@@ -71,6 +71,8 @@ export const reportTypeEnum = pgEnum("report_type", [
   "custom",
 ]);
 export const notificationChannelEnum = pgEnum("notification_channel", ["email", "in_app", "push"]);
+export const feedbackCategoryEnum = pgEnum("feedback_category", ["bug", "design", "feature", "general"]);
+export const feedbackStatusEnum = pgEnum("feedback_status", ["new", "in_review", "resolved"]);
 // See docs/Data Dictionary.md "Admin Access Rule" - sourced from the 2026/2027 recruitment guidebook.
 export const accessTierEnum = pgEnum("access_tier", ["full", "scoped", "advisory"]);
 
@@ -114,6 +116,9 @@ export const users = pgTable("users", {
   phone: text("phone"),
   wechatId: text("wechat_id"),
   status: userStatusEnum("status").notNull().default("active"),
+  // Null = never asked yet (triggers the first-login onboarding prompt). True/false
+  // once the user has answered. Opt-in by design - never defaults to true.
+  emailSubscribed: boolean("email_subscribed"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
   lastLoginAt: timestamp("last_login_at"),
 });
@@ -452,6 +457,26 @@ export const releaseNotes = pgTable("release_notes", {
   details: text("details"),
   publishedBy: uuid("published_by").references(() => users.id),
   publishedAt: timestamp("published_at").notNull().defaultNow(),
+});
+
+// In-app feedback widget submissions (floating widget + element picker on every
+// page). userId is nullable - feedback can be submitted while logged out.
+export const feedback = pgTable("feedback", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  category: feedbackCategoryEnum("category").notNull(),
+  message: text("message").notNull(),
+  status: feedbackStatusEnum("status").notNull().default("new"),
+  userId: uuid("user_id").references(() => users.id),
+  userEmail: text("user_email"), // snapshot at submit time, survives account deletion
+  pagePath: text("page_path").notNull(),
+  // Element-picker capture: which DOM node the reporter clicked, described in
+  // multiple redundant ways since a CSS selector alone can drift as the UI changes.
+  elementSelector: text("element_selector"),
+  elementDescription: text("element_description"),
+  elementRect: jsonb("element_rect"), // { x, y, width, height } at capture time
+  viewport: jsonb("viewport"), // { width, height }
+  userAgent: text("user_agent"),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
 });
 
 // ---------- Relations (for Drizzle's relational query API) ----------
