@@ -1,5 +1,8 @@
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
+import { Providers } from "@/components/providers";
+import { FeedbackWidget } from "@/components/feedback/feedback-widget";
+import { OnboardingModal } from "@/components/onboarding-modal";
 import "./globals.css";
 
 // next/font/google downloads and self-hosts the font at build time - no runtime
@@ -20,7 +23,13 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html lang="id" className={`${inter.variable} scroll-smooth`}>
-      <body className="antialiased">{children}</body>
+      <body className="antialiased">
+        <Providers>
+          {children}
+          <FeedbackWidget />
+          <OnboardingModal />
+        </Providers>
+      </body>
     </html>
   );
 }
