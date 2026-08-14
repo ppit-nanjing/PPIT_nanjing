@@ -1,4 +1,5 @@
 import { ArrowRight, Users, GraduationCap, CalendarDays, Quote } from "lucide-react";
+import { AnimatedHeroHeading } from "@/components/animated-hero-heading";
 
 const NAV_LINKS = [
   { href: "/", label: "Home" },
@@ -47,14 +48,34 @@ export default function Home() {
         </div>
       </nav>
 
-      <header className="relative w-full h-[560px] md:h-[640px] flex items-center justify-center overflow-hidden">
-        <div className="absolute inset-0 bg-gradient-to-br from-primary via-primary-container to-tertiary" />
-        <div className="absolute inset-0 opacity-10 [background-image:radial-gradient(circle_at_20%_30%,white_1px,transparent_1px)] [background-size:24px_24px]" />
+      <header className="relative w-full h-[600px] md:h-[680px] flex items-center justify-center overflow-hidden bg-on-background">
+        {/* Layered depth: deep base -> directional glow -> decorative skyline silhouette.
+            Placeholder for a licensed Nanjing photograph (see docs/Design System/Iconography & Imagery.md) -
+            original vector art only, no hotlinked/unlicensed images. */}
+        <div className="absolute inset-0 bg-gradient-to-b from-on-background via-primary/40 to-on-background" />
+        <div className="absolute inset-0 [background:radial-gradient(circle_at_50%_20%,var(--color-primary-container)_0%,transparent_55%)] opacity-70" />
+        <svg
+          className="absolute bottom-0 left-0 w-full h-[45%] opacity-80"
+          viewBox="0 0 1200 300"
+          preserveAspectRatio="none"
+          fill="none"
+        >
+          <path
+            d="M0 300V180l60-20 20-40 20 40 40-60 40 60 20-30 20 30 80-90 80 90 30-40 30 40 60-70 60 70 40-50 40 50 60-30 60 30 40-60 40 60 60-20 60 20V300Z"
+            fill="var(--color-on-background)"
+            opacity="0.9"
+          />
+        </svg>
+        <div className="absolute inset-0 opacity-[0.08] [background-image:radial-gradient(circle_at_20%_30%,white_1px,transparent_1px)] [background-size:24px_24px]" />
+
         <div className="relative z-10 text-center px-[var(--spacing-container-padding)] max-w-3xl mx-auto flex flex-col items-center">
-          <h1 className="text-display-hero-mobile md:text-display-hero text-on-primary mb-[var(--spacing-stack-md)]">
-            Menghubungkan Mahasiswa{" "}
-            <span className="italic">Indonesia</span> di Nanjing
-          </h1>
+          <span className="text-label-caps uppercase tracking-[0.2em] text-inverse-primary border border-inverse-primary/40 rounded-full px-4 py-1.5 mb-6">
+            EST. 2008
+          </span>
+          <AnimatedHeroHeading
+            words={["Menghubungkan", "Mahasiswa", "Indonesia", "di", "Nanjing"]}
+            className="text-display-hero-mobile md:text-display-hero text-on-primary mb-[var(--spacing-stack-md)]"
+          />
           <p className="text-body-lg text-on-primary-container mb-[var(--spacing-stack-md)] max-w-2xl">
             Wadah resmi Perhimpunan Pelajar Indonesia Tiongkok (PPIT) Cabang Nanjing untuk
             bersinergi, berkarya, dan berkontribusi bagi bangsa &mdash; sejak 2008.
