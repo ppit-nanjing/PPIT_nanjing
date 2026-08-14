@@ -1,5 +1,6 @@
 import { ArrowRight, Users, GraduationCap, CalendarDays, Quote } from "lucide-react";
 import { AnimatedHeroHeading } from "@/components/animated-hero-heading";
+import { AccountMenu } from "@/components/account-menu";
 
 const NAV_LINKS = [
   { href: "/", label: "Home" },
@@ -39,12 +40,7 @@ export default function Home() {
               </a>
             ))}
           </div>
-          <a
-            href="/login"
-            className="bg-primary-container text-on-primary text-label-caps uppercase tracking-wide px-5 py-2.5 rounded-md hover:bg-primary transition-colors"
-          >
-            Login
-          </a>
+          <AccountMenu />
         </div>
       </nav>
 
