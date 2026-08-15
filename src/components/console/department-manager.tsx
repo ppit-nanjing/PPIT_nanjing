@@ -3,7 +3,7 @@
 import { useState, useTransition } from "react";
 import { ChevronUp, ChevronDown, Pencil, Plus, X } from "lucide-react";
 import { createDepartment, updateDepartment, moveDepartment } from "@/app/actions/admin-departments";
-import { ASSIGNABLE_SCOPE_KEYS } from "@/lib/admin-scope-constants";
+import { ASSIGNABLE_SCOPE_KEYS, SENSITIVE_SCOPE_KEYS } from "@/lib/admin-scope-constants";
 
 interface Department {
   id: string;
@@ -15,7 +15,7 @@ interface Department {
   adminModuleScope: string[];
 }
 
-export function DepartmentManager({ departments }: { departments: Department[] }) {
+export function DepartmentManager({ departments, isFullAdmin }: { departments: Department[]; isFullAdmin: boolean }) {
   const [showAddFor, setShowAddFor] = useState<string | "root" | null>(null);
   const topLevel = departments.filter((d) => d.parentDepartmentId === null).sort((a, b) => a.orderIndex - b.orderIndex);
 
@@ -30,6 +30,7 @@ export function DepartmentManager({ departments }: { departments: Department[] }
           isLast={i === topLevel.length - 1}
           showAddFor={showAddFor}
           setShowAddFor={setShowAddFor}
+          isFullAdmin={isFullAdmin}
         />
       ))}
 
@@ -47,29 +48,47 @@ export function DepartmentManager({ departments }: { departments: Department[] }
 // Checkbox list shared by the top-level department edit form and the division
 // edit form - access is meaningful at either level (a department itself can
 // have direct members, not just its divisions).
-function AccessFields({ dept }: { dept: Department }) {
+// isFullAdmin gates grantsFullAdminAccess and the sensitive scope keys -
+// the server (updateDepartment in admin-departments.ts) enforces the same
+// restriction independently, so a disabled control here is UX only, not the
+// actual security boundary. Disabled checkboxes are dropped from FormData by
+// the browser, which matches the server's "keep existing value" fallback.
+function AccessFields({ dept, isFullAdmin }: { dept: Department; isFullAdmin: boolean }) {
   return (
     <div className="bg-surface-container-lowest rounded-md p-3 flex flex-col gap-2">
       <label className="flex items-center gap-2 text-body-md text-on-background">
-        <input type="checkbox" name="grantsFullAdminAccess" defaultChecked={dept.grantsFullAdminAccess} className="w-4 h-4" />
+        <input
+          type="checkbox"
+          name="grantsFullAdminAccess"
+          defaultChecked={dept.grantsFullAdminAccess}
+          disabled={!isFullAdmin}
+          className="w-4 h-4 disabled:opacity-50"
+        />
         Berikan akses admin penuh ke semua anggota (mis. Divisi Teknologi)
       </label>
+      {!isFullAdmin && (
+        <p className="text-label-caps text-on-surface-variant">Hanya BPH yang dapat mengubah akses penuh &amp; modul sensitif.</p>
+      )}
       <p className="text-label-caps text-on-surface-variant uppercase tracking-wide mt-1">
         Modul admin yang bisa diakses (untuk anggota dengan role &apos;scoped&apos;)
       </p>
       <div className="grid grid-cols-2 gap-1.5">
-        {ASSIGNABLE_SCOPE_KEYS.map((m) => (
-          <label key={m.key} className="flex items-center gap-2 text-label-caps text-on-background">
-            <input
-              type="checkbox"
-              name="adminModuleScope"
-              value={m.key}
-              defaultChecked={dept.adminModuleScope.includes(m.key)}
-              className="w-3.5 h-3.5"
-            />
-            {m.label}
-          </label>
-        ))}
+        {ASSIGNABLE_SCOPE_KEYS.map((m) => {
+          const isSensitive = SENSITIVE_SCOPE_KEYS.includes(m.key as (typeof SENSITIVE_SCOPE_KEYS)[number]);
+          return (
+            <label key={m.key} className="flex items-center gap-2 text-label-caps text-on-background">
+              <input
+                type="checkbox"
+                name="adminModuleScope"
+                value={m.key}
+                defaultChecked={dept.adminModuleScope.includes(m.key)}
+                disabled={isSensitive && !isFullAdmin}
+                className="w-3.5 h-3.5 disabled:opacity-50"
+              />
+              {m.label}
+            </label>
+          );
+        })}
       </div>
     </div>
   );
@@ -82,6 +101,7 @@ function DepartmentCard({
   isLast,
   showAddFor,
   setShowAddFor,
+  isFullAdmin,
 }: {
   dept: Department;
   children: Department[];
@@ -89,6 +109,7 @@ function DepartmentCard({
   isLast: boolean;
   showAddFor: string | "root" | null;
   setShowAddFor: (v: string | "root" | null) => void;
+  isFullAdmin: boolean;
 }) {
   const [editing, setEditing] = useState(false);
   const [, startTransition] = useTransition();
@@ -140,7 +161,7 @@ function DepartmentCard({
             rows={2}
             className="bg-soft-gray rounded-md p-2 text-body-md resize-none"
           />
-          <AccessFields dept={dept} />
+          <AccessFields dept={dept} isFullAdmin={isFullAdmin} />
           <button
             type="submit"
             className="self-start bg-primary-container text-on-primary text-label-caps uppercase px-4 py-2 rounded-md hover:bg-primary transition-colors"
@@ -153,7 +174,7 @@ function DepartmentCard({
       {children.length > 0 && (
         <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mt-4">
           {children.map((c, i) => (
-            <DivisionCard key={c.id} division={c} isFirst={i === 0} isLast={i === children.length - 1} />
+            <DivisionCard key={c.id} division={c} isFirst={i === 0} isLast={i === children.length - 1} isFullAdmin={isFullAdmin} />
           ))}
         </div>
       )}
@@ -169,7 +190,17 @@ function DepartmentCard({
   );
 }
 
-function DivisionCard({ division, isFirst, isLast }: { division: Department; isFirst: boolean; isLast: boolean }) {
+function DivisionCard({
+  division,
+  isFirst,
+  isLast,
+  isFullAdmin,
+}: {
+  division: Department;
+  isFirst: boolean;
+  isLast: boolean;
+  isFullAdmin: boolean;
+}) {
   const [editing, setEditing] = useState(false);
   const [, startTransition] = useTransition();
 
@@ -230,7 +261,7 @@ function DivisionCard({ division, isFirst, isLast }: { division: Department; isF
             rows={2}
             className="bg-surface-container-lowest rounded-md p-2 text-body-md resize-none"
           />
-          <AccessFields dept={division} />
+          <AccessFields dept={division} isFullAdmin={isFullAdmin} />
           <button
             type="submit"
             className="self-start bg-primary-container text-on-primary text-label-caps uppercase px-3 py-1.5 rounded-md hover:bg-primary transition-colors"
