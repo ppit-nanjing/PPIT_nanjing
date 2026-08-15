@@ -4,8 +4,8 @@ const SECTIONS = ["Pengguna", "Organisasi", "Kegiatan", "Inventaris", "Laporan"]
 
 export default function NewHelpArticlePage() {
   return (
-    <div className="px-8 py-10 max-w-2xl">
-      <h1 className="text-headline-lg text-on-background mb-8">Tulis Panduan Baru</h1>
+    <div className="px-4 py-6 sm:px-6 lg:px-8 lg:py-10 max-w-2xl">
+      <h1 className="text-headline-md sm:text-headline-lg text-on-background mb-8">Tulis Panduan Baru</h1>
       <form action={upsertHelpArticle.bind(null, null)} className="flex flex-col gap-6">
         <label className="flex flex-col gap-2">
           <span className="text-label-caps uppercase tracking-wide text-on-surface-variant">Judul *</span>
