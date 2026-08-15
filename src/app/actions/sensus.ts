@@ -19,7 +19,7 @@ export interface SensusInput {
   emergencyContactPhone: string;
 }
 
-export async function submitSensusProfile(input: SensusInput) {
+export async function submitSensusProfile(returnTo: string | null, input: SensusInput) {
   const session = await auth();
   if (!session?.user?.id) redirect("/login");
 
@@ -60,5 +60,7 @@ export async function submitSensusProfile(input: SensusInput) {
       },
     });
 
-  redirect("/sensus/success");
+  // Only redirect to a same-origin path - returnTo comes from a query param, so
+  // treat it as untrusted input (open-redirect guard).
+  redirect(returnTo && returnTo.startsWith("/") && !returnTo.startsWith("//") ? returnTo : "/sensus/success");
 }
