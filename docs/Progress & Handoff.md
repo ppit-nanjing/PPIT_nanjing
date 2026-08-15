@@ -30,14 +30,13 @@
 
 1. **Auth doesn't work in production yet** — needs real `AUTH_SECRET` / `AUTH_GOOGLE_ID` / `AUTH_GOOGLE_SECRET` **and** `DATABASE_URL` as Vercel env vars (all four, not just the auth three — this tripped up an earlier deploy attempt). Google OAuth client: console.cloud.google.com, redirect URI `<deploy-url>/api/auth/callback/google`.
 2. **Connect GitHub integration on Vercel** (Project Settings → Git) so pushes auto-deploy — my Vercel MCP connector 403'd trying to do this, so it's manual on the owner's end each time.
-3. Resume/CV on job applications and every image URL field (news cover, gallery photos, album covers) are plain URL inputs, not file uploads — Vercel Blob isn't wired up yet.
+3. Resume/CV on job applications and every image URL field (news cover, gallery photos, album covers) are plain URL inputs, not file uploads — Vercel Blob isn't wired up yet (needs a Blob store provisioned on Vercel first, which needs dashboard/owner access).
 4. Hero background is an original SVG placeholder, not a photo — swap for a licensed Nanjing photograph via Vercel Blob once the org has one, don't hotlink.
-5. `adminModuleScope` seed values for Usaha Dana / Desain / Komunikasi & Konten are still **inferred** from the guidebook's job descriptions, not confirmed by the org — enforcement now exists (see `src/lib/admin-scope.ts`) but the underlying scope assignments themselves should be reviewed with PPIT Nanjing before this matters in practice. The `/console/organization` UI doesn't yet expose editing `adminModuleScope`/`grantsFullAdminAccess` directly (only name/description) — for now, adjusting scope means editing the seed or a direct DB update.
-6. `reports` and `sensus` scope keys both unlock the same `/console/reports` page (it hasn't been split into a sensus-only view vs. a full-reports view) — so Divisi Hubungan Masyarakat (scoped to `sensus`) currently sees the same page, including the CSV export button, as Divisi Usaha Dana (scoped to `reports`). Same simplification for `content` vs `gallery` on `/console/content`.
+5. `adminModuleScope`/`grantsFullAdminAccess` seed values for Usaha Dana / Desain / Komunikasi & Konten are still **inferred** from the guidebook's job descriptions, not confirmed by the org. Enforcement exists (`src/lib/admin-scope.ts`) **and** it's now editable in the UI (`/console/organization` → edit a division → checkboxes) — so reviewing/correcting these with PPIT Nanjing is now a self-service task, not a DB edit.
+6. `reports` and `sensus` scope keys both unlock the same `/console/reports` page (it hasn't been split into a sensus-only view vs. a full-reports view) — so a division scoped to just `sensus` currently sees the same page, including the CSV export button, as one scoped to `reports`. Same simplification for `content` vs `gallery` on `/console/content`. The raw keys are still stored separately (`ASSIGNABLE_SCOPE_KEYS` in `admin-scope.ts`) so splitting the pages later won't require a data migration, just new routes + tightening the alias map.
 7. Only 9 of the stated 32 PPI Tiongkok regional branches are seeded — the other 23 aren't named anywhere available to this project.
-8. `favicon.ico` uses the Next.js default, not a custom one.
 
-Every module in the original IA now has a real `/console/*` page — there is no remaining "unbuilt screen" gap, only the polish items above.
+Every module in the original IA now has a real `/console/*` page — there is no remaining "unbuilt screen" gap, only the polish items above. Custom favicon shipped (was gap #8, now `src/app/icon.svg`).
 
 ## Decisions worth knowing about (so they don't get re-litigated)
 
