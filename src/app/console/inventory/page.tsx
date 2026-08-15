@@ -20,7 +20,12 @@ export default async function ConsoleInventoryPage() {
 
   return (
     <div className="px-8 py-10">
-      <h1 className="text-headline-lg text-on-background mb-8">Manajemen Inventaris</h1>
+      <div className="flex items-center justify-between mb-8">
+        <h1 className="text-headline-lg text-on-background">Manajemen Inventaris</h1>
+        <a href="/console/inventory/audit-log" className="text-label-caps text-primary-container hover:text-primary transition-colors">
+          Log Audit &rarr;
+        </a>
+      </div>
 
       <h2 className="text-headline-md text-on-background mb-4">Pengajuan Peminjaman</h2>
       <BorrowRequestQueue
