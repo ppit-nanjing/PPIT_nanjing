@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 import { auth } from "@/auth";
 import { db } from "@/db";
 import { users, sensusProfiles } from "@/db/schema";
+import { hasModuleAccess } from "@/lib/admin-scope";
 
 function csvEscape(value: unknown): string {
   const s = value == null ? "" : String(value);
@@ -11,7 +12,7 @@ function csvEscape(value: unknown): string {
 
 export async function GET() {
   const session = await auth();
-  if (!session?.user?.isAdmin) {
+  if (!session || !hasModuleAccess(session.user.adminScope, "reports")) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
