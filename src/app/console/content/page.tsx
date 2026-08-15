@@ -4,6 +4,7 @@ import { newsArticles, galleryAlbums } from "@/db/schema";
 import { requireModuleAccess } from "@/lib/admin-scope";
 import { createGalleryAlbum } from "@/app/actions/admin-content";
 import { Plus, Newspaper, Images } from "lucide-react";
+import { FileUpload } from "@/components/upload/file-upload";
 
 const STATUS_LABEL: Record<string, string> = { draft: "Draf", published: "Dipublikasikan" };
 
@@ -83,7 +84,7 @@ function NewAlbumForm() {
   return (
     <>
       <input name="title" placeholder="Judul Album *" required className="bg-soft-gray rounded-md p-2.5 text-body-md" />
-      <input name="coverImageUrl" placeholder="URL Foto Sampul (opsional)" className="bg-soft-gray rounded-md p-2.5 text-body-md" />
+      <FileUpload name="coverImageUrl" folder="album" label="Foto Sampul (opsional)" placeholder="URL atau unggah gambar" />
       <button
         type="submit"
         className="bg-primary-container text-on-primary text-label-caps uppercase tracking-wide py-2.5 rounded-md hover:bg-primary transition-colors"
