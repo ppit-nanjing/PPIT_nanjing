@@ -4,6 +4,7 @@ import { auth } from "@/auth";
 import { db } from "@/db";
 import { users, sensusProfiles } from "@/db/schema";
 import { EmailSubscriptionToggle } from "@/components/profile/email-subscription-toggle";
+import { ImageUploadCropper } from "@/components/upload/image-upload-cropper";
 import { updateProfile } from "@/app/actions/user";
 import { ClipboardCheck, ClipboardList, UserRound } from "lucide-react";
 
@@ -49,16 +50,13 @@ export default async function ProfilePage() {
               className="bg-soft-gray rounded-md p-3 text-body-md focus:outline-none focus:ring-2 focus:ring-primary-container"
             />
           </label>
-          <label className="flex flex-col gap-2">
-            <span className="text-label-caps uppercase tracking-wide text-on-surface-variant">URL Foto Profil</span>
-            <input
-              name="avatarUrl"
-              type="url"
-              defaultValue={user?.avatarUrl ?? ""}
-              placeholder="Kosongkan untuk memakai foto akun Google"
-              className="bg-soft-gray rounded-md p-3 text-body-md focus:outline-none focus:ring-2 focus:ring-primary-container"
-            />
-          </label>
+          <ImageUploadCropper
+            name="avatarUrl"
+            folder="avatar"
+            label="Foto Profil"
+            defaultValue={user?.avatarUrl ?? ""}
+            aspect={1}
+          />
           <label className="flex flex-col gap-2">
             <span className="text-label-caps uppercase tracking-wide text-on-surface-variant">No. Telepon/WhatsApp</span>
             <input
@@ -76,6 +74,32 @@ export default async function ProfilePage() {
               className="bg-soft-gray rounded-md p-3 text-body-md focus:outline-none focus:ring-2 focus:ring-primary-container"
             />
           </label>
+
+          <h3 className="text-label-caps uppercase tracking-wide text-secondary mt-2">
+            Media Sosial (opsional)
+          </h3>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {(
+              [
+                ["linkedinUrl", "LinkedIn", user?.linkedinUrl],
+                ["instagramUrl", "Instagram", user?.instagramUrl],
+                ["githubUrl", "GitHub", user?.githubUrl],
+                ["spotifyUrl", "Spotify", user?.spotifyUrl],
+                ["tiktokUrl", "TikTok", user?.tiktokUrl],
+              ] as const
+            ).map(([fieldName, fieldLabel, current]) => (
+              <label key={fieldName} className="flex flex-col gap-2">
+                <span className="text-label-caps uppercase tracking-wide text-on-surface-variant">{fieldLabel}</span>
+                <input
+                  name={fieldName}
+                  defaultValue={current ?? ""}
+                  placeholder="URL atau handle"
+                  className="bg-soft-gray rounded-md p-3 text-body-md focus:outline-none focus:ring-2 focus:ring-primary-container"
+                />
+              </label>
+            ))}
+          </div>
+
           <button
             type="submit"
             className="self-start bg-primary-container text-on-primary text-label-caps uppercase tracking-wide px-6 py-3 rounded-md hover:bg-primary transition-colors"
