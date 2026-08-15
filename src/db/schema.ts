@@ -290,6 +290,9 @@ export const newsArticles = pgTable("news_articles", {
   slug: text("slug").notNull().unique(),
   content: text("content"),
   coverImageUrl: text("cover_image_url"),
+  // Freeform tag (e.g. "Pengumuman", "Komunitas") - backs the /news category filter
+  // tabs (Goal.md Tier 1 #12), same pattern as events.category.
+  category: text("category"),
   authorId: uuid("author_id").references(() => users.id),
   status: publishStatusEnum("status").notNull().default("draft"),
   publishedAt: timestamp("published_at"),
