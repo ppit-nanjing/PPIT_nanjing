@@ -8,6 +8,8 @@ const ACTION_LABEL: Record<string, string> = {
   adjusted: "Disesuaikan",
   damaged: "Rusak",
   retired: "Dipensiunkan",
+  lent_external: "Dipinjam Keluar",
+  returned_external: "Dikembalikan (Eksternal)",
 };
 
 export default async function InventoryAuditLogPage() {
