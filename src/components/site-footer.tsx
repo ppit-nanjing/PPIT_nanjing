@@ -8,7 +8,7 @@ export function SiteFooter() {
       <div className="max-w-[var(--container-max)] mx-auto bg-primary-container text-on-primary rounded-2xl px-8 py-14 flex flex-col items-center text-center gap-8">
         <AnimatedLettersHeading
           text="Ayo bergabung dengan PPIT Nanjing."
-          className="text-headline-lg md:text-display-hero-mobile"
+          className="text-display-hero-mobile md:text-display-hero"
         />
         <a
           href="/join-us"
