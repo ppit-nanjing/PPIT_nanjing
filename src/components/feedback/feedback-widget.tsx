@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { usePathname } from "next/navigation";
 import { MessageSquarePlus, X, MousePointerClick, RotateCcw, Bug, Palette, Lightbulb, MessageCircle } from "lucide-react";
 import { submitFeedback } from "@/app/actions/feedback";
+import { AIImproveButton } from "@/components/ai/ai-improve-button";
 import { pickElementAt, type PickedElement } from "./element-picker";
 
 type Category = "bug" | "design" | "feature" | "general";
@@ -178,7 +179,14 @@ export function FeedbackWidget() {
                   onChange={(e) => updateDraft(e.target.value)}
                   placeholder={activeCategory.placeholder}
                   rows={4}
-                  className="w-full bg-soft-gray rounded-md p-3 text-body-md text-on-background placeholder:text-on-surface-variant resize-none focus:outline-none focus:ring-2 focus:ring-primary-container mb-3"
+                  className="w-full bg-soft-gray rounded-md p-3 text-body-md text-on-background placeholder:text-on-surface-variant resize-none focus:outline-none focus:ring-2 focus:ring-primary-container mb-2"
+                />
+                <AIImproveButton
+                  context="feedback"
+                  value={drafts[category]}
+                  onImproved={(text) => updateDraft(text)}
+                  label="Bantu tulis dengan AI"
+                  className="mb-2"
                 />
 
                 {picked ? (
