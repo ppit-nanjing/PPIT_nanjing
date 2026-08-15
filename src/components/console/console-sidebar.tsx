@@ -15,7 +15,7 @@ import {
   BookOpen,
   Images,
 } from "lucide-react";
-import { hasModuleAccess, type AdminModule } from "@/lib/admin-scope";
+import { hasModuleAccess, type AdminModule } from "@/lib/admin-scope-constants";
 
 // `module: null` = always visible to anyone who got past the layout gate
 // (Dashboard, Documentation are meta/support, not sensitive management).
