@@ -1,8 +1,17 @@
-import { MessageSquare, LayoutDashboard, ArrowLeft, Users, Building2, CalendarDays, Package, FileBarChart } from "lucide-react";
+import {
+  MessageSquare,
+  LayoutDashboard,
+  ArrowLeft,
+  Users,
+  Building2,
+  CalendarDays,
+  Package,
+  FileBarChart,
+  BookOpen,
+} from "lucide-react";
 
-// Documentation Hub / Help Center (docs/Information Architecture.md § Admin
-// Console) is the one module from the original prototype still without a
-// /console/* page - everything else is built.
+// Every module from docs/Information Architecture.md § Admin Console now has
+// a /console/* page - Documentation & Help Center was the last one built.
 const NAV = [
   { href: "/console", label: "Dashboard", icon: LayoutDashboard },
   { href: "/console/users", label: "Pengguna", icon: Users },
@@ -10,6 +19,7 @@ const NAV = [
   { href: "/console/events", label: "Kegiatan", icon: CalendarDays },
   { href: "/console/inventory", label: "Inventaris", icon: Package },
   { href: "/console/reports", label: "Laporan", icon: FileBarChart },
+  { href: "/console/docs", label: "Dokumentasi", icon: BookOpen },
   { href: "/console/feedback", label: "Masukan Pengguna", icon: MessageSquare },
 ];
 
