@@ -421,6 +421,33 @@ export const membershipApplications = pgTable("membership_applications", {
   note: text("note"),
   submittedAt: timestamp("submitted_at").notNull().defaultNow(),
   reviewedAt: timestamp("reviewed_at"),
+  responses: jsonb("responses"),
+});
+
+export const membershipFieldTypeEnum = pgEnum("membership_field_type", [
+  "text",
+  "textarea",
+  "email",
+  "tel",
+  "number",
+  "select",
+  "date",
+]);
+
+// Configurable fields for the public membership application form (Join Us).
+// Admin edits these from /console/membership/form. Core keys map onto the
+// structured columns above; any extra custom fields live only in `responses`.
+export const membershipFormFields = pgTable("membership_form_fields", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  key: text("key").notNull().unique(),
+  label: text("label").notNull(),
+  type: membershipFieldTypeEnum("type").notNull().default("text"),
+  placeholder: text("placeholder"),
+  helpText: text("help_text"),
+  required: boolean("required").notNull().default(false),
+  options: text("options"),
+  orderIndex: integer("order_index").notNull().default(0),
+  isCore: boolean("is_core").notNull().default(false),
 });
 
 // ---------- 7. Inventory & Borrowing ----------
