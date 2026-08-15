@@ -3,6 +3,9 @@
 import { auth } from "@/auth";
 import { hasModuleAccess, type AdminModule } from "@/lib/admin-scope";
 import { improveIndonesianText, groqChat, AI_CHAT_SYSTEM_PROMPT, type ImproveContext, type GroqMessage } from "@/lib/groq";
+import { eq } from "drizzle-orm";
+import { db } from "@/db";
+import { users } from "@/db/schema";
 
 // event/news/gallery edits are gated by the matching admin module.
 // feedback text improvement is open to any signed-in user (they improve their own draft).
@@ -31,7 +34,37 @@ export async function improveTextAction(text: string, context: ImproveContext): 
   return improveIndonesianText(clean, context);
 }
 
-export async function chatWithAIAction(history: { role: "user" | "assistant"; content: string }[]): Promise<string> {
+export const PROFILE_FIELDS = [
+  "name",
+  "phone",
+  "wechatId",
+  "linkedinUrl",
+  "instagramUrl",
+  "githubUrl",
+  "spotifyUrl",
+  "tiktokUrl",
+  "avatarUrl",
+] as const;
+type ProfileField = (typeof PROFILE_FIELDS)[number];
+
+const FIELD_MAX: Record<ProfileField, number> = {
+  name: 80,
+  phone: 30,
+  wechatId: 60,
+  linkedinUrl: 500,
+  instagramUrl: 500,
+  githubUrl: 500,
+  spotifyUrl: 500,
+  tiktokUrl: 500,
+  avatarUrl: 2000,
+};
+
+export type ChatResult = {
+  reply: string;
+  profileEdit?: { field: ProfileField; value: string };
+};
+
+export async function chatWithAIAction(history: { role: "user" | "assistant"; content: string }[]): Promise<ChatResult> {
   const session = await auth();
   if (!session?.user?.id) throw new Error("Kamu harus masuk untuk menggunakan asisten AI");
 
@@ -39,5 +72,38 @@ export async function chatWithAIAction(history: { role: "user" | "assistant"; co
   if (recent.length === 0) throw new Error("Pesan kosong");
 
   const messages: GroqMessage[] = [{ role: "system", content: AI_CHAT_SYSTEM_PROMPT }, ...recent];
-  return groqChat(messages, { temperature: 0.5, maxTokens: 500 });
+  const raw = await groqChat(messages, { temperature: 0.5, maxTokens: 500 });
+
+  const marker = raw.match(/<<PROFILE_EDIT:([\s\S]*?)>>/);
+  if (marker) {
+    try {
+      const parsed = JSON.parse(marker[1]) as { field?: string; value?: string };
+      const field = parsed.field as ProfileField;
+      const value = String(parsed.value ?? "").trim();
+      if ((PROFILE_FIELDS as readonly string[]).includes(field) && value && value.length <= FIELD_MAX[field]) {
+        return { reply: "", profileEdit: { field, value } };
+      }
+    } catch {
+      // fall through to normal reply
+    }
+  }
+  return { reply: raw };
+}
+
+/**
+ * Guarded single-field profile update. The chatbot may only *propose* a change;
+ * this is the only path that writes, and it is scoped to a whitelisted field,
+ * length-checked, and owned by the current session user.
+ */
+export async function updateProfileFieldAction(field: string, value: string): Promise<void> {
+  const session = await auth();
+  if (!session?.user?.id) throw new Error("Kamu harus masuk");
+  if (!(PROFILE_FIELDS as readonly string[]).includes(field)) throw new Error("Field profil tidak valid");
+  const f = field as ProfileField;
+  const v = value.trim();
+  if (!v) throw new Error("Nilai tidak boleh kosong");
+  if (v.length > FIELD_MAX[f]) throw new Error("Nilai terlalu panjang");
+  if (f.endsWith("Url") && !/^https?:\/\//i.test(v)) throw new Error("URL harus dimulai dengan http(s)://");
+
+  await db.update(users).set({ [f]: v } as Partial<typeof users.$inferInsert>).where(eq(users.id, session.user.id));
 }
