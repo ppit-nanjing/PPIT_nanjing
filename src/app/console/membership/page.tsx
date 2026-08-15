@@ -2,6 +2,7 @@ import { desc, eq } from "drizzle-orm";
 import { db } from "@/db";
 import { membershipApplications, recruitmentPeriods } from "@/db/schema";
 import { requireModuleAccess } from "@/lib/admin-scope";
+import { MembershipTabs } from "@/components/console/membership-tabs";
 import { UserPlus } from "lucide-react";
 
 const STATUS_LABEL: Record<string, string> = {
@@ -38,7 +39,8 @@ export default async function ConsoleMembershipPage() {
   return (
     <div className="px-8 py-10">
       <h1 className="text-headline-lg text-on-background mb-2">Pendaftaran Anggota</h1>
-      <p className="text-body-md text-on-surface-variant mb-8">{apps.length} pendaftar.</p>
+      <p className="text-body-md text-on-surface-variant mb-4">{apps.length} pendaftar.</p>
+      <MembershipTabs active="list" />
 
       <div className="bg-surface-container-lowest border border-outline-variant rounded-xl overflow-x-auto">
         <table className="w-full text-body-md min-w-[720px]">
