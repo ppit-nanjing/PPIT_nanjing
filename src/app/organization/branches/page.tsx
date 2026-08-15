@@ -2,7 +2,7 @@ import { db } from "@/db";
 import { regionalBranches } from "@/db/schema";
 import { SiteNav } from "@/components/site-nav";
 import { SiteFooter } from "@/components/site-footer";
-import { MapPin } from "lucide-react";
+import { MapPin, Map } from "lucide-react";
 
 const REGION_LABEL: Record<string, string> = {
   north: "North (Utara)",
@@ -30,10 +30,16 @@ export default async function RegionalBranchesPage() {
         <h1 className="text-headline-lg md:text-display-hero-mobile text-on-background mb-4">
           Cabang Regional PPI Tiongkok
         </h1>
-        <p className="text-body-lg text-on-surface-variant max-w-2xl">
+        <p className="text-body-lg text-on-surface-variant max-w-2xl mb-6">
           PPI Tiongkok memiliki cabang aktif di berbagai kota besar di Tiongkok. PPIT Nanjing
           adalah salah satunya, di wilayah Timur.
         </p>
+        <a
+          href="/organization/map"
+          className="inline-flex items-center gap-2 text-label-caps text-primary-container hover:text-primary transition-colors"
+        >
+          <Map size={16} /> Lihat Peta Persebaran
+        </a>
       </header>
 
       <main className="max-w-[var(--container-max)] mx-auto px-[var(--spacing-container-padding)] pb-24 grid grid-cols-1 md:grid-cols-3 gap-8">
