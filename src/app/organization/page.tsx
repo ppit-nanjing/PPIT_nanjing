@@ -110,7 +110,7 @@ export default async function OrganizationPage() {
         <span className="text-label-caps text-primary-container tracking-widest uppercase mb-2 block">
           Kepengurusan 2026/2027
         </span>
-        <h1 className="text-headline-lg md:text-display-hero-mobile text-on-background mb-4">
+        <h1 className="text-display-hero-mobile md:text-display-hero text-on-background mb-4">
           Struktur PPIT Nanjing
         </h1>
         <p className="text-body-lg text-on-surface-variant max-w-2xl">
