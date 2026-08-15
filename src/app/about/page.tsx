@@ -1,22 +1,8 @@
 import { SiteNav } from "@/components/site-nav";
 import { SiteFooter } from "@/components/site-footer";
 import { AnimatedRevealText } from "@/components/animated-reveal-text";
-import { Target, Compass, Users, Layers, Handshake, MapPinned, GraduationCap, CalendarDays, MapPin } from "lucide-react";
-
-const MISI = [
-  {
-    icon: Users,
-    text: "Menambah dan memperluas program kerja dari PPIT Nanjing untuk menambah kesempatan mahasiswa dalam kota ini untuk interaksi dan saling connect.",
-  },
-  {
-    icon: Layers,
-    text: "Menyusun struktur organisasi yang efisien dan jelas untuk mendukung misi pertama.",
-  },
-  {
-    icon: Handshake,
-    text: "Membangun koordinasi erat dan positif antara PPIT Cabang Nanjing dengan ranting dan PPI Tiongkok.",
-  },
-];
+import { MissionCards } from "@/components/mission-cards";
+import { Compass, MapPinned, GraduationCap, CalendarDays, MapPin } from "lucide-react";
 
 const COVERAGE_CITIES = ["Xuzhou", "Jurong", "Ma'anshan", "Zhenjiang", "Huai'an"];
 
@@ -75,16 +61,8 @@ export default function AboutPage() {
                 </p>
               </div>
             </div>
-            <div className="md:col-span-7 grid grid-cols-1 sm:grid-cols-3 gap-6">
-              {MISI.map(({ icon: Icon, text }, i) => (
-                <div
-                  key={i}
-                  className="bg-surface-container-low border border-outline-variant rounded-xl p-6 flex flex-col gap-3"
-                >
-                  <Icon className="text-primary-container" size={24} />
-                  <p className="text-body-md text-on-surface-variant">{text}</p>
-                </div>
-              ))}
+            <div className="md:col-span-7">
+              <MissionCards />
             </div>
           </div>
         </section>
