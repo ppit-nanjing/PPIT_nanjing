@@ -74,8 +74,8 @@ export default function AboutPage() {
             Selain mahasiswa di Kota Nanjing sendiri, PPIT Nanjing menaungi pelajar Indonesia di
             kota-kota sekitarnya serta dua ranting organisasi aktif setingkat kampus.
           </p>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-            <div className="sm:col-span-2 bg-primary-container text-on-primary rounded-xl p-6 sm:p-8 flex flex-col justify-between">
+          <div className="flex flex-col gap-4">
+            <div className="bg-primary-container text-on-primary rounded-xl p-6 sm:p-8">
               <div className="w-12 h-12 bg-on-primary/15 rounded-full flex items-center justify-center mb-4">
                 <MapPinned className="text-on-primary" size={22} />
               </div>
@@ -91,15 +91,22 @@ export default function AboutPage() {
                 ))}
               </div>
             </div>
-            {RANTING.map((r) => (
-              <div key={r.name} className="bg-surface-container-low border border-outline-variant rounded-xl p-6 flex flex-col">
-                <div className="w-12 h-12 bg-primary-container/15 rounded-full flex items-center justify-center mb-4">
-                  <GraduationCap className="text-primary-container" size={22} />
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              {RANTING.map((r) => (
+                <div
+                  key={r.name}
+                  className="bg-surface-container-low border border-outline-variant rounded-xl p-6 flex items-center gap-4"
+                >
+                  <div className="w-12 h-12 shrink-0 bg-primary-container/15 rounded-full flex items-center justify-center">
+                    <GraduationCap className="text-primary-container" size={22} />
+                  </div>
+                  <div>
+                    <p className="text-label-caps uppercase tracking-wide text-on-surface-variant mb-1">Ranting {r.name}</p>
+                    <p className="text-headline-sm text-on-surface">{r.campus}</p>
+                  </div>
                 </div>
-                <p className="text-label-caps uppercase tracking-wide text-on-surface-variant mb-1">Ranting {r.name}</p>
-                <p className="text-headline-sm text-on-surface">{r.campus}</p>
-              </div>
-            ))}
+              ))}
+            </div>
           </div>
         </section>
 
