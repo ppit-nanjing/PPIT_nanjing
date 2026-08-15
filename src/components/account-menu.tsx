@@ -2,7 +2,7 @@
 
 import { useSession, signIn, signOut } from "next-auth/react";
 import { useState } from "react";
-import { ChevronDown, ShieldCheck, User, LogOut } from "lucide-react";
+import { ChevronDown, ShieldCheck, User, LogOut, Inbox } from "lucide-react";
 
 /**
  * Profile hover menu. The "Masuk ke Console" (admin) link only renders when
@@ -50,6 +50,9 @@ export function AccountMenu() {
         <div className="absolute right-0 top-full w-52 bg-surface-container-lowest border border-outline-variant rounded-lg shadow-lg py-2 z-50">
           <a href="/profile" className="flex items-center gap-2 px-4 py-2 text-sm hover:bg-surface-container-high transition-colors">
             <User size={16} /> Profil Saya
+          </a>
+          <a href="/profile/submissions" className="flex items-center gap-2 px-4 py-2 text-sm hover:bg-surface-container-high transition-colors">
+            <Inbox size={16} /> Riwayat Pengajuan
           </a>
           {session.user.isAdmin && (
             <a
