@@ -48,7 +48,30 @@ export default async function ConsoleEventDetailPage({ params }: { params: Promi
             />
             <input name="capacity" type="number" min={1} defaultValue={event.capacity ?? ""} placeholder="Kapasitas" className="bg-soft-gray rounded-md p-3 text-body-md" />
           </div>
+          <div className="grid grid-cols-2 gap-4">
+            <input
+              name="coverImageUrl"
+              type="url"
+              defaultValue={event.coverImageUrl ?? ""}
+              placeholder="URL Gambar Sampul"
+              className="bg-soft-gray rounded-md p-3 text-body-md"
+            />
+            <input
+              name="registrationDeadline"
+              type="datetime-local"
+              defaultValue={event.registrationDeadline ? new Date(event.registrationDeadline).toISOString().slice(0, 16) : ""}
+              placeholder="Batas Pendaftaran"
+              className="bg-soft-gray rounded-md p-3 text-body-md"
+            />
+          </div>
           <textarea name="description" defaultValue={event.description ?? ""} rows={3} className="bg-soft-gray rounded-md p-3 text-body-md resize-none" />
+          <textarea
+            name="agenda"
+            defaultValue={event.agenda ?? ""}
+            placeholder={"Agenda/Jadwal (satu baris per item, contoh:\n18:00 - Registrasi\n19:00 - Pembukaan)"}
+            rows={3}
+            className="bg-soft-gray rounded-md p-3 text-body-md resize-none"
+          />
           <select name="status" defaultValue={event.status} className="bg-soft-gray rounded-md p-3 text-body-md">
             <option value="draft">Draf</option>
             <option value="published">Dipublikasikan</option>
