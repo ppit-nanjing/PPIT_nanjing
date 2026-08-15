@@ -36,10 +36,10 @@ export default async function OrganizationPage() {
       <div className="flex flex-wrap gap-3 mt-4 pt-4 border-t border-outline-variant">
         {members.map((m, i) => (
           <div key={i} className="flex items-center gap-2">
-            {m.image || m.avatarUrl ? (
+            {m.avatarUrl || m.image ? (
               // eslint-disable-next-line @next/next/no-img-element
               <img
-                src={m.image ?? m.avatarUrl ?? undefined}
+                src={m.avatarUrl || m.image || undefined}
                 alt={m.name ?? ""}
                 className="w-8 h-8 rounded-full object-cover border border-outline-variant"
               />
