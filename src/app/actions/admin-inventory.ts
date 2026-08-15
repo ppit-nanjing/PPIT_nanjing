@@ -4,7 +4,7 @@ import { eq, sql } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { auth } from "@/auth";
 import { db } from "@/db";
-import { inventoryItems, borrowRequests, inventoryAuditLogs } from "@/db/schema";
+import { inventoryItems, borrowRequests, inventoryAuditLogs, externalLoans } from "@/db/schema";
 import { hasModuleAccess } from "@/lib/admin-scope";
 import { createNotification } from "@/lib/notifications";
 
@@ -104,6 +104,103 @@ export async function markReturned(requestId: string) {
     .update(borrowRequests)
     .set({ status: "returned", returnedAt: new Date() })
     .where(eq(borrowRequests.id, requestId));
+
+  revalidatePath("/console/inventory");
+}
+
+// §4c - PPIT lends its OWN asset to an external (non-registered) party. Admin
+// only. Decrements availableQuantity and mirrors the event into
+// inventory_audit_logs (action "lent_external") so the item's full history
+// stays in one place.
+export async function recordExternalLoan(formData: FormData) {
+  const actorId = await requireAdmin();
+  const itemId = String(formData.get("itemId") ?? "").trim();
+  const borrowerName = String(formData.get("borrowerName") ?? "").trim();
+  const borrowerContact = String(formData.get("borrowerContact") ?? "").trim();
+  const purpose = String(formData.get("purpose") ?? "").trim();
+  const quantity = Number(formData.get("quantity") ?? 1);
+  const conditionOut = String(formData.get("conditionOut") ?? "").trim();
+  const expectedReturnAt = String(formData.get("expectedReturnAt") ?? "").trim();
+  const notes = String(formData.get("notes") ?? "").trim();
+
+  if (!itemId || !borrowerName) throw new Error("Barang dan nama peminjam wajib diisi");
+  if (!Number.isFinite(quantity) || quantity < 1) throw new Error("Jumlah tidak valid");
+
+  const [item] = await db.select().from(inventoryItems).where(eq(inventoryItems.id, itemId));
+  if (!item) throw new Error("Barang tidak ditemukan");
+  if (item.availableQuantity < quantity) throw new Error("Stok tidak cukup untuk dipinjam keluar");
+
+  await db
+    .update(inventoryItems)
+    .set({ availableQuantity: sql`${inventoryItems.availableQuantity} - ${quantity}` })
+    .where(eq(inventoryItems.id, itemId));
+
+  await db.insert(externalLoans).values({
+    itemId,
+    borrowerName,
+    borrowerContact: borrowerContact || null,
+    purpose: purpose || null,
+    quantity,
+    conditionOut: (["new", "good", "fair", "damaged", "retired"].includes(conditionOut) ? conditionOut : null) as
+      | "new"
+      | "good"
+      | "fair"
+      | "damaged"
+      | "retired"
+      | undefined,
+    expectedReturnAt: expectedReturnAt || null,
+    recordedBy: actorId,
+    status: "active",
+    notes: notes || null,
+  });
+
+  await db.insert(inventoryAuditLogs).values({
+    itemId,
+    performedBy: actorId,
+    action: "lent_external",
+    quantityDelta: -quantity,
+    note: `Dipinjam keluar ke ${borrowerName}`,
+  });
+
+  revalidatePath("/console/inventory");
+}
+
+// §4c - external loan returned: restores stock and records condition_in.
+export async function returnExternalLoan(formData: FormData) {
+  const actorId = await requireAdmin();
+  const loanId = String(formData.get("loanId") ?? "").trim();
+  const conditionIn = String(formData.get("conditionIn") ?? "").trim();
+
+  const [loan] = await db.select().from(externalLoans).where(eq(externalLoans.id, loanId));
+  if (!loan || loan.status !== "active") return;
+
+  await db
+    .update(inventoryItems)
+    .set({ availableQuantity: sql`${inventoryItems.availableQuantity} + ${loan.quantity}` })
+    .where(eq(inventoryItems.id, loan.itemId));
+
+  await db
+    .update(externalLoans)
+    .set({
+      status: "returned",
+      returnedAt: new Date(),
+      conditionIn: (["new", "good", "fair", "damaged", "retired"].includes(conditionIn) ? conditionIn : null) as
+        | "new"
+        | "good"
+        | "fair"
+        | "damaged"
+        | "retired"
+        | undefined,
+    })
+    .where(eq(externalLoans.id, loanId));
+
+  await db.insert(inventoryAuditLogs).values({
+    itemId: loan.itemId,
+    performedBy: actorId,
+    action: "returned_external",
+    quantityDelta: loan.quantity,
+    note: `Dikembalikan oleh ${loan.borrowerName}`,
+  });
 
   revalidatePath("/console/inventory");
 }
