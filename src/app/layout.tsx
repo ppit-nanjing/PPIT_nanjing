@@ -1,9 +1,8 @@
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import { Providers } from "@/components/providers";
-import { FeedbackWidget } from "@/components/feedback/feedback-widget";
 import { OnboardingModal } from "@/components/onboarding-modal";
-import { AiChatbot } from "@/components/ai/ai-chatbot";
+import { HelpCenter } from "@/components/ai/help-center";
 import { auth } from "@/auth";
 import "./globals.css";
 
@@ -29,8 +28,7 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
       <body className="antialiased">
         <Providers session={session}>
           {children}
-          <FeedbackWidget />
-          {session?.user && <AiChatbot />}
+          <HelpCenter authed={!!session?.user} />
           <OnboardingModal />
         </Providers>
       </body>
