@@ -3,7 +3,7 @@ import { db } from "@/db";
 import { galleryAlbums, galleryPhotos } from "@/db/schema";
 import { SiteNav } from "@/components/site-nav";
 import { SiteFooter } from "@/components/site-footer";
-import { Images } from "lucide-react";
+import { Images, Archive } from "lucide-react";
 
 export default async function GalleryPage() {
   const albums = await db.select().from(galleryAlbums).orderBy(desc(galleryAlbums.createdAt));
@@ -15,11 +15,19 @@ export default async function GalleryPage() {
     <div className="min-h-screen bg-background text-on-background">
       <SiteNav />
 
-      <header className="max-w-[var(--container-max)] mx-auto px-[var(--spacing-container-padding)] pt-16 pb-8">
-        <h1 className="text-headline-lg md:text-display-hero-mobile text-on-background mb-4">Galeri</h1>
-        <p className="text-body-lg text-on-surface-variant max-w-2xl">
-          Momen-momen kegiatan PPIT Nanjing, terdokumentasi per album.
-        </p>
+      <header className="max-w-[var(--container-max)] mx-auto px-[var(--spacing-container-padding)] pt-16 pb-8 flex items-end justify-between gap-4 flex-wrap">
+        <div>
+          <h1 className="text-headline-lg md:text-display-hero-mobile text-on-background mb-4">Galeri</h1>
+          <p className="text-body-lg text-on-surface-variant max-w-2xl">
+            Momen-momen kegiatan PPIT Nanjing, terdokumentasi per album.
+          </p>
+        </div>
+        <a
+          href="/gallery/archive"
+          className="flex items-center gap-2 text-label-caps text-primary-container hover:text-primary transition-colors shrink-0"
+        >
+          <Archive size={16} /> Arsip per Tahun
+        </a>
       </header>
 
       <main className="max-w-[var(--container-max)] mx-auto px-[var(--spacing-container-padding)] pb-24">
