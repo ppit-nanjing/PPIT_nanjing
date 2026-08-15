@@ -14,11 +14,11 @@ export default async function ConsoleContentPage() {
   const albums = await db.select().from(galleryAlbums).orderBy(desc(galleryAlbums.createdAt));
 
   return (
-    <div className="px-8 py-10">
-      <h1 className="text-headline-lg text-on-background mb-8">Konten</h1>
+    <div className="px-4 py-6 sm:px-6 lg:px-8 lg:py-10">
+      <h1 className="text-headline-md sm:text-headline-lg text-on-background mb-8">Konten</h1>
 
       <section className="mb-12">
-        <div className="flex items-center justify-between mb-4">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between mb-4">
           <h2 className="text-headline-md text-on-background flex items-center gap-2">
             <Newspaper size={20} className="text-primary-container" /> Berita
           </h2>
@@ -47,7 +47,7 @@ export default async function ConsoleContentPage() {
       </section>
 
       <section>
-        <div className="flex items-center justify-between mb-4">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between mb-4">
           <h2 className="text-headline-md text-on-background flex items-center gap-2">
             <Images size={20} className="text-primary-container" /> Galeri
           </h2>
@@ -63,7 +63,7 @@ export default async function ConsoleContentPage() {
             </form>
           </details>
         </div>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           {albums.length === 0 && <p className="text-body-md text-on-surface-variant col-span-full">Belum ada album.</p>}
           {albums.map((al) => (
             <a
