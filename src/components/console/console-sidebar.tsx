@@ -1,13 +1,14 @@
-import { MessageSquare, LayoutDashboard, ArrowLeft, Users, Building2, CalendarDays } from "lucide-react";
+import { MessageSquare, LayoutDashboard, ArrowLeft, Users, Building2, CalendarDays, Package } from "lucide-react";
 
 // Remaining admin modules documented in docs/Information Architecture.md §
-// Admin Console still need their own /console/* pages (Inventory, Reports,
-// Documentation) - added here as each one gets built.
+// Admin Console still need their own /console/* pages (Reports, Documentation)
+// - added here as each one gets built.
 const NAV = [
   { href: "/console", label: "Dashboard", icon: LayoutDashboard },
   { href: "/console/users", label: "Pengguna", icon: Users },
   { href: "/console/organization", label: "Organisasi", icon: Building2 },
   { href: "/console/events", label: "Kegiatan", icon: CalendarDays },
+  { href: "/console/inventory", label: "Inventaris", icon: Package },
   { href: "/console/feedback", label: "Masukan Pengguna", icon: MessageSquare },
 ];
 
