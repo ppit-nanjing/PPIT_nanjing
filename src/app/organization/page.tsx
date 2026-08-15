@@ -3,7 +3,45 @@ import { db } from "@/db";
 import { departments, departmentMembers, users } from "@/db/schema";
 import { SiteNav } from "@/components/site-nav";
 import { SiteFooter } from "@/components/site-footer";
-import { Building2, UserRound } from "lucide-react";
+import { Building2, UserRound, Briefcase, Camera, FolderGit2, Music2, Video } from "lucide-react";
+
+type SocialLinks = {
+  linkedinUrl: string | null;
+  instagramUrl: string | null;
+  githubUrl: string | null;
+  spotifyUrl: string | null;
+  tiktokUrl: string | null;
+};
+
+// lucide-react dropped brand icons in this version, so all 5 use generic
+// stand-ins (per Advanced Features Build Spec §3c "keputusan visual kecil").
+function SocialIcons({ member }: { member: SocialLinks }) {
+  const links: { url: string | null; label: string; Icon: typeof Briefcase }[] = [
+    { url: member.linkedinUrl, label: "LinkedIn", Icon: Briefcase },
+    { url: member.instagramUrl, label: "Instagram", Icon: Camera },
+    { url: member.githubUrl, label: "GitHub", Icon: FolderGit2 },
+    { url: member.spotifyUrl, label: "Spotify", Icon: Music2 },
+    { url: member.tiktokUrl, label: "TikTok", Icon: Video },
+  ].filter((l) => l.url);
+
+  if (links.length === 0) return null;
+  return (
+    <div className="flex items-center gap-2 mt-1">
+      {links.map(({ url, label, Icon }) => (
+        <a
+          key={label}
+          href={url!}
+          target="_blank"
+          rel="noopener noreferrer"
+          aria-label={label}
+          className="text-on-surface-variant hover:text-primary-container transition-colors"
+        >
+          <Icon size={13} />
+        </a>
+      ))}
+    </div>
+  );
+}
 
 export default async function OrganizationPage() {
   const topLevel = await db.select().from(departments).where(isNull(departments.parentDepartmentId));
@@ -18,6 +56,11 @@ export default async function OrganizationPage() {
       name: users.name,
       image: users.image,
       avatarUrl: users.avatarUrl,
+      linkedinUrl: users.linkedinUrl,
+      instagramUrl: users.instagramUrl,
+      githubUrl: users.githubUrl,
+      spotifyUrl: users.spotifyUrl,
+      tiktokUrl: users.tiktokUrl,
     })
     .from(departmentMembers)
     .leftJoin(users, eq(departmentMembers.userId, users.id));
@@ -51,6 +94,7 @@ export default async function OrganizationPage() {
             <div>
               <p className="text-label-caps font-semibold text-on-background leading-tight">{m.name ?? "Anggota"}</p>
               {m.position && <p className="text-label-caps text-on-surface-variant leading-tight">{m.position}</p>}
+              <SocialIcons member={m} />
             </div>
           </div>
         ))}
