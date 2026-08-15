@@ -5,6 +5,7 @@ import { newsArticles } from "@/db/schema";
 import { requireModuleAccess } from "@/lib/admin-scope";
 import { upsertNewsArticle } from "@/app/actions/admin-content";
 import { FileUpload } from "@/components/upload/file-upload";
+import { AIImproveButton } from "@/components/ai/ai-improve-button";
 
 export default async function EditNewsArticlePage({ params }: { params: Promise<{ id: string }> }) {
   await requireModuleAccess("content");
@@ -32,12 +33,16 @@ export default async function EditNewsArticlePage({ params }: { params: Promise<
               className="bg-soft-gray rounded-md p-3 text-body-md"
             />
           </div>
-        <textarea
-          name="content"
-          defaultValue={article.content ?? ""}
-          rows={10}
-          className="bg-soft-gray rounded-md p-3 text-body-md resize-none"
-        />
+        <div>
+          <textarea
+            id="news-content"
+            name="content"
+            defaultValue={article.content ?? ""}
+            rows={10}
+            className="bg-soft-gray rounded-md p-3 text-body-md resize-none w-full"
+          />
+          <AIImproveButton context="news" targetId="news-content" className="mt-1" />
+        </div>
         <label className="flex items-center gap-2 text-body-md text-on-background">
           <input type="checkbox" name="publish" defaultChecked={article.status === "published"} className="w-4 h-4" />
           Dipublikasikan
