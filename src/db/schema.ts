@@ -15,7 +15,7 @@ import {
 } from "drizzle-orm/pg-core";
 
 // ---------- Enums ----------
-export const userStatusEnum = pgEnum("user_status", ["active", "inactive", "suspended"]);
+export const userStatusEnum = pgEnum("user_status", ["invited", "active", "inactive", "suspended"]);
 export const sensusCompletionEnum = pgEnum("sensus_completion_status", ["incomplete", "complete"]);
 export const orgDocTypeEnum = pgEnum("org_document_type", ["ad_art", "guideline", "other"]);
 export const branchRegionEnum = pgEnum("branch_region", ["north", "east", "south", "central", "west"]);
@@ -48,7 +48,17 @@ export const membershipApplicationStatusEnum = pgEnum("membership_application_st
   "accepted",
   "rejected",
 ]);
-export const inventoryConditionEnum = pgEnum("inventory_condition", ["good", "damaged", "retired"]);
+// One source of truth for an item's physical state across inventoryItems,
+// itemContributions and externalLoans. Expanded 2026-08-15 from the original
+// 3 values (good/damaged/retired) - backwards compatible, the 3 old values
+// remain valid.
+export const inventoryConditionEnum = pgEnum("inventory_condition", [
+  "new", // baru / belum pernah dipakai
+  "good", // baik / masih bagus
+  "fair", // cukup baik - ada tanda pakai, tapi masih layak fungsi
+  "damaged", // rusak
+  "retired", // dipensiunkan / tidak dipakai lagi
+]);
 export const borrowRequestStatusEnum = pgEnum("borrow_request_status", [
   "pending",
   "approved",
@@ -62,7 +72,11 @@ export const inventoryAuditActionEnum = pgEnum("inventory_audit_action", [
   "adjusted",
   "damaged",
   "retired",
+  "lent_external",
+  "returned_external",
 ]);
+
+export const externalLoanStatusEnum = pgEnum("external_loan_status", ["active", "returned", "overdue"]);
 export const reportTypeEnum = pgEnum("report_type", [
   "event_attendance",
   "inventory_audit",
@@ -115,6 +129,14 @@ export const users = pgTable("users", {
   roleId: uuid("role_id").references(() => roles.id),
   phone: text("phone"),
   wechatId: text("wechat_id"),
+  // All optional social links - "kalau ada yang punya" (confirmed 2026-08-15).
+  // No separate public contact-email column: users.email (login identity) IS
+  // the public contact address, on purpose.
+  linkedinUrl: text("linkedin_url"),
+  instagramUrl: text("instagram_url"),
+  githubUrl: text("github_url"),
+  spotifyUrl: text("spotify_url"),
+  tiktokUrl: text("tiktok_url"),
   status: userStatusEnum("status").notNull().default("active"),
   // Null = never asked yet (triggers the first-login onboarding prompt). True/false
   // once the user has answered. Opt-in by design - never defaults to true.
@@ -181,6 +203,9 @@ export const sensusProfiles = pgTable("sensus_profiles", {
   scholarshipType: text("scholarship_type"),
   emergencyContactName: text("emergency_contact_name"),
   emergencyContactPhone: text("emergency_contact_phone"),
+  // Required for completionStatus "complete" - proof the person is actually
+  // studying in China, not just profile decoration (confirmed 2026-08-15).
+  photoUrl: text("photo_url"),
   completionStatus: sensusCompletionEnum("completion_status").notNull().default("incomplete"),
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
 });
@@ -389,6 +414,12 @@ export const membershipApplications = pgTable("membership_applications", {
 
 // ---------- 7. Inventory & Borrowing ----------
 
+export const contributionTypeEnum = pgEnum("contribution_type", ["donate", "lend_to_org"]);
+export const contributionStatusEnum = pgEnum("contribution_status", ["pending", "approved", "rejected"]);
+
+export const procurementUrgencyEnum = pgEnum("procurement_urgency", ["low", "medium", "high"]);
+export const procurementStatusEnum = pgEnum("procurement_status", ["pending", "approved", "rejected", "fulfilled"]);
+
 export const inventoryItems = pgTable("inventory_items", {
   id: uuid("id").defaultRandom().primaryKey(),
   name: text("name").notNull(),
@@ -423,6 +454,63 @@ export const inventoryAuditLogs = pgTable("inventory_audit_logs", {
   quantityDelta: integer("quantity_delta").notNull().default(0),
   note: text("note"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
+// Member-donated / member-loaned personal items (§4a). Stays a separate table
+// from inventoryItems until an admin approves it into the org's own catalog -
+// a contributed item is NOT org property until then.
+export const itemContributions = pgTable("item_contributions", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  userId: uuid("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  name: text("name").notNull(),
+  category: text("category"),
+  description: text("description"),
+  imageUrl: text("image_url"),
+  condition: inventoryConditionEnum("condition").notNull().default("good"),
+  contributionType: contributionTypeEnum("contribution_type").notNull(),
+  expectedReturnDate: date("expected_return_date"), // only when contributionType = lend_to_org
+  status: contributionStatusEnum("status").notNull().default("pending"),
+  reviewedBy: uuid("reviewed_by").references(() => users.id),
+  reviewedAt: timestamp("reviewed_at"),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
+// Member-requested procurement (§4b) - asking PPIT to buy a new item, distinct
+// from donating/lending a personal one (§4a).
+export const procurementRequests = pgTable("procurement_requests", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  userId: uuid("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  itemName: text("item_name").notNull(),
+  category: text("category"),
+  justification: text("justification"),
+  estimatedCost: integer("estimated_cost"), // whole-number RMB (no decimals) per 2026-08-15 decision
+  urgency: procurementUrgencyEnum("urgency").notNull().default("medium"),
+  status: procurementStatusEnum("status").notNull().default("pending"),
+  reviewedBy: uuid("reviewed_by").references(() => users.id),
+  reviewedAt: timestamp("reviewed_at"),
+  fulfilledAt: timestamp("fulfilled_at"),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
+// PPIT lending its OWN assets to an external (non-registered) party (§4c). This
+// is an admin-only action; borrowerName is free text (not a users FK) because
+// the borrower is by definition outside the org. recordedBy captures which PPIT
+// member ran the transaction.
+export const externalLoans = pgTable("external_loans", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  itemId: uuid("item_id").notNull().references(() => inventoryItems.id, { onDelete: "cascade" }),
+  borrowerName: text("borrower_name").notNull(),
+  borrowerContact: text("borrower_contact"),
+  purpose: text("purpose"),
+  quantity: integer("quantity").notNull().default(1),
+  conditionOut: inventoryConditionEnum("condition_out"),
+  conditionIn: inventoryConditionEnum("condition_in"), // filled on return
+  loanedAt: timestamp("loaned_at").notNull().defaultNow(),
+  expectedReturnAt: date("expected_return_at"),
+  returnedAt: timestamp("returned_at"),
+  recordedBy: uuid("recorded_by").notNull().references(() => users.id),
+  status: externalLoanStatusEnum("status").notNull().default("active"),
+  notes: text("notes"),
 });
 
 // ---------- 8. Admin & System ----------
