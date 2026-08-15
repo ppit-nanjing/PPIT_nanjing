@@ -432,6 +432,9 @@ export const membershipFieldTypeEnum = pgEnum("membership_field_type", [
   "number",
   "select",
   "date",
+  "checkbox",
+  "image",
+  "url",
 ]);
 
 // Configurable fields for the public membership application form (Join Us).
