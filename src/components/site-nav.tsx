@@ -7,14 +7,14 @@ import { AccountMenu } from "@/components/account-menu";
 import { NotificationBell } from "@/components/notifications/notification-bell";
 import { NAV_LINKS } from "@/lib/nav-links";
 
-// Scroll-driven glass effect: fully off (transparent, no blur) at rest,
-// fades the glass in as you scroll, reverses smoothly back to off scrolling
-// back up. No width/shape animation - that turned out broken (the reference's
-// own navbar is a fixed-height 50px pill at every scroll position, just
-// resizing width within that same shape, not a bar that morphs into a pill -
-// re-shaping our full-width bar into a floating capsule on scroll was the
-// wrong read of it). The real ask was a shorter, more compressed bar height,
-// which is the h-12/h-14 below, not a shape change.
+// Scroll-driven shrink + glass, corrected to match the reference's actual
+// mechanics (docs: reference's .navbar is ALWAYS a fixed-height, fully
+// rounded pill at every scroll position - border-radius never animates,
+// only width does - and its `navbar-header` wrapper always carries a small
+// fixed padding so the pill never touches the viewport edge). Solid opaque
+// white at rest (no blur); the translucent glass look and blur only appear
+// as it shrinks, and even then stays fairly solid - not an aggressive see-
+// through effect.
 function useScrollProgress(maxScroll = 300) {
   const [progress, setProgress] = useState(0);
 
@@ -40,28 +40,37 @@ export function SiteNav() {
     setMenuOpen(false);
   }, [pathname]);
 
-  // Glass: fully off at rest (alpha 0, no blur) - fades in as you scroll,
-  // fades back out on the way up. Everything below is a plain 0->1 ramp; the
-  // actual smoothing/easing comes from the CSS `transition` on these
-  // properties in the style block, not from the JS.
-  const bgAlpha = 0.9 * progress; // 0 -> 0.9
-  const blurPx = Math.round(progress * 20); // 0 -> 20px
+  // Width: shrinks from full-bleed down to a narrower floating pill as you
+  // scroll. Shape stays a constant rounded-full pill throughout (see note
+  // above) - only width/opacity/blur/shadow animate, never the radius.
+  const startWidthPct = 100;
+  const endWidthPct = 40;
+  const widthPct = startWidthPct - (startWidthPct - endWidthPct) * progress;
+
+  // Opacity/blur: solid opaque white (alpha 1, no blur) at rest. As you
+  // shrink, it eases into a translucent glass look - kept fairly solid
+  // (alpha floor ~0.82, not an aggressive see-through) rather than a heavy
+  // frosted effect.
+  const bgAlpha = 1 - 0.18 * progress; // 1 -> 0.82
+  const blurPx = Math.round(progress * 14); // 0 -> 14px
   const shadowAlpha = (progress * 0.14).toFixed(3);
   const borderAlpha = (progress * 0.5).toFixed(3);
 
   return (
     <>
-      <header className="w-full sticky top-0 z-50">
+      <header className="w-full sticky top-0 z-50 flex justify-center p-2.5">
         <nav
-          className="w-full"
+          className="rounded-full overflow-hidden"
           style={{
+            width: `min(100%, ${widthPct}%)`,
+            maxWidth: "var(--container-max)",
             backgroundColor: `rgba(255,248,247,${bgAlpha})`,
             backdropFilter: `blur(${blurPx}px) saturate(140%)`,
             WebkitBackdropFilter: `blur(${blurPx}px) saturate(140%)`,
             boxShadow: `0 10px 30px rgba(39,23,22,${shadowAlpha})`,
-            borderBottom: `1px solid rgba(144,111,108,${borderAlpha})`,
+            border: `1px solid rgba(144,111,108,${borderAlpha})`,
             transition:
-              "background-color 400ms ease, backdrop-filter 400ms ease, -webkit-backdrop-filter 400ms ease, box-shadow 400ms ease, border-color 400ms ease",
+              "width 400ms ease, background-color 400ms ease, backdrop-filter 400ms ease, -webkit-backdrop-filter 400ms ease, box-shadow 400ms ease, border-color 400ms ease",
           }}
         >
           <div className="max-w-[var(--container-max)] mx-auto px-[var(--spacing-container-padding)] flex justify-between items-center h-12 md:h-14">
