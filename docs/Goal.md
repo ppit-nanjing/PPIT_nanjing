@@ -12,7 +12,7 @@ The app was built for real functionality first (every page reads/writes Neon, no
 
 These have zero implementation — not thin, literally missing.
 
-- [ ] **Peta Persebaran** (distribution map) — prototype: `stitch_ppit_nanjing_web_portal/.../peta_persebaran_ppit_nanjing/code.html` (228 lines). Route: `/organization/map`. Reads `regional_branches` (lat/lng already in schema, only 9/32 seeded — see Progress & Handoff gap). Link it from `/organization/branches` and the nav/footer.
+- [x] **Peta Persebaran** — built 2026-08-15 as an SVG scatter plot (real lat/lng, equirectangular projection over China's bounding box) rather than a licensed map tile provider. Linked from `/organization/branches`.
 - [ ] **Review AD/ART Guidelines** — prototype: `review_ad_art_guidelines_ppit_nanjing/code.html` (302 lines). Route: `/organization/ad-art/review`. A read-and-acknowledge gate page (Legal Framework / Student Conduct / Equipment Lending Policies sections per the prototype). Decide whether this is purely informational or an actual gate before some action (original IA docs weren't fully certain either — see `docs/Screens/Public/Organization & Regional Branches.md`).
 - [ ] **Gallery Archive & Filters** — prototype: `gallery_archive_filters_ppit_nanjing/code.html` (324 lines). Route: `/gallery/archive`. Year/cabinet-period filtering over `gallery_albums`.
 - [ ] **Submission History** — prototype: `stitch_ppit_nanjing_web_portal (1)/.../submission_history_ppit_nanjing/code.html` (280 lines). Route: `/profile/submissions`. Per `docs/Screens/Public/Event Flow.md`, this is a cross-domain view — union of the signed-in user's `event_registrations`, `borrow_requests`, and `job_applications`, most recent first.
