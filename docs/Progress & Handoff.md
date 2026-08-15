@@ -8,7 +8,7 @@
 
 ## What's built and working
 
-**Full application — every page is real, no mockups.** Public flows (Events, Jobs, Career, Join Us, Sensus, Inventory borrowing) all write to Neon via server actions. Admin console (`/console`, not `/admin` — deliberately less guessable) has working CRUD for Users, Organization, Events, Inventory, Reports, and Feedback.
+**Full application, every module from the original IA — every page is real, no mockups.** Public flows (Events, Jobs, Career, Join Us, Sensus, Inventory borrowing) all write to Neon via server actions. Admin console (`/console`, not `/admin` — deliberately less guessable) has working CRUD for every module: Users, Organization, Events, Inventory, Reports, Documentation, and Feedback.
 
 - Next.js 16 (App Router, Turbopack) + TypeScript + Tailwind v4, design tokens from [Design System Overview.md](./Design%20System%20Overview.md).
 - **Neon Postgres** (`ap-southeast-1`) via Drizzle ORM — schema matches [Entity Relationship Diagram.md](./Entity%20Relationship%20Diagram.md). Real org structure seeded from the recruitment guidebook (3 Departemen, 9 Divisi, BPH), plus the 9 known PPI Tiongkok regional branches and the actual 2026/2027 recruitment period dates.
@@ -21,6 +21,7 @@
   - `/console/events` — create/edit, registration roster, check-in
   - `/console/inventory` — add items, approve/reject/return borrow requests (atomically adjusts `availableQuantity`)
   - `/console/reports` — real sensus aggregate tallies + CSV student export
+  - `/console/docs` — help articles by section (5 seeded from what's actually built) + editable in-app, `/console/docs/changelog` for release notes
   - `/console/feedback` — inbox for the floating feedback widget
 - **Feedback widget** on every page: 4 categories with per-category draft persistence (localStorage), DOM element picker, admin inbox with filters/copy/status workflow.
 - **Motion** for animation (not GSAP/Aceternity — matches the original "no heavy JS libraries" PRD constraint). `components.json` registers the `@react-bits` registry for future use.
@@ -30,12 +31,13 @@
 
 1. **Auth doesn't work in production yet** — needs real `AUTH_SECRET` / `AUTH_GOOGLE_ID` / `AUTH_GOOGLE_SECRET` **and** `DATABASE_URL` as Vercel env vars (all four, not just the auth three — this tripped up an earlier deploy attempt). Google OAuth client: console.cloud.google.com, redirect URI `<deploy-url>/api/auth/callback/google`.
 2. **Connect GitHub integration on Vercel** (Project Settings → Git) so pushes auto-deploy — my Vercel MCP connector 403'd trying to do this, so it's manual on the owner's end each time.
-3. **Documentation Hub / Help Center** (`/console/docs` + the 7 guide pages) is the one admin module from the original prototype IA still unbuilt — everything else is done.
-4. Resume/CV on job applications is a URL field (e.g. a Drive link), not a file upload — Vercel Blob isn't wired up yet.
-5. Hero background is an original SVG placeholder, not a photo — swap for a licensed Nanjing photograph via Vercel Blob once the org has one, don't hotlink.
-6. `adminModuleScope` seed values for Usaha Dana / Desain / Komunikasi & Konten are inferred from the guidebook's job descriptions, not confirmed by the org, and aren't actually enforced yet (the app currently gates by `isAdmin` only — full vs. none, not per-module scoping). Worth building out if granular per-division admin access matters in practice.
-7. Only 9 of the stated 32 PPI Tiongkok regional branches are seeded — the other 23 aren't named anywhere available to this project.
-8. `favicon.ico` uses the Next.js default, not a custom one.
+3. Resume/CV on job applications is a URL field (e.g. a Drive link), not a file upload — Vercel Blob isn't wired up yet.
+4. Hero background is an original SVG placeholder, not a photo — swap for a licensed Nanjing photograph via Vercel Blob once the org has one, don't hotlink.
+5. `adminModuleScope` seed values for Usaha Dana / Desain / Komunikasi & Konten are inferred from the guidebook's job descriptions, not confirmed by the org, and aren't actually enforced yet (the app currently gates by `isAdmin` only — full vs. none, not per-module scoping). Worth building out if granular per-division admin access matters in practice.
+6. Only 9 of the stated 32 PPI Tiongkok regional branches are seeded — the other 23 aren't named anywhere available to this project.
+7. `favicon.ico` uses the Next.js default, not a custom one.
+
+Every module in the original IA now has a real `/console/*` page — there is no remaining "unbuilt screen" gap, only the polish items above.
 
 ## Decisions worth knowing about (so they don't get re-litigated)
 
