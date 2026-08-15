@@ -9,10 +9,10 @@ export default async function ConsoleOrganizationPage() {
   const isFullAdmin = session.user.adminScope === "full";
 
   return (
-    <div className="px-8 py-10">
-      <div className="flex items-center justify-between mb-8">
+    <div className="px-4 py-6 sm:px-6 lg:px-8 lg:py-10">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between mb-8">
         <div>
-          <h1 className="text-headline-lg text-on-background mb-2">Struktur Organisasi</h1>
+          <h1 className="text-headline-md sm:text-headline-lg text-on-background mb-2">Struktur Organisasi</h1>
           <p className="text-body-md text-on-surface-variant">
             Kelola departemen dan divisi PPIT Nanjing. Perubahan tercatat di{" "}
             <a href="/console/organization/audit-log" className="text-primary-container underline">
