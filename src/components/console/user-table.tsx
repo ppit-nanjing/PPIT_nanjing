@@ -8,7 +8,7 @@ interface Row {
   name: string | null;
   email: string;
   image: string | null;
-  status: "active" | "inactive" | "suspended";
+  status: "invited" | "active" | "inactive" | "suspended";
   roleId: string | null;
   departmentId: string | null;
   position: string;
@@ -113,7 +113,7 @@ function UserRow({ user, roles, departments }: { user: Row; roles: Role[]; depar
         </select>
       </td>
       <td className="px-5 py-3">
-        <select
+          <select
           value={status}
           onChange={(e) => {
             const next = e.target.value as Row["status"];
@@ -122,6 +122,7 @@ function UserRow({ user, roles, departments }: { user: Row; roles: Role[]; depar
           }}
           className="bg-soft-gray rounded-md px-2 py-1.5 text-body-md"
         >
+          <option value="invited">Diundang</option>
           <option value="active">Aktif</option>
           <option value="inactive">Nonaktif</option>
           <option value="suspended">Ditangguhkan</option>
