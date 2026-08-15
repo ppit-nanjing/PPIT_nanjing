@@ -6,6 +6,7 @@ import { requireModuleAccess } from "@/lib/admin-scope";
 import { upsertNewsArticle } from "@/app/actions/admin-content";
 import { FileUpload } from "@/components/upload/file-upload";
 import { AIImproveButton } from "@/components/ai/ai-improve-button";
+import { AIReviewButton } from "@/components/ai/ai-review-popup";
 
 export default async function EditNewsArticlePage({ params }: { params: Promise<{ id: string }> }) {
   await requireModuleAccess("content");
@@ -17,7 +18,7 @@ export default async function EditNewsArticlePage({ params }: { params: Promise<
     <div className="px-8 py-10 max-w-2xl">
       <h1 className="text-headline-lg text-on-background mb-8">Edit Berita</h1>
       <form action={upsertNewsArticle.bind(null, article.id)} className="flex flex-col gap-6">
-        <input name="title" defaultValue={article.title} required className="bg-soft-gray rounded-md p-3 text-body-md" />
+        <input id="news-title" name="title" defaultValue={article.title} required className="bg-soft-gray rounded-md p-3 text-body-md" />
           <div className="grid grid-cols-2 gap-4">
             <FileUpload
               name="coverImageUrl"
@@ -41,7 +42,10 @@ export default async function EditNewsArticlePage({ params }: { params: Promise<
             rows={10}
             className="bg-soft-gray rounded-md p-3 text-body-md resize-none w-full"
           />
-          <AIImproveButton context="news" targetId="news-content" className="mt-1" />
+          <div className="flex items-center gap-4 mt-1">
+            <AIImproveButton context="news" targetId="news-content" />
+            <AIReviewButton context="news" fields={[{ id: "news-title", label: "Judul" }, { id: "news-content", label: "Isi" }]} />
+          </div>
         </div>
         <label className="flex items-center gap-2 text-body-md text-on-background">
           <input type="checkbox" name="publish" defaultChecked={article.status === "published"} className="w-4 h-4" />
