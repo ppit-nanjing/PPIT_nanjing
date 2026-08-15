@@ -8,22 +8,29 @@ import {
   Package,
   FileBarChart,
   BookOpen,
+  Images,
 } from "lucide-react";
+import { hasModuleAccess, type AdminModule } from "@/lib/admin-scope";
 
-// Every module from docs/Information Architecture.md § Admin Console now has
-// a /console/* page - Documentation & Help Center was the last one built.
-const NAV = [
-  { href: "/console", label: "Dashboard", icon: LayoutDashboard },
-  { href: "/console/users", label: "Pengguna", icon: Users },
-  { href: "/console/organization", label: "Organisasi", icon: Building2 },
-  { href: "/console/events", label: "Kegiatan", icon: CalendarDays },
-  { href: "/console/inventory", label: "Inventaris", icon: Package },
-  { href: "/console/reports", label: "Laporan", icon: FileBarChart },
-  { href: "/console/docs", label: "Dokumentasi", icon: BookOpen },
-  { href: "/console/feedback", label: "Masukan Pengguna", icon: MessageSquare },
+// `module: null` = always visible to anyone who got past the layout gate
+// (Dashboard, Documentation are meta/support, not sensitive management).
+// `module: "users"/"organization"/"feedback"` aren't delegable via
+// adminModuleScope (no seed row lists them) - full tier only.
+const NAV: { href: string; label: string; icon: typeof LayoutDashboard; module: AdminModule | null }[] = [
+  { href: "/console", label: "Dashboard", icon: LayoutDashboard, module: null },
+  { href: "/console/users", label: "Pengguna", icon: Users, module: "users" },
+  { href: "/console/organization", label: "Organisasi", icon: Building2, module: "organization" },
+  { href: "/console/events", label: "Kegiatan", icon: CalendarDays, module: "events" },
+  { href: "/console/inventory", label: "Inventaris", icon: Package, module: "inventory" },
+  { href: "/console/content", label: "Konten", icon: Images, module: "content" },
+  { href: "/console/reports", label: "Laporan", icon: FileBarChart, module: "reports" },
+  { href: "/console/docs", label: "Dokumentasi", icon: BookOpen, module: null },
+  { href: "/console/feedback", label: "Masukan Pengguna", icon: MessageSquare, module: "feedback" },
 ];
 
-export function ConsoleSidebar({ userName }: { userName: string }) {
+export function ConsoleSidebar({ userName, scope }: { userName: string; scope: "full" | string[] | null }) {
+  const visible = NAV.filter((item) => item.module === null || hasModuleAccess(scope, item.module));
+
   return (
     <aside className="w-64 shrink-0 bg-surface-container-lowest border-r border-outline-variant min-h-screen flex flex-col">
       <div className="px-6 py-6 border-b border-outline-variant">
@@ -31,7 +38,7 @@ export function ConsoleSidebar({ userName }: { userName: string }) {
         <p className="text-label-caps text-on-surface-variant mt-1">{userName}</p>
       </div>
       <nav className="flex-1 py-4">
-        {NAV.map((item) => (
+        {visible.map((item) => (
           <a
             key={item.href}
             href={item.href}
