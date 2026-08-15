@@ -1,5 +1,6 @@
 import { db } from "@/db";
 import { sensusProfiles, users } from "@/db/schema";
+import { requireModuleAccess } from "@/lib/admin-scope";
 import { Download, Users as UsersIcon, GraduationCap, MapPin } from "lucide-react";
 
 function tally(values: (string | null)[]): { label: string; count: number }[] {
@@ -12,6 +13,7 @@ function tally(values: (string | null)[]): { label: string; count: number }[] {
 }
 
 export default async function ConsoleReportsPage() {
+  await requireModuleAccess("reports");
   const allUsers = await db.select().from(users);
   const allSensus = await db.select().from(sensusProfiles);
 
