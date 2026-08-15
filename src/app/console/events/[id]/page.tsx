@@ -4,8 +4,10 @@ import { db } from "@/db";
 import { events, eventRegistrations, users } from "@/db/schema";
 import { updateEvent } from "@/app/actions/admin-events";
 import { RegistrationList } from "@/components/console/registration-list";
+import { requireModuleAccess } from "@/lib/admin-scope";
 
 export default async function ConsoleEventDetailPage({ params }: { params: Promise<{ id: string }> }) {
+  await requireModuleAccess("events");
   const { id } = await params;
   const [event] = await db.select().from(events).where(eq(events.id, id));
   if (!event) notFound();
