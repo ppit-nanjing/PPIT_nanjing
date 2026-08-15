@@ -1,6 +1,7 @@
 import { eq, and } from "drizzle-orm";
 import QRCode from "qrcode";
 import { redirect, notFound } from "next/navigation";
+import { headers } from "next/headers";
 import { auth } from "@/auth";
 import { db } from "@/db";
 import { events, eventRegistrations } from "@/db/schema";
@@ -23,7 +24,16 @@ export default async function EventTicketPage({ params }: { params: Promise<{ sl
 
   if (!registration) redirect(`/events/${slug}`);
 
-  const qrDataUrl = await QRCode.toDataURL(registration.qrCodeToken ?? registration.id, { margin: 1, width: 240 });
+  // Encode an absolute check-in URL (not just the raw token) so any phone camera
+  // can scan it and open the admin scanner directly, which identifies the user.
+  const headerList = await headers();
+  const host = headerList.get("x-forwarded-host") ?? headerList.get("host");
+  const proto = headerList.get("x-forwarded-proto") ?? "https";
+  const origin = host ? `${proto}://${host}` : "";
+  const token = registration.qrCodeToken ?? registration.id;
+  const checkInUrl = `${origin}/console/events/${event.id}/scan?t=${encodeURIComponent(token)}`;
+
+  const qrDataUrl = await QRCode.toDataURL(checkInUrl, { margin: 1, width: 240 });
 
   return (
     <div className="min-h-screen bg-background text-on-background">
