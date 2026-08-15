@@ -27,8 +27,8 @@ export function RegistrationList({ eventId, registrations }: { eventId: string; 
   }
 
   return (
-    <div className="bg-surface-container-lowest border border-outline-variant rounded-xl overflow-hidden">
-      <table className="w-full text-body-md">
+      <div className="bg-surface-container-lowest border border-outline-variant rounded-xl overflow-x-auto">
+      <table className="w-full text-body-md min-w-[480px]">
         <thead className="bg-surface-container-low text-label-caps uppercase tracking-wide text-on-surface-variant">
           <tr>
             <th className="text-left px-5 py-3">Peserta</th>
