@@ -5,6 +5,8 @@ import { events, eventRegistrations, users } from "@/db/schema";
 import { updateEvent } from "@/app/actions/admin-events";
 import { RegistrationList } from "@/components/console/registration-list";
 import { requireModuleAccess } from "@/lib/admin-scope";
+import { ImageUploadCropper } from "@/components/upload/image-upload-cropper";
+import { AIImproveButton } from "@/components/ai/ai-improve-button";
 
 export default async function ConsoleEventDetailPage({ params }: { params: Promise<{ id: string }> }) {
   await requireModuleAccess("events");
@@ -48,23 +50,26 @@ export default async function ConsoleEventDetailPage({ params }: { params: Promi
             />
             <input name="capacity" type="number" min={1} defaultValue={event.capacity ?? ""} placeholder="Kapasitas" className="bg-soft-gray rounded-md p-3 text-body-md" />
           </div>
-          <div className="grid grid-cols-2 gap-4">
-            <input
-              name="coverImageUrl"
-              type="url"
-              defaultValue={event.coverImageUrl ?? ""}
-              placeholder="URL Gambar Sampul"
-              className="bg-soft-gray rounded-md p-3 text-body-md"
-            />
-            <input
-              name="registrationDeadline"
-              type="datetime-local"
-              defaultValue={event.registrationDeadline ? new Date(event.registrationDeadline).toISOString().slice(0, 16) : ""}
-              placeholder="Batas Pendaftaran"
-              className="bg-soft-gray rounded-md p-3 text-body-md"
-            />
+          <ImageUploadCropper
+            name="coverImageUrl"
+            folder="events"
+            label="Gambar Sampul"
+            placeholder="Tempel URL atau unggah gambar"
+            defaultValue={event.coverImageUrl ?? ""}
+            aspect={16 / 9}
+            allowPaste
+          />
+          <input
+            name="registrationDeadline"
+            type="datetime-local"
+            defaultValue={event.registrationDeadline ? new Date(event.registrationDeadline).toISOString().slice(0, 16) : ""}
+            placeholder="Batas Pendaftaran"
+            className="bg-soft-gray rounded-md p-3 text-body-md"
+          />
+          <div>
+            <textarea id="event-description" name="description" defaultValue={event.description ?? ""} rows={3} className="bg-soft-gray rounded-md p-3 text-body-md resize-none w-full" />
+            <AIImproveButton context="event" targetId="event-description" className="mt-1" />
           </div>
-          <textarea name="description" defaultValue={event.description ?? ""} rows={3} className="bg-soft-gray rounded-md p-3 text-body-md resize-none" />
           <textarea
             name="agenda"
             defaultValue={event.agenda ?? ""}
