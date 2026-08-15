@@ -5,6 +5,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
 import { Bell, CheckCheck } from "lucide-react";
 import { formatRelativeTime } from "@/lib/format-relative-time";
+import { Tooltip } from "@/components/ui/tooltip";
 
 type NItem = {
   id: string;
@@ -55,19 +56,21 @@ export function NotificationBell() {
 
   return (
     <div className="relative">
-      <button
-        type="button"
-        aria-label="Notifikasi"
-        onClick={() => setOpen((v) => !v)}
-        className="relative text-on-background p-1 hover:bg-surface-container-low rounded-lg transition-colors"
-      >
-        <Bell size={20} />
-        {unread > 0 && (
-          <span className="absolute -top-0.5 -right-0.5 min-w-4 h-4 px-1 rounded-full bg-error text-on-error text-[10px] font-bold flex items-center justify-center">
-            {unread > 9 ? "9+" : unread}
-          </span>
-        )}
-      </button>
+      <Tooltip label="Notifikasi">
+        <button
+          type="button"
+          aria-label="Notifikasi"
+          onClick={() => setOpen((v) => !v)}
+          className="relative text-on-background p-1 hover:bg-surface-container-low rounded-lg transition-colors"
+        >
+          <Bell size={20} />
+          {unread > 0 && (
+            <span className="absolute -top-0.5 -right-0.5 min-w-4 h-4 px-1 rounded-full bg-error text-on-error text-[10px] font-bold flex items-center justify-center">
+              {unread > 9 ? "9+" : unread}
+            </span>
+          )}
+        </button>
+      </Tooltip>
 
       {open && (
         <div className="absolute right-0 top-full mt-2 w-80 max-w-[90vw] bg-surface-container-lowest border border-outline-variant rounded-lg shadow-lg z-50 overflow-hidden">
