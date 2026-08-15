@@ -18,6 +18,7 @@ export interface SensusInput {
   scholarshipType: string;
   emergencyContactName: string;
   emergencyContactPhone: string;
+  photoUrl: string;
 }
 
 function toValues(input: SensusInput) {
@@ -33,12 +34,19 @@ function toValues(input: SensusInput) {
     scholarshipType: input.scholarshipType || null,
     emergencyContactName: input.emergencyContactName || null,
     emergencyContactPhone: input.emergencyContactPhone || null,
+    photoUrl: input.photoUrl || null,
   };
 }
 
 export async function submitSensusProfile(returnTo: string | null, input: SensusInput) {
   const session = await auth();
   if (!session?.user?.id) redirect("/login");
+
+  // Photo is mandatory for a "complete" submission - it's proof the person is
+  // actually studying in China, not decoration (confirmed 2026-08-15).
+  if (!input.photoUrl.trim()) {
+    return { error: "photo_required" as const };
+  }
 
   const values = { ...toValues(input), completionStatus: "complete" as const, updatedAt: new Date() };
 
