@@ -44,6 +44,13 @@ export async function submitMembershipApplication(recruitmentPeriodId: string, f
   const email = responses[CORE_KEYS.email];
   if (!fullName || !email) throw new Error("Nama dan email wajib diisi");
 
+  for (const f of fields) {
+    if (!f.required) continue;
+    const v = responses[f.key];
+    const empty = f.type === "checkbox" ? v !== "true" : !v;
+    if (empty) throw new Error(`Field "${f.label}" wajib diisi`);
+  }
+
   await db.insert(membershipApplications).values({
     recruitmentPeriodId,
     userId: session?.user?.id ?? null,
