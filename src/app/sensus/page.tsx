@@ -66,6 +66,7 @@ export default async function SensusPage({
             scholarshipType: existing?.scholarshipType ?? "",
             emergencyContactName: existing?.emergencyContactName ?? "",
             emergencyContactPhone: existing?.emergencyContactPhone ?? "",
+            photoUrl: existing?.photoUrl ?? "",
           }}
         />
       </main>
