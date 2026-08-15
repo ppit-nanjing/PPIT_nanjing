@@ -3,13 +3,12 @@
 import { randomUUID } from "crypto";
 import { eq, and } from "drizzle-orm";
 import { redirect } from "next/navigation";
-import { auth } from "@/auth";
 import { db } from "@/db";
 import { events, eventRegistrations } from "@/db/schema";
+import { requireCompletedSensus } from "@/lib/sensus-gate";
 
 export async function registerForEvent(eventId: string, slug: string) {
-  const session = await auth();
-  if (!session?.user?.id) redirect("/login");
+  const session = await requireCompletedSensus(`/events/${slug}`);
 
   const [event] = await db.select().from(events).where(eq(events.id, eventId));
   if (!event || event.status !== "published") throw new Error("Event tidak tersedia untuk pendaftaran");
