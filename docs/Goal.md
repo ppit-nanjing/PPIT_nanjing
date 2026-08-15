@@ -56,7 +56,7 @@ These aren't "missing" so much as "solved differently" — revisit only after Ti
 
 ## Tier 3 — Schema exists, no UI at all (future work, not urgent)
 
-- `notifications` / `notification_templates` — tables exist, nothing sends or displays a notification anywhere yet. No prototype screen strictly requires this to function (it's plumbing, not a screen), but the Guide: Notification Templates prototype implies it was intended.
+- `notifications` — **in-app notification bell built in Phase 2 (2026-08-15)**: a nav `NotificationBell` + `/notifications` page, backed by `src/lib/notifications.ts`, triggered on real admin status changes (borrow request approve/reject, event check-in). Scoped down to existing data, no email sending (no email provider available — `notification_templates` is still unused, and no prototype screen strictly required notifications). Email verification for sign-up was also intentionally skipped (no sending infra).
 
 ## Process notes for whoever/whatever works through this
 
