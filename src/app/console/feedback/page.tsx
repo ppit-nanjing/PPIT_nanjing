@@ -23,7 +23,7 @@ export default async function ConsoleFeedbackPage() {
   return (
     <div className="min-h-screen bg-background px-[var(--spacing-container-padding)] py-12">
       <div className="max-w-4xl mx-auto">
-        <h1 className="text-headline-lg text-on-background mb-2">Masukan Pengguna</h1>
+        <h1 className="text-headline-md sm:text-headline-lg text-on-background mb-2">Masukan Pengguna</h1>
         <p className="text-body-md text-on-surface-variant mb-8">
           Semua masukan yang dikirim lewat widget umpan balik di seluruh halaman.
         </p>
