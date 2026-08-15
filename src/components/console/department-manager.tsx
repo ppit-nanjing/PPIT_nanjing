@@ -3,7 +3,7 @@
 import { useState, useTransition } from "react";
 import { ChevronUp, ChevronDown, Pencil, Plus, X } from "lucide-react";
 import { createDepartment, updateDepartment, moveDepartment } from "@/app/actions/admin-departments";
-import { ASSIGNABLE_SCOPE_KEYS } from "@/lib/admin-scope";
+import { ASSIGNABLE_SCOPE_KEYS } from "@/lib/admin-scope-constants";
 
 interface Department {
   id: string;
