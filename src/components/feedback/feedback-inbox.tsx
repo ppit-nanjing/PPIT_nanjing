@@ -76,7 +76,7 @@ export function FeedbackInbox({ initialRows }: { initialRows: FeedbackRow[] }) {
 
   return (
     <div>
-      <div className="flex flex-wrap items-center justify-between gap-4 mb-6">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between mb-6">
         <div className="flex flex-wrap gap-2">
           <select
             value={categoryFilter}
@@ -119,7 +119,7 @@ export function FeedbackInbox({ initialRows }: { initialRows: FeedbackRow[] }) {
           const Icon = CATEGORY_META[f.category].icon;
           return (
             <div key={f.id} className="bg-surface-container-lowest border border-outline-variant rounded-lg p-5">
-              <div className="flex items-start justify-between gap-4 mb-3">
+               <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between mb-3">
                 <div className="flex items-center gap-3">
                   <span className="flex items-center gap-1.5 text-label-caps uppercase tracking-wide bg-surface-container-low px-2.5 py-1 rounded-full">
                     <Icon size={13} /> {CATEGORY_META[f.category].label}
@@ -151,7 +151,7 @@ export function FeedbackInbox({ initialRows }: { initialRows: FeedbackRow[] }) {
                 )}
               </div>
 
-              <div className="flex gap-2">
+              <div className="flex flex-wrap gap-2">
                 {(["new", "in_review", "resolved"] as Status[]).map((s) => (
                   <button
                     key={s}
