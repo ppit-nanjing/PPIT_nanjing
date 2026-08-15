@@ -107,3 +107,33 @@ export async function updateProfileFieldAction(field: string, value: string): Pr
 
   await db.update(users).set({ [f]: v } as Partial<typeof users.$inferInsert>).where(eq(users.id, session.user.id));
 }
+
+export async function suggestContentAction(
+  context: "event" | "news",
+  fields: Record<string, string>,
+): Promise<string> {
+  const session = await auth();
+  if (!session?.user?.id) throw new Error("Kamu harus masuk untuk menggunakan fitur ini");
+  const required = context === "event" ? "events" : "content";
+  if (!hasModuleAccess(session.user.adminScope, required)) throw new Error("Kamu tidak punya akses");
+
+  const text = Object.entries(fields)
+    .map(([k, v]) => `${k}: ${v?.toString().trim() || "(kosong)"}`)
+    .join("\n");
+  if (text.replace(/\(kosong\)/g, "").trim().length < 3) {
+    throw new Error("Isi dulu bagian yang ingin disarankan");
+  }
+
+  const system =
+    context === "event"
+      ? "Kamu adalah konsultan konten PPIT Nanjing, organisasi mahasiswa Indonesia di Nanjing. Berikan 2-4 saran singkat dan konkret dalam Bahasa Indonesia untuk memperbaiki draf kegiatan ini (judul lebih menarik, deskripsi lebih jelas, atau hal yang terlewat). Balas sebagai daftar bernomor tanpa kalimat pembuka maupun penutup."
+      : "Kamu adalah editor berita PPIT Nanjing. Berikan 2-4 saran singkat dan konkret dalam Bahasa Indonesia untuk memperbaiki draf berita ini. Balas sebagai daftar bernomor tanpa kalimat pembuka maupun penutup.";
+
+  return groqChat(
+    [
+      { role: "system", content: system },
+      { role: "user", content: text },
+    ],
+    { temperature: 0.5, maxTokens: 400 },
+  );
+}
