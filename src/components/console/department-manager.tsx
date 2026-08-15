@@ -72,7 +72,7 @@ function AccessFields({ dept, isFullAdmin }: { dept: Department; isFullAdmin: bo
       <p className="text-label-caps text-on-surface-variant uppercase tracking-wide mt-1">
         Modul admin yang bisa diakses (untuk anggota dengan role &apos;scoped&apos;)
       </p>
-      <div className="grid grid-cols-2 gap-1.5">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5">
         {ASSIGNABLE_SCOPE_KEYS.map((m) => {
           const isSensitive = SENSITIVE_SCOPE_KEYS.includes(m.key as (typeof SENSITIVE_SCOPE_KEYS)[number]);
           return (
