@@ -50,9 +50,9 @@ export default async function ConsoleInventoryPage() {
   const itemOptions = items.map((i) => ({ id: i.id, name: i.name, availableQuantity: i.availableQuantity }));
 
   return (
-    <div className="px-8 py-10">
-      <div className="flex items-center justify-between mb-8">
-        <h1 className="text-headline-lg text-on-background">Manajemen Inventaris</h1>
+    <div className="px-4 py-6 sm:px-6 lg:px-8 lg:py-10">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between mb-8">
+        <h1 className="text-headline-md sm:text-headline-lg text-on-background">Manajemen Inventaris</h1>
         <a href="/console/inventory/audit-log" className="text-label-caps text-primary-container hover:text-primary transition-colors">
           Log Audit &rarr;
         </a>
@@ -123,7 +123,7 @@ export default async function ConsoleInventoryPage() {
         </summary>
         <form action={createInventoryItem} className="px-6 pb-6 flex flex-col gap-4">
           <input name="name" placeholder="Nama Barang *" required className="bg-soft-gray rounded-md p-3 text-body-md" />
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <input name="category" placeholder="Kategori" className="bg-soft-gray rounded-md p-3 text-body-md" />
             <input name="location" placeholder="Lokasi Penyimpanan" className="bg-soft-gray rounded-md p-3 text-body-md" />
           </div>
@@ -139,7 +139,7 @@ export default async function ConsoleInventoryPage() {
         </form>
       </details>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
         {items.length === 0 && (
           <p className="text-body-md text-on-surface-variant col-span-full">Belum ada barang terdaftar.</p>
         )}
