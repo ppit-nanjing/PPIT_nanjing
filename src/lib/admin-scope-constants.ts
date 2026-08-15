@@ -11,7 +11,7 @@
 // (src/db/seed.ts) - "sensus" and "reports" both unlock /console/reports since
 // that page hasn't been split into separate sensus vs. financial-report views
 // yet (see docs/Progress & Handoff.md).
-export type AdminModule = "users" | "organization" | "events" | "inventory" | "reports" | "content" | "feedback";
+export type AdminModule = "users" | "organization" | "events" | "inventory" | "reports" | "content" | "feedback" | "membership";
 
 const MODULE_ALIASES: Partial<Record<AdminModule, string[]>> = {
   reports: ["reports", "sensus"],
@@ -34,6 +34,7 @@ export const ASSIGNABLE_SCOPE_KEYS: { key: string; label: string }[] = [
   { key: "users", label: "Pengguna (sensitif — hanya BPH)" },
   { key: "organization", label: "Organisasi (sensitif — hanya BPH)" },
   { key: "feedback", label: "Masukan Pengguna (sensitif — hanya BPH)" },
+  { key: "membership", label: "Pendaftaran Anggota (rekrutmen)" },
 ];
 
 // Keys that only a "full" tier actor may grant to a department - handing these
