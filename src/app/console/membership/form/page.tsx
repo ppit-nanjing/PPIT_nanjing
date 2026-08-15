@@ -11,7 +11,7 @@ import {
   updateFormField,
 } from "@/app/actions/membership";
 
-const FIELD_TYPES = ["text", "textarea", "email", "tel", "number", "select", "date"] as const;
+const FIELD_TYPES = ["text", "textarea", "email", "tel", "number", "select", "date", "checkbox", "image", "url"] as const;
 
 export default async function MembershipFormPage() {
   await requireModuleAccess("membership");
