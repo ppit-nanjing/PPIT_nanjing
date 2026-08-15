@@ -48,9 +48,12 @@ export async function updateDepartment(id: string, formData: FormData) {
   const description = String(formData.get("description") ?? "").trim();
   if (!name) throw new Error("Nama wajib diisi");
 
+  const grantsFullAdminAccess = formData.get("grantsFullAdminAccess") === "on";
+  const adminModuleScope = formData.getAll("adminModuleScope").map(String);
+
   const [after] = await db
     .update(departments)
-    .set({ name, description: description || null })
+    .set({ name, description: description || null, grantsFullAdminAccess, adminModuleScope })
     .where(eq(departments.id, id))
     .returning();
 
