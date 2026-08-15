@@ -45,7 +45,7 @@ export default async function ReviewAdArtGuidelinesPage() {
             <div className="inline-flex items-center gap-2 bg-surface-container-high text-primary-container px-3 py-1 rounded-full text-label-caps uppercase mb-4">
               <Gavel size={14} /> Dokumen Resmi
             </div>
-            <h1 className="text-headline-lg md:text-display-hero-mobile text-on-background mb-4">
+            <h1 className="text-display-hero-mobile md:text-display-hero text-on-background mb-4">
               Tinjauan Panduan AD/ART
             </h1>
             <p className="text-quote-text text-on-surface-variant max-w-3xl">
