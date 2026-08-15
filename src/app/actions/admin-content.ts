@@ -31,6 +31,7 @@ export async function upsertNewsArticle(existingId: string | null, formData: For
   const title = String(formData.get("title") ?? "").trim();
   const content = String(formData.get("content") ?? "").trim();
   const coverImageUrl = String(formData.get("coverImageUrl") ?? "").trim();
+  const category = String(formData.get("category") ?? "").trim();
   const publish = formData.get("publish") === "on";
   if (!title) throw new Error("Judul wajib diisi");
 
@@ -41,6 +42,7 @@ export async function upsertNewsArticle(existingId: string | null, formData: For
         title,
         content: content || null,
         coverImageUrl: coverImageUrl || null,
+        category: category || null,
         status: publish ? "published" : "draft",
         publishedAt: publish ? new Date() : null,
       })
@@ -51,6 +53,7 @@ export async function upsertNewsArticle(existingId: string | null, formData: For
       slug: slugify(title),
       content: content || null,
       coverImageUrl: coverImageUrl || null,
+      category: category || null,
       authorId: actorId,
       status: publish ? "published" : "draft",
       publishedAt: publish ? new Date() : null,
