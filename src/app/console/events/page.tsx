@@ -5,6 +5,7 @@ import { createEvent } from "@/app/actions/admin-events";
 import { requireModuleAccess } from "@/lib/admin-scope";
 import { ImageUploadCropper } from "@/components/upload/image-upload-cropper";
 import { AIImproveButton } from "@/components/ai/ai-improve-button";
+import { AIReviewButton } from "@/components/ai/ai-review-popup";
 import { Plus } from "lucide-react";
 
 const STATUS_LABEL: Record<string, string> = {
@@ -28,15 +29,19 @@ export default async function ConsoleEventsPage() {
           <Plus size={16} /> Buat Kegiatan Baru
         </summary>
         <form action={createEvent} className="px-6 pb-6 flex flex-col gap-4">
-          <input name="title" placeholder="Judul Kegiatan *" required className="bg-soft-gray rounded-md p-3 text-body-md" />
+          <input id="event-title" name="title" placeholder="Judul Kegiatan *" required className="bg-soft-gray rounded-md p-3 text-body-md" />
           <div className="grid grid-cols-2 gap-4">
-            <input name="category" placeholder="Kategori" className="bg-soft-gray rounded-md p-3 text-body-md" />
-            <input name="location" placeholder="Lokasi" className="bg-soft-gray rounded-md p-3 text-body-md" />
+            <input id="event-category" name="category" placeholder="Kategori" className="bg-soft-gray rounded-md p-3 text-body-md" />
+            <input id="event-location" name="location" placeholder="Lokasi" className="bg-soft-gray rounded-md p-3 text-body-md" />
           </div>
           <div className="grid grid-cols-2 gap-4">
             <input name="startAt" type="datetime-local" className="bg-soft-gray rounded-md p-3 text-body-md" />
             <input name="capacity" type="number" min={1} placeholder="Kapasitas" className="bg-soft-gray rounded-md p-3 text-body-md" />
           </div>
+          <label className="flex items-center gap-2 bg-soft-gray rounded-md p-3 text-body-md cursor-pointer">
+            <input type="checkbox" name="requiresSensus" className="h-4 w-4 accent-[var(--color-primary-container)]" />
+            Hanya untuk peserta yang sudah lengkap mengisi sensus (mahasiswa Indo di China)
+          </label>
           <ImageUploadCropper
             name="coverImageUrl"
             folder="events"
@@ -51,10 +56,21 @@ export default async function ConsoleEventsPage() {
             <AIImproveButton context="event" targetId="event-description" className="mt-1" />
           </div>
           <textarea
+            id="event-agenda"
             name="agenda"
             placeholder={"Agenda/Jadwal (satu baris per item, contoh:\n18:00 - Registrasi\n19:00 - Pembukaan)"}
             rows={3}
             className="bg-soft-gray rounded-md p-3 text-body-md resize-none"
+          />
+          <AIReviewButton
+            context="event"
+            fields={[
+              { id: "event-title", label: "Judul" },
+              { id: "event-category", label: "Kategori" },
+              { id: "event-location", label: "Lokasi" },
+              { id: "event-description", label: "Deskripsi" },
+              { id: "event-agenda", label: "Agenda" },
+            ]}
           />
           <button
             type="submit"
