@@ -7,11 +7,14 @@ import { AccountMenu } from "@/components/account-menu";
 import { NotificationBell } from "@/components/notifications/notification-bell";
 import { NAV_LINKS } from "@/lib/nav-links";
 
-// Scroll-driven glass capsule effect, ported from the website-portofolio
-// Navbar reference: fully off (transparent, no blur) at rest, fades the
-// glass in as you scroll and shrink, reverses smoothly back to off as you
-// scroll back up - CSS transitions on the glass properties (not just width)
-// so each scroll-driven update eases instead of jumping per tick.
+// Scroll-driven glass effect: fully off (transparent, no blur) at rest,
+// fades the glass in as you scroll, reverses smoothly back to off scrolling
+// back up. No width/shape animation - that turned out broken (the reference's
+// own navbar is a fixed-height 50px pill at every scroll position, just
+// resizing width within that same shape, not a bar that morphs into a pill -
+// re-shaping our full-width bar into a floating capsule on scroll was the
+// wrong read of it). The real ask was a shorter, more compressed bar height,
+// which is the h-12/h-14 below, not a shape change.
 function useScrollProgress(maxScroll = 300) {
   const [progress, setProgress] = useState(0);
 
@@ -37,14 +40,6 @@ export function SiteNav() {
     setMenuOpen(false);
   }, [pathname]);
 
-  // Desktop: full-bleed bar (100%) shrinks into a floating capsule (40%,
-  // matching the reference's own end width) as you scroll. Mobile stays
-  // nearly full-width - shrinking is a desktop-only flourish, not something
-  // worth fighting for screen space on a phone.
-  const startWidthPct = 100;
-  const endWidthPct = 40;
-  const widthPct = startWidthPct - (startWidthPct - endWidthPct) * progress;
-
   // Glass: fully off at rest (alpha 0, no blur) - fades in as you scroll,
   // fades back out on the way up. Everything below is a plain 0->1 ramp; the
   // actual smoothing/easing comes from the CSS `transition` on these
@@ -53,27 +48,23 @@ export function SiteNav() {
   const blurPx = Math.round(progress * 20); // 0 -> 20px
   const shadowAlpha = (progress * 0.14).toFixed(3);
   const borderAlpha = (progress * 0.5).toFixed(3);
-  const radiusPx = Math.round(progress * 999);
 
   return (
     <>
-      <header className="w-full sticky top-0 z-50 flex justify-center pt-0 md:pt-3 transition-[padding] duration-300">
+      <header className="w-full sticky top-0 z-50">
         <nav
           className="w-full"
           style={{
-            width: `min(100%, ${widthPct}%)`,
-            maxWidth: "var(--container-max)",
             backgroundColor: `rgba(255,248,247,${bgAlpha})`,
             backdropFilter: `blur(${blurPx}px) saturate(140%)`,
             WebkitBackdropFilter: `blur(${blurPx}px) saturate(140%)`,
             boxShadow: `0 10px 30px rgba(39,23,22,${shadowAlpha})`,
-            border: `1px solid rgba(144,111,108,${borderAlpha})`,
-            borderRadius: `${radiusPx}px`,
+            borderBottom: `1px solid rgba(144,111,108,${borderAlpha})`,
             transition:
-              "width 400ms ease, background-color 400ms ease, backdrop-filter 400ms ease, -webkit-backdrop-filter 400ms ease, box-shadow 400ms ease, border-color 400ms ease, border-radius 400ms ease",
+              "background-color 400ms ease, backdrop-filter 400ms ease, -webkit-backdrop-filter 400ms ease, box-shadow 400ms ease, border-color 400ms ease",
           }}
         >
-          <div className="px-[var(--spacing-container-padding)] flex justify-between items-center h-16 md:h-20">
+          <div className="max-w-[var(--container-max)] mx-auto px-[var(--spacing-container-padding)] flex justify-between items-center h-12 md:h-14">
             <a href="/" className="text-headline-md font-bold text-primary uppercase tracking-tight shrink-0">
               PPIT Nanjing
             </a>
