@@ -1,6 +1,8 @@
 import { redirect } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
 import { auth, signIn } from "@/auth";
+import { CredentialForm } from "@/components/auth/credential-form";
+import { signInWithPassword } from "@/app/actions/auth";
 
 export default async function LoginPage() {
   const session = await auth();
@@ -20,10 +22,19 @@ export default async function LoginPage() {
             PPIT Nanjing
           </span>
           <h1 className="text-headline-lg text-on-background mb-3">Masuk</h1>
-          <p className="text-body-md text-on-surface-variant mb-10">
-            Masuk dengan akun Google kamu untuk mendaftar kegiatan, mengisi sensus, dan mengakses
-            layanan PPIT Nanjing lainnya.
+          <p className="text-body-md text-on-surface-variant mb-8">
+            Masuk dengan akun Google kamu, atau gunakan email dan kata sandi untuk mendaftar kegiatan,
+            mengisi sensus, dan mengakses layanan PPIT Nanjing lainnya.
           </p>
+
+          <CredentialForm action={signInWithPassword} mode="signin" />
+
+          <div className="flex items-center gap-3 my-6">
+            <span className="h-px flex-1 bg-outline-variant" />
+            <span className="text-label-caps uppercase tracking-wide text-on-surface-variant">atau</span>
+            <span className="h-px flex-1 bg-outline-variant" />
+          </div>
+
           <form
             action={async () => {
               "use server";
