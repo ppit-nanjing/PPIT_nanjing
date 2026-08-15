@@ -8,8 +8,8 @@ export default async function ChangelogPage() {
   const notes = await db.select().from(releaseNotes).orderBy(desc(releaseNotes.publishedAt));
 
   return (
-    <div className="px-8 py-10 max-w-2xl">
-      <h1 className="text-headline-lg text-on-background mb-8">System Changelog</h1>
+    <div className="px-4 py-6 sm:px-6 lg:px-8 lg:py-10 max-w-2xl">
+      <h1 className="text-headline-md sm:text-headline-lg text-on-background mb-8">System Changelog</h1>
 
       <details className="mb-10 bg-surface-container-lowest border border-outline-variant rounded-xl">
         <summary className="flex items-center gap-2 px-6 py-4 cursor-pointer text-label-caps text-primary-container uppercase tracking-wide">
