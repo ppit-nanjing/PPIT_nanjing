@@ -119,6 +119,10 @@ export const users = pgTable("users", {
   // Null = never asked yet (triggers the first-login onboarding prompt). True/false
   // once the user has answered. Opt-in by design - never defaults to true.
   emailSubscribed: boolean("email_subscribed"),
+  // bcrypt hash of the user's password for the email/password (Credentials) sign-in
+  // path. Null for Google-OAuth-only accounts (they have no password). Never returned
+  // to the client and never logged - see src/lib/password.ts.
+  passwordHash: text("password_hash"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
   lastLoginAt: timestamp("last_login_at"),
 });
