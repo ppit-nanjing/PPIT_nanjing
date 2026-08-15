@@ -9,7 +9,10 @@ export default async function NewNewsArticlePage() {
       <h1 className="text-headline-lg text-on-background mb-8">Tulis Berita Baru</h1>
       <form action={upsertNewsArticle.bind(null, null)} className="flex flex-col gap-6">
         <input name="title" placeholder="Judul *" required className="bg-soft-gray rounded-md p-3 text-body-md" />
-        <input name="coverImageUrl" placeholder="URL Foto Sampul (opsional)" className="bg-soft-gray rounded-md p-3 text-body-md" />
+        <div className="grid grid-cols-2 gap-4">
+          <input name="coverImageUrl" placeholder="URL Foto Sampul (opsional)" className="bg-soft-gray rounded-md p-3 text-body-md" />
+          <input name="category" placeholder="Kategori (opsional)" className="bg-soft-gray rounded-md p-3 text-body-md" />
+        </div>
         <textarea name="content" placeholder="Isi berita" rows={10} className="bg-soft-gray rounded-md p-3 text-body-md resize-none" />
         <label className="flex items-center gap-2 text-body-md text-on-background">
           <input type="checkbox" name="publish" className="w-4 h-4" />
