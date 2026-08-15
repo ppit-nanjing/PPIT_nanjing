@@ -10,7 +10,7 @@ export default async function ConsoleLayout({ children }: { children: React.Reac
   if (!session.user.isAdmin) redirect("/");
 
   return (
-    <div className="min-h-screen bg-background flex">
+    <div className="min-h-screen bg-background flex flex-col md:flex-row">
       <ConsoleSidebar userName={session.user.name ?? "Admin"} scope={session.user.adminScope} />
       <main className="flex-1 min-w-0">{children}</main>
     </div>
