@@ -6,11 +6,12 @@ import { redirect } from "next/navigation";
 import { auth } from "@/auth";
 import { db } from "@/db";
 import { events, eventRegistrations } from "@/db/schema";
+import { hasModuleAccess } from "@/lib/admin-scope";
 
 async function requireAdmin() {
   const session = await auth();
-  if (!session?.user?.isAdmin) throw new Error("Forbidden");
-  return session.user.id;
+  if (!hasModuleAccess(session?.user?.adminScope ?? null, "events")) throw new Error("Forbidden");
+  return session!.user.id;
 }
 
 function slugify(title: string) {

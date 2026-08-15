@@ -5,11 +5,12 @@ import { revalidatePath } from "next/cache";
 import { auth } from "@/auth";
 import { db } from "@/db";
 import { departments, auditLogs } from "@/db/schema";
+import { hasModuleAccess } from "@/lib/admin-scope";
 
 async function requireAdmin() {
   const session = await auth();
-  if (!session?.user?.isAdmin) throw new Error("Forbidden");
-  return session.user.id;
+  if (!hasModuleAccess(session?.user?.adminScope ?? null, "organization")) throw new Error("Forbidden");
+  return session!.user.id;
 }
 
 export async function createDepartment(formData: FormData) {

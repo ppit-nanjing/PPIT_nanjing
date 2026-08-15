@@ -5,10 +5,11 @@ import { revalidatePath } from "next/cache";
 import { auth } from "@/auth";
 import { db } from "@/db";
 import { users, departmentMembers } from "@/db/schema";
+import { hasModuleAccess } from "@/lib/admin-scope";
 
 async function assertAdmin() {
   const session = await auth();
-  if (!session?.user?.isAdmin) throw new Error("Forbidden");
+  if (!hasModuleAccess(session?.user?.adminScope ?? null, "users")) throw new Error("Forbidden");
 }
 
 export async function updateUserRole(userId: string, roleId: string) {
