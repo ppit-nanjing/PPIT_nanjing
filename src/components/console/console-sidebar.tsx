@@ -1,4 +1,9 @@
+"use client";
+
+import { useState } from "react";
 import {
+  Menu,
+  X,
   MessageSquare,
   LayoutDashboard,
   ArrowLeft,
@@ -29,32 +34,71 @@ const NAV: { href: string; label: string; icon: typeof LayoutDashboard; module: 
 ];
 
 export function ConsoleSidebar({ userName, scope }: { userName: string; scope: "full" | string[] | null }) {
+  const [open, setOpen] = useState(false);
   const visible = NAV.filter((item) => item.module === null || hasModuleAccess(scope, item.module));
 
-  return (
-    <aside className="w-64 shrink-0 bg-surface-container-lowest border-r border-outline-variant min-h-screen flex flex-col">
-      <div className="px-6 py-6 border-b border-outline-variant">
-        <p className="text-headline-md font-bold text-primary uppercase tracking-tight">Console</p>
-        <p className="text-label-caps text-on-surface-variant mt-1">{userName}</p>
-      </div>
-      <nav className="flex-1 py-4">
-        {visible.map((item) => (
-          <a
-            key={item.href}
-            href={item.href}
-            className="flex items-center gap-3 px-6 py-3 text-body-md text-on-background hover:bg-surface-container-low transition-colors"
-          >
-            <item.icon size={18} className="text-secondary" />
-            {item.label}
-          </a>
-        ))}
-      </nav>
+  const links = (onNavigate: () => void) =>
+    visible.map((item) => (
       <a
-        href="/"
-        className="flex items-center gap-2 px-6 py-4 text-label-caps text-secondary hover:text-on-background border-t border-outline-variant transition-colors"
+        key={item.href}
+        href={item.href}
+        onClick={onNavigate}
+        className="flex items-center gap-3 px-6 py-3 text-body-md text-on-background hover:bg-surface-container-low transition-colors"
       >
-        <ArrowLeft size={14} /> Kembali ke Situs
+        <item.icon size={18} className="text-secondary" />
+        {item.label}
       </a>
-    </aside>
+    ));
+
+  return (
+    <>
+      {/* Desktop rail */}
+      <aside className="hidden md:flex w-64 shrink-0 bg-surface-container-lowest border-r border-outline-variant min-h-screen flex-col">
+        <div className="px-6 py-6 border-b border-outline-variant">
+          <p className="text-headline-md font-bold text-primary uppercase tracking-tight">Console</p>
+          <p className="text-label-caps text-on-surface-variant mt-1">{userName}</p>
+        </div>
+        <nav className="flex-1 py-4">{links(() => {})}</nav>
+        <a
+          href="/"
+          className="flex items-center gap-2 px-6 py-4 text-label-caps text-secondary hover:text-on-background border-t border-outline-variant transition-colors"
+        >
+          <ArrowLeft size={14} /> Kembali ke Situs
+        </a>
+      </aside>
+
+      {/* Mobile top bar */}
+      <div className="md:hidden sticky top-0 z-40 flex items-center justify-between bg-surface-container-lowest border-b border-outline-variant px-4 py-3">
+        <span className="text-headline-md font-bold text-primary uppercase tracking-tight">Console</span>
+        <button onClick={() => setOpen(true)} aria-label="Buka menu" className="text-on-background">
+          <Menu size={22} />
+        </button>
+      </div>
+
+      {/* Mobile drawer */}
+      {open && (
+        <div className="md:hidden fixed inset-0 z-50 bg-black/50" onClick={() => setOpen(false)}>
+          <aside
+            className="w-64 h-full bg-surface-container-lowest border-r border-outline-variant flex flex-col"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between px-6 py-6 border-b border-outline-variant">
+              <p className="text-headline-md font-bold text-primary uppercase tracking-tight">Console</p>
+              <button onClick={() => setOpen(false)} aria-label="Tutup menu" className="text-secondary">
+                <X size={22} />
+              </button>
+            </div>
+            <nav className="flex-1 py-4">{links(() => setOpen(false))}</nav>
+            <a
+              href="/"
+              onClick={() => setOpen(false)}
+              className="flex items-center gap-2 px-6 py-4 text-label-caps text-secondary hover:text-on-background border-t border-outline-variant transition-colors"
+            >
+              <ArrowLeft size={14} /> Kembali ke Situs
+            </a>
+          </aside>
+        </div>
+      )}
+    </>
   );
 }
