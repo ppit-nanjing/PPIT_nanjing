@@ -43,8 +43,10 @@ export function SiteNav() {
   // Width: shrinks from full-bleed down to a narrower floating pill as you
   // scroll. Shape stays a constant rounded-full pill throughout (see note
   // above) - only width/opacity/blur/shadow animate, never the radius.
+  // Capped at 60%, not 40% - narrower than that leaves no room for the nav
+  // links + account menu + bell, which were visibly compressing.
   const startWidthPct = 100;
-  const endWidthPct = 40;
+  const endWidthPct = 60;
   const widthPct = startWidthPct - (startWidthPct - endWidthPct) * progress;
 
   // Opacity/blur: solid opaque white (alpha 1, no blur) at rest. As you
@@ -60,7 +62,7 @@ export function SiteNav() {
     <>
       <header className="w-full sticky top-0 z-50 flex justify-center p-2.5">
         <nav
-          className="rounded-full overflow-hidden"
+          className="rounded-full"
           style={{
             width: `min(100%, ${widthPct}%)`,
             maxWidth: "var(--container-max)",
@@ -73,19 +75,19 @@ export function SiteNav() {
               "width 400ms ease, background-color 400ms ease, backdrop-filter 400ms ease, -webkit-backdrop-filter 400ms ease, box-shadow 400ms ease, border-color 400ms ease",
           }}
         >
-          <div className="max-w-[var(--container-max)] mx-auto px-[var(--spacing-container-padding)] flex justify-between items-center h-12 md:h-14">
-            <a href="/" className="text-headline-md font-bold text-primary uppercase tracking-tight shrink-0">
+          <div className="max-w-[var(--container-max)] mx-auto px-[var(--spacing-container-padding)] flex justify-between items-center gap-4 h-12 md:h-14">
+            <a href="/" className="text-headline-md font-bold text-primary uppercase tracking-tight shrink-0 whitespace-nowrap">
               PPIT Nanjing
             </a>
 
-            <div className="hidden md:flex items-center gap-8 text-body-md">
+            <div className="hidden md:flex items-center gap-4 lg:gap-6 text-body-md shrink-0">
               {NAV_LINKS.map((link) => {
                 const active = pathname === link.href;
                 return (
                   <a
                     key={link.href}
                     href={link.href}
-                    className={`relative overflow-hidden h-5 group ${active ? "text-primary" : "text-secondary"}`}
+                    className={`relative overflow-hidden h-5 shrink-0 whitespace-nowrap group ${active ? "text-primary" : "text-secondary"}`}
                   >
                     <span className="block transition-transform duration-200 ease-out group-hover:-translate-y-5 font-medium">
                       {link.label}
@@ -98,13 +100,13 @@ export function SiteNav() {
               })}
             </div>
 
-            <div className="flex items-center gap-1 md:gap-3">
+            <div className="flex items-center gap-1 md:gap-3 shrink-0">
               <NotificationBell />
               <AccountMenu />
               <button
                 aria-label={menuOpen ? "Tutup menu" : "Buka menu"}
                 type="button"
-                className="md:hidden text-on-background p-1"
+                className="md:hidden text-on-background p-1 shrink-0"
                 onClick={() => setMenuOpen((v) => !v)}
               >
                 {menuOpen ? <X size={22} /> : <Menu size={22} />}
