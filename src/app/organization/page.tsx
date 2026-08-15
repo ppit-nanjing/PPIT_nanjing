@@ -109,11 +109,6 @@ export default async function OrganizationPage() {
                         {c.description && (
                           <p className="text-label-caps text-on-surface-variant">{c.description}</p>
                         )}
-                        {c.grantsFullAdminAccess && (
-                          <span className="inline-block mt-3 text-label-caps uppercase tracking-wide bg-primary-container/10 text-primary-container px-2 py-1 rounded">
-                            Akses Admin Penuh
-                          </span>
-                        )}
                         <MemberList deptId={c.id} />
                       </div>
                     ))}
