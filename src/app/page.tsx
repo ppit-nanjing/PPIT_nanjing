@@ -1,15 +1,7 @@
 import { ArrowRight, Users, GraduationCap, CalendarDays, Quote } from "lucide-react";
 import { AnimatedHeroHeading } from "@/components/animated-hero-heading";
-import { AccountMenu } from "@/components/account-menu";
-
-const NAV_LINKS = [
-  { href: "/", label: "Home" },
-  { href: "/about", label: "About" },
-  { href: "/events", label: "Events" },
-  { href: "/news", label: "News" },
-  { href: "/gallery", label: "Gallery" },
-  { href: "/jobs", label: "Careers" },
-];
+import { SiteNav } from "@/components/site-nav";
+import { SiteFooter } from "@/components/site-footer";
 
 // Real figures from the 2026/2027 recruitment guidebook (docs/Overview.md context),
 // not the prototype's placeholder numbers.
@@ -24,25 +16,7 @@ const CITIES = ["Nanjing", "Xuzhou", "Jurong", "Ma'anshan", "Zhenjiang", "Huai'a
 export default function Home() {
   return (
     <div className="min-h-screen bg-background text-on-background">
-      <nav className="w-full sticky top-0 z-50 bg-surface shadow-[0_10px_30px_rgba(39,23,22,0.04)]">
-        <div className="max-w-[var(--container-max)] mx-auto px-[var(--spacing-container-padding)] flex justify-between items-center h-20">
-          <span className="text-headline-md font-bold text-primary uppercase tracking-tight">
-            PPIT Nanjing
-          </span>
-          <div className="hidden md:flex items-center gap-8 text-body-md">
-            {NAV_LINKS.map((link) => (
-              <a
-                key={link.href}
-                href={link.href}
-                className="text-secondary font-medium hover:text-primary transition-colors"
-              >
-                {link.label}
-              </a>
-            ))}
-          </div>
-          <AccountMenu />
-        </div>
-      </nav>
+      <SiteNav />
 
       <header className="relative w-full h-[600px] md:h-[680px] flex items-center justify-center overflow-hidden bg-on-background">
         {/* Layered depth: deep base -> directional glow -> decorative skyline silhouette.
@@ -149,22 +123,7 @@ export default function Home() {
         </section>
       </main>
 
-      <footer className="w-full bg-inverse-surface text-inverse-on-surface py-12 mt-16">
-        <div className="max-w-[var(--container-max)] mx-auto px-[var(--spacing-container-padding)] flex flex-col md:flex-row justify-between items-center gap-6">
-          <span className="text-headline-md font-bold uppercase">PPIT Nanjing</span>
-          <div className="text-body-md flex gap-2 flex-wrap justify-center">
-            {NAV_LINKS.map((link, i) => (
-              <span key={link.href}>
-                <a href={link.href} className="hover:text-primary-fixed-dim transition-colors">
-                  {link.label}
-                </a>
-                {i < NAV_LINKS.length - 1 && <span className="mx-2 opacity-40">|</span>}
-              </span>
-            ))}
-          </div>
-          <p className="text-label-caps opacity-70">&copy; 2026 PPIT Nanjing</p>
-        </div>
-      </footer>
+      <SiteFooter />
     </div>
   );
 }
