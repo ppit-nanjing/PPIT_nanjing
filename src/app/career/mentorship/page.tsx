@@ -33,7 +33,7 @@ export default async function MentorshipPage() {
       <main className="max-w-[var(--container-max)] mx-auto px-[var(--spacing-container-padding)] py-16 grid grid-cols-1 lg:grid-cols-12 gap-10">
         <div className="lg:col-span-5 flex flex-col gap-8">
           <div>
-            <h1 className="text-headline-lg md:text-display-hero-mobile text-on-background mb-4">
+            <h1 className="text-display-hero-mobile md:text-display-hero text-on-background mb-4">
               Alumni Network <span className="text-primary-container">Mentorship</span>
             </h1>
             <p className="text-body-lg text-on-surface-variant">
