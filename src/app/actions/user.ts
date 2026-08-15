@@ -21,9 +21,20 @@ export async function updateProfile(formData: FormData) {
 
   const phone = String(formData.get("phone") ?? "").trim();
   const wechatId = String(formData.get("wechatId") ?? "").trim();
+  const name = String(formData.get("name") ?? "").trim();
+  const avatarUrl = String(formData.get("avatarUrl") ?? "").trim();
 
   await db
     .update(users)
-    .set({ phone: phone || null, wechatId: wechatId || null })
+    .set({
+      phone: phone || null,
+      wechatId: wechatId || null,
+      // Name is never nulled out from this form - an empty submission just
+      // means "leave it as-is" (the input is pre-filled, so empty is
+      // accidental, not a deliberate clear). avatarUrl clearing IS allowed:
+      // that's the deliberate "revert to my Google photo" action.
+      ...(name ? { name } : {}),
+      avatarUrl: avatarUrl || null,
+    })
     .where(eq(users.id, session.user.id));
 }
