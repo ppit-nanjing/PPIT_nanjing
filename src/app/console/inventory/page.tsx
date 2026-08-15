@@ -3,11 +3,13 @@ import { db } from "@/db";
 import { inventoryItems, borrowRequests, users } from "@/db/schema";
 import { createInventoryItem } from "@/app/actions/admin-inventory";
 import { BorrowRequestQueue } from "@/components/console/borrow-request-queue";
+import { requireModuleAccess } from "@/lib/admin-scope";
 import { Plus, Package } from "lucide-react";
 
 const CONDITION_LABEL: Record<string, string> = { good: "Baik", damaged: "Rusak", retired: "Pensiun" };
 
 export default async function ConsoleInventoryPage() {
+  await requireModuleAccess("inventory");
   const items = await db.select().from(inventoryItems);
   const requests = await db
     .select({ req: borrowRequests, itemName: inventoryItems.name, userName: users.name, userEmail: users.email })
