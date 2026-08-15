@@ -34,7 +34,7 @@ export default async function EventsPage({
 
       <header className="max-w-[var(--container-max)] mx-auto px-[var(--spacing-container-padding)] pt-16 pb-8 flex flex-col md:flex-row justify-between items-start md:items-end gap-8 border-b border-outline-variant">
         <div className="max-w-2xl">
-          <h1 className="text-headline-lg md:text-display-hero-mobile text-on-background mb-4">Kegiatan</h1>
+          <h1 className="text-display-hero-mobile md:text-display-hero text-on-background mb-4">Kegiatan</h1>
           <p className="text-body-lg text-on-surface-variant">
             Ikuti kegiatan PPIT Nanjing dan daftar langsung lewat situs ini.
           </p>
