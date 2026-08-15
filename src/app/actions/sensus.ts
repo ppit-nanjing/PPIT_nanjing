@@ -1,0 +1,64 @@
+"use server";
+
+import { redirect } from "next/navigation";
+import { auth } from "@/auth";
+import { db } from "@/db";
+import { sensusProfiles } from "@/db/schema";
+
+export interface SensusInput {
+  gender: string;
+  birthDate: string;
+  university: string;
+  program: string;
+  degreeLevel: string;
+  cityInChina: string;
+  arrivalDate: string;
+  visaType: string;
+  scholarshipType: string;
+  emergencyContactName: string;
+  emergencyContactPhone: string;
+}
+
+export async function submitSensusProfile(input: SensusInput) {
+  const session = await auth();
+  if (!session?.user?.id) redirect("/login");
+
+  await db
+    .insert(sensusProfiles)
+    .values({
+      userId: session.user.id,
+      gender: input.gender || null,
+      birthDate: input.birthDate || null,
+      university: input.university || null,
+      program: input.program || null,
+      degreeLevel: input.degreeLevel || null,
+      cityInChina: input.cityInChina || null,
+      arrivalDate: input.arrivalDate || null,
+      visaType: input.visaType || null,
+      scholarshipType: input.scholarshipType || null,
+      emergencyContactName: input.emergencyContactName || null,
+      emergencyContactPhone: input.emergencyContactPhone || null,
+      completionStatus: "complete",
+      updatedAt: new Date(),
+    })
+    .onConflictDoUpdate({
+      target: sensusProfiles.userId,
+      set: {
+        gender: input.gender || null,
+        birthDate: input.birthDate || null,
+        university: input.university || null,
+        program: input.program || null,
+        degreeLevel: input.degreeLevel || null,
+        cityInChina: input.cityInChina || null,
+        arrivalDate: input.arrivalDate || null,
+        visaType: input.visaType || null,
+        scholarshipType: input.scholarshipType || null,
+        emergencyContactName: input.emergencyContactName || null,
+        emergencyContactPhone: input.emergencyContactPhone || null,
+        completionStatus: "complete",
+        updatedAt: new Date(),
+      },
+    });
+
+  redirect("/sensus/success");
+}
