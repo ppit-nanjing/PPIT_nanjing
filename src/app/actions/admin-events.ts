@@ -46,6 +46,7 @@ export async function createEvent(formData: FormData) {
         ? new Date(String(formData.get("registrationDeadline")))
         : null,
       capacity: formData.get("capacity") ? Number(formData.get("capacity")) : null,
+      requiresSensus: formData.get("requiresSensus") === "on",
       agenda: String(formData.get("agenda") ?? "").trim() || null,
       status: "draft",
       createdBy: actorId,
@@ -73,6 +74,7 @@ export async function updateEvent(id: string, formData: FormData) {
         ? new Date(String(formData.get("registrationDeadline")))
         : null,
       capacity: formData.get("capacity") ? Number(formData.get("capacity")) : null,
+      requiresSensus: formData.get("requiresSensus") === "on",
       agenda: String(formData.get("agenda") ?? "").trim() || null,
       status: String(formData.get("status") ?? "draft") as (typeof events.status.enumValues)[number],
     })
