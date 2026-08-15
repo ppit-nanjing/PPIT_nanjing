@@ -2,6 +2,7 @@ import { desc } from "drizzle-orm";
 import { db } from "@/db";
 import { events } from "@/db/schema";
 import { createEvent } from "@/app/actions/admin-events";
+import { requireModuleAccess } from "@/lib/admin-scope";
 import { Plus } from "lucide-react";
 
 const STATUS_LABEL: Record<string, string> = {
@@ -13,6 +14,7 @@ const STATUS_LABEL: Record<string, string> = {
 };
 
 export default async function ConsoleEventsPage() {
+  await requireModuleAccess("events");
   const list = await db.select().from(events).orderBy(desc(events.startAt));
 
   return (
