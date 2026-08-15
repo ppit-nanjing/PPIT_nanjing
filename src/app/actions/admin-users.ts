@@ -7,6 +7,8 @@ import { db } from "@/db";
 import { users, departmentMembers } from "@/db/schema";
 import { hasModuleAccess } from "@/lib/admin-scope";
 
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
 async function assertAdmin() {
   const session = await auth();
   if (!hasModuleAccess(session?.user?.adminScope ?? null, "users")) throw new Error("Forbidden");
@@ -30,8 +32,36 @@ export async function assignUserDepartment(userId: string, departmentId: string,
   revalidatePath("/console/users");
 }
 
-export async function updateUserStatus(userId: string, status: "active" | "inactive" | "suspended") {
+export async function updateUserStatus(userId: string, status: "invited" | "active" | "inactive" | "suspended") {
   await assertAdmin();
   await db.update(users).set({ status }).where(eq(users.id, userId));
+  revalidatePath("/console/users");
+}
+
+// Admin pre-provisions an account ("invited"): no passwordHash yet, so the
+// person can't sign in until they claim it via Google (signIn callback links
+// the OAuth identity) or via /signup with this exact email (signUpWithPassword
+// claims the row). Role/department can be set up front so admin access is live
+// the moment they first sign in.
+export async function createInvitedUser(formData: FormData) {
+  await assertAdmin();
+  const name = String(formData.get("name") ?? "").trim();
+  const email = String(formData.get("email") ?? "").trim().toLowerCase();
+  const roleId = String(formData.get("roleId") ?? "").trim();
+  const departmentId = String(formData.get("departmentId") ?? "").trim();
+  const position = String(formData.get("position") ?? "").trim();
+
+  if (!name || !EMAIL_RE.test(email)) throw new Error("Nama dan email wajib diisi dengan benar");
+  const [existing] = await db.select({ id: users.id }).from(users).where(eq(users.email, email));
+  if (existing) throw new Error("Email sudah digunakan oleh akun lain");
+
+  const [row] = await db
+    .insert(users)
+    .values({ name, email, status: "invited", roleId: roleId || null })
+    .returning();
+
+  if (departmentId) {
+    await db.insert(departmentMembers).values({ userId: row.id, departmentId, position: position || null });
+  }
   revalidatePath("/console/users");
 }
