@@ -3,6 +3,7 @@ import { Inter } from "next/font/google";
 import { Providers } from "@/components/providers";
 import { FeedbackWidget } from "@/components/feedback/feedback-widget";
 import { OnboardingModal } from "@/components/onboarding-modal";
+import { auth } from "@/auth";
 import "./globals.css";
 
 // next/font/google downloads and self-hosts the font at build time - no runtime
@@ -20,11 +21,12 @@ export const metadata: Metadata = {
     "Perhimpunan Pelajar Indonesia Tiongkok Cabang Nanjing - wadah resmi mahasiswa Indonesia di Nanjing untuk bersinergi, berkarya, dan berkontribusi.",
 };
 
-export default function RootLayout({ children }: LayoutProps<"/">) {
+export default async function RootLayout({ children }: LayoutProps<"/">) {
+  const session = await auth();
   return (
     <html lang="id" className={`${inter.variable} scroll-smooth`}>
       <body className="antialiased">
-        <Providers>
+        <Providers session={session}>
           {children}
           <FeedbackWidget />
           <OnboardingModal />
