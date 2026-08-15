@@ -2,13 +2,12 @@
 
 import { eq, and } from "drizzle-orm";
 import { redirect } from "next/navigation";
-import { auth } from "@/auth";
 import { db } from "@/db";
 import { jobApplications } from "@/db/schema";
+import { requireCompletedSensus } from "@/lib/sensus-gate";
 
 export async function applyToJob(jobId: string, formData: FormData) {
-  const session = await auth();
-  if (!session?.user?.id) redirect("/login");
+  const session = await requireCompletedSensus(`/jobs/${jobId}/apply`);
 
   const resumeUrl = String(formData.get("resumeUrl") ?? "").trim();
   const coverLetter = String(formData.get("coverLetter") ?? "").trim();
