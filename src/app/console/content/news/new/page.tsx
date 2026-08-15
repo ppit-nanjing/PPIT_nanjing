@@ -8,11 +8,11 @@ export default async function NewNewsArticlePage() {
   await requireModuleAccess("content");
 
   return (
-    <div className="px-8 py-10 max-w-2xl">
-      <h1 className="text-headline-lg text-on-background mb-8">Tulis Berita Baru</h1>
+    <div className="px-4 py-6 sm:px-6 lg:px-8 lg:py-10 max-w-2xl">
+      <h1 className="text-headline-md sm:text-headline-lg text-on-background mb-8">Tulis Berita Baru</h1>
       <form action={upsertNewsArticle.bind(null, null)} className="flex flex-col gap-6">
         <input id="news-title" name="title" placeholder="Judul *" required className="bg-soft-gray rounded-md p-3 text-body-md" />
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <FileUpload name="coverImageUrl" folder="news" label="Foto Sampul (opsional)" placeholder="URL atau unggah gambar" />
             <input name="category" placeholder="Kategori (opsional)" className="bg-soft-gray rounded-md p-3 text-body-md" />
           </div>
