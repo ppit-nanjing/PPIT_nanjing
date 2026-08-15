@@ -6,8 +6,11 @@ import { requireModuleAccess } from "@/lib/admin-scope";
 import {
   updateMembershipStatus,
   updateMembershipNote,
+  getFormFields,
 } from "@/app/actions/membership";
 import { MembershipDeleteButton } from "@/components/console/membership-delete-button";
+import { MembershipTabs } from "@/components/console/membership-tabs";
+import { CORE_KEYS } from "@/lib/membership-form";
 
 const STATUS_LABEL: Record<string, string> = {
   pending: "Menunggu",
@@ -46,6 +49,7 @@ export default async function MembershipDetailPage({ params }: { params: Promise
       commitment: membershipApplications.commitment,
       status: membershipApplications.status,
       note: membershipApplications.note,
+      responses: membershipApplications.responses,
       submittedAt: membershipApplications.submittedAt,
       reviewedAt: membershipApplications.reviewedAt,
       batchLabel: recruitmentPeriods.batchLabel,
@@ -58,12 +62,19 @@ export default async function MembershipDetailPage({ params }: { params: Promise
   if (!app) notFound();
   const row = app as unknown as Record<string, string | null>;
 
+  const fields = await getFormFields();
+  const labelByKey = new Map(fields.map((f) => [f.key, f.label]));
+  const coreKeys = new Set(Object.values(CORE_KEYS));
+  const responses = (app.responses as Record<string, string> | null) ?? {};
+  const extraAnswers = Object.entries(responses).filter(([k]) => !coreKeys.has(k as never) && k !== "fullName" && k !== "email");
+
   return (
     <div className="px-8 py-10 max-w-3xl">
       <a href="/console/membership" className="text-label-caps text-secondary uppercase hover:text-on-background">
         &larr; Kembali ke Daftar
       </a>
       <h1 className="text-headline-lg text-on-background mt-2 mb-1">{app.fullName}</h1>
+      <MembershipTabs active="list" />
       <p className="text-body-md text-on-surface-variant mb-8">
         Periode {app.batchLabel ?? "-"} &middot; Terkirim{" "}
         {app.submittedAt
@@ -83,6 +94,18 @@ export default async function MembershipDetailPage({ params }: { params: Promise
           </div>
         ))}
       </div>
+
+      {extraAnswers.length > 0 && (
+        <div className="bg-surface-container-lowest border border-outline-variant rounded-xl divide-y divide-outline-variant mt-6">
+          <p className="px-6 py-3 text-headline-sm text-on-background">Jawaban Tambahan</p>
+          {extraAnswers.map(([k, v]) => (
+            <div key={k} className="px-6 py-4">
+              <p className="text-label-caps uppercase tracking-wide text-on-surface-variant">{labelByKey.get(k) ?? k}</p>
+              <p className="text-body-md text-on-background whitespace-pre-wrap mt-1">{v || "-"}</p>
+            </div>
+          ))}
+        </div>
+      )}
 
       <div className="mt-8 grid grid-cols-1 md:grid-cols-2 gap-6">
         <form
