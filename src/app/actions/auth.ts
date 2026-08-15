@@ -32,17 +32,31 @@ export async function signUpWithPassword(_prev: AuthFormState, formData: FormDat
   if (password !== confirm) return { error: "Konfirmasi kata sandi tidak cocok." };
 
   const [existing] = await db
-    .select({ id: users.id, passwordHash: users.passwordHash })
+    .select({ id: users.id, passwordHash: users.passwordHash, status: users.status })
     .from(users)
     .where(eq(users.email, email));
 
   // Respect the existing unique(email) constraint rather than creating a
-  // second row: an existing Google-OAuth-only account (no passwordHash) is told
-  // to sign in with Google; one that already has a password is told to sign in.
+  // second row:
+  //  - an invited account (no passwordHash yet, status "invited") is CLAIMED:
+  //    set its passwordHash + flip to active on the same row so the person who
+  //    was invited can sign in with a password they choose.
+  //  - an existing Google-OAuth-only account (no passwordHash, already active)
+  //    is told to sign in with Google.
+  //  - an account that already has a password is told to sign in.
   if (existing) {
-    return existing.passwordHash
-      ? { error: "Email sudah terdaftar. Masuk dengan kata sandi kamu." }
-      : { error: "Email ini sudah terdaftar lewat Google. Masuk dengan Google." };
+    if (existing.passwordHash) return { error: "Email sudah terdaftar. Masuk dengan kata sandi kamu." };
+    if (existing.status !== "invited") {
+      return { error: "Email ini sudah terdaftar lewat Google. Masuk dengan Google." };
+    }
+    const passwordHash = await hashPassword(password);
+    await db
+      .update(users)
+      .set({ passwordHash, status: "active", name: deriveName(email) })
+      .where(eq(users.id, existing.id));
+  } else {
+    const passwordHash = await hashPassword(password);
+    await db.insert(users).values({ email, name: deriveName(email), passwordHash });
   }
 
   const passwordHash = await hashPassword(password);
