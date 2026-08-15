@@ -6,7 +6,7 @@ import { submitSensusProfile, type SensusInput } from "@/app/actions/sensus";
 
 const STEPS = ["Data Diri", "Akademik", "Kontak Darurat"] as const;
 
-export function SensusWizard({ initial }: { initial: Partial<SensusInput> }) {
+export function SensusWizard({ initial, returnTo }: { initial: Partial<SensusInput>; returnTo?: string }) {
   const [step, setStep] = useState(0);
   const [form, setForm] = useState<SensusInput>({
     gender: initial.gender ?? "",
@@ -28,7 +28,7 @@ export function SensusWizard({ initial }: { initial: Partial<SensusInput> }) {
   }
 
   function handleSubmit() {
-    startTransition(() => submitSensusProfile(form));
+    startTransition(() => submitSensusProfile(returnTo ?? null, form));
   }
 
   const field = (label: string, key: keyof SensusInput, type = "text") => (
