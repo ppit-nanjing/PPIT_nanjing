@@ -3,6 +3,8 @@ import { db } from "@/db";
 import { events } from "@/db/schema";
 import { createEvent } from "@/app/actions/admin-events";
 import { requireModuleAccess } from "@/lib/admin-scope";
+import { ImageUploadCropper } from "@/components/upload/image-upload-cropper";
+import { AIImproveButton } from "@/components/ai/ai-improve-button";
 import { Plus } from "lucide-react";
 
 const STATUS_LABEL: Record<string, string> = {
@@ -35,11 +37,19 @@ export default async function ConsoleEventsPage() {
             <input name="startAt" type="datetime-local" className="bg-soft-gray rounded-md p-3 text-body-md" />
             <input name="capacity" type="number" min={1} placeholder="Kapasitas" className="bg-soft-gray rounded-md p-3 text-body-md" />
           </div>
-          <div className="grid grid-cols-2 gap-4">
-            <input name="coverImageUrl" type="url" placeholder="URL Gambar Sampul" className="bg-soft-gray rounded-md p-3 text-body-md" />
-            <input name="registrationDeadline" type="datetime-local" placeholder="Batas Pendaftaran" className="bg-soft-gray rounded-md p-3 text-body-md" />
+          <ImageUploadCropper
+            name="coverImageUrl"
+            folder="events"
+            label="Gambar Sampul"
+            placeholder="Tempel URL atau unggah gambar"
+            aspect={16 / 9}
+            allowPaste
+          />
+          <input name="registrationDeadline" type="datetime-local" placeholder="Batas Pendaftaran" className="bg-soft-gray rounded-md p-3 text-body-md" />
+          <div>
+            <textarea id="event-description" name="description" placeholder="Deskripsi" rows={3} className="bg-soft-gray rounded-md p-3 text-body-md resize-none w-full" />
+            <AIImproveButton context="event" targetId="event-description" className="mt-1" />
           </div>
-          <textarea name="description" placeholder="Deskripsi" rows={3} className="bg-soft-gray rounded-md p-3 text-body-md resize-none" />
           <textarea
             name="agenda"
             placeholder={"Agenda/Jadwal (satu baris per item, contoh:\n18:00 - Registrasi\n19:00 - Pembukaan)"}
