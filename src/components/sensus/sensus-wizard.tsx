@@ -1,8 +1,9 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { ChevronRight, ChevronLeft, Check } from "lucide-react";
+import { ChevronRight, ChevronLeft, Check, AlertTriangle } from "lucide-react";
 import { submitSensusProfile, saveSensusStep, type SensusInput } from "@/app/actions/sensus";
+import { ImageUploadCropper } from "@/components/upload/image-upload-cropper";
 
 const STEPS = ["Data Diri", "Akademik", "Kontak Darurat"] as const;
 
@@ -24,10 +25,12 @@ export function SensusWizard({ initial, returnTo }: { initial: Partial<SensusInp
     scholarshipType: initial.scholarshipType ?? "",
     emergencyContactName: initial.emergencyContactName ?? "",
     emergencyContactPhone: initial.emergencyContactPhone ?? "",
+    photoUrl: initial.photoUrl ?? "",
   });
   const [pending, startTransition] = useTransition();
   const [saving, setSaving] = useState(false);
   const [lastSaved, setLastSaved] = useState<Date | null>(null);
+  const [submitError, setSubmitError] = useState<string | null>(null);
 
   function update<K extends keyof SensusInput>(key: K, value: string) {
     setForm((f) => ({ ...f, [key]: value }));
@@ -44,7 +47,15 @@ export function SensusWizard({ initial, returnTo }: { initial: Partial<SensusInp
   }
 
   function handleSubmit() {
-    startTransition(() => submitSensusProfile(returnTo ?? null, form));
+    setSubmitError(null);
+    startTransition(async () => {
+      const result = await submitSensusProfile(returnTo ?? null, form);
+      // A successful submit redirects server-side and never returns here.
+      if (result && "error" in result && result.error === "photo_required") {
+        setSubmitError("Foto profil wajib diunggah sebelum sensus bisa disimpan sebagai lengkap.");
+        setStep(0);
+      }
+    });
   }
 
   const field = (
@@ -104,6 +115,14 @@ export function SensusWizard({ initial, returnTo }: { initial: Partial<SensusInp
       <div className="flex flex-col gap-6 mb-10">
         {step === 0 && (
           <>
+            <ImageUploadCropper
+              folder="sensus"
+              label="Foto Profil (bukti mahasiswa aktif di Tiongkok)"
+              required
+              aspect={1}
+              value={form.photoUrl}
+              onValueChange={(url) => update("photoUrl", url)}
+            />
             {field("Jenis Kelamin", "gender", { options: GENDER_OPTIONS })}
             {field("Tanggal Lahir", "birthDate", { type: "date" })}
             {field("Kota Domisili di Tiongkok", "cityInChina", {
@@ -133,6 +152,13 @@ export function SensusWizard({ initial, returnTo }: { initial: Partial<SensusInp
           </>
         )}
       </div>
+
+      {submitError && (
+        <div className="flex items-start gap-3 bg-error-container/40 border-l-4 border-error rounded-r-lg p-4 mb-6">
+          <AlertTriangle className="text-error shrink-0 mt-0.5" size={18} />
+          <p className="text-body-md text-on-background">{submitError}</p>
+        </div>
+      )}
 
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-4">
