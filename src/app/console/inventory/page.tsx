@@ -2,6 +2,7 @@ import { eq, desc } from "drizzle-orm";
 import { db } from "@/db";
 import { inventoryItems, borrowRequests, users } from "@/db/schema";
 import { createInventoryItem } from "@/app/actions/admin-inventory";
+import { FileUpload } from "@/components/upload/file-upload";
 import { BorrowRequestQueue } from "@/components/console/borrow-request-queue";
 import { requireModuleAccess } from "@/lib/admin-scope";
 import { Plus, Package } from "lucide-react";
@@ -55,6 +56,7 @@ export default async function ConsoleInventoryPage() {
           </div>
           <input name="totalQuantity" type="number" min={1} placeholder="Jumlah Total *" required className="bg-soft-gray rounded-md p-3 text-body-md" />
           <textarea name="description" placeholder="Deskripsi" rows={2} className="bg-soft-gray rounded-md p-3 text-body-md resize-none" />
+          <FileUpload name="imageUrl" folder="inventory" label="Foto Barang (opsional)" placeholder="URL atau unggah gambar" />
           <button
             type="submit"
             className="self-start bg-primary-container text-on-primary text-label-caps uppercase tracking-wide px-6 py-3 rounded-md hover:bg-primary transition-colors"
