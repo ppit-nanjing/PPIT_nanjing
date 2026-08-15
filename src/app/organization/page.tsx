@@ -1,0 +1,87 @@
+import { isNull } from "drizzle-orm";
+import { db } from "@/db";
+import { departments } from "@/db/schema";
+import { SiteNav } from "@/components/site-nav";
+import { SiteFooter } from "@/components/site-footer";
+import { Building2 } from "lucide-react";
+
+export default async function OrganizationPage() {
+  const topLevel = await db.select().from(departments).where(isNull(departments.parentDepartmentId));
+  const all = await db.select().from(departments);
+  const childrenOf = (parentId: string) =>
+    all.filter((d) => d.parentDepartmentId === parentId).sort((a, b) => a.orderIndex - b.orderIndex);
+
+  return (
+    <div className="min-h-screen bg-background text-on-background">
+      <SiteNav />
+
+      <header className="max-w-[var(--container-max)] mx-auto px-[var(--spacing-container-padding)] pt-16 pb-8">
+        <span className="text-label-caps text-primary-container tracking-widest uppercase mb-2 block">
+          Kepengurusan 2026/2027
+        </span>
+        <h1 className="text-headline-lg md:text-display-hero-mobile text-on-background mb-4">
+          Struktur PPIT Nanjing
+        </h1>
+        <p className="text-body-lg text-on-surface-variant max-w-2xl">
+          Kabinet Maju PPIT Nanjing terdiri dari Badan Pengurus Harian (BPH) dan tiga departemen,
+          masing-masing menaungi tiga divisi.
+        </p>
+      </header>
+
+      <main className="max-w-[var(--container-max)] mx-auto px-[var(--spacing-container-padding)] pb-24 flex flex-col gap-10">
+        {topLevel
+          .sort((a, b) => a.orderIndex - b.orderIndex)
+          .map((dept) => {
+            const children = childrenOf(dept.id);
+            return (
+              <section
+                key={dept.id}
+                className="bg-surface-container-lowest border border-outline-variant rounded-xl p-8"
+              >
+                <div className="flex items-start gap-4 mb-6">
+                  <div className="w-10 h-10 rounded-lg bg-primary-container/10 flex items-center justify-center shrink-0">
+                    <Building2 className="text-primary-container" size={20} />
+                  </div>
+                  <div>
+                    <h2 className="text-headline-md text-on-background">{dept.name}</h2>
+                    {dept.description && (
+                      <p className="text-body-md text-on-surface-variant mt-1">{dept.description}</p>
+                    )}
+                  </div>
+                </div>
+
+                {children.length > 0 && (
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    {children.map((c) => (
+                      <div
+                        key={c.id}
+                        className="bg-surface-container-low border border-outline-variant rounded-lg p-5"
+                      >
+                        <h3 className="text-body-md font-semibold text-on-background mb-1">{c.name}</h3>
+                        {c.description && (
+                          <p className="text-label-caps text-on-surface-variant">{c.description}</p>
+                        )}
+                        {c.grantsFullAdminAccess && (
+                          <span className="inline-block mt-3 text-label-caps uppercase tracking-wide bg-primary-container/10 text-primary-container px-2 py-1 rounded">
+                            Akses Admin Penuh
+                          </span>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </section>
+            );
+          })}
+
+        {topLevel.length === 0 && (
+          <p className="text-body-md text-on-surface-variant text-center py-12">
+            Struktur organisasi belum tersedia.
+          </p>
+        )}
+      </main>
+
+      <SiteFooter />
+    </div>
+  );
+}
