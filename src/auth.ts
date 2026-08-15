@@ -2,7 +2,7 @@ import NextAuth from "next-auth";
 import Google from "next-auth/providers/google";
 import Credentials from "next-auth/providers/credentials";
 import { DrizzleAdapter } from "@auth/drizzle-adapter";
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import { db } from "@/db";
 import { users, accounts, sessions, verificationTokens, roles, departmentMembers, departments } from "@/db/schema";
 import { verifyPassword } from "@/lib/password";
@@ -127,6 +127,44 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
   // login. JWT is the supported strategy for a Credentials + OAuth mix.
   session: { strategy: "jwt" },
   callbacks: {
+    // Handles admin-invited accounts (createInvitedUser in admin-users.ts inserts
+    // a `users` row with status "invited" and no passwordHash, before the person
+    // has ever signed in). Auth.js does NOT auto-link an OAuth sign-in to an
+    // existing user by email (by design, to prevent account takeover via a
+    // same-email OAuth provider) - without this, the invited person's first
+    // Google sign-in would hit OAuthAccountNotLinked and fail. We manually link
+    // the `accounts` row here, which runs BEFORE the adapter's own
+    // getUserByAccount check in handleLoginOrRegister, so that check finds our
+    // row and treats it as an existing linked account instead of throwing.
+    async signIn({ user, account }) {
+      if (account?.provider === "google" && user?.email) {
+        const email = user.email.toLowerCase();
+        const [existing] = await db.select().from(users).where(eq(users.email, email));
+        if (existing?.status === "invited") {
+          const [alreadyLinked] = await db
+            .select()
+            .from(accounts)
+            .where(and(eq(accounts.provider, "google"), eq(accounts.providerAccountId, account.providerAccountId)));
+          if (!alreadyLinked) {
+            await db.insert(accounts).values({
+              userId: existing.id,
+              type: account.type,
+              provider: account.provider,
+              providerAccountId: account.providerAccountId,
+              refresh_token: (account.refresh_token as string | null) ?? null,
+              access_token: (account.access_token as string | null) ?? null,
+              expires_at: (account.expires_at as number | null) ?? null,
+              token_type: (account.token_type as string | null) ?? null,
+              scope: (account.scope as string | null) ?? null,
+              id_token: (account.id_token as string | null) ?? null,
+              session_state: (account.session_state as string | null) ?? null,
+            });
+            await db.update(users).set({ status: "active" }).where(eq(users.id, existing.id));
+          }
+        }
+      }
+      return true;
+    },
     async jwt({ token, user }) {
       // Bake the stable user id into the token at sign-in (user is present only
       // then); on later refreshes we keep the existing token.id.
