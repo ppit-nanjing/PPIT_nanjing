@@ -5,8 +5,10 @@ import { recruitmentPeriods } from "@/db/schema";
 import { SiteNav } from "@/components/site-nav";
 import { SiteFooter } from "@/components/site-footer";
 import { Lock } from "lucide-react";
+import Link from "next/link";
 import { submitMembershipApplication, getFormFields } from "@/app/actions/membership";
 import type { MembershipFieldDef } from "@/lib/membership-form";
+import { ImageUploadCropper } from "@/components/upload/image-upload-cropper";
 
 export default async function JoinUsPage() {
   const [period] = await db.select().from(recruitmentPeriods).orderBy(desc(recruitmentPeriods.opensAt)).limit(1);
@@ -92,6 +94,30 @@ export default async function JoinUsPage() {
                         </option>
                       ))}
                     </select>
+                  ) : f.type === "checkbox" ? (
+                    <div className="flex items-center gap-3">
+                      <input
+                        type="checkbox"
+                        id={id}
+                        name={f.key}
+                        value="true"
+                        className="h-5 w-5 accent-[color:var(--color-primary-container)]"
+                      />
+                      <span className="text-body-md text-on-surface-variant">{f.placeholder ?? "Centang jika ya"}</span>
+                    </div>
+                  ) : f.type === "image" ? (
+                    session?.user?.id ? (
+                      <ImageUploadCropper name={f.key} folder="membership" aspect={1} required={f.required} />
+                    ) : (
+                      <div className="flex flex-col gap-1 rounded-md border border-dashed border-outline-variant bg-soft-gray p-4">
+                        <p className="text-body-sm text-on-surface-variant">
+                          Untuk unggah gambar, silakan masuk terlebih dahulu.
+                        </p>
+                        <Link href="/login" className="text-body-sm text-primary-container underline">
+                          Masuk
+                        </Link>
+                      </div>
+                    )
                   ) : (
                     <input
                       id={id}
