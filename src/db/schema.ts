@@ -259,6 +259,10 @@ export const events = pgTable("events", {
   endAt: timestamp("end_at"),
   registrationDeadline: timestamp("registration_deadline"),
   capacity: integer("capacity"),
+  // Freeform schedule, one item per line (e.g. "18:00 - Registrasi") - rendered as
+  // a timeline on the event detail page when set. Not structured jsonb since the
+  // admin form is a single textarea, matching description's freeform pattern.
+  agenda: text("agenda"),
   status: eventStatusEnum("status").notNull().default("draft"),
   departmentId: uuid("department_id").references(() => departments.id),
   createdBy: uuid("created_by").references(() => users.id),
