@@ -12,8 +12,8 @@ export default async function ConsoleDashboardPage() {
   const recent = await db.select().from(feedback).orderBy(desc(feedback.createdAt)).limit(5);
 
   return (
-    <div className="px-8 py-10">
-      <h1 className="text-headline-lg text-on-background mb-8">Dashboard</h1>
+    <div className="px-4 py-6 sm:px-6 lg:px-8 lg:py-10">
+      <h1 className="text-headline-md sm:text-headline-lg text-on-background mb-8">Dashboard</h1>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-10 max-w-xl">
         <div className="bg-surface-container-low border border-outline-variant rounded-lg p-6">
@@ -30,7 +30,7 @@ export default async function ConsoleDashboardPage() {
         </div>
       </div>
 
-      <div className="flex items-center justify-between mb-4">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between mb-4">
         <h2 className="text-headline-md text-on-background">Masukan Terbaru</h2>
         <a
           href="/console/feedback"
