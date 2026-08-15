@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { usePathname } from "next/navigation";
-import { MessageSquarePlus, X, MousePointerClick, RotateCcw, Bug, Palette, Lightbulb, MessageCircle } from "lucide-react";
+import { X, MousePointerClick, RotateCcw, Bug, Palette, Lightbulb, MessageCircle } from "lucide-react";
 import { submitFeedback } from "@/app/actions/feedback";
 import { AIImproveButton } from "@/components/ai/ai-improve-button";
 import { pickElementAt, type PickedElement } from "./element-picker";
@@ -28,9 +28,8 @@ function loadDrafts(): Record<Category, string> {
   }
 }
 
-export function FeedbackWidget() {
+export function FeedbackPanel() {
   const pathname = usePathname();
-  const [open, setOpen] = useState(false);
   const [category, setCategory] = useState<Category>("bug");
   const [drafts, setDrafts] = useState<Record<Category, string>>({ bug: "", design: "", feature: "", general: "" });
   const [picking, setPicking] = useState(false);
@@ -71,7 +70,6 @@ export function FeedbackWidget() {
       if (result) {
         setPicked(result.picked);
         setPicking(false);
-        setOpen(true);
       }
     }
 
@@ -129,103 +127,80 @@ export function FeedbackWidget() {
         </div>
       )}
 
-      {/* Launcher */}
-      {!open && !picking && (
-        <button
-          onClick={() => setOpen(true)}
-          className="fixed bottom-6 right-6 z-[90] bg-primary-container text-on-primary rounded-full p-4 shadow-lg hover:bg-primary transition-colors"
-          aria-label="Beri masukan"
-        >
-          <MessageSquarePlus size={22} />
-        </button>
-      )}
+      <div className="flex border-b border-outline-variant">
+        {CATEGORIES.map((c) => (
+          <button
+            key={c.key}
+            onClick={() => setCategory(c.key)}
+            className={`flex-1 flex flex-col items-center gap-1 py-3 text-label-caps transition-colors ${
+              category === c.key
+                ? "text-primary-container border-b-2 border-primary-container bg-primary-container/5"
+                : "text-secondary hover:text-on-background"
+            }`}
+          >
+            <c.icon size={16} />
+            {c.label}
+          </button>
+        ))}
+      </div>
 
-      {/* Panel */}
-      {open && !picking && (
-        <div className="fixed bottom-6 right-6 z-[90] w-[360px] max-w-[calc(100vw-3rem)] bg-surface-container-lowest border border-outline-variant rounded-xl shadow-lg overflow-hidden">
-          <div className="flex items-center justify-between px-5 py-4 border-b border-outline-variant">
-            <span className="text-headline-md text-on-background">Beri Masukan</span>
-            <button onClick={() => setOpen(false)} className="text-secondary hover:text-on-background">
-              <X size={18} />
-            </button>
-          </div>
+      <div className="p-5">
+        {submitted ? (
+          <p className="text-body-md text-center py-6 text-on-background">
+            Terima kasih! Masukan kamu sudah terkirim.
+          </p>
+        ) : (
+          <>
+            <textarea
+              value={drafts[category]}
+              onChange={(e) => updateDraft(e.target.value)}
+              placeholder={activeCategory.placeholder}
+              rows={4}
+              className="w-full bg-soft-gray rounded-md p-3 text-body-md text-on-background placeholder:text-on-surface-variant resize-none focus:outline-none focus:ring-2 focus:ring-primary-container mb-2"
+            />
+            <AIImproveButton
+              context="feedback"
+              value={drafts[category]}
+              onImproved={(text) => updateDraft(text)}
+              label="Bantu tulis dengan AI"
+              className="mb-2"
+            />
 
-          <div className="flex border-b border-outline-variant">
-            {CATEGORIES.map((c) => (
-              <button
-                key={c.key}
-                onClick={() => setCategory(c.key)}
-                className={`flex-1 flex flex-col items-center gap-1 py-3 text-label-caps transition-colors ${
-                  category === c.key
-                    ? "text-primary-container border-b-2 border-primary-container bg-primary-container/5"
-                    : "text-secondary hover:text-on-background"
-                }`}
-              >
-                <c.icon size={16} />
-                {c.label}
-              </button>
-            ))}
-          </div>
-
-          <div className="p-5">
-            {submitted ? (
-              <p className="text-body-md text-center py-6 text-on-background">
-                Terima kasih! Masukan kamu sudah terkirim.
-              </p>
+            {picked ? (
+              <div className="flex items-center justify-between gap-2 bg-surface-container-low border border-outline-variant rounded-md px-3 py-2 mb-3 text-label-caps">
+                <span className="truncate text-on-surface-variant">📍 {picked.description}</span>
+                <button onClick={() => setPicked(null)} className="text-secondary hover:text-error shrink-0">
+                  <X size={14} />
+                </button>
+              </div>
             ) : (
-              <>
-                <textarea
-                  value={drafts[category]}
-                  onChange={(e) => updateDraft(e.target.value)}
-                  placeholder={activeCategory.placeholder}
-                  rows={4}
-                  className="w-full bg-soft-gray rounded-md p-3 text-body-md text-on-background placeholder:text-on-surface-variant resize-none focus:outline-none focus:ring-2 focus:ring-primary-container mb-2"
-                />
-                <AIImproveButton
-                  context="feedback"
-                  value={drafts[category]}
-                  onImproved={(text) => updateDraft(text)}
-                  label="Bantu tulis dengan AI"
-                  className="mb-2"
-                />
-
-                {picked ? (
-                  <div className="flex items-center justify-between gap-2 bg-surface-container-low border border-outline-variant rounded-md px-3 py-2 mb-3 text-label-caps">
-                    <span className="truncate text-on-surface-variant">📍 {picked.description}</span>
-                    <button onClick={() => setPicked(null)} className="text-secondary hover:text-error shrink-0">
-                      <X size={14} />
-                    </button>
-                  </div>
-                ) : (
-                  <button
-                    onClick={() => setPicking(true)}
-                    className="flex items-center gap-2 text-label-caps text-primary-container hover:text-primary mb-3"
-                  >
-                    <MousePointerClick size={14} /> Tandai elemen di halaman
-                  </button>
-                )}
-
-                <div className="flex items-center gap-3">
-                  <button
-                    onClick={resetDraft}
-                    disabled={!drafts[category] && !picked}
-                    className="flex items-center gap-1 text-label-caps text-secondary hover:text-on-background disabled:opacity-40"
-                  >
-                    <RotateCcw size={14} /> Reset
-                  </button>
-                  <button
-                    onClick={handleSubmit}
-                    disabled={!drafts[category].trim() || submitting}
-                    className="flex-1 bg-primary-container text-on-primary text-label-caps uppercase tracking-wide py-2.5 rounded-md hover:bg-primary transition-colors disabled:opacity-50"
-                  >
-                    {submitting ? "Mengirim..." : "Kirim"}
-                  </button>
-                </div>
-              </>
+              <button
+                onClick={() => setPicking(true)}
+                className="flex items-center gap-2 text-label-caps text-primary-container hover:text-primary mb-3"
+              >
+                <MousePointerClick size={14} /> Tandai elemen di halaman
+              </button>
             )}
-          </div>
-        </div>
-      )}
+
+            <div className="flex items-center gap-3">
+              <button
+                onClick={resetDraft}
+                disabled={!drafts[category] && !picked}
+                className="flex items-center gap-1 text-label-caps text-secondary hover:text-on-background disabled:opacity-40"
+              >
+                <RotateCcw size={14} /> Reset
+              </button>
+              <button
+                onClick={handleSubmit}
+                disabled={!drafts[category].trim() || submitting}
+                className="flex-1 bg-primary-container text-on-primary text-label-caps uppercase tracking-wide py-2.5 rounded-md hover:bg-primary transition-colors disabled:opacity-50"
+              >
+                {submitting ? "Mengirim..." : "Kirim"}
+              </button>
+            </div>
+          </>
+        )}
+      </div>
     </>
   );
 }
