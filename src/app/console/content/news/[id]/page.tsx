@@ -16,12 +16,20 @@ export default async function EditNewsArticlePage({ params }: { params: Promise<
       <h1 className="text-headline-lg text-on-background mb-8">Edit Berita</h1>
       <form action={upsertNewsArticle.bind(null, article.id)} className="flex flex-col gap-6">
         <input name="title" defaultValue={article.title} required className="bg-soft-gray rounded-md p-3 text-body-md" />
-        <input
-          name="coverImageUrl"
-          defaultValue={article.coverImageUrl ?? ""}
-          placeholder="URL Foto Sampul"
-          className="bg-soft-gray rounded-md p-3 text-body-md"
-        />
+        <div className="grid grid-cols-2 gap-4">
+          <input
+            name="coverImageUrl"
+            defaultValue={article.coverImageUrl ?? ""}
+            placeholder="URL Foto Sampul"
+            className="bg-soft-gray rounded-md p-3 text-body-md"
+          />
+          <input
+            name="category"
+            defaultValue={article.category ?? ""}
+            placeholder="Kategori (opsional)"
+            className="bg-soft-gray rounded-md p-3 text-body-md"
+          />
+        </div>
         <textarea
           name="content"
           defaultValue={article.content ?? ""}
