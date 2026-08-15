@@ -123,6 +123,12 @@ export const users = pgTable("users", {
   lastLoginAt: timestamp("last_login_at"),
 });
 
+// Property names for the 6 token fields must be exact snake_case - the
+// @auth/drizzle-adapter's PostgresDrizzleAdapter accesses accountsTable.refresh_token
+// etc. directly as JS properties (matching OAuth2 response field names), not just
+// the underlying DB column name. camelCase properties here type-check fine on
+// their own but fail DrizzleAdapter's DefaultPostgresAccountsTable shape and,
+// worse, would silently write undefined for these columns at runtime.
 export const accounts = pgTable(
   "accounts",
   {
@@ -130,13 +136,13 @@ export const accounts = pgTable(
     type: text("type").notNull(),
     provider: text("provider").notNull(),
     providerAccountId: text("provider_account_id").notNull(),
-    refreshToken: text("refresh_token"),
-    accessToken: text("access_token"),
-    expiresAt: integer("expires_at"),
-    tokenType: text("token_type"),
+    refresh_token: text("refresh_token"),
+    access_token: text("access_token"),
+    expires_at: integer("expires_at"),
+    token_type: text("token_type"),
     scope: text("scope"),
-    idToken: text("id_token"),
-    sessionState: text("session_state"),
+    id_token: text("id_token"),
+    session_state: text("session_state"),
   },
   (t) => [primaryKey({ columns: [t.provider, t.providerAccountId] })]
 );
