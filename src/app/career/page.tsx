@@ -28,7 +28,7 @@ export default async function CareerCenterPage() {
       <SiteNav />
 
       <header className="max-w-2xl mx-auto px-[var(--spacing-container-padding)] pt-16 pb-10 text-center flex flex-col items-center">
-        <h1 className="text-headline-lg md:text-display-hero-mobile text-on-background mb-4">Pusat Karir</h1>
+        <h1 className="text-display-hero-mobile md:text-display-hero text-on-background mb-4">Pusat Karir</h1>
         <p className="text-body-lg text-on-surface-variant">
           Peluang kerja, panduan karir, dan program mentorship untuk mahasiswa PPIT Nanjing.
         </p>
