@@ -3,6 +3,7 @@ import { Inter } from "next/font/google";
 import { Providers } from "@/components/providers";
 import { FeedbackWidget } from "@/components/feedback/feedback-widget";
 import { OnboardingModal } from "@/components/onboarding-modal";
+import { AiChatbot } from "@/components/ai/ai-chatbot";
 import { auth } from "@/auth";
 import "./globals.css";
 
@@ -29,6 +30,7 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
         <Providers session={session}>
           {children}
           <FeedbackWidget />
+          {session?.user && <AiChatbot />}
           <OnboardingModal />
         </Providers>
       </body>
