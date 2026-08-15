@@ -73,7 +73,7 @@ export default async function JobDetailPage({ params }: { params: Promise<{ id: 
                 <History size={13} /> {formatRelativeTime(job.createdAt)}
               </span>
             </div>
-            <h1 className="text-headline-lg md:text-display-hero-mobile text-on-background mb-3">{job.title}</h1>
+            <h1 className="text-display-hero-mobile md:text-display-hero text-on-background mb-3">{job.title}</h1>
             <h2 className="text-headline-md text-secondary mb-6">{job.company}</h2>
             <div className="flex flex-wrap gap-6 text-body-md text-on-surface-variant">
               {job.location && (
