@@ -75,7 +75,7 @@ export default async function EventScanPage({
   const attendedCount = registeredRows.filter((r) => r.status === "attended").length;
 
   return (
-    <div className="px-8 py-10 max-w-xl">
+    <div className="px-4 py-6 sm:px-6 lg:px-8 lg:py-10 max-w-xl">
       <a
         href={`/console/events/${id}`}
         className="inline-flex items-center gap-2 text-label-caps uppercase tracking-wide text-primary-container hover:text-primary transition-colors mb-6"
@@ -83,7 +83,7 @@ export default async function EventScanPage({
         <ArrowLeft size={16} /> Kembali ke Kegiatan
       </a>
 
-      <h1 className="text-headline-lg text-on-background mb-1">{event.title}</h1>
+      <h1 className="text-headline-md sm:text-headline-lg text-on-background mb-1">{event.title}</h1>
       <p className="text-body-md text-on-surface-variant mb-8">
         Scan QR tiket peserta untuk mencatat kehadiran.
       </p>
