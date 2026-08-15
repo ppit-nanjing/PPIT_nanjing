@@ -31,7 +31,7 @@ export default async function InventoryPage({
       <SiteNav />
 
       <header className="max-w-[var(--container-max)] mx-auto px-[var(--spacing-container-padding)] pt-16 pb-8">
-        <h1 className="text-headline-lg md:text-display-hero-mobile text-on-background mb-4">
+        <h1 className="text-display-hero-mobile md:text-display-hero text-on-background mb-4">
           Inventaris &amp; Peminjaman
         </h1>
         <p className="text-body-lg text-on-surface-variant max-w-2xl mb-8">
