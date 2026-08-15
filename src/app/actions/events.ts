@@ -3,15 +3,23 @@
 import { randomUUID } from "crypto";
 import { eq, and } from "drizzle-orm";
 import { redirect } from "next/navigation";
+import { auth } from "@/auth";
 import { db } from "@/db";
 import { events, eventRegistrations } from "@/db/schema";
-import { requireCompletedSensus } from "@/lib/sensus-gate";
+import { hasCompletedSensus } from "@/lib/sensus-gate";
 
 export async function registerForEvent(eventId: string, slug: string) {
-  const session = await requireCompletedSensus(`/events/${slug}`);
+  const session = await auth();
+  if (!session?.user?.id) redirect(`/login?returnTo=/events/${slug}`);
 
   const [event] = await db.select().from(events).where(eq(events.id, eventId));
   if (!event || event.status !== "published") throw new Error("Event tidak tersedia untuk pendaftaran");
+
+  // By default events only need login. Sensus (verified Indonesian student in
+  // China) is only required when the event opts in via requiresSensus.
+  if (event.requiresSensus && !(await hasCompletedSensus(session.user.id))) {
+    redirect(`/sensus?returnTo=/events/${slug}`);
+  }
 
   const [existing] = await db
     .select()
