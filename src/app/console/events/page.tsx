@@ -21,8 +21,8 @@ export default async function ConsoleEventsPage() {
   const list = await db.select().from(events).orderBy(desc(events.startAt));
 
   return (
-    <div className="px-8 py-10">
-      <h1 className="text-headline-lg text-on-background mb-8">Manajemen Kegiatan</h1>
+    <div className="px-4 py-6 sm:px-6 lg:px-8 lg:py-10">
+      <h1 className="text-headline-md sm:text-headline-lg text-on-background mb-8">Manajemen Kegiatan</h1>
 
       <details className="mb-8 bg-surface-container-lowest border border-outline-variant rounded-xl">
         <summary className="flex items-center gap-2 px-6 py-4 cursor-pointer text-label-caps text-primary-container uppercase tracking-wide">
@@ -30,11 +30,11 @@ export default async function ConsoleEventsPage() {
         </summary>
         <form action={createEvent} className="px-6 pb-6 flex flex-col gap-4">
           <input id="event-title" name="title" placeholder="Judul Kegiatan *" required className="bg-soft-gray rounded-md p-3 text-body-md" />
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <input id="event-category" name="category" placeholder="Kategori" className="bg-soft-gray rounded-md p-3 text-body-md" />
             <input id="event-location" name="location" placeholder="Lokasi" className="bg-soft-gray rounded-md p-3 text-body-md" />
           </div>
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <input name="startAt" type="datetime-local" className="bg-soft-gray rounded-md p-3 text-body-md" />
             <input name="capacity" type="number" min={1} placeholder="Kapasitas" className="bg-soft-gray rounded-md p-3 text-body-md" />
           </div>
