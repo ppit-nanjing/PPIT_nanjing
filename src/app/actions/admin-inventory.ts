@@ -6,6 +6,7 @@ import { auth } from "@/auth";
 import { db } from "@/db";
 import { inventoryItems, borrowRequests, inventoryAuditLogs } from "@/db/schema";
 import { hasModuleAccess } from "@/lib/admin-scope";
+import { createNotification } from "@/lib/notifications";
 
 async function requireAdmin() {
   const session = await auth();
@@ -57,15 +58,34 @@ export async function approveBorrowRequest(requestId: string) {
     .set({ status: "approved", approvedBy: actorId })
     .where(eq(borrowRequests.id, requestId));
 
+  await createNotification({
+    userId: request.userId,
+    title: "Permintaan peminjaman disetujui",
+    body: "Permintaan peminjaman barang kamu telah disetujui oleh admin. Cek detail di riwayat pengajuan.",
+    relatedEntityType: "borrow_request",
+    relatedEntityId: requestId,
+  });
+
   revalidatePath("/console/inventory");
 }
 
 export async function rejectBorrowRequest(requestId: string) {
   const actorId = await requireAdmin();
+  const [request] = await db.select().from(borrowRequests).where(eq(borrowRequests.id, requestId));
+  if (!request) return;
   await db
     .update(borrowRequests)
     .set({ status: "rejected", approvedBy: actorId })
     .where(eq(borrowRequests.id, requestId));
+
+  await createNotification({
+    userId: request.userId,
+    title: "Permintaan peminjaman ditolak",
+    body: "Maaf, permintaan peminjaman barang kamu ditolak. Cek detail di riwayat pengajuan.",
+    relatedEntityType: "borrow_request",
+    relatedEntityId: requestId,
+  });
+
   revalidatePath("/console/inventory");
 }
 
