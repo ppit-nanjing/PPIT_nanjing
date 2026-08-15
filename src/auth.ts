@@ -1,9 +1,38 @@
 import NextAuth from "next-auth";
 import Google from "next-auth/providers/google";
+import Credentials from "next-auth/providers/credentials";
 import { DrizzleAdapter } from "@auth/drizzle-adapter";
 import { eq } from "drizzle-orm";
 import { db } from "@/db";
 import { users, accounts, sessions, verificationTokens, roles, departmentMembers, departments } from "@/db/schema";
+import { verifyPassword } from "@/lib/password";
+
+// Best-effort brute-force throttle for the email/password path. NOTE: this is an
+// in-memory Map per function instance, so on Vercel (multiple Lambda instances)
+// it does not provide a hard guarantee across requests that land on different
+// instances - it adds friction, not bulletproof rate-limiting. Real protection
+// needs a shared store (e.g. Upstash Redis), which isn't provisioned yet.
+const MAX_ATTEMPTS = 5;
+const LOCK_MS = 5 * 60 * 1000;
+const attempts = new Map<string, { count: number; lockUntil: number }>();
+
+function checkThrottle(key: string): { locked: boolean; retryAfterMs: number } {
+  const rec = attempts.get(key);
+  if (!rec) return { locked: false, retryAfterMs: 0 };
+  if (rec.lockUntil > Date.now()) return { locked: true, retryAfterMs: rec.lockUntil - Date.now() };
+  return { locked: false, retryAfterMs: 0 };
+}
+
+function registerFailure(key: string) {
+  const rec = attempts.get(key) ?? { count: 0, lockUntil: 0 };
+  rec.count += 1;
+  if (rec.count >= MAX_ATTEMPTS) rec.lockUntil = Date.now() + LOCK_MS;
+  attempts.set(key, rec);
+}
+
+function registerSuccess(key: string) {
+  attempts.delete(key);
+}
 
 // Admin-access rule per docs/Data Dictionary.md "Admin Access Rule" (sourced from the
 // 2026/2027 recruitment guidebook):
@@ -50,15 +79,70 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     sessionsTable: sessions,
     verificationTokensTable: verificationTokens,
   }),
-  providers: [Google],
-  session: { strategy: "database" },
+  providers: [
+    Google,
+    Credentials({
+      // Shown only on the Auth.js default sign-in page (we use a custom /login,
+      // so these labels are informational), but the field names MUST match what
+      // the credentials sign-in server action passes to signIn("credentials").
+      credentials: {
+        email: { label: "Email", type: "email" },
+        password: { label: "Password", type: "password" },
+      },
+      async authorize(credentials) {
+        const email = String(credentials?.email ?? "").trim().toLowerCase();
+        const password = String(credentials?.password ?? "");
+        if (!email || !password) return null;
+
+        const { locked, retryAfterMs } = checkThrottle(email);
+        if (locked) {
+          // Delay to slow automated guessing even within a single instance window.
+          await new Promise((r) => setTimeout(r, Math.min(retryAfterMs, 1000)));
+          return null;
+        }
+
+        const [user] = await db.select().from(users).where(eq(users.email, email));
+        // No account, or a Google-OAuth-only account (no passwordHash) - reject.
+        // We return null for both so the response is identical (no email-enumeration
+        // leak about whether an address is registered or Google-linked).
+        if (!user || !user.passwordHash) {
+          registerFailure(email);
+          return null;
+        }
+
+        const ok = await verifyPassword(password, user.passwordHash);
+        if (!ok) {
+          registerFailure(email);
+          return null;
+        }
+
+        registerSuccess(email);
+        return { id: user.id, email: user.email, name: user.name, image: user.image };
+      },
+    }),
+  ],
+  // JWT sessions, not "database": @auth/core's Credentials branch
+  // (callback/index.js) always JWT-encodes the session cookie and never writes a
+  // row to the sessions table, so database sessions cannot persist a credentials
+  // login. JWT is the supported strategy for a Credentials + OAuth mix.
+  session: { strategy: "jwt" },
   callbacks: {
-    async session({ session, user }) {
-      session.user.id = user.id;
-      const scope = await resolveAdminScope(user.id);
+    async jwt({ token, user }) {
+      // Bake the stable user id into the token at sign-in (user is present only
+      // then); on later refreshes we keep the existing token.id.
+      if (user?.id) {
+        token.id = user.id;
+        await db.update(users).set({ lastLoginAt: new Date() }).where(eq(users.id, user.id));
+      }
+      return token;
+    },
+    async session({ session, token }) {
+      const userId = (token.id as string) ?? (token.sub as string);
+      session.user.id = userId;
+      const scope = await resolveAdminScope(userId);
       session.user.adminScope = scope;
       session.user.isAdmin = scope === "full" || (Array.isArray(scope) && scope.length > 0);
-      session.user.emailSubscribed = await resolveEmailSubscribed(user.id);
+      session.user.emailSubscribed = await resolveEmailSubscribed(userId);
       return session;
     },
   },
