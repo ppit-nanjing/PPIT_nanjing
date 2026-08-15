@@ -37,11 +37,12 @@ export function SiteNav() {
     setMenuOpen(false);
   }, [pathname]);
 
-  // Desktop: full-bleed bar (100%) shrinks into a floating capsule (72%) as
-  // you scroll. Mobile stays nearly full-width - shrinking is a desktop-only
-  // flourish, not something worth fighting for screen space on a phone.
+  // Desktop: full-bleed bar (100%) shrinks into a floating capsule (40%,
+  // matching the reference's own end width) as you scroll. Mobile stays
+  // nearly full-width - shrinking is a desktop-only flourish, not something
+  // worth fighting for screen space on a phone.
   const startWidthPct = 100;
-  const endWidthPct = 72;
+  const endWidthPct = 40;
   const widthPct = startWidthPct - (startWidthPct - endWidthPct) * progress;
 
   // Glass: fully off at rest (alpha 0, no blur) - fades in as you scroll,
