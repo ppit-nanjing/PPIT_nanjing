@@ -38,6 +38,21 @@ export default async function InventoryPage({
           Pinjam peralatan organisasi untuk kebutuhan kegiatan PPIT Nanjing.
         </p>
 
+        <div className="flex flex-wrap gap-3 mb-8">
+          <a
+            href="/inventory/contribute"
+            className="bg-primary-container text-on-primary text-label-caps uppercase tracking-wide px-5 py-2.5 rounded-md hover:bg-primary transition-colors"
+          >
+            Sumbangkan / Pinjamkan Barang
+          </a>
+          <a
+            href="/inventory/request-new"
+            className="bg-surface-container-low text-on-background text-label-caps uppercase tracking-wide px-5 py-2.5 rounded-md border border-outline-variant hover:bg-surface-container-lowest transition-colors"
+          >
+            Usulkan Barang Baru
+          </a>
+        </div>
+
         <form action="/inventory" className="relative max-w-xl mb-6">
           <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-secondary" size={18} />
           <input
