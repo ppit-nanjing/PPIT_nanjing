@@ -7,6 +7,7 @@ import { auth } from "@/auth";
 import { db } from "@/db";
 import { events, eventRegistrations } from "@/db/schema";
 import { hasModuleAccess } from "@/lib/admin-scope";
+import { createNotification } from "@/lib/notifications";
 
 async function requireAdmin() {
   const session = await auth();
@@ -82,9 +83,26 @@ export async function updateEvent(id: string, formData: FormData) {
 
 export async function checkInRegistration(registrationId: string, eventId: string) {
   await requireAdmin();
+  const [registration] = await db
+    .select({ userId: eventRegistrations.userId })
+    .from(eventRegistrations)
+    .where(eq(eventRegistrations.id, registrationId));
+  const [event] = await db.select({ title: events.title }).from(events).where(eq(events.id, eventId));
+
   await db
     .update(eventRegistrations)
     .set({ status: "attended", checkedInAt: new Date() })
     .where(eq(eventRegistrations.id, registrationId));
+
+  if (registration?.userId) {
+    await createNotification({
+      userId: registration.userId,
+      title: "Kehadiran terkonfirmasi",
+      body: `Kehadiran kamu di "${event?.title ?? "acara"}" telah dicatat. Terima kasih sudah hadir!`,
+      relatedEntityType: "event_registration",
+      relatedEntityId: registrationId,
+    });
+  }
+
   revalidatePath(`/console/events/${eventId}`);
 }
