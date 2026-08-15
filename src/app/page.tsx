@@ -1,7 +1,10 @@
-import { ArrowRight, Users, GraduationCap, CalendarDays, Quote } from "lucide-react";
+import { eq, desc, asc } from "drizzle-orm";
+import { ArrowRight, Users, GraduationCap, CalendarDays, Quote, Newspaper } from "lucide-react";
 import { AnimatedHeroHeading } from "@/components/animated-hero-heading";
 import { SiteNav } from "@/components/site-nav";
 import { SiteFooter } from "@/components/site-footer";
+import { db } from "@/db";
+import { events, newsArticles } from "@/db/schema";
 
 // Real figures from the 2026/2027 recruitment guidebook (docs/Overview.md context),
 // not the prototype's placeholder numbers.
@@ -13,7 +16,20 @@ const STATS = [
 
 const CITIES = ["Nanjing", "Xuzhou", "Jurong", "Ma'anshan", "Zhenjiang", "Huai'an"];
 
-export default function Home() {
+export default async function Home() {
+  const latestEvents = await db
+    .select()
+    .from(events)
+    .where(eq(events.status, "published"))
+    .orderBy(asc(events.startAt))
+    .limit(3);
+  const latestNews = await db
+    .select()
+    .from(newsArticles)
+    .where(eq(newsArticles.status, "published"))
+    .orderBy(desc(newsArticles.publishedAt))
+    .limit(3);
+
   return (
     <div className="min-h-screen bg-background text-on-background">
       <SiteNav />
@@ -121,6 +137,118 @@ export default function Home() {
             ))}
           </div>
         </section>
+
+        {/* Latest Events - only renders once an admin has published something via /console/events */}
+        {latestEvents.length > 0 && (
+          <section className="flex flex-col gap-8">
+            <div className="flex justify-between items-end border-b border-outline-variant pb-6">
+              <div>
+                <span className="text-label-caps text-primary-container tracking-widest uppercase mb-2 block">
+                  Kegiatan Terbaru
+                </span>
+                <h2 className="text-headline-lg text-on-background">Latest Events</h2>
+              </div>
+              <a
+                href="/events"
+                className="hidden md:flex items-center gap-1 text-label-caps text-primary-container hover:text-primary transition-colors"
+              >
+                Lihat Semua <ArrowRight size={16} />
+              </a>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+              {latestEvents.map((e) => (
+                <a
+                  key={e.id}
+                  href={`/events/${e.slug}`}
+                  className="group bg-surface-container-lowest border border-outline-variant rounded-xl overflow-hidden hover:shadow-[0_10px_30px_rgba(39,23,22,0.06)] transition-shadow flex flex-col"
+                >
+                  <div className="h-44 bg-surface-container-low overflow-hidden">
+                    {e.coverImageUrl ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img
+                        src={e.coverImageUrl}
+                        alt={e.title}
+                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                      />
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center">
+                        <CalendarDays className="text-outline-variant" size={28} />
+                      </div>
+                    )}
+                  </div>
+                  <div className="p-6 flex flex-col flex-1">
+                    {e.category && (
+                      <span className="text-label-caps uppercase tracking-wide text-primary-container mb-2">
+                        {e.category}
+                      </span>
+                    )}
+                    <div className="flex items-center gap-2 text-label-caps text-secondary mb-3">
+                      <CalendarDays size={14} />
+                      {e.startAt ? new Date(e.startAt).toLocaleDateString("id-ID", { dateStyle: "medium" }) : ""}
+                    </div>
+                    <h3 className="text-headline-md text-on-background mb-2">{e.title}</h3>
+                    {e.description && (
+                      <p className="text-body-md text-on-surface-variant line-clamp-2">{e.description}</p>
+                    )}
+                  </div>
+                </a>
+              ))}
+            </div>
+          </section>
+        )}
+
+        {/* Latest News - same honesty rule: no section rendered until real content exists */}
+        {latestNews.length > 0 && (
+          <section className="flex flex-col gap-8">
+            <div className="flex justify-between items-end border-b border-outline-variant pb-6">
+              <div>
+                <span className="text-label-caps text-primary-container tracking-widest uppercase mb-2 block">
+                  Kabar Terbaru
+                </span>
+                <h2 className="text-headline-lg text-on-background">Latest News</h2>
+              </div>
+              <a
+                href="/news"
+                className="hidden md:flex items-center gap-1 text-label-caps text-primary-container hover:text-primary transition-colors"
+              >
+                Lihat Semua <ArrowRight size={16} />
+              </a>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+              {latestNews.map((a) => (
+                <a
+                  key={a.id}
+                  href={`/news/${a.slug}`}
+                  className="group bg-surface-container-lowest border border-outline-variant rounded-xl overflow-hidden hover:shadow-[0_10px_30px_rgba(39,23,22,0.06)] transition-shadow flex flex-col"
+                >
+                  <div className="h-44 bg-surface-container-low overflow-hidden">
+                    {a.coverImageUrl ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img
+                        src={a.coverImageUrl}
+                        alt={a.title}
+                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                      />
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center">
+                        <Newspaper className="text-outline-variant" size={28} />
+                      </div>
+                    )}
+                  </div>
+                  <div className="p-6 flex flex-col flex-1">
+                    <p className="text-label-caps text-on-surface-variant uppercase mb-2">
+                      {a.publishedAt ? new Date(a.publishedAt).toLocaleDateString("id-ID") : ""}
+                    </p>
+                    <h3 className="text-headline-md text-on-background mb-2">{a.title}</h3>
+                    {a.content && (
+                      <p className="text-body-md text-on-surface-variant line-clamp-2">{a.content}</p>
+                    )}
+                  </div>
+                </a>
+              ))}
+            </div>
+          </section>
+        )}
       </main>
 
       <SiteFooter />
