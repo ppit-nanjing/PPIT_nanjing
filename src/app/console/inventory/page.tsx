@@ -1,13 +1,22 @@
 import { eq, desc } from "drizzle-orm";
 import { db } from "@/db";
-import { inventoryItems, borrowRequests, users } from "@/db/schema";
+import { inventoryItems, borrowRequests, users, itemContributions, procurementRequests, externalLoans } from "@/db/schema";
 import { createInventoryItem } from "@/app/actions/admin-inventory";
 import { FileUpload } from "@/components/upload/file-upload";
 import { BorrowRequestQueue } from "@/components/console/borrow-request-queue";
+import { ContributionReview } from "@/components/console/contribution-review";
+import { ProcurementReview } from "@/components/console/procurement-review";
+import { ExternalLoanManager } from "@/components/console/external-loan-manager";
 import { requireModuleAccess } from "@/lib/admin-scope";
 import { Plus, Package } from "lucide-react";
 
-const CONDITION_LABEL: Record<string, string> = { good: "Baik", damaged: "Rusak", retired: "Pensiun" };
+const CONDITION_LABEL: Record<string, string> = {
+  new: "Baru",
+  good: "Baik",
+  fair: "Cukup Baik",
+  damaged: "Rusak",
+  retired: "Pensiun",
+};
 
 export default async function ConsoleInventoryPage() {
   await requireModuleAccess("inventory");
@@ -18,6 +27,27 @@ export default async function ConsoleInventoryPage() {
     .leftJoin(inventoryItems, eq(borrowRequests.itemId, inventoryItems.id))
     .leftJoin(users, eq(borrowRequests.userId, users.id))
     .orderBy(desc(borrowRequests.requestedAt));
+
+  const contributions = await db
+    .select({ c: itemContributions, userName: users.name, userEmail: users.email })
+    .from(itemContributions)
+    .leftJoin(users, eq(itemContributions.userId, users.id))
+    .where(eq(itemContributions.status, "pending"));
+
+  const procurements = await db
+    .select({ r: procurementRequests, userName: users.name })
+    .from(procurementRequests)
+    .leftJoin(users, eq(procurementRequests.userId, users.id))
+    .orderBy(desc(procurementRequests.createdAt));
+
+  const loans = await db
+    .select({ l: externalLoans, itemName: inventoryItems.name })
+    .from(externalLoans)
+    .leftJoin(inventoryItems, eq(externalLoans.itemId, inventoryItems.id))
+    .where(eq(externalLoans.status, "active"))
+    .orderBy(desc(externalLoans.loanedAt));
+
+  const itemOptions = items.map((i) => ({ id: i.id, name: i.name, availableQuantity: i.availableQuantity }));
 
   return (
     <div className="px-8 py-10">
@@ -40,6 +70,49 @@ export default async function ConsoleInventoryPage() {
           status: r.req.status,
           requestedFrom: r.req.requestedFrom,
           requestedTo: r.req.requestedTo,
+        }))}
+      />
+
+      <h2 className="text-headline-md text-on-background mt-12 mb-4">Pengajuan Sumbangan / Pinjaman Barang</h2>
+      <ContributionReview
+        contributions={contributions.map((x) => ({
+          id: x.c.id,
+          name: x.c.name,
+          category: x.c.category,
+          condition: CONDITION_LABEL[x.c.condition] ?? x.c.condition,
+          contributionType: x.c.contributionType,
+          userName: x.userName,
+          userEmail: x.userEmail,
+        }))}
+        items={itemOptions}
+      />
+
+      <h2 className="text-headline-md text-on-background mt-12 mb-4">Usulan Pengadaan Barang</h2>
+      <ProcurementReview
+        requests={procurements.map((x) => ({
+          id: x.r.id,
+          itemName: x.r.itemName,
+          category: x.r.category,
+          justification: x.r.justification,
+          estimatedCost: x.r.estimatedCost,
+          urgency: x.r.urgency,
+          status: x.r.status,
+          userName: x.userName,
+        }))}
+      />
+
+      <h2 className="text-headline-md text-on-background mt-12 mb-4">Pinjam Keluar (Eksternal)</h2>
+      <ExternalLoanManager
+        items={itemOptions}
+        loans={loans.map((x) => ({
+          id: x.l.id,
+          itemName: x.itemName ?? "(barang dihapus)",
+          borrowerName: x.l.borrowerName,
+          borrowerContact: x.l.borrowerContact,
+          quantity: x.l.quantity,
+          conditionOut: x.l.conditionOut,
+          loanedAt: x.l.loanedAt.toISOString(),
+          expectedReturnAt: x.l.expectedReturnAt,
         }))}
       />
 
