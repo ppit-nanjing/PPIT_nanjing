@@ -14,6 +14,7 @@ import {
   FileBarChart,
   BookOpen,
   Images,
+  UserPlus,
 } from "lucide-react";
 import { hasModuleAccess, type AdminModule } from "@/lib/admin-scope-constants";
 
@@ -27,6 +28,7 @@ const NAV: { href: string; label: string; icon: typeof LayoutDashboard; module: 
   { href: "/console/organization", label: "Organisasi", icon: Building2, module: "organization" },
   { href: "/console/events", label: "Kegiatan", icon: CalendarDays, module: "events" },
   { href: "/console/inventory", label: "Inventaris", icon: Package, module: "inventory" },
+  { href: "/console/membership", label: "Pendaftaran", icon: UserPlus, module: "membership" },
   { href: "/console/content", label: "Konten", icon: Images, module: "content" },
   { href: "/console/reports", label: "Laporan", icon: FileBarChart, module: "reports" },
   { href: "/console/docs", label: "Dokumentasi", icon: BookOpen, module: null },
