@@ -1,10 +1,14 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { ChevronRight, ChevronLeft } from "lucide-react";
-import { submitSensusProfile, type SensusInput } from "@/app/actions/sensus";
+import { ChevronRight, ChevronLeft, Check } from "lucide-react";
+import { submitSensusProfile, saveSensusStep, type SensusInput } from "@/app/actions/sensus";
 
 const STEPS = ["Data Diri", "Akademik", "Kontak Darurat"] as const;
+
+const GENDER_OPTIONS = ["Laki-Laki", "Perempuan"];
+const DEGREE_OPTIONS = ["D3", "S1", "S2", "S3", "Sekolah Bahasa"];
+const SCHOLARSHIP_OPTIONS = ["Self-funded", "Partial Scholarship", "Full Scholarship"];
 
 export function SensusWizard({ initial, returnTo }: { initial: Partial<SensusInput>; returnTo?: string }) {
   const [step, setStep] = useState(0);
@@ -22,24 +26,56 @@ export function SensusWizard({ initial, returnTo }: { initial: Partial<SensusInp
     emergencyContactPhone: initial.emergencyContactPhone ?? "",
   });
   const [pending, startTransition] = useTransition();
+  const [saving, setSaving] = useState(false);
+  const [lastSaved, setLastSaved] = useState<Date | null>(null);
 
   function update<K extends keyof SensusInput>(key: K, value: string) {
     setForm((f) => ({ ...f, [key]: value }));
+  }
+
+  function goNext() {
+    setSaving(true);
+    startTransition(async () => {
+      const result = await saveSensusStep(form);
+      setSaving(false);
+      if (!("error" in result)) setLastSaved(new Date(result.savedAt));
+      setStep((s) => Math.min(STEPS.length - 1, s + 1));
+    });
   }
 
   function handleSubmit() {
     startTransition(() => submitSensusProfile(returnTo ?? null, form));
   }
 
-  const field = (label: string, key: keyof SensusInput, type = "text") => (
+  const field = (
+    label: string,
+    key: keyof SensusInput,
+    opts?: { type?: string; hint?: string; options?: string[] }
+  ) => (
     <label className="flex flex-col gap-2">
       <span className="text-label-caps uppercase tracking-wide text-on-surface-variant">{label}</span>
-      <input
-        type={type}
-        value={form[key]}
-        onChange={(e) => update(key, e.target.value)}
-        className="bg-soft-gray rounded-md p-3 text-body-md focus:outline-none focus:ring-2 focus:ring-primary-container"
-      />
+      {opts?.options ? (
+        <select
+          value={form[key]}
+          onChange={(e) => update(key, e.target.value)}
+          className="bg-soft-gray rounded-md p-3 text-body-md focus:outline-none focus:ring-2 focus:ring-primary-container"
+        >
+          <option value="">Pilih {label.toLowerCase()}</option>
+          {opts.options.map((o) => (
+            <option key={o} value={o}>
+              {o}
+            </option>
+          ))}
+        </select>
+      ) : (
+        <input
+          type={opts?.type ?? "text"}
+          value={form[key]}
+          onChange={(e) => update(key, e.target.value)}
+          className="bg-soft-gray rounded-md p-3 text-body-md focus:outline-none focus:ring-2 focus:ring-primary-container"
+        />
+      )}
+      {opts?.hint && <span className="text-xs text-on-surface-variant">{opts.hint}</span>}
     </label>
   );
 
@@ -68,42 +104,59 @@ export function SensusWizard({ initial, returnTo }: { initial: Partial<SensusInp
       <div className="flex flex-col gap-6 mb-10">
         {step === 0 && (
           <>
-            {field("Jenis Kelamin", "gender")}
-            {field("Tanggal Lahir", "birthDate", "date")}
-            {field("Kota Domisili di Tiongkok", "cityInChina")}
-            {field("Tanggal Kedatangan di Tiongkok", "arrivalDate", "date")}
+            {field("Jenis Kelamin", "gender", { options: GENDER_OPTIONS })}
+            {field("Tanggal Lahir", "birthDate", { type: "date" })}
+            {field("Kota Domisili di Tiongkok", "cityInChina", {
+              hint: "Kota tempat kamu tinggal saat ini, bukan kota kampus jika berbeda.",
+            })}
+            {field("Tanggal Kedatangan di Tiongkok", "arrivalDate", { type: "date" })}
           </>
         )}
         {step === 1 && (
           <>
             {field("Universitas", "university")}
             {field("Program Studi", "program")}
-            {field("Jenjang (S1/S2/S3)", "degreeLevel")}
+            {field("Jenjang", "degreeLevel", { options: DEGREE_OPTIONS })}
             {field("Jenis Visa", "visaType")}
-            {field("Jenis Beasiswa", "scholarshipType")}
+            {field("Sumber Pembiayaan", "scholarshipType", {
+              options: SCHOLARSHIP_OPTIONS,
+              hint: "Pilih jenis beasiswa atau pendanaan mandiri.",
+            })}
           </>
         )}
         {step === 2 && (
           <>
-            {field("Nama Kontak Darurat", "emergencyContactName")}
-            {field("No. Telepon Kontak Darurat", "emergencyContactPhone")}
+            {field("Nama Kontak Darurat", "emergencyContactName", {
+              hint: "Keluarga atau kerabat yang bisa dihubungi dalam keadaan darurat.",
+            })}
+            {field("No. Telepon Kontak Darurat", "emergencyContactPhone", { type: "tel" })}
           </>
         )}
       </div>
 
       <div className="flex items-center justify-between">
-        <button
-          onClick={() => setStep((s) => Math.max(0, s - 1))}
-          disabled={step === 0}
-          className="flex items-center gap-1 text-label-caps text-secondary hover:text-on-background disabled:opacity-30 transition-colors"
-        >
-          <ChevronLeft size={16} /> Sebelumnya
-        </button>
+        <div className="flex items-center gap-4">
+          <button
+            onClick={() => setStep((s) => Math.max(0, s - 1))}
+            disabled={step === 0}
+            className="flex items-center gap-1 text-label-caps text-secondary hover:text-on-background disabled:opacity-30 transition-colors"
+          >
+            <ChevronLeft size={16} /> Sebelumnya
+          </button>
+          {lastSaved && !saving && (
+            <span className="flex items-center gap-1 text-xs text-on-surface-variant">
+              <Check size={12} className="text-primary-container" />
+              Tersimpan {lastSaved.toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit" })}
+            </span>
+          )}
+          {saving && <span className="text-xs text-on-surface-variant">Menyimpan progres...</span>}
+        </div>
 
         {step < STEPS.length - 1 ? (
           <button
-            onClick={() => setStep((s) => Math.min(STEPS.length - 1, s + 1))}
-            className="flex items-center gap-1 bg-primary-container text-on-primary text-label-caps uppercase tracking-wide px-6 py-3 rounded-md hover:bg-primary transition-colors"
+            onClick={goNext}
+            disabled={pending}
+            className="flex items-center gap-1 bg-primary-container text-on-primary text-label-caps uppercase tracking-wide px-6 py-3 rounded-md hover:bg-primary transition-colors disabled:opacity-60"
           >
             Selanjutnya <ChevronRight size={16} />
           </button>
