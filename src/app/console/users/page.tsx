@@ -1,8 +1,10 @@
 import { db } from "@/db";
 import { users, roles, departments, departmentMembers } from "@/db/schema";
 import { UserTable } from "@/components/console/user-table";
+import { requireModuleAccess } from "@/lib/admin-scope";
 
 export default async function ConsoleUsersPage() {
+  await requireModuleAccess("users");
   const allUsers = await db.select().from(users);
   const allRoles = await db.select().from(roles);
   const allDepartments = await db.select().from(departments);
