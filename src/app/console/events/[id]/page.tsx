@@ -25,8 +25,8 @@ export default async function ConsoleEventDetailPage({ params }: { params: Promi
   const attended = registrations.filter((r) => r.reg.status === "attended").length;
 
   return (
-    <div className="px-8 py-10 max-w-3xl">
-      <h1 className="text-headline-lg text-on-background mb-2">{event.title}</h1>
+    <div className="px-4 py-6 sm:px-6 lg:px-8 lg:py-10 max-w-3xl">
+      <h1 className="text-headline-md sm:text-headline-lg text-on-background mb-2">{event.title}</h1>
       <p className="text-body-md text-on-surface-variant mb-8">
         {registrations.length} terdaftar &middot; {attended} hadir
         {event.capacity ? ` &middot; kapasitas ${event.capacity}` : ""}
@@ -38,11 +38,11 @@ export default async function ConsoleEventDetailPage({ params }: { params: Promi
         </summary>
         <form action={updateEvent.bind(null, id)} className="px-6 pb-6 flex flex-col gap-4">
           <input id="event-title" name="title" defaultValue={event.title} required className="bg-soft-gray rounded-md p-3 text-body-md" />
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <input id="event-category" name="category" defaultValue={event.category ?? ""} placeholder="Kategori" className="bg-soft-gray rounded-md p-3 text-body-md" />
             <input id="event-location" name="location" defaultValue={event.location ?? ""} placeholder="Lokasi" className="bg-soft-gray rounded-md p-3 text-body-md" />
           </div>
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <input
               name="startAt"
               type="datetime-local"
@@ -109,7 +109,7 @@ export default async function ConsoleEventDetailPage({ params }: { params: Promi
         </form>
       </details>
 
-      <div className="flex items-center justify-between gap-4 mb-4">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between mb-4">
         <h2 className="text-headline-md text-on-background">Daftar Pendaftar</h2>
         <a
           href={`/console/events/${id}/scan`}
