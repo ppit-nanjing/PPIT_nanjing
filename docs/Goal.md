@@ -58,6 +58,22 @@ These aren't "missing" so much as "solved differently" — revisit only after Ti
 
 - `notifications` — **in-app notification bell built in Phase 2 (2026-08-15)**: a nav `NotificationBell` + `/notifications` page, backed by `src/lib/notifications.ts`, triggered on real admin status changes (borrow request approve/reject, event check-in). Scoped down to existing data, no email sending (no email provider available — `notification_templates` is still unused, and no prototype screen strictly required notifications). Email verification for sign-up was also intentionally skipped (no sending infra).
 
+## Advanced Features (2026-08-15)
+
+Built per the Advanced Features Build Spec (Obsidian vault). All code committed; the only outstanding item is a **live runtime test of §6.1 invited-account linking** (needs real Google OAuth sign-in + `BLOB_READ_WRITE_TOKEN` on Vercel — neither available in local dev, uploads currently return 503).
+
+- [x] **§1 ImageUploadCropper** — `react-easy-crop`-based, controlled (`value`/`onValueChange`) + uncontrolled (`name`+hidden input) modes; `folder` whitelisted (`sensus`/`avatar`/`resume`/content/admin folders). Used by Sensus photo + Profile avatar.
+- [x] **§2 Sensus mandatory photo** — `photoUrl` required on profile submit (returns `photo_required` otherwise); wizard wired to the cropper.
+- [x] **§3 Profile avatar + 5 social links** — avatar cropper + LinkedIn/Instagram/GitHub/Spotify/TikTok inputs persisted via `updateProfile`; organization page renders generic social icons.
+- [x] **§4a Contributions** — `itemContributions` table + enums; `createContribution`/`reviewContribution`; member `/inventory/contribute` form + admin `ContributionReview`.
+- [x] **§4b Procurement** — `procurementRequests` table + enums; `createProcurementRequest`/`reviewProcurement`; member `/inventory/request-new` form + admin `ProcurementReview`.
+- [x] **§4c External loans** — `externalLoans` table + `lent_external`/`returned_external` audit actions; `recordExternalLoan`/`returnExternalLoan`; admin `ExternalLoanManager`.
+- [x] **§5 Inventory condition** — `inventoryConditionEnum` expanded to 5 values (new/good/fair/damaged/retired), pushed to Neon.
+- [x] **§6.1 User invite + admin claim** — `createInvitedUser` + invite form; `signUpWithPassword` claims an invited account; `signIn` callback links an invited Google account before the adapter's own check.
+- [x] **Responsive (Responsive Design Build Spec)** — `--spacing-container-padding` is now `clamp(1rem,4vw,1.5rem)`; `console-sidebar` is a desktop rail + mobile drawer (layout is `flex-col md:flex-row`); the three admin tables are wrapped in `overflow-x-auto` so they scroll on narrow screens instead of overflowing.
+
+Remaining: live test of §6.1 linking; full 8-width browser pass not possible in this environment — applied the spec's two concrete code fixes (gutter clamp + sidebar) plus table-scroll wrappers.
+
 ## Process notes for whoever/whatever works through this
 
 - Build, `git add` **one file at a time**, commit with a message explaining the *why* (matches the rest of this repo's history) — not batched commits.
