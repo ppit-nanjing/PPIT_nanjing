@@ -56,7 +56,6 @@ export function SiteNav() {
   const bgAlpha = 1 - 0.18 * progress; // 1 -> 0.82
   const blurPx = Math.round(progress * 14); // 0 -> 14px
   const shadowAlpha = (progress * 0.14).toFixed(3);
-  const borderAlpha = (progress * 0.5).toFixed(3);
 
   return (
     <>
@@ -70,9 +69,8 @@ export function SiteNav() {
             backdropFilter: `blur(${blurPx}px) saturate(140%)`,
             WebkitBackdropFilter: `blur(${blurPx}px) saturate(140%)`,
             boxShadow: `0 10px 30px rgba(39,23,22,${shadowAlpha})`,
-            border: `1px solid rgba(144,111,108,${borderAlpha})`,
             transition:
-              "width 400ms ease, background-color 400ms ease, backdrop-filter 400ms ease, -webkit-backdrop-filter 400ms ease, box-shadow 400ms ease, border-color 400ms ease",
+              "width 400ms ease, background-color 400ms ease, backdrop-filter 400ms ease, -webkit-backdrop-filter 400ms ease, box-shadow 400ms ease",
           }}
         >
           <div className="max-w-[var(--container-max)] mx-auto px-[var(--spacing-container-padding)] flex justify-between items-center gap-4 h-12 md:h-14">
