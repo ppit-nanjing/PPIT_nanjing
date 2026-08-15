@@ -6,7 +6,7 @@ import { sensusProfiles } from "@/db/schema";
 import { SiteNav } from "@/components/site-nav";
 import { SiteFooter } from "@/components/site-footer";
 import { SensusWizard } from "@/components/sensus/sensus-wizard";
-import { ShieldCheck } from "lucide-react";
+import { AlertTriangle, ShieldCheck } from "lucide-react";
 
 export default async function SensusPage({
   searchParams,
@@ -30,14 +30,25 @@ export default async function SensusPage({
             : "Lengkapi data pendataan mahasiswa Indonesia di Tiongkok. Data ini digunakan untuk pelaporan internal PPIT Nanjing."}
         </p>
 
-        {returnTo && existing?.completionStatus !== "complete" && (
+        {existing?.completionStatus !== "complete" && (
+          <div className="flex items-start gap-3 bg-error-container/40 border-l-4 border-error rounded-r-lg p-4 mb-8">
+            <AlertTriangle className="text-error shrink-0 mt-0.5" size={18} />
+            <div>
+              <p className="text-body-md font-semibold text-on-background">Perhatian</p>
+              <p className="text-body-md text-on-surface-variant mt-1">
+                {returnTo
+                  ? "Untuk melamar kerja, meminjam barang, atau mendaftar kegiatan, kamu perlu menyelesaikan data sensus terlebih dahulu sebagai verifikasi identitas. Setelah disimpan, kamu akan diarahkan kembali otomatis."
+                  : existing
+                    ? "Data sensus kamu belum lengkap. Progres yang sudah diisi tetap tersimpan — lanjutkan kapan saja."
+                    : "Profil kamu belum tercatat di data Sensus PPI Tiongkok. Lengkapi data di bawah ini."}
+              </p>
+            </div>
+          </div>
+        )}
+        {existing?.completionStatus === "complete" && (
           <div className="flex items-start gap-3 bg-primary-container/10 border border-primary-container/20 rounded-lg p-4 mb-8">
             <ShieldCheck className="text-primary-container shrink-0 mt-0.5" size={18} />
-            <p className="text-body-md text-on-background">
-              Untuk melamar kerja, meminjam barang, atau mendaftar kegiatan, kamu perlu menyelesaikan data
-              sensus terlebih dahulu sebagai verifikasi identitas. Setelah disimpan, kamu akan diarahkan
-              kembali otomatis.
-            </p>
+            <p className="text-body-md text-on-background">Data sensus kamu sudah lengkap dan tersimpan.</p>
           </div>
         )}
 
