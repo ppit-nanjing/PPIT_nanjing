@@ -4,8 +4,9 @@ import { DepartmentManager } from "@/components/console/department-manager";
 import { requireModuleAccess } from "@/lib/admin-scope";
 
 export default async function ConsoleOrganizationPage() {
-  await requireModuleAccess("organization");
+  const session = await requireModuleAccess("organization");
   const all = await db.select().from(departments);
+  const isFullAdmin = session.user.adminScope === "full";
 
   return (
     <div className="px-8 py-10">
@@ -21,7 +22,7 @@ export default async function ConsoleOrganizationPage() {
           </p>
         </div>
       </div>
-      <DepartmentManager departments={all} />
+      <DepartmentManager departments={all} isFullAdmin={isFullAdmin} />
     </div>
   );
 }
