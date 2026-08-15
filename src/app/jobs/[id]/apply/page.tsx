@@ -6,6 +6,7 @@ import { jobPostings } from "@/db/schema";
 import { SiteNav } from "@/components/site-nav";
 import { SiteFooter } from "@/components/site-footer";
 import { applyToJob } from "@/app/actions/jobs";
+import { FileUpload } from "@/components/upload/file-upload";
 
 export default async function JobApplyPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -23,18 +24,14 @@ export default async function JobApplyPage({ params }: { params: Promise<{ id: s
         <p className="text-body-md text-on-surface-variant mb-10">{job.company}</p>
 
         <form action={applyToJob.bind(null, id)} className="flex flex-col gap-6">
-          <label className="flex flex-col gap-2">
-            <span className="text-label-caps uppercase tracking-wide text-on-surface-variant">
-              Tautan Resume/CV *
-            </span>
-            <input
-              type="url"
-              name="resumeUrl"
-              required
-              placeholder="https://drive.google.com/..."
-              className="bg-soft-gray rounded-md p-3 text-body-md focus:outline-none focus:ring-2 focus:ring-primary-container"
-            />
-          </label>
+          <FileUpload
+            name="resumeUrl"
+            folder="resume"
+            label="Resume/CV *"
+            placeholder="Tempel URL Drive atau unggah PDF"
+            accept="application/pdf"
+            required
+          />
           <label className="flex flex-col gap-2">
             <span className="text-label-caps uppercase tracking-wide text-on-surface-variant">
               Cover Letter (opsional)
