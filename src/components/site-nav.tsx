@@ -8,11 +8,10 @@ import { NotificationBell } from "@/components/notifications/notification-bell";
 import { NAV_LINKS } from "@/lib/nav-links";
 
 // Scroll-driven glass capsule effect, ported from the website-portofolio
-// Navbar reference: shrinks + gains blur/shadow as you scroll, re-expressed
-// with this project's own surface/shadow tokens (kept solid enough to stay
-// legible over the homepage's dark hero, unlike the reference's near-
-// transparent starting state - see docs/Motion & Animation.md's a11y note on
-// respecting reduced-motion/legibility over literal fidelity).
+// Navbar reference: fully off (transparent, no blur) at rest, fades the
+// glass in as you scroll and shrink, reverses smoothly back to off as you
+// scroll back up - CSS transitions on the glass properties (not just width)
+// so each scroll-driven update eases instead of jumping per tick.
 function useScrollProgress(maxScroll = 300) {
   const [progress, setProgress] = useState(0);
 
@@ -45,12 +44,12 @@ export function SiteNav() {
   const endWidthPct = 72;
   const widthPct = startWidthPct - (startWidthPct - endWidthPct) * progress;
 
-  // Glass: background stays translucent throughout (never fully opaque) so
-  // the backdrop-blur is actually visible as a frosted-glass wash, not just a
-  // flat color sitting on top of blurred nothing. Blur/opacity both ramp with
-  // scroll for the "more glass the further you scroll" feel.
-  const bgAlpha = 0.55 + 0.35 * progress; // 0.55 -> 0.90
-  const blurPx = Math.round(10 + progress * 14); // 10px -> 24px, always on
+  // Glass: fully off at rest (alpha 0, no blur) - fades in as you scroll,
+  // fades back out on the way up. Everything below is a plain 0->1 ramp; the
+  // actual smoothing/easing comes from the CSS `transition` on these
+  // properties in the style block, not from the JS.
+  const bgAlpha = 0.9 * progress; // 0 -> 0.9
+  const blurPx = Math.round(progress * 20); // 0 -> 20px
   const shadowAlpha = (progress * 0.14).toFixed(3);
   const borderAlpha = (progress * 0.5).toFixed(3);
   const radiusPx = Math.round(progress * 999);
@@ -59,7 +58,7 @@ export function SiteNav() {
     <>
       <header className="w-full sticky top-0 z-50 flex justify-center pt-0 md:pt-3 transition-[padding] duration-300">
         <nav
-          className="w-full md:transition-[width] md:duration-300 md:ease-out"
+          className="w-full"
           style={{
             width: `min(100%, ${widthPct}%)`,
             maxWidth: "var(--container-max)",
@@ -69,6 +68,8 @@ export function SiteNav() {
             boxShadow: `0 10px 30px rgba(39,23,22,${shadowAlpha})`,
             border: `1px solid rgba(144,111,108,${borderAlpha})`,
             borderRadius: `${radiusPx}px`,
+            transition:
+              "width 400ms ease, background-color 400ms ease, backdrop-filter 400ms ease, -webkit-backdrop-filter 400ms ease, box-shadow 400ms ease, border-color 400ms ease, border-radius 400ms ease",
           }}
         >
           <div className="px-[var(--spacing-container-padding)] flex justify-between items-center h-16 md:h-20">
