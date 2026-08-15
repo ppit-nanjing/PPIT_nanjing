@@ -1,6 +1,6 @@
 "use server";
 
-import { eq } from "drizzle-orm";
+import { eq, and } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { auth } from "@/auth";
@@ -107,4 +107,41 @@ export async function checkInRegistration(registrationId: string, eventId: strin
   }
 
   revalidatePath(`/console/events/${eventId}`);
+}
+
+// Check-in by the QR token scanned from a ticket. Separated from the scan page
+// render so the db write happens in a server action (triggered client-side
+// after the page loads) rather than during the Server Component render - doing
+// a mutation inside a render breaks RSC streaming in production.
+export async function checkInByToken(token: string, eventId: string) {
+  await requireAdmin();
+
+  const [registration] = await db
+    .select({ id: eventRegistrations.id, userId: eventRegistrations.userId, status: eventRegistrations.status })
+    .from(eventRegistrations)
+    .where(and(eq(eventRegistrations.qrCodeToken, token), eq(eventRegistrations.eventId, eventId)));
+
+  if (!registration) return { ok: false as const };
+
+  if (registration.status === "attended") {
+    return { ok: true as const, already: true as const };
+  }
+
+  await db
+    .update(eventRegistrations)
+    .set({ status: "attended", checkedInAt: new Date() })
+    .where(eq(eventRegistrations.id, registration.id));
+
+  const [event] = await db.select({ title: events.title }).from(events).where(eq(events.id, eventId));
+  if (registration.userId) {
+    await createNotification({
+      userId: registration.userId,
+      title: "Kehadiran terkonfirmasi",
+      body: `Kehadiran kamu di "${event?.title ?? "acara"}" telah dicatat. Terima kasih sudah hadir!`,
+      relatedEntityType: "event_registration",
+      relatedEntityId: registration.id,
+    });
+  }
+
+  return { ok: true as const, already: false as const };
 }
