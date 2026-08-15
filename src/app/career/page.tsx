@@ -3,45 +3,80 @@ import { db } from "@/db";
 import { jobPostings, careerGuideArticles } from "@/db/schema";
 import { SiteNav } from "@/components/site-nav";
 import { SiteFooter } from "@/components/site-footer";
-import { Briefcase, BookOpen, Users } from "lucide-react";
+import { formatRelativeTime } from "@/lib/format-relative-time";
+import { Briefcase, BookOpen, Users, MapPin, ArrowRight } from "lucide-react";
+
+const TYPE_LABEL: Record<string, string> = {
+  internship: "Magang",
+  full_time: "Full-time",
+  part_time: "Part-time",
+  volunteer: "Volunteer",
+};
+
+function excerpt(content: string | null, length = 120): string {
+  if (!content) return "";
+  const plain = content.replace(/\s+/g, " ").trim();
+  return plain.length > length ? plain.slice(0, length).trim() + "…" : plain;
+}
 
 export default async function CareerCenterPage() {
-  const jobs = await db.select().from(jobPostings).where(eq(jobPostings.status, "open")).limit(4);
+  const jobs = await db.select().from(jobPostings).where(eq(jobPostings.status, "open")).orderBy(desc(jobPostings.createdAt)).limit(6);
   const guides = await db.select().from(careerGuideArticles).orderBy(desc(careerGuideArticles.publishedAt)).limit(4);
 
   return (
     <div className="min-h-screen bg-background text-on-background">
       <SiteNav />
 
-      <header className="max-w-[var(--container-max)] mx-auto px-[var(--spacing-container-padding)] pt-16 pb-8">
+      <header className="max-w-2xl mx-auto px-[var(--spacing-container-padding)] pt-16 pb-10 text-center flex flex-col items-center">
         <h1 className="text-headline-lg md:text-display-hero-mobile text-on-background mb-4">Pusat Karir</h1>
-        <p className="text-body-lg text-on-surface-variant max-w-2xl">
+        <p className="text-body-lg text-on-surface-variant">
           Peluang kerja, panduan karir, dan program mentorship untuk mahasiswa PPIT Nanjing.
         </p>
       </header>
 
-      <main className="max-w-[var(--container-max)] mx-auto px-[var(--spacing-container-padding)] pb-24 flex flex-col gap-14">
+      <main className="max-w-[var(--container-max)] mx-auto px-[var(--spacing-container-padding)] pb-24 flex flex-col gap-16">
         <section>
-          <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center justify-between mb-6">
             <h2 className="text-headline-md text-on-background flex items-center gap-2">
               <Briefcase size={20} className="text-primary-container" /> Peluang Terbaru
             </h2>
-            <a href="/jobs" className="text-label-caps text-primary-container hover:text-primary">
+            <a href="/jobs" className="text-label-caps uppercase tracking-wide text-primary-container hover:text-primary transition-colors">
               Lihat Semua
             </a>
           </div>
           {jobs.length === 0 ? (
             <p className="text-body-md text-on-surface-variant">Belum ada lowongan dibuka.</p>
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
               {jobs.map((j) => (
                 <a
                   key={j.id}
                   href={`/jobs/${j.id}`}
-                  className="bg-surface-container-lowest border border-outline-variant rounded-lg p-5 hover:bg-surface-container-low transition-colors"
+                  className="group bg-surface-container-lowest border border-outline-variant rounded-xl p-6 hover:shadow-[0_10px_30px_rgba(39,23,22,0.06)] transition-shadow flex flex-col"
                 >
-                  <h3 className="text-body-md font-semibold text-on-background">{j.title}</h3>
-                  <p className="text-label-caps text-on-surface-variant">{j.company}</p>
+                  <div className="flex items-start justify-between mb-4">
+                    <div className="w-11 h-11 bg-surface-container-low rounded-lg flex items-center justify-center text-primary-container">
+                      <Briefcase size={20} />
+                    </div>
+                    <span className="bg-primary-container/10 text-primary-container text-label-caps uppercase px-2.5 py-1 rounded-md">
+                      {TYPE_LABEL[j.type] ?? j.type}
+                    </span>
+                  </div>
+                  <h3 className="text-body-md font-semibold text-on-background mb-1 group-hover:text-primary-container transition-colors">
+                    {j.title}
+                  </h3>
+                  <p className="text-body-md text-on-surface-variant mb-3">{j.company}</p>
+                  {j.location && (
+                    <span className="flex items-center gap-1 text-label-caps text-secondary mb-4">
+                      <MapPin size={12} /> {j.location}
+                    </span>
+                  )}
+                  <div className="mt-auto flex items-center justify-between border-t border-outline-variant pt-4">
+                    <span className="text-label-caps text-on-surface-variant">{formatRelativeTime(j.createdAt)}</span>
+                    <span className="flex items-center gap-1 text-label-caps uppercase text-primary-container">
+                      Detail <ArrowRight size={13} className="group-hover:translate-x-1 transition-transform" />
+                    </span>
+                  </div>
                 </a>
               ))}
             </div>
@@ -49,23 +84,31 @@ export default async function CareerCenterPage() {
         </section>
 
         <section>
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-headline-md text-on-background flex items-center gap-2">
-              <BookOpen size={20} className="text-primary-container" /> Panduan Karir
-            </h2>
-          </div>
+          <h2 className="text-headline-md text-on-background mb-2">Panduan &amp; Sumber Daya Karir</h2>
+          <p className="text-body-md text-on-surface-variant max-w-2xl mb-6">
+            Tingkatkan peluangmu dengan materi persiapan karir untuk mahasiswa Indonesia di Tiongkok.
+          </p>
           {guides.length === 0 ? (
             <p className="text-body-md text-on-surface-variant">Belum ada artikel panduan.</p>
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               {guides.map((g) => (
                 <a
                   key={g.id}
                   href={`/career/guide/${g.slug}`}
-                  className="bg-surface-container-lowest border border-outline-variant rounded-lg p-5 hover:bg-surface-container-low transition-colors"
+                  className="group bg-surface-container-lowest border border-outline-variant rounded-xl p-6 flex gap-4 items-start hover:border-primary-container/50 transition-colors"
                 >
-                  <h3 className="text-body-md font-semibold text-on-background">{g.title}</h3>
-                  {g.category && <p className="text-label-caps text-on-surface-variant">{g.category}</p>}
+                  <div className="bg-surface-container-low p-3 rounded-lg text-primary-container shrink-0">
+                    <BookOpen size={22} />
+                  </div>
+                  <div>
+                    <h3 className="text-body-md font-semibold text-on-background mb-1 group-hover:text-primary-container transition-colors">
+                      {g.title}
+                    </h3>
+                    {g.category && <p className="text-label-caps uppercase text-on-surface-variant mb-2">{g.category}</p>}
+                    {g.content && <p className="text-body-md text-on-surface-variant mb-3">{excerpt(g.content)}</p>}
+                    <span className="text-label-caps uppercase tracking-wide text-primary-container">Baca Artikel</span>
+                  </div>
                 </a>
               ))}
             </div>
