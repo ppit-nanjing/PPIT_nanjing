@@ -5,7 +5,7 @@ import { db } from "@/db";
 import { users, sensusProfiles } from "@/db/schema";
 import { EmailSubscriptionToggle } from "@/components/profile/email-subscription-toggle";
 import { updateProfile } from "@/app/actions/user";
-import { ClipboardCheck, ClipboardList } from "lucide-react";
+import { ClipboardCheck, ClipboardList, UserRound } from "lucide-react";
 
 export default async function ProfilePage() {
   const session = await auth();
@@ -20,22 +20,45 @@ export default async function ProfilePage() {
         <h1 className="text-headline-lg text-on-background mb-8">Profil Saya</h1>
 
         <div className="flex items-center gap-4 mb-10">
-          {session.user.image && (
+          {user?.avatarUrl || session.user.image ? (
             // eslint-disable-next-line @next/next/no-img-element
             <img
-              src={session.user.image}
-              alt={session.user.name ?? "Profile"}
+              src={user?.avatarUrl || session.user.image || undefined}
+              alt={user?.name ?? session.user.name ?? "Profile"}
               className="w-16 h-16 rounded-full object-cover border border-outline-variant"
             />
+          ) : (
+            <div className="w-16 h-16 rounded-full bg-surface-container flex items-center justify-center text-on-surface-variant shrink-0">
+              <UserRound size={24} />
+            </div>
           )}
           <div>
-            <p className="text-headline-md text-on-background">{session.user.name}</p>
+            <p className="text-headline-md text-on-background">{user?.name ?? session.user.name}</p>
             <p className="text-body-md text-on-surface-variant">{session.user.email}</p>
           </div>
         </div>
 
-        <h2 className="text-label-caps uppercase tracking-widest text-secondary mb-4">Kontak</h2>
+        <h2 className="text-label-caps uppercase tracking-widest text-secondary mb-4">Profil</h2>
         <form action={updateProfile} className="flex flex-col gap-4 mb-10">
+          <label className="flex flex-col gap-2">
+            <span className="text-label-caps uppercase tracking-wide text-on-surface-variant">Nama Tampilan</span>
+            <input
+              name="name"
+              defaultValue={user?.name ?? session.user.name ?? ""}
+              placeholder="Nama yang ditampilkan di situs"
+              className="bg-soft-gray rounded-md p-3 text-body-md focus:outline-none focus:ring-2 focus:ring-primary-container"
+            />
+          </label>
+          <label className="flex flex-col gap-2">
+            <span className="text-label-caps uppercase tracking-wide text-on-surface-variant">URL Foto Profil</span>
+            <input
+              name="avatarUrl"
+              type="url"
+              defaultValue={user?.avatarUrl ?? ""}
+              placeholder="Kosongkan untuk memakai foto akun Google"
+              className="bg-soft-gray rounded-md p-3 text-body-md focus:outline-none focus:ring-2 focus:ring-primary-container"
+            />
+          </label>
           <label className="flex flex-col gap-2">
             <span className="text-label-caps uppercase tracking-wide text-on-surface-variant">No. Telepon/WhatsApp</span>
             <input
@@ -57,7 +80,7 @@ export default async function ProfilePage() {
             type="submit"
             className="self-start bg-primary-container text-on-primary text-label-caps uppercase tracking-wide px-6 py-3 rounded-md hover:bg-primary transition-colors"
           >
-            Simpan Kontak
+            Simpan Profil
           </button>
         </form>
 
