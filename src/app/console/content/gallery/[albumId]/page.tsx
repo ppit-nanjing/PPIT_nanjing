@@ -5,6 +5,7 @@ import { galleryAlbums, galleryPhotos } from "@/db/schema";
 import { requireModuleAccess } from "@/lib/admin-scope";
 import { addGalleryPhoto } from "@/app/actions/admin-content";
 import { PhotoGrid } from "@/components/console/photo-grid";
+import { FileUpload } from "@/components/upload/file-upload";
 
 export default async function ConsoleAlbumDetailPage({ params }: { params: Promise<{ albumId: string }> }) {
   await requireModuleAccess("content");
@@ -17,8 +18,10 @@ export default async function ConsoleAlbumDetailPage({ params }: { params: Promi
     <div className="px-8 py-10 max-w-3xl">
       <h1 className="text-headline-lg text-on-background mb-8">{album.title}</h1>
 
-      <form action={addGalleryPhoto.bind(null, albumId)} className="flex gap-3 mb-10">
-        <input name="imageUrl" placeholder="URL Foto *" required className="flex-1 bg-soft-gray rounded-md p-3 text-body-md" />
+      <form action={addGalleryPhoto.bind(null, albumId)} className="flex gap-3 mb-10 items-end">
+        <div className="flex-1">
+          <FileUpload name="imageUrl" folder="gallery" label="URL Foto *" placeholder="URL atau unggah gambar" required />
+        </div>
         <input name="caption" placeholder="Keterangan (opsional)" className="flex-1 bg-soft-gray rounded-md p-3 text-body-md" />
         <button
           type="submit"
