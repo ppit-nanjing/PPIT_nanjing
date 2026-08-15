@@ -1,8 +1,10 @@
 import { desc, eq } from "drizzle-orm";
 import { db } from "@/db";
 import { auditLogs, users } from "@/db/schema";
+import { requireModuleAccess } from "@/lib/admin-scope";
 
 export default async function OrganizationAuditLogPage() {
+  await requireModuleAccess("organization");
   const logs = await db
     .select({ log: auditLogs, actorName: users.name, actorEmail: users.email })
     .from(auditLogs)
