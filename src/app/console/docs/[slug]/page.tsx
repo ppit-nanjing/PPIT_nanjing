@@ -15,11 +15,11 @@ export default async function HelpArticlePage({ params }: { params: Promise<{ sl
   const { article, authorName } = row;
 
   return (
-    <div className="px-8 py-10 max-w-2xl">
+    <div className="px-4 py-6 sm:px-6 lg:px-8 lg:py-10 max-w-2xl">
       <span className="text-label-caps uppercase tracking-wide text-primary-container mb-2 block">
         {article.section}
       </span>
-      <h1 className="text-headline-lg text-on-background mb-2">{article.title}</h1>
+      <h1 className="text-headline-md sm:text-headline-lg text-on-background mb-2">{article.title}</h1>
       <p className="text-label-caps text-on-surface-variant mb-8">
         Diperbarui {new Date(article.updatedAt).toLocaleDateString("id-ID")}
         {authorName ? ` oleh ${authorName}` : ""}
