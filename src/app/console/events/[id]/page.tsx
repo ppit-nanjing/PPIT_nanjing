@@ -7,6 +7,7 @@ import { RegistrationList } from "@/components/console/registration-list";
 import { requireModuleAccess } from "@/lib/admin-scope";
 import { ImageUploadCropper } from "@/components/upload/image-upload-cropper";
 import { AIImproveButton } from "@/components/ai/ai-improve-button";
+import { AIReviewButton } from "@/components/ai/ai-review-popup";
 
 export default async function ConsoleEventDetailPage({ params }: { params: Promise<{ id: string }> }) {
   await requireModuleAccess("events");
@@ -36,10 +37,10 @@ export default async function ConsoleEventDetailPage({ params }: { params: Promi
           Edit Detail Kegiatan
         </summary>
         <form action={updateEvent.bind(null, id)} className="px-6 pb-6 flex flex-col gap-4">
-          <input name="title" defaultValue={event.title} required className="bg-soft-gray rounded-md p-3 text-body-md" />
+          <input id="event-title" name="title" defaultValue={event.title} required className="bg-soft-gray rounded-md p-3 text-body-md" />
           <div className="grid grid-cols-2 gap-4">
-            <input name="category" defaultValue={event.category ?? ""} placeholder="Kategori" className="bg-soft-gray rounded-md p-3 text-body-md" />
-            <input name="location" defaultValue={event.location ?? ""} placeholder="Lokasi" className="bg-soft-gray rounded-md p-3 text-body-md" />
+            <input id="event-category" name="category" defaultValue={event.category ?? ""} placeholder="Kategori" className="bg-soft-gray rounded-md p-3 text-body-md" />
+            <input id="event-location" name="location" defaultValue={event.location ?? ""} placeholder="Lokasi" className="bg-soft-gray rounded-md p-3 text-body-md" />
           </div>
           <div className="grid grid-cols-2 gap-4">
             <input
@@ -48,8 +49,12 @@ export default async function ConsoleEventDetailPage({ params }: { params: Promi
               defaultValue={event.startAt ? new Date(event.startAt).toISOString().slice(0, 16) : ""}
               className="bg-soft-gray rounded-md p-3 text-body-md"
             />
-            <input name="capacity" type="number" min={1} defaultValue={event.capacity ?? ""} placeholder="Kapasitas" className="bg-soft-gray rounded-md p-3 text-body-md" />
-          </div>
+              <input name="capacity" type="number" min={1} defaultValue={event.capacity ?? ""} placeholder="Kapasitas" className="bg-soft-gray rounded-md p-3 text-body-md" />
+            </div>
+            <label className="flex items-center gap-2 bg-soft-gray rounded-md p-3 text-body-md cursor-pointer">
+              <input type="checkbox" name="requiresSensus" defaultChecked={event.requiresSensus} className="h-4 w-4 accent-[var(--color-primary-container)]" />
+              Hanya untuk peserta yang sudah lengkap mengisi sensus (mahasiswa Indo di China)
+            </label>
           <ImageUploadCropper
             name="coverImageUrl"
             folder="events"
@@ -71,11 +76,22 @@ export default async function ConsoleEventDetailPage({ params }: { params: Promi
             <AIImproveButton context="event" targetId="event-description" className="mt-1" />
           </div>
           <textarea
+            id="event-agenda"
             name="agenda"
             defaultValue={event.agenda ?? ""}
             placeholder={"Agenda/Jadwal (satu baris per item, contoh:\n18:00 - Registrasi\n19:00 - Pembukaan)"}
             rows={3}
             className="bg-soft-gray rounded-md p-3 text-body-md resize-none"
+          />
+          <AIReviewButton
+            context="event"
+            fields={[
+              { id: "event-title", label: "Judul" },
+              { id: "event-category", label: "Kategori" },
+              { id: "event-location", label: "Lokasi" },
+              { id: "event-description", label: "Deskripsi" },
+              { id: "event-agenda", label: "Agenda" },
+            ]}
           />
           <select name="status" defaultValue={event.status} className="bg-soft-gray rounded-md p-3 text-body-md">
             <option value="draft">Draf</option>
@@ -93,7 +109,15 @@ export default async function ConsoleEventDetailPage({ params }: { params: Promi
         </form>
       </details>
 
-      <h2 className="text-headline-md text-on-background mb-4">Daftar Pendaftar</h2>
+      <div className="flex items-center justify-between gap-4 mb-4">
+        <h2 className="text-headline-md text-on-background">Daftar Pendaftar</h2>
+        <a
+          href={`/console/events/${id}/scan`}
+          className="inline-flex items-center gap-2 border border-outline-variant text-on-background text-label-caps uppercase tracking-wide px-4 py-2 rounded-md hover:bg-surface-container-low transition-colors"
+        >
+          Buka Scanner Check-in
+        </a>
+      </div>
       <RegistrationList
         eventId={id}
         registrations={registrations.map((r) => ({
