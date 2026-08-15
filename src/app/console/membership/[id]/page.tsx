@@ -69,11 +69,11 @@ export default async function MembershipDetailPage({ params }: { params: Promise
   const extraAnswers = Object.entries(responses).filter(([k]) => !coreKeys.has(k as never) && k !== "fullName" && k !== "email");
 
   return (
-    <div className="px-8 py-10 max-w-3xl">
+    <div className="px-4 py-6 sm:px-6 lg:px-8 lg:py-10 max-w-3xl">
       <a href="/console/membership" className="text-label-caps text-secondary uppercase hover:text-on-background">
         &larr; Kembali ke Daftar
       </a>
-      <h1 className="text-headline-lg text-on-background mt-2 mb-1">{app.fullName}</h1>
+      <h1 className="text-headline-md sm:text-headline-lg text-on-background mt-2 mb-1">{app.fullName}</h1>
       <MembershipTabs active="list" />
       <p className="text-body-md text-on-surface-variant mb-8">
         Periode {app.batchLabel ?? "-"} &middot; Terkirim{" "}
