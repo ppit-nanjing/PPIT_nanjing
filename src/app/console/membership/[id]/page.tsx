@@ -98,12 +98,26 @@ export default async function MembershipDetailPage({ params }: { params: Promise
       {extraAnswers.length > 0 && (
         <div className="bg-surface-container-lowest border border-outline-variant rounded-xl divide-y divide-outline-variant mt-6">
           <p className="px-6 py-3 text-headline-sm text-on-background">Jawaban Tambahan</p>
-          {extraAnswers.map(([k, v]) => (
-            <div key={k} className="px-6 py-4">
-              <p className="text-label-caps uppercase tracking-wide text-on-surface-variant">{labelByKey.get(k) ?? k}</p>
-              <p className="text-body-md text-on-background whitespace-pre-wrap mt-1">{v || "-"}</p>
-            </div>
-          ))}
+          {extraAnswers.map(([k, v]) => {
+            const type = fields.find((f) => f.key === k)?.type;
+            return (
+              <div key={k} className="px-6 py-4">
+                <p className="text-label-caps uppercase tracking-wide text-on-surface-variant">{labelByKey.get(k) ?? k}</p>
+                {type === "image" && v ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={v} alt={labelByKey.get(k) ?? k} className="max-h-48 rounded-md object-contain mt-1" />
+                ) : type === "checkbox" ? (
+                  <p className="text-body-md text-on-background mt-1">{v === "true" ? "Ya" : "Tidak"}</p>
+                ) : type === "url" && v ? (
+                  <a href={v} target="_blank" rel="noopener noreferrer" className="text-body-md text-primary-container underline mt-1 break-all">
+                    {v}
+                  </a>
+                ) : (
+                  <p className="text-body-md text-on-background whitespace-pre-wrap mt-1">{v || "-"}</p>
+                )}
+              </div>
+            );
+          })}
         </div>
       )}
 
