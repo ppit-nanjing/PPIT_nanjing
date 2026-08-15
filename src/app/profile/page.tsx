@@ -4,6 +4,7 @@ import { auth } from "@/auth";
 import { db } from "@/db";
 import { users, sensusProfiles } from "@/db/schema";
 import { EmailSubscriptionToggle } from "@/components/profile/email-subscription-toggle";
+import { BackButton } from "@/components/profile/back-button";
 import { ImageUploadCropper } from "@/components/upload/image-upload-cropper";
 import { updateProfile } from "@/app/actions/user";
 import { ClipboardCheck, ClipboardList, UserRound } from "lucide-react";
@@ -100,12 +101,15 @@ export default async function ProfilePage() {
             ))}
           </div>
 
-          <button
-            type="submit"
-            className="self-start bg-primary-container text-on-primary text-label-caps uppercase tracking-wide px-6 py-3 rounded-md hover:bg-primary transition-colors"
-          >
-            Simpan Profil
-          </button>
+          <div className="flex items-center gap-3">
+            <button
+              type="submit"
+              className="bg-primary-container text-on-primary text-label-caps uppercase tracking-wide px-6 py-3 rounded-md hover:bg-primary transition-colors"
+            >
+              Simpan Profil
+            </button>
+            <BackButton label="Batal" />
+          </div>
         </form>
 
         <h2 className="text-label-caps uppercase tracking-widest text-secondary mb-4">Data Sensus</h2>
