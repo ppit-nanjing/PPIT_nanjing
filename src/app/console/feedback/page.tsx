@@ -1,14 +1,11 @@
-import { redirect } from "next/navigation";
-import { auth } from "@/auth";
+import { requireModuleAccess } from "@/lib/admin-scope";
 import { listFeedback } from "@/app/actions/feedback";
 import { FeedbackInbox, type FeedbackRow } from "@/components/feedback/feedback-inbox";
 
 // /console is intentionally not named /admin (see docs/Information Architecture.md) to
-// keep it off casual URL-guessing - the real gate is this session check, not the name.
+// keep it off casual URL-guessing - the real gate is the session/scope check, not the name.
 export default async function ConsoleFeedbackPage() {
-  const session = await auth();
-  if (!session) redirect("/login");
-  if (!session.user.isAdmin) redirect("/");
+  await requireModuleAccess("feedback");
 
   const rows = await listFeedback();
   const serialized: FeedbackRow[] = rows.map((r) => ({
