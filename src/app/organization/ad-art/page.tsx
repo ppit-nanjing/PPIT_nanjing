@@ -32,9 +32,11 @@ export default async function AdArtPage() {
             <FileText className="text-primary-container" size={26} />
           </div>
           <div className="flex-1">
-            <h2 className="text-headline-md text-on-background">AD/ART PPIT Nanjing</h2>
+            <h2 className="text-headline-md text-on-background">{doc?.title ?? "AD/ART PPIT Nanjing"}</h2>
             <p className="text-body-md text-on-surface-variant">
-              {doc ? `Versi ${doc.version ?? "terbaru"}` : "Belum ada dokumen yang diunggah admin."}
+              {doc
+                ? `Versi ${doc.version ?? "terbaru"} · diterbitkan ${doc.publishedAt.toLocaleDateString("id-ID", { dateStyle: "long" })}`
+                : "Belum ada dokumen yang diunggah admin."}
             </p>
           </div>
           {doc?.fileUrl && (
@@ -46,6 +48,12 @@ export default async function AdArtPage() {
             </a>
           )}
         </div>
+
+        {doc?.fileUrl && (
+          <div className="mt-8 border border-outline-variant rounded-xl overflow-hidden">
+            <iframe src={doc.fileUrl} title={doc.title} className="w-full h-[70vh]" />
+          </div>
+        )}
 
         <a
           href="/organization/ad-art/review"
