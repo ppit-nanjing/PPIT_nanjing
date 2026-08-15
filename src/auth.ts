@@ -3,7 +3,7 @@ import Google from "next-auth/providers/google";
 import { DrizzleAdapter } from "@auth/drizzle-adapter";
 import { eq } from "drizzle-orm";
 import { db } from "@/db";
-import { users, roles, departmentMembers, departments } from "@/db/schema";
+import { users, accounts, sessions, verificationTokens, roles, departmentMembers, departments } from "@/db/schema";
 
 // Admin-access rule per docs/Data Dictionary.md "Admin Access Rule" (sourced from the
 // 2026/2027 recruitment guidebook):
@@ -39,7 +39,17 @@ async function resolveEmailSubscribed(userId: string): Promise<boolean | null> {
 }
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
-  adapter: DrizzleAdapter(db),
+  // DrizzleAdapter's second arg is required whenever the table names/columns
+  // don't match its own defaults (singular "user"/"account"/"session" and
+  // camelCase "verificationToken") - without it, it silently queries tables
+  // that don't exist (users/accounts/sessions/verification_tokens here) and
+  // Postgres throws 42P01 undefined_table on first sign-in.
+  adapter: DrizzleAdapter(db, {
+    usersTable: users,
+    accountsTable: accounts,
+    sessionsTable: sessions,
+    verificationTokensTable: verificationTokens,
+  }),
   providers: [Google],
   session: { strategy: "database" },
   callbacks: {
