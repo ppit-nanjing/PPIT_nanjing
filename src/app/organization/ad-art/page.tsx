@@ -46,6 +46,13 @@ export default async function AdArtPage() {
             </a>
           )}
         </div>
+
+        <a
+          href="/organization/ad-art/review"
+          className="inline-flex items-center gap-2 text-label-caps text-primary-container hover:text-primary transition-colors mt-6"
+        >
+          Baca Ringkasan Panduan &rarr;
+        </a>
       </main>
 
       <SiteFooter />
