@@ -1,10 +1,22 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { Bot, X, Send, Loader2 } from "lucide-react";
-import { chatWithAIAction } from "@/app/actions/ai";
+import { Bot, X, Send, Loader2, Check, Pencil } from "lucide-react";
+import { chatWithAIAction, updateProfileFieldAction } from "@/app/actions/ai";
 
 type Msg = { role: "user" | "assistant"; content: string };
+
+const FIELD_LABELS: Record<string, string> = {
+  name: "Nama",
+  phone: "Nomor telepon",
+  wechatId: "WeChat ID",
+  linkedinUrl: "LinkedIn",
+  instagramUrl: "Instagram",
+  githubUrl: "GitHub",
+  spotifyUrl: "Spotify",
+  tiktokUrl: "TikTok",
+  avatarUrl: "URL foto profil",
+};
 
 export function AiChatbot() {
   const [open, setOpen] = useState(false);
@@ -12,11 +24,12 @@ export function AiChatbot() {
   const [input, setInput] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [pendingEdit, setPendingEdit] = useState<{ field: string; value: string } | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight });
-  }, [messages, busy]);
+  }, [messages, busy, pendingEdit]);
 
   async function send() {
     const text = input.trim();
@@ -27,13 +40,43 @@ export function AiChatbot() {
     setBusy(true);
     setError(null);
     try {
-      const reply = await chatWithAIAction(next);
-      setMessages([...next, { role: "assistant", content: reply }]);
+      const result = await chatWithAIAction(next);
+      if (result.profileEdit) {
+        setPendingEdit(result.profileEdit);
+      } else {
+        setMessages([...next, { role: "assistant", content: result.reply }]);
+      }
     } catch (e) {
       setError(e instanceof Error ? e.message : "Gagal menghubungi asisten AI");
     } finally {
       setBusy(false);
     }
+  }
+
+  async function confirmEdit() {
+    if (!pendingEdit) return;
+    const { field, value } = pendingEdit;
+    const label = FIELD_LABELS[field] ?? field;
+    setPendingEdit(null);
+    setBusy(true);
+    try {
+      await updateProfileFieldAction(field, value);
+      setMessages((m) => [...m, { role: "assistant", content: `${label} berhasil diperbarui.` }]);
+    } catch (e) {
+      setMessages((m) => [
+        ...m,
+        { role: "assistant", content: `Gagal memperbarui ${label}: ${e instanceof Error ? e.message : "terjadi kesalahan"}` },
+      ]);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  function cancelEdit() {
+    if (!pendingEdit) return;
+    const label = FIELD_LABELS[pendingEdit.field] ?? pendingEdit.field;
+    setPendingEdit(null);
+    setMessages((m) => [...m, { role: "assistant", content: `Oke, tidak jadi mengubah ${label}.` }]);
   }
 
   const bubbleClass = (role: string) =>
@@ -65,10 +108,10 @@ export function AiChatbot() {
           </div>
 
           <div ref={scrollRef} className="flex flex-col gap-3 p-5 h-80 overflow-y-auto">
-            {messages.length === 0 && (
+            {messages.length === 0 && !pendingEdit && (
               <p className="text-body-md text-on-surface-variant">
                 Halo! Saya asisten PPIT Nanjing. Tanya apa saja seputar kegiatan, cara bergabung, atau
-                kehidupan mahasiswa Indonesia di Nanjing.
+                kehidupan mahasiswa Indonesia di Nanjing. Saya juga bisa membantu mengubah data profilmu.
               </p>
             )}
             {messages.map((m, i) => (
@@ -76,7 +119,34 @@ export function AiChatbot() {
                 {m.content}
               </div>
             ))}
-            {busy && <p className="self-start text-label-caps text-on-surface-variant">Mengetik...</p>}
+
+            {pendingEdit && (
+              <div className="self-start max-w-[90%] rounded-lg border border-primary-container bg-surface-container-low p-3 text-body-md">
+                <p className="flex items-center gap-1.5 text-on-background mb-1">
+                  <Pencil size={14} className="text-primary-container" />
+                  Ubah {FIELD_LABELS[pendingEdit.field] ?? pendingEdit.field}?
+                </p>
+                <p className="text-on-surface-variant mb-3 break-words">{pendingEdit.value}</p>
+                <div className="flex gap-2">
+                  <button
+                    onClick={confirmEdit}
+                    disabled={busy}
+                    className="flex items-center gap-1 bg-primary-container text-on-primary text-label-caps uppercase tracking-wide px-3 py-2 rounded-md hover:bg-primary transition-colors disabled:opacity-50"
+                  >
+                    <Check size={14} /> Ya, ubah
+                  </button>
+                  <button
+                    onClick={cancelEdit}
+                    disabled={busy}
+                    className="flex items-center gap-1 text-label-caps px-3 py-2 rounded-md text-secondary hover:text-on-background disabled:opacity-50"
+                  >
+                    Batal
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {busy && !pendingEdit && <p className="self-start text-label-caps text-on-surface-variant">Mengetik...</p>}
             {error && <p className="self-start text-label-caps text-error">{error}</p>}
           </div>
 
