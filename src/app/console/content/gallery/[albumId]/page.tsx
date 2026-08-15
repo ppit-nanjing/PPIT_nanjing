@@ -15,10 +15,10 @@ export default async function ConsoleAlbumDetailPage({ params }: { params: Promi
   const photos = await db.select().from(galleryPhotos).where(eq(galleryPhotos.albumId, albumId));
 
   return (
-    <div className="px-8 py-10 max-w-3xl">
-      <h1 className="text-headline-lg text-on-background mb-8">{album.title}</h1>
+    <div className="px-4 py-6 sm:px-6 lg:px-8 lg:py-10 max-w-3xl">
+      <h1 className="text-headline-md sm:text-headline-lg text-on-background mb-8">{album.title}</h1>
 
-      <form action={addGalleryPhoto.bind(null, albumId)} className="flex gap-3 mb-10 items-end">
+      <form action={addGalleryPhoto.bind(null, albumId)} className="flex flex-col gap-3 sm:flex-row sm:items-end mb-10">
         <div className="flex-1">
           <FileUpload name="imageUrl" folder="gallery" label="URL Foto *" placeholder="URL atau unggah gambar" required />
         </div>
