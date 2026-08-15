@@ -321,6 +321,7 @@ export const jobPostings = pgTable("job_postings", {
   applicationDeadline: date("application_deadline"),
   postedBy: uuid("posted_by").references(() => users.id),
   status: jobPostingStatusEnum("status").notNull().default("open"),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
 });
 
 export const jobApplications = pgTable("job_applications", {
