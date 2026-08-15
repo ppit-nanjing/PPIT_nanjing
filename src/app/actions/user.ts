@@ -23,6 +23,11 @@ export async function updateProfile(formData: FormData) {
   const wechatId = String(formData.get("wechatId") ?? "").trim();
   const name = String(formData.get("name") ?? "").trim();
   const avatarUrl = String(formData.get("avatarUrl") ?? "").trim();
+  const linkedinUrl = String(formData.get("linkedinUrl") ?? "").trim();
+  const instagramUrl = String(formData.get("instagramUrl") ?? "").trim();
+  const githubUrl = String(formData.get("githubUrl") ?? "").trim();
+  const spotifyUrl = String(formData.get("spotifyUrl") ?? "").trim();
+  const tiktokUrl = String(formData.get("tiktokUrl") ?? "").trim();
 
   await db
     .update(users)
@@ -35,6 +40,11 @@ export async function updateProfile(formData: FormData) {
       // that's the deliberate "revert to my Google photo" action.
       ...(name ? { name } : {}),
       avatarUrl: avatarUrl || null,
+      linkedinUrl: linkedinUrl || null,
+      instagramUrl: instagramUrl || null,
+      githubUrl: githubUrl || null,
+      spotifyUrl: spotifyUrl || null,
+      tiktokUrl: tiktokUrl || null,
     })
     .where(eq(users.id, session.user.id));
 }
