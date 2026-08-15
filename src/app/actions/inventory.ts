@@ -2,13 +2,12 @@
 
 import { eq } from "drizzle-orm";
 import { redirect } from "next/navigation";
-import { auth } from "@/auth";
 import { db } from "@/db";
 import { inventoryItems, borrowRequests } from "@/db/schema";
+import { requireCompletedSensus } from "@/lib/sensus-gate";
 
 export async function submitBorrowRequest(itemId: string, formData: FormData) {
-  const session = await auth();
-  if (!session?.user?.id) redirect("/login");
+  const session = await requireCompletedSensus(`/inventory/${itemId}/borrow`);
 
   const [item] = await db.select().from(inventoryItems).where(eq(inventoryItems.id, itemId));
   if (!item) throw new Error("Barang tidak ditemukan");
