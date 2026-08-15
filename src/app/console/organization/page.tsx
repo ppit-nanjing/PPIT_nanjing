@@ -1,8 +1,10 @@
 import { db } from "@/db";
 import { departments } from "@/db/schema";
 import { DepartmentManager } from "@/components/console/department-manager";
+import { requireModuleAccess } from "@/lib/admin-scope";
 
 export default async function ConsoleOrganizationPage() {
+  await requireModuleAccess("organization");
   const all = await db.select().from(departments);
 
   return (
