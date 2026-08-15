@@ -52,7 +52,7 @@ export function BorrowRequestQueue({ requests }: { requests: Request[] }) {
           {r.purpose && <p className="text-body-md text-on-surface-variant mb-3">{r.purpose}</p>}
 
           {r.status === "pending" && (
-            <div className="flex gap-2">
+            <div className="flex flex-wrap gap-2">
               <button
                 onClick={() => startTransition(() => approveBorrowRequest(r.id))}
                 className="flex items-center gap-1 text-label-caps bg-primary-container/10 text-primary-container px-3 py-1.5 rounded-md hover:bg-primary-container/20 transition-colors"
