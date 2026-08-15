@@ -11,7 +11,7 @@ export default async function ConsoleLayout({ children }: { children: React.Reac
 
   return (
     <div className="min-h-screen bg-background flex">
-      <ConsoleSidebar userName={session.user.name ?? "Admin"} />
+      <ConsoleSidebar userName={session.user.name ?? "Admin"} scope={session.user.adminScope} />
       <main className="flex-1 min-w-0">{children}</main>
     </div>
   );
