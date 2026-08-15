@@ -29,8 +29,8 @@ export function UserTable({ users, roles, departments }: { users: Row[]; roles: 
   const assignable = departments.filter((d) => d.parentDepartmentId !== null || !departments.some((c) => c.parentDepartmentId === d.id));
 
   return (
-    <div className="bg-surface-container-lowest border border-outline-variant rounded-xl overflow-hidden">
-      <table className="w-full text-body-md">
+      <div className="bg-surface-container-lowest border border-outline-variant rounded-xl overflow-x-auto">
+      <table className="w-full text-body-md min-w-[640px]">
         <thead className="bg-surface-container-low text-label-caps uppercase tracking-wide text-on-surface-variant">
           <tr>
             <th className="text-left px-5 py-3">Pengguna</th>
