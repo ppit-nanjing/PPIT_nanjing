@@ -17,7 +17,7 @@ export default async function GalleryPage() {
 
       <header className="max-w-[var(--container-max)] mx-auto px-[var(--spacing-container-padding)] pt-16 pb-8 flex items-end justify-between gap-4 flex-wrap">
         <div>
-          <h1 className="text-headline-lg md:text-display-hero-mobile text-on-background mb-4">Galeri</h1>
+          <h1 className="text-display-hero-mobile md:text-display-hero text-on-background mb-4">Galeri</h1>
           <p className="text-body-lg text-on-surface-variant max-w-2xl">
             Momen-momen kegiatan PPIT Nanjing, terdokumentasi per album.
           </p>
