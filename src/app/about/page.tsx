@@ -1,5 +1,6 @@
 import { SiteNav } from "@/components/site-nav";
 import { SiteFooter } from "@/components/site-footer";
+import { AnimatedRevealText } from "@/components/animated-reveal-text";
 import { Target, Compass, Users, Layers, Handshake, MapPinned, GraduationCap, CalendarDays, MapPin } from "lucide-react";
 
 const MISI = [
@@ -37,12 +38,7 @@ export default function AboutPage() {
           Tentang PPIT Nanjing
         </h1>
         <div className="max-w-3xl flex flex-col gap-4 text-body-lg text-on-surface-variant mb-8">
-          <p>
-            PPIT Cabang Nanjing adalah organisasi kemahasiswaan di Kota Nanjing yang mewadahi
-            pelajar dan mahasiswa Indonesia serta organisasi-organisasi pelajar Indonesia di
-            Tiongkok, khususnya Kota Nanjing. Organisasi ini dibentuk pada 28 Oktober 2008,
-            bertepatan dengan Hari Sumpah Pemuda.
-          </p>
+          <AnimatedRevealText text="PPIT Cabang Nanjing adalah organisasi kemahasiswaan di Kota Nanjing yang mewadahi pelajar dan mahasiswa Indonesia serta organisasi-organisasi pelajar Indonesia di Tiongkok, khususnya Kota Nanjing. Organisasi ini dibentuk pada 28 Oktober 2008, bertepatan dengan Hari Sumpah Pemuda." />
           <p>
             Selain Kota Nanjing, PPIT Nanjing turut menaungi pelajar dan mahasiswa Indonesia di
             kota-kota sekitarnya: Xuzhou, Jurong, Ma&rsquo;anshan, Zhenjiang, dan Huai&rsquo;an,
