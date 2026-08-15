@@ -5,7 +5,10 @@ export type MembershipFieldType =
   | "tel"
   | "number"
   | "select"
-  | "date";
+  | "date"
+  | "checkbox"
+  | "image"
+  | "url";
 
 export interface MembershipFieldDef {
   id?: string;
