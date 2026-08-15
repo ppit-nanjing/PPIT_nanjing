@@ -35,7 +35,17 @@ export default async function ConsoleEventsPage() {
             <input name="startAt" type="datetime-local" className="bg-soft-gray rounded-md p-3 text-body-md" />
             <input name="capacity" type="number" min={1} placeholder="Kapasitas" className="bg-soft-gray rounded-md p-3 text-body-md" />
           </div>
+          <div className="grid grid-cols-2 gap-4">
+            <input name="coverImageUrl" type="url" placeholder="URL Gambar Sampul" className="bg-soft-gray rounded-md p-3 text-body-md" />
+            <input name="registrationDeadline" type="datetime-local" placeholder="Batas Pendaftaran" className="bg-soft-gray rounded-md p-3 text-body-md" />
+          </div>
           <textarea name="description" placeholder="Deskripsi" rows={3} className="bg-soft-gray rounded-md p-3 text-body-md resize-none" />
+          <textarea
+            name="agenda"
+            placeholder={"Agenda/Jadwal (satu baris per item, contoh:\n18:00 - Registrasi\n19:00 - Pembukaan)"}
+            rows={3}
+            className="bg-soft-gray rounded-md p-3 text-body-md resize-none"
+          />
           <button
             type="submit"
             className="self-start bg-primary-container text-on-primary text-label-caps uppercase tracking-wide px-6 py-3 rounded-md hover:bg-primary transition-colors"
