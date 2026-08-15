@@ -37,8 +37,8 @@ export default async function ConsoleMembershipPage() {
     .orderBy(desc(membershipApplications.submittedAt));
 
   return (
-    <div className="px-8 py-10">
-      <h1 className="text-headline-lg text-on-background mb-2">Pendaftaran Anggota</h1>
+    <div className="px-4 py-6 sm:px-6 lg:px-8 lg:py-10">
+      <h1 className="text-headline-md sm:text-headline-lg text-on-background mb-2">Pendaftaran Anggota</h1>
       <p className="text-body-md text-on-surface-variant mb-4">{apps.length} pendaftar.</p>
       <MembershipTabs active="list" />
 
