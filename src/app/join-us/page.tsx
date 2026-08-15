@@ -5,11 +5,13 @@ import { recruitmentPeriods } from "@/db/schema";
 import { SiteNav } from "@/components/site-nav";
 import { SiteFooter } from "@/components/site-footer";
 import { Lock } from "lucide-react";
-import { submitMembershipApplication } from "@/app/actions/membership";
+import { submitMembershipApplication, getFormFields } from "@/app/actions/membership";
+import type { MembershipFieldDef } from "@/lib/membership-form";
 
 export default async function JoinUsPage() {
   const [period] = await db.select().from(recruitmentPeriods).orderBy(desc(recruitmentPeriods.opensAt)).limit(1);
   const session = await auth();
+  const fields = await getFormFields();
 
   return (
     <div className="min-h-screen bg-background text-on-background">
@@ -29,9 +31,9 @@ export default async function JoinUsPage() {
             <li>Tuliskan motivasi &amp; komitmen dengan jelas agar panitia seleksi dapat menilai.</li>
             <li>Setelah mengirim, kamu akan mendapat kabar via email untuk tahap wawancara/oke.</li>
           </ol>
-          <p className="text-label-caps text-secondary uppercase mt-4">Data yang perlu disiapkan</p>
+          <p className="text-label-caps text-secondary uppercase mt-4">Yang perlu disiapkan</p>
           <p className="text-body-sm text-on-surface-variant mt-1">
-            Nama, Email, WhatsApp, Universitas, Jurusan, Perkiraan Lulus, Minat Divisi, Motivasi, Komitmen.
+            Siapkan data diri dan jawaban motivasi/komitmen kamu. Field yang bertanda * wajib diisi.
           </p>
         </section>
 
@@ -54,86 +56,57 @@ export default async function JoinUsPage() {
           </div>
         ) : (
           <form action={submitMembershipApplication.bind(null, period.id)} className="flex flex-col gap-6">
-            <label className="flex flex-col gap-2">
-              <span className="text-label-caps uppercase tracking-wide text-on-surface-variant">Nama Lengkap *</span>
-              <input
-                type="text"
-                name="fullName"
-                required
-                defaultValue={session?.user?.name ?? ""}
-                className="bg-soft-gray rounded-md p-3 text-body-md focus:outline-none focus:ring-2 focus:ring-primary-container"
-              />
-            </label>
-            <label className="flex flex-col gap-2">
-              <span className="text-label-caps uppercase tracking-wide text-on-surface-variant">Email *</span>
-              <input
-                type="email"
-                name="email"
-                required
-                defaultValue={session?.user?.email ?? ""}
-                className="bg-soft-gray rounded-md p-3 text-body-md focus:outline-none focus:ring-2 focus:ring-primary-container"
-              />
-            </label>
-            <label className="flex flex-col gap-2">
-              <span className="text-label-caps uppercase tracking-wide text-on-surface-variant">WhatsApp *</span>
-              <input
-                type="tel"
-                name="whatsapp"
-                required
-                className="bg-soft-gray rounded-md p-3 text-body-md focus:outline-none focus:ring-2 focus:ring-primary-container"
-              />
-            </label>
-            <label className="flex flex-col gap-2">
-              <span className="text-label-caps uppercase tracking-wide text-on-surface-variant">Universitas</span>
-              <input
-                type="text"
-                name="university"
-                className="bg-soft-gray rounded-md p-3 text-body-md focus:outline-none focus:ring-2 focus:ring-primary-container"
-              />
-            </label>
-            <label className="flex flex-col gap-2">
-              <span className="text-label-caps uppercase tracking-wide text-on-surface-variant">Jurusan / Program Studi</span>
-              <input
-                type="text"
-                name="major"
-                className="bg-soft-gray rounded-md p-3 text-body-md focus:outline-none focus:ring-2 focus:ring-primary-container"
-              />
-            </label>
-            <label className="flex flex-col gap-2">
-              <span className="text-label-caps uppercase tracking-wide text-on-surface-variant">Perkiraan Lulus (mis. Juni 2027)</span>
-              <input
-                type="text"
-                name="expectedGraduation"
-                className="bg-soft-gray rounded-md p-3 text-body-md focus:outline-none focus:ring-2 focus:ring-primary-container"
-              />
-            </label>
-            <label className="flex flex-col gap-2">
-              <span className="text-label-caps uppercase tracking-wide text-on-surface-variant">Minat Divisi</span>
-              <input
-                type="text"
-                name="divisionInterest"
-                placeholder="mis. Hubungan Masyarakat, Teknologi, Logistik"
-                className="bg-soft-gray rounded-md p-3 text-body-md focus:outline-none focus:ring-2 focus:ring-primary-container"
-              />
-            </label>
-            <label className="flex flex-col gap-2">
-              <span className="text-label-caps uppercase tracking-wide text-on-surface-variant">Motivasi Bergabung</span>
-              <textarea
-                name="motivation"
-                rows={5}
-                className="bg-soft-gray rounded-md p-3 text-body-md focus:outline-none focus:ring-2 focus:ring-primary-container resize-none"
-              />
-            </label>
-            <label className="flex flex-col gap-2">
-              <span className="text-label-caps uppercase tracking-wide text-on-surface-variant">
-                Komitmen (kesiapan mengikuti kegiatan)
-              </span>
-              <textarea
-                name="commitment"
-                rows={3}
-                className="bg-soft-gray rounded-md p-3 text-body-md focus:outline-none focus:ring-2 focus:ring-primary-container resize-none"
-              />
-            </label>
+            {fields.map((f) => {
+              const id = `field-${f.key}`;
+              const common =
+                "bg-soft-gray rounded-md p-3 text-body-md focus:outline-none focus:ring-2 focus:ring-primary-container";
+              const defaultValue =
+                f.key === "fullName"
+                  ? session?.user?.name ?? ""
+                  : f.key === "email"
+                    ? session?.user?.email ?? ""
+                    : undefined;
+              return (
+                <label key={f.id ?? f.key} htmlFor={id} className="flex flex-col gap-2">
+                  <span className="text-label-caps uppercase tracking-wide text-on-surface-variant">
+                    {f.label}
+                    {f.required && " *"}
+                  </span>
+                  {f.type === "textarea" ? (
+                    <textarea
+                      id={id}
+                      name={f.key}
+                      rows={f.key === "motivation" ? 5 : 3}
+                      placeholder={f.placeholder}
+                      defaultValue={defaultValue}
+                      className={`${common} resize-none`}
+                    />
+                  ) : f.type === "select" ? (
+                    <select id={id} name={f.key} defaultValue="" className={common}>
+                      <option value="" disabled>
+                        Pilih…
+                      </option>
+                      {(f.options ?? []).map((opt) => (
+                        <option key={opt} value={opt}>
+                          {opt}
+                        </option>
+                      ))}
+                    </select>
+                  ) : (
+                    <input
+                      id={id}
+                      type={f.type}
+                      name={f.key}
+                      required={f.required}
+                      placeholder={f.placeholder}
+                      defaultValue={defaultValue}
+                      className={common}
+                    />
+                  )}
+                  {f.helpText && <span className="text-label-caps text-on-surface-variant">{f.helpText}</span>}
+                </label>
+              );
+            })}
             <button
               type="submit"
               className="bg-primary-container text-on-primary text-label-caps uppercase tracking-wide py-3.5 rounded-md hover:bg-primary transition-colors"
