@@ -39,9 +39,9 @@ export default async function ConsoleReportsPage() {
   const byCity = tally(allSensus.map((s) => s.cityInChina));
 
   return (
-    <div className="px-8 py-10">
+    <div className="px-4 py-6 sm:px-6 lg:px-8 lg:py-10">
       <div className="mb-8">
-        <h1 className="text-headline-lg text-on-background mb-2">Laporan</h1>
+        <h1 className="text-headline-md sm:text-headline-lg text-on-background mb-2">Laporan</h1>
         <p className="text-body-md text-on-surface-variant">Ringkasan sensus dan generator laporan.</p>
       </div>
 
