@@ -39,8 +39,13 @@ export async function createEvent(formData: FormData) {
       description: String(formData.get("description") ?? "").trim() || null,
       category: String(formData.get("category") ?? "").trim() || null,
       location: String(formData.get("location") ?? "").trim() || null,
+      coverImageUrl: String(formData.get("coverImageUrl") ?? "").trim() || null,
       startAt: formData.get("startAt") ? new Date(String(formData.get("startAt"))) : null,
+      registrationDeadline: formData.get("registrationDeadline")
+        ? new Date(String(formData.get("registrationDeadline")))
+        : null,
       capacity: formData.get("capacity") ? Number(formData.get("capacity")) : null,
+      agenda: String(formData.get("agenda") ?? "").trim() || null,
       status: "draft",
       createdBy: actorId,
     })
@@ -61,8 +66,13 @@ export async function updateEvent(id: string, formData: FormData) {
       description: String(formData.get("description") ?? "").trim() || null,
       category: String(formData.get("category") ?? "").trim() || null,
       location: String(formData.get("location") ?? "").trim() || null,
+      coverImageUrl: String(formData.get("coverImageUrl") ?? "").trim() || null,
       startAt: formData.get("startAt") ? new Date(String(formData.get("startAt"))) : null,
+      registrationDeadline: formData.get("registrationDeadline")
+        ? new Date(String(formData.get("registrationDeadline")))
+        : null,
       capacity: formData.get("capacity") ? Number(formData.get("capacity")) : null,
+      agenda: String(formData.get("agenda") ?? "").trim() || null,
       status: String(formData.get("status") ?? "draft") as (typeof events.status.enumValues)[number],
     })
     .where(eq(events.id, id));
