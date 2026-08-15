@@ -31,10 +31,17 @@ export const ASSIGNABLE_SCOPE_KEYS: { key: string; label: string }[] = [
   { key: "sensus", label: "Sensus (ringkasan saja)" },
   { key: "content", label: "Konten (berita)" },
   { key: "gallery", label: "Galeri" },
-  { key: "users", label: "Pengguna (sensitif — biasanya BPH saja)" },
-  { key: "organization", label: "Organisasi (sensitif — biasanya BPH saja)" },
-  { key: "feedback", label: "Masukan Pengguna (sensitif — biasanya BPH saja)" },
+  { key: "users", label: "Pengguna (sensitif — hanya BPH)" },
+  { key: "organization", label: "Organisasi (sensitif — hanya BPH)" },
+  { key: "feedback", label: "Masukan Pengguna (sensitif — hanya BPH)" },
 ];
+
+// Keys that only a "full" tier actor may grant to a department - handing these
+// out via a scoped "organization" edit would let that department promote
+// itself (or any department) to full admin. Enforced in updateDepartment()
+// (admin-departments.ts), not just hidden in the UI, since the server action
+// is reachable directly regardless of what the form renders.
+export const SENSITIVE_SCOPE_KEYS = ["users", "organization", "feedback"] as const;
 
 export function hasModuleAccess(scope: "full" | string[] | null, mod: AdminModule): boolean {
   if (scope === "full") return true;
