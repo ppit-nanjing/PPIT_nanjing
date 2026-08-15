@@ -76,6 +76,11 @@ export default async function EventDetailPage({ params }: { params: Promise<{ sl
                 {event.category}
               </span>
             )}
+            {event.requiresSensus && (
+              <span className="text-label-caps uppercase tracking-wide bg-surface-container-low text-primary-container px-2.5 py-1 rounded mb-3 block w-fit">
+                Khusus peserta tersensus
+              </span>
+            )}
             <h1 className="text-headline-lg text-on-background mb-6">{event.title}</h1>
 
             {event.description && (
@@ -170,6 +175,11 @@ export default async function EventDetailPage({ params }: { params: Promise<{ sl
               )}
 
               <div className="border-t border-outline-variant pt-5">
+                {event.requiresSensus && !alreadyRegistered && (
+                  <p className="text-label-caps text-on-surface-variant mb-3 text-center">
+                    Event ini hanya untuk peserta yang sudah lengkap mengisi sensus.
+                  </p>
+                )}
                 {alreadyRegistered ? (
                   <a
                     href={`/events/${slug}/ticket`}
