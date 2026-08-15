@@ -8,6 +8,7 @@ type Request = {
   itemName: string;
   category: string | null;
   justification: string | null;
+  imageUrl: string | null;
   estimatedCost: number | null;
   urgency: string;
   status: "pending" | "approved" | "rejected" | "fulfilled";
@@ -37,15 +38,25 @@ export function ProcurementReview({ requests }: { requests: Request[] }) {
           className="bg-surface-container-low border border-outline-variant rounded-lg p-5 flex flex-col gap-3"
         >
           <input type="hidden" name="id" value={r.id} />
-          <div>
-            <p className="text-body-md font-semibold text-on-background">{r.itemName}</p>
-            <p className="text-label-caps text-on-surface-variant">
-              {STATUS_LABEL[r.status]} &middot; Urgensi: {r.urgency}
-              {r.estimatedCost != null ? ` &middot; ~RMB ${r.estimatedCost}` : ""}
-              {r.category ? ` &middot; ${r.category}` : ""}
-            </p>
-            {r.justification && <p className="text-body-md text-on-surface-variant mt-1">{r.justification}</p>}
-            {r.userName && <p className="text-label-caps text-on-surface-variant">Diusulkan oleh: {r.userName}</p>}
+          <div className="flex gap-4">
+            {r.imageUrl && (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={r.imageUrl}
+                alt={r.itemName}
+                className="w-24 h-24 object-cover rounded-md border border-outline-variant shrink-0"
+              />
+            )}
+            <div className="min-w-0">
+              <p className="text-body-md font-semibold text-on-background">{r.itemName}</p>
+              <p className="text-label-caps text-on-surface-variant">
+                {STATUS_LABEL[r.status]} &middot; Urgensi: {r.urgency}
+                {r.estimatedCost != null ? ` &middot; ~RMB ${r.estimatedCost}` : ""}
+                {r.category ? ` &middot; ${r.category}` : ""}
+              </p>
+              {r.justification && <p className="text-body-md text-on-surface-variant mt-1">{r.justification}</p>}
+              {r.userName && <p className="text-label-caps text-on-surface-variant">Diusulkan oleh: {r.userName}</p>}
+            </div>
           </div>
 
           <div className="flex gap-3 flex-wrap">

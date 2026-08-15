@@ -1,7 +1,7 @@
 "use client";
 
-import { useState } from "react";
-import { Upload, Loader2 } from "lucide-react";
+import { useState, useRef, type DragEvent } from "react";
+import { Upload, Loader2, ImageIcon, X } from "lucide-react";
 
 type Props = {
   name: string;
@@ -27,8 +27,30 @@ export function FileUpload({
 }: Props) {
   const [value, setValue] = useState(defaultValue ?? "");
   const [file, setFile] = useState<File | null>(null);
+  const [preview, setPreview] = useState<string | null>(null);
+  const [dragging, setDragging] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  function pickFile(f: File | null) {
+    if (!f) return;
+    setFile(f);
+    setError(null);
+    if (f.type.startsWith("image/")) {
+      const reader = new FileReader();
+      reader.onload = () => setPreview(reader.result as string);
+      reader.readAsDataURL(f);
+    } else {
+      setPreview(null);
+    }
+  }
+
+  function onDrop(e: DragEvent<HTMLDivElement>) {
+    e.preventDefault();
+    setDragging(false);
+    pickFile(e.dataTransfer.files?.[0] ?? null);
+  }
 
   async function upload() {
     if (!file) return;
@@ -57,30 +79,70 @@ export function FileUpload({
           type="text"
           name={name}
           value={value}
-          required={required}
+          required={required && !file}
           onChange={(e) => setValue(e.target.value)}
           placeholder={placeholder ?? "Tempel URL atau unggah berkas"}
           className="bg-soft-gray rounded-md p-3 text-body-md focus:outline-none focus:ring-2 focus:ring-primary-container"
         />
       )}
       {!allowPaste && value && <input type="hidden" name={name} value={value} />}
-      <div className="flex items-center gap-3">
+
+      <div
+        onDragOver={(e) => {
+          e.preventDefault();
+          setDragging(true);
+        }}
+        onDragLeave={() => setDragging(false)}
+        onDrop={onDrop}
+        onClick={() => inputRef.current?.click()}
+        className={`flex flex-col items-center justify-center gap-2 rounded-lg border-2 border-dashed p-6 text-center cursor-pointer transition-colors ${
+          dragging
+            ? "border-primary-container bg-primary-container/10"
+            : "border-outline-variant bg-surface-container-lowest hover:bg-surface-container-low"
+        }`}
+      >
+        {preview ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img src={preview} alt="Pratinjau" className="max-h-40 rounded-md object-contain" />
+        ) : (
+          <ImageIcon className="text-outline-variant" size={28} />
+        )}
+        <p className="text-body-sm text-on-surface-variant">
+          {file ? file.name : "Seret & jatuhkan gambar ke sini, atau klik untuk pilih"}
+        </p>
         <input
+          ref={inputRef}
           type="file"
           accept={accept}
-          onChange={(e) => setFile(e.target.files?.[0] ?? null)}
-          className="text-body-sm text-on-surface-variant file:mr-3 file:bg-surface-container-low file:border file:border-outline-variant file:rounded-md file:px-3 file:py-1.5 file:text-body-sm"
+          onChange={(e) => pickFile(e.target.files?.[0] ?? null)}
+          className="hidden"
         />
-        <button
-          type="button"
-          onClick={upload}
-          disabled={!file || uploading}
-          className="flex items-center gap-2 bg-surface-container-low text-on-background text-body-sm font-medium px-4 py-2.5 rounded-md border border-outline-variant hover:bg-surface-container-lowest transition-colors disabled:opacity-60"
-        >
-          {uploading ? <Loader2 size={14} className="animate-spin" /> : <Upload size={14} />}
-          Unggah
-        </button>
       </div>
+
+      {file && (
+        <div className="flex items-center gap-3">
+          <button
+            type="button"
+            onClick={upload}
+            disabled={uploading}
+            className="flex items-center gap-2 bg-surface-container-low text-on-background text-body-sm font-medium px-4 py-2.5 rounded-md border border-outline-variant hover:bg-surface-container-lowest transition-colors disabled:opacity-60"
+          >
+            {uploading ? <Loader2 size={14} className="animate-spin" /> : <Upload size={14} />}
+            Unggah
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              setFile(null);
+              setPreview(null);
+              if (inputRef.current) inputRef.current.value = "";
+            }}
+            className="flex items-center gap-1 text-body-sm text-on-surface-variant hover:text-error transition-colors"
+          >
+            <X size={14} /> Batal
+          </button>
+        </div>
+      )}
       {error && <p className="text-body-sm text-error">{error}</p>}
     </div>
   );

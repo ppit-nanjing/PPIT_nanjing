@@ -3,6 +3,7 @@
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { createProcurementRequest } from "@/app/actions/procurement";
+import { FileUpload } from "@/components/upload/file-upload";
 
 const URGENCY = [
   { value: "low", label: "Rendah" },
@@ -66,6 +67,11 @@ export function ProcurementForm({ categories }: { categories: string[] }) {
         <span className="text-label-caps uppercase tracking-wide text-on-surface-variant">Alasan / Justifikasi</span>
         <textarea name="justification" rows={3} className="bg-soft-gray rounded-md p-3 text-body-md resize-none" />
       </label>
+
+      <div className="flex flex-col gap-2">
+        <span className="text-label-caps uppercase tracking-wide text-on-surface-variant">Foto Barang (opsional)</span>
+        <FileUpload name="imageUrl" folder="inventory" placeholder="URL atau seret gambar ke sini" />
+      </div>
 
       <label className="flex flex-col gap-2">
         <span className="text-label-caps uppercase tracking-wide text-on-surface-variant">Perkiraan Biaya (RMB, opsional)</span>

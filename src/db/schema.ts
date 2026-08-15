@@ -524,6 +524,7 @@ export const procurementRequests = pgTable("procurement_requests", {
   itemName: text("item_name").notNull(),
   category: text("category"),
   justification: text("justification"),
+  imageUrl: text("image_url"), // optional reference photo supplied by the requester
   estimatedCost: integer("estimated_cost"), // whole-number RMB (no decimals) per 2026-08-15 decision
   urgency: procurementUrgencyEnum("urgency").notNull().default("medium"),
   status: procurementStatusEnum("status").notNull().default("pending"),

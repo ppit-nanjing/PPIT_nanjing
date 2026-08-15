@@ -21,6 +21,7 @@ export async function createProcurementRequest(formData: FormData) {
   const itemName = String(formData.get("itemName") ?? "").trim();
   const category = String(formData.get("category") ?? "").trim();
   const justification = String(formData.get("justification") ?? "").trim();
+  const imageUrl = String(formData.get("imageUrl") ?? "").trim();
   const estimatedCostRaw = String(formData.get("estimatedCost") ?? "").trim();
   const urgency = String(formData.get("urgency") ?? "medium");
 
@@ -36,6 +37,7 @@ export async function createProcurementRequest(formData: FormData) {
     itemName,
     category: category || null,
     justification: justification || null,
+    imageUrl: imageUrl || null,
     estimatedCost: estimatedCost !== null ? Math.round(estimatedCost) : null,
     urgency: (["low", "medium", "high"].includes(urgency) ? urgency : "medium") as "low" | "medium" | "high",
   });

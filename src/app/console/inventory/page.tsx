@@ -94,6 +94,7 @@ export default async function ConsoleInventoryPage() {
           itemName: x.r.itemName,
           category: x.r.category,
           justification: x.r.justification,
+          imageUrl: x.r.imageUrl,
           estimatedCost: x.r.estimatedCost,
           urgency: x.r.urgency,
           status: x.r.status,
