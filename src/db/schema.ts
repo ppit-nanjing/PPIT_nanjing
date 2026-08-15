@@ -45,6 +45,7 @@ export const jobApplicationStatusEnum = pgEnum("job_application_status", [
 export const mentorshipStatusEnum = pgEnum("mentorship_status", ["pending", "matched", "rejected"]);
 export const membershipApplicationStatusEnum = pgEnum("membership_application_status", [
   "pending",
+  "reviewed",
   "accepted",
   "rejected",
 ]);
@@ -288,6 +289,9 @@ export const events = pgTable("events", {
   endAt: timestamp("end_at"),
   registrationDeadline: timestamp("registration_deadline"),
   capacity: integer("capacity"),
+  // When true, only users who have completed the sensus (verified as Indonesian
+  // students in China) may register. Regular events only require login.
+  requiresSensus: boolean("requires_sensus").notNull().default(false),
   // Freeform schedule, one item per line (e.g. "18:00 - Registrasi") - rendered as
   // a timeline on the event detail page when set. Not structured jsonb since the
   // admin form is a single textarea, matching description's freeform pattern.
@@ -406,10 +410,17 @@ export const membershipApplications = pgTable("membership_applications", {
   userId: uuid("user_id").references(() => users.id),
   fullName: text("full_name").notNull(),
   email: text("email").notNull(),
+  whatsapp: text("whatsapp"),
   university: text("university"),
+  major: text("major"),
+  expectedGraduation: text("expected_graduation"),
+  divisionInterest: text("division_interest"),
   motivation: text("motivation"),
+  commitment: text("commitment"),
   status: membershipApplicationStatusEnum("status").notNull().default("pending"),
+  note: text("note"),
   submittedAt: timestamp("submitted_at").notNull().defaultNow(),
+  reviewedAt: timestamp("reviewed_at"),
 });
 
 // ---------- 7. Inventory & Borrowing ----------
