@@ -78,7 +78,9 @@
   --spacing-stack-sm: 1rem;
   --spacing-stack-md: 2rem;
   --spacing-gutter: 2rem;
-  --spacing-container-padding: 1.5rem;
+  /* Responsive page gutter: tighter on phones (1.5rem ate ~48px of a 320px
+     screen), capped at the original 1.5rem on larger viewports. Audit 2026-08-15. */
+  --spacing-container-padding: clamp(1rem, 4vw, 1.5rem);
   --spacing-card-padding: 2rem;
   --spacing-section-gap: 8rem;
   --spacing-section-gap-mobile: 4rem;
