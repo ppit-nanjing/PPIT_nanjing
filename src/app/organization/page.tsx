@@ -1,15 +1,62 @@
-import { isNull } from "drizzle-orm";
+import { isNull, eq } from "drizzle-orm";
 import { db } from "@/db";
-import { departments } from "@/db/schema";
+import { departments, departmentMembers, users } from "@/db/schema";
 import { SiteNav } from "@/components/site-nav";
 import { SiteFooter } from "@/components/site-footer";
-import { Building2 } from "lucide-react";
+import { Building2, UserRound } from "lucide-react";
 
 export default async function OrganizationPage() {
   const topLevel = await db.select().from(departments).where(isNull(departments.parentDepartmentId));
   const all = await db.select().from(departments);
   const childrenOf = (parentId: string) =>
     all.filter((d) => d.parentDepartmentId === parentId).sort((a, b) => a.orderIndex - b.orderIndex);
+
+  const memberRows = await db
+    .select({
+      departmentId: departmentMembers.departmentId,
+      position: departmentMembers.position,
+      name: users.name,
+      image: users.image,
+      avatarUrl: users.avatarUrl,
+    })
+    .from(departmentMembers)
+    .leftJoin(users, eq(departmentMembers.userId, users.id));
+
+  const membersByDept = new Map<string, typeof memberRows>();
+  for (const m of memberRows) {
+    const list = membersByDept.get(m.departmentId) ?? [];
+    list.push(m);
+    membersByDept.set(m.departmentId, list);
+  }
+
+  function MemberList({ deptId }: { deptId: string }) {
+    const members = membersByDept.get(deptId);
+    if (!members || members.length === 0) return null;
+    return (
+      <div className="flex flex-wrap gap-3 mt-4 pt-4 border-t border-outline-variant">
+        {members.map((m, i) => (
+          <div key={i} className="flex items-center gap-2">
+            {m.image || m.avatarUrl ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={m.image ?? m.avatarUrl ?? undefined}
+                alt={m.name ?? ""}
+                className="w-8 h-8 rounded-full object-cover border border-outline-variant"
+              />
+            ) : (
+              <div className="w-8 h-8 rounded-full bg-surface-container flex items-center justify-center text-on-surface-variant shrink-0">
+                <UserRound size={14} />
+              </div>
+            )}
+            <div>
+              <p className="text-label-caps font-semibold text-on-background leading-tight">{m.name ?? "Anggota"}</p>
+              {m.position && <p className="text-label-caps text-on-surface-variant leading-tight">{m.position}</p>}
+            </div>
+          </div>
+        ))}
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-background text-on-background">
@@ -49,9 +96,10 @@ export default async function OrganizationPage() {
                     )}
                   </div>
                 </div>
+                <MemberList deptId={dept.id} />
 
                 {children.length > 0 && (
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-6">
                     {children.map((c) => (
                       <div
                         key={c.id}
@@ -66,6 +114,7 @@ export default async function OrganizationPage() {
                             Akses Admin Penuh
                           </span>
                         )}
+                        <MemberList deptId={c.id} />
                       </div>
                     ))}
                   </div>
