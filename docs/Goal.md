@@ -1,0 +1,68 @@
+# Goal — Full Prototype Parity, End to End
+
+> Working checklist. If you're picking this up cold (new session, `/loop`, or after a context reset): read [Progress & Handoff.md](./Progress%20&%20Handoff.md) first for how the app is wired (Neon/Drizzle/Auth.js/adminScope), then come back here. **Check items off in this file as you complete them and commit the updated file** — this doc is the durable memory across context resets, not the chat history.
+
+## Why this doc exists
+
+The app was built for real functionality first (every page reads/writes Neon, no mockups) rather than 1:1 visual fidelity to the 95 Stitch prototype files. That was the right call to get CRUD working everywhere, but it means a lot of pages are noticeably thinner than their prototype source. Evidence: `jobs_opportunities_expanded_ppit_nanjing/code.html` (prototype) is 364 lines with a hero search bar, a filter sidebar, and an inline Career Resources section; the built `/jobs` page is 76 lines with none of that. This doc's job is to close that gap systematically, screen by screen, using the actual prototype HTML as the source of truth for what's missing — not guessing.
+
+**Ground rule:** when porting a section from a prototype `code.html`, bring over its structure/content/copy, but always express it with this project's real design tokens (`docs/Design System/`) and real Drizzle data (`docs/Entity Relationship Diagram.md`) — never hardcode fake data where a real query belongs, and never add a section that has no real backing data source without first adding the schema for it.
+
+## Tier 0 — Routes that don't exist at all yet
+
+These have zero implementation — not thin, literally missing.
+
+- [ ] **Peta Persebaran** (distribution map) — prototype: `stitch_ppit_nanjing_web_portal/.../peta_persebaran_ppit_nanjing/code.html` (228 lines). Route: `/organization/map`. Reads `regional_branches` (lat/lng already in schema, only 9/32 seeded — see Progress & Handoff gap). Link it from `/organization/branches` and the nav/footer.
+- [ ] **Review AD/ART Guidelines** — prototype: `review_ad_art_guidelines_ppit_nanjing/code.html` (302 lines). Route: `/organization/ad-art/review`. A read-and-acknowledge gate page (Legal Framework / Student Conduct / Equipment Lending Policies sections per the prototype). Decide whether this is purely informational or an actual gate before some action (original IA docs weren't fully certain either — see `docs/Screens/Public/Organization & Regional Branches.md`).
+- [ ] **Gallery Archive & Filters** — prototype: `gallery_archive_filters_ppit_nanjing/code.html` (324 lines). Route: `/gallery/archive`. Year/cabinet-period filtering over `gallery_albums`.
+- [ ] **Submission History** — prototype: `stitch_ppit_nanjing_web_portal (1)/.../submission_history_ppit_nanjing/code.html` (280 lines). Route: `/profile/submissions`. Per `docs/Screens/Public/Event Flow.md`, this is a cross-domain view — union of the signed-in user's `event_registrations`, `borrow_requests`, and `job_applications`, most recent first.
+- [ ] **Event Submission Detail** — prototype: `stitch_ppit_nanjing_web_portal (1)/.../event_submission_detail_ppit_nanjing/code.html` (309 lines). Route: `/profile/submissions/[id]`. Detail drill-down from Submission History.
+- [ ] **Inventory Audit Report (admin)** — `inventory_audit_logs` table exists and is populated (item creation logs to it already), but there's no admin page to view it. Add a view at `/console/inventory` (new tab/section) or `/console/inventory/audit-log`, mirroring `/console/organization/audit-log`'s pattern.
+- [ ] **Notification Templates (admin)** — `notification_templates` table exists in schema, nothing reads/writes it from any UI. Prototype: `guide_configuring_notification_templates_admin_console`. Low priority unless notifications themselves get built (see Tier 3).
+- [ ] **Report Generator (admin)** — prototype: `new_report_generator_admin_console` / `refined_report_generator_admin_console`. `/console/reports` is a fixed dashboard today, not a configurable generator. Lower priority than the items above — `reports.type`/`parameters_json` schema already supports it if built later.
+
+## Tier 1 — Built, but a real fidelity gap vs. the prototype (priority order)
+
+For each: prototype line count vs. built line count, and what's concretely missing. Port section-by-section from the named prototype file.
+
+1. [ ] **Homepage** (`/`) — prototype `ppit_nanjing_homepage_final_refinement/code.html` (502 lines) vs. built (129 lines). Missing vs. prototype: Latest Events preview section, Latest News preview section, Partners/Networks section. Currently has: hero, stats, quote, cities. This is the highest-traffic page — do this first.
+2. [ ] **Jobs listing** (`/jobs`) — prototype `jobs_opportunities_expanded_ppit_nanjing/code.html` (364) vs. built (76). Missing: hero search bar, filter sidebar (category/type/location), inline Career Resources section at the bottom.
+3. [ ] **Sensus Profile** (`/sensus`) — prototype `sensus_profile_master_edition/code.html` (501) vs. built (64, the page shell — wizard itself is a separate component). This is the screen with the most prototype design iterations (6 variants) — the org clearly cared about this one. Check the prototype for field-level guidance/help text, progress persistence UI, and any fields not yet in the 3-step wizard (`src/components/sensus/sensus-wizard.tsx`).
+4. [ ] **About** (`/about`) — prototype `about_master_edition/code.html` (463) vs. built (81). Missing: likely a full leadership/BPH photo grid section, more detailed history/timeline content beyond the current Visi/Misi cards.
+5. [ ] **Events listing** (`/events`) — prototype `events_master_edition/code.html` (460) vs. built (83). Missing: category filter tabs, featured/highlighted event treatment.
+6. [ ] **Event Detail** (`/events/[slug]`) — prototype `event_details_ppit_nanjing/code.html` (356) vs. built (101). Missing: likely a full agenda/schedule section, speaker/organizer info, related-events section.
+7. [ ] **Comprehensive Career Center** (`/career`) — prototype `comprehensive_career_center_ppit_nanjing/code.html` (414) vs. built (97). Missing: richer resource cards, possibly testimonials/alumni spotlight section.
+8. [ ] **Edit Profile** (`/profile`) — prototype `edit_profile_refined_inputs/code.html` (384) vs. built (36, and today only has an email-subscription toggle, not a full profile editor). This is the biggest relative gap — check the prototype for what fields it actually expected (likely overlaps with `sensus_profiles` + `users.phone`/`wechatId`/`avatarUrl`, decide what's redundant with `/sensus` vs. what's genuinely account-level).
+9. [ ] **Join Mentorship Program** (`/career/mentorship`) — prototype `join_mentorship_program_ppit_nanjing/code.html` (347) vs. built (65). Missing: likely mentor profile browsing/matching UI, not just a blind application form.
+10. [ ] **Career Guide article** (`/career/guide/[slug]`) — prototype `career_guide_ppit_nanjing/code.html` (328) vs. built (28, very thin). Missing: sidebar resources, related articles, mock-interview booking CTA per `docs/Screens/Public/Career Flow.md`.
+11. [ ] **Job Detail** (`/jobs/[id]`) — prototype `job_details_ppit_nanjing/code.html` (330) vs. built (90). Missing: company info section, similar-jobs section.
+12. [ ] **News listing** (`/news`) — prototype `news_master_edition/code.html` (430) vs. built (65). Missing: featured article treatment, category filtering.
+13. [ ] **Terms** (`/terms`) — prototype `terms_privacy_ppit_nanjing/code.html` (294 lines, covers both terms AND privacy) vs. built (48 for terms alone). Check the prototype's actual legal section structure since this was written from general knowledge, not ported.
+14. [ ] **Organization Structure** (`/organization`) — prototype `organization_structure_refined/code.html` (344) vs. built (87). Missing: individual member photo/name cards per division (currently just division names), not just the department/division hierarchy boxes.
+15. [ ] **Inventory catalog** (`/inventory`) — prototype `inventory_equipment_lending_ppit_nanjing/code.html` (354) vs. built (81). Missing: search/filter by category, item condition badges are there but check for more detail (specs, photos plural).
+16. [ ] **Apply to Borrow** (`/inventory/[id]/borrow`) — prototype `apply_to_borrow_equipment_ppit_nanjing/code.html` (317) vs. built (81). Check for fields not yet in the form (prototype was a 3-step wizard per `docs/Screens/Public/Equipment Lending Flow.md` — built version is a single-step form).
+17. [ ] **AD/ART** (`/organization/ad-art`) — prototype (247) vs. built (54). Missing: the actual Mukadimah/BAB I/BAB II document content sections, not just a download-PDF card.
+18. [ ] **Regional Branches** (`/organization/branches`) — prototype (236) vs. built (68). Reasonably close proportionally but check for per-branch contact info/member count display (schema has `memberCount`/`contactInfo`, page may not surface them).
+19. [ ] **Login** (`/login`) — prototype `login_refined_inputs` (245) vs. built (50). This one's intentionally simpler (Google-only, no password field needed) — lower priority, mostly just check visual polish against the prototype's card treatment.
+
+## Tier 2 — Functional-equivalent but different UX than the prototype envisioned (lower priority, defensible)
+
+These aren't "missing" so much as "solved differently" — revisit only after Tier 0/1:
+
+- **Add New Department / Edit Department / Manage Members / Reorder Hierarchy** — prototype had 4 separate admin screens; built version does all of this inline within `/console/organization` (collapsible forms + up/down buttons instead of drag-and-drop). Functionally complete, simpler UX.
+- **Create New Event** — prototype had a dedicated `/admin/events/new` screen; built version uses a collapsible inline form on `/console/events`. Functionally complete.
+- **Add New User** — intentionally not built as a manual-create flow; accounts only exist via Google OAuth (documented decision in Progress & Handoff).
+- **New Entry Selection modal** — prototype had a unified "what do you want to create?" picker; built version has each module's own inline add form instead. Cosmetic difference only.
+- **7 admin Guide pages + Help & Documentation** — prototype had 8 separate screens; built version folds all guide content into `/console/docs` as `help_articles` rows (5 seeded so far, one per real module) rather than one static page per guide topic. Functionally superior (admin-editable) but not a 1:1 visual port — leave as-is.
+
+## Tier 3 — Schema exists, no UI at all (future work, not urgent)
+
+- `notifications` / `notification_templates` — tables exist, nothing sends or displays a notification anywhere yet. No prototype screen strictly requires this to function (it's plumbing, not a screen), but the Guide: Notification Templates prototype implies it was intended.
+
+## Process notes for whoever/whatever works through this
+
+- Build, `git add` **one file at a time**, commit with a message explaining the *why* (matches the rest of this repo's history) — not batched commits.
+- Run `npm run build` before each commit batch — this repo's `npm run build` catches real compile errors but does **not** catch schema-drift or auth-adapter bugs (see the two lessons documented in Progress & Handoff.md from 2026-08-15) — those only surface at actual runtime.
+- After finishing an item, check its box in this file and commit the doc update alongside the code.
+- If a prototype section references data with no corresponding table/column yet, add the schema first (`src/db/schema.ts` + `npx drizzle-kit push --force` immediately, don't batch schema changes).
+- Don't invent organizational facts (branch names, real people, real events) — where the prototype shows placeholder/example content, either leave the real page's empty-state honest or use genuinely-known facts from `docs/Overview.md` and the guidebook, same standard applied throughout this project so far.
