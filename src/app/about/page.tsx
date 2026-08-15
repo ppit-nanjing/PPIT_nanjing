@@ -20,9 +20,9 @@ export default function AboutPage() {
         <span className="text-label-caps text-primary-container tracking-widest uppercase mb-2 block">
           Tentang Kami
         </span>
-        <h1 className="text-headline-lg md:text-display-hero-mobile text-on-background mb-6">
-          Tentang PPIT Nanjing
-        </h1>
+          <h1 className="text-display-hero-mobile md:text-display-hero text-on-background mb-6">
+            Tentang PPIT Nanjing
+          </h1>
         <div className="max-w-3xl flex flex-col gap-4 text-body-lg text-on-surface-variant mb-8">
           <AnimatedRevealText text="PPIT Cabang Nanjing adalah organisasi kemahasiswaan di Kota Nanjing yang mewadahi pelajar dan mahasiswa Indonesia serta organisasi-organisasi pelajar Indonesia di Tiongkok, khususnya Kota Nanjing. Organisasi ini dibentuk pada 28 Oktober 2008, bertepatan dengan Hari Sumpah Pemuda." />
           <p>
@@ -75,20 +75,29 @@ export default function AboutPage() {
             kota-kota sekitarnya serta dua ranting organisasi aktif setingkat kampus.
           </p>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-            <div className="bg-surface-container-low border border-outline-variant rounded-xl p-6">
-              <MapPinned className="text-primary-container mb-3" size={22} />
-              <h3 className="text-body-md font-bold text-on-surface mb-2">Kota Sekitar</h3>
-              <ul className="flex flex-col gap-1 text-body-md text-on-surface-variant">
+            <div className="sm:col-span-2 bg-primary-container text-on-primary rounded-xl p-6 sm:p-8 flex flex-col justify-between">
+              <div className="w-12 h-12 bg-on-primary/15 rounded-full flex items-center justify-center mb-4">
+                <MapPinned className="text-on-primary" size={22} />
+              </div>
+              <h3 className="text-headline-sm text-on-primary mb-4">Kota Sekitar</h3>
+              <div className="flex flex-wrap gap-2">
                 {COVERAGE_CITIES.map((c) => (
-                  <li key={c}>{c}</li>
+                  <span
+                    key={c}
+                    className="px-3 py-1.5 bg-on-primary/15 text-on-primary text-label-caps uppercase tracking-wide rounded-full"
+                  >
+                    {c}
+                  </span>
                 ))}
-              </ul>
+              </div>
             </div>
             {RANTING.map((r) => (
-              <div key={r.name} className="bg-surface-container-low border border-outline-variant rounded-xl p-6">
-                <GraduationCap className="text-primary-container mb-3" size={22} />
-                <h3 className="text-body-md font-bold text-on-surface mb-2">Ranting {r.name}</h3>
-                <p className="text-body-md text-on-surface-variant">{r.campus}</p>
+              <div key={r.name} className="bg-surface-container-low border border-outline-variant rounded-xl p-6 flex flex-col">
+                <div className="w-12 h-12 bg-primary-container/15 rounded-full flex items-center justify-center mb-4">
+                  <GraduationCap className="text-primary-container" size={22} />
+                </div>
+                <p className="text-label-caps uppercase tracking-wide text-on-surface-variant mb-1">Ranting {r.name}</p>
+                <p className="text-headline-sm text-on-surface">{r.campus}</p>
               </div>
             ))}
           </div>
