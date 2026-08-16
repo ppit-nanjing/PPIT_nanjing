@@ -9,6 +9,6 @@ export const NAV_LINKS = [
   { href: "/events", label: "Events" },
   { href: "/news", label: "News" },
   { href: "/gallery", label: "Gallery" },
-  { href: "/jobs", label: "Careers" },
+  { href: "/jobs", label: "Lowongan" },
   { href: "/inventory", label: "Inventaris" },
 ];
