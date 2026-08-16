@@ -8,6 +8,7 @@ import { AnimatedRevealText } from "@/components/animated-reveal-text";
 import { Reveal } from "@/components/reveal";
 import { GalleryCard } from "@/components/gallery-card";
 import { Images, Archive } from "lucide-react";
+import Link from "next/link";
 
 export default async function GalleryPage() {
   const albums = await db.select().from(galleryAlbums).orderBy(desc(galleryAlbums.createdAt));
@@ -27,12 +28,12 @@ export default async function GalleryPage() {
           />
           <AnimatedRevealText text="Momen-momen kegiatan PPIT Nanjing, terdokumentasi per album." />
         </div>
-        <a
+        <Link
           href="/gallery/archive"
           className="flex items-center gap-2 text-label-caps text-primary-container hover:text-primary transition-colors shrink-0"
         >
           <Archive size={16} /> Arsip per Tahun
-        </a>
+        </Link>
       </header>
 
       <main className="max-w-[var(--container-max)] mx-auto px-[var(--spacing-container-padding)] pb-24">
