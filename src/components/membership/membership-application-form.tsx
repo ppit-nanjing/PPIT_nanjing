@@ -186,7 +186,7 @@ export function MembershipApplicationForm({ fields, periodId, defaults, action, 
                     className={common}
                   />
                 )}
-                {f.helpText && f.type !== "checkbox" && (
+                {f.helpText && (
                   <span id={helpId} className="text-label-caps text-on-surface-variant">
                     {f.helpText}
                   </span>
