@@ -1,4 +1,4 @@
-import { desc, eq, sql, and, gte, type SQL } from "drizzle-orm";
+import { desc, eq, sql, and, gte, type SQL, type Table } from "drizzle-orm";
 import { db } from "@/db";
 import {
   users,
@@ -19,7 +19,7 @@ import {
   feedback,
 } from "@/db/schema";
 import { CollapsibleSection } from "@/components/console/collapsible-section";
-import { ArrowRight, Plus, type LucideIcon } from "lucide-react";
+import { ArrowRight, type LucideIcon } from "lucide-react";
 import Link from "next/link";
 import {
   Users,
@@ -34,7 +34,7 @@ import {
   MessageSquare,
 } from "lucide-react";
 
-async function countOf(table: any, where?: SQL) {
+async function countOf(table: Table, where?: SQL) {
   const q = db.select({ v: sql<number>`count(*)::int` }).from(table);
   const rows = where ? await q.where(where) : await q;
   return rows[0].v;
@@ -91,7 +91,6 @@ export default async function ConsoleDashboardPage() {
     activeUsers,
     newUsers,
     sensusComplete,
-    totalEvents,
     publishedEvents,
     draftEvents,
     upcomingEvents,
