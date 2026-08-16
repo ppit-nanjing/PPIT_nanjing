@@ -6,7 +6,8 @@ import { jobPostings, jobApplications } from "@/db/schema";
 import { SiteNav } from "@/components/site-nav";
 import { SiteFooter } from "@/components/site-footer";
 import { formatRelativeTime } from "@/lib/format-relative-time";
-import { MapPin, Calendar, CheckCircle2, Info, ClipboardCheck, Building2, History } from "lucide-react";
+import Link from "next/link";
+import { MapPin, Calendar, CheckCircle2, Info, ClipboardCheck, Building2, History, ArrowLeft } from "lucide-react";
 
 const TYPE_LABEL: Record<string, string> = {
   internship: "Magang",
@@ -43,19 +44,41 @@ export default async function JobDetailPage({ params }: { params: Promise<{ id: 
     .orderBy(desc(jobPostings.createdAt))
     .limit(3);
 
+  const deadlineSoon =
+    job.applicationDeadline &&
+    new Date(job.applicationDeadline).getTime() - Date.now() < 7 * 24 * 60 * 60 * 1000;
+
   const applyCta = alreadyApplied ? (
-    <p className="flex items-center gap-2 text-body-md text-on-background">
-      <CheckCircle2 className="text-primary-container" size={20} /> Kamu sudah melamar posisi ini.
-    </p>
+    <div className="flex flex-col items-center gap-3">
+      <p className="flex items-center gap-2 text-body-md text-on-background">
+        <CheckCircle2 className="text-primary-container" size={20} aria-hidden /> Kamu sudah melamar posisi ini.
+      </p>
+      <Link
+        href={`/jobs/${id}/applied`}
+        className="block w-full text-center border border-primary-container text-primary-container text-label-caps uppercase tracking-wide px-6 py-3 rounded-md hover:bg-primary-container hover:text-on-primary transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-container focus-visible:ring-offset-2 focus-visible:ring-offset-background motion-reduce:transition-none"
+      >
+        Lihat Status Lamaran
+      </Link>
+    </div>
   ) : job.status === "open" ? (
-    <a
-      href={`/jobs/${id}/apply`}
-      className="block w-full text-center bg-primary-container text-on-primary text-label-caps uppercase tracking-wide px-6 py-4 rounded-md hover:bg-primary transition-colors"
-    >
-      Lamar Sekarang
-    </a>
+    <div className="flex flex-col items-center gap-3">
+      <a
+        href={`/jobs/${id}/apply`}
+        aria-label={`Lamar posisi ${job.title}`}
+        className="block w-full text-center bg-primary-container text-on-primary text-label-caps uppercase tracking-wide px-6 py-4 rounded-md hover:bg-primary transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background motion-reduce:transition-none"
+      >
+        Lamar Sekarang
+      </a>
+      {!session && (
+        <p className="text-label-caps text-on-surface-variant text-center">
+          Perlu login untuk melamar.
+        </p>
+      )}
+    </div>
   ) : (
-    <p className="text-body-md text-on-surface-variant">Lowongan ini sudah ditutup.</p>
+    <p className="text-center text-body-md text-on-surface-variant rounded-md bg-surface-container-low px-4 py-3">
+      Lowongan ini sudah ditutup.
+    </p>
   );
 
   return (
@@ -65,13 +88,25 @@ export default async function JobDetailPage({ params }: { params: Promise<{ id: 
       <header className="border-b border-outline-variant bg-surface-container-lowest">
         <div className="max-w-[var(--container-max)] mx-auto px-[var(--spacing-container-padding)] py-16">
           <div className="max-w-3xl">
+            <Link
+              href="/jobs"
+              aria-label="Kembali ke daftar lowongan"
+              className="inline-flex items-center gap-1.5 mb-6 text-label-caps uppercase tracking-wide text-on-surface-variant hover:text-primary-container transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-container focus-visible:ring-offset-2 focus-visible:ring-offset-background rounded-md motion-reduce:transition-none"
+            >
+              <ArrowLeft size={14} aria-hidden /> Lowongan
+            </Link>
             <div className="flex items-center gap-3 mb-6">
               <span className="bg-primary-container/10 text-primary-container text-label-caps uppercase tracking-wide px-3 py-1.5 rounded-full">
                 {TYPE_LABEL[job.type] ?? job.type}
               </span>
               <span className="bg-surface-container-low text-on-surface-variant text-label-caps uppercase tracking-wide px-3 py-1.5 rounded-full flex items-center gap-1">
-                <History size={13} /> {formatRelativeTime(job.createdAt)}
+                <History size={13} aria-hidden /> {formatRelativeTime(job.createdAt)}
               </span>
+              {deadlineSoon && (
+                <span className="bg-error-container/30 text-error text-label-caps uppercase tracking-wide px-3 py-1.5 rounded-full">
+                  Segera ditutup
+                </span>
+              )}
             </div>
             <h1 className="text-display-hero-mobile md:text-display-hero text-on-background mb-3">{job.title}</h1>
             <h2 className="text-headline-md text-secondary mb-6">{job.company}</h2>
@@ -113,9 +148,9 @@ export default async function JobDetailPage({ params }: { params: Promise<{ id: 
         </div>
 
         <div className="lg:col-span-4">
-          <div className="sticky top-24 bg-surface-container-lowest border border-outline-variant rounded-xl p-8">
+          <div aria-label="Ringkasan lowongan" className="sticky top-24 bg-surface-container-lowest border border-outline-variant rounded-xl p-8">
             <div className="flex items-center justify-center h-16 w-16 mx-auto bg-surface-container-low rounded-lg mb-4 text-primary-container">
-              <Building2 size={28} />
+              <Building2 size={28} aria-hidden />
             </div>
             <h4 className="text-headline-md text-on-background mb-1 text-center">{job.company}</h4>
             {job.location && <p className="text-body-md text-on-surface-variant text-center mb-6">{job.location}</p>}
@@ -134,7 +169,8 @@ export default async function JobDetailPage({ params }: { params: Promise<{ id: 
               <a
                 key={j.id}
                 href={`/jobs/${j.id}`}
-                className="bg-surface-container-lowest border border-outline-variant rounded-xl p-6 hover:shadow-[0_10px_30px_rgba(39,23,22,0.06)] transition-shadow"
+                aria-label={`Lihat lowongan serupa ${j.title} di ${j.company}`}
+                className="group bg-surface-container-lowest border border-outline-variant rounded-xl p-6 hover:shadow-[0_10px_30px_rgba(39,23,22,0.06)] transition-shadow focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-container focus-visible:ring-offset-2 focus-visible:ring-offset-background motion-reduce:transition-none"
               >
                 <span className="text-label-caps uppercase tracking-wide bg-surface-container-low px-2 py-0.5 rounded">
                   {TYPE_LABEL[j.type] ?? j.type}
