@@ -16,8 +16,6 @@ import { events, newsArticles } from "@/db/schema";
 
 const CITIES = ["Nanjing", "Xuzhou", "Jurong", "Ma'anshan", "Zhenjiang", "Huai'an"];
 
-const CITIES = ["Nanjing", "Xuzhou", "Jurong", "Ma'anshan", "Zhenjiang", "Huai'an"];
-
 export default async function Home() {
   const latestEvents = await db
     .select()
