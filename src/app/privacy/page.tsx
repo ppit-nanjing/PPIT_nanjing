@@ -52,7 +52,7 @@ export default function PrivacyPage() {
                 Kami hanya mengirimkan berita dan info kegiatan lewat email jika Anda secara aktif
                 memilih untuk berlangganan. Anda dapat berhenti berlangganan kapan saja lewat
                 halaman{" "}
-                <Link href="/profile" className="text-primary-container underline">
+                <Link href="/profile" className="text-primary-container underline rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-container focus-visible:ring-offset-2 focus-visible:ring-offset-background">
                   Profil
                 </Link>
                 .
@@ -80,7 +80,7 @@ export default function PrivacyPage() {
                 Anda berhak meminta akses, perbaikan, atau penghapusan data pribadi Anda. Untuk
                 pertanyaan terkait kebijakan privasi ini atau pengajuan permintaan data, silakan
                 hubungi pengurus PPIT Nanjing melalui surel resmi di{" "}
-                <Link href="/profile" className="text-primary-container underline">
+                <Link href="/profile" className="text-primary-container underline rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-container focus-visible:ring-offset-2 focus-visible:ring-offset-background">
                   Profil
                 </Link>{" "}
                 atau kanal komunikasi resmi organisasi.
