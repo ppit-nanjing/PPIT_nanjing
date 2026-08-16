@@ -14,21 +14,17 @@ import {
   users,
 } from "@/db/schema";
 import { hasModuleAccess } from "@/lib/admin-scope";
-
-function csvEscape(value: unknown): string {
-  let s = value == null ? "" : String(value);
-  // Guard against CSV/formula injection: a cell that starts with = + - @ can
-  // be executed by spreadsheet software on open. Prefix with a single quote
-  // (the standard neutralizer) after quoting.
-  if (/^[=+\-@]/.test(s)) s = `'${s}`;
-  return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
-}
-
-function toCsv(header: string[], rows: unknown[][]): string {
-  return [header, ...rows].map((r) => r.map(csvEscape).join(",")).join("\n");
-}
+import { datasetToCsv, datasetToXlsx, type ReportDataset } from "@/lib/report-export";
 
 type ReportType = (typeof reportTypeEnum.enumValues)[number];
+
+const TITLE: Record<ReportType, string> = {
+  event_attendance: "Laporan Kehadiran Acara",
+  inventory_audit: "Laporan Audit Inventaris",
+  sensus_summary: "Ringkasan Sensus",
+  student_export: "Data Mahasiswa",
+  custom: "Catatan Kustom",
+};
 
 export async function GET(request: Request) {
   const session = await auth();
@@ -38,15 +34,28 @@ export async function GET(request: Request) {
 
   const url = new URL(request.url);
   const type = url.searchParams.get("type") ?? "";
+  const format = (url.searchParams.get("format") ?? "csv").toLowerCase();
   if (!reportTypeEnum.enumValues.includes(type as ReportType)) {
     return NextResponse.json({ error: "Jenis laporan tidak valid" }, { status: 400 });
   }
+  if (format !== "csv" && format !== "xlsx") {
+    return NextResponse.json({ error: "Format tidak didukung (csv|xlsx)" }, { status: 400 });
+  }
+
   const departmentId = url.searchParams.get("departmentId") || null;
   const dateFrom = url.searchParams.get("dateFrom") || null;
   const dateTo = url.searchParams.get("dateTo") || null;
   const note = url.searchParams.get("note") || null;
 
-  let csv = "";
+  const now = new Date();
+  const filters: Record<string, string | null> = {
+    Departemen: departmentId,
+    "Dari Tanggal": dateFrom,
+    "Sampai Tanggal": dateTo,
+    Catatan: note,
+  };
+
+  let dataset: ReportDataset;
 
   switch (type as ReportType) {
     case "event_attendance": {
@@ -70,17 +79,28 @@ export async function GET(request: Request) {
         .where(conditions.length > 0 ? and(...conditions) : undefined)
         .orderBy(desc(events.startAt));
 
-      csv = toCsv(
-        ["Acara", "Tanggal Mulai", "Nama Peserta", "Email", "Status", "Check-in"],
-        rows.map((r) => [
-          r.eventTitle,
-          r.startAt?.toISOString() ?? "",
-          r.userName,
-          r.userEmail,
-          r.status,
-          r.checkedInAt?.toISOString() ?? "",
-        ])
-      );
+      dataset = {
+        title: TITLE.event_attendance,
+        type,
+        generatedAt: now,
+        filters,
+        columns: [
+          { header: "Acara", key: "eventTitle" },
+          { header: "Tanggal Mulai", key: "startAt", type: "date" },
+          { header: "Nama Peserta", key: "userName" },
+          { header: "Email", key: "userEmail" },
+          { header: "Status", key: "status" },
+          { header: "Check-in", key: "checkedInAt", type: "date" },
+        ],
+        rows: rows.map((r) => ({
+          eventTitle: r.eventTitle,
+          startAt: r.startAt,
+          userName: r.userName,
+          userEmail: r.userEmail,
+          status: r.status,
+          checkedInAt: r.checkedInAt,
+        })),
+      };
       break;
     }
     case "inventory_audit": {
@@ -103,29 +123,56 @@ export async function GET(request: Request) {
         .where(conditions.length > 0 ? and(...conditions) : undefined)
         .orderBy(desc(inventoryAuditLogs.createdAt));
 
-      csv = toCsv(
-        ["Tanggal", "Barang", "Aksi", "Perubahan Jumlah", "Oleh", "Catatan"],
-        rows.map((r) => [
-          r.createdAt.toISOString(),
-          r.itemName ?? "(barang dihapus)",
-          r.action,
-          r.quantityDelta,
-          r.performedByName,
-          r.note,
-        ])
-      );
+      dataset = {
+        title: TITLE.inventory_audit,
+        type,
+        generatedAt: now,
+        filters,
+        columns: [
+          { header: "Tanggal", key: "createdAt", type: "date" },
+          { header: "Barang", key: "itemName" },
+          { header: "Aksi", key: "action" },
+          { header: "Perubahan Jumlah", key: "quantityDelta", type: "number" },
+          { header: "Oleh", key: "performedByName" },
+          { header: "Catatan", key: "note" },
+        ],
+        rows: rows.map((r) => ({
+          createdAt: r.createdAt,
+          itemName: r.itemName ?? "(barang dihapus)",
+          action: r.action,
+          quantityDelta: r.quantityDelta,
+          performedByName: r.performedByName,
+          note: r.note,
+        })),
+      };
       break;
     }
     case "sensus_summary": {
       const rows = await db.select().from(sensusProfiles);
-      csv = toCsv(
-        ["Universitas", "Program", "Jenjang", "Kota di Tiongkok", "Status"],
-        rows.map((r) => [r.university, r.program, r.degreeLevel, r.cityInChina, r.completionStatus])
-      );
+      dataset = {
+        title: TITLE.sensus_summary,
+        type,
+        generatedAt: now,
+        filters,
+        columns: [
+          { header: "Universitas", key: "university" },
+          { header: "Program", key: "program" },
+          { header: "Jenjang", key: "degreeLevel" },
+          { header: "Kota di Tiongkok", key: "cityInChina" },
+          { header: "Status", key: "completionStatus" },
+        ],
+        rows: rows.map((r) => ({
+          university: r.university,
+          program: r.program,
+          degreeLevel: r.degreeLevel,
+          cityInChina: r.cityInChina,
+          completionStatus: r.completionStatus,
+        })),
+      };
       break;
     }
     case "student_export": {
-      const rows = departmentId
+      const dbRows = departmentId
         ? await db
             .select({ user: users, sensus: sensusProfiles })
             .from(users)
@@ -139,22 +186,41 @@ export async function GET(request: Request) {
             .from(users)
             .leftJoin(sensusProfiles, eq(sensusProfiles.userId, users.id));
 
-      csv = toCsv(
-        ["Nama", "Email", "Universitas", "Program", "Jenjang", "Kota di Tiongkok", "Status Sensus"],
-        rows.map((r) => [
-          r.user.name,
-          r.user.email,
-          r.sensus?.university,
-          r.sensus?.program,
-          r.sensus?.degreeLevel,
-          r.sensus?.cityInChina,
-          r.sensus?.completionStatus ?? "belum mengisi",
-        ])
-      );
+      dataset = {
+        title: TITLE.student_export,
+        type,
+        generatedAt: now,
+        filters,
+        columns: [
+          { header: "Nama", key: "name" },
+          { header: "Email", key: "email" },
+          { header: "Universitas", key: "university" },
+          { header: "Program", key: "program" },
+          { header: "Jenjang", key: "degreeLevel" },
+          { header: "Kota di Tiongkok", key: "cityInChina" },
+          { header: "Status Sensus", key: "completionStatus" },
+        ],
+        rows: dbRows.map((r) => ({
+          name: r.user.name,
+          email: r.user.email,
+          university: r.sensus?.university,
+          program: r.sensus?.program,
+          degreeLevel: r.sensus?.degreeLevel,
+          cityInChina: r.sensus?.cityInChina,
+          completionStatus: r.sensus?.completionStatus ?? "belum mengisi",
+        })),
+      };
       break;
     }
     case "custom": {
-      csv = toCsv(["Catatan"], [[note ?? ""]]);
+      dataset = {
+        title: TITLE.custom,
+        type,
+        generatedAt: now,
+        filters,
+        columns: [{ header: "Catatan", key: "note" }],
+        rows: [{ note: note ?? "" }],
+      };
       break;
     }
   }
@@ -165,10 +231,25 @@ export async function GET(request: Request) {
     parametersJson: { departmentId, dateFrom, dateTo, note },
   });
 
+  const ext = format === "xlsx" ? "xlsx" : "csv";
+  const disposition = `attachment; filename="laporan-${type}-${now.toISOString().slice(0, 10)}.${ext}"`;
+
+  if (format === "xlsx") {
+    const buf = await datasetToXlsx(dataset);
+    return new NextResponse(new Uint8Array(buf), {
+      headers: {
+        "Content-Type":
+          "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        "Content-Disposition": disposition,
+      },
+    });
+  }
+
+  const csv = datasetToCsv(dataset);
   return new NextResponse(csv, {
     headers: {
       "Content-Type": "text/csv; charset=utf-8",
-      "Content-Disposition": `attachment; filename="laporan-${type}.csv"`,
+      "Content-Disposition": disposition,
     },
   });
 }
