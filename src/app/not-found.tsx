@@ -1,4 +1,5 @@
 import { Home, Compass } from "lucide-react";
+import Link from "next/link";
 
 export default function NotFound() {
   return (
@@ -11,18 +12,18 @@ export default function NotFound() {
           Coba kembali ke beranda atau jelajahi kegiatan PPIT Nanjing lainnya.
         </p>
         <div className="flex flex-col sm:flex-row gap-4 justify-center">
-          <a
+          <Link
             href="/"
             className="inline-flex items-center justify-center gap-2 bg-primary-container text-on-primary text-label-caps uppercase tracking-wide px-6 py-3 rounded-md hover:bg-primary transition-colors"
           >
             <Home size={18} /> Kembali ke Beranda
-          </a>
-          <a
+          </Link>
+          <Link
             href="/events"
             className="inline-flex items-center justify-center gap-2 border border-outline-variant text-on-background text-label-caps uppercase tracking-wide px-6 py-3 rounded-md hover:bg-surface-container-low transition-colors"
           >
             <Compass size={18} /> Jelajahi Kegiatan
-          </a>
+          </Link>
         </div>
       </div>
     </div>
