@@ -5,6 +5,7 @@ import { SiteNav } from "@/components/site-nav";
 import { SiteFooter } from "@/components/site-footer";
 import { formatRelativeTime } from "@/lib/format-relative-time";
 import { Briefcase, BookOpen, Users, MapPin, ArrowRight } from "lucide-react";
+import Link from "next/link";
 
 const TYPE_LABEL: Record<string, string> = {
   internship: "Magang",
@@ -40,9 +41,9 @@ export default async function CareerCenterPage() {
             <h2 className="text-headline-md text-on-background flex items-center gap-2">
               <Briefcase size={20} className="text-primary-container" /> Peluang Terbaru
             </h2>
-            <a href="/jobs" className="text-label-caps uppercase tracking-wide text-primary-container hover:text-primary transition-colors">
+            <Link href="/jobs" className="text-label-caps uppercase tracking-wide text-primary-container hover:text-primary transition-colors">
               Lihat Semua
-            </a>
+            </Link>
           </div>
           {jobs.length === 0 ? (
             <p className="text-body-md text-on-surface-variant">Belum ada lowongan dibuka.</p>
@@ -125,12 +126,12 @@ export default async function CareerCenterPage() {
               </p>
             </div>
           </div>
-          <a
+          <Link
             href="/career/mentorship"
             className="bg-primary-container text-on-primary text-label-caps uppercase tracking-wide px-6 py-3 rounded-md hover:bg-primary transition-colors shrink-0"
           >
             Daftar Mentorship
-          </a>
+          </Link>
         </section>
       </main>
 
