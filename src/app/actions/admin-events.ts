@@ -5,7 +5,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { auth } from "@/auth";
 import { db } from "@/db";
-import { events, eventRegistrations } from "@/db/schema";
+import { events, eventRegistrations, galleryAlbums } from "@/db/schema";
 import { hasModuleAccess } from "@/lib/admin-scope";
 import { createNotification } from "@/lib/notifications";
 
@@ -144,4 +144,14 @@ export async function checkInByToken(token: string, eventId: string) {
   }
 
   return { ok: true as const, already: false as const };
+}
+
+export async function deleteEvent(eventId: string) {
+  await requireAdmin();
+  // galleryAlbums.eventId has no FK cascade, so delete albums (and their photos
+  // via cascade) first; eventRegistrations cascade from events automatically.
+  await db.delete(galleryAlbums).where(eq(galleryAlbums.eventId, eventId));
+  await db.delete(events).where(eq(events.id, eventId));
+  revalidatePath("/console/events");
+  redirect("/console/events");
 }

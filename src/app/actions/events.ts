@@ -13,7 +13,10 @@ export async function registerForEvent(eventId: string, slug: string) {
   if (!session?.user?.id) redirect(`/login?returnTo=/events/${slug}`);
 
   const [event] = await db.select().from(events).where(eq(events.id, eventId));
-  if (!event || event.status !== "published") throw new Error("Event tidak tersedia untuk pendaftaran");
+  // Event is unpublished, closed, finished, or cancelled - don't throw here
+  // (a raw Error inside a Server Action surfaces as a generic #441 in prod).
+  // Bounce back to the event page, which already shows the right message.
+  if (!event || event.status !== "published") redirect(`/events/${slug}`);
 
   // By default events only need login. Sensus (verified Indonesian student in
   // China) is only required when the event opts in via requiresSensus.

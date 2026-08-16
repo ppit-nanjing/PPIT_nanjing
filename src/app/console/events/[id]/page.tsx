@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { db } from "@/db";
 import { events, eventRegistrations, users } from "@/db/schema";
 import { updateEvent } from "@/app/actions/admin-events";
+import { DeleteEventButton } from "@/components/console/delete-event-button";
 import { RegistrationList } from "@/components/console/registration-list";
 import { requireModuleAccess } from "@/lib/admin-scope";
 import { ImageUploadCropper } from "@/components/upload/image-upload-cropper";
@@ -111,12 +112,15 @@ export default async function ConsoleEventDetailPage({ params }: { params: Promi
 
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between mb-4">
         <h2 className="text-headline-md text-on-background">Daftar Pendaftar</h2>
-        <a
-          href={`/console/events/${id}/scan`}
-          className="inline-flex items-center gap-2 border border-outline-variant text-on-background text-label-caps uppercase tracking-wide px-4 py-2 rounded-md hover:bg-surface-container-low transition-colors"
-        >
-          Buka Scanner Check-in
-        </a>
+        <div className="flex items-center gap-3">
+          <a
+            href={`/console/events/${id}/scan`}
+            className="inline-flex items-center gap-2 border border-outline-variant text-on-background text-label-caps uppercase tracking-wide px-4 py-2 rounded-md hover:bg-surface-container-low transition-colors"
+          >
+            Buka Scanner Check-in
+          </a>
+          <DeleteEventButton eventId={id} label="Hapus Kegiatan" />
+        </div>
       </div>
       <RegistrationList
         eventId={id}

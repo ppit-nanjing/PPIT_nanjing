@@ -2,6 +2,7 @@ import { desc } from "drizzle-orm";
 import { db } from "@/db";
 import { events } from "@/db/schema";
 import { createEvent } from "@/app/actions/admin-events";
+import { DeleteEventButton } from "@/components/console/delete-event-button";
 import { requireModuleAccess } from "@/lib/admin-scope";
 import { ImageUploadCropper } from "@/components/upload/image-upload-cropper";
 import { AIImproveButton } from "@/components/ai/ai-improve-button";
@@ -84,21 +85,26 @@ export default async function ConsoleEventsPage() {
       <div className="flex flex-col gap-2">
         {list.length === 0 && <p className="text-body-md text-on-surface-variant">Belum ada kegiatan dibuat.</p>}
         {list.map((e) => (
-          <a
+          <div
             key={e.id}
-            href={`/console/events/${e.id}`}
-            className="flex items-center justify-between gap-4 bg-surface-container-lowest border border-outline-variant rounded-lg px-5 py-4 hover:bg-surface-container-low transition-colors"
+            className="flex items-center justify-between gap-4 bg-surface-container-lowest border border-outline-variant rounded-lg pl-5 pr-2 py-2 hover:bg-surface-container-low transition-colors"
           >
-            <div>
-              <p className="text-body-md font-medium text-on-background">{e.title}</p>
-              <p className="text-label-caps text-on-surface-variant">
-                {e.startAt ? new Date(e.startAt).toLocaleDateString("id-ID") : "Belum dijadwalkan"}
-              </p>
-            </div>
-            <span className="text-label-caps uppercase tracking-wide bg-surface-container-low px-2.5 py-1 rounded shrink-0">
-              {STATUS_LABEL[e.status]}
-            </span>
-          </a>
+            <a
+              href={`/console/events/${e.id}`}
+              className="flex-1 flex items-center justify-between gap-4 py-2"
+            >
+              <div>
+                <p className="text-body-md font-medium text-on-background">{e.title}</p>
+                <p className="text-label-caps text-on-surface-variant">
+                  {e.startAt ? new Date(e.startAt).toLocaleDateString("id-ID") : "Belum dijadwalkan"}
+                </p>
+              </div>
+              <span className="text-label-caps uppercase tracking-wide bg-surface-container-low px-2.5 py-1 rounded shrink-0">
+                {STATUS_LABEL[e.status]}
+              </span>
+            </a>
+            <DeleteEventButton eventId={e.id} />
+          </div>
         ))}
       </div>
     </div>
