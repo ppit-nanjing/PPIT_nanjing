@@ -3,7 +3,6 @@ import { db } from "@/db";
 import { membershipApplications, recruitmentPeriods } from "@/db/schema";
 import { requireModuleAccess } from "@/lib/admin-scope";
 import { MembershipTabs } from "@/components/console/membership-tabs";
-import { UserPlus } from "lucide-react";
 
 const STATUS_LABEL: Record<string, string> = {
   pending: "Menunggu",
