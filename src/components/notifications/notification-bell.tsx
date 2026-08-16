@@ -64,7 +64,7 @@ export function NotificationBell() {
           type="button"
           aria-label="Notifikasi"
           onClick={() => setOpen((v) => !v)}
-          className="relative text-on-background p-1 hover:bg-surface-container-low rounded-lg transition-colors"
+          className="relative text-on-background p-1 hover:bg-surface-container-low rounded-lg transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-container focus-visible:ring-offset-2 focus-visible:ring-offset-background motion-reduce:transition-none"
         >
           <Bell size={20} />
           {unread > 0 && (
@@ -83,7 +83,7 @@ export function NotificationBell() {
               <button
                 type="button"
                 onClick={markAllRead}
-                className="flex items-center gap-1 text-label-caps uppercase tracking-wide text-primary-container hover:underline"
+                className="flex items-center gap-1 text-label-caps uppercase tracking-wide text-primary-container hover:underline rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-container focus-visible:ring-offset-2 focus-visible:ring-offset-background motion-reduce:transition-none"
               >
                 <CheckCheck size={14} /> Tandai dibaca
               </button>
