@@ -1,6 +1,7 @@
 import { SiteNav } from "@/components/site-nav";
 import { SiteFooter } from "@/components/site-footer";
 import { LegalNav } from "@/components/legal-nav";
+import Link from "next/link";
 
 export default function TermsPage() {
   return (
@@ -65,9 +66,9 @@ export default function TermsPage() {
               <p>
                 Data yang dikumpulkan melalui formulir Sensus digunakan untuk keperluan pendataan
                 internal organisasi dan pelaporan kepada pihak terkait. Lihat{" "}
-                <a href="/privacy" className="text-primary-container underline">
+                <Link href="/privacy" className="text-primary-container underline">
                   Kebijakan Privasi
-                </a>{" "}
+                </Link>{" "}
                 untuk detail lebih lanjut.
               </p>
             </section>
