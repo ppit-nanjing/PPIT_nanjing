@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { Bot, Send, Loader2, Check, Pencil } from "lucide-react";
+import { Send, Loader2, Check, Pencil } from "lucide-react";
 import { chatWithAIAction, updateProfileFieldAction } from "@/app/actions/ai";
 
 type Msg = { role: "user" | "assistant"; content: string };
