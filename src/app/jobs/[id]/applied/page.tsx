@@ -6,11 +6,12 @@ import { jobPostings, jobApplications } from "@/db/schema";
 import { SiteNav } from "@/components/site-nav";
 import { SiteFooter } from "@/components/site-footer";
 import { CheckCircle2 } from "lucide-react";
+import Link from "next/link";
 
 export default async function JobAppliedPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const session = await auth();
-  if (!session) redirect("/login");
+  if (!session) redirect(`/login?returnTo=${encodeURIComponent(`/jobs/${id}/applied`)}`);
 
   const [job] = await db.select().from(jobPostings).where(eq(jobPostings.id, id));
   if (!job) notFound();
@@ -40,12 +41,12 @@ export default async function JobAppliedPage({ params }: { params: Promise<{ id:
             >
               Lihat Lowongan
             </a>
-            <a
+            <Link
               href="/jobs"
               className="bg-primary-container text-on-primary text-label-caps uppercase tracking-wide px-6 py-3 rounded-md hover:bg-primary transition-colors"
             >
               Cari Lowongan Lain
-            </a>
+            </Link>
           </div>
         </main>
         <SiteFooter />
@@ -66,18 +67,18 @@ export default async function JobAppliedPage({ params }: { params: Promise<{ id:
           Tim terkait akan menghubungimu jika lolos ke tahap berikutnya.
         </p>
         <div className="flex flex-col sm:flex-row gap-3 justify-center">
-          <a
+          <Link
             href="/jobs"
             className="border border-outline-variant text-on-background text-label-caps uppercase tracking-wide px-6 py-3 rounded-md hover:bg-surface-container-low transition-colors"
           >
             Cari Lowongan Lain
-          </a>
-          <a
+          </Link>
+          <Link
             href="/"
             className="bg-primary-container text-on-primary text-label-caps uppercase tracking-wide px-6 py-3 rounded-md hover:bg-primary transition-colors"
           >
             Kembali ke Beranda
-          </a>
+          </Link>
         </div>
       </main>
       <SiteFooter />
