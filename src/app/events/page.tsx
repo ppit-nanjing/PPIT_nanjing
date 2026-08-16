@@ -9,6 +9,7 @@ import { Reveal } from "@/components/reveal";
 import { FilterTabs } from "@/components/filter-tabs";
 import { EventCard } from "@/components/event-card";
 import { CalendarDays, MapPin, CalendarX, Star, ArrowRight } from "lucide-react";
+import Image from "next/image";
 
 export default async function EventsPage({
   searchParams,
@@ -88,11 +89,12 @@ export default async function EventsPage({
                   >
                     <div className="lg:col-span-7 h-64 lg:h-auto relative overflow-hidden bg-surface-container-low">
                       {featured.coverImageUrl ? (
-                        // eslint-disable-next-line @next/next/no-img-element
-                        <img
+                        <Image
                           src={featured.coverImageUrl}
                           alt={featured.title}
-                          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700 absolute inset-0"
+                          fill
+                          sizes="(max-width: 768px) 100vw, 58vw"
+                          className="object-cover group-hover:scale-105 transition-transform duration-700"
                         />
                       ) : (
                         <div className="w-full h-full flex items-center justify-center">
