@@ -3,6 +3,7 @@ import { regionalBranches } from "@/db/schema";
 import { SiteNav } from "@/components/site-nav";
 import { SiteFooter } from "@/components/site-footer";
 import { MapPin, Map, Users, Phone } from "lucide-react";
+import Link from "next/link";
 
 const REGION_LABEL: Record<string, string> = {
   north: "North (Utara)",
@@ -34,12 +35,12 @@ export default async function RegionalBranchesPage() {
           PPI Tiongkok memiliki cabang aktif di berbagai kota besar di Tiongkok. PPIT Nanjing
           adalah salah satunya, di wilayah Timur.
         </p>
-        <a
+        <Link
           href="/organization/map"
           className="inline-flex items-center gap-2 text-label-caps text-primary-container hover:text-primary transition-colors"
         >
           <Map size={16} /> Lihat Peta Persebaran
-        </a>
+        </Link>
       </header>
 
       <main className="max-w-[var(--container-max)] mx-auto px-[var(--spacing-container-padding)] pb-24 grid grid-cols-1 md:grid-cols-3 gap-8">
