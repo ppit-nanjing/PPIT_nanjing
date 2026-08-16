@@ -97,9 +97,13 @@ export function SiteNav() {
   // Compact floating pill once scrolled (desktop only). Mobile/tablet stays
   // full-width since the burger menu is used there. The width is capped at a
   // comfortable fixed value so the links + search pill never get crushed.
-  const width = isDesktop && scrolled ? "min(100%, 1000px)" : "100%";
   // Everything (account menu, search) collapses to icon-only when shrunk.
   const compact = isDesktop && scrolled;
+  // Animate max-width (not width): transitioning a plain `100%` to a
+  // `min(100%, 1000px)` value isn't interpolable, so the pill would snap
+  // straight to the end instead of easing. max-width px -> px interpolates
+  // smoothly while width stays 100%.
+  const maxWidth = compact ? "1000px" : "var(--container-max)";
 
   // Glass + shadow appear on scroll only; opaque & flat at rest.
   const bgAlpha = scrolled ? 0.82 : 1;
@@ -112,14 +116,14 @@ export function SiteNav() {
         <nav
           className="rounded-full"
           style={{
-            width,
-            maxWidth: "var(--container-max)",
+            width: "100%",
+            maxWidth,
             backgroundColor: `rgba(255,248,247,${bgAlpha})`,
             backdropFilter: `blur(${blurPx}px) saturate(140%)`,
             WebkitBackdropFilter: `blur(${blurPx}px) saturate(140%)`,
             boxShadow: `0 10px 30px rgba(39,23,22,${shadowAlpha})`,
             transition:
-              "width 350ms cubic-bezier(0.22, 1, 0.36, 1), background-color 350ms ease, backdrop-filter 350ms ease, -webkit-backdrop-filter 350ms ease, box-shadow 350ms ease",
+              "max-width 350ms cubic-bezier(0.22, 1, 0.36, 1), background-color 350ms ease, backdrop-filter 350ms ease, -webkit-backdrop-filter 350ms ease, box-shadow 350ms ease",
           }}
         >
           <div className="max-w-[var(--container-max)] mx-auto flex justify-between items-center gap-2 sm:gap-4 h-12 md:h-14 px-4 sm:px-6">
