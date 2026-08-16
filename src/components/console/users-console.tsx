@@ -71,7 +71,6 @@ export function UsersConsole({
   });
 
   const selectCls = "bg-soft-gray rounded-md px-2 py-1.5 text-body-md";
-  const labelCls = "text-label-caps uppercase tracking-wide text-on-surface-variant";
 
   return (
     <div>
