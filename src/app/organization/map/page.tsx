@@ -91,9 +91,12 @@ export default async function DistributionMapPage() {
           </div>
         )}
 
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mt-8">
+        <ul
+          aria-label="Daftar kota cabang"
+          className="grid grid-cols-2 md:grid-cols-4 gap-3 mt-8"
+        >
           {branches.map((b) => (
-            <div
+            <li
               key={b.id}
               className={`flex items-center gap-2 px-4 py-3 rounded-md text-body-md ${
                 b.cityName === "Nanjing"
@@ -101,11 +104,11 @@ export default async function DistributionMapPage() {
                   : "bg-surface-container-low text-on-background"
               }`}
             >
-              <MapPin size={16} />
+              <MapPin size={16} aria-hidden />
               {b.cityName}
-            </div>
+            </li>
           ))}
-        </div>
+        </ul>
       </main>
 
       <SiteFooter />
