@@ -3,10 +3,10 @@ import { Home, Compass } from "lucide-react";
 export default function NotFound() {
   return (
     <div className="min-h-screen flex items-center justify-center bg-background px-[var(--spacing-container-padding)]">
-      <div className="text-center max-w-lg">
+      <div className="w-full max-w-lg bg-surface-container-lowest rounded-xl p-10 text-center">
         <p className="text-display-hero-mobile text-primary-container mb-4">404</p>
-        <h1 className="text-headline-lg text-on-background mb-4">Halaman Tidak Ditemukan</h1>
-        <p className="text-body-md text-on-surface-variant mb-10">
+        <h1 className="text-headline-lg text-on-background mb-4">Halaman tidak ditemukan</h1>
+        <p className="text-body-md text-on-surface-variant mb-8">
           Halaman yang Anda cari mungkin sudah dipindahkan, dihapus, atau memang tidak pernah ada.
           Coba kembali ke beranda atau jelajahi kegiatan PPIT Nanjing lainnya.
         </p>
