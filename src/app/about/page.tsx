@@ -5,6 +5,7 @@ import { AnimatedLettersHeading } from "@/components/animated-letters-heading";
 import { MissionCards } from "@/components/mission-cards";
 import { Reveal } from "@/components/reveal";
 import { Compass, MapPinned, GraduationCap, CalendarDays, MapPin } from "lucide-react";
+import Link from "next/link";
 
 const COVERAGE_CITIES = ["Xuzhou", "Jurong", "Ma'anshan", "Zhenjiang", "Huai'an"];
 
@@ -123,18 +124,18 @@ export default function AboutPage() {
 
         <Reveal>
           <div className="flex flex-col sm:flex-row gap-3 sm:gap-4">
-            <a
+            <Link
               href="/organization"
               className="w-full sm:w-auto text-center bg-primary-container text-on-primary text-label-caps uppercase tracking-wide px-6 py-3 rounded-md hover:bg-primary transition-colors"
             >
               Lihat Struktur Organisasi
-            </a>
-            <a
+            </Link>
+            <Link
               href="/organization/branches"
               className="w-full sm:w-auto text-center border border-outline-variant text-on-background text-label-caps uppercase tracking-wide px-6 py-3 rounded-md hover:bg-surface-container-low transition-colors"
             >
               Cabang Regional
-            </a>
+            </Link>
           </div>
         </Reveal>
       </main>
