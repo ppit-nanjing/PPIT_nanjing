@@ -2,9 +2,7 @@ import { desc } from "drizzle-orm";
 import { db } from "@/db";
 import { newsArticles, galleryAlbums } from "@/db/schema";
 import { requireModuleAccess } from "@/lib/admin-scope";
-import { createGalleryAlbum } from "@/app/actions/admin-content";
 import { Plus, Newspaper, Images } from "lucide-react";
-import { FileUpload } from "@/components/upload/file-upload";
 import { CollapsibleSection } from "@/components/console/collapsible-section";
 
 const STATUS_LABEL: Record<string, string> = { draft: "Draf", published: "Dipublikasikan" };
@@ -47,17 +45,12 @@ export default async function ConsoleContentPage() {
 
         <CollapsibleSection title="Galeri" description="Album foto kegiatan.">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between mb-4">
-            <details className="relative">
-              <summary className="flex items-center gap-2 bg-primary-container text-on-primary text-label-caps uppercase tracking-wide px-4 py-2.5 rounded-md hover:bg-primary transition-colors cursor-pointer list-none">
-                <Plus size={14} /> Album Baru
-              </summary>
-              <form
-                action={createGalleryAlbum}
-                className="absolute right-0 mt-2 w-80 bg-surface-container-lowest border border-outline-variant rounded-xl p-5 flex flex-col gap-3 shadow-[0_10px_30px_rgba(39,23,22,0.08)] z-10"
-              >
-                <NewAlbumForm />
-              </form>
-            </details>
+            <a
+              href="/console/content/gallery/new"
+              className="flex items-center gap-2 bg-primary-container text-on-primary text-label-caps uppercase tracking-wide px-4 py-2.5 rounded-md hover:bg-primary transition-colors"
+            >
+              <Plus size={14} /> Album Baru
+            </a>
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
             {albums.length === 0 && <p className="text-body-md text-on-surface-variant col-span-full">Belum ada album.</p>}
@@ -74,20 +67,5 @@ export default async function ConsoleContentPage() {
         </CollapsibleSection>
       </div>
     </div>
-  );
-}
-
-function NewAlbumForm() {
-  return (
-    <>
-      <input name="title" placeholder="Judul Album *" required className="bg-soft-gray rounded-md p-2.5 text-body-md" />
-      <FileUpload name="coverImageUrl" folder="album" label="Foto Sampul (opsional)" placeholder="URL atau unggah gambar" />
-      <button
-        type="submit"
-        className="bg-primary-container text-on-primary text-label-caps uppercase tracking-wide py-2.5 rounded-md hover:bg-primary transition-colors"
-      >
-        Buat Album
-      </button>
-    </>
   );
 }
