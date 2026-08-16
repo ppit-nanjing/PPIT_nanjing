@@ -14,7 +14,14 @@ import { QuoteMark } from "@/components/quote-mark";
 import { db } from "@/db";
 import { events, newsArticles } from "@/db/schema";
 
-const CITIES = ["Nanjing", "Xuzhou", "Jurong", "Ma'anshan", "Zhenjiang", "Huai'an"];
+const CITIES = [
+  { name: "Nanjing", blurb: "Ibu kota provinsi Jiangsu sekaligus markas utama PPIT Nanjing." },
+  { name: "Xuzhou", blurb: "Kota industri & transportasi di utara Jiangsu dengan komunitas pelajar aktif." },
+  { name: "Jurong", blurb: "Kawasan kampus yang menghimpun pelajar Indonesia di sekitarnya." },
+  { name: "Ma'anshan", blurb: "Kota di Anhui yang berbatasan dekat dengan Nanjing." },
+  { name: "Zhenjiang", blurb: "Kota tepi Sungai Yangtze dengan cukup banyak mahasiswa Indonesia." },
+  { name: "Huai'an", blurb: "Kota historis di utara Jiangsu, salah satu ranting aktif PPIT." },
+];
 
 export default async function Home() {
   const latestEvents = await db
