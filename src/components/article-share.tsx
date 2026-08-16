@@ -9,6 +9,8 @@ import { CopyButton } from "@/components/copy-button";
  */
 export function ArticleShare() {
   const [url, setUrl] = useState("");
+  // URL is only known on the client; read it after mount to avoid an SSR hydration mismatch.
+  // eslint-disable-next-line react-hooks/set-state-in-effect
   useEffect(() => setUrl(window.location.href), []);
   return <CopyButton value={url} label="Salin tautan" />;
 }
