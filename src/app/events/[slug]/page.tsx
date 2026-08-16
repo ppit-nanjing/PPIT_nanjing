@@ -62,9 +62,9 @@ export default async function EventDetailPage({ params }: { params: Promise<{ sl
       <main className="max-w-[var(--container-max)] mx-auto px-[var(--spacing-container-padding)] py-10">
         <Link
           href="/events"
-          className="inline-flex items-center gap-2 text-label-caps uppercase tracking-wide text-primary-container hover:text-primary transition-colors mb-6"
+          className="inline-flex items-center gap-2 text-label-caps uppercase tracking-wide text-primary-container hover:text-primary transition-colors mb-6 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-container focus-visible:ring-offset-2 focus-visible:ring-offset-background rounded"
         >
-          <ArrowLeft size={16} /> Kembali ke Kegiatan
+          <ArrowLeft size={16} aria-hidden="true" /> Kembali ke Kegiatan
         </Link>
 
         {event.coverImageUrl && (
@@ -155,18 +155,37 @@ export default async function EventDetailPage({ params }: { params: Promise<{ sl
               <div className="sticky top-24 bg-surface-container-low border border-outline-variant rounded-xl p-6 flex flex-col gap-5">
                 {event.startAt && (
                   <div className="flex items-start gap-3">
-                    <CalendarDays className="text-primary-container shrink-0 mt-0.5" size={18} />
+                    <CalendarDays className="text-primary-container shrink-0 mt-0.5" size={18} aria-hidden="true" />
                     <div>
-                      <p className="text-label-caps uppercase text-on-surface-variant mb-0.5">Tanggal</p>
+                      <p className="text-label-caps uppercase text-on-surface-variant mb-0.5">Tanggal & Waktu</p>
                       <p className="text-body-md text-on-background font-semibold">
                         {new Date(event.startAt).toLocaleDateString("id-ID", { dateStyle: "full" })}
                       </p>
+                      {(() => {
+                        const start = new Date(event.startAt);
+                        const startTime =
+                          start.getHours() !== 0 || start.getMinutes() !== 0
+                            ? start.toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit" })
+                            : null;
+                        const endTime =
+                          event.endAt &&
+                          (new Date(event.endAt).getHours() !== 0 || new Date(event.endAt).getMinutes() !== 0)
+                            ? new Date(event.endAt).toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit" })
+                            : null;
+                        if (!startTime && !endTime) return null;
+                        return (
+                          <p className="text-body-sm text-on-surface-variant">
+                            {startTime ?? "—"}
+                            {endTime ? ` – ${endTime}` : ""}
+                          </p>
+                        );
+                      })()}
                     </div>
                   </div>
                 )}
                 {event.location && (
                   <div className="flex items-start gap-3">
-                    <MapPin className="text-primary-container shrink-0 mt-0.5" size={18} />
+                    <MapPin className="text-primary-container shrink-0 mt-0.5" size={18} aria-hidden="true" />
                     <div>
                       <p className="text-label-caps uppercase text-on-surface-variant mb-0.5">Lokasi</p>
                       <p className="text-body-md text-on-background font-semibold">{event.location}</p>
@@ -174,8 +193,8 @@ export default async function EventDetailPage({ params }: { params: Promise<{ sl
                   </div>
                 )}
                 <div className="flex items-start gap-3">
-                  <Users className="text-primary-container shrink-0 mt-0.5" size={18} />
-                  <div>
+                  <Users className="text-primary-container shrink-0 mt-0.5" size={18} aria-hidden="true" />
+                  <div className="flex-1">
                     <p className="text-label-caps uppercase text-on-surface-variant mb-0.5">Peserta</p>
                     <p className="text-body-md text-on-background font-semibold">
                       {registeredCount}
@@ -186,6 +205,23 @@ export default async function EventDetailPage({ params }: { params: Promise<{ sl
                         Sisa {event.capacity - registeredCount} slot
                       </p>
                     )}
+                    {event.capacity != null && (
+                      <div
+                        className="mt-2 h-2 w-full rounded-full bg-surface-container-low overflow-hidden"
+                        role="progressbar"
+                        aria-label="Kapasitas pendaftaran"
+                        aria-valuemin={0}
+                        aria-valuemax={event.capacity}
+                        aria-valuenow={Math.min(registeredCount, event.capacity)}
+                      >
+                        <div
+                          className={`h-full rounded-full transition-all duration-500 motion-reduce:transition-none ${
+                            isFull ? "bg-error" : "bg-primary-container"
+                          }`}
+                          style={{ width: `${Math.min(100, (registeredCount / event.capacity) * 100)}%` }}
+                        />
+                      </div>
+                    )}
                   </div>
                 </div>
                 {event.registrationDeadline && (
@@ -195,46 +231,61 @@ export default async function EventDetailPage({ params }: { params: Promise<{ sl
                   </p>
                 )}
 
-                <div className="border-t border-outline-variant pt-5">
+                <div className="border-t border-outline-variant pt-5" role="status" aria-live="polite">
                   {event.requiresSensus && !alreadyRegistered && (
                     <>
                       <p className="text-label-caps text-on-surface-variant mb-3 text-center">
                         Event ini hanya untuk peserta yang sudah lengkap mengisi sensus.
                       </p>
                       <p className="text-body-md text-on-surface-variant text-center mb-4">
-                        Lengkapi data sensus untuk mendaftar.
+                        Lengkapi data sensus untuk mendaftar — kamu akan kembali ke halaman ini.
                       </p>
                       <Link
-                        href="/sensus"
-                        className="w-full inline-flex items-center justify-center gap-2 bg-primary-container text-on-primary text-label-caps uppercase tracking-wide px-6 py-4 rounded-md hover:bg-primary transition-colors"
+                        href={`/sensus?returnTo=${encodeURIComponent(`/events/${slug}`)}`}
+                        className="w-full inline-flex items-center justify-center gap-2 bg-primary-container text-on-primary text-label-caps uppercase tracking-wide px-6 py-4 rounded-md hover:bg-primary transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-container focus-visible:ring-offset-2 focus-visible:ring-offset-surface-container-low"
                       >
-                        Isi Sensus
+                        <ListChecks size={18} aria-hidden="true" /> Isi Sensus untuk Daftar
                       </Link>
                     </>
                   )}
                   {alreadyRegistered ? (
                     <a
                       href={`/events/${slug}/ticket`}
-                      className="w-full inline-flex items-center justify-center gap-2 bg-primary-container text-on-primary text-label-caps uppercase tracking-wide px-6 py-4 rounded-md hover:bg-primary transition-colors"
+                      className="w-full inline-flex items-center justify-center gap-2 bg-primary-container text-on-primary text-label-caps uppercase tracking-wide px-6 py-4 rounded-md hover:bg-primary transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-container focus-visible:ring-offset-2 focus-visible:ring-offset-surface-container-low"
                     >
-                      <Ticket size={18} /> Lihat Tiket Saya
+                      <Ticket size={18} aria-hidden="true" /> Lihat Tiket Saya
                     </a>
                   ) : canRegister ? (
-                    <form action={registerForEvent.bind(null, event.id, slug)}>
-                      <button
-                        type="submit"
-                        className="w-full bg-primary-container text-on-primary text-label-caps uppercase tracking-wide px-6 py-4 rounded-md hover:bg-primary transition-colors"
+                    session?.user?.id ? (
+                      <form action={registerForEvent.bind(null, event.id, slug)}>
+                        <button
+                          type="submit"
+                          className="w-full inline-flex items-center justify-center gap-2 bg-primary-container text-on-primary text-label-caps uppercase tracking-wide px-6 py-4 rounded-md hover:bg-primary transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-container focus-visible:ring-offset-2 focus-visible:ring-offset-surface-container-low"
+                        >
+                          <Ticket size={18} aria-hidden="true" /> Daftar Sekarang
+                        </button>
+                      </form>
+                    ) : (
+                      <Link
+                        href={`/login?returnTo=${encodeURIComponent(`/events/${slug}`)}`}
+                        className="w-full inline-flex items-center justify-center gap-2 bg-primary-container text-on-primary text-label-caps uppercase tracking-wide px-6 py-4 rounded-md hover:bg-primary transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-container focus-visible:ring-offset-2 focus-visible:ring-offset-surface-container-low"
                       >
-                        Daftar Sekarang
-                      </button>
-                    </form>
+                        <ArrowRight size={18} aria-hidden="true" /> Masuk untuk Daftar
+                      </Link>
+                    )
                   ) : (
-                    <p className="text-body-md text-on-surface-variant text-center">
-                      {isFull
-                        ? "Pendaftaran sudah penuh."
-                        : deadlinePassed
-                          ? "Batas waktu pendaftaran sudah lewat."
-                          : "Pendaftaran untuk kegiatan ini belum/tidak dibuka."}
+                    <p className="flex items-center justify-center gap-2 text-body-md text-on-surface-variant text-center bg-surface-container-low rounded-md px-4 py-3">
+                      {isFull ? (
+                        <>
+                          <Users size={16} aria-hidden="true" /> Pendaftaran sudah penuh.
+                        </>
+                      ) : deadlinePassed ? (
+                        <>
+                          <CalendarX size={16} aria-hidden="true" /> Batas waktu pendaftaran sudah lewat.
+                        </>
+                      ) : (
+                        "Pendaftaran untuk kegiatan ini belum/tidak dibuka."
+                      )}
                     </p>
                   )}
                 </div>
