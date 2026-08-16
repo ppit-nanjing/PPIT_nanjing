@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { Reveal } from "@/components/reveal";
 import { Images } from "lucide-react";
+import Image from "next/image";
 
 export type GalleryCardAlbum = {
   id: string;
@@ -33,12 +34,13 @@ export function GalleryCard({
       >
         <div className="relative h-52 bg-surface-container-low flex items-center justify-center overflow-hidden">
           {cover ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img
+            <Image
               src={cover}
               alt={album.title}
+              fill
               loading="lazy"
-              className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+              sizes="(max-width: 768px) 100vw, 25vw"
+              className="object-cover transition-transform duration-500 group-hover:scale-105"
             />
           ) : (
             <Images className="text-outline-variant" size={36} />
