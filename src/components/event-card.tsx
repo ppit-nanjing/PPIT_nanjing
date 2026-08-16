@@ -1,7 +1,7 @@
 import Link from "next/link";
 import Image from "next/image";
 import { Reveal } from "@/components/reveal";
-import { CalendarDays, MapPin, CalendarX, Clock } from "lucide-react";
+import { CalendarDays, MapPin, CalendarX, Clock, ArrowRight } from "lucide-react";
 
 export type EventCardEvent = {
   id: string;
@@ -44,10 +44,7 @@ export function EventCard({
       >
         <div className="h-44 bg-surface-container-low overflow-hidden relative">
           {isPast && (
-            <span
-              aria-hidden="true"
-              className="absolute top-3 left-3 z-10 bg-surface-container-lowest text-on-background px-3 py-1.5 rounded-lg text-label-caps font-bold tracking-widest shadow-sm"
-            >
+            <span className="absolute top-3 left-3 z-10 bg-surface-container-lowest text-on-background px-3 py-1.5 rounded-lg text-label-caps font-bold tracking-widest shadow-sm">
               SELESAI
             </span>
           )}
@@ -74,8 +71,13 @@ export function EventCard({
               {event.category}
             </span>
           )}
-          <h3 className="text-headline-md text-on-background mb-3 group-hover:text-primary-container transition-colors">
-            {event.title}
+          <h3 className="text-headline-md text-on-background mb-3 group-hover:text-primary-container transition-colors flex items-start gap-1.5">
+            <span className="flex-1">{event.title}</span>
+            <ArrowRight
+              size={18}
+              aria-hidden="true"
+              className="shrink-0 mt-1 opacity-0 -translate-x-1 group-hover:opacity-100 group-hover:translate-x-0 transition-all duration-300 motion-reduce:transition-none motion-reduce:transform-none motion-reduce:opacity-100"
+            />
           </h3>
           <div className="flex flex-col gap-1.5 text-label-caps text-on-surface-variant mt-auto">
             {date && (
