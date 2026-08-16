@@ -1,4 +1,5 @@
 import Link from "next/link";
+import Image from "next/image";
 import { Reveal } from "@/components/reveal";
 import { CalendarDays, MapPin, CalendarX } from "lucide-react";
 
@@ -41,12 +42,13 @@ export function EventCard({
             </span>
           )}
           {event.coverImageUrl ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img
+            <Image
               src={event.coverImageUrl}
               alt={event.title}
+              fill
               loading="lazy"
-              className={`w-full h-full object-cover transition-transform duration-500 group-hover:scale-105 ${
+              sizes="(max-width: 768px) 100vw, 33vw"
+              className={`object-cover transition-transform duration-500 group-hover:scale-105 ${
                 isPast ? "grayscale group-hover:grayscale-0" : ""
               }`}
             />
