@@ -3,7 +3,7 @@ import { db } from "@/db";
 import { departments, reports, sensusProfiles, users } from "@/db/schema";
 import { requireModuleAccess } from "@/lib/admin-scope";
 import { CollapsibleSection } from "@/components/console/collapsible-section";
-import { Download, Users as UsersIcon, GraduationCap, MapPin, FileText } from "lucide-react";
+import { Download, Users as UsersIcon, GraduationCap, MapPin } from "lucide-react";
 
 const REPORT_TYPE_LABEL: Record<string, string> = {
   event_attendance: "Kehadiran Acara",
