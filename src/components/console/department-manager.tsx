@@ -25,7 +25,9 @@ export function DepartmentManager({ departments, isFullAdmin }: { departments: D
         <DepartmentCard
           key={dept.id}
           dept={dept}
-          children={departments.filter((d) => d.parentDepartmentId === dept.id).sort((a, b) => a.orderIndex - b.orderIndex)}
+          childDepartments={departments
+            .filter((d) => d.parentDepartmentId === dept.id)
+            .sort((a, b) => a.orderIndex - b.orderIndex)}
           isFirst={i === 0}
           isLast={i === topLevel.length - 1}
           showAddFor={showAddFor}
@@ -96,7 +98,7 @@ function AccessFields({ dept, isFullAdmin }: { dept: Department; isFullAdmin: bo
 
 function DepartmentCard({
   dept,
-  children,
+  childDepartments,
   isFirst,
   isLast,
   showAddFor,
@@ -104,7 +106,7 @@ function DepartmentCard({
   isFullAdmin,
 }: {
   dept: Department;
-  children: Department[];
+  childDepartments: Department[];
   isFirst: boolean;
   isLast: boolean;
   showAddFor: string | "root" | null;
@@ -171,10 +173,10 @@ function DepartmentCard({
         </form>
       )}
 
-      {children.length > 0 && (
+      {childDepartments.length > 0 && (
         <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mt-4">
-          {children.map((c, i) => (
-            <DivisionCard key={c.id} division={c} isFirst={i === 0} isLast={i === children.length - 1} isFullAdmin={isFullAdmin} />
+          {childDepartments.map((c, i) => (
+            <DivisionCard key={c.id} division={c} isFirst={i === 0} isLast={i === childDepartments.length - 1} isFullAdmin={isFullAdmin} />
           ))}
         </div>
       )}
