@@ -10,6 +10,7 @@ import { FilterTabs } from "@/components/filter-tabs";
 import { NewsCard } from "@/components/news-card";
 import { Newspaper, ArrowRight } from "lucide-react";
 import Image from "next/image";
+import Link from "next/link";
 
 export default async function NewsPage({
   searchParams,
@@ -65,22 +66,43 @@ export default async function NewsPage({
       <main className="max-w-[var(--container-max)] mx-auto px-[var(--spacing-container-padding)] pb-24 pt-12 flex flex-col gap-16">
         {articles.length === 0 ? (
           <Reveal>
-            <div className="flex flex-col items-center text-center py-24">
-              <Newspaper className="text-outline-variant mb-4" size={40} />
-              <p className="text-body-md text-on-surface-variant">
+            <div
+              role="status"
+              aria-live="polite"
+              className="flex flex-col items-center text-center py-24"
+            >
+              <div className="flex items-center justify-center w-16 h-16 rounded-full bg-surface-container-low mb-6">
+                <Newspaper className="text-outline-variant" size={32} aria-hidden="true" />
+              </div>
+              <h2 className="text-headline-md text-on-background mb-2">
+                {category ? "Kategori ini masih kosong" : "Belum ada berita"}
+              </h2>
+              <p className="text-body-md text-on-surface-variant max-w-md">
                 {category
-                  ? "Belum ada berita untuk kategori ini."
-                  : "Belum ada berita yang dipublikasikan."}
+                  ? "Belum ada berita untuk kategori ini. Coba kategori lain atau lihat semua berita."
+                  : "Belum ada berita yang dipublikasikan. Pantau terus halaman ini untuk kabar terbaru."}
               </p>
+              {category && (
+                <Link
+                  href="/news"
+                  className="mt-6 inline-flex items-center gap-1.5 rounded-md bg-primary-container px-4 py-2 text-label-caps uppercase tracking-wide text-on-primary transition-colors hover:bg-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-container focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+                >
+                  Lihat semua berita
+                </Link>
+              )}
             </div>
           </Reveal>
         ) : (
           <>
+            <p className="sr-only" aria-live="polite">
+              {articles.length} berita{category ? ` dalam kategori ${category}` : ""}
+            </p>
             <section>
               <Reveal>
                 <a
                   href={`/news/${featured.slug}`}
-                  className="group grid grid-cols-1 lg:grid-cols-2 bg-surface-container-lowest border border-outline-variant rounded-xl overflow-hidden hover:shadow-[0_14px_40px_rgba(39,23,22,0.10)] hover:-translate-y-1 transition-all duration-300"
+                  aria-label={`Baca artikel unggulan: ${featured.title}`}
+                  className="group grid grid-cols-1 lg:grid-cols-2 bg-surface-container-lowest border border-outline-variant rounded-xl overflow-hidden hover:shadow-[0_14px_40px_rgba(39,23,22,0.10)] hover:-translate-y-1 transition-all duration-300 motion-reduce:transition-none motion-reduce:hover:translate-y-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-container focus-visible:ring-offset-2 focus-visible:ring-offset-background"
                 >
                   <div className="relative h-64 lg:h-auto bg-surface-container-low overflow-hidden">
                     {featured.coverImageUrl ? (
@@ -88,12 +110,13 @@ export default async function NewsPage({
                         src={featured.coverImageUrl}
                         alt={featured.title}
                         fill
+                        priority
                         sizes="(max-width: 768px) 100vw, 50vw"
-                        className="object-cover group-hover:scale-105 transition-transform duration-700"
+                        className="object-cover transition-transform duration-700 group-hover:scale-105 motion-reduce:transition-none motion-reduce:group-hover:scale-100"
                       />
                     ) : (
                       <div className="w-full h-full flex items-center justify-center">
-                        <Newspaper className="text-outline-variant" size={40} />
+                        <Newspaper className="text-outline-variant" size={40} aria-hidden="true" />
                       </div>
                     )}
                   </div>
@@ -120,7 +143,7 @@ export default async function NewsPage({
                         </p>
                       )}
                       <span className="inline-flex items-center gap-1.5 text-label-caps uppercase tracking-wide text-primary-container">
-                        Baca selengkapnya <ArrowRight size={16} className="transition-transform group-hover:translate-x-1" />
+                        Baca selengkapnya <ArrowRight size={16} className="transition-transform group-hover:translate-x-1 motion-reduce:transition-none motion-reduce:group-hover:translate-x-0" />
                       </span>
                     </div>
                   </div>
