@@ -38,6 +38,8 @@ export function FeedbackPanel() {
   const [submitted, setSubmitted] = useState(false);
   const overlayRef = useRef<HTMLDivElement>(null);
 
+  // Load persisted drafts after mount (localStorage is unavailable during SSR).
+  // eslint-disable-next-line react-hooks/set-state-in-effect
   useEffect(() => setDrafts(loadDrafts()), []);
 
   useEffect(() => {
