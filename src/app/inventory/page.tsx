@@ -6,8 +6,7 @@ import { SiteFooter } from "@/components/site-footer";
 import { Package, MapPin, Search } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
-
-const CONDITION_LABEL: Record<string, string> = { good: "Baik", damaged: "Rusak", retired: "Pensiun" };
+import { conditionLabel } from "@/lib/inventory-labels";
 
 export default async function InventoryPage({
   searchParams,
@@ -43,22 +42,31 @@ export default async function InventoryPage({
         <div className="flex flex-wrap gap-3 mb-8">
           <Link
             href="/inventory/contribute"
-            className="bg-primary-container text-on-primary text-label-caps uppercase tracking-wide px-5 py-2.5 rounded-md hover:bg-primary transition-colors"
+            className="bg-primary-container text-on-primary text-label-caps uppercase tracking-wide px-5 py-2.5 rounded-md hover:bg-primary transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-container focus-visible:ring-offset-2 focus-visible:ring-offset-background motion-reduce:transition-none"
           >
             Sumbangkan / Pinjamkan Barang
           </Link>
           <Link
             href="/inventory/request-new"
-            className="bg-surface-container-low text-on-background text-label-caps uppercase tracking-wide px-5 py-2.5 rounded-md border border-outline-variant hover:bg-surface-container-lowest transition-colors"
+            className="bg-surface-container-low text-on-background text-label-caps uppercase tracking-wide px-5 py-2.5 rounded-md border border-outline-variant hover:bg-surface-container-lowest transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-container focus-visible:ring-offset-2 focus-visible:ring-offset-background motion-reduce:transition-none"
           >
             Usulkan Barang Baru
           </Link>
         </div>
 
-        <form action="/inventory" className="relative max-w-xl mb-6">
-          <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-secondary" size={18} />
+        <form action="/inventory" role="search" className="relative max-w-xl mb-6">
+          <label htmlFor="inventory-search" className="sr-only">
+            Cari barang inventaris
+          </label>
+          <Search
+            className="absolute left-4 top-1/2 -translate-y-1/2 text-secondary"
+            size={18}
+            aria-hidden
+          />
           <input
+            id="inventory-search"
             name="q"
+            type="search"
             defaultValue={q}
             placeholder="Cari barang..."
             className="w-full pl-12 pr-28 py-3.5 bg-surface-container-lowest border border-outline-variant rounded-md text-body-md focus:outline-none focus:ring-2 focus:ring-primary-container"
@@ -66,58 +74,77 @@ export default async function InventoryPage({
           {category && <input type="hidden" name="category" value={category} />}
           <button
             type="submit"
-            className="absolute right-2 top-1/2 -translate-y-1/2 bg-primary-container text-on-primary text-label-caps uppercase px-5 py-2 rounded-md hover:bg-primary transition-colors"
+            className="absolute right-2 top-1/2 -translate-y-1/2 bg-primary-container text-on-primary text-label-caps uppercase px-5 py-2 rounded-md hover:bg-primary transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-container focus-visible:ring-offset-2 focus-visible:ring-offset-background motion-reduce:transition-none"
           >
             Cari
           </button>
         </form>
 
         {categories.length > 0 && (
-          <div className="flex flex-wrap gap-2">
-            <a
+          <nav aria-label="Filter kategori barang" className="flex flex-wrap gap-2">
+            <Link
               href={q ? `/inventory?q=${encodeURIComponent(q)}` : "/inventory"}
-              className={`px-4 py-2 rounded-full text-label-caps uppercase tracking-wide transition-colors ${
+              aria-current={!category ? "page" : undefined}
+              className={`px-4 py-2 rounded-full text-label-caps uppercase tracking-wide transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-container focus-visible:ring-offset-2 focus-visible:ring-offset-background motion-reduce:transition-none ${
                 !category
                   ? "bg-primary-container text-on-primary"
                   : "bg-surface-container-low text-secondary border border-outline-variant hover:bg-surface-container-lowest"
               }`}
             >
               Semua
-            </a>
+            </Link>
             {categories.map((c) => {
               const params = new URLSearchParams();
               if (q) params.set("q", q);
               params.set("category", c);
               return (
-                <a
+                <Link
                   key={c}
                   href={`/inventory?${params.toString()}`}
-                  className={`px-4 py-2 rounded-full text-label-caps uppercase tracking-wide transition-colors ${
+                  aria-current={category === c ? "page" : undefined}
+                  className={`px-4 py-2 rounded-full text-label-caps uppercase tracking-wide transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-container focus-visible:ring-offset-2 focus-visible:ring-offset-background motion-reduce:transition-none ${
                     category === c
                       ? "bg-primary-container text-on-primary"
                       : "bg-surface-container-low text-secondary border border-outline-variant hover:bg-surface-container-lowest"
                   }`}
                 >
                   {c}
-                </a>
+                </Link>
               );
             })}
-          </div>
+          </nav>
         )}
       </header>
 
       <main className="max-w-[var(--container-max)] mx-auto px-[var(--spacing-container-padding)] pb-24">
         {items.length === 0 ? (
-          <div className="flex flex-col items-center text-center py-24">
-            <Package className="text-outline-variant mb-4" size={40} />
-            <p className="text-body-md text-on-surface-variant">
-              {q || category ? "Tidak ada barang yang cocok dengan pencarian ini." : "Belum ada barang inventaris yang terdaftar."}
+          <div role="status" aria-live="polite" className="flex flex-col items-center text-center py-24">
+            <Package className="text-outline-variant mb-4" size={40} aria-hidden />
+            <h2 className="text-headline-md text-on-background mb-2">
+              {q || category ? "Tidak ada barang yang cocok" : "Belum ada barang inventaris"}
+            </h2>
+            <p className="text-body-md text-on-surface-variant max-w-md">
+              {q || category
+                ? "Coba kata kunci lain atau hapus filter kategori."
+                : "Barang inventaris akan muncul di sini setelah pengurus menambahkannya."}
             </p>
+            {(q || category) && (
+              <Link
+                href="/inventory"
+                className="mt-6 bg-primary-container text-on-primary text-label-caps uppercase tracking-wide px-6 py-3 rounded-md hover:bg-primary transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-container focus-visible:ring-offset-2 focus-visible:ring-offset-background motion-reduce:transition-none"
+              >
+                Hapus semua filter
+              </Link>
+            )}
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <>
+            <p className="sr-only" aria-live="polite">
+              {items.length} barang ditemukan
+            </p>
+            <ul aria-label="Daftar barang inventaris" className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
             {items.map((item) => (
-              <div
+              <li
                 key={item.id}
                 className="bg-surface-container-lowest border border-outline-variant rounded-xl overflow-hidden flex flex-col"
               >
@@ -139,7 +166,7 @@ export default async function InventoryPage({
                       className="object-cover"
                     />
                   ) : (
-                    <Package className="text-outline-variant" size={28} />
+                    <Package className="text-outline-variant" size={28} aria-hidden />
                   )}
                 </div>
                 <div className="p-5 flex flex-col flex-1">
@@ -151,10 +178,10 @@ export default async function InventoryPage({
                   <div className="flex flex-col gap-1.5 text-label-caps text-on-surface-variant mb-3">
                     {item.location && (
                       <span className="flex items-center gap-1.5">
-                        <MapPin size={13} /> {item.location}
+                        <MapPin size={13} aria-hidden /> {item.location}
                       </span>
                     )}
-                    <span>Kondisi: {CONDITION_LABEL[item.condition]}</span>
+                    <span>Kondisi: {conditionLabel(item.condition)}</span>
                   </div>
                   <div className="flex items-center justify-between mt-auto">
                     <span
@@ -168,17 +195,19 @@ export default async function InventoryPage({
                     </span>
                   </div>
                   {item.availableQuantity > 0 && (
-                    <a
+                    <Link
                       href={`/inventory/${item.id}/borrow`}
-                      className="mt-4 text-center bg-primary-container text-on-primary text-label-caps uppercase tracking-wide py-2.5 rounded-md hover:bg-primary transition-colors"
+                      aria-label={`Ajukan peminjaman ${item.name}`}
+                      className="mt-4 text-center bg-primary-container text-on-primary text-label-caps uppercase tracking-wide py-2.5 rounded-md hover:bg-primary transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-container focus-visible:ring-offset-2 focus-visible:ring-offset-background motion-reduce:transition-none"
                     >
                       Ajukan Peminjaman
-                    </a>
+                    </Link>
                   )}
                 </div>
-              </div>
+              </li>
             ))}
-          </div>
+            </ul>
+          </>
         )}
       </main>
 
