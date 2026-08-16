@@ -30,6 +30,13 @@ export default async function GalleryAlbumPage({
         >
           <ArrowLeft size={16} /> Kembali ke Galeri
         </a>
+        <span className="mx-2 text-on-surface-variant mb-8">/</span>
+        <a
+          href="/gallery/archive"
+          className="inline-flex items-center gap-1.5 text-label-caps uppercase tracking-wide text-on-surface-variant hover:text-primary-container transition-colors mb-8"
+        >
+          Lihat Arsip
+        </a>
 
         <AnimatedHeroHeading
           words={album.title.split(" ")}
