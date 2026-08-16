@@ -10,6 +10,8 @@ import { NewsCard } from "@/components/news-card";
 import { ReadingProgress } from "@/components/reading-progress";
 import { ArticleShare } from "@/components/article-share";
 import { ArrowLeft } from "lucide-react";
+import Image from "next/image";
+import Link from "next/link";
 
 export default async function NewsDetailPage({
   params,
@@ -47,12 +49,12 @@ export default async function NewsDetailPage({
       <SiteNav />
 
       <main className="max-w-3xl mx-auto px-[var(--spacing-container-padding)] py-16">
-        <a
+        <Link
           href="/news"
           className="inline-flex items-center gap-1.5 text-label-caps uppercase tracking-wide text-on-surface-variant hover:text-primary-container transition-colors mb-8"
         >
           <ArrowLeft size={16} /> Kembali ke Berita
-        </a>
+        </Link>
 
         <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-label-caps uppercase text-on-surface-variant mb-4">
           {a.publishedAt && <span>{new Date(a.publishedAt).toLocaleDateString("id-ID", { dateStyle: "long" })}</span>}
@@ -79,11 +81,13 @@ export default async function NewsDetailPage({
 
         {a.coverImageUrl && (
           <Reveal>
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
+            <Image
               src={a.coverImageUrl}
               alt={a.title}
-              className="w-full rounded-xl mb-10 object-cover max-h-[420px]"
+              width={1200}
+              height={630}
+              sizes="(max-width: 768px) 100vw, 768px"
+              className="w-full h-auto rounded-xl mb-10 object-cover max-h-[420px]"
             />
           </Reveal>
         )}
