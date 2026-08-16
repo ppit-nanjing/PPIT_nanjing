@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { motion, AnimatePresence } from "motion/react";
+import Image from "next/image";
 import { X, ChevronLeft, ChevronRight } from "lucide-react";
 
 type Photo = { id: string; imageUrl: string; caption: string | null };
@@ -51,15 +52,16 @@ export function GalleryLightbox({ photos }: { photos: Photo[] }) {
             key={p.id}
             type="button"
             onClick={() => setIndex(i)}
-            className="group relative rounded-lg overflow-hidden bg-surface-container-low focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-container"
+            className="group relative aspect-square rounded-lg overflow-hidden bg-surface-container-low focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-container"
             aria-label={p.caption ?? "Buka foto"}
           >
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
+            <Image
               src={p.imageUrl}
               alt={p.caption ?? ""}
+              fill
               loading="lazy"
-              className="w-full aspect-square object-cover transition-transform duration-500 group-hover:scale-105"
+              sizes="(max-width: 768px) 50vw, 20vw"
+              className="object-cover transition-transform duration-500 group-hover:scale-105"
             />
             <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/0 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-end p-3">
               {p.caption && (
