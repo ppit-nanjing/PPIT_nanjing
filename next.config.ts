@@ -18,6 +18,11 @@ const csp = [
   "img-src 'self' data: blob: https://*.public.blob.vercel-storage.com https://*.googleusercontent.com",
   "font-src 'self'",
   "connect-src 'self'",
+  // /organization/ad-art previews the admin-uploaded AD/ART PDF in an iframe
+  // served from Blob storage. Without this, frame-src falls back through
+  // child-src to default-src 'self' and the browser silently blocks the
+  // preview - which would only show up once a real PDF is finally uploaded.
+  "frame-src 'self' https://*.public.blob.vercel-storage.com",
   "frame-ancestors 'none'",
   "base-uri 'self'",
   "form-action 'self'",
