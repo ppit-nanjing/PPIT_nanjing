@@ -11,11 +11,20 @@ import { motion } from "motion/react";
  * rest of this project's word/letter reveals are built (AnimatedHeroHeading,
  * AnimatedRevealText).
  */
-export function AnimatedLettersHeading({ text, className }: { text: string; className?: string }) {
+export function AnimatedLettersHeading({
+  text,
+  className,
+  as = "h2",
+}: {
+  text: string;
+  className?: string;
+  as?: "h1" | "h2";
+}) {
   const words = text.split(" ");
+  const MotionTag = as === "h1" ? motion.h1 : motion.h2;
 
   return (
-    <motion.h2
+    <MotionTag
       className={className}
       initial="hidden"
       whileInView="visible"
@@ -40,6 +49,6 @@ export function AnimatedLettersHeading({ text, className }: { text: string; clas
           ))}
         </span>
       ))}
-    </motion.h2>
+    </MotionTag>
   );
 }
