@@ -5,6 +5,21 @@ import { SiteFooter } from "@/components/site-footer";
 import { MentorshipForm } from "@/components/mentorship-form";
 import { TrendingUp, Map, Users2 } from "lucide-react";
 
+const STEPS = [
+  {
+    title: "Daftar",
+    description: "Isi formulir dengan latar belakang dan bidang yang kamu minati.",
+  },
+  {
+    title: "Dicocokkan",
+    description: "Kami mencarikan mentor alumni yang paling relevan dengan profilmu.",
+  },
+  {
+    title: "Sesi Bimbingan",
+    description: "Terhubung langsung dengan mentor untuk sesi bimbingan 1-on-1.",
+  },
+];
+
 const BENEFITS = [
   {
     icon: TrendingUp,
@@ -59,6 +74,26 @@ export default async function MentorshipPage() {
               ))}
             </ul>
           </div>
+
+          <div className="bg-surface-container-lowest border border-outline-variant rounded-xl p-6">
+            <h2 className="text-headline-md text-on-background mb-4">Cara Kerja</h2>
+            <ol className="flex flex-col gap-4">
+              {STEPS.map(({ title, description }, i) => (
+                <li key={title} className="flex items-start gap-4">
+                  <span
+                    aria-hidden
+                    className="bg-primary-container/10 text-primary-container font-bold text-body-md flex items-center justify-center w-8 h-8 rounded-full shrink-0"
+                  >
+                    {i + 1}
+                  </span>
+                  <div>
+                    <h3 className="text-body-md font-bold text-on-surface">{title}</h3>
+                    <p className="text-body-md text-on-surface-variant mt-1">{description}</p>
+                  </div>
+                </li>
+              ))}
+            </ol>
+          </div>
         </div>
 
         <div className="lg:col-span-7 bg-surface-container-lowest border border-outline-variant rounded-xl p-6 md:p-10">
@@ -67,6 +102,9 @@ export default async function MentorshipPage() {
             <p className="text-body-md text-on-surface-variant mt-2">
               Ceritakan sedikit tentang dirimu supaya kami bisa mencarikan mentor alumni yang
               paling cocok untukmu.
+            </p>
+            <p className="text-label-caps text-on-surface-variant mt-4">
+              Data yang kamu berikan bersifat rahasia dan hanya digunakan untuk mencocokkan mentor.
             </p>
           </div>
           <MentorshipForm />
