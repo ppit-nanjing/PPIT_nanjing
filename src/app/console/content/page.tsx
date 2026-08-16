@@ -2,7 +2,7 @@ import { desc } from "drizzle-orm";
 import { db } from "@/db";
 import { newsArticles, galleryAlbums } from "@/db/schema";
 import { requireModuleAccess } from "@/lib/admin-scope";
-import { Plus, Newspaper, Images } from "lucide-react";
+import { Plus } from "lucide-react";
 import { CollapsibleSection } from "@/components/console/collapsible-section";
 import Link from "next/link";
 
