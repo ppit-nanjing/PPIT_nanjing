@@ -28,9 +28,20 @@ export default async function SignUpPage({
           <div className="absolute top-0 left-0 w-full h-1 bg-primary-container" />
           <span className="text-headline-md font-bold text-primary uppercase tracking-tight block mb-2">PPIT Nanjing</span>
           <h1 className="text-headline-lg text-on-background mb-3">Daftar Akun</h1>
-          <p className="text-body-md text-on-surface-variant mb-8">
+          <p className="text-body-md text-on-surface-variant mb-6">
             Buat akun dengan email dan kata sandi untuk mengakses layanan PPIT Nanjing.
           </p>
+
+          {returnTo !== "/" && (
+            <div className="flex items-start gap-3 bg-primary-container/10 border border-primary-container/20 rounded-lg p-4 mb-6 text-left">
+              <span className="text-label-caps uppercase tracking-wide text-primary-container font-semibold shrink-0">
+                Simpan akun
+              </span>
+              <p className="text-body-sm text-on-surface-variant">
+                Setelah daftar, kamu akan diarahkan kembali ke halaman yang sedang kamu buka.
+              </p>
+            </div>
+          )}
 
           <CredentialForm action={signUpWithPassword} mode="signup" returnTo={returnTo} />
 
@@ -48,7 +59,8 @@ export default async function SignUpPage({
           >
             <button
               type="submit"
-              className="w-full flex items-center justify-center gap-3 bg-surface-container-lowest border border-outline-variant text-on-background text-body-md font-medium py-3.5 rounded-md hover:bg-surface-container-low transition-colors"
+              aria-label="Daftar dengan akun Google"
+              className="w-full flex items-center justify-center gap-3 bg-surface-container-lowest border border-outline-variant text-on-background text-body-md font-medium py-3.5 rounded-md hover:bg-surface-container-low transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-container focus-visible:ring-offset-2 focus-visible:ring-offset-surface-container-lowest"
             >
               <svg width="18" height="18" viewBox="0 0 18 18">
                 <path fill="#4285F4" d="M17.64 9.2c0-.64-.06-1.25-.16-1.84H9v3.48h4.84a4.14 4.14 0 0 1-1.8 2.72v2.26h2.9c1.7-1.57 2.7-3.87 2.7-6.62Z" />
@@ -64,7 +76,7 @@ export default async function SignUpPage({
         <div className="text-center mt-6">
           <Link
             href="/"
-            className="inline-flex items-center gap-2 text-label-caps uppercase tracking-wide text-on-surface-variant hover:text-on-background transition-colors"
+            className="inline-flex items-center gap-2 text-label-caps uppercase tracking-wide text-on-surface-variant hover:text-on-background transition-colors rounded-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-container"
           >
             <ArrowLeft size={14} /> Kembali ke Beranda
           </Link>
