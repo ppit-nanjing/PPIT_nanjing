@@ -4,7 +4,8 @@ import { db } from "@/db";
 import { events, eventRegistrations, users } from "@/db/schema";
 import { requireModuleAccess } from "@/lib/admin-scope";
 import { ScanCheckIn } from "@/components/console/scan-checkin";
-import { XCircle, ScanLine, ArrowLeft } from "lucide-react";
+import { QrScanner } from "@/components/console/qr-scanner";
+import { XCircle, ArrowLeft } from "lucide-react";
 
 export default async function EventScanPage({
   params,
@@ -68,14 +69,7 @@ export default async function EventScanPage({
         </div>
       )}
 
-      {!t && (
-        <div className="mb-8 flex flex-col items-center justify-center bg-surface-container-lowest border border-dashed border-outline-variant rounded-xl p-10 text-center">
-          <ScanLine className="text-outline-variant mb-3" size={48} />
-          <p className="text-body-md text-on-surface-variant">
-            Arahkan kamera ponsel panitia ke QR tiket peserta, atau masukkan token di bawah ini.
-          </p>
-        </div>
-      )}
+      {!t && <QrScanner />}
 
       <form method="get" className="flex flex-col gap-3 sm:flex-row">
         <input
