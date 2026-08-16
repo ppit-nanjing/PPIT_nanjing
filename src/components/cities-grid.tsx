@@ -26,7 +26,7 @@ export function CitiesGrid({ cities }: { cities: { name: string; blurb: string; 
             variants={{ hidden: { opacity: 0, y: 16 }, visible: { opacity: 1, y: 0 } }}
             transition={{ duration: 0.4, ease: [0.25, 0.1, 0.25, 1] }}
             whileHover={{ y: -4 }}
-            className="bg-surface-container-low border border-outline-variant rounded-lg p-5 flex flex-col gap-3 hover:border-primary-container hover:shadow-[0_10px_30px_rgba(39,23,22,0.05)] transition-all text-left"
+            className="bg-surface-container-low border border-outline-variant rounded-lg p-5 flex flex-col gap-3 hover:border-primary-container hover:shadow-[0_10px_30px_rgba(39,23,22,0.05)] transition-all text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background"
           >
             <div className="flex items-start gap-2">
               <MapPin className="text-primary-container shrink-0 mt-0.5" size={18} />
@@ -40,7 +40,7 @@ export function CitiesGrid({ cities }: { cities: { name: string; blurb: string; 
               className="self-start flex items-center gap-1 text-label-caps text-primary-container"
             >
               {isOpen ? "Tutup" : "Baca selengkapnya"}
-              <ChevronDown size={14} className={`transition-transform duration-300 ${isOpen ? "rotate-180" : ""}`} />
+              <ChevronDown size={14} aria-hidden="true" className={`transition-transform duration-300 ${isOpen ? "rotate-180" : ""}`} />
             </span>
 
             <AnimatePresence initial={false}>
