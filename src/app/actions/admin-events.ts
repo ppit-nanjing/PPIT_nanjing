@@ -7,7 +7,7 @@ import { auth } from "@/auth";
 import { db } from "@/db";
 import { events, eventRegistrations, galleryAlbums } from "@/db/schema";
 import { hasModuleAccess } from "@/lib/admin-scope";
-import { createNotification } from "@/lib/notifications";
+import { createTemplatedNotification } from "@/lib/notifications";
 
 async function requireAdmin() {
   const session = await auth();
@@ -97,10 +97,10 @@ export async function checkInRegistration(registrationId: string, eventId: strin
     .where(eq(eventRegistrations.id, registrationId));
 
   if (registration?.userId) {
-    await createNotification({
+    await createTemplatedNotification({
       userId: registration.userId,
-      title: "Kehadiran terkonfirmasi",
-      body: `Kehadiran kamu di "${event?.title ?? "acara"}" telah dicatat. Terima kasih sudah hadir!`,
+      templateKey: "event_checkin",
+      variables: { eventTitle: event?.title ?? "acara" },
       relatedEntityType: "event_registration",
       relatedEntityId: registrationId,
     });
@@ -134,10 +134,10 @@ export async function checkInByToken(token: string, eventId: string) {
 
   const [event] = await db.select({ title: events.title }).from(events).where(eq(events.id, eventId));
   if (registration.userId) {
-    await createNotification({
+    await createTemplatedNotification({
       userId: registration.userId,
-      title: "Kehadiran terkonfirmasi",
-      body: `Kehadiran kamu di "${event?.title ?? "acara"}" telah dicatat. Terima kasih sudah hadir!`,
+      templateKey: "event_checkin",
+      variables: { eventTitle: event?.title ?? "acara" },
       relatedEntityType: "event_registration",
       relatedEntityId: registration.id,
     });
