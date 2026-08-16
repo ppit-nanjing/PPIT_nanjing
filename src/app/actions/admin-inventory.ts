@@ -6,7 +6,7 @@ import { auth } from "@/auth";
 import { db } from "@/db";
 import { inventoryItems, borrowRequests, inventoryAuditLogs, externalLoans } from "@/db/schema";
 import { hasModuleAccess } from "@/lib/admin-scope";
-import { createNotification } from "@/lib/notifications";
+import { createTemplatedNotification } from "@/lib/notifications";
 
 async function requireAdmin() {
   const session = await auth();
@@ -59,10 +59,9 @@ export async function approveBorrowRequest(requestId: string) {
     .set({ status: "approved", approvedBy: actorId })
     .where(eq(borrowRequests.id, requestId));
 
-  await createNotification({
+  await createTemplatedNotification({
     userId: request.userId,
-    title: "Permintaan peminjaman disetujui",
-    body: "Permintaan peminjaman barang kamu telah disetujui oleh admin. Cek detail di riwayat pengajuan.",
+    templateKey: "borrow_approved",
     relatedEntityType: "borrow_request",
     relatedEntityId: requestId,
   });
@@ -79,10 +78,9 @@ export async function rejectBorrowRequest(requestId: string) {
     .set({ status: "rejected", approvedBy: actorId })
     .where(eq(borrowRequests.id, requestId));
 
-  await createNotification({
+  await createTemplatedNotification({
     userId: request.userId,
-    title: "Permintaan peminjaman ditolak",
-    body: "Maaf, permintaan peminjaman barang kamu ditolak. Cek detail di riwayat pengajuan.",
+    templateKey: "borrow_rejected",
     relatedEntityType: "borrow_request",
     relatedEntityId: requestId,
   });
