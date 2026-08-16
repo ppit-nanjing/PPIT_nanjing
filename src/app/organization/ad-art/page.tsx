@@ -28,9 +28,9 @@ export default async function AdArtPage() {
           Anggaran Rumah Tangga (ART) &mdash; landasan hukum dan operasional PPIT Nanjing.
         </p>
 
-        <div className="bg-surface-container-lowest border border-outline-variant rounded-xl p-8 flex items-center gap-6">
+        <div className="bg-surface-container-lowest border border-outline-variant rounded-xl p-6 sm:p-8 flex flex-col sm:flex-row sm:items-center gap-5 sm:gap-6">
           <div className="w-14 h-14 rounded-lg bg-primary-container/10 flex items-center justify-center shrink-0">
-            <FileText className="text-primary-container" size={26} />
+            <FileText className="text-primary-container" size={26} aria-hidden />
           </div>
           <div className="flex-1">
             <h2 className="text-headline-md text-on-background">{doc?.title ?? "AD/ART PPIT Nanjing"}</h2>
@@ -43,9 +43,12 @@ export default async function AdArtPage() {
           {doc?.fileUrl && (
             <a
               href={doc.fileUrl}
-              className="flex items-center gap-2 bg-primary-container text-on-primary text-label-caps uppercase tracking-wide px-5 py-3 rounded-md hover:bg-primary transition-colors shrink-0"
+              target="_blank"
+              rel="noopener noreferrer"
+              aria-label={`Unduh PDF ${doc.title} (membuka tab baru)`}
+              className="flex items-center justify-center gap-2 bg-primary-container text-on-primary text-label-caps uppercase tracking-wide px-5 py-3 rounded-md hover:bg-primary transition-colors shrink-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-container focus-visible:ring-offset-2 focus-visible:ring-offset-background motion-reduce:transition-none"
             >
-              <Download size={16} /> Unduh PDF
+              <Download size={16} aria-hidden /> Unduh PDF
             </a>
           )}
         </div>
@@ -58,7 +61,7 @@ export default async function AdArtPage() {
 
         <Link
           href="/organization/ad-art/review"
-          className="inline-flex items-center gap-2 text-label-caps text-primary-container hover:text-primary transition-colors mt-6"
+          className="inline-flex items-center gap-2 text-label-caps text-primary-container hover:text-primary transition-colors mt-6 rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-container focus-visible:ring-offset-2 focus-visible:ring-offset-background motion-reduce:transition-none"
         >
           Baca Ringkasan Panduan &rarr;
         </Link>
