@@ -8,7 +8,7 @@ import { ContributeForm } from "@/components/inventory/contribute-form";
 
 export default async function ContributePage() {
   const session = await auth();
-  if (!session?.user?.id) redirect("/login");
+  if (!session?.user?.id) redirect(`/login?returnTo=${encodeURIComponent("/inventory/contribute")}`);
 
   const all = await db.select({ category: inventoryItems.category }).from(inventoryItems);
   const categories = [...new Set(all.map((i) => i.category).filter((c): c is string => !!c))];
