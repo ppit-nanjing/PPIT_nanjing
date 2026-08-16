@@ -7,6 +7,7 @@ import { requireModuleAccess } from "@/lib/admin-scope";
 import { ImageUploadCropper } from "@/components/upload/image-upload-cropper";
 import { AIImproveButton } from "@/components/ai/ai-improve-button";
 import { AIReviewButton } from "@/components/ai/ai-review-popup";
+import { CollapsibleSection } from "@/components/console/collapsible-section";
 import { Plus } from "lucide-react";
 
 const STATUS_LABEL: Record<string, string> = {
@@ -82,31 +83,33 @@ export default async function ConsoleEventsPage() {
         </form>
       </details>
 
-      <div className="flex flex-col gap-2">
-        {list.length === 0 && <p className="text-body-md text-on-surface-variant">Belum ada kegiatan dibuat.</p>}
-        {list.map((e) => (
-          <div
-            key={e.id}
-            className="flex items-center justify-between gap-4 bg-surface-container-lowest border border-outline-variant rounded-lg pl-5 pr-2 py-2 hover:bg-surface-container-low transition-colors"
-          >
-            <a
-              href={`/console/events/${e.id}`}
-              className="flex-1 flex items-center justify-between gap-4 py-2"
+      <CollapsibleSection title="Daftar Kegiatan" description="Semua kegiatan yang dibuat.">
+        <div className="flex flex-col gap-2">
+          {list.length === 0 && <p className="text-body-md text-on-surface-variant">Belum ada kegiatan dibuat.</p>}
+          {list.map((e) => (
+            <div
+              key={e.id}
+              className="flex items-center justify-between gap-4 bg-surface-container-lowest border border-outline-variant rounded-lg pl-5 pr-2 py-2 hover:bg-surface-container-low transition-colors"
             >
-              <div>
-                <p className="text-body-md font-medium text-on-background">{e.title}</p>
-                <p className="text-label-caps text-on-surface-variant">
-                  {e.startAt ? new Date(e.startAt).toLocaleDateString("id-ID") : "Belum dijadwalkan"}
-                </p>
-              </div>
-              <span className="text-label-caps uppercase tracking-wide bg-surface-container-low px-2.5 py-1 rounded shrink-0">
-                {STATUS_LABEL[e.status]}
-              </span>
-            </a>
-            <DeleteEventButton eventId={e.id} />
-          </div>
-        ))}
-      </div>
+              <a
+                href={`/console/events/${e.id}`}
+                className="flex-1 flex items-center justify-between gap-4 py-2"
+              >
+                <div>
+                  <p className="text-body-md font-medium text-on-background">{e.title}</p>
+                  <p className="text-label-caps text-on-surface-variant">
+                    {e.startAt ? new Date(e.startAt).toLocaleDateString("id-ID") : "Belum dijadwalkan"}
+                  </p>
+                </div>
+                <span className="text-label-caps uppercase tracking-wide bg-surface-container-low px-2.5 py-1 rounded shrink-0">
+                  {STATUS_LABEL[e.status]}
+                </span>
+              </a>
+              <DeleteEventButton eventId={e.id} />
+            </div>
+          ))}
+        </div>
+      </CollapsibleSection>
     </div>
   );
 }
