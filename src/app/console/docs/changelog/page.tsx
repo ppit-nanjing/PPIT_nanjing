@@ -2,6 +2,7 @@ import { desc } from "drizzle-orm";
 import { db } from "@/db";
 import { releaseNotes } from "@/db/schema";
 import { publishReleaseNote } from "@/app/actions/admin-docs";
+import { CollapsibleSection } from "@/components/console/collapsible-section";
 import { Plus } from "lucide-react";
 
 export default async function ChangelogPage() {
@@ -28,23 +29,25 @@ export default async function ChangelogPage() {
         </form>
       </details>
 
-      <div className="flex flex-col gap-6">
-        {notes.length === 0 && <p className="text-body-md text-on-surface-variant">Belum ada rilis tercatat.</p>}
-        {notes.map((n) => (
-          <div key={n.id} className="border-l-2 border-primary-container pl-5">
-            <div className="flex items-center gap-3 mb-1">
-              <span className="text-label-caps uppercase tracking-wide bg-primary-container/10 text-primary-container px-2 py-0.5 rounded">
-                v{n.version}
-              </span>
-              <span className="text-label-caps text-on-surface-variant">
-                {new Date(n.publishedAt).toLocaleDateString("id-ID")}
-              </span>
+      <CollapsibleSection title="Riwayat Rilis" description="Catatan versi yang dipublikasikan.">
+        <div className="flex flex-col gap-6">
+          {notes.length === 0 && <p className="text-body-md text-on-surface-variant">Belum ada rilis tercatat.</p>}
+          {notes.map((n) => (
+            <div key={n.id} className="border-l-2 border-primary-container pl-5">
+              <div className="flex items-center gap-3 mb-1">
+                <span className="text-label-caps uppercase tracking-wide bg-primary-container/10 text-primary-container px-2 py-0.5 rounded">
+                  v{n.version}
+                </span>
+                <span className="text-label-caps text-on-surface-variant">
+                  {new Date(n.publishedAt).toLocaleDateString("id-ID")}
+                </span>
+              </div>
+              <p className="text-body-md text-on-background font-medium">{n.summary}</p>
+              {n.details && <p className="text-body-md text-on-surface-variant whitespace-pre-wrap mt-1">{n.details}</p>}
             </div>
-            <p className="text-body-md text-on-background font-medium">{n.summary}</p>
-            {n.details && <p className="text-body-md text-on-surface-variant whitespace-pre-wrap mt-1">{n.details}</p>}
-          </div>
-        ))}
-      </div>
+          ))}
+        </div>
+      </CollapsibleSection>
     </div>
   );
 }
