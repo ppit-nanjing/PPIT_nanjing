@@ -32,9 +32,9 @@ export function SectionHeading({
       {href && (
         <a
           href={href}
-          className="hidden md:flex items-center gap-1 text-label-caps text-primary-container hover:text-primary transition-colors shrink-0"
+          className="mt-2 md:mt-0 md:ml-auto inline-flex items-center gap-1 text-label-caps text-primary-container hover:text-primary transition-colors shrink-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background"
         >
-          {linkLabel} <ArrowRight size={16} />
+          {linkLabel} <ArrowRight size={16} aria-hidden="true" />
         </a>
       )}
     </div>
