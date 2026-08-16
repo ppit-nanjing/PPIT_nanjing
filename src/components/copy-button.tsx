@@ -6,7 +6,7 @@ import { Copy, Check } from "lucide-react";
 export function CopyButton({
   value,
   label = "Salin",
-  className = "flex items-center gap-1.5 text-label-caps uppercase tracking-wide border border-outline-variant rounded-md px-4 py-2 hover:bg-surface-container-low transition-colors",
+  className = "flex items-center gap-1.5 text-label-caps uppercase tracking-wide border border-outline-variant rounded-md px-4 py-2 hover:bg-surface-container-low transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-container focus-visible:ring-offset-2 focus-visible:ring-offset-background",
 }: {
   value: string;
   label?: string;
