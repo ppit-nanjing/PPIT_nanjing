@@ -4,6 +4,7 @@ import { auth, signIn } from "@/auth";
 import { CredentialForm } from "@/components/auth/credential-form";
 import { signInWithPassword } from "@/app/actions/auth";
 import { safeRedirect } from "@/lib/safe-redirect";
+import Link from "next/link";
 
 export default async function LoginPage({
   searchParams,
@@ -73,12 +74,12 @@ export default async function LoginPage({
         </div>
 
         <div className="text-center mt-6">
-          <a
+          <Link
             href="/"
             className="inline-flex items-center gap-2 text-label-caps uppercase tracking-wide text-on-surface-variant hover:text-on-background transition-colors"
           >
             <ArrowLeft size={14} /> Kembali ke Beranda
-          </a>
+          </Link>
         </div>
       </div>
     </div>
