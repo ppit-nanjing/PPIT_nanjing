@@ -1,6 +1,7 @@
 import { SiteNav } from "@/components/site-nav";
 import { SiteFooter } from "@/components/site-footer";
 import { LegalNav } from "@/components/legal-nav";
+import Link from "next/link";
 
 export default function PrivacyPage() {
   return (
@@ -51,9 +52,9 @@ export default function PrivacyPage() {
                 Kami hanya mengirimkan berita dan info kegiatan lewat email jika Anda secara aktif
                 memilih untuk berlangganan. Anda dapat berhenti berlangganan kapan saja lewat
                 halaman{" "}
-                <a href="/profile" className="text-primary-container underline">
+                <Link href="/profile" className="text-primary-container underline">
                   Profil
-                </a>
+                </Link>
                 .
               </p>
             </section>
@@ -79,9 +80,9 @@ export default function PrivacyPage() {
                 Anda berhak meminta akses, perbaikan, atau penghapusan data pribadi Anda. Untuk
                 pertanyaan terkait kebijakan privasi ini atau pengajuan permintaan data, silakan
                 hubungi pengurus PPIT Nanjing melalui surel resmi di{" "}
-                <a href="/profile" className="text-primary-container underline">
+                <Link href="/profile" className="text-primary-container underline">
                   Profil
-                </a>{" "}
+                </Link>{" "}
                 atau kanal komunikasi resmi organisasi.
               </p>
             </section>
