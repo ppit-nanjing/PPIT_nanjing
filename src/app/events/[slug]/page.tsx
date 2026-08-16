@@ -10,7 +10,9 @@ import { Reveal } from "@/components/reveal";
 import { EventCard } from "@/components/event-card";
 import { GalleryLightbox } from "@/components/gallery-lightbox";
 import { CalendarDays, MapPin, Users, Ticket, ArrowLeft, ListChecks, Images, ArrowRight } from "lucide-react";
+import Image from "next/image";
 import { registerForEvent } from "@/app/actions/events";
+import Link from "next/link";
 
 export default async function EventDetailPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
@@ -58,18 +60,23 @@ export default async function EventDetailPage({ params }: { params: Promise<{ sl
       <SiteNav />
 
       <main className="max-w-[var(--container-max)] mx-auto px-[var(--spacing-container-padding)] py-10">
-        <a
+        <Link
           href="/events"
           className="inline-flex items-center gap-2 text-label-caps uppercase tracking-wide text-primary-container hover:text-primary transition-colors mb-6"
         >
           <ArrowLeft size={16} /> Kembali ke Kegiatan
-        </a>
+        </Link>
 
         {event.coverImageUrl && (
           <Reveal>
             <div className="relative w-full h-64 md:h-96 rounded-xl overflow-hidden mb-8">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={event.coverImageUrl} alt={event.title} className="w-full h-full object-cover" />
+              <Image
+                src={event.coverImageUrl}
+                alt={event.title}
+                fill
+                sizes="(max-width: 768px) 100vw, 768px"
+                className="object-cover"
+              />
               <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent" />
             </div>
           </Reveal>
@@ -197,12 +204,12 @@ export default async function EventDetailPage({ params }: { params: Promise<{ sl
                       <p className="text-body-md text-on-surface-variant text-center mb-4">
                         Lengkapi data sensus untuk mendaftar.
                       </p>
-                      <a
+                      <Link
                         href="/sensus"
                         className="w-full inline-flex items-center justify-center gap-2 bg-primary-container text-on-primary text-label-caps uppercase tracking-wide px-6 py-4 rounded-md hover:bg-primary transition-colors"
                       >
                         Isi Sensus
-                      </a>
+                      </Link>
                     </>
                   )}
                   {alreadyRegistered ? (
