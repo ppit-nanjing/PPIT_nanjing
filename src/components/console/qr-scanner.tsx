@@ -27,6 +27,8 @@ export function QrScanner() {
 
   const [status, setStatus] = useState<"idle" | "starting" | "scanning" | "error">("idle");
   const [error, setError] = useState<string | null>(null);
+  const [devices, setDevices] = useState<MediaDeviceInfo[]>([]);
+  const [activeDeviceId, setActiveDeviceId] = useState<string | null>(null);
 
   function stopCamera() {
     if (rafRef.current) cancelAnimationFrame(rafRef.current);
@@ -37,9 +39,25 @@ export function QrScanner() {
 
   useEffect(() => stopCamera, []);
 
+  async function listCameras() {
+    try {
+      const all = await navigator.mediaDevices.enumerateDevices();
+      setDevices(all.filter((d) => d.kind === "videoinput"));
+    } catch {
+      // enumeration is best-effort; ignore if unsupported
+    }
+  }
+
   // Prefer the rear ("environment") camera on phones; fall back to whatever
   // camera the device has (e.g. a laptop's default webcam) when that fails.
-  async function openCamera(): Promise<MediaStream> {
+  // When a specific deviceId is given (user picked from the dropdown), use it.
+  async function openCamera(deviceId?: string): Promise<MediaStream> {
+    if (deviceId) {
+      return await navigator.mediaDevices.getUserMedia({
+        video: { deviceId: { exact: deviceId } },
+        audio: false,
+      });
+    }
     try {
       return await navigator.mediaDevices.getUserMedia({
         video: { facingMode: { ideal: "environment" } },
@@ -99,6 +117,9 @@ export function QrScanner() {
     try {
       const stream = await openCamera();
       streamRef.current = stream;
+      const track = stream.getVideoTracks()[0];
+      setActiveDeviceId(track?.getSettings().deviceId ?? null);
+      await listCameras();
       const video = videoRef.current;
       if (!video) {
         stopCamera();
@@ -114,9 +135,38 @@ export function QrScanner() {
       if (err?.name === "NotAllowedError") {
         setError("Izin kamera ditolak. Izinkan akses kamera di pengaturan browser, lalu coba lagi.");
       } else if (err?.name === "NotFoundError") {
-        setError("Tidak ada kamera belakang ditemukan di perangkat ini.");
+        setError("Tidak ada kamera ditemukan di perangkat ini.");
       } else {
         setError("Tidak bisa membuka kamera. Pastikan koneksi HTTPS dan izin diberikan.");
+      }
+      setStatus("error");
+    }
+  }
+
+  async function switchCamera(deviceId: string) {
+    stopCamera();
+    setError(null);
+    setStatus("starting");
+    try {
+      const stream = await openCamera(deviceId);
+      streamRef.current = stream;
+      setActiveDeviceId(deviceId);
+      const video = videoRef.current;
+      if (!video) {
+        stopCamera();
+        return;
+      }
+      video.srcObject = stream;
+      await video.play();
+      setStatus("scanning");
+      rafRef.current = requestAnimationFrame(tick);
+    } catch (e) {
+      stopCamera();
+      const err = e as DOMException;
+      if (err?.name === "NotAllowedError") {
+        setError("Izin kamera ditolak. Izinkan akses kamera di pengaturan browser, lalu coba lagi.");
+      } else {
+        setError("Tidak bisa membuka kamera yang dipilih.");
       }
       setStatus("error");
     }
@@ -152,6 +202,23 @@ export function QrScanner() {
           <AlertTriangle className="text-error shrink-0 mt-0.5" size={16} />
           <span>{error}</span>
         </div>
+      )}
+
+      {status === "scanning" && devices.length > 1 && (
+        <label className="flex flex-col gap-1.5 max-w-sm mx-auto w-full">
+          <span className="text-label-caps uppercase tracking-wide text-on-surface-variant">Kamera</span>
+          <select
+            value={activeDeviceId ?? ""}
+            onChange={(e) => switchCamera(e.target.value)}
+            className="bg-soft-gray rounded-md p-3 text-body-md focus:outline-none focus:ring-2 focus:ring-primary-container"
+          >
+            {devices.map((d, i) => (
+              <option key={d.deviceId} value={d.deviceId}>
+                {d.label || `Kamera ${i + 1}`}
+              </option>
+            ))}
+          </select>
+        </label>
       )}
 
       <div className="flex justify-center gap-3">
