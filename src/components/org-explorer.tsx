@@ -272,7 +272,7 @@ function TreeNode({
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
-        className="w-full flex items-center gap-2 px-4 py-3 text-left hover:bg-surface-container-low transition-colors"
+        className="w-full flex items-center gap-2 px-4 py-3 text-left hover:bg-surface-container-low transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-container focus-visible:ring-offset-2 focus-visible:ring-offset-background motion-reduce:transition-none"
       >
         <ChevronRight
           size={16}
@@ -365,7 +365,7 @@ function ProfileModal({ node, onClose }: { node: OrgNodeData; onClose: () => voi
             type="button"
             onClick={onClose}
             aria-label="Tutup"
-            className="ml-auto text-on-surface-variant hover:text-on-background"
+            className="ml-auto text-on-surface-variant hover:text-on-background rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-container focus-visible:ring-offset-2 focus-visible:ring-offset-background motion-reduce:transition-none"
           >
             <X size={20} />
           </button>
@@ -396,7 +396,7 @@ export function OrgExplorer({ units }: { units: OrgNodeData[] }) {
             key={v.key}
             type="button"
             onClick={() => setView(v.key)}
-            className={`text-label-caps uppercase tracking-wide px-4 py-2 rounded-full border transition-colors ${
+            className={`text-label-caps uppercase tracking-wide px-4 py-2 rounded-full border transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-container focus-visible:ring-offset-2 focus-visible:ring-offset-background motion-reduce:transition-none ${
               view === v.key
                 ? "bg-primary-container text-on-primary border-primary-container"
                 : "bg-surface-container-low text-on-surface-variant border-outline-variant hover:text-on-background"
