@@ -25,7 +25,7 @@ export function HelpCenter({ authed }: { authed: boolean }) {
       {!open && (
         <button
           onClick={toggle}
-          className="fixed bottom-6 right-6 z-[90] bg-primary-container text-on-primary rounded-full p-4 shadow-lg hover:bg-primary transition-colors"
+          className="fixed bottom-24 right-4 z-[60] bg-primary-container text-on-primary rounded-full p-4 shadow-lg hover:bg-primary transition-colors sm:bottom-6 sm:right-6"
           aria-label="Bantuan & Masukan"
         >
           <MessageSquarePlus size={22} />
@@ -33,7 +33,7 @@ export function HelpCenter({ authed }: { authed: boolean }) {
       )}
 
       {open && (
-        <div className="fixed bottom-6 right-6 z-[90] w-[360px] max-w-[calc(100vw-3rem)] bg-surface-container-lowest border border-outline-variant rounded-xl shadow-lg overflow-hidden flex flex-col">
+        <div className="fixed bottom-24 right-4 z-[60] w-[360px] max-w-[calc(100vw-2rem)] bg-surface-container-lowest border border-outline-variant rounded-xl shadow-lg overflow-hidden flex flex-col sm:bottom-6 sm:right-6">
           <div className="flex items-center justify-between px-5 py-3 border-b border-outline-variant">
             <div className="flex items-center gap-1">
               <button
