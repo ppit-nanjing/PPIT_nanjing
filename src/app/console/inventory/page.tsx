@@ -11,14 +11,8 @@ import { CollapsibleSection } from "@/components/console/collapsible-section";
 import { requireModuleAccess } from "@/lib/admin-scope";
 import { Plus, Package } from "lucide-react";
 import Link from "next/link";
+import { conditionLabel } from "@/lib/inventory-labels";
 
-const CONDITION_LABEL: Record<string, string> = {
-  new: "Baru",
-  good: "Baik",
-  fair: "Cukup Baik",
-  damaged: "Rusak",
-  retired: "Pensiun",
-};
 
 export default async function ConsoleInventoryPage() {
   await requireModuleAccess("inventory");
@@ -83,7 +77,7 @@ export default async function ConsoleInventoryPage() {
               id: x.c.id,
               name: x.c.name,
               category: x.c.category,
-              condition: CONDITION_LABEL[x.c.condition] ?? x.c.condition,
+              condition: conditionLabel(x.c.condition),
               contributionType: x.c.contributionType,
               userName: x.userName,
               userEmail: x.userEmail,
@@ -158,7 +152,7 @@ export default async function ConsoleInventoryPage() {
                   <h3 className="text-body-md font-semibold text-on-background">{item.name}</h3>
                 </div>
                 <p className="text-label-caps text-on-surface-variant">
-                  {item.availableQuantity} / {item.totalQuantity} tersedia &middot; {CONDITION_LABEL[item.condition]}
+                  {item.availableQuantity} / {item.totalQuantity} tersedia &middot; {conditionLabel(item.condition)}
                 </p>
               </div>
             ))}
