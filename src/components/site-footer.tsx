@@ -23,7 +23,7 @@ export function SiteFooter() {
         />
         <Link
           href="/join-us"
-          className="inline-flex items-center gap-2 bg-on-primary text-primary-container text-label-caps uppercase tracking-wide px-8 py-3.5 rounded-full hover:bg-on-primary/90 transition-colors"
+          className="inline-flex items-center gap-2 bg-on-primary text-primary-container text-label-caps uppercase tracking-wide px-8 py-3.5 rounded-full hover:bg-on-primary/90 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-on-primary focus-visible:ring-offset-2 focus-visible:ring-offset-primary-container"
         >
           Gabung Sekarang <ArrowRight size={16} />
         </Link>
@@ -35,7 +35,7 @@ export function SiteFooter() {
           <div className="text-body-md flex gap-2 flex-wrap justify-center">
             {NAV_LINKS.map((link, i) => (
               <span key={link.href}>
-                <a href={link.href} className="hover:text-primary-fixed-dim transition-colors">
+                <a href={link.href} className="hover:text-primary-fixed-dim transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-on-primary focus-visible:ring-offset-2 focus-visible:ring-offset-inverse-surface">
                   {link.label}
                 </a>
                 {i < NAV_LINKS.length - 1 && <span className="mx-2 opacity-40">|</span>}
@@ -47,7 +47,7 @@ export function SiteFooter() {
             <div className="text-body-md flex gap-2 flex-wrap justify-center">
               {ABOUT_LINKS.map((link, i) => (
                 <span key={link.href}>
-                  <a href={link.href} className="hover:text-primary-fixed-dim transition-colors">
+                  <a href={link.href} className="hover:text-primary-fixed-dim transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-on-primary focus-visible:ring-offset-2 focus-visible:ring-offset-inverse-surface">
                     {link.label}
                   </a>
                   {i < ABOUT_LINKS.length - 1 && <span className="mx-2 opacity-40">|</span>}
@@ -63,7 +63,7 @@ export function SiteFooter() {
                 target="_blank"
                 rel="noopener noreferrer"
                 aria-label={s.label}
-                className="inline-flex items-center justify-center w-9 h-9 rounded-full bg-inverse-on-surface/10 hover:bg-inverse-on-surface/20 transition-colors"
+                className="inline-flex items-center justify-center w-9 h-9 rounded-full bg-inverse-on-surface/10 hover:bg-inverse-on-surface/20 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-on-primary focus-visible:ring-offset-2 focus-visible:ring-offset-inverse-surface"
               >
                 <svg
                   viewBox="0 0 24 24"
