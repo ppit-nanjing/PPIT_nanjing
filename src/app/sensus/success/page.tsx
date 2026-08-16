@@ -1,6 +1,7 @@
 import { SiteNav } from "@/components/site-nav";
 import { SiteFooter } from "@/components/site-footer";
 import { CheckCircle2 } from "lucide-react";
+import Link from "next/link";
 
 export default function SensusSuccessPage() {
   return (
@@ -15,18 +16,18 @@ export default function SensusSuccessPage() {
           Terima kasih sudah mengisi data sensus. Kamu bisa memperbaruinya kapan saja.
         </p>
         <div className="flex flex-col sm:flex-row gap-3 justify-center">
-          <a
+          <Link
             href="/sensus"
             className="border border-outline-variant text-on-background text-label-caps uppercase tracking-wide px-6 py-3 rounded-md hover:bg-surface-container-low transition-colors"
           >
             Lihat/Ubah Data
-          </a>
-          <a
+          </Link>
+          <Link
             href="/"
             className="bg-primary-container text-on-primary text-label-caps uppercase tracking-wide px-6 py-3 rounded-md hover:bg-primary transition-colors"
           >
             Kembali ke Beranda
-          </a>
+          </Link>
         </div>
       </main>
       <SiteFooter />
