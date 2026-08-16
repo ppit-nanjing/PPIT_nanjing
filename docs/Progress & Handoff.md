@@ -21,6 +21,7 @@
   - `/console/inventory` — add items, approve/reject/return borrow requests (atomically adjusts `availableQuantity`)
   - `/console/content` — news articles (draft/publish) + gallery albums/photos — was a real gap (no way to publish anything) until this batch
   - `/console/reports` — real sensus aggregate tallies + CSV student export (also reachable via the `sensus` scope key, see `admin-scope.ts` comment)
+  - `/console/notifications` — **new 2026-08-17**, full-tier only: edit the wording of the 7 automatic notifications the app sends. Defaults live in code (`src/lib/notification-templates.ts`); a `notification_templates` row is an *override*, and "Kembalikan ke bawaan" deletes the row rather than writing a second copy of the default. `notification_templates` is no longer an unused table. In-app channel only — no email/push provider exists, and the page says so instead of offering a dead channel picker.
   - `/console/docs` — help articles by section (5 seeded from what's actually built) + editable in-app, `/console/docs/changelog` for release notes — visible to anyone with any admin access, same as Dashboard
 - **Feedback widget** on every page: 4 categories with per-category draft persistence (localStorage), DOM element picker, admin inbox with filters/copy/status workflow.
 - **Motion** for animation (not GSAP/Aceternity — matches the original "no heavy JS libraries" PRD constraint). `components.json` registers the `@react-bits` registry for future use.
@@ -34,7 +35,7 @@
 4. Hero background is an original SVG placeholder, not a photo — swap for a licensed Nanjing photograph via Vercel Blob once the org has one, don't hotlink.
 5. `adminModuleScope`/`grantsFullAdminAccess` seed values for Usaha Dana / Desain / Komunikasi & Konten are still **inferred** from the guidebook's job descriptions, not confirmed by the org. Enforcement exists (`src/lib/admin-scope.ts`) **and** it's now editable in the UI (`/console/organization` → edit a division → checkboxes) — so reviewing/correcting these with PPIT Nanjing is now a self-service task, not a DB edit.
 6. `reports` and `sensus` scope keys both unlock the same `/console/reports` page (it hasn't been split into a sensus-only view vs. a full-reports view) — so a division scoped to just `sensus` currently sees the same page, including the CSV export button, as one scoped to `reports`. Same simplification for `content` vs `gallery` on `/console/content`. The raw keys are still stored separately (`ASSIGNABLE_SCOPE_KEYS` in `admin-scope.ts`) so splitting the pages later won't require a data migration, just new routes + tightening the alias map.
-7. Only 9 of the stated 32 PPI Tiongkok regional branches are seeded — the other 23 aren't named anywhere available to this project.
+7. ~~Only 9 of the stated 32 PPI Tiongkok regional branches are seeded~~ — **resolved**: `src/db/seed-branches.ts` now seeds all 32, sourced from PPI Tiongkok. This gap line was stale.
 
 Every module in the original IA now has a real `/console/*` page — there is no remaining "unbuilt screen" gap, only the polish items above. Custom favicon shipped (was gap #8, now `src/app/icon.svg`).
 
