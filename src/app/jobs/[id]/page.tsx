@@ -46,6 +46,8 @@ export default async function JobDetailPage({ params }: { params: Promise<{ id: 
 
   const deadlineSoon =
     job.applicationDeadline &&
+    // Current time is required to compute deadline proximity; this is a server component.
+    // eslint-disable-next-line react-hooks/purity
     new Date(job.applicationDeadline).getTime() - Date.now() < 7 * 24 * 60 * 60 * 1000;
 
   const applyCta = alreadyApplied ? (
