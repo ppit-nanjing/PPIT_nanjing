@@ -24,6 +24,13 @@ export function OnboardingModal() {
     });
   }
 
+  function handleSkip() {
+    startTransition(async () => {
+      await setEmailSubscription(false);
+      await update();
+    });
+  }
+
   return (
     <div className="fixed inset-0 z-[100] bg-on-background/50 backdrop-blur-sm flex items-center justify-center px-4">
       <div className="bg-surface-container-lowest rounded-xl border border-outline-variant shadow-lg max-w-md w-full p-8">
@@ -54,6 +61,13 @@ export function OnboardingModal() {
           className="w-full bg-primary-container text-on-primary text-label-caps uppercase tracking-wide py-3 rounded-md hover:bg-primary transition-colors disabled:opacity-60"
         >
           {pending ? "Menyimpan..." : "Lanjutkan"}
+        </button>
+        <button
+          onClick={handleSkip}
+          disabled={pending}
+          className="w-full mt-3 bg-transparent text-on-surface-variant uppercase tracking-wide text-label-caps py-2 rounded-md border border-outline-variant hover:text-on-background disabled:opacity-60"
+        >
+          Lewati
         </button>
         <p className="text-label-caps text-secondary text-center mt-4">
           Bisa diubah kapan saja lewat halaman Profil
