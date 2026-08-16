@@ -6,7 +6,7 @@ import { auth } from "@/auth";
 import { db } from "@/db";
 import { procurementRequests } from "@/db/schema";
 import { hasModuleAccess } from "@/lib/admin-scope";
-import { createNotification } from "@/lib/notifications";
+import { createTemplatedNotification } from "@/lib/notifications";
 
 async function requireMember() {
   const session = await auth();
@@ -62,13 +62,13 @@ export async function reviewProcurement(formData: FormData) {
       .update(procurementRequests)
       .set({ status: "approved", reviewedBy: actorId, reviewedAt: new Date() })
       .where(eq(procurementRequests.id, id));
-    await notify(req.userId, req.itemName, "disetujui");
+    await notify(req.userId, req.itemName, true);
   } else if (decision === "reject" && req.status === "pending") {
     await db
       .update(procurementRequests)
       .set({ status: "rejected", reviewedBy: actorId, reviewedAt: new Date() })
       .where(eq(procurementRequests.id, id));
-    await notify(req.userId, req.itemName, "ditolak");
+    await notify(req.userId, req.itemName, false);
   } else if (decision === "fulfill" && req.status === "approved") {
     await db
       .update(procurementRequests)
@@ -79,11 +79,14 @@ export async function reviewProcurement(formData: FormData) {
   revalidatePath("/console/inventory");
 }
 
-async function notify(userId: string, itemName: string, verb: string) {
-  await createNotification({
+// Approved and rejected are separate templates rather than one template with a
+// {{verb}} placeholder, so an admin can word each outcome independently (a
+// rejection usually wants a softer tone than an approval).
+async function notify(userId: string, itemName: string, approved: boolean) {
+  await createTemplatedNotification({
     userId,
-    title: `Usulan pengadaan ${verb}`,
-    body: `Usulan barang "${itemName}" telah ${verb} oleh admin.`,
+    templateKey: approved ? "procurement_approved" : "procurement_rejected",
+    variables: { itemName },
     relatedEntityType: "procurement_request",
     relatedEntityId: userId,
   });
