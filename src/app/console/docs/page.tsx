@@ -2,6 +2,7 @@ import { db } from "@/db";
 import { helpArticles } from "@/db/schema";
 import { Plus, FileText, History } from "lucide-react";
 import { CollapsibleSection } from "@/components/console/collapsible-section";
+import Link from "next/link";
 
 export default async function ConsoleDocsPage() {
   const articles = await db.select().from(helpArticles);
@@ -20,18 +21,18 @@ export default async function ConsoleDocsPage() {
           </p>
         </div>
         <div className="flex flex-wrap gap-3 shrink-0">
-          <a
+          <Link
             href="/console/docs/changelog"
             className="flex items-center gap-2 border border-outline-variant text-on-background text-label-caps uppercase tracking-wide px-5 py-3 rounded-md hover:bg-surface-container-low transition-colors"
           >
             <History size={16} /> Changelog
-          </a>
-          <a
+          </Link>
+          <Link
             href="/console/docs/new"
             className="flex items-center gap-2 bg-primary-container text-on-primary text-label-caps uppercase tracking-wide px-5 py-3 rounded-md hover:bg-primary transition-colors"
           >
             <Plus size={16} /> Tulis Panduan
-          </a>
+          </Link>
         </div>
       </div>
 
