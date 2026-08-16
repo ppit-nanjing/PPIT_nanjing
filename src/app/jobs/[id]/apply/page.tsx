@@ -11,7 +11,8 @@ import { FileUpload } from "@/components/upload/file-upload";
 export default async function JobApplyPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const session = await auth();
-  if (!session) redirect("/login");
+  const currentPath = `/jobs/${id}/apply`;
+  if (!session) redirect(`/login?returnTo=${encodeURIComponent(currentPath)}`);
 
   const [job] = await db.select().from(jobPostings).where(eq(jobPostings.id, id));
   if (!job) notFound();
