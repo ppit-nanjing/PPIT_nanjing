@@ -1,22 +1,20 @@
 import { eq, desc, asc } from "drizzle-orm";
-import { ArrowRight, Users, GraduationCap, CalendarDays, Quote } from "lucide-react";
+import { ArrowRight } from "lucide-react";
 import Link from "next/link";
 import { AnimatedHeroHeading } from "@/components/animated-hero-heading";
+import { AnimatedRevealText } from "@/components/animated-reveal-text";
 import { SiteNav } from "@/components/site-nav";
 import { SiteFooter } from "@/components/site-footer";
 import { Reveal } from "@/components/reveal";
 import { SectionHeading } from "@/components/section-heading";
 import { ContentCard } from "@/components/content-card";
+import { StatsGrid } from "@/components/stats-grid";
+import { CitiesGrid } from "@/components/cities-grid";
+import { QuoteMark } from "@/components/quote-mark";
 import { db } from "@/db";
 import { events, newsArticles } from "@/db/schema";
 
-// Real figures from the 2026/2027 recruitment guidebook (docs/Overview.md context),
-// not the prototype's placeholder numbers.
-const STATS = [
-  { icon: Users, value: "600+", label: "Pelajar Aktif" },
-  { icon: GraduationCap, value: "6", label: "Kota Naungan" },
-  { icon: CalendarDays, value: "2008", label: "Berdiri Sejak" },
-];
+const CITIES = ["Nanjing", "Xuzhou", "Jurong", "Ma'anshan", "Zhenjiang", "Huai'an"];
 
 const CITIES = ["Nanjing", "Xuzhou", "Jurong", "Ma'anshan", "Zhenjiang", "Huai'an"];
 
@@ -66,10 +64,10 @@ export default async function Home() {
             words={["Menghubungkan", "Mahasiswa", "Indonesia", "di", "Nanjing"]}
             className="text-display-hero-mobile md:text-display-hero text-on-primary mb-[var(--spacing-stack-md)]"
           />
-          <p className="text-body-lg text-on-primary-container mb-[var(--spacing-stack-md)] max-w-2xl">
-            Wadah resmi Perhimpunan Pelajar Indonesia Tiongkok (PPIT) Cabang Nanjing untuk
-            bersinergi, berkarya, dan berkontribusi bagi bangsa &mdash; sejak 2008.
-          </p>
+          <AnimatedRevealText
+            text="Wadah resmi Perhimpunan Pelajar Indonesia Tiongkok (PPIT) Cabang Nanjing untuk bersinergi, berkarya, dan berkontribusi bagi bangsa — sejak 2008."
+            className="text-body-lg text-on-primary-container mb-[var(--spacing-stack-md)] max-w-2xl"
+          />
           <Link
             href="/events"
             className="inline-flex items-center gap-2 bg-on-primary text-primary text-label-caps uppercase tracking-wide px-8 py-4 rounded-md hover:scale-105 transition-transform"
@@ -81,28 +79,13 @@ export default async function Home() {
 
       <main className="max-w-[var(--container-max)] mx-auto px-[var(--spacing-container-padding)] flex flex-col gap-16 md:gap-[var(--spacing-section-gap)] py-16 md:py-[var(--spacing-section-gap)]">
         {/* Stats */}
-        <Reveal>
-          <section className="grid grid-cols-1 md:grid-cols-3 gap-8">
-            {STATS.map(({ icon: Icon, value, label }) => (
-              <div
-                key={label}
-                className="bg-surface-container-low rounded-lg p-10 flex flex-col items-center text-center border border-outline-variant transition-transform hover:-translate-y-1"
-              >
-                <Icon className="text-primary-container mb-4" size={40} strokeWidth={1.5} />
-                <h3 className="text-display-hero-mobile text-on-background mb-2">{value}</h3>
-                <p className="text-label-caps text-on-surface-variant uppercase tracking-widest">
-                  {label}
-                </p>
-              </div>
-            ))}
-          </section>
-        </Reveal>
+        <StatsGrid />
 
         {/* Quote */}
         <Reveal>
           <section className="flex justify-center">
             <div className="bg-surface-container-lowest border border-outline-variant rounded-xl overflow-hidden shadow-[0_10px_30px_rgba(39,23,22,0.04)] max-w-4xl w-full p-10 md:p-16">
-              <Quote className="text-primary-container mb-6" size={40} />
+              <QuoteMark />
               <p className="text-quote-text text-on-surface italic mb-8">
                 &ldquo;PPIT Nanjing adalah{" "}
                 <span className="font-bold text-primary-container not-italic">
@@ -129,16 +112,7 @@ export default async function Home() {
               title="Kota di Bawah Naungan PPIT Nanjing"
               description="Selain Kota Nanjing, PPIT Nanjing turut menaungi pelajar dan mahasiswa Indonesia di kota-kota sekitarnya, termasuk dua ranting organisasi aktif: INA (NUIST) dan JIA (JSAHVC)."
             />
-            <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-              {CITIES.map((city) => (
-                <div
-                  key={city}
-                  className="bg-surface-container-low border border-outline-variant rounded-md px-6 py-5 text-center text-body-md font-medium"
-                >
-                  {city}
-                </div>
-              ))}
-            </div>
+            <CitiesGrid cities={CITIES} />
           </section>
         </Reveal>
 
