@@ -7,6 +7,11 @@ import { formatRelativeTime } from "@/lib/format-relative-time";
 import { Briefcase, BookOpen, Users, MapPin, ArrowRight } from "lucide-react";
 import Link from "next/link";
 
+export const metadata = {
+  title: "Pusat Karir - PPIT Nanjing",
+  description: "Peluang kerja, panduan karir, dan mentorship untuk mahasiswa PPIT Nanjing.",
+};
+
 const TYPE_LABEL: Record<string, string> = {
   internship: "Magang",
   full_time: "Full-time",
@@ -41,20 +46,24 @@ export default async function CareerCenterPage() {
             <h2 className="text-headline-md text-on-background flex items-center gap-2">
               <Briefcase size={20} className="text-primary-container" /> Peluang Terbaru
             </h2>
-            <Link href="/jobs" className="text-label-caps uppercase tracking-wide text-primary-container hover:text-primary transition-colors">
+            <Link href="/jobs" className="text-label-caps uppercase tracking-wide text-primary-container hover:text-primary transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-container focus-visible:ring-offset-2 focus-visible:ring-offset-background rounded-md motion-reduce:transition-none">
               Lihat Semua
             </Link>
           </div>
-          {jobs.length === 0 ? (
-            <p className="text-body-md text-on-surface-variant">Belum ada lowongan dibuka.</p>
-          ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-              {jobs.map((j) => (
-                <a
-                  key={j.id}
-                  href={`/jobs/${j.id}`}
-                  className="group bg-surface-container-lowest border border-outline-variant rounded-xl p-6 hover:shadow-[0_10px_30px_rgba(39,23,22,0.06)] transition-shadow flex flex-col"
-                >
+            {jobs.length === 0 ? (
+              <div className="flex flex-col items-center text-center py-16 bg-surface-container-lowest border border-outline-variant border-dashed rounded-xl px-6">
+                <Briefcase className="text-outline-variant mb-4" size={36} aria-hidden />
+                <p className="text-body-md text-on-surface-variant">Belum ada lowongan dibuka saat ini.</p>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+                {jobs.map((j) => (
+                  <a
+                    key={j.id}
+                    href={`/jobs/${j.id}`}
+                    aria-label={`Lihat lowongan ${j.title} di ${j.company}`}
+                    className="group bg-surface-container-lowest border border-outline-variant rounded-xl p-6 hover:shadow-[0_10px_30px_rgba(39,23,22,0.06)] transition-shadow flex flex-col focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-container focus-visible:ring-offset-2 focus-visible:ring-offset-background motion-reduce:transition-none"
+                  >
                   <div className="flex items-start justify-between mb-4">
                     <div className="w-11 h-11 bg-surface-container-low rounded-lg flex items-center justify-center text-primary-container">
                       <Briefcase size={20} />
@@ -89,16 +98,20 @@ export default async function CareerCenterPage() {
           <p className="text-body-md text-on-surface-variant max-w-2xl mb-6">
             Tingkatkan peluangmu dengan materi persiapan karir untuk mahasiswa Indonesia di Tiongkok.
           </p>
-          {guides.length === 0 ? (
-            <p className="text-body-md text-on-surface-variant">Belum ada artikel panduan.</p>
-          ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {guides.map((g) => (
-                <a
-                  key={g.id}
-                  href={`/career/guide/${g.slug}`}
-                  className="group bg-surface-container-lowest border border-outline-variant rounded-xl p-6 flex gap-4 items-start hover:border-primary-container/50 transition-colors"
-                >
+            {guides.length === 0 ? (
+              <div className="flex flex-col items-center text-center py-16 bg-surface-container-lowest border border-outline-variant border-dashed rounded-xl px-6">
+                <BookOpen className="text-outline-variant mb-4" size={36} aria-hidden />
+                <p className="text-body-md text-on-surface-variant">Belum ada artikel panduan.</p>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {guides.map((g) => (
+                  <a
+                    key={g.id}
+                    href={`/career/guide/${g.slug}`}
+                    aria-label={`Baca panduan ${g.title}`}
+                    className="group bg-surface-container-lowest border border-outline-variant rounded-xl p-6 flex gap-4 items-start hover:border-primary-container/50 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-container focus-visible:ring-offset-2 focus-visible:ring-offset-background motion-reduce:transition-none"
+                  >
                   <div className="bg-surface-container-low p-3 rounded-lg text-primary-container shrink-0">
                     <BookOpen size={22} />
                   </div>
@@ -126,10 +139,10 @@ export default async function CareerCenterPage() {
               </p>
             </div>
           </div>
-          <Link
-            href="/career/mentorship"
-            className="bg-primary-container text-on-primary text-label-caps uppercase tracking-wide px-6 py-3 rounded-md hover:bg-primary transition-colors shrink-0"
-          >
+            <Link
+              href="/career/mentorship"
+              className="bg-primary-container text-on-primary text-label-caps uppercase tracking-wide px-6 py-3 rounded-md hover:bg-primary transition-colors shrink-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-container focus-visible:ring-offset-2 focus-visible:ring-offset-background motion-reduce:transition-none"
+            >
             Daftar Mentorship
           </Link>
         </section>
