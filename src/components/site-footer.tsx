@@ -4,6 +4,14 @@ import { ArrowRight } from "lucide-react";
 
 const SOCIALS = [{ label: "Instagram PPIT Nanjing", href: "https://www.instagram.com/ppit_nanjing/" }];
 
+const ABOUT_LINKS = [
+  { href: "/organization", label: "Struktur Organisasi" },
+  { href: "/sensus", label: "Isi Sensus" },
+  { href: "/terms", label: "Ketentuan" },
+  { href: "/privacy", label: "Privasi" },
+  { href: "/organization/ad-art", label: "AD/ART" },
+];
+
 export function SiteFooter() {
   return (
     <footer className="w-full mt-16 px-[var(--spacing-container-padding)]">
@@ -32,6 +40,19 @@ export function SiteFooter() {
                 {i < NAV_LINKS.length - 1 && <span className="mx-2 opacity-40">|</span>}
               </span>
             ))}
+          </div>
+          <div className="flex flex-col items-center md:items-start gap-2">
+            <span className="text-label-caps uppercase opacity-70">Tentang</span>
+            <div className="text-body-md flex gap-2 flex-wrap justify-center">
+              {ABOUT_LINKS.map((link, i) => (
+                <span key={link.href}>
+                  <a href={link.href} className="hover:text-primary-fixed-dim transition-colors">
+                    {link.label}
+                  </a>
+                  {i < ABOUT_LINKS.length - 1 && <span className="mx-2 opacity-40">|</span>}
+                </span>
+              ))}
+            </div>
           </div>
           <div className="flex items-center gap-4">
             {SOCIALS.map((s) => (
