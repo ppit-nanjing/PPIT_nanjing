@@ -4,12 +4,20 @@ import { FileUpload } from "@/components/upload/file-upload";
 import { AIImproveButton } from "@/components/ai/ai-improve-button";
 import { AIReviewButton } from "@/components/ai/ai-review-popup";
 import { CollapsibleSection } from "@/components/console/collapsible-section";
+import { ArrowLeft } from "lucide-react";
+import Link from "next/link";
 
 export default async function NewNewsArticlePage() {
   await requireModuleAccess("content");
 
   return (
     <div className="px-4 py-6 sm:px-6 lg:px-8 lg:py-10 max-w-2xl">
+      <Link
+        href="/console/content"
+        className="inline-flex items-center gap-2 text-label-caps uppercase tracking-wide text-on-surface-variant hover:text-on-background mb-4"
+      >
+        <ArrowLeft size={16} /> Kembali ke Konten
+      </Link>
       <h1 className="text-headline-md sm:text-headline-lg text-on-background mb-8">Tulis Berita Baru</h1>
       <CollapsibleSection title="Formulir Berita">
         <form action={upsertNewsArticle.bind(null, null)} className="flex flex-col gap-6">
