@@ -10,10 +10,12 @@ import { BackButton } from "@/components/profile/back-button";
 import { ImageUploadCropper } from "@/components/upload/image-upload-cropper";
 import { updateProfile } from "@/app/actions/user";
 import { ClipboardCheck, ClipboardList, UserRound } from "lucide-react";
+import Image from "next/image";
+import Link from "next/link";
 
 export default async function ProfilePage() {
   const session = await auth();
-  if (!session?.user?.id) redirect("/login");
+  if (!session?.user?.id) redirect(`/login?returnTo=${encodeURIComponent("/profile")}`);
 
   const [user] = await db.select().from(users).where(eq(users.id, session.user.id));
   const [sensus] = await db.select().from(sensusProfiles).where(eq(sensusProfiles.userId, session.user.id));
@@ -27,10 +29,11 @@ export default async function ProfilePage() {
 
         <div className="flex items-center gap-4 mb-10">
           {user?.avatarUrl || session.user.image ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img
-              src={user?.avatarUrl || session.user.image || undefined}
+            <Image
+              src={(user?.avatarUrl || session.user.image) as string}
               alt={user?.name ?? session.user.name ?? "Profile"}
+              width={64}
+              height={64}
               className="w-16 h-16 rounded-full object-cover border border-outline-variant"
             />
           ) : (
@@ -117,7 +120,7 @@ export default async function ProfilePage() {
         </form>
 
         <h2 className="text-label-caps uppercase tracking-widest text-secondary mb-4">Data Sensus</h2>
-        <a
+        <Link
           href="/sensus"
           className="flex items-center justify-between gap-4 bg-surface-container-lowest border border-outline-variant rounded-lg p-5 mb-10 hover:bg-surface-container-low transition-colors"
         >
@@ -139,7 +142,7 @@ export default async function ProfilePage() {
           <span className="text-label-caps text-primary-container shrink-0">
             {sensus ? "Ubah" : "Isi Sekarang"}
           </span>
-        </a>
+        </Link>
 
         <h2 className="text-label-caps uppercase tracking-widest text-secondary mb-4">Preferensi Notifikasi</h2>
         <EmailSubscriptionToggle initialSubscribed={session.user.emailSubscribed} />
