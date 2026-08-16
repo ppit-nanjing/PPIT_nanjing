@@ -8,6 +8,7 @@ import { SiteFooter } from "@/components/site-footer";
 import { Reveal } from "@/components/reveal";
 import { SectionHeading } from "@/components/section-heading";
 import { ContentCard } from "@/components/content-card";
+import { EmptyState } from "@/components/empty-state";
 import { StatsGrid } from "@/components/stats-grid";
 import { CitiesGrid } from "@/components/cities-grid";
 import { QuoteMark } from "@/components/quote-mark";
@@ -105,9 +106,9 @@ export default async function Home() {
           />
           <Link
             href="/events"
-            className="inline-flex items-center gap-2 bg-on-primary text-primary text-label-caps uppercase tracking-wide px-8 py-4 rounded-md hover:scale-105 transition-transform"
+            className="inline-flex items-center gap-2 bg-on-primary text-primary text-label-caps uppercase tracking-wide px-8 py-4 rounded-md hover:scale-105 transition-transform motion-reduce:hover:scale-100 motion-reduce:transition-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-on-primary focus-visible:ring-offset-2 focus-visible:ring-offset-on-background"
           >
-            Jelajahi Kegiatan <ArrowRight size={18} />
+            Jelajahi Kegiatan <ArrowRight size={18} aria-hidden="true" />
           </Link>
         </div>
       </header>
@@ -133,7 +134,7 @@ export default async function Home() {
                 kita pastikan setiap pelajar Indonesia di sini memiliki support system terbaik untuk
                 berkarya dan berkontribusi.&rdquo;
               </p>
-              <h4 className="text-headline-md text-on-background mb-1">Ketua Umum PPIT Nanjing</h4>
+              <p className="text-headline-md text-on-background mb-1">Ketua Umum PPIT Nanjing</p>
               <p className="text-label-caps text-secondary uppercase">Periode 2026-2027</p>
             </div>
           </section>
@@ -151,13 +152,13 @@ export default async function Home() {
           </section>
         </Reveal>
 
-        {/* Latest Events - only renders once an admin has published something via /console/events */}
-        {latestEvents.length > 0 && (
-          <Reveal>
-            <section className="flex flex-col gap-8">
-              <SectionHeading kicker="Kegiatan Terbaru" title="Latest Events" href="/events" />
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-                {latestEvents.map((e) => (
+        {/* Latest Events - honest empty state guides users when nothing is published yet */}
+        <Reveal>
+          <section className="flex flex-col gap-8">
+            <SectionHeading kicker="Agenda" title="Kegiatan Terbaru" href="/events" />
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+              {latestEvents.length > 0 ? (
+                latestEvents.map((e) => (
                   <ContentCard
                     key={e.id}
                     href={`/events/${e.slug}`}
@@ -167,19 +168,27 @@ export default async function Home() {
                     title={e.title}
                     excerpt={e.description}
                   />
-                ))}
-              </div>
-            </section>
-          </Reveal>
-        )}
+                ))
+              ) : (
+                <EmptyState
+                  icon="calendar"
+                  title="Belum ada kegiatan"
+                  description="Kegiatan terbaru akan muncul di sini setelah dipublikasikan. Sementara itu, lihat seluruh agenda PPIT Nanjing."
+                  ctaHref="/events"
+                  ctaLabel="Lihat semua kegiatan"
+                />
+              )}
+            </div>
+          </section>
+        </Reveal>
 
-        {/* Latest News - same honesty rule: no section rendered until real content exists */}
-        {latestNews.length > 0 && (
-          <Reveal>
-            <section className="flex flex-col gap-8">
-              <SectionHeading kicker="Kabar Terbaru" title="Latest News" href="/news" />
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-                {latestNews.map((a) => (
+        {/* Latest News - same honesty rule, with a graceful empty state */}
+        <Reveal>
+          <section className="flex flex-col gap-8">
+            <SectionHeading kicker="Publikasi" title="Kabar Terbaru" href="/news" />
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+              {latestNews.length > 0 ? (
+                latestNews.map((a) => (
                   <ContentCard
                     key={a.id}
                     href={`/news/${a.slug}`}
@@ -190,11 +199,19 @@ export default async function Home() {
                     title={a.title}
                     excerpt={a.content}
                   />
-                ))}
-              </div>
-            </section>
-          </Reveal>
-        )}
+                ))
+              ) : (
+                <EmptyState
+                  icon="news"
+                  title="Belum ada kabar terbaru"
+                  description="Informasi dan pengumuman terbaru dari PPIT Nanjing akan tampil di sini. Cek halaman berita untuk kabar terkini."
+                  ctaHref="/news"
+                  ctaLabel="Lihat semua berita"
+                />
+              )}
+            </div>
+          </section>
+        </Reveal>
       </main>
 
       <SiteFooter />
