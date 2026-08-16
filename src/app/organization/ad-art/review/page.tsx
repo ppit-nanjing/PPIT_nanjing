@@ -32,7 +32,7 @@ export default async function ReviewAdArtGuidelinesPage() {
             <ul className="flex flex-col gap-3 text-body-md">
               {SECTIONS.map((s, i) => (
                 <li key={s.id}>
-                  <a href={`#${s.id}`} className="text-on-background hover:text-primary-container transition-colors">
+                  <a href={`#${s.id}`} className="text-on-background hover:text-primary-container transition-colors rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-container focus-visible:ring-offset-2 focus-visible:ring-offset-background motion-reduce:transition-none">
                     {i + 1}. {s.title}
                   </a>
                 </li>
@@ -44,7 +44,7 @@ export default async function ReviewAdArtGuidelinesPage() {
         <article className="md:col-span-9 bg-surface-container-lowest border border-outline-variant rounded-xl p-6 md:p-12">
           <header className="mb-10 pb-8 border-b border-outline-variant">
             <div className="inline-flex items-center gap-2 bg-surface-container-high text-primary-container px-3 py-1 rounded-full text-label-caps uppercase mb-4">
-              <Gavel size={14} /> Dokumen Resmi
+              <Gavel size={14} aria-hidden /> Dokumen Resmi
             </div>
             <h1 className="text-display-hero-mobile md:text-display-hero text-on-background mb-4">
               Tinjauan Panduan AD/ART
@@ -121,7 +121,7 @@ export default async function ReviewAdArtGuidelinesPage() {
                     <h4 className="text-body-md font-semibold text-on-background mb-1">Pengajuan Peminjaman</h4>
                     <p className="text-body-md">
                       Pengajuan harus dikirim lewat{" "}
-                      <Link href="/inventory" className="text-primary-container underline">
+                      <Link href="/inventory" className="text-primary-container underline rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-container focus-visible:ring-offset-2 focus-visible:ring-offset-background motion-reduce:transition-none">
                         portal resmi
                       </Link>{" "}
                       minimal 48 jam sebelum tanggal yang dibutuhkan.
@@ -164,9 +164,9 @@ export default async function ReviewAdArtGuidelinesPage() {
             {doc?.fileUrl && (
               <a
                 href={doc.fileUrl}
-                className="flex items-center gap-2 text-primary-container hover:text-primary transition-colors"
+                className="flex items-center gap-2 text-primary-container hover:text-primary transition-colors rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-container focus-visible:ring-offset-2 focus-visible:ring-offset-background motion-reduce:transition-none"
               >
-                <Download size={16} /> Unduh AD/ART Lengkap
+                <Download size={16} aria-hidden /> Unduh AD/ART Lengkap
               </a>
             )}
           </div>
