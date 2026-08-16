@@ -16,7 +16,11 @@ import {
 import { hasModuleAccess } from "@/lib/admin-scope";
 
 function csvEscape(value: unknown): string {
-  const s = value == null ? "" : String(value);
+  let s = value == null ? "" : String(value);
+  // Guard against CSV/formula injection: a cell that starts with = + - @ can
+  // be executed by spreadsheet software on open. Prefix with a single quote
+  // (the standard neutralizer) after quoting.
+  if (/^[=+\-@]/.test(s)) s = `'${s}`;
   return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
 }
 
