@@ -34,7 +34,7 @@ export async function improveTextAction(text: string, context: ImproveContext): 
   return improveIndonesianText(clean, context);
 }
 
-export const PROFILE_FIELDS = [
+const PROFILE_FIELDS = [
   "name",
   "phone",
   "wechatId",
