@@ -12,6 +12,7 @@ import {
   doublePrecision,
   primaryKey,
   uniqueIndex,
+  AnyPgColumn,
 } from "drizzle-orm/pg-core";
 
 // ---------- Enums ----------
@@ -216,7 +217,7 @@ export const sensusProfiles = pgTable("sensus_profiles", {
 export const departments = pgTable("departments", {
   id: uuid("id").defaultRandom().primaryKey(),
   name: text("name").notNull(),
-  parentDepartmentId: uuid("parent_department_id").references((): any => departments.id),
+  parentDepartmentId: uuid("parent_department_id").references((): AnyPgColumn => departments.id),
   headUserId: uuid("head_user_id").references(() => users.id),
   orderIndex: integer("order_index").notNull().default(0),
   description: text("description"),
