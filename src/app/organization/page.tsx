@@ -3,7 +3,17 @@ import { db } from "@/db";
 import { departments, departmentMembers, users } from "@/db/schema";
 import { SiteNav } from "@/components/site-nav";
 import { SiteFooter } from "@/components/site-footer";
-import { Building2, UserRound, Briefcase, Camera, FolderGit2, Music2, Video } from "lucide-react";
+import {
+  Building2,
+  UserRound,
+  Briefcase,
+  Camera,
+  FolderGit2,
+  Music2,
+  Video,
+  Crown,
+  Users,
+} from "lucide-react";
 
 type SocialLinks = {
   linkedinUrl: string | null;
@@ -43,8 +53,46 @@ function SocialIcons({ member }: { member: SocialLinks }) {
   );
 }
 
+// Warm-institutional branch accents (kept subtle to match the design system).
+const BRANCH_ACCENT = [
+  "var(--color-primary)",
+  "var(--color-muted-gold)",
+  "var(--color-secondary)",
+  "var(--color-tertiary)",
+];
+
+function NodeMember({ member }: { member: SocialLinks & { name: string | null; image: string | null; avatarUrl: string | null; position: string | null } }) {
+  return (
+    <div className="flex items-center gap-2">
+      {member.avatarUrl || member.image ? (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img
+          src={member.avatarUrl || member.image || undefined}
+          alt={member.name ?? ""}
+          className="w-7 h-7 rounded-full object-cover border border-outline-variant shrink-0"
+        />
+      ) : (
+        <div className="w-7 h-7 rounded-full bg-surface-container flex items-center justify-center text-on-surface-variant shrink-0">
+          <UserRound size={12} />
+        </div>
+      )}
+      <div className="min-w-0">
+        <p className="text-label-caps font-semibold text-on-background leading-tight truncate">
+          {member.name ?? "Anggota"}
+        </p>
+        {member.position && (
+          <p className="text-label-caps text-on-surface-variant leading-tight truncate">{member.position}</p>
+        )}
+      </div>
+      <SocialIcons member={member} />
+    </div>
+  );
+}
+
 export default async function OrganizationPage() {
-  const topLevel = await db.select().from(departments).where(isNull(departments.parentDepartmentId));
+  const topLevel = (await db.select().from(departments).where(isNull(departments.parentDepartmentId))).sort(
+    (a, b) => a.orderIndex - b.orderIndex,
+  );
   const all = await db.select().from(departments);
   const childrenOf = (parentId: string) =>
     all.filter((d) => d.parentDepartmentId === parentId).sort((a, b) => a.orderIndex - b.orderIndex);
@@ -72,32 +120,48 @@ export default async function OrganizationPage() {
     membersByDept.set(m.departmentId, list);
   }
 
-  function MemberList({ deptId }: { deptId: string }) {
-    const members = membersByDept.get(deptId);
-    if (!members || members.length === 0) return null;
+  // Map every department (and its divisions) to its top-level branch color.
+  const colorByDept = new Map<string, string>();
+  topLevel.forEach((t, i) => {
+    const color = BRANCH_ACCENT[i % BRANCH_ACCENT.length];
+    colorByDept.set(t.id, color);
+    for (const c of childrenOf(t.id)) colorByDept.set(c.id, color);
+  });
+
+  function OrgNode({
+    deptId,
+    name,
+    description,
+    color,
+  }: {
+    deptId: string;
+    name: string;
+    description: string | null;
+    color: string;
+  }) {
+    const members = membersByDept.get(deptId) ?? [];
+    const Icon = name.startsWith("Badan Pengurus") ? Users : Building2;
     return (
-      <div className="flex flex-wrap gap-3 mt-4 pt-4 border-t border-outline-variant">
-        {members.map((m, i) => (
-          <div key={i} className="flex items-center gap-2">
-            {m.avatarUrl || m.image ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img
-                src={m.avatarUrl || m.image || undefined}
-                alt={m.name ?? ""}
-                className="w-8 h-8 rounded-full object-cover border border-outline-variant"
-              />
-            ) : (
-              <div className="w-8 h-8 rounded-full bg-surface-container flex items-center justify-center text-on-surface-variant shrink-0">
-                <UserRound size={14} />
-              </div>
+      <div className="ppit-node" style={{ borderTopColor: color }}>
+        <div className="flex items-center gap-2 mb-1.5">
+          <span className="ppit-node-ico shrink-0" style={{ color }}>
+            <Icon style={{ color }} />
+          </span>
+          <h3 className="text-body-md font-semibold text-on-background leading-tight">{name}</h3>
+        </div>
+        {description && (
+          <p className="text-label-caps text-on-surface-variant leading-snug mb-2">{description}</p>
+        )}
+        {members.length > 0 && (
+          <div className="flex flex-col gap-2 mt-1 pt-2 border-t border-outline-variant">
+            {members.slice(0, 5).map((m, i) => (
+              <NodeMember key={i} member={m} />
+            ))}
+            {members.length > 5 && (
+              <p className="text-label-caps text-on-surface-variant">+{members.length - 5} lainnya</p>
             )}
-            <div>
-              <p className="text-label-caps font-semibold text-on-background leading-tight">{m.name ?? "Anggota"}</p>
-              {m.position && <p className="text-label-caps text-on-surface-variant leading-tight">{m.position}</p>}
-              <SocialIcons member={m} />
-            </div>
           </div>
-        ))}
+        )}
       </div>
     );
   }
@@ -107,7 +171,7 @@ export default async function OrganizationPage() {
       <SiteNav />
 
       <header className="max-w-[var(--container-max)] mx-auto px-[var(--spacing-container-padding)] pt-16 pb-8">
-        <span className="text-label-caps text-primary-container tracking-widest uppercase mb-2 block">
+        <span className="text-label-caps tracking-widest uppercase mb-2 block text-primary-container">
           Kepengurusan 2026/2027
         </span>
         <h1 className="text-display-hero-mobile md:text-display-hero text-on-background mb-4">
@@ -115,57 +179,74 @@ export default async function OrganizationPage() {
         </h1>
         <p className="text-body-lg text-on-surface-variant max-w-2xl">
           Kabinet Maju PPIT Nanjing terdiri dari Badan Pengurus Harian (BPH) dan tiga departemen,
-          masing-masing menaungi tiga divisi.
+          masing-masing menaungi tiga divisi. Geser ke samping pada layar kecil untuk melihat seluruh
+          struktur.
         </p>
       </header>
 
-      <main className="max-w-[var(--container-max)] mx-auto px-[var(--spacing-container-padding)] pb-24 flex flex-col gap-10">
-        {topLevel
-          .sort((a, b) => a.orderIndex - b.orderIndex)
-          .map((dept) => {
-            const children = childrenOf(dept.id);
-            return (
-              <section
-                key={dept.id}
-                className="bg-surface-container-lowest border border-outline-variant rounded-xl p-8"
-              >
-                <div className="flex items-start gap-4 mb-6">
-                  <div className="w-10 h-10 rounded-lg bg-primary-container/10 flex items-center justify-center shrink-0">
-                    <Building2 className="text-primary-container" size={20} />
-                  </div>
-                  <div>
-                    <h2 className="text-headline-md text-on-background">{dept.name}</h2>
-                    {dept.description && (
-                      <p className="text-body-md text-on-surface-variant mt-1">{dept.description}</p>
-                    )}
-                  </div>
-                </div>
-                <MemberList deptId={dept.id} />
-
-                {children.length > 0 && (
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-6">
-                    {children.map((c) => (
-                      <div
-                        key={c.id}
-                        className="bg-surface-container-low border border-outline-variant rounded-lg p-5"
-                      >
-                        <h3 className="text-body-md font-semibold text-on-background mb-1">{c.name}</h3>
-                        {c.description && (
-                          <p className="text-label-caps text-on-surface-variant">{c.description}</p>
-                        )}
-                        <MemberList deptId={c.id} />
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </section>
-            );
-          })}
-
-        {topLevel.length === 0 && (
+      <main className="max-w-[var(--container-max)] mx-auto px-[var(--spacing-container-padding)] pb-12">
+        {topLevel.length === 0 ? (
           <p className="text-body-md text-on-surface-variant text-center py-12">
             Struktur organisasi belum tersedia.
           </p>
+        ) : (
+          <div className="ppit-org-tree">
+            <ul>
+              <li>
+                <div className="ppit-node ppit-node-apex" style={{ borderTopColor: "var(--color-primary)" }}>
+                  <div className="flex items-center gap-2">
+                    <span className="ppit-node-ico" style={{ color: "var(--color-primary)" }}>
+                      <Crown size={16} style={{ color: "var(--color-primary)" }} />
+                    </span>
+                    <div>
+                      <h2 className="text-headline-md text-on-background leading-tight">PPIT Nanjing</h2>
+                      <p className="text-label-caps text-on-surface-variant">Kabinet Maju · 2026/2027</p>
+                    </div>
+                  </div>
+                </div>
+                <ul>
+                  {topLevel.map((dept) => (
+                    <li key={dept.id}>
+                      <OrgNode
+                        deptId={dept.id}
+                        name={dept.name}
+                        description={dept.description}
+                        color={colorByDept.get(dept.id) ?? "var(--color-primary)"}
+                      />
+                      {childrenOf(dept.id).length > 0 && (
+                        <ul>
+                          {childrenOf(dept.id).map((c) => (
+                            <li key={c.id}>
+                              <OrgNode
+                                deptId={c.id}
+                                name={c.name}
+                                description={c.description}
+                                color={colorByDept.get(c.id) ?? "var(--color-primary)"}
+                              />
+                            </li>
+                          ))}
+                        </ul>
+                      )}
+                    </li>
+                  ))}
+                </ul>
+              </li>
+            </ul>
+          </div>
+        )}
+
+        {topLevel.length > 0 && (
+          <div className="flex flex-wrap gap-x-6 gap-y-2 justify-center mt-10">
+            {topLevel.map((t, i) => (
+              <div key={t.id} className="flex items-center gap-2 text-label-caps text-on-surface-variant">
+                <span
+                  className="w-3 h-3 rounded-full"
+                  style={{ background: BRANCH_ACCENT[i % BRANCH_ACCENT.length] }}
+                />
+                {t.name}
+              </div>
+            ))}
+          </div>
         )}
       </main>
 

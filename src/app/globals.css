@@ -99,3 +99,99 @@ body {
   background: var(--color-background);
   color: var(--color-on-background);
 }
+
+/* ===== Org chart (Struktur Organisasi) ===== */
+.ppit-org-tree {
+  overflow-x: auto;
+  padding-bottom: 8px;
+}
+.ppit-org-tree ul {
+  display: flex;
+  padding-top: 28px;
+  position: relative;
+  align-items: flex-start;
+  justify-content: center;
+}
+.ppit-org-tree > ul {
+  padding-top: 0;
+}
+.ppit-org-tree li {
+  list-style: none;
+  position: relative;
+  padding: 28px 10px 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  flex: 0 0 auto;
+}
+.ppit-org-tree > ul > li {
+  padding-top: 0;
+}
+.ppit-org-tree > ul > li::before,
+.ppit-org-tree > ul > li::after {
+  display: none;
+}
+.ppit-org-tree li::before,
+.ppit-org-tree li::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  width: 50%;
+  height: 28px;
+  border-top: 2px solid var(--color-outline-variant);
+}
+.ppit-org-tree li::before {
+  right: 50%;
+}
+.ppit-org-tree li::after {
+  left: 50%;
+  border-left: 2px solid var(--color-outline-variant);
+}
+.ppit-org-tree li:only-child {
+  padding-top: 0;
+}
+.ppit-org-tree li:only-child::before,
+.ppit-org-tree li:only-child::after {
+  display: none;
+}
+.ppit-org-tree li:first-child::before,
+.ppit-org-tree li:last-child::after {
+  border: 0 none;
+}
+.ppit-org-tree li:last-child::before {
+  border-right: 2px solid var(--color-outline-variant);
+}
+.ppit-org-tree ul ul {
+  padding-top: 28px;
+}
+.ppit-org-tree ul ul::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 50%;
+  width: 0;
+  height: 28px;
+  border-left: 2px solid var(--color-outline-variant);
+}
+.ppit-node {
+  width: 224px;
+  background: var(--color-surface-container-lowest);
+  border: 1px solid var(--color-outline-variant);
+  border-top: 3px solid var(--color-primary);
+  border-radius: var(--radius-lg);
+  padding: 14px 16px;
+  text-align: left;
+  box-shadow: 0 1px 2px rgba(39, 23, 22, 0.05);
+}
+.ppit-node-apex {
+  width: 264px;
+}
+.ppit-node-ico {
+  width: 30px;
+  height: 30px;
+  border-radius: 9px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: color-mix(in srgb, currentColor 14%, transparent);
+}
