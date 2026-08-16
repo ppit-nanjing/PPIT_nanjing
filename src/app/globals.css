@@ -195,3 +195,16 @@ body {
   justify-content: center;
   background: color-mix(in srgb, currentColor 14%, transparent);
 }
+
+/* Compact variant: smaller nodes + tighter spacing for a denser chart. */
+.ppit-org-tree.is-compact .ppit-node {
+  width: 184px;
+  padding: 10px 12px;
+}
+.ppit-org-tree.is-compact .ppit-node-apex {
+  width: 216px;
+}
+.ppit-org-tree.is-compact .ppit-node-ico {
+  width: 26px;
+  height: 26px;
+}
