@@ -4,7 +4,7 @@ import { eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { auth } from "@/auth";
 import { db } from "@/db";
-import { users, departmentMembers } from "@/db/schema";
+import { users, departmentMembers, departments, membershipApplications, feedback } from "@/db/schema";
 import { hasModuleAccess } from "@/lib/admin-scope";
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -63,5 +63,29 @@ export async function createInvitedUser(formData: FormData) {
   if (departmentId) {
     await db.insert(departmentMembers).values({ userId: row.id, departmentId, position: position || null });
   }
+  revalidatePath("/console/users");
+}
+
+export async function updateUserDetails(userId: string, name: string, email: string) {
+  await assertAdmin();
+  const n = name.trim();
+  const e = email.trim().toLowerCase();
+  if (!n || !EMAIL_RE.test(e)) throw new Error("Nama dan email wajib diisi dengan benar");
+  const [existing] = await db.select({ id: users.id }).from(users).where(eq(users.email, e));
+  if (existing && existing.id !== userId) throw new Error("Email sudah digunakan oleh akun lain");
+  await db.update(users).set({ name: n, email: e }).where(eq(users.id, userId));
+  revalidatePath("/console/users");
+}
+
+export async function deleteUser(userId: string) {
+  await assertAdmin();
+  const session = await auth();
+  if (session?.user?.id === userId) throw new Error("Tidak bisa menghapus akun sendiri");
+  // Clear references first - membership_applications.userId, feedback.userId and
+  // departments.headUserId have no ON DELETE cascade, so leaving them would fail.
+  await db.update(departments).set({ headUserId: null }).where(eq(departments.headUserId, userId));
+  await db.update(membershipApplications).set({ userId: null }).where(eq(membershipApplications.userId, userId));
+  await db.update(feedback).set({ userId: null }).where(eq(feedback.userId, userId));
+  await db.delete(users).where(eq(users.id, userId));
   revalidatePath("/console/users");
 }
