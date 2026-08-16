@@ -4,6 +4,8 @@ import { inventoryItems } from "@/db/schema";
 import { SiteNav } from "@/components/site-nav";
 import { SiteFooter } from "@/components/site-footer";
 import { Package, MapPin, Search } from "lucide-react";
+import Image from "next/image";
+import Link from "next/link";
 
 const CONDITION_LABEL: Record<string, string> = { good: "Baik", damaged: "Rusak", retired: "Pensiun" };
 
@@ -39,18 +41,18 @@ export default async function InventoryPage({
         </p>
 
         <div className="flex flex-wrap gap-3 mb-8">
-          <a
+          <Link
             href="/inventory/contribute"
             className="bg-primary-container text-on-primary text-label-caps uppercase tracking-wide px-5 py-2.5 rounded-md hover:bg-primary transition-colors"
           >
             Sumbangkan / Pinjamkan Barang
-          </a>
-          <a
+          </Link>
+          <Link
             href="/inventory/request-new"
             className="bg-surface-container-low text-on-background text-label-caps uppercase tracking-wide px-5 py-2.5 rounded-md border border-outline-variant hover:bg-surface-container-lowest transition-colors"
           >
             Usulkan Barang Baru
-          </a>
+          </Link>
         </div>
 
         <form action="/inventory" className="relative max-w-xl mb-6">
@@ -129,8 +131,13 @@ export default async function InventoryPage({
                     {item.availableQuantity > 0 ? "Tersedia" : "Tidak Tersedia"}
                   </span>
                   {item.imageUrl ? (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img src={item.imageUrl} alt={item.name} className="w-full h-full object-cover" />
+                    <Image
+                      src={item.imageUrl}
+                      alt={item.name}
+                      fill
+                      sizes="(max-width: 768px) 100vw, 33vw"
+                      className="object-cover"
+                    />
                   ) : (
                     <Package className="text-outline-variant" size={28} />
                   )}
