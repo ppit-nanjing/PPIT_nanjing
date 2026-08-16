@@ -9,6 +9,7 @@ import { Reveal } from "@/components/reveal";
 import { FilterTabs } from "@/components/filter-tabs";
 import { NewsCard } from "@/components/news-card";
 import { Newspaper, ArrowRight } from "lucide-react";
+import Image from "next/image";
 
 export default async function NewsPage({
   searchParams,
@@ -81,13 +82,14 @@ export default async function NewsPage({
                   href={`/news/${featured.slug}`}
                   className="group grid grid-cols-1 lg:grid-cols-2 bg-surface-container-lowest border border-outline-variant rounded-xl overflow-hidden hover:shadow-[0_14px_40px_rgba(39,23,22,0.10)] hover:-translate-y-1 transition-all duration-300"
                 >
-                  <div className="h-64 lg:h-auto bg-surface-container-low overflow-hidden">
+                  <div className="relative h-64 lg:h-auto bg-surface-container-low overflow-hidden">
                     {featured.coverImageUrl ? (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img
+                      <Image
                         src={featured.coverImageUrl}
                         alt={featured.title}
-                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"
+                        fill
+                        sizes="(max-width: 768px) 100vw, 50vw"
+                        className="object-cover group-hover:scale-105 transition-transform duration-700"
                       />
                     ) : (
                       <div className="w-full h-full flex items-center justify-center">
