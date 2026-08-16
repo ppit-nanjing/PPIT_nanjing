@@ -1,6 +1,7 @@
 import { db } from "@/db";
 import { helpArticles } from "@/db/schema";
 import { Plus, FileText, History } from "lucide-react";
+import { CollapsibleSection } from "@/components/console/collapsible-section";
 
 export default async function ConsoleDocsPage() {
   const articles = await db.select().from(helpArticles);
@@ -40,10 +41,9 @@ export default async function ConsoleDocsPage() {
           <p className="text-body-md text-on-surface-variant">Belum ada panduan yang ditulis.</p>
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           {Object.entries(bySection).map(([section, items]) => (
-            <div key={section}>
-              <h2 className="text-headline-md text-on-background mb-4">{section}</h2>
+            <CollapsibleSection key={section} title={section}>
               <div className="flex flex-col gap-2">
                 {items.map((a) => (
                   <a
@@ -55,7 +55,7 @@ export default async function ConsoleDocsPage() {
                   </a>
                 ))}
               </div>
-            </div>
+            </CollapsibleSection>
           ))}
         </div>
       )}
