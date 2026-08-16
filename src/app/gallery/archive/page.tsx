@@ -9,6 +9,7 @@ import { Reveal } from "@/components/reveal";
 import { FilterTabs } from "@/components/filter-tabs";
 import { GalleryCard } from "@/components/gallery-card";
 import { Images } from "lucide-react";
+import Link from "next/link";
 
 export default async function GalleryArchivePage({
   searchParams,
@@ -56,15 +57,28 @@ export default async function GalleryArchivePage({
 
         {filtered.length === 0 ? (
           <Reveal>
-            <div className="flex flex-col items-center text-center py-24">
-              <Images className="text-outline-variant mb-4" size={40} />
-              <p className="text-body-md text-on-surface-variant">
-                {year ? `Tidak ada album di tahun ${year}.` : "Belum ada album yang dipublikasikan."}
+            <div role="status" aria-live="polite" className="flex flex-col items-center text-center py-24">
+              <Images className="text-outline-variant mb-4" size={40} aria-hidden />
+              <h2 className="text-headline-md text-on-background mb-2">
+                {year ? `Tidak ada album di tahun ${year}` : "Belum ada album"}
+              </h2>
+              <p className="text-body-md text-on-surface-variant max-w-md">
+                {year
+                  ? "Coba pilih tahun lain, atau lihat seluruh arsip."
+                  : "Dokumentasi kegiatan akan muncul di sini setelah album dipublikasikan."}
               </p>
+              {year && (
+                <Link
+                  href="/gallery/archive"
+                  className="mt-6 bg-primary-container text-on-primary text-label-caps uppercase tracking-wide px-6 py-3 rounded-md hover:bg-primary transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-container focus-visible:ring-offset-2 focus-visible:ring-offset-background motion-reduce:transition-none"
+                >
+                  Lihat semua tahun
+                </Link>
+              )}
             </div>
           </Reveal>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <section aria-label="Daftar album" className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
             {filtered.map((album, i) => (
               <GalleryCard
                 key={album.id}
@@ -75,7 +89,7 @@ export default async function GalleryArchivePage({
                 year={album.createdAt.getFullYear()}
               />
             ))}
-          </div>
+          </section>
         )}
       </main>
 
