@@ -83,8 +83,10 @@ export default function AboutPage() {
               Selain mahasiswa di Kota Nanjing sendiri, PPIT Nanjing menaungi pelajar Indonesia di
               kota-kota sekitarnya serta dua ranting organisasi aktif setingkat kampus.
             </p>
-            <div className="flex flex-col gap-4">
-              <div className="bg-surface-container-low border border-outline-variant text-on-background rounded-xl p-6 sm:p-8">
+          </Reveal>
+          <div className="flex flex-col gap-4">
+            <Reveal delay={0.05}>
+              <div className="bg-surface-container-low border border-outline-variant text-on-background rounded-xl p-6 sm:p-8 transition-all duration-300 hover:-translate-y-1 hover:border-primary-container hover:shadow-md">
                 <div className="w-12 h-12 bg-primary-container/15 rounded-full flex items-center justify-center mb-4">
                   <MapPinned className="text-primary-container" size={22} />
                 </div>
@@ -100,12 +102,11 @@ export default function AboutPage() {
                   ))}
                 </div>
               </div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                {RANTING.map((r) => (
-                  <div
-                    key={r.name}
-                    className="bg-surface-container-low border border-outline-variant rounded-xl p-6 flex items-center gap-4"
-                  >
+            </Reveal>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              {RANTING.map((r, i) => (
+                <Reveal key={r.name} delay={0.1 + i * 0.08} className="h-full">
+                  <div className="h-full bg-surface-container-low border border-outline-variant rounded-xl p-6 flex items-center gap-4 transition-all duration-300 hover:-translate-y-1 hover:border-primary-container hover:bg-surface-container">
                     <div className="w-12 h-12 shrink-0 bg-primary-container/15 rounded-full flex items-center justify-center">
                       <GraduationCap className="text-primary-container" size={22} />
                     </div>
@@ -114,10 +115,10 @@ export default function AboutPage() {
                       <p className="text-headline-sm text-on-surface">{r.campus}</p>
                     </div>
                   </div>
-                ))}
-              </div>
+                </Reveal>
+              ))}
             </div>
-          </Reveal>
+          </div>
         </section>
 
         <Reveal>
