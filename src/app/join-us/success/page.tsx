@@ -1,6 +1,7 @@
 import { SiteNav } from "@/components/site-nav";
 import { SiteFooter } from "@/components/site-footer";
 import { CheckCircle2 } from "lucide-react";
+import Link from "next/link";
 
 export default function JoinUsSuccessPage() {
   return (
@@ -15,12 +16,12 @@ export default function JoinUsSuccessPage() {
           Terima kasih sudah mendaftar sebagai calon pengurus PPIT Nanjing. Proses wawancara akan
           dikabarkan lewat grup rekrutmen.
         </p>
-        <a
+        <Link
           href="/"
           className="bg-primary-container text-on-primary text-label-caps uppercase tracking-wide px-6 py-3 rounded-md hover:bg-primary transition-colors"
         >
           Kembali ke Beranda
-        </a>
+        </Link>
       </main>
       <SiteFooter />
     </div>
