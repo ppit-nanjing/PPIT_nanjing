@@ -10,6 +10,7 @@ import {
 } from "@/app/actions/membership";
 import { MembershipDeleteButton } from "@/components/console/membership-delete-button";
 import { MembershipTabs } from "@/components/console/membership-tabs";
+import { CollapsibleSection } from "@/components/console/collapsible-section";
 import { CORE_KEYS } from "@/lib/membership-form";
 
 const STATUS_LABEL: Record<string, string> = {
@@ -86,44 +87,48 @@ export default async function MembershipDetailPage({ params }: { params: Promise
           : ""}
       </p>
 
-      <div className="bg-surface-container-lowest border border-outline-variant rounded-xl divide-y divide-outline-variant">
-        {FIELDS.map((f) => (
-          <div key={f.key} className="px-6 py-4">
-            <p className="text-label-caps uppercase tracking-wide text-on-surface-variant">{f.label}</p>
-            <p className="text-body-md text-on-background whitespace-pre-wrap mt-1">{row[f.key] ?? "-"}</p>
-          </div>
-        ))}
-      </div>
+      <CollapsibleSection title="Data Pendaftar">
+        <div className="bg-surface-container-lowest border border-outline-variant rounded-xl divide-y divide-outline-variant">
+          {FIELDS.map((f) => (
+            <div key={f.key} className="px-6 py-4">
+              <p className="text-label-caps uppercase tracking-wide text-on-surface-variant">{f.label}</p>
+              <p className="text-body-md text-on-background whitespace-pre-wrap mt-1">{row[f.key] ?? "-"}</p>
+            </div>
+          ))}
+        </div>
+      </CollapsibleSection>
 
       {extraAnswers.length > 0 && (
-        <div className="bg-surface-container-lowest border border-outline-variant rounded-xl divide-y divide-outline-variant mt-6">
-          <p className="px-6 py-3 text-headline-sm text-on-background">Jawaban Tambahan</p>
-          {extraAnswers.map(([k, v]) => {
-            const type = fields.find((f) => f.key === k)?.type;
-            return (
-              <div key={k} className="px-6 py-4">
-                <p className="text-label-caps uppercase tracking-wide text-on-surface-variant">{labelByKey.get(k) ?? k}</p>
-                {type === "image" && v ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img src={v} alt={labelByKey.get(k) ?? k} className="max-h-48 rounded-md object-contain mt-1" />
-                ) : type === "checkbox" ? (
-                  <p className="text-body-md text-on-background mt-1">{v === "true" ? "Ya" : "Tidak"}</p>
-                ) : type === "url" && v ? (
-                  <a href={v} target="_blank" rel="noopener noreferrer" className="text-body-md text-primary-container underline mt-1 break-all">
-                    {v}
-                  </a>
-                ) : (
-                  <p className="text-body-md text-on-background whitespace-pre-wrap mt-1">{v || "-"}</p>
-                )}
-              </div>
-            );
-          })}
-        </div>
+        <CollapsibleSection title="Jawaban Tambahan" className="mt-6">
+          <div className="bg-surface-container-lowest border border-outline-variant rounded-xl divide-y divide-outline-variant">
+            {extraAnswers.map(([k, v]) => {
+              const type = fields.find((f) => f.key === k)?.type;
+              return (
+                <div key={k} className="px-6 py-4">
+                  <p className="text-label-caps uppercase tracking-wide text-on-surface-variant">{labelByKey.get(k) ?? k}</p>
+                  {type === "image" && v ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={v} alt={labelByKey.get(k) ?? k} className="max-h-48 rounded-md object-contain mt-1" />
+                  ) : type === "checkbox" ? (
+                    <p className="text-body-md text-on-background mt-1">{v === "true" ? "Ya" : "Tidak"}</p>
+                  ) : type === "url" && v ? (
+                    <a href={v} target="_blank" rel="noopener noreferrer" className="text-body-md text-primary-container underline mt-1 break-all">
+                      {v}
+                    </a>
+                  ) : (
+                    <p className="text-body-md text-on-background whitespace-pre-wrap mt-1">{v || "-"}</p>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        </CollapsibleSection>
       )}
 
-      <div className="mt-8 grid grid-cols-1 md:grid-cols-2 gap-6">
-        <form
-          action={updateMembershipStatus}
+      <CollapsibleSection title="Tindakan Panitia" className="mt-8">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <form
+            action={updateMembershipStatus}
           className="bg-surface-container-lowest border border-outline-variant rounded-xl p-6"
         >
           <h2 className="text-headline-md text-on-background mb-4">Status</h2>
@@ -162,7 +167,8 @@ export default async function MembershipDetailPage({ params }: { params: Promise
             Simpan Catatan
           </button>
         </form>
-      </div>
+        </div>
+      </CollapsibleSection>
 
       <div className="mt-8">
         <MembershipDeleteButton id={app.id} />
