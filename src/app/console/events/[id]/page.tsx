@@ -9,6 +9,7 @@ import { requireModuleAccess } from "@/lib/admin-scope";
 import { ImageUploadCropper } from "@/components/upload/image-upload-cropper";
 import { AIImproveButton } from "@/components/ai/ai-improve-button";
 import { AIReviewButton } from "@/components/ai/ai-review-popup";
+import { CollapsibleSection } from "@/components/console/collapsible-section";
 
 export default async function ConsoleEventDetailPage({ params }: { params: Promise<{ id: string }> }) {
   await requireModuleAccess("events");
@@ -110,28 +111,29 @@ export default async function ConsoleEventDetailPage({ params }: { params: Promi
         </form>
       </details>
 
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between mb-4">
-        <h2 className="text-headline-md text-on-background">Daftar Pendaftar</h2>
-        <div className="flex items-center gap-3">
-          <a
-            href={`/console/events/${id}/scan`}
-            className="inline-flex items-center gap-2 border border-outline-variant text-on-background text-label-caps uppercase tracking-wide px-4 py-2 rounded-md hover:bg-surface-container-low transition-colors"
-          >
-            Buka Scanner Check-in
-          </a>
-          <DeleteEventButton eventId={id} label="Hapus Kegiatan" />
+      <CollapsibleSection title="Daftar Pendaftar" description={`${registrations.length} terdaftar · ${attended} hadir`}>
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between mb-4">
+          <div className="flex items-center gap-3">
+            <a
+              href={`/console/events/${id}/scan`}
+              className="inline-flex items-center gap-2 border border-outline-variant text-on-background text-label-caps uppercase tracking-wide px-4 py-2 rounded-md hover:bg-surface-container-low transition-colors"
+            >
+              Buka Scanner Check-in
+            </a>
+            <DeleteEventButton eventId={id} label="Hapus Kegiatan" />
+          </div>
         </div>
-      </div>
-      <RegistrationList
-        eventId={id}
-        registrations={registrations.map((r) => ({
-          id: r.reg.id,
-          userName: r.userName,
-          userEmail: r.userEmail,
-          status: r.reg.status,
-          registeredAt: r.reg.registeredAt.toISOString(),
-        }))}
-      />
+        <RegistrationList
+          eventId={id}
+          registrations={registrations.map((r) => ({
+            id: r.reg.id,
+            userName: r.userName,
+            userEmail: r.userEmail,
+            status: r.reg.status,
+            registeredAt: r.reg.registeredAt.toISOString(),
+          }))}
+        />
+      </CollapsibleSection>
     </div>
   );
 }
