@@ -4,6 +4,7 @@ import { newsArticles, galleryAlbums } from "@/db/schema";
 import { requireModuleAccess } from "@/lib/admin-scope";
 import { Plus, Newspaper, Images } from "lucide-react";
 import { CollapsibleSection } from "@/components/console/collapsible-section";
+import Link from "next/link";
 
 const STATUS_LABEL: Record<string, string> = { draft: "Draf", published: "Dipublikasikan" };
 
@@ -19,12 +20,12 @@ export default async function ConsoleContentPage() {
       <div className="flex flex-col gap-6">
         <CollapsibleSection title="Berita" description="Artikel berita yang dipublikasikan.">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between mb-4">
-            <a
+            <Link
               href="/console/content/news/new"
               className="flex items-center gap-2 bg-primary-container text-on-primary text-label-caps uppercase tracking-wide px-4 py-2.5 rounded-md hover:bg-primary transition-colors"
             >
               <Plus size={14} /> Tulis Berita
-            </a>
+            </Link>
           </div>
           <div className="flex flex-col gap-2">
             {articles.length === 0 && <p className="text-body-md text-on-surface-variant">Belum ada berita.</p>}
@@ -45,12 +46,12 @@ export default async function ConsoleContentPage() {
 
         <CollapsibleSection title="Galeri" description="Album foto kegiatan.">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between mb-4">
-            <a
+            <Link
               href="/console/content/gallery/new"
               className="flex items-center gap-2 bg-primary-container text-on-primary text-label-caps uppercase tracking-wide px-4 py-2.5 rounded-md hover:bg-primary transition-colors"
             >
               <Plus size={14} /> Album Baru
-            </a>
+            </Link>
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
             {albums.length === 0 && <p className="text-body-md text-on-surface-variant col-span-full">Belum ada album.</p>}
