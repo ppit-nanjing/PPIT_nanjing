@@ -8,6 +8,7 @@ import { AnimatedHeroHeading } from "@/components/animated-hero-heading";
 import { Reveal } from "@/components/reveal";
 import { GalleryLightbox } from "@/components/gallery-lightbox";
 import { ArrowLeft } from "lucide-react";
+import Link from "next/link";
 
 export default async function GalleryAlbumPage({
   params,
@@ -24,19 +25,19 @@ export default async function GalleryAlbumPage({
       <SiteNav />
 
       <main className="max-w-[var(--container-max)] mx-auto px-[var(--spacing-container-padding)] py-16">
-        <a
+        <Link
           href="/gallery"
           className="inline-flex items-center gap-1.5 text-label-caps uppercase tracking-wide text-on-surface-variant hover:text-primary-container transition-colors mb-8"
         >
           <ArrowLeft size={16} /> Kembali ke Galeri
-        </a>
+        </Link>
         <span className="mx-2 text-on-surface-variant mb-8">/</span>
-        <a
+        <Link
           href="/gallery/archive"
           className="inline-flex items-center gap-1.5 text-label-caps uppercase tracking-wide text-on-surface-variant hover:text-primary-container transition-colors mb-8"
         >
           Lihat Arsip
-        </a>
+        </Link>
 
         <AnimatedHeroHeading
           words={album.title.split(" ")}
