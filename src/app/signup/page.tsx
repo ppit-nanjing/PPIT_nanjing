@@ -3,10 +3,17 @@ import { ArrowLeft } from "lucide-react";
 import { auth, signIn } from "@/auth";
 import { CredentialForm } from "@/components/auth/credential-form";
 import { signUpWithPassword } from "@/app/actions/auth";
+import { safeRedirect } from "@/lib/safe-redirect";
 
-export default async function SignUpPage() {
+export default async function SignUpPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ returnTo?: string }>;
+}) {
+  const { returnTo: rawReturnTo } = await searchParams;
+  const returnTo = safeRedirect(rawReturnTo);
   const session = await auth();
-  if (session) redirect("/");
+  if (session) redirect(returnTo);
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-background px-[var(--spacing-container-padding)] relative overflow-hidden">
@@ -24,7 +31,7 @@ export default async function SignUpPage() {
             Buat akun dengan email dan kata sandi untuk mengakses layanan PPIT Nanjing.
           </p>
 
-          <CredentialForm action={signUpWithPassword} mode="signup" />
+          <CredentialForm action={signUpWithPassword} mode="signup" returnTo={returnTo} />
 
           <div className="flex items-center gap-3 my-6">
             <span className="h-px flex-1 bg-outline-variant" />
@@ -35,7 +42,7 @@ export default async function SignUpPage() {
           <form
             action={async () => {
               "use server";
-              await signIn("google", { redirectTo: "/" });
+              await signIn("google", { redirectTo: returnTo });
             }}
           >
             <button
