@@ -8,13 +8,15 @@ import type { AuthFormState } from "@/app/actions/auth";
 type Props = {
   action: (prev: AuthFormState, formData: FormData) => Promise<AuthFormState>;
   mode: "signin" | "signup";
+  returnTo?: string;
 };
 
-export function CredentialForm({ action, mode }: Props) {
+export function CredentialForm({ action, mode, returnTo }: Props) {
   const [state, formAction, pending] = useActionState(action, {} as AuthFormState);
 
   return (
     <form action={formAction} className="flex flex-col gap-4">
+      {returnTo ? <input type="hidden" name="returnTo" value={returnTo} /> : null}
       <label className="flex flex-col gap-2">
         <span className="text-label-caps uppercase tracking-wide text-on-surface-variant">Email</span>
         <input
