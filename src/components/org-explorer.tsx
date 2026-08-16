@@ -37,10 +37,9 @@ export type OrgNodeData = {
 };
 
 const VIEWS = [
-  { key: "chart", label: "Bagan" },
+  { key: "interactive", label: "Bagan" },
   { key: "cards", label: "Kartu" },
   { key: "tree", label: "Pohon" },
-  { key: "interactive", label: "Interaktif" },
 ] as const;
 
 type ViewKey = (typeof VIEWS)[number]["key"];
@@ -361,7 +360,7 @@ function ProfileModal({ node, onClose }: { node: OrgNodeData; onClose: () => voi
 }
 
 export function OrgExplorer({ units }: { units: OrgNodeData[] }) {
-  const [view, setView] = useState<ViewKey>("chart");
+  const [view, setView] = useState<ViewKey>("interactive");
   const [active, setActive] = useState<OrgNodeData | null>(null);
 
   return (
@@ -383,7 +382,6 @@ export function OrgExplorer({ units }: { units: OrgNodeData[] }) {
         ))}
       </div>
 
-      {view === "chart" && <ChartView units={units} />}
       {view === "cards" && <CardsView units={units} />}
       {view === "tree" && <TreeView units={units} />}
       {view === "interactive" && <ChartView units={units} onSelect={setActive} />}
