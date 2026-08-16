@@ -1,6 +1,7 @@
 "use client";
 
 import { SessionProvider } from "next-auth/react";
+import { MotionConfig } from "motion/react";
 import type { Session } from "next-auth";
 
 // Without a server-fetched `session` seeding this, useSession() (e.g. in
@@ -10,5 +11,9 @@ import type { Session } from "next-auth";
 // page. Passing the session down from the server (see layout.tsx) means
 // useSession() has the real value on first render, no flash.
 export function Providers({ children, session }: { children: React.ReactNode; session: Session | null }) {
-  return <SessionProvider session={session}>{children}</SessionProvider>;
+  return (
+    <SessionProvider session={session}>
+      <MotionConfig reducedMotion="user">{children}</MotionConfig>
+    </SessionProvider>
+  );
 }
