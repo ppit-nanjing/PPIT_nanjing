@@ -3,6 +3,8 @@
 import { useSession, signIn, signOut } from "next-auth/react";
 import { useState } from "react";
 import { ChevronDown, ShieldCheck, User, LogOut, Inbox } from "lucide-react";
+import Image from "next/image";
+import Link from "next/link";
 
 /**
  * Profile hover menu. The "Masuk ke Console" (admin) link only renders when
@@ -37,9 +39,11 @@ export function AccountMenu({ compact = false }: { compact?: boolean }) {
   const { name, email, image, isAdmin } = session.user;
 
   const avatar = image ? (
-    <img
+    <Image
       src={image}
       alt={name ?? "Profile"}
+      width={32}
+      height={32}
       className="w-8 h-8 rounded-full object-cover border border-outline-variant shrink-0"
     />
   ) : (
@@ -94,19 +98,19 @@ export function AccountMenu({ compact = false }: { compact?: boolean }) {
 
       {open && (
         <div className="absolute right-0 top-full w-52 bg-surface-container-lowest border border-outline-variant rounded-lg shadow-lg py-2 z-50">
-          <a href="/profile" className="flex items-center gap-2 px-4 py-2 text-sm hover:bg-surface-container-high transition-colors">
+          <Link href="/profile" className="flex items-center gap-2 px-4 py-2 text-sm hover:bg-surface-container-high transition-colors">
             <User size={16} /> Profil Saya
-          </a>
-          <a href="/profile/submissions" className="flex items-center gap-2 px-4 py-2 text-sm hover:bg-surface-container-high transition-colors">
+          </Link>
+          <Link href="/profile/submissions" className="flex items-center gap-2 px-4 py-2 text-sm hover:bg-surface-container-high transition-colors">
             <Inbox size={16} /> Riwayat Pengajuan
-          </a>
+          </Link>
           {session.user.isAdmin && (
-            <a
+            <Link
               href="/console"
               className="flex items-center gap-2 px-4 py-2 text-sm text-primary-container font-medium hover:bg-surface-container-high transition-colors"
             >
               <ShieldCheck size={16} /> Masuk ke Console
-            </a>
+            </Link>
           )}
           <div className="border-t border-outline-variant my-1" />
           <button
