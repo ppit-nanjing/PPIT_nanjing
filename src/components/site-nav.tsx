@@ -54,6 +54,8 @@ export function SiteNav() {
   useEffect(() => {
     try {
       if (!localStorage.getItem("ppit-cmdk-hint-dismissed")) {
+        // First-visit hint, shown once after mount.
+        // eslint-disable-next-line react-hooks/set-state-in-effect
         setShowHint(true);
         const t = setTimeout(() => setShowHint(false), 7000);
         return () => clearTimeout(t);
@@ -64,6 +66,8 @@ export function SiteNav() {
   }, []);
 
   useEffect(() => {
+    // Dismiss the shortcut hint as soon as the palette opens.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     if (paletteOpen) dismissHint();
   }, [paletteOpen]);
   // The width-shrink + inline links only make sense on real desktops. On
@@ -80,6 +84,8 @@ export function SiteNav() {
   }, []);
 
   useEffect(() => {
+    // Close the mobile menu whenever navigation occurs.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setMenuOpen(false);
   }, [pathname]);
 
