@@ -1,6 +1,7 @@
 import { NAV_LINKS } from "@/lib/nav-links";
 import { AnimatedLettersHeading } from "@/components/animated-letters-heading";
 import { ArrowRight } from "lucide-react";
+import Link from "next/link";
 
 const SOCIALS = [{ label: "Instagram PPIT Nanjing", href: "https://www.instagram.com/ppit_nanjing/" }];
 
@@ -20,12 +21,12 @@ export function SiteFooter() {
           text="Ayo bergabung dengan PPIT Nanjing."
           className="text-display-hero-mobile md:text-display-hero"
         />
-        <a
+        <Link
           href="/join-us"
           className="inline-flex items-center gap-2 bg-on-primary text-primary-container text-label-caps uppercase tracking-wide px-8 py-3.5 rounded-full hover:bg-on-primary/90 transition-colors"
         >
           Gabung Sekarang <ArrowRight size={16} />
-        </a>
+        </Link>
       </div>
 
       <div className="max-w-[var(--container-max)] mx-auto py-12">
