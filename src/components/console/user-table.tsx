@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import Image from "next/image";
 import { useRouter } from "next/navigation";
 import {
   updateUserRole,
@@ -153,8 +154,13 @@ function UserRow({
       <td className="px-5 py-3">
         <div className="flex items-center gap-3">
           {user.image ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img src={user.image} alt="" className="w-8 h-8 rounded-full object-cover" />
+            <Image
+              src={user.image}
+              alt=""
+              width={32}
+              height={32}
+              className="w-8 h-8 rounded-full object-cover"
+            />
           ) : (
             <div className="w-8 h-8 rounded-full bg-surface-container-low" />
           )}
