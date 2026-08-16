@@ -14,7 +14,7 @@ import { CheckCircle2, CalendarDays, MapPin } from "lucide-react";
 export default async function EventTicketPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
   const session = await auth();
-  if (!session?.user?.id) redirect("/login");
+  if (!session?.user?.id) redirect(`/login?returnTo=${encodeURIComponent(`/events/${slug}/ticket`)}`);
 
   const [event] = await db.select().from(events).where(eq(events.slug, slug));
   if (!event) notFound();
