@@ -25,7 +25,7 @@ const BENEFITS = [
 
 export default async function MentorshipPage() {
   const session = await auth();
-  if (!session) redirect("/login");
+  if (!session) redirect(`/login?returnTo=${encodeURIComponent("/career/mentorship")}`);
 
   return (
     <div className="min-h-screen bg-background text-on-background">
