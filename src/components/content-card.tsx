@@ -1,4 +1,5 @@
 import { CalendarDays, Newspaper } from "lucide-react";
+import Image from "next/image";
 
 /**
  * Shared content card for the home page's Latest Events and Latest News grids.
@@ -30,13 +31,14 @@ export function ContentCard({
       href={href}
       className="group bg-surface-container-lowest border border-outline-variant rounded-xl overflow-hidden hover:shadow-[0_14px_40px_rgba(39,23,22,0.10)] hover:-translate-y-1 transition-all duration-300 flex flex-col"
     >
-      <div className="h-44 bg-surface-container-low overflow-hidden">
+      <div className="relative h-44 bg-surface-container-low overflow-hidden">
         {imageUrl ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img
+          <Image
             src={imageUrl}
             alt={title}
-            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+            fill
+            sizes="(max-width: 768px) 100vw, 33vw"
+            className="object-cover group-hover:scale-105 transition-transform duration-500"
           />
         ) : (
           <div className="w-full h-full flex items-center justify-center">
