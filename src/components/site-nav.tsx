@@ -9,33 +9,30 @@ import { NotificationBell } from "@/components/notifications/notification-bell";
 import { CommandPalette, useCommandPalette } from "@/components/command-palette";
 import { NAV_LINKS } from "@/lib/nav-links";
 
-// Scroll-driven shrink + glass, corrected to match the reference's actual
-// mechanics (docs: reference's .navbar is ALWAYS a fixed-height, fully
-// rounded pill at every scroll position - border-radius never animates,
-// only width does - and its `navbar-header` wrapper always carries a small
-// fixed padding so the pill never touches the viewport edge). Solid opaque
-// white at rest (no blur); the translucent glass look and blur only appear
-// as it shrinks, and even then stays fairly solid - not an aggressive see-
-// through effect.
-function useScrollProgress(maxScroll = 300) {
-  const [progress, setProgress] = useState(0);
+// Scroll state: a gentle, intentional pill. We use a boolean threshold
+// (not a continuous, scroll-position-driven interpolation) so the navbar
+// snaps to a comfortable floating pill once you start scrolling, instead of
+// the width "chasing" every pixel of scroll - which read as jittery/weird.
+// The pill never shrinks below a width that would crush the links + search
+// pill, so content stays intact on smaller desktops.
+function useScrolled(threshold = 24) {
+  const [scrolled, setScrolled] = useState(false);
 
   useEffect(() => {
-    function handleScroll() {
-      const y = Math.max(window.scrollY, 0);
-      setProgress(Math.min(y / maxScroll, 1));
+    function onScroll() {
+      setScrolled(window.scrollY > threshold);
     }
-    handleScroll();
-    window.addEventListener("scroll", handleScroll, { passive: true });
-    return () => window.removeEventListener("scroll", handleScroll);
-  }, [maxScroll]);
+    onScroll();
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => window.removeEventListener("scroll", onScroll);
+  }, [threshold]);
 
-  return progress;
+  return scrolled;
 }
 
 export function SiteNav() {
   const pathname = usePathname();
-  const progress = useScrollProgress();
+  const scrolled = useScrolled();
   const [menuOpen, setMenuOpen] = useState(false);
   const { open: paletteOpen, setOpen: setPaletteOpen } = useCommandPalette();
   const { data: session } = useSession();
@@ -84,31 +81,28 @@ export function SiteNav() {
     setMenuOpen(false);
   }, [pathname]);
 
-  // Lock body scroll while the mobile/tablet menu is open.
+  // Lock body scroll while the command palette or the mobile/tablet menu is
+  // open. Without this, scrolling behind the fixed palette re-renders the
+  // blurred navbar every frame (the scroll-jank you noticed), and the page
+  // itself shouldn't move under a modal anyway.
   useEffect(() => {
-    if (!menuOpen) return;
+    if (!paletteOpen && !menuOpen) return;
     const prev = document.body.style.overflow;
     document.body.style.overflow = "hidden";
     return () => {
       document.body.style.overflow = prev;
     };
-  }, [menuOpen]);
+  }, [paletteOpen, menuOpen]);
 
-  // Width: shrinks from full-bleed down to a narrower floating pill on desktop
-  // only. On mobile/tablet it stays essentially full-width. Shape stays a
-  // constant rounded-full pill throughout - only width/opacity/blur/shadow
-  // animate, never the radius.
-  const startWidthPct = 100;
-  const endWidthPct = isDesktop ? 60 : 100;
-  const widthPct = startWidthPct - (startWidthPct - endWidthPct) * progress;
+  // Compact floating pill once scrolled (desktop only). Mobile/tablet stays
+  // full-width since the burger menu is used there. The width is capped at a
+  // comfortable fixed value so the links + search pill never get crushed.
+  const width = isDesktop && scrolled ? "min(100%, 1000px)" : "100%";
 
-  // Opacity/blur: solid opaque white (alpha 1, no blur) at rest. As you
-  // shrink, it eases into a translucent glass look - kept fairly solid
-  // (alpha floor ~0.82, not an aggressive see-through) rather than a heavy
-  // frosted effect.
-  const bgAlpha = 1 - 0.18 * progress; // 1 -> 0.82
-  const blurPx = Math.round(progress * 14); // 0 -> 14px
-  const shadowAlpha = (progress * 0.14).toFixed(3);
+  // Glass + shadow appear on scroll only; opaque & flat at rest.
+  const bgAlpha = scrolled ? 0.82 : 1;
+  const blurPx = scrolled ? 12 : 0;
+  const shadowAlpha = scrolled ? 0.14 : 0;
 
   return (
     <>
@@ -116,14 +110,14 @@ export function SiteNav() {
         <nav
           className="rounded-full"
           style={{
-            width: `min(100%, ${widthPct}%)`,
+            width,
             maxWidth: "var(--container-max)",
             backgroundColor: `rgba(255,248,247,${bgAlpha})`,
             backdropFilter: `blur(${blurPx}px) saturate(140%)`,
             WebkitBackdropFilter: `blur(${blurPx}px) saturate(140%)`,
             boxShadow: `0 10px 30px rgba(39,23,22,${shadowAlpha})`,
             transition:
-              "width 400ms ease, background-color 400ms ease, backdrop-filter 400ms ease, -webkit-backdrop-filter 400ms ease, box-shadow 400ms ease",
+              "width 350ms cubic-bezier(0.22, 1, 0.36, 1), background-color 350ms ease, backdrop-filter 350ms ease, -webkit-backdrop-filter 350ms ease, box-shadow 350ms ease",
           }}
         >
           <div className="max-w-[var(--container-max)] mx-auto flex justify-between items-center gap-2 sm:gap-4 h-12 md:h-14 px-4 sm:px-6">
