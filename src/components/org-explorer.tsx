@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   Building2,
   UserRound,
@@ -72,7 +72,15 @@ function SocialIcons({ member }: { member: OrgMember }) {
   );
 }
 
-function MemberRow({ member, compact }: { member: OrgMember; compact?: boolean }) {
+function MemberRow({
+  member,
+  compact,
+  showSocials = true,
+}: {
+  member: OrgMember;
+  compact?: boolean;
+  showSocials?: boolean;
+}) {
   const avatar = compact ? "w-6 h-6" : "w-7 h-7";
   return (
     <div className="flex items-center gap-2">
@@ -96,7 +104,7 @@ function MemberRow({ member, compact }: { member: OrgMember; compact?: boolean }
           <p className="text-label-caps text-on-surface-variant leading-tight truncate">{member.position}</p>
         )}
       </div>
-      <SocialIcons member={member} />
+      {showSocials && <SocialIcons member={member} />}
     </div>
   );
 }
@@ -153,7 +161,7 @@ function NodeCard({
       {members.length > 0 && (
         <div className="flex flex-col gap-2 mt-1 pt-2 border-t border-outline-variant">
           {members.slice(0, cap).map((m, i) => (
-            <MemberRow key={i} member={m} compact={compact} />
+            <MemberRow key={i} member={m} compact={compact} showSocials={!onClick} />
           ))}
           {members.length > cap && (
             <p className="text-label-caps text-on-surface-variant">+{members.length - cap} lainnya</p>
@@ -319,6 +327,21 @@ function TreeView({ units }: { units: OrgNodeData[] }) {
 }
 
 function ProfileModal({ node, onClose }: { node: OrgNodeData; onClose: () => void }) {
+  // ESC to close + lock background scroll while open (matches the command
+  // palette / mobile-menu behaviour).
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onClose();
+    };
+    document.addEventListener("keydown", onKey);
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.removeEventListener("keydown", onKey);
+      document.body.style.overflow = prev;
+    };
+  }, [onClose]);
+
   return (
     <div
       className="fixed inset-0 z-[60] bg-black/40 flex items-center justify-center p-4"
