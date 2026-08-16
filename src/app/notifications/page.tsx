@@ -8,7 +8,7 @@ import { NotificationMarkAllReadButton } from "@/components/notifications/notifi
 
 export default async function NotificationsPage() {
   const session = await auth();
-  if (!session?.user?.id) redirect("/login");
+  if (!session?.user?.id) redirect(`/login?returnTo=${encodeURIComponent("/notifications")}`);
 
   const items = await listNotifications(session.user.id, 50);
 
