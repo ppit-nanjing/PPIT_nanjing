@@ -16,6 +16,11 @@ const TYPE_LABEL = {
 type JobType = keyof typeof TYPE_LABEL;
 const TYPES = Object.keys(TYPE_LABEL) as JobType[];
 
+export const metadata = {
+  title: "Lowongan Karir - PPIT Nanjing",
+  description: "Cari magang dan lowongan kerja untuk mahasiswa Indonesia di Nanjing dan sekitarnya.",
+};
+
 export default async function JobsPage({
   searchParams,
 }: {
@@ -63,17 +68,18 @@ export default async function JobsPage({
         <p className="text-body-lg text-on-surface-variant mb-8">
           Lowongan magang dan kerja untuk mahasiswa Indonesia, dari startup lokal hingga peran akademik.
         </p>
-        <form action="/jobs" className="w-full relative">
-          <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-secondary" size={18} />
+        <form action="/jobs" role="search" aria-label="Cari lowongan pekerjaan" className="w-full relative">
+          <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-secondary" size={18} aria-hidden />
           <input
             name="q"
             defaultValue={q}
+            aria-label="Cari berdasarkan posisi atau perusahaan"
             placeholder="Cari posisi, perusahaan..."
-            className="w-full pl-12 pr-28 py-4 bg-surface-container-lowest border border-outline-variant rounded-md text-body-lg focus:outline-none focus:ring-2 focus:ring-primary-container"
+            className="w-full pl-12 pr-28 py-4 bg-surface-container-lowest border border-outline-variant rounded-md text-body-lg focus:outline-none focus:ring-2 focus:ring-primary-container focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-container focus-visible:ring-offset-2 focus-visible:ring-offset-background"
           />
           <button
             type="submit"
-            className="absolute right-2 top-1/2 -translate-y-1/2 bg-primary-container text-on-primary text-label-caps uppercase px-5 py-2.5 rounded-md hover:bg-primary transition-colors"
+            className="absolute right-2 top-1/2 -translate-y-1/2 bg-primary-container text-on-primary text-label-caps uppercase px-5 py-2.5 rounded-md hover:bg-primary transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background motion-reduce:transition-none"
           >
             Cari
           </button>
@@ -81,7 +87,7 @@ export default async function JobsPage({
       </header>
 
       <main className="max-w-[var(--container-max)] mx-auto px-[var(--spacing-container-padding)] pb-24 grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
-        <aside className="lg:col-span-3 bg-surface-container-lowest border border-outline-variant rounded-lg p-6">
+        <aside aria-label="Filter lowongan" className="lg:col-span-3 bg-surface-container-lowest border border-outline-variant rounded-lg p-6">
           <div className="flex items-center gap-2 mb-6 border-b border-outline-variant pb-4">
             <SlidersHorizontal size={18} className="text-on-background" />
             <h2 className="text-headline-md text-on-background">Filter</h2>
@@ -102,7 +108,8 @@ export default async function JobsPage({
                   <a
                     key={t}
                     href={`/jobs?${params.toString()}`}
-                    className="flex items-center gap-2 text-body-md text-on-background hover:text-primary-container transition-colors"
+                    aria-current={selectedTypes.includes(t) ? "true" : undefined}
+                    className="flex items-center gap-2 text-body-md text-on-background hover:text-primary-container transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-container focus-visible:ring-offset-2 focus-visible:ring-offset-background motion-reduce:transition-none"
                   >
                     <span
                       className={`w-4 h-4 rounded border flex items-center justify-center shrink-0 ${
@@ -126,7 +133,7 @@ export default async function JobsPage({
                   <a
                     key={loc}
                     href={buildQuery({ location: location === loc ? undefined : loc })}
-                    className={`flex items-center gap-2 text-body-md transition-colors ${
+                    className={`flex items-center gap-2 text-body-md transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-container focus-visible:ring-offset-2 focus-visible:ring-offset-background motion-reduce:transition-none ${
                       location === loc ? "text-primary-container font-medium" : "text-on-background hover:text-primary-container"
                     }`}
                   >
@@ -139,19 +146,46 @@ export default async function JobsPage({
         </aside>
 
         <div className="lg:col-span-9 flex flex-col gap-4">
+          <div className="flex items-center justify-between gap-4 mb-2">
+            <p className="text-label-caps uppercase tracking-wide text-on-surface-variant" aria-live="polite">
+              {jobs.length} lowongan ditemukan
+            </p>
+            {(q || selectedTypes.length > 0 || location) && (
+              <a
+                href="/jobs"
+                className="text-label-caps uppercase tracking-wide text-primary-container hover:text-primary transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-container focus-visible:ring-offset-2 focus-visible:ring-offset-background rounded-md motion-reduce:transition-none"
+              >
+                Hapus filter
+              </a>
+            )}
+          </div>
           {jobs.length === 0 ? (
-            <div className="flex flex-col items-center text-center py-24">
-              <Briefcase className="text-outline-variant mb-4" size={40} />
-              <p className="text-body-md text-on-surface-variant">
-                {q || selectedTypes.length || location ? "Tidak ada lowongan yang cocok dengan filter ini." : "Belum ada lowongan yang dibuka."}
+            <div className="flex flex-col items-center text-center py-20 bg-surface-container-lowest border border-outline-variant border-dashed rounded-xl px-6">
+              <Briefcase className="text-outline-variant mb-4" size={40} aria-hidden />
+              <h2 className="text-headline-md text-on-background mb-2">
+                {q || selectedTypes.length > 0 || location ? "Tidak ada hasil" : "Belum ada lowongan"}
+              </h2>
+              <p className="text-body-md text-on-surface-variant mb-6 max-w-sm">
+                {q || selectedTypes.length > 0 || location
+                  ? "Tidak ada lowongan yang cocok dengan filter ini. Coba ubah kata kunci atau hapus filter."
+                  : "Lowongan magang dan kerja akan ditampilkan di sini saat tersedia."}
               </p>
+              {(q || selectedTypes.length > 0 || location) && (
+                <a
+                  href="/jobs"
+                  className="bg-primary-container text-on-primary text-label-caps uppercase tracking-wide px-6 py-3 rounded-md hover:bg-primary transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-container focus-visible:ring-offset-2 focus-visible:ring-offset-background motion-reduce:transition-none"
+                >
+                  Hapus semua filter
+                </a>
+              )}
             </div>
           ) : (
             jobs.map((j) => (
               <a
                 key={j.id}
                 href={`/jobs/${j.id}`}
-                className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-surface-container-lowest border border-outline-variant rounded-lg p-6 hover:shadow-[0_10px_30px_rgba(39,23,22,0.06)] transition-shadow"
+                aria-label={`Lihat detail lowongan ${j.title} di ${j.company}`}
+                className="group flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-surface-container-lowest border border-outline-variant rounded-lg p-6 hover:shadow-[0_10px_30px_rgba(39,23,22,0.06)] transition-shadow focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-container focus-visible:ring-offset-2 focus-visible:ring-offset-background motion-reduce:transition-none"
               >
                 <div>
                   <div className="flex items-center gap-2 mb-1">
@@ -164,11 +198,14 @@ export default async function JobsPage({
                   <p className="text-body-md text-on-surface-variant mb-2">{j.company}</p>
                   {j.location && (
                     <span className="flex items-center gap-1 text-label-caps text-secondary">
-                      <MapPin size={12} /> {j.location}
+                      <MapPin size={12} aria-hidden /> {j.location}
                     </span>
                   )}
                 </div>
-                <span className="shrink-0 border border-primary-container text-primary-container text-label-caps uppercase tracking-wide px-5 py-2 rounded-md hover:bg-primary-container hover:text-on-primary transition-colors">
+                <span
+                  aria-hidden
+                  className="shrink-0 border border-primary-container text-primary-container text-label-caps uppercase tracking-wide px-5 py-2 rounded-md group-hover:bg-primary-container group-hover:text-on-primary transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-container focus-visible:ring-offset-2 focus-visible:ring-offset-background motion-reduce:transition-none"
+                >
                   Lihat Detail
                 </span>
               </a>
@@ -185,7 +222,7 @@ export default async function JobsPage({
             <a
               key={g.id}
               href={`/career/guide/${g.slug}`}
-              className="flex items-start gap-4 bg-surface-container-lowest border border-outline-variant rounded-lg p-6 hover:bg-surface-container-low transition-colors"
+              className="flex items-start gap-4 bg-surface-container-lowest border border-outline-variant rounded-lg p-6 hover:bg-surface-container-low transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-container focus-visible:ring-offset-2 focus-visible:ring-offset-background motion-reduce:transition-none"
             >
               <BookOpen className="text-primary-container shrink-0" size={22} />
               <div>
@@ -196,7 +233,7 @@ export default async function JobsPage({
           ))}
           <Link
             href="/career/mentorship"
-            className="flex items-start gap-4 bg-primary-container/5 border border-primary-container/20 rounded-lg p-6 hover:bg-primary-container/10 transition-colors"
+            className="flex items-start gap-4 bg-primary-container/5 border border-primary-container/20 rounded-lg p-6 hover:bg-primary-container/10 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-container focus-visible:ring-offset-2 focus-visible:ring-offset-background motion-reduce:transition-none"
           >
             <Users className="text-primary-container shrink-0" size={22} />
             <div>
