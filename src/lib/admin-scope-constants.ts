@@ -11,7 +11,11 @@
 // (src/db/seed.ts) - "sensus" and "reports" both unlock /console/reports since
 // that page hasn't been split into separate sensus vs. financial-report views
 // yet (see docs/Progress & Handoff.md).
-export type AdminModule = "users" | "organization" | "events" | "inventory" | "reports" | "content" | "feedback" | "membership";
+// "notifications" (template wording sent org-wide to every member) is
+// deliberately absent from ASSIGNABLE_SCOPE_KEYS below, so hasModuleAccess()
+// only ever returns true for it via the `scope === "full"` short-circuit -
+// same non-delegable treatment as users/organization/feedback.
+export type AdminModule = "users" | "organization" | "events" | "inventory" | "reports" | "content" | "feedback" | "membership" | "notifications";
 
 const MODULE_ALIASES: Partial<Record<AdminModule, string[]>> = {
   reports: ["reports", "sensus"],
