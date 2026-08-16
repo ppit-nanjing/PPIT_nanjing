@@ -4,6 +4,7 @@ import { organizationDocuments } from "@/db/schema";
 import { SiteNav } from "@/components/site-nav";
 import { SiteFooter } from "@/components/site-footer";
 import { Gavel, Download } from "lucide-react";
+import Link from "next/link";
 
 const SECTIONS = [
   { id: "kerangka-hukum", title: "Kerangka Hukum" },
@@ -120,9 +121,9 @@ export default async function ReviewAdArtGuidelinesPage() {
                     <h4 className="text-body-md font-semibold text-on-background mb-1">Pengajuan Peminjaman</h4>
                     <p className="text-body-md">
                       Pengajuan harus dikirim lewat{" "}
-                      <a href="/inventory" className="text-primary-container underline">
+                      <Link href="/inventory" className="text-primary-container underline">
                         portal resmi
-                      </a>{" "}
+                      </Link>{" "}
                       minimal 48 jam sebelum tanggal yang dibutuhkan.
                     </p>
                   </div>
