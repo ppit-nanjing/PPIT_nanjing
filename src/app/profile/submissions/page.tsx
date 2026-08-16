@@ -6,6 +6,7 @@ import { eventRegistrations, events, borrowRequests, inventoryItems, jobApplicat
 import { SiteNav } from "@/components/site-nav";
 import { SiteFooter } from "@/components/site-footer";
 import { CalendarDays, Package, Briefcase, Inbox } from "lucide-react";
+import Link from "next/link";
 
 const STATUS_STYLE: Record<string, string> = {
   pending: "bg-surface-container-low text-on-surface-variant",
@@ -22,6 +23,29 @@ const STATUS_STYLE: Record<string, string> = {
   interview: "bg-primary-container/10 text-primary-container",
   offered: "bg-primary-container/10 text-primary-container",
 };
+
+// The raw enum value was rendered straight to the page, so members saw
+// "under_review" / "pending" instead of Indonesian. Unknown values fall back to
+// a de-underscored version rather than disappearing.
+const STATUS_LABEL: Record<string, string> = {
+  pending: "Menunggu",
+  confirmed: "Terkonfirmasi",
+  attended: "Hadir",
+  approved: "Disetujui",
+  rejected: "Ditolak",
+  cancelled: "Dibatalkan",
+  returned: "Dikembalikan",
+  overdue: "Terlambat",
+  borrowed: "Dipinjam",
+  submitted: "Terkirim",
+  under_review: "Ditinjau",
+  interview: "Wawancara",
+  offered: "Ditawari",
+};
+
+function statusLabel(status: string): string {
+  return STATUS_LABEL[status] ?? status.replace(/_/g, " ");
+}
 
 export default async function SubmissionHistoryPage() {
   const session = await auth();
@@ -88,34 +112,67 @@ export default async function SubmissionHistoryPage() {
         </p>
 
         {items.length === 0 ? (
-          <div className="flex flex-col items-center text-center py-24">
-            <Inbox className="text-outline-variant mb-4" size={40} />
-            <p className="text-body-md text-on-surface-variant">Belum ada pengajuan yang tercatat.</p>
+          <div role="status" aria-live="polite" className="flex flex-col items-center text-center py-24">
+            <Inbox className="text-outline-variant mb-4" size={40} aria-hidden />
+            <h2 className="text-headline-md text-on-background mb-2">Belum ada pengajuan</h2>
+            <p className="text-body-md text-on-surface-variant max-w-sm mb-6">
+              Pendaftaran kegiatan, peminjaman barang, dan lamaran kerja kamu akan tercatat di sini.
+            </p>
+            <div className="flex flex-wrap gap-3 justify-center">
+              <Link
+                href="/events"
+                className="bg-primary-container text-on-primary text-label-caps uppercase tracking-wide px-6 py-3 rounded-md hover:bg-primary transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-container focus-visible:ring-offset-2 focus-visible:ring-offset-background motion-reduce:transition-none"
+              >
+                Lihat Kegiatan
+              </Link>
+              <Link
+                href="/inventory"
+                className="border border-outline-variant text-on-background text-label-caps uppercase tracking-wide px-6 py-3 rounded-md hover:bg-surface-container-low transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-container focus-visible:ring-offset-2 focus-visible:ring-offset-background motion-reduce:transition-none"
+              >
+                Lihat Inventaris
+              </Link>
+            </div>
           </div>
         ) : (
-          <div className="flex flex-col gap-3">
+          <ul aria-label="Daftar pengajuan" className="flex flex-col gap-3">
             {items.map((item) => {
               const Icon = ICON[item.kind];
               return (
-                <a
-                  key={`${item.kind}-${item.id}`}
-                  href={item.href}
-                  className="flex items-center gap-4 bg-surface-container-lowest border border-outline-variant rounded-lg p-5 hover:bg-surface-container-low transition-colors"
-                >
-                  <Icon className="text-secondary shrink-0" size={20} />
-                  <div className="flex-1 min-w-0">
-                    <p className="text-label-caps text-on-surface-variant uppercase">{KIND_LABEL[item.kind]}</p>
-                    <p className="text-body-md font-medium text-on-background truncate">{item.title}</p>
-                  </div>
-                  <span
-                    className={`text-label-caps uppercase tracking-wide px-2.5 py-1 rounded shrink-0 ${STATUS_STYLE[item.status] ?? "bg-surface-container-low text-on-surface-variant"}`}
+                <li key={`${item.kind}-${item.id}`}>
+                  <Link
+                    href={item.href}
+                    aria-label={`${KIND_LABEL[item.kind]}: ${item.title} — status ${statusLabel(item.status)}`}
+                    className="flex items-center gap-4 bg-surface-container-lowest border border-outline-variant rounded-lg p-5 hover:bg-surface-container-low transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-container focus-visible:ring-offset-2 focus-visible:ring-offset-background motion-reduce:transition-none"
                   >
-                    {item.status}
-                  </span>
-                </a>
+                    <Icon className="text-secondary shrink-0" size={20} aria-hidden />
+                    <div className="flex-1 min-w-0">
+                      <p className="text-label-caps text-on-surface-variant uppercase">
+                        {KIND_LABEL[item.kind]}
+                      </p>
+                      <p className="text-body-md font-medium text-on-background truncate">{item.title}</p>
+                      {/* The date was computed for sorting but never shown - on a
+                          history page it is the thing that orders the list. */}
+                      <time
+                        dateTime={item.date.toISOString()}
+                        className="text-label-caps text-on-surface-variant"
+                      >
+                        {item.date.toLocaleDateString("id-ID", {
+                          day: "numeric",
+                          month: "long",
+                          year: "numeric",
+                        })}
+                      </time>
+                    </div>
+                    <span
+                      className={`text-label-caps uppercase tracking-wide px-2.5 py-1 rounded shrink-0 ${STATUS_STYLE[item.status] ?? "bg-surface-container-low text-on-surface-variant"}`}
+                    >
+                      {statusLabel(item.status)}
+                    </span>
+                  </Link>
+                </li>
               );
             })}
-          </div>
+          </ul>
         )}
       </main>
       <SiteFooter />
