@@ -93,7 +93,7 @@ export default async function CareerCenterPage() {
           )}
         </section>
 
-        <section>
+        <section id="panduan">
           <h2 className="text-headline-md text-on-background mb-2">Panduan &amp; Sumber Daya Karir</h2>
           <p className="text-body-md text-on-surface-variant max-w-2xl mb-6">
             Tingkatkan peluangmu dengan materi persiapan karir untuk mahasiswa Indonesia di Tiongkok.
