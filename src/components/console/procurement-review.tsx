@@ -2,6 +2,7 @@
 
 import { useTransition } from "react";
 import { reviewProcurement } from "@/app/actions/procurement";
+import Image from "next/image";
 
 type Request = {
   id: string;
@@ -40,10 +41,11 @@ export function ProcurementReview({ requests }: { requests: Request[] }) {
           <input type="hidden" name="id" value={r.id} />
           <div className="flex gap-4">
             {r.imageUrl && (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img
+              <Image
                 src={r.imageUrl}
                 alt={r.itemName}
+                width={96}
+                height={96}
                 className="w-24 h-24 object-cover rounded-md border border-outline-variant shrink-0"
               />
             )}
