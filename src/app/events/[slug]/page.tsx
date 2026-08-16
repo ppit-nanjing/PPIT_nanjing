@@ -190,9 +190,20 @@ export default async function EventDetailPage({ params }: { params: Promise<{ sl
 
                 <div className="border-t border-outline-variant pt-5">
                   {event.requiresSensus && !alreadyRegistered && (
-                    <p className="text-label-caps text-on-surface-variant mb-3 text-center">
-                      Event ini hanya untuk peserta yang sudah lengkap mengisi sensus.
-                    </p>
+                    <>
+                      <p className="text-label-caps text-on-surface-variant mb-3 text-center">
+                        Event ini hanya untuk peserta yang sudah lengkap mengisi sensus.
+                      </p>
+                      <p className="text-body-md text-on-surface-variant text-center mb-4">
+                        Lengkapi data sensus untuk mendaftar.
+                      </p>
+                      <a
+                        href="/sensus"
+                        className="w-full inline-flex items-center justify-center gap-2 bg-primary-container text-on-primary text-label-caps uppercase tracking-wide px-6 py-4 rounded-md hover:bg-primary transition-colors"
+                      >
+                        Isi Sensus
+                      </a>
+                    </>
                   )}
                   {alreadyRegistered ? (
                     <a
