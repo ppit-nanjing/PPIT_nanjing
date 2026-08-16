@@ -30,10 +30,21 @@ export default async function LoginPage({
             PPIT Nanjing
           </span>
           <h1 className="text-headline-lg text-on-background mb-3">Masuk</h1>
-          <p className="text-body-md text-on-surface-variant mb-8">
+          <p className="text-body-md text-on-surface-variant mb-6">
             Masuk dengan akun Google kamu, atau gunakan email dan kata sandi untuk mendaftar kegiatan,
             mengisi sensus, dan mengakses layanan PPIT Nanjing lainnya.
           </p>
+
+          {returnTo !== "/" && (
+            <div className="flex items-start gap-3 bg-primary-container/10 border border-primary-container/20 rounded-lg p-4 mb-6 text-left">
+              <span className="text-label-caps uppercase tracking-wide text-primary-container font-semibold shrink-0">
+                Simpan login
+              </span>
+              <p className="text-body-sm text-on-surface-variant">
+                Setelah masuk, kamu akan diarahkan kembali ke halaman yang sedang kamu buka.
+              </p>
+            </div>
+          )}
 
           <CredentialForm action={signInWithPassword} mode="signin" returnTo={returnTo} />
 
@@ -51,7 +62,8 @@ export default async function LoginPage({
           >
             <button
               type="submit"
-              className="w-full flex items-center justify-center gap-3 bg-surface-container-lowest border border-outline-variant text-on-background text-body-md font-medium py-3.5 rounded-md hover:bg-surface-container-low transition-colors"
+              aria-label="Masuk dengan akun Google"
+              className="w-full flex items-center justify-center gap-3 bg-surface-container-lowest border border-outline-variant text-on-background text-body-md font-medium py-3.5 rounded-md hover:bg-surface-container-low transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-container focus-visible:ring-offset-2 focus-visible:ring-offset-surface-container-lowest"
             >
               <svg width="18" height="18" viewBox="0 0 18 18">
                 <path
@@ -76,7 +88,7 @@ export default async function LoginPage({
         <div className="text-center mt-6">
           <Link
             href="/"
-            className="inline-flex items-center gap-2 text-label-caps uppercase tracking-wide text-on-surface-variant hover:text-on-background transition-colors"
+            className="inline-flex items-center gap-2 text-label-caps uppercase tracking-wide text-on-surface-variant hover:text-on-background transition-colors rounded-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-container"
           >
             <ArrowLeft size={14} /> Kembali ke Beranda
           </Link>
