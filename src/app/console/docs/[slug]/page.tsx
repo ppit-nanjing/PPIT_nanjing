@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { db } from "@/db";
 import { helpArticles, users } from "@/db/schema";
 import { upsertHelpArticle } from "@/app/actions/admin-docs";
+import { CollapsibleSection } from "@/components/console/collapsible-section";
 
 export default async function HelpArticlePage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
@@ -29,11 +30,8 @@ export default async function HelpArticlePage({ params }: { params: Promise<{ sl
         <p className="text-body-lg text-on-surface-variant whitespace-pre-wrap mb-10">{article.content}</p>
       )}
 
-      <details className="bg-surface-container-lowest border border-outline-variant rounded-xl">
-        <summary className="px-6 py-4 cursor-pointer text-label-caps text-primary-container uppercase tracking-wide">
-          Edit Panduan Ini
-        </summary>
-        <form action={upsertHelpArticle.bind(null, article.id)} className="px-6 pb-6 flex flex-col gap-4">
+      <CollapsibleSection title="Edit Panduan Ini">
+        <form action={upsertHelpArticle.bind(null, article.id)} className="flex flex-col gap-4">
           <input name="title" defaultValue={article.title} required className="bg-soft-gray rounded-md p-3 text-body-md" />
           <input name="section" defaultValue={article.section} required className="bg-soft-gray rounded-md p-3 text-body-md" />
           <textarea name="content" defaultValue={article.content ?? ""} rows={8} className="bg-soft-gray rounded-md p-3 text-body-md resize-none" />
@@ -44,7 +42,7 @@ export default async function HelpArticlePage({ params }: { params: Promise<{ sl
             Simpan Perubahan
           </button>
         </form>
-      </details>
+      </CollapsibleSection>
     </div>
   );
 }
