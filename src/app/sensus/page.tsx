@@ -15,7 +15,7 @@ export default async function SensusPage({
 }) {
   const { returnTo } = await searchParams;
   const session = await auth();
-  if (!session?.user?.id) redirect(returnTo ? `/login` : "/login");
+  if (!session?.user?.id) redirect(`/login?returnTo=${encodeURIComponent("/sensus")}`);
 
   const [existing] = await db.select().from(sensusProfiles).where(eq(sensusProfiles.userId, session.user.id));
 
