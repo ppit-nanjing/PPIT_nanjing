@@ -12,6 +12,8 @@ import { MembershipDeleteButton } from "@/components/console/membership-delete-b
 import { MembershipTabs } from "@/components/console/membership-tabs";
 import { CollapsibleSection } from "@/components/console/collapsible-section";
 import { CORE_KEYS } from "@/lib/membership-form";
+import Image from "next/image";
+import Link from "next/link";
 
 const STATUS_LABEL: Record<string, string> = {
   pending: "Menunggu",
@@ -71,9 +73,9 @@ export default async function MembershipDetailPage({ params }: { params: Promise
 
   return (
     <div className="px-4 py-6 sm:px-6 lg:px-8 lg:py-10 max-w-3xl">
-      <a href="/console/membership" className="text-label-caps text-secondary uppercase hover:text-on-background">
+      <Link href="/console/membership" className="text-label-caps text-secondary uppercase hover:text-on-background">
         &larr; Kembali ke Daftar
-      </a>
+      </Link>
       <h1 className="text-headline-md sm:text-headline-lg text-on-background mt-2 mb-1">{app.fullName}</h1>
       <MembershipTabs active="list" />
       <p className="text-body-md text-on-surface-variant mb-8">
@@ -107,8 +109,13 @@ export default async function MembershipDetailPage({ params }: { params: Promise
                 <div key={k} className="px-6 py-4">
                   <p className="text-label-caps uppercase tracking-wide text-on-surface-variant">{labelByKey.get(k) ?? k}</p>
                   {type === "image" && v ? (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img src={v} alt={labelByKey.get(k) ?? k} className="max-h-48 rounded-md object-contain mt-1" />
+                    <Image
+                      src={v}
+                      alt={labelByKey.get(k) ?? k}
+                      width={640}
+                      height={480}
+                      className="max-h-48 w-auto h-auto rounded-md object-contain mt-1"
+                    />
                   ) : type === "checkbox" ? (
                     <p className="text-body-md text-on-background mt-1">{v === "true" ? "Ya" : "Tidak"}</p>
                   ) : type === "url" && v ? (
