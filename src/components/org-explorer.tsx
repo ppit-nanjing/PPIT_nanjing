@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import Image from "next/image";
 import {
   Building2,
   UserRound,
@@ -82,13 +83,15 @@ function MemberRow({
   showSocials?: boolean;
 }) {
   const avatar = compact ? "w-6 h-6" : "w-7 h-7";
+  const avatarSize = compact ? 24 : 28;
   return (
     <div className="flex items-center gap-2">
       {member.avatarUrl || member.image ? (
-        // eslint-disable-next-line @next/next/no-img-element
-        <img
-          src={member.avatarUrl || member.image || undefined}
-          alt={member.name ?? ""}
+          <Image
+            src={(member.avatarUrl || member.image) as string}
+            alt={member.name ?? ""}
+          width={avatarSize}
+          height={avatarSize}
           className={`${avatar} rounded-full object-cover border border-outline-variant shrink-0`}
         />
       ) : (
@@ -107,10 +110,6 @@ function MemberRow({
       {showSocials && <SocialIcons member={member} />}
     </div>
   );
-}
-
-function unitIcon(name: string) {
-  return name.startsWith("Badan Pengurus") ? Users : Building2;
 }
 
 function ApexNode() {
@@ -140,7 +139,6 @@ function NodeCard({
 }) {
   const members = node.members;
   const cap = compact ? 3 : 5;
-  const Icon = unitIcon(node.name);
   const Wrapper = onClick ? "button" : "div";
   return (
     <Wrapper
@@ -151,7 +149,11 @@ function NodeCard({
     >
       <div className="flex items-center gap-2 mb-1.5">
         <span className="ppit-node-ico shrink-0" style={{ color: node.color }}>
-          <Icon style={{ color: node.color }} />
+          {node.name.startsWith("Badan Pengurus") ? (
+            <Users style={{ color: node.color }} />
+          ) : (
+            <Building2 style={{ color: node.color }} />
+          )}
         </span>
         <h3 className="text-body-md font-semibold text-on-background leading-tight">{node.name}</h3>
       </div>
