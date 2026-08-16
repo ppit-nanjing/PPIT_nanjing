@@ -6,7 +6,7 @@ import { auth } from "@/auth";
 import { db } from "@/db";
 import { itemContributions, inventoryItems, inventoryAuditLogs } from "@/db/schema";
 import { hasModuleAccess } from "@/lib/admin-scope";
-import { createNotification } from "@/lib/notifications";
+import { createTemplatedNotification } from "@/lib/notifications";
 
 async function requireMember() {
   const session = await auth();
@@ -123,12 +123,10 @@ export async function reviewContribution(formData: FormData) {
 }
 
 async function notifyContributor(userId: string, itemName: string, approved: boolean) {
-  await createNotification({
+  await createTemplatedNotification({
     userId,
-    title: approved ? "Sumbangan disetujui" : "Sumbangan ditolak",
-    body: approved
-      ? `Sumbangan "${itemName}" telah masuk ke inventaris PPIT. Terima kasih!`
-      : `Maaf, sumbangan "${itemName}" tidak dapat kami terima saat ini.`,
+    templateKey: approved ? "contribution_approved" : "contribution_rejected",
+    variables: { itemName },
     relatedEntityType: "item_contribution",
     relatedEntityId: userId,
   });
