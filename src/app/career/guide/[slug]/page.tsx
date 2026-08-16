@@ -5,6 +5,7 @@ import { careerGuideArticles } from "@/db/schema";
 import { SiteNav } from "@/components/site-nav";
 import { SiteFooter } from "@/components/site-footer";
 import { Video, FileText } from "lucide-react";
+import Link from "next/link";
 
 function estimateReadMinutes(content: string | null): number {
   if (!content) return 1;
@@ -62,12 +63,12 @@ export default async function CareerGuideDetailPage({ params }: { params: Promis
                 Daftar Alumni Network Mentorship untuk sesi bimbingan 1-on-1 dengan alumni PPIT
                 Nanjing.
               </p>
-              <a
+              <Link
                 href="/career/mentorship"
                 className="block w-full bg-primary-container text-on-primary text-label-caps uppercase tracking-wide py-3 rounded-md hover:bg-primary transition-colors"
               >
                 Daftar Mentorship
-              </a>
+              </Link>
             </div>
 
             {related.length > 0 && (
