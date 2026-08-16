@@ -5,6 +5,7 @@ import { SiteNav } from "@/components/site-nav";
 import { SiteFooter } from "@/components/site-footer";
 import { formatRelativeTime } from "@/lib/format-relative-time";
 import { Briefcase, MapPin, Search, SlidersHorizontal, BookOpen, Users } from "lucide-react";
+import Link from "next/link";
 
 const TYPE_LABEL = {
   internship: "Magang",
@@ -193,7 +194,7 @@ export default async function JobsPage({
               </div>
             </a>
           ))}
-          <a
+          <Link
             href="/career/mentorship"
             className="flex items-start gap-4 bg-primary-container/5 border border-primary-container/20 rounded-lg p-6 hover:bg-primary-container/10 transition-colors"
           >
@@ -202,7 +203,7 @@ export default async function JobsPage({
               <h3 className="text-body-md font-semibold text-on-background mb-1">Alumni Network Mentorship</h3>
               <p className="text-label-caps text-on-surface-variant">Terhubung dengan alumni untuk bimbingan karir</p>
             </div>
-          </a>
+          </Link>
         </div>
       </section>
 
