@@ -7,6 +7,8 @@ import { db } from "@/db";
 import { events, eventRegistrations } from "@/db/schema";
 import { SiteNav } from "@/components/site-nav";
 import { SiteFooter } from "@/components/site-footer";
+import { CopyButton } from "@/components/copy-button";
+import Link from "next/link";
 import { CheckCircle2, CalendarDays, MapPin } from "lucide-react";
 
 export default async function EventTicketPage({ params }: { params: Promise<{ slug: string }> }) {
@@ -52,6 +54,13 @@ export default async function EventTicketPage({ params }: { params: Promise<{ sl
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src={qrDataUrl} alt="QR Tiket" className="mx-auto mb-6 rounded-lg" width={240} height={240} />
           <h2 className="text-headline-md text-on-background mb-3">{event.title}</h2>
+
+          <div className="flex flex-col items-center gap-2 mb-4">
+            <p className="text-label-caps text-on-surface-variant">Token check-in (cadangan jika QR tak terbaca)</p>
+            <code className="bg-surface-container-low px-3 py-1.5 rounded-md text-body-sm break-all select-all">{token}</code>
+            <CopyButton value={token} label="Salin Token" />
+          </div>
+
           <div className="flex flex-col gap-1.5 text-label-caps text-on-surface-variant items-center">
             {event.startAt && (
               <span className="flex items-center gap-1.5">
@@ -67,18 +76,18 @@ export default async function EventTicketPage({ params }: { params: Promise<{ sl
         </div>
 
         <div className="flex flex-col sm:flex-row gap-3 mt-8 justify-center">
-          <a
+          <Link
             href="/events"
             className="border border-outline-variant text-on-background text-label-caps uppercase tracking-wide px-6 py-3 rounded-md hover:bg-surface-container-low transition-colors"
           >
             Kegiatan Lainnya
-          </a>
-          <a
+          </Link>
+          <Link
             href="/"
             className="bg-primary-container text-on-primary text-label-caps uppercase tracking-wide px-6 py-3 rounded-md hover:bg-primary transition-colors"
           >
             Kembali ke Beranda
-          </a>
+          </Link>
         </div>
       </main>
 
