@@ -3,6 +3,8 @@ import { redirect } from "next/navigation";
 import { auth } from "@/auth";
 import { db } from "@/db";
 import { users, sensusProfiles } from "@/db/schema";
+import { SiteNav } from "@/components/site-nav";
+import { SiteFooter } from "@/components/site-footer";
 import { EmailSubscriptionToggle } from "@/components/profile/email-subscription-toggle";
 import { BackButton } from "@/components/profile/back-button";
 import { ImageUploadCropper } from "@/components/upload/image-upload-cropper";
@@ -17,8 +19,10 @@ export default async function ProfilePage() {
   const [sensus] = await db.select().from(sensusProfiles).where(eq(sensusProfiles.userId, session.user.id));
 
   return (
-    <div className="min-h-screen bg-background px-[var(--spacing-container-padding)] py-16">
-      <div className="max-w-2xl mx-auto">
+    <>
+      <SiteNav />
+      <div className="min-h-screen bg-background px-[var(--spacing-container-padding)] py-16">
+        <div className="max-w-2xl mx-auto">
         <h1 className="text-headline-lg text-on-background mb-8">Profil Saya</h1>
 
         <div className="flex items-center gap-4 mb-10">
@@ -139,7 +143,9 @@ export default async function ProfilePage() {
 
         <h2 className="text-label-caps uppercase tracking-widest text-secondary mb-4">Preferensi Notifikasi</h2>
         <EmailSubscriptionToggle initialSubscribed={session.user.emailSubscribed} />
+        </div>
       </div>
-    </div>
+      <SiteFooter />
+    </>
   );
 }
