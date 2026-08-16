@@ -151,12 +151,12 @@ export default async function JobsPage({
               {jobs.length} lowongan ditemukan
             </p>
             {(q || selectedTypes.length > 0 || location) && (
-              <a
+              <Link
                 href="/jobs"
                 className="text-label-caps uppercase tracking-wide text-primary-container hover:text-primary transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-container focus-visible:ring-offset-2 focus-visible:ring-offset-background rounded-md motion-reduce:transition-none"
               >
                 Hapus filter
-              </a>
+              </Link>
             )}
           </div>
           {jobs.length === 0 ? (
@@ -171,12 +171,12 @@ export default async function JobsPage({
                   : "Lowongan magang dan kerja akan ditampilkan di sini saat tersedia."}
               </p>
               {(q || selectedTypes.length > 0 || location) && (
-                <a
+                <Link
                   href="/jobs"
                   className="bg-primary-container text-on-primary text-label-caps uppercase tracking-wide px-6 py-3 rounded-md hover:bg-primary transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-container focus-visible:ring-offset-2 focus-visible:ring-offset-background motion-reduce:transition-none"
                 >
                   Hapus semua filter
-                </a>
+                </Link>
               )}
             </div>
           ) : (
