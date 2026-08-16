@@ -38,7 +38,7 @@ export default async function ProfilePage() {
             />
           ) : (
             <div className="w-16 h-16 rounded-full bg-surface-container flex items-center justify-center text-on-surface-variant shrink-0">
-              <UserRound size={24} />
+              <UserRound size={24} aria-hidden />
             </div>
           )}
           <div>
@@ -111,7 +111,7 @@ export default async function ProfilePage() {
           <div className="flex items-center gap-3">
             <button
               type="submit"
-              className="bg-primary-container text-on-primary text-label-caps uppercase tracking-wide px-6 py-3 rounded-md hover:bg-primary transition-colors"
+              className="bg-primary-container text-on-primary text-label-caps uppercase tracking-wide px-6 py-3 rounded-md hover:bg-primary transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-container focus-visible:ring-offset-2 focus-visible:ring-offset-background motion-reduce:transition-none"
             >
               Simpan Profil
             </button>
@@ -122,13 +122,13 @@ export default async function ProfilePage() {
         <h2 className="text-label-caps uppercase tracking-widest text-secondary mb-4">Data Sensus</h2>
         <Link
           href="/sensus"
-          className="flex items-center justify-between gap-4 bg-surface-container-lowest border border-outline-variant rounded-lg p-5 mb-10 hover:bg-surface-container-low transition-colors"
+          className="flex items-center justify-between gap-4 bg-surface-container-lowest border border-outline-variant rounded-lg p-5 mb-10 hover:bg-surface-container-low transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-container focus-visible:ring-offset-2 focus-visible:ring-offset-background motion-reduce:transition-none"
         >
           <div className="flex items-center gap-3">
             {sensus?.completionStatus === "complete" ? (
-              <ClipboardCheck className="text-primary-container" size={20} />
+              <ClipboardCheck className="text-primary-container" size={20} aria-hidden />
             ) : (
-              <ClipboardList className="text-secondary" size={20} />
+              <ClipboardList className="text-secondary" size={20} aria-hidden />
             )}
             <div>
               <p className="text-body-md font-medium text-on-background">
