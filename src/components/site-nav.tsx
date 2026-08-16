@@ -2,9 +2,11 @@
 
 import { useEffect, useState } from "react";
 import { usePathname } from "next/navigation";
-import { Menu, X } from "lucide-react";
+import { useSession, signIn } from "next-auth/react";
+import { Menu, X, Search, User } from "lucide-react";
 import { AccountMenu } from "@/components/account-menu";
 import { NotificationBell } from "@/components/notifications/notification-bell";
+import { CommandPalette, useCommandPalette } from "@/components/command-palette";
 import { NAV_LINKS } from "@/lib/nav-links";
 
 // Scroll-driven shrink + glass, corrected to match the reference's actual
@@ -35,18 +37,41 @@ export function SiteNav() {
   const pathname = usePathname();
   const progress = useScrollProgress();
   const [menuOpen, setMenuOpen] = useState(false);
+  const { open: paletteOpen, setOpen: setPaletteOpen } = useCommandPalette();
+  const { data: session } = useSession();
+  // The width-shrink + inline links only make sense on real desktops. On
+  // phones/tablets the burger menu is used, and shrinking the pill would just
+  // crush the brand + icons, so we keep it near full-width there.
+  const [isDesktop, setIsDesktop] = useState(true);
+
+  useEffect(() => {
+    const mq = window.matchMedia("(min-width: 1024px)");
+    const update = () => setIsDesktop(mq.matches);
+    update();
+    mq.addEventListener("change", update);
+    return () => mq.removeEventListener("change", update);
+  }, []);
 
   useEffect(() => {
     setMenuOpen(false);
   }, [pathname]);
 
-  // Width: shrinks from full-bleed down to a narrower floating pill as you
-  // scroll. Shape stays a constant rounded-full pill throughout (see note
-  // above) - only width/opacity/blur/shadow animate, never the radius.
-  // Capped at 60%, not 40% - narrower than that leaves no room for the nav
-  // links + account menu + bell, which were visibly compressing.
+  // Lock body scroll while the mobile/tablet menu is open.
+  useEffect(() => {
+    if (!menuOpen) return;
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = prev;
+    };
+  }, [menuOpen]);
+
+  // Width: shrinks from full-bleed down to a narrower floating pill on desktop
+  // only. On mobile/tablet it stays essentially full-width. Shape stays a
+  // constant rounded-full pill throughout - only width/opacity/blur/shadow
+  // animate, never the radius.
   const startWidthPct = 100;
-  const endWidthPct = 60;
+  const endWidthPct = isDesktop ? 60 : 100;
   const widthPct = startWidthPct - (startWidthPct - endWidthPct) * progress;
 
   // Opacity/blur: solid opaque white (alpha 1, no blur) at rest. As you
@@ -73,19 +98,26 @@ export function SiteNav() {
               "width 400ms ease, background-color 400ms ease, backdrop-filter 400ms ease, -webkit-backdrop-filter 400ms ease, box-shadow 400ms ease",
           }}
         >
-          <div className="max-w-[var(--container-max)] mx-auto px-[var(--spacing-container-padding)] flex justify-between items-center gap-4 h-12 md:h-14">
-            <a href="/" className="text-headline-md font-bold text-primary uppercase tracking-tight shrink-0 whitespace-nowrap">
+          <div className="max-w-[var(--container-max)] mx-auto flex justify-between items-center gap-2 sm:gap-4 h-12 md:h-14 px-4 sm:px-6">
+            <a
+              href="/"
+              className="text-headline-sm sm:text-headline-md font-bold text-primary uppercase tracking-tight shrink-0 whitespace-nowrap"
+            >
               PPIT Nanjing
             </a>
 
-            <div className="hidden md:flex items-center gap-4 lg:gap-6 text-body-md shrink-0">
+            {/* Inline links: desktop (lg) and up only - narrower viewports use
+                the burger menu below. */}
+            <div className="hidden lg:flex items-center gap-5 xl:gap-7 text-body-md shrink-0">
               {NAV_LINKS.map((link) => {
                 const active = pathname === link.href;
                 return (
                   <a
                     key={link.href}
                     href={link.href}
-                    className={`relative overflow-hidden h-5 shrink-0 whitespace-nowrap group ${active ? "text-primary" : "text-secondary"}`}
+                    className={`relative overflow-hidden h-5 shrink-0 whitespace-nowrap group ${
+                      active ? "text-primary" : "text-secondary"
+                    }`}
                   >
                     <span className="block transition-transform duration-200 ease-out group-hover:-translate-y-5 font-medium">
                       {link.label}
@@ -98,13 +130,24 @@ export function SiteNav() {
               })}
             </div>
 
-            <div className="flex items-center gap-1 md:gap-3 shrink-0">
+            <div className="flex items-center gap-1 sm:gap-2 shrink-0">
+              <button
+                aria-label="Cari (Ctrl/⌘ + K)"
+                type="button"
+                className="text-on-background p-1 shrink-0"
+                onClick={() => setPaletteOpen(true)}
+              >
+                <Search size={20} />
+              </button>
+              <kbd className="hidden lg:inline-flex text-label-caps text-on-surface-variant border border-outline-variant rounded px-1.5 py-0.5 shrink-0">
+                ⌘K
+              </kbd>
               <NotificationBell />
               <AccountMenu />
               <button
                 aria-label={menuOpen ? "Tutup menu" : "Buka menu"}
                 type="button"
-                className="md:hidden text-on-background p-1 shrink-0"
+                className="lg:hidden text-on-background p-1 shrink-0"
                 onClick={() => setMenuOpen((v) => !v)}
               >
                 {menuOpen ? <X size={22} /> : <Menu size={22} />}
@@ -114,28 +157,78 @@ export function SiteNav() {
         </nav>
       </header>
 
-      {/* Mobile full-screen menu overlay */}
+      {/* Mobile / tablet full-screen menu (below lg). The header pill stays on
+          top (z-50) so the close (X) button remains reachable. */}
       <div
-        className={`md:hidden fixed inset-0 z-40 bg-surface transition-opacity duration-300 ${
+        className={`lg:hidden fixed inset-0 z-40 bg-surface transition-opacity duration-300 ${
           menuOpen ? "opacity-100 pointer-events-auto" : "opacity-0 pointer-events-none"
         }`}
         aria-hidden={!menuOpen}
       >
-        <nav className="h-full flex flex-col items-center justify-center gap-6 pt-16">
-          {NAV_LINKS.map((link) => (
-            <a
-              key={link.href}
-              href={link.href}
-              onClick={() => setMenuOpen(false)}
-              className={`text-headline-md font-semibold ${
-                pathname === link.href ? "text-primary" : "text-on-background"
-              }`}
-            >
-              {link.label}
-            </a>
-          ))}
+        <nav className="h-full flex flex-col items-stretch justify-center gap-1 pt-20 px-5 overflow-y-auto">
+          {/* Self-contained account header so login / profile / logout are
+              reachable from the drawer without relying on the top pill. */}
+          <div className="px-1 mb-3">
+            {session ? (
+              <div className="flex items-center gap-3 bg-surface-container-lowest border border-outline-variant rounded-xl p-3">
+                {session.user.image ? (
+                  <img
+                    src={session.user.image}
+                    alt={session.user.name ?? "Profil"}
+                    className="w-10 h-10 rounded-full object-cover border border-outline-variant shrink-0"
+                  />
+                ) : (
+                  <div className="w-10 h-10 rounded-full bg-surface-container-low border border-outline-variant flex items-center justify-center shrink-0">
+                    <User size={18} />
+                  </div>
+                )}
+                <div className="min-w-0">
+                  <p className="text-body-md font-semibold text-on-background truncate">
+                    {session.user.name}
+                  </p>
+                  <a
+                    href="/profile"
+                    onClick={() => setMenuOpen(false)}
+                    className="text-label-caps text-primary-container hover:text-primary"
+                  >
+                    Lihat Profil
+                  </a>
+                </div>
+              </div>
+            ) : (
+              <button
+                onClick={() => {
+                  setMenuOpen(false);
+                  signIn("google");
+                }}
+                className="w-full bg-primary-container text-on-primary text-label-caps uppercase tracking-wide px-6 py-3 rounded-md hover:bg-primary transition-colors"
+              >
+                Login
+              </button>
+            )}
+          </div>
+
+          {NAV_LINKS.map((link) => {
+            const active = pathname === link.href;
+            return (
+              <a
+                key={link.href}
+                href={link.href}
+                onClick={() => setMenuOpen(false)}
+                className={`text-center text-headline-sm sm:text-headline-md font-semibold py-3 rounded-lg ${
+                  active
+                    ? "text-primary bg-surface-container-low"
+                    : "text-on-background hover:bg-surface-container-low"
+                }`}
+              >
+                {link.label}
+              </a>
+            );
+          })}
         </nav>
       </div>
+
+      {paletteOpen && <CommandPalette onClose={() => setPaletteOpen(false)} />}
     </>
   );
 }
