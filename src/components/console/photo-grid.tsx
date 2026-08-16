@@ -2,6 +2,7 @@
 
 import { useTransition } from "react";
 import { Trash2, Image as ImageIcon } from "lucide-react";
+import NextImage from "next/image";
 import { deleteGalleryPhoto } from "@/app/actions/admin-content";
 
 interface Photo {
@@ -25,9 +26,14 @@ export function PhotoGrid({ albumId, photos }: { albumId: string; photos: Photo[
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
       {photos.map((p) => (
-        <div key={p.id} className="relative group rounded-lg overflow-hidden bg-surface-container-low">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={p.imageUrl} alt={p.caption ?? ""} className="w-full aspect-square object-cover" />
+        <div key={p.id} className="relative aspect-square group rounded-lg overflow-hidden bg-surface-container-low">
+          <NextImage
+            src={p.imageUrl}
+            alt={p.caption ?? ""}
+            fill
+            sizes="(max-width: 768px) 100vw, 20vw"
+            className="object-cover"
+          />
           <button
             onClick={() => startTransition(() => deleteGalleryPhoto(p.id, albumId))}
             className="absolute top-2 right-2 bg-inverse-surface/80 text-inverse-on-surface p-1.5 rounded-md opacity-0 group-hover:opacity-100 transition-opacity"
