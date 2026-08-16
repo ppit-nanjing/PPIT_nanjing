@@ -4,6 +4,7 @@ import { departments, departmentMembers, users } from "@/db/schema";
 import { SiteNav } from "@/components/site-nav";
 import { SiteFooter } from "@/components/site-footer";
 import { OrgExplorer, type OrgNodeData, type OrgMember } from "@/components/org-explorer";
+import { Network } from "lucide-react";
 
 // Warm-institutional branch accents (kept subtle to match the design system).
 const BRANCH_ACCENT = [
@@ -106,9 +107,15 @@ export default async function OrganizationPage() {
 
       <main className="max-w-[var(--container-max)] mx-auto px-[var(--spacing-container-padding)] pb-24">
         {units.length === 0 ? (
-          <p className="text-body-md text-on-surface-variant text-center py-12">
-            Struktur organisasi belum tersedia.
-          </p>
+          <div role="status" aria-live="polite" className="flex flex-col items-center text-center py-24">
+            <Network className="text-outline-variant mb-4" size={40} aria-hidden />
+            <h2 className="text-headline-md text-on-background mb-2">
+              Struktur organisasi belum tersedia
+            </h2>
+            <p className="text-body-md text-on-surface-variant max-w-md">
+              Bagan kepengurusan akan muncul di sini setelah departemen dan divisi ditambahkan.
+            </p>
+          </div>
         ) : (
           <OrgExplorer units={units} />
         )}
