@@ -25,7 +25,7 @@ const STATUS_STYLE: Record<string, string> = {
 
 export default async function SubmissionHistoryPage() {
   const session = await auth();
-  if (!session?.user?.id) redirect("/login");
+  if (!session?.user?.id) redirect(`/login?returnTo=${encodeURIComponent("/profile/submissions")}`);
   const userId = session.user.id;
 
   // Cross-domain view (docs/Screens/Public/Event Flow.md) - union of everything
