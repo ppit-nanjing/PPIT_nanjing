@@ -66,7 +66,7 @@ export default function TermsPage() {
               <p>
                 Data yang dikumpulkan melalui formulir Sensus digunakan untuk keperluan pendataan
                 internal organisasi dan pelaporan kepada pihak terkait. Lihat{" "}
-                <Link href="/privacy" className="text-primary-container underline">
+                <Link href="/privacy" className="text-primary-container underline rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-container focus-visible:ring-offset-2 focus-visible:ring-offset-background">
                   Kebijakan Privasi
                 </Link>{" "}
                 untuk detail lebih lanjut.
