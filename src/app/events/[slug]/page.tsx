@@ -5,6 +5,10 @@ import { db } from "@/db";
 import { events, eventRegistrations, galleryAlbums, galleryPhotos } from "@/db/schema";
 import { SiteNav } from "@/components/site-nav";
 import { SiteFooter } from "@/components/site-footer";
+import { AnimatedHeroHeading } from "@/components/animated-hero-heading";
+import { Reveal } from "@/components/reveal";
+import { EventCard } from "@/components/event-card";
+import { GalleryLightbox } from "@/components/gallery-lightbox";
 import { CalendarDays, MapPin, Users, Ticket, ArrowLeft, ListChecks, Images, ArrowRight } from "lucide-react";
 import { registerForEvent } from "@/app/actions/events";
 
@@ -62,11 +66,13 @@ export default async function EventDetailPage({ params }: { params: Promise<{ sl
         </a>
 
         {event.coverImageUrl && (
-          <div className="relative w-full h-64 md:h-96 rounded-xl overflow-hidden mb-8">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={event.coverImageUrl} alt={event.title} className="w-full h-full object-cover" />
-            <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent" />
-          </div>
+          <Reveal>
+            <div className="relative w-full h-64 md:h-96 rounded-xl overflow-hidden mb-8">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={event.coverImageUrl} alt={event.title} className="w-full h-full object-cover" />
+              <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent" />
+            </div>
+          </Reveal>
         )}
 
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
@@ -81,170 +87,165 @@ export default async function EventDetailPage({ params }: { params: Promise<{ sl
                 Khusus peserta tersensus
               </span>
             )}
-            <h1 className="text-headline-lg text-on-background mb-6">{event.title}</h1>
+            <AnimatedHeroHeading
+              words={event.title.split(" ")}
+              className="text-display-hero-mobile md:text-display-hero text-on-background mb-6 leading-tight"
+            />
 
             {event.description && (
-              <p className="text-body-lg text-on-surface-variant whitespace-pre-wrap mb-10">{event.description}</p>
+              <Reveal>
+                <p className="text-body-lg text-on-surface-variant whitespace-pre-wrap mb-10">
+                  {event.description}
+                </p>
+              </Reveal>
             )}
 
             {agendaItems.length > 0 && (
-              <section className="mb-10">
-                <h2 className="text-headline-md text-on-background mb-6 flex items-center gap-2">
-                  <ListChecks className="text-primary-container" size={20} /> Agenda Acara
-                </h2>
-                <ul className="flex flex-col gap-4">
-                  {agendaItems.map((item, i) => (
-                    <li key={i} className="flex items-start gap-3 border-l-2 border-primary-container pl-4">
-                      <span className="text-body-md text-on-background">{item}</span>
-                    </li>
-                  ))}
-                </ul>
-              </section>
+              <Reveal>
+                <section className="mb-10">
+                  <h2 className="text-headline-md text-on-background mb-6 flex items-center gap-2">
+                    <ListChecks className="text-primary-container" size={20} /> Agenda Acara
+                  </h2>
+                  <ul className="flex flex-col gap-4">
+                    {agendaItems.map((item, i) => (
+                      <li key={i} className="flex items-start gap-3 border-l-2 border-primary-container pl-4">
+                        <span className="text-body-md text-on-background">{item}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </section>
+              </Reveal>
             )}
 
             {photos.length > 0 && (
-              <section className="mb-10">
-                <h2 className="text-headline-md text-on-background mb-6 flex items-center gap-2">
-                  <Images className="text-primary-container" size={20} /> Galeri
-                </h2>
-                <div className="grid grid-cols-2 gap-4">
-                  {photos.map((p) => (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img
-                      key={p.id}
-                      src={p.imageUrl}
-                      alt={p.caption ?? event.title}
-                      className="w-full h-40 object-cover rounded-lg border border-outline-variant"
-                    />
-                  ))}
-                </div>
-                {album && (
-                  <a
-                    href={`/gallery/${album.id}`}
-                    className="inline-flex items-center gap-1 text-label-caps uppercase text-primary-container hover:text-primary transition-colors mt-4"
-                  >
-                    Lihat Album Lengkap <ArrowRight size={14} />
-                  </a>
-                )}
-              </section>
+              <Reveal>
+                <section className="mb-10">
+                  <h2 className="text-headline-md text-on-background mb-6 flex items-center gap-2">
+                    <Images className="text-primary-container" size={20} /> Galeri
+                  </h2>
+                  <GalleryLightbox
+                    photos={photos.map((p) => ({
+                      id: p.id,
+                      imageUrl: p.imageUrl,
+                      caption: p.caption ?? null,
+                    }))}
+                  />
+                  {album && (
+                    <a
+                      href={`/gallery/${album.id}`}
+                      className="inline-flex items-center gap-1 text-label-caps uppercase text-primary-container hover:text-primary transition-colors mt-4"
+                    >
+                      Lihat Album Lengkap <ArrowRight size={14} />
+                    </a>
+                  )}
+                </section>
+              </Reveal>
             )}
           </div>
 
           <div className="lg:col-span-4">
-            <div className="sticky top-24 bg-surface-container-low border border-outline-variant rounded-xl p-6 flex flex-col gap-5">
-              {event.startAt && (
+            <Reveal>
+              <div className="sticky top-24 bg-surface-container-low border border-outline-variant rounded-xl p-6 flex flex-col gap-5">
+                {event.startAt && (
+                  <div className="flex items-start gap-3">
+                    <CalendarDays className="text-primary-container shrink-0 mt-0.5" size={18} />
+                    <div>
+                      <p className="text-label-caps uppercase text-on-surface-variant mb-0.5">Tanggal</p>
+                      <p className="text-body-md text-on-background font-semibold">
+                        {new Date(event.startAt).toLocaleDateString("id-ID", { dateStyle: "full" })}
+                      </p>
+                    </div>
+                  </div>
+                )}
+                {event.location && (
+                  <div className="flex items-start gap-3">
+                    <MapPin className="text-primary-container shrink-0 mt-0.5" size={18} />
+                    <div>
+                      <p className="text-label-caps uppercase text-on-surface-variant mb-0.5">Lokasi</p>
+                      <p className="text-body-md text-on-background font-semibold">{event.location}</p>
+                    </div>
+                  </div>
+                )}
                 <div className="flex items-start gap-3">
-                  <CalendarDays className="text-primary-container shrink-0 mt-0.5" size={18} />
+                  <Users className="text-primary-container shrink-0 mt-0.5" size={18} />
                   <div>
-                    <p className="text-label-caps uppercase text-on-surface-variant mb-0.5">Tanggal</p>
+                    <p className="text-label-caps uppercase text-on-surface-variant mb-0.5">Peserta</p>
                     <p className="text-body-md text-on-background font-semibold">
-                      {new Date(event.startAt).toLocaleDateString("id-ID", { dateStyle: "full" })}
+                      {registeredCount}
+                      {event.capacity ? ` / ${event.capacity}` : ""} terdaftar
                     </p>
+                    {event.capacity != null && !isFull && (
+                      <p className="text-label-caps text-primary-container mt-0.5">
+                        Sisa {event.capacity - registeredCount} slot
+                      </p>
+                    )}
                   </div>
                 </div>
-              )}
-              {event.location && (
-                <div className="flex items-start gap-3">
-                  <MapPin className="text-primary-container shrink-0 mt-0.5" size={18} />
-                  <div>
-                    <p className="text-label-caps uppercase text-on-surface-variant mb-0.5">Lokasi</p>
-                    <p className="text-body-md text-on-background font-semibold">{event.location}</p>
-                  </div>
-                </div>
-              )}
-              <div className="flex items-start gap-3">
-                <Users className="text-primary-container shrink-0 mt-0.5" size={18} />
-                <div>
-                  <p className="text-label-caps uppercase text-on-surface-variant mb-0.5">Peserta</p>
-                  <p className="text-body-md text-on-background font-semibold">
-                    {registeredCount}
-                    {event.capacity ? ` / ${event.capacity}` : ""} terdaftar
+                {event.registrationDeadline && (
+                  <p className="text-label-caps text-on-surface-variant">
+                    Pendaftaran ditutup{" "}
+                    {new Date(event.registrationDeadline).toLocaleDateString("id-ID", { dateStyle: "long" })}
                   </p>
-                  {event.capacity != null && !isFull && (
-                    <p className="text-label-caps text-primary-container mt-0.5">
-                      Sisa {event.capacity - registeredCount} slot
+                )}
+
+                <div className="border-t border-outline-variant pt-5">
+                  {event.requiresSensus && !alreadyRegistered && (
+                    <p className="text-label-caps text-on-surface-variant mb-3 text-center">
+                      Event ini hanya untuk peserta yang sudah lengkap mengisi sensus.
+                    </p>
+                  )}
+                  {alreadyRegistered ? (
+                    <a
+                      href={`/events/${slug}/ticket`}
+                      className="w-full inline-flex items-center justify-center gap-2 bg-primary-container text-on-primary text-label-caps uppercase tracking-wide px-6 py-4 rounded-md hover:bg-primary transition-colors"
+                    >
+                      <Ticket size={18} /> Lihat Tiket Saya
+                    </a>
+                  ) : canRegister ? (
+                    <form action={registerForEvent.bind(null, event.id, slug)}>
+                      <button
+                        type="submit"
+                        className="w-full bg-primary-container text-on-primary text-label-caps uppercase tracking-wide px-6 py-4 rounded-md hover:bg-primary transition-colors"
+                      >
+                        Daftar Sekarang
+                      </button>
+                    </form>
+                  ) : (
+                    <p className="text-body-md text-on-surface-variant text-center">
+                      {isFull
+                        ? "Pendaftaran sudah penuh."
+                        : deadlinePassed
+                          ? "Batas waktu pendaftaran sudah lewat."
+                          : "Pendaftaran untuk kegiatan ini belum/tidak dibuka."}
                     </p>
                   )}
                 </div>
               </div>
-              {event.registrationDeadline && (
-                <p className="text-label-caps text-on-surface-variant">
-                  Pendaftaran ditutup{" "}
-                  {new Date(event.registrationDeadline).toLocaleDateString("id-ID", { dateStyle: "long" })}
-                </p>
-              )}
-
-              <div className="border-t border-outline-variant pt-5">
-                {event.requiresSensus && !alreadyRegistered && (
-                  <p className="text-label-caps text-on-surface-variant mb-3 text-center">
-                    Event ini hanya untuk peserta yang sudah lengkap mengisi sensus.
-                  </p>
-                )}
-                {alreadyRegistered ? (
-                  <a
-                    href={`/events/${slug}/ticket`}
-                    className="w-full inline-flex items-center justify-center gap-2 bg-primary-container text-on-primary text-label-caps uppercase tracking-wide px-6 py-4 rounded-md hover:bg-primary transition-colors"
-                  >
-                    <Ticket size={18} /> Lihat Tiket Saya
-                  </a>
-                ) : canRegister ? (
-                  <form action={registerForEvent.bind(null, event.id, slug)}>
-                    <button
-                      type="submit"
-                      className="w-full bg-primary-container text-on-primary text-label-caps uppercase tracking-wide px-6 py-4 rounded-md hover:bg-primary transition-colors"
-                    >
-                      Daftar Sekarang
-                    </button>
-                  </form>
-                ) : (
-                  <p className="text-body-md text-on-surface-variant text-center">
-                    {isFull
-                      ? "Pendaftaran sudah penuh."
-                      : deadlinePassed
-                        ? "Batas waktu pendaftaran sudah lewat."
-                        : "Pendaftaran untuk kegiatan ini belum/tidak dibuka."}
-                  </p>
-                )}
-              </div>
-            </div>
+            </Reveal>
           </div>
         </div>
 
         {related.length > 0 && (
           <section className="mt-20 pt-12 border-t border-outline-variant">
-            <h2 className="text-headline-lg text-on-background mb-8">Kegiatan Lainnya</h2>
+            <Reveal>
+              <h2 className="text-headline-lg text-on-background mb-8">Kegiatan Lainnya</h2>
+            </Reveal>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              {related.map((e) => (
-                <a
+              {related.map((e, i) => (
+                <EventCard
                   key={e.id}
-                  href={`/events/${e.slug}`}
-                  className="group bg-surface-container-lowest border border-outline-variant rounded-xl overflow-hidden hover:shadow-[0_10px_30px_rgba(39,23,22,0.06)] transition-shadow flex flex-col"
-                >
-                  <div className="h-36 bg-surface-container-low overflow-hidden">
-                    {e.coverImageUrl ? (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img
-                        src={e.coverImageUrl}
-                        alt={e.title}
-                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-                      />
-                    ) : (
-                      <div className="w-full h-full flex items-center justify-center">
-                        <CalendarDays className="text-outline-variant" size={28} />
-                      </div>
-                    )}
-                  </div>
-                  <div className="p-5">
-                    <h3 className="text-body-md font-semibold text-on-background mb-2 group-hover:text-primary-container transition-colors">
-                      {e.title}
-                    </h3>
-                    {e.startAt && (
-                      <span className="flex items-center gap-1.5 text-label-caps text-on-surface-variant">
-                        <CalendarDays size={13} /> {new Date(e.startAt).toLocaleDateString("id-ID")}
-                      </span>
-                    )}
-                  </div>
-                </a>
+                  index={i}
+                  isPast={e.startAt ? new Date(e.startAt) < now : false}
+                  event={{
+                    id: e.id,
+                    slug: e.slug,
+                    title: e.title,
+                    coverImageUrl: e.coverImageUrl,
+                    category: e.category,
+                    startAt: e.startAt,
+                    location: e.location,
+                  }}
+                />
               ))}
             </div>
           </section>
