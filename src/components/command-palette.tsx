@@ -7,11 +7,11 @@ import { Search, CornerDownLeft, Lock } from "lucide-react";
 import { NAV_LINKS } from "@/lib/nav-links";
 
 type ApiResult = {
-  type: "event" | "news" | "job" | "gallery";
+  type: "event" | "news" | "job" | "gallery" | "inventory" | "page";
   title: string;
   subtitle?: string;
   href: string;
-  locked: boolean;
+  locked?: boolean;
 };
 
 type ResultItem = {
@@ -19,7 +19,7 @@ type ResultItem = {
   label: string;
   subtitle?: string;
   href: string;
-  kind: "page" | "event" | "news" | "job" | "gallery" | "action";
+  kind: "page" | "event" | "news" | "job" | "gallery" | "inventory" | "action";
   action?: "logout";
   locked?: boolean;
 };
@@ -105,7 +105,14 @@ export function CommandPalette({ onClose }: { onClose: () => void }) {
     }));
     const actionItems = buildActions(session, isAdmin).filter((a) => a.label.toLowerCase().includes(q));
 
-    const byType: Record<string, ResultItem[]> = { event: [], news: [], job: [], gallery: [] };
+    const byType: Record<string, ResultItem[]> = {
+      event: [],
+      news: [],
+      job: [],
+      gallery: [],
+      inventory: [],
+      page: [],
+    };
     results.forEach((r) =>
       byType[r.type].push({
         key: `${r.type}:${r.href}`,
@@ -122,6 +129,8 @@ export function CommandPalette({ onClose }: { onClose: () => void }) {
       { label: "Berita", type: "news" },
       { label: "Lowongan", type: "job" },
       { label: "Galeri", type: "gallery" },
+      { label: "Inventaris", type: "inventory" },
+      { label: "Halaman", type: "page" },
     ];
 
     const secs: Section[] = [];
