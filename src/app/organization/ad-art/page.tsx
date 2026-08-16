@@ -4,6 +4,7 @@ import { organizationDocuments } from "@/db/schema";
 import { SiteNav } from "@/components/site-nav";
 import { SiteFooter } from "@/components/site-footer";
 import { FileText, Download } from "lucide-react";
+import Link from "next/link";
 
 export default async function AdArtPage() {
   const [doc] = await db
@@ -55,12 +56,12 @@ export default async function AdArtPage() {
           </div>
         )}
 
-        <a
+        <Link
           href="/organization/ad-art/review"
           className="inline-flex items-center gap-2 text-label-caps text-primary-container hover:text-primary transition-colors mt-6"
         >
           Baca Ringkasan Panduan &rarr;
-        </a>
+        </Link>
       </main>
 
       <SiteFooter />
