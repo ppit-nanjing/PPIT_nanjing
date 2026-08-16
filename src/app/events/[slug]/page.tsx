@@ -9,7 +9,7 @@ import { AnimatedHeroHeading } from "@/components/animated-hero-heading";
 import { Reveal } from "@/components/reveal";
 import { EventCard } from "@/components/event-card";
 import { GalleryLightbox } from "@/components/gallery-lightbox";
-import { CalendarDays, MapPin, Users, Ticket, ArrowLeft, ListChecks, Images, ArrowRight } from "lucide-react";
+import { CalendarDays, MapPin, Users, Ticket, ArrowLeft, ListChecks, Images, ArrowRight, CalendarX } from "lucide-react";
 import Image from "next/image";
 import { registerForEvent } from "@/app/actions/events";
 import Link from "next/link";
