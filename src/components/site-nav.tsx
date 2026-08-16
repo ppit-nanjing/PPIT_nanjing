@@ -39,6 +39,34 @@ export function SiteNav() {
   const [menuOpen, setMenuOpen] = useState(false);
   const { open: paletteOpen, setOpen: setPaletteOpen } = useCommandPalette();
   const { data: session } = useSession();
+  const [showHint, setShowHint] = useState(false);
+
+  const dismissHint = () => {
+    setShowHint(false);
+    try {
+      localStorage.setItem("ppit-cmdk-hint-dismissed", "1");
+    } catch {
+      /* ignore */
+    }
+  };
+
+  // First-visit nudge advertising the Ctrl/⌘+K shortcut. Shown once, then
+  // remembered via localStorage; also dismissed as soon as the palette opens.
+  useEffect(() => {
+    try {
+      if (!localStorage.getItem("ppit-cmdk-hint-dismissed")) {
+        setShowHint(true);
+        const t = setTimeout(() => setShowHint(false), 7000);
+        return () => clearTimeout(t);
+      }
+    } catch {
+      /* ignore */
+    }
+  }, []);
+
+  useEffect(() => {
+    if (paletteOpen) dismissHint();
+  }, [paletteOpen]);
   // The width-shrink + inline links only make sense on real desktops. On
   // phones/tablets the burger menu is used, and shrinking the pill would just
   // crush the brand + icons, so we keep it near full-width there.
@@ -131,17 +159,55 @@ export function SiteNav() {
             </div>
 
             <div className="flex items-center gap-1 sm:gap-2 shrink-0">
-              <button
-                aria-label="Cari (Ctrl/⌘ + K)"
-                type="button"
-                className="text-on-background p-1 shrink-0"
-                onClick={() => setPaletteOpen(true)}
-              >
-                <Search size={20} />
-              </button>
-              <kbd className="hidden lg:inline-flex text-label-caps text-on-surface-variant border border-outline-variant rounded px-1.5 py-0.5 shrink-0">
-                ⌘K
-              </kbd>
+              <div className="relative">
+                {/* Desktop: labeled search pill that advertises the shortcut. */}
+                <button
+                  aria-label="Cari (Ctrl/⌘ + K)"
+                  type="button"
+                  onClick={() => {
+                    setPaletteOpen(true);
+                    dismissHint();
+                  }}
+                  className="hidden lg:flex items-center gap-2 bg-surface-container-low text-on-surface-variant rounded-full pl-3 pr-2 py-1.5 text-body-md hover:bg-surface-container transition-colors"
+                >
+                  <Search size={16} />
+                  <span>Cari…</span>
+                  <kbd className="text-label-caps border border-outline-variant rounded px-1.5 py-0.5">⌘K</kbd>
+                </button>
+                {/* Mobile / tablet: icon only (no keyboard shortcut there). */}
+                <button
+                  aria-label="Cari"
+                  type="button"
+                  onClick={() => setPaletteOpen(true)}
+                  className="lg:hidden text-on-background p-1 shrink-0"
+                >
+                  <Search size={20} />
+                </button>
+
+                {/* First-visit hint pointing at the shortcut. */}
+                {showHint && isDesktop && (
+                  <div className="absolute right-0 top-full mt-2 z-[55] w-60 bg-surface-container-lowest border border-outline-variant rounded-xl shadow-lg p-3">
+                    <p className="text-body-md text-on-background">
+                      Tekan{" "}
+                      <kbd className="text-label-caps border border-outline-variant rounded px-1 py-0.5">
+                        ⌘K
+                      </kbd>{" "}
+                      /{" "}
+                      <kbd className="text-label-caps border border-outline-variant rounded px-1 py-0.5">
+                        Ctrl K
+                      </kbd>{" "}
+                      untuk mencari cepat di semua halaman.
+                    </p>
+                    <button
+                      type="button"
+                      onClick={dismissHint}
+                      className="mt-2 text-label-caps text-primary-container hover:text-primary"
+                    >
+                      Mengerti
+                    </button>
+                  </div>
+                )}
+              </div>
               <NotificationBell />
               <AccountMenu />
               <button
