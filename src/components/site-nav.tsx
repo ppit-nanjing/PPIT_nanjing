@@ -98,6 +98,8 @@ export function SiteNav() {
   // full-width since the burger menu is used there. The width is capped at a
   // comfortable fixed value so the links + search pill never get crushed.
   const width = isDesktop && scrolled ? "min(100%, 1000px)" : "100%";
+  // Everything (account menu, search) collapses to icon-only when shrunk.
+  const compact = isDesktop && scrolled;
 
   // Glass + shadow appear on scroll only; opaque & flat at rest.
   const bgAlpha = scrolled ? 0.82 : 1;
@@ -154,7 +156,8 @@ export function SiteNav() {
 
             <div className="flex items-center gap-1 sm:gap-2 shrink-0">
               <div className="relative">
-                {/* Desktop: labeled search pill that advertises the shortcut. */}
+                {/* Desktop, expanded: labeled search pill that advertises the
+                    shortcut. Collapses to icon-only when the navbar shrinks. */}
                 <button
                   aria-label="Cari (Ctrl/⌘ + K)"
                   type="button"
@@ -162,18 +165,19 @@ export function SiteNav() {
                     setPaletteOpen(true);
                     dismissHint();
                   }}
-                  className="hidden lg:flex items-center gap-2 bg-surface-container-low text-on-surface-variant rounded-full pl-3 pr-2 py-1.5 text-body-md hover:bg-surface-container transition-colors"
+                  className={`${compact ? "hidden" : "hidden lg:flex"} items-center gap-2 bg-surface-container-low text-on-surface-variant rounded-full pl-3 pr-2 py-1.5 text-body-md hover:bg-surface-container transition-colors`}
                 >
                   <Search size={16} />
                   <span>Cari…</span>
                   <kbd className="text-label-caps border border-outline-variant rounded px-1.5 py-0.5">⌘K</kbd>
                 </button>
-                {/* Mobile / tablet: icon only (no keyboard shortcut there). */}
+                {/* Icon-only trigger: mobile/tablet, and also desktop once the
+                    navbar has shrunk (no keyboard shortcut hint needed then). */}
                 <button
                   aria-label="Cari"
                   type="button"
                   onClick={() => setPaletteOpen(true)}
-                  className="lg:hidden text-on-background p-1 shrink-0"
+                  className={`${compact ? "lg:flex" : "lg:hidden"} text-on-background p-1 shrink-0`}
                 >
                   <Search size={20} />
                 </button>
@@ -203,7 +207,7 @@ export function SiteNav() {
                 )}
               </div>
               <NotificationBell />
-              <AccountMenu compact={isDesktop && scrolled} />
+              <AccountMenu compact={compact} />
               <button
                 aria-label={menuOpen ? "Tutup menu" : "Buka menu"}
                 type="button"
