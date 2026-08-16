@@ -15,12 +15,42 @@ import { db } from "@/db";
 import { events, newsArticles } from "@/db/schema";
 
 const CITIES = [
-  { name: "Nanjing", blurb: "Ibu kota provinsi Jiangsu sekaligus markas utama PPIT Nanjing." },
-  { name: "Xuzhou", blurb: "Kota industri & transportasi di utara Jiangsu dengan komunitas pelajar aktif." },
-  { name: "Jurong", blurb: "Kawasan kampus yang menghimpun pelajar Indonesia di sekitarnya." },
-  { name: "Ma'anshan", blurb: "Kota di Anhui yang berbatasan dekat dengan Nanjing." },
-  { name: "Zhenjiang", blurb: "Kota tepi Sungai Yangtze dengan cukup banyak mahasiswa Indonesia." },
-  { name: "Huai'an", blurb: "Kota historis di utara Jiangsu, salah satu ranting aktif PPIT." },
+  {
+    name: "Nanjing",
+    blurb: "Ibu kota provinsi Jiangsu sekaligus markas utama PPIT Nanjing.",
+    detail:
+      "Sebagai pusat PPIT Cabang Nanjing, kota ini jadi rumah bagi sebagian besar pelajar Indonesia di wilayah ini. Di sini berpusat kegiatan rutin, forum, hingga kolaborasi antar-ranting.",
+  },
+  {
+    name: "Xuzhou",
+    blurb: "Kota industri & transportasi di utara Jiangsu dengan komunitas pelajar aktif.",
+    detail:
+      "Terkenal sebagai hub kereta api utara Jiangsu, Xuzhou menghimpun pelajar dari beberapa kampus dengan kegiatan komunitas yang solid dan saling suport.",
+  },
+  {
+    name: "Jurong",
+    blurb: "Kawasan kampus yang menghimpun pelajar Indonesia di sekitarnya.",
+    detail:
+      "Kawasan ini menjadi titik kumpul yang hangat bagi mahasiswa Indonesia setempat, sering kali terhubung dengan kegiatan di Nanjing.",
+  },
+  {
+    name: "Ma'anshan",
+    blurb: "Kota di Anhui yang berbatasan dekat dengan Nanjing.",
+    detail:
+      "Kota industri di provinsi Anhui yang letaknya sangat dekat dengan Nanjing, sehingga kerap terlibat dalam kegiatan lintas-kota PPIT.",
+  },
+  {
+    name: "Zhenjiang",
+    blurb: "Kota tepi Sungai Yangtze dengan cukup banyak mahasiswa Indonesia.",
+    detail:
+      "Berada di tepi Sungai Yangtze, Zhenjiang dihuni cukup banyak mahasiswa Indonesia yang aktif dalam jaringan PPIT Nanjing.",
+  },
+  {
+    name: "Huai'an",
+    blurb: "Kota historis di utara Jiangsu, salah satu ranting aktif PPIT.",
+    detail:
+      "Kota bersejarah di utara Jiangsu yang merupakan salah satu ranting aktif, turut memperluas jangkauan PPIT di luar Nanjing.",
+  },
 ];
 
 export default async function Home() {
@@ -115,7 +145,7 @@ export default async function Home() {
             <SectionHeading
               kicker="Jangkauan Wilayah"
               title="Kota di Bawah Naungan PPIT Nanjing"
-              description="Selain Kota Nanjing, PPIT Nanjing turut menaungi pelajar dan mahasiswa Indonesia di kota-kota sekitarnya, termasuk dua ranting organisasi aktif: INA (NUIST) dan JIA (JSAHVC)."
+              description="Selain Kota Nanjing, PPIT Nanjing turut menaungi pelajar dan mahasiswa Indonesia di kota-kota sekitarnya. Klik tiap kartu untuk membaca selengkapnya tentang peran masing-masing kota."
             />
             <CitiesGrid cities={CITIES} />
           </section>
