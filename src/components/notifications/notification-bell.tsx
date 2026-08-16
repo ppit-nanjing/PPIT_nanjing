@@ -6,6 +6,7 @@ import { useSession } from "next-auth/react";
 import { Bell, CheckCheck } from "lucide-react";
 import { formatRelativeTime } from "@/lib/format-relative-time";
 import { Tooltip } from "@/components/ui/tooltip";
+import Link from "next/link";
 
 type NItem = {
   id: string;
@@ -43,6 +44,8 @@ export function NotificationBell() {
   }, []);
 
   useEffect(() => {
+    // Fetch notifications once the session is authenticated (external data sync).
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     if (status === "authenticated") load();
   }, [status, pathname, load]);
 
@@ -123,13 +126,13 @@ export function NotificationBell() {
               })
             )}
           </div>
-          <a
+          <Link
             href="/notifications"
             onClick={() => setOpen(false)}
             className="block px-4 py-2 text-center text-label-caps uppercase tracking-wide text-primary-container hover:bg-surface-container-low transition-colors border-t border-outline-variant"
           >
             Lihat semua
-          </a>
+          </Link>
         </div>
       )}
     </div>
