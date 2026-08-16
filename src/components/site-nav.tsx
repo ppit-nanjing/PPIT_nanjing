@@ -4,10 +4,12 @@ import { useEffect, useState } from "react";
 import { usePathname } from "next/navigation";
 import { useSession, signIn } from "next-auth/react";
 import { Menu, X, Search, User } from "lucide-react";
+import Image from "next/image";
 import { AccountMenu } from "@/components/account-menu";
 import { NotificationBell } from "@/components/notifications/notification-bell";
 import { CommandPalette, useCommandPalette } from "@/components/command-palette";
 import { NAV_LINKS } from "@/lib/nav-links";
+import Link from "next/link";
 
 // Scroll state: a gentle, intentional pill. We use a boolean threshold
 // (not a continuous, scroll-position-driven interpolation) so the navbar
@@ -127,12 +129,12 @@ export function SiteNav() {
           }}
         >
           <div className="max-w-[var(--container-max)] mx-auto flex justify-between items-center gap-2 sm:gap-4 h-12 md:h-14 px-4 sm:px-6">
-            <a
+            <Link
               href="/"
               className="text-headline-sm sm:text-headline-md font-bold text-primary uppercase tracking-tight shrink-0 whitespace-nowrap"
             >
               PPIT Nanjing
-            </a>
+            </Link>
 
             {/* Inline links: desktop (lg) and up only - narrower viewports use
                 the burger menu below. */}
@@ -240,9 +242,11 @@ export function SiteNav() {
             {session ? (
               <div className="flex items-center gap-3 bg-surface-container-lowest border border-outline-variant rounded-xl p-3">
                 {session.user.image ? (
-                  <img
+                  <Image
                     src={session.user.image}
                     alt={session.user.name ?? "Profil"}
+                    width={40}
+                    height={40}
                     className="w-10 h-10 rounded-full object-cover border border-outline-variant shrink-0"
                   />
                 ) : (
@@ -254,13 +258,13 @@ export function SiteNav() {
                   <p className="text-body-md font-semibold text-on-background truncate">
                     {session.user.name}
                   </p>
-                  <a
+                  <Link
                     href="/profile"
                     onClick={() => setMenuOpen(false)}
                     className="text-label-caps text-primary-container hover:text-primary"
                   >
                     Lihat Profil
-                  </a>
+                  </Link>
                 </div>
               </div>
             ) : (
