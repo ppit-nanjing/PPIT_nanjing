@@ -17,6 +17,7 @@ import {
   UserPlus,
 } from "lucide-react";
 import { hasModuleAccess, type AdminModule } from "@/lib/admin-scope-constants";
+import Link from "next/link";
 
 // `module: null` = always visible to anyone who got past the layout gate
 // (Dashboard, Documentation are meta/support, not sensitive management).
@@ -61,12 +62,12 @@ export function ConsoleSidebar({ userName, scope }: { userName: string; scope: "
           <p className="text-label-caps text-on-surface-variant mt-1">{userName}</p>
         </div>
         <nav className="flex-1 py-4">{links(() => {})}</nav>
-        <a
+        <Link
           href="/"
           className="flex items-center gap-2 px-6 py-4 text-label-caps text-secondary hover:text-on-background border-t border-outline-variant transition-colors"
         >
           <ArrowLeft size={14} /> Kembali ke Situs
-        </a>
+        </Link>
       </aside>
 
       {/* Mobile top bar */}
@@ -91,13 +92,13 @@ export function ConsoleSidebar({ userName, scope }: { userName: string; scope: "
               </button>
             </div>
             <nav className="flex-1 py-4">{links(() => setOpen(false))}</nav>
-            <a
+            <Link
               href="/"
               onClick={() => setOpen(false)}
               className="flex items-center gap-2 px-6 py-4 text-label-caps text-secondary hover:text-on-background border-t border-outline-variant transition-colors"
             >
               <ArrowLeft size={14} /> Kembali ke Situs
-            </a>
+            </Link>
           </aside>
         </div>
       )}
