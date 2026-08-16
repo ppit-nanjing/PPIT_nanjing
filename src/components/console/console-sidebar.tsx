@@ -15,6 +15,7 @@ import {
   BookOpen,
   Images,
   UserPlus,
+  BellRing,
 } from "lucide-react";
 import { hasModuleAccess, type AdminModule } from "@/lib/admin-scope-constants";
 import Link from "next/link";
@@ -32,6 +33,7 @@ const NAV: { href: string; label: string; icon: typeof LayoutDashboard; module: 
   { href: "/console/membership", label: "Pendaftaran", icon: UserPlus, module: "membership" },
   { href: "/console/content", label: "Konten", icon: Images, module: "content" },
   { href: "/console/reports", label: "Laporan", icon: FileBarChart, module: "reports" },
+  { href: "/console/notifications", label: "Notifikasi", icon: BellRing, module: "notifications" },
   { href: "/console/docs", label: "Dokumentasi", icon: BookOpen, module: null },
   { href: "/console/feedback", label: "Masukan Pengguna", icon: MessageSquare, module: "feedback" },
 ];
