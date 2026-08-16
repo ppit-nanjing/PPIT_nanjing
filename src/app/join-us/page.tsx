@@ -7,7 +7,6 @@ import { SiteFooter } from "@/components/site-footer";
 import { Lock } from "lucide-react";
 import Link from "next/link";
 import { submitMembershipApplication, getFormFields } from "@/app/actions/membership";
-import type { MembershipFieldDef } from "@/lib/membership-form";
 import { ImageUploadCropper } from "@/components/upload/image-upload-cropper";
 
 export default async function JoinUsPage() {
