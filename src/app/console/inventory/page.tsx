@@ -10,6 +10,7 @@ import { ExternalLoanManager } from "@/components/console/external-loan-manager"
 import { CollapsibleSection } from "@/components/console/collapsible-section";
 import { requireModuleAccess } from "@/lib/admin-scope";
 import { Plus, Package } from "lucide-react";
+import Link from "next/link";
 
 const CONDITION_LABEL: Record<string, string> = {
   new: "Baru",
@@ -54,9 +55,9 @@ export default async function ConsoleInventoryPage() {
     <div className="px-4 py-6 sm:px-6 lg:px-8 lg:py-10">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between mb-8">
         <h1 className="text-headline-md sm:text-headline-lg text-on-background">Manajemen Inventaris</h1>
-        <a href="/console/inventory/audit-log" className="text-label-caps text-primary-container hover:text-primary transition-colors">
+        <Link href="/console/inventory/audit-log" className="text-label-caps text-primary-container hover:text-primary transition-colors">
           Log Audit &rarr;
-        </a>
+        </Link>
       </div>
 
       <div className="flex flex-col gap-6">
