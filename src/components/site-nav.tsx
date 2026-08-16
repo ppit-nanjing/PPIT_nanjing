@@ -203,7 +203,7 @@ export function SiteNav() {
                 )}
               </div>
               <NotificationBell />
-              <AccountMenu />
+              <AccountMenu compact={isDesktop && scrolled} />
               <button
                 aria-label={menuOpen ? "Tutup menu" : "Buka menu"}
                 type="button"
