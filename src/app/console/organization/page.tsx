@@ -1,6 +1,7 @@
 import { db } from "@/db";
 import { departments } from "@/db/schema";
 import { DepartmentManager } from "@/components/console/department-manager";
+import { CollapsibleSection } from "@/components/console/collapsible-section";
 import { requireModuleAccess } from "@/lib/admin-scope";
 
 export default async function ConsoleOrganizationPage() {
@@ -22,7 +23,9 @@ export default async function ConsoleOrganizationPage() {
           </p>
         </div>
       </div>
-      <DepartmentManager departments={all} isFullAdmin={isFullAdmin} />
+      <CollapsibleSection title="Manajemen Departemen & Divisi">
+        <DepartmentManager departments={all} isFullAdmin={isFullAdmin} />
+      </CollapsibleSection>
     </div>
   );
 }
