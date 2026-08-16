@@ -41,10 +41,10 @@ export default function AboutPage() {
         </div>
         <div className="flex flex-wrap gap-3">
           <span className="flex items-center gap-2 px-4 py-2 bg-surface-container-low text-on-surface text-label-caps uppercase tracking-wide rounded-full border border-outline-variant">
-            <CalendarDays size={14} className="text-primary-container" /> Didirikan 28 Oktober 2008
+            <CalendarDays size={14} className="text-primary-container" aria-hidden /> Didirikan 28 Oktober 2008
           </span>
           <span className="flex items-center gap-2 px-4 py-2 bg-surface-container-low text-on-surface text-label-caps uppercase tracking-wide rounded-full border border-outline-variant">
-            <MapPin size={14} className="text-primary-container" /> Nanjing, Tiongkok
+            <MapPin size={14} className="text-primary-container" aria-hidden /> Nanjing, Tiongkok
           </span>
         </div>
       </header>
@@ -58,7 +58,7 @@ export default function AboutPage() {
               <div className="md:col-span-5 bg-primary-container text-on-primary p-8 md:p-10 rounded-xl flex flex-col justify-between">
                 <div>
                   <div className="w-12 h-12 bg-on-primary/15 rounded-full flex items-center justify-center mb-6">
-                    <Compass className="text-on-primary" size={22} />
+                    <Compass className="text-on-primary" size={22} aria-hidden />
                   </div>
                   <h3 className="text-headline-md mb-4">Visi</h3>
                   <p className="text-body-md text-on-primary/90">
@@ -89,7 +89,7 @@ export default function AboutPage() {
             <Reveal delay={0.05}>
               <div className="bg-surface-container-low border border-outline-variant text-on-background rounded-xl p-6 sm:p-8 transition-all duration-300 hover:-translate-y-1 hover:border-primary-container hover:shadow-md">
                 <div className="w-12 h-12 bg-primary-container/15 rounded-full flex items-center justify-center mb-4">
-                  <MapPinned className="text-primary-container" size={22} />
+                  <MapPinned className="text-primary-container" size={22} aria-hidden />
                 </div>
                 <h3 className="text-headline-sm text-on-background mb-4">Kota Sekitar</h3>
                 <div className="flex flex-wrap gap-2">
@@ -109,7 +109,7 @@ export default function AboutPage() {
                 <Reveal key={r.name} delay={0.1 + i * 0.08} className="h-full">
                   <div className="h-full bg-surface-container-low border border-outline-variant rounded-xl p-6 flex items-center gap-4 transition-all duration-300 hover:-translate-y-1 hover:border-primary-container hover:bg-surface-container">
                     <div className="w-12 h-12 shrink-0 bg-primary-container/15 rounded-full flex items-center justify-center">
-                      <GraduationCap className="text-primary-container" size={22} />
+                      <GraduationCap className="text-primary-container" size={22} aria-hidden />
                     </div>
                     <div>
                       <p className="text-label-caps uppercase tracking-wide text-on-surface-variant mb-1">Ranting {r.name}</p>
@@ -126,13 +126,13 @@ export default function AboutPage() {
           <div className="flex flex-col sm:flex-row gap-3 sm:gap-4">
             <Link
               href="/organization"
-              className="w-full sm:w-auto text-center bg-primary-container text-on-primary text-label-caps uppercase tracking-wide px-6 py-3 rounded-md hover:bg-primary transition-colors"
+              className="w-full sm:w-auto text-center bg-primary-container text-on-primary text-label-caps uppercase tracking-wide px-6 py-3 rounded-md hover:bg-primary transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-container focus-visible:ring-offset-2 focus-visible:ring-offset-background motion-reduce:transition-none"
             >
               Lihat Struktur Organisasi
             </Link>
             <Link
               href="/organization/branches"
-              className="w-full sm:w-auto text-center border border-outline-variant text-on-background text-label-caps uppercase tracking-wide px-6 py-3 rounded-md hover:bg-surface-container-low transition-colors"
+              className="w-full sm:w-auto text-center border border-outline-variant text-on-background text-label-caps uppercase tracking-wide px-6 py-3 rounded-md hover:bg-surface-container-low transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-container focus-visible:ring-offset-2 focus-visible:ring-offset-background motion-reduce:transition-none"
             >
               Cabang Regional
             </Link>
