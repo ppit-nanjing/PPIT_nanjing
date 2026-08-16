@@ -14,14 +14,50 @@ export default function TermsPage() {
             <p>
               Dengan menggunakan situs dan layanan PPIT Nanjing, Anda menyetujui untuk mematuhi
               syarat dan ketentuan berikut serta Anggaran Dasar &amp; Rumah Tangga (AD/ART) PPIT
-              Nanjing yang berlaku.
+              Nanjing yang berlaku. Apabila Anda tidak menyetujui ketentuan ini, mohon untuk tidak
+              menggunakan layanan kami.
             </p>
             <section>
-              <h2 className="text-headline-md text-on-background mb-2">Keanggotaan</h2>
+              <h2 className="text-headline-md text-on-background mb-2">Kelayakan Keanggotaan</h2>
               <p>
                 Keanggotaan PPIT Nanjing terbuka bagi pelajar dan mahasiswa Indonesia yang
-                terdaftar secara resmi di wilayah kerja PPIT Nanjing, sebagaimana diatur dalam
-                AD/ART dan panduan pendaftaran kepengurusan yang berlaku setiap periode.
+                terdaftar secara resmi di perguruan tinggi di wilayah kerja PPIT Nanjing, sebagaimana
+                diatur dalam AD/ART dan panduan pendaftaran kepengurusan yang berlaku setiap periode.
+                Calon anggota wajib mengisi data diri secara benar dan diperbarui apabila terjadi
+                perubahan status akademik atau kontak. PPIT Nanjing berhak menolak atau mengakhiri
+                keanggotaan apabila syarat kelayakan tidak lagi terpenuhi.
+              </p>
+            </section>
+            <section>
+              <h2 className="text-headline-md text-on-background mb-2">Kode Etik &amp; Tata Tertib</h2>
+              <p>
+                Setiap anggota dan pengguna wajib menjunjung tinggi nilai-nilai PPIT Nanjing,
+                menghormati sesama anggota, serta menjaga nama baik organisasi dan Indonesia. Dilarang
+                menggunakan layanan untuk menyebarkan konten yang bersifat diskriminatif, melecehkan,
+                melanggar hukum yang berlaku di Tiongkok maupun di Indonesia, atau merugikan pihak
+                lain. Pelanggaran terhadap kode etik dapat dikenakan sanksi mulai dari teguran hingga
+                pencabutan akses sesuai keputusan kepengurusan.
+              </p>
+            </section>
+            <section>
+              <h2 className="text-headline-md text-on-background mb-2">Tanggung Jawab Akun</h2>
+              <p>
+                Anda bertanggung jawab penuh atas keamanan akun dan segala aktivitas yang dilakukan
+                melalui akun Anda, termasuk akses terhadap data pribadi, pendaftaran kegiatan, dan
+                peminjaman inventaris. Segera laporkan kepada pengurus apabila terdapat aktivitas
+                mencurigakan pada akun Anda. PPIT Nanjing tidak bertanggung jawab atas kerugian yang
+                timbul akibat kelalaian pengguna dalam menjaga kerahasiaan atau keamanan akunnya.
+              </p>
+            </section>
+            <section>
+              <h2 className="text-headline-md text-on-background mb-2">Konten &amp; Hak Kekayaan Intelektual</h2>
+              <p>
+                Seluruh konten yang dipublikasikan melalui situs ini, termasuk dokumen, berita, dan
+                materi kegiatan, merupakan milik PPIT Nanjing atau pihak yang berhak kecuali dinyatakan
+                lain. Pengguna diperkenankan membagikan konten untuk keperluan non-komersial dengan
+                menyertakan atribusi yang layak. Konten yang diunggah oleh pengguna menjadi tanggung
+                jawab penuh pengguna terkait dan harus tunduk pada kode etik serta ketentuan hukum
+                yang berlaku.
               </p>
             </section>
             <section>
@@ -40,7 +76,16 @@ export default function TermsPage() {
               <p>
                 Anggota yang meminjam inventaris organisasi bertanggung jawab penuh atas kondisi
                 dan pengembalian tepat waktu barang yang dipinjam, sesuai kebijakan yang dikelola
-                oleh Divisi Logistik.
+                oleh Divisi Logistik. Kerusakan atau kehilangan akibat kelalaian akan ditanggung
+                sesuai ketentuan yang berlaku.
+              </p>
+            </section>
+            <section>
+              <h2 className="text-headline-md text-on-background mb-2">Perubahan Ketentuan</h2>
+              <p>
+                PPIT Nanjing dapat memperbarui syarat dan ketentuan ini dari waktu ke waktu. Versi
+                terbaru akan dipublikasikan melalui halaman ini, dan penggunaan layanan yang berlanjut
+                setelah pembaruan dianggap sebagai persetujuan terhadap perubahan tersebut.
               </p>
             </section>
           </div>
