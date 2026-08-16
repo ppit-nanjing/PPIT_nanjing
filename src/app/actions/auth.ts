@@ -6,6 +6,7 @@ import { db } from "@/db";
 import { users } from "@/db/schema";
 import { signIn } from "@/auth";
 import { hashPassword } from "@/lib/password";
+import { safeRedirect } from "@/lib/safe-redirect";
 
 export type AuthFormState = { error?: string };
 
@@ -59,12 +60,10 @@ export async function signUpWithPassword(_prev: AuthFormState, formData: FormDat
     await db.insert(users).values({ email, name: deriveName(email), passwordHash });
   }
 
-  const passwordHash = await hashPassword(password);
-  await db.insert(users).values({ email, name: deriveName(email), passwordHash });
-
   // Sign the new account in via the same credentials path (will redirect on success).
+  const returnTo = safeRedirect(String(formData.get("returnTo") ?? ""));
   try {
-    await signIn("credentials", { email, password, redirectTo: "/" });
+    await signIn("credentials", { email, password, redirectTo: returnTo });
   } catch (error) {
     if (error instanceof AuthError) {
       return { error: "Pendaftaran berhasil, tapi gagal masuk otomatis. Coba masuk manual." };
@@ -81,8 +80,9 @@ export async function signInWithPassword(_prev: AuthFormState, formData: FormDat
   const password = String(formData.get("password") ?? "");
   if (!email || !password) return { error: "Email dan kata sandi wajib diisi." };
 
+  const returnTo = safeRedirect(String(formData.get("returnTo") ?? ""));
   try {
-    await signIn("credentials", { email, password, redirectTo: "/" });
+    await signIn("credentials", { email, password, redirectTo: returnTo });
   } catch (error) {
     if (error instanceof AuthError) return { error: "Email atau kata sandi salah." };
     throw error;
