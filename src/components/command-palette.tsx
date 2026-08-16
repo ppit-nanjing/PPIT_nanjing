@@ -55,6 +55,8 @@ export function CommandPalette({ onClose }: { onClose: () => void }) {
   useEffect(() => {
     const q = query.trim();
     if (q.length < 2) {
+      // Clear stale results synchronously when the query is too short.
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setResults([]);
       setLoading(false);
       return;
@@ -147,6 +149,8 @@ export function CommandPalette({ onClose }: { onClose: () => void }) {
     inputRef.current?.focus();
   }, []);
   useEffect(() => {
+    // Reset the highlighted index whenever the result set changes.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setActive(0);
   }, [query, results]);
 
