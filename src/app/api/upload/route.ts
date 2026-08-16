@@ -31,6 +31,14 @@ export async function POST(req: NextRequest) {
   const file = form.get("file");
   const folder = String(form.get("folder") ?? "");
 
+  // CSRF defense-in-depth: the session cookie is SameSite=Lax (so cross-site
+  // POSTs don't carry it), but we also reject any request whose Origin doesn't
+  // match our host - cheap and stops same-site-but-cross-origin trickery.
+  const origin = req.headers.get("origin");
+  if (origin && new URL(origin).host !== req.nextUrl.host) {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  }
+
   if (!(file instanceof File)) return NextResponse.json({ error: "Tidak ada berkas" }, { status: 400 });
   if (!(folder in FOLDER_MODULE)) return NextResponse.json({ error: "Folder tidak valid" }, { status: 400 });
   const requiredModule = FOLDER_MODULE[folder];
@@ -47,7 +55,10 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Unggah berkas belum dikonfigurasi" }, { status: 503 });
   }
 
-  const blob = await put(`${folder}/${Date.now()}-${file.name}`, file, {
+  // Strip path separators / control chars so a malicious filename can't
+  // traverse out of its folder in the blob key (addRandomSuffix also helps).
+  const safeName = (file.name || "file").replace(/[^\w.\-]+/g, "_").slice(0, 100);
+  const blob = await put(`${folder}/${Date.now()}-${safeName}`, file, {
     access: "public",
     addRandomSuffix: true,
   });
