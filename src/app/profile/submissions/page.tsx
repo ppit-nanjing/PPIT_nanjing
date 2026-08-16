@@ -1,4 +1,4 @@
-import { eq, desc } from "drizzle-orm";
+import { eq } from "drizzle-orm";
 import { redirect } from "next/navigation";
 import { auth } from "@/auth";
 import { db } from "@/db";
