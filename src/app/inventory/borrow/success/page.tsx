@@ -1,6 +1,7 @@
 import { SiteNav } from "@/components/site-nav";
 import { SiteFooter } from "@/components/site-footer";
 import { CheckCircle2 } from "lucide-react";
+import Link from "next/link";
 
 export default function BorrowSuccessPage() {
   return (
@@ -14,12 +15,12 @@ export default function BorrowSuccessPage() {
         <p className="text-body-md text-on-surface-variant mb-10">
           Permintaan peminjaman kamu menunggu persetujuan dari Divisi Logistik.
         </p>
-        <a
+        <Link
           href="/inventory"
           className="bg-primary-container text-on-primary text-label-caps uppercase tracking-wide px-6 py-3 rounded-md hover:bg-primary transition-colors"
         >
           Kembali ke Inventaris
-        </a>
+        </Link>
       </main>
       <SiteFooter />
     </div>
