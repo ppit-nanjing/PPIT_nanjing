@@ -32,6 +32,15 @@ export async function createEvent(formData: FormData) {
   const title = String(formData.get("title") ?? "").trim();
   if (!title) throw new Error("Judul wajib diisi");
 
+  const scheduledPublishAt = formData.get("scheduledPublishAt")
+    ? new Date(String(formData.get("scheduledPublishAt")))
+    : null;
+  // When a publish schedule is set, the event stays in a 'scheduled' state
+  // (hidden from the public) until its time arrives, instead of a plain draft.
+  const status: (typeof events.status.enumValues)[number] = scheduledPublishAt
+    ? "scheduled"
+    : "draft";
+
   const [created] = await db
     .insert(events)
     .values({
@@ -48,7 +57,8 @@ export async function createEvent(formData: FormData) {
       capacity: formData.get("capacity") ? Number(formData.get("capacity")) : null,
       requiresSensus: formData.get("requiresSensus") === "on",
       agenda: String(formData.get("agenda") ?? "").trim() || null,
-      status: "draft",
+      status,
+      scheduledPublishAt,
       createdBy: actorId,
     })
     .returning();
@@ -60,6 +70,14 @@ export async function updateEvent(id: string, formData: FormData) {
   await requireAdmin();
   const title = String(formData.get("title") ?? "").trim();
   if (!title) throw new Error("Judul wajib diisi");
+
+  const scheduledPublishAt = formData.get("scheduledPublishAt")
+    ? new Date(String(formData.get("scheduledPublishAt")))
+    : null;
+  let status = String(formData.get("status") ?? "draft") as (typeof events.status.enumValues)[number];
+  // If a publish schedule is set but the admin left it as a draft, move it to
+  // the 'scheduled' state so it auto-publishes when the time arrives.
+  if (scheduledPublishAt && status === "draft") status = "scheduled";
 
   await db
     .update(events)
@@ -76,7 +94,8 @@ export async function updateEvent(id: string, formData: FormData) {
       capacity: formData.get("capacity") ? Number(formData.get("capacity")) : null,
       requiresSensus: formData.get("requiresSensus") === "on",
       agenda: String(formData.get("agenda") ?? "").trim() || null,
-      status: String(formData.get("status") ?? "draft") as (typeof events.status.enumValues)[number],
+      status,
+      scheduledPublishAt,
     })
     .where(eq(events.id, id));
 
