@@ -22,6 +22,7 @@ export const orgDocTypeEnum = pgEnum("org_document_type", ["ad_art", "guideline"
 export const branchRegionEnum = pgEnum("branch_region", ["north", "east", "south", "central", "west"]);
 export const eventStatusEnum = pgEnum("event_status", [
   "draft",
+  "scheduled",
   "published",
   "registration_closed",
   "completed",
@@ -194,20 +195,36 @@ export const verificationTokens = pgTable(
 export const sensusProfiles = pgTable("sensus_profiles", {
   id: uuid("id").defaultRandom().primaryKey(),
   userId: uuid("user_id").notNull().unique().references(() => users.id, { onDelete: "cascade" }),
+
+  // BIODATA
+  fullName: text("full_name"),
+  passportNumber: text("passport_number"),
   gender: text("gender"),
+  passportExpiry: date("passport_expiry"),
+  province: text("province"),
   birthDate: date("birth_date"),
+
+  // DATA MAHASISWA
+  branch: text("branch"),
+  studentStatus: text("student_status"),
   university: text("university"),
-  program: text("program"),
   degreeLevel: text("degree_level"),
-  cityInChina: text("city_in_china"),
-  arrivalDate: date("arrival_date"),
-  visaType: text("visa_type"),
-  scholarshipType: text("scholarship_type"),
-  emergencyContactName: text("emergency_contact_name"),
-  emergencyContactPhone: text("emergency_contact_phone"),
-  // Required for completionStatus "complete" - proof the person is actually
-  // studying in China, not just profile decoration (confirmed 2026-08-15).
-  photoUrl: text("photo_url"),
+  major: text("major"),
+  fundingSource: text("funding_source"),
+  entryYear: integer("entry_year"),
+  graduationYear: integer("graduation_year"),
+
+  // KONTAK
+  wechatId: text("wechat_id"),
+  phoneActive: text("phone_active"),
+  whatsappNumber: text("whatsapp_number"),
+
+  // Dokumen bukti & persetujuan
+  // Kartu Tanda Mahasiswa - bukti mahasiswa aktif di Tiongkok (pengganti foto
+  // profil sebagai verifikasi identitas, sesuai form PPIT Tiongkok).
+  studentCardUrl: text("student_card_url"),
+  agreeTerms: boolean("agree_terms").notNull().default(false),
+
   completionStatus: sensusCompletionEnum("completion_status").notNull().default("incomplete"),
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
 });
@@ -298,6 +315,10 @@ export const events = pgTable("events", {
   // admin form is a single textarea, matching description's freeform pattern.
   agenda: text("agenda"),
   status: eventStatusEnum("status").notNull().default("draft"),
+  // When set and status is 'scheduled', the event is auto-published (status ->
+  // 'published') once this time passes. Lets admins prepare an event fully and
+  // have it go live automatically at a chosen moment.
+  scheduledPublishAt: timestamp("scheduled_publish_at"),
   departmentId: uuid("department_id").references(() => departments.id),
   createdBy: uuid("created_by").references(() => users.id),
 });

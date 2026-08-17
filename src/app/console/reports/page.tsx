@@ -37,7 +37,7 @@ export default async function ConsoleReportsPage() {
   const completedCount = allSensus.filter((s) => s.completionStatus === "complete").length;
   const byUniversity = tally(allSensus.map((s) => s.university));
   const byDegree = tally(allSensus.map((s) => s.degreeLevel));
-  const byCity = tally(allSensus.map((s) => s.cityInChina));
+  const byBranch = tally(allSensus.map((s) => s.branch));
 
   return (
     <div className="px-4 py-6 sm:px-6 lg:px-8 lg:py-10">
@@ -132,8 +132,8 @@ export default async function ConsoleReportsPage() {
             </div>
             <div className="bg-surface-container-low border border-outline-variant rounded-lg p-6">
               <MapPin className="text-primary-container mb-2" size={20} />
-              <p className="text-display-hero-mobile text-on-background">{byCity.length}</p>
-              <p className="text-label-caps text-on-surface-variant uppercase">Kota Tercatat</p>
+              <p className="text-display-hero-mobile text-on-background">{byBranch.length}</p>
+              <p className="text-label-caps text-on-surface-variant uppercase">Cabang Tercatat</p>
             </div>
           </div>
         </CollapsibleSection>
@@ -144,8 +144,8 @@ export default async function ConsoleReportsPage() {
         <CollapsibleSection title="Jenjang">
           <SummaryList items={byDegree} />
         </CollapsibleSection>
-        <CollapsibleSection title="Kota di Tiongkok">
-          <SummaryList items={byCity} />
+        <CollapsibleSection title="Cabang">
+          <SummaryList items={byBranch} />
         </CollapsibleSection>
       </div>
     </div>

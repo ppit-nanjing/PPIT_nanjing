@@ -5,27 +5,43 @@ import { ChevronRight, ChevronLeft, Check, AlertTriangle, Loader2 } from "lucide
 import { submitSensusProfile, saveSensusStep, type SensusInput } from "@/app/actions/sensus";
 import { ImageUploadCropper } from "@/components/upload/image-upload-cropper";
 
-const STEPS = ["Data Diri", "Akademik", "Kontak Darurat"] as const;
+const STEPS = ["Biodata", "Data Mahasiswa", "Kontak"] as const;
 
 const GENDER_OPTIONS = ["Laki-Laki", "Perempuan"];
-const DEGREE_OPTIONS = ["D3", "S1", "S2", "S3", "Sekolah Bahasa"];
-const SCHOLARSHIP_OPTIONS = ["Self-funded", "Partial Scholarship", "Full Scholarship"];
+const STUDENT_STATUS_OPTIONS = ["Mahasiswa Aktif", "Mahasiswa Non-Aktif", "Cuti", "Lulus"];
+const DEGREE_OPTIONS = ["D3", "S1", "S2", "S3", "Sekolah Bahasa", "Lainnya"];
+const FUNDING_OPTIONS = ["Self-funded", "Partial Scholarship", "Full Scholarship"];
 
-export function SensusWizard({ initial, returnTo }: { initial: Partial<SensusInput>; returnTo?: string }) {
+export function SensusWizard({
+  initial,
+  returnTo,
+  branchOptions,
+}: {
+  initial: Partial<SensusInput>;
+  returnTo?: string;
+  branchOptions: string[];
+}) {
   const [step, setStep] = useState(0);
   const [form, setForm] = useState<SensusInput>({
+    fullName: initial.fullName ?? "",
+    passportNumber: initial.passportNumber ?? "",
     gender: initial.gender ?? "",
+    passportExpiry: initial.passportExpiry ?? "",
+    province: initial.province ?? "",
     birthDate: initial.birthDate ?? "",
+    branch: initial.branch ?? "",
+    studentStatus: initial.studentStatus ?? "",
     university: initial.university ?? "",
-    program: initial.program ?? "",
     degreeLevel: initial.degreeLevel ?? "",
-    cityInChina: initial.cityInChina ?? "",
-    arrivalDate: initial.arrivalDate ?? "",
-    visaType: initial.visaType ?? "",
-    scholarshipType: initial.scholarshipType ?? "",
-    emergencyContactName: initial.emergencyContactName ?? "",
-    emergencyContactPhone: initial.emergencyContactPhone ?? "",
-    photoUrl: initial.photoUrl ?? "",
+    major: initial.major ?? "",
+    fundingSource: initial.fundingSource ?? "",
+    entryYear: initial.entryYear ?? "",
+    graduationYear: initial.graduationYear ?? "",
+    wechatId: initial.wechatId ?? "",
+    phoneActive: initial.phoneActive ?? "",
+    whatsappNumber: initial.whatsappNumber ?? "",
+    studentCardUrl: initial.studentCardUrl ?? "",
+    agreeTerms: initial.agreeTerms ?? false,
   });
   const [pending, startTransition] = useTransition();
   const [saving, setSaving] = useState(false);
@@ -38,7 +54,7 @@ export function SensusWizard({ initial, returnTo }: { initial: Partial<SensusInp
     first?.focus();
   }, [step]);
 
-  function update<K extends keyof SensusInput>(key: K, value: string) {
+  function update<K extends keyof SensusInput>(key: K, value: string | boolean) {
     setForm((f) => ({ ...f, [key]: value }));
   }
 
@@ -57,9 +73,14 @@ export function SensusWizard({ initial, returnTo }: { initial: Partial<SensusInp
     startTransition(async () => {
       const result = await submitSensusProfile(returnTo ?? null, form);
       // A successful submit redirects server-side and never returns here.
-      if (result && "error" in result && result.error === "photo_required") {
-        setSubmitError("Foto profil wajib diunggah sebelum sensus bisa disimpan sebagai lengkap.");
-        setStep(0);
+      if (result && "error" in result) {
+        if (result.error === "student_card_required") {
+          setSubmitError("Kartu Tanda Mahasiswa wajib diunggah sebelum sensus bisa disimpan sebagai lengkap.");
+          setStep(1);
+        } else if (result.error === "terms_required") {
+          setSubmitError("Kamu harus menyetujui syarat, ketentuan, dan kebijakan privasi.");
+          setStep(2);
+        }
       }
     });
   }
@@ -67,7 +88,7 @@ export function SensusWizard({ initial, returnTo }: { initial: Partial<SensusInp
   const field = (
     label: string,
     key: keyof SensusInput,
-    opts?: { type?: string; hint?: string; options?: string[]; required?: boolean }
+    opts?: { type?: string; hint?: string; options?: string[]; required?: boolean; placeholder?: string }
   ) => {
     const id = `sensus-${key}`;
     const hintId = `sensus-hint-${key}`;
@@ -80,7 +101,7 @@ export function SensusWizard({ initial, returnTo }: { initial: Partial<SensusInp
         {opts?.options ? (
           <select
             id={id}
-            value={form[key]}
+            value={form[key] as string}
             onChange={(e) => update(key, e.target.value)}
             aria-required={opts.required || undefined}
             aria-describedby={opts.hint ? hintId : undefined}
@@ -97,10 +118,11 @@ export function SensusWizard({ initial, returnTo }: { initial: Partial<SensusInp
           <input
             id={id}
             type={opts?.type ?? "text"}
-            value={form[key]}
+            value={form[key] as string}
             onChange={(e) => update(key, e.target.value)}
+            placeholder={opts?.placeholder}
             aria-required={opts?.required || undefined}
-            aria-describedby={opts?.hint ? hintId : undefined}
+            aria-describedby={opts.hint ? hintId : undefined}
             className="bg-soft-gray rounded-md p-3 text-body-md focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-container"
           />
         )}
@@ -145,45 +167,80 @@ export function SensusWizard({ initial, returnTo }: { initial: Partial<SensusInp
         {step === 0 && (
           <fieldset className="contents">
             <legend className="sr-only">{STEPS[0]}</legend>
-            <ImageUploadCropper
-              folder="sensus"
-              label="Foto Profil (bukti mahasiswa aktif di Tiongkok)"
-              required
-              aspect={1}
-              value={form.photoUrl}
-              onValueChange={(url) => update("photoUrl", url)}
-            />
+            {field("Nama Lengkap", "fullName", { required: true })}
+            {field("Nomor Paspor", "passportNumber", {
+              required: true,
+              hint: "Sesuai paspor, contoh: X3XXXX18",
+              placeholder: "X3XXXX18",
+            })}
             {field("Jenis Kelamin", "gender", { options: GENDER_OPTIONS, required: true })}
             {field("Tanggal Lahir", "birthDate", { type: "date", required: true })}
-            {field("Kota Domisili di Tiongkok", "cityInChina", {
+            {field("Asal Provinsi", "province", {
               required: true,
-              hint: "Kota tempat kamu tinggal saat ini, bukan kota kampus jika berbeda.",
+              hint: "Provinsi asal di Indonesia, contoh: Banten",
+              placeholder: "Banten",
             })}
-            {field("Tanggal Kedatangan di Tiongkok", "arrivalDate", { type: "date", required: true })}
+            {field("Tanggal Maksimal Berlaku Paspor", "passportExpiry", { type: "date", required: true })}
           </fieldset>
         )}
         {step === 1 && (
           <fieldset className="contents">
             <legend className="sr-only">{STEPS[1]}</legend>
-            {field("Universitas", "university", { required: true })}
-            {field("Program Studi", "program", { required: true })}
-            {field("Jenjang", "degreeLevel", { options: DEGREE_OPTIONS, required: true })}
-            {field("Jenis Visa", "visaType", { required: true })}
-            {field("Sumber Pembiayaan", "scholarshipType", {
-              options: SCHOLARSHIP_OPTIONS,
+            {field("Asal Cabang", "branch", { options: branchOptions, required: true })}
+            {field("Status Mahasiswa", "studentStatus", { options: STUDENT_STATUS_OPTIONS, required: true })}
+            {field("Nama Universitas (dalam Bahasa Inggris)", "university", {
               required: true,
-              hint: "Pilih jenis beasiswa atau pendanaan mandiri.",
+              placeholder: "Nanjing Xiaozhuang University",
             })}
+            {field("Jenjang Pendidikan", "degreeLevel", { options: DEGREE_OPTIONS, required: true })}
+            {field("Jurusan (dalam Bahasa Inggris)", "major", {
+              required: true,
+              placeholder: "Software Engineer",
+            })}
+            {field("Sumber Pembiayaan Pendidikan", "fundingSource", { options: FUNDING_OPTIONS, required: true })}
+            {field("Tahun Masuk", "entryYear", { type: "number", required: true, placeholder: "2025" })}
+            {field("Perkiraan Tahun Kelulusan", "graduationYear", {
+              type: "number",
+              required: true,
+              placeholder: "2027",
+            })}
+            <ImageUploadCropper
+              folder="sensus"
+              label="Kartu Tanda Mahasiswa"
+              required
+              value={form.studentCardUrl}
+              onValueChange={(url) => update("studentCardUrl", url)}
+            />
           </fieldset>
         )}
         {step === 2 && (
           <fieldset className="contents">
             <legend className="sr-only">{STEPS[2]}</legend>
-            {field("Nama Kontak Darurat", "emergencyContactName", {
+            {field("WeChat ID", "wechatId", { required: true, placeholder: "Xevuin12" })}
+            {field("Nomor Telepon Aktif (+86)", "phoneActive", {
+              type: "tel",
               required: true,
-              hint: "Keluarga atau kerabat yang bisa dihubungi dalam keadaan darurat.",
+              placeholder: "+8615851866267",
             })}
-            {field("No. Telepon Kontak Darurat", "emergencyContactPhone", { type: "tel", required: true })}
+            {field("Nomor WhatsApp (+62/+86)", "whatsappNumber", {
+              type: "tel",
+              required: true,
+              placeholder: "+6285211849390",
+            })}
+            <label className="flex items-start gap-3 bg-soft-gray rounded-md p-3 cursor-pointer">
+              <input
+                id="sensus-agreeTerms"
+                type="checkbox"
+                checked={form.agreeTerms}
+                onChange={(e) => update("agreeTerms", e.target.checked)}
+                aria-required="true"
+                className="mt-1 accent-[var(--color-primary-container)]"
+              />
+              <span className="text-body-md text-on-background">
+                Saya menyetujui syarat dan ketentuan serta kebijakan privasi.
+                <span className="text-error" aria-hidden="true"> *</span>
+              </span>
+            </label>
           </fieldset>
         )}
       </div>

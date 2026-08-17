@@ -2,7 +2,7 @@ import { eq } from "drizzle-orm";
 import { redirect } from "next/navigation";
 import { auth } from "@/auth";
 import { db } from "@/db";
-import { sensusProfiles } from "@/db/schema";
+import { regionalBranches, sensusProfiles } from "@/db/schema";
 import { SiteNav } from "@/components/site-nav";
 import { SiteFooter } from "@/components/site-footer";
 import { SensusWizard } from "@/components/sensus/sensus-wizard";
@@ -18,6 +18,9 @@ export default async function SensusPage({
   if (!session?.user?.id) redirect(`/login?returnTo=${encodeURIComponent("/sensus")}`);
 
   const [existing] = await db.select().from(sensusProfiles).where(eq(sensusProfiles.userId, session.user.id));
+  const branches = (await db.select({ cityName: regionalBranches.cityName }).from(regionalBranches))
+    .map((b) => b.cityName)
+    .sort((a, b) => a.localeCompare(b));
 
   return (
     <div className="min-h-screen bg-background text-on-background">
@@ -54,19 +57,27 @@ export default async function SensusPage({
 
         <SensusWizard
           returnTo={returnTo}
+          branchOptions={branches}
           initial={{
+            fullName: existing?.fullName ?? "",
+            passportNumber: existing?.passportNumber ?? "",
             gender: existing?.gender ?? "",
+            passportExpiry: existing?.passportExpiry ?? "",
+            province: existing?.province ?? "",
             birthDate: existing?.birthDate ?? "",
+            branch: existing?.branch ?? "",
+            studentStatus: existing?.studentStatus ?? "",
             university: existing?.university ?? "",
-            program: existing?.program ?? "",
             degreeLevel: existing?.degreeLevel ?? "",
-            cityInChina: existing?.cityInChina ?? "",
-            arrivalDate: existing?.arrivalDate ?? "",
-            visaType: existing?.visaType ?? "",
-            scholarshipType: existing?.scholarshipType ?? "",
-            emergencyContactName: existing?.emergencyContactName ?? "",
-            emergencyContactPhone: existing?.emergencyContactPhone ?? "",
-            photoUrl: existing?.photoUrl ?? "",
+            major: existing?.major ?? "",
+            fundingSource: existing?.fundingSource ?? "",
+            entryYear: existing?.entryYear ? String(existing.entryYear) : "",
+            graduationYear: existing?.graduationYear ? String(existing.graduationYear) : "",
+            wechatId: existing?.wechatId ?? "",
+            phoneActive: existing?.phoneActive ?? "",
+            whatsappNumber: existing?.whatsappNumber ?? "",
+            studentCardUrl: existing?.studentCardUrl ?? "",
+            agreeTerms: existing?.agreeTerms ?? false,
           }}
         />
       </main>
