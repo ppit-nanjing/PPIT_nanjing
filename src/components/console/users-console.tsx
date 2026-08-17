@@ -4,7 +4,6 @@ import { useState } from "react";
 import { UsersTabs } from "@/components/console/users-tabs";
 import { UserTable } from "@/components/console/user-table";
 import { StructureTable } from "@/components/console/structure-table";
-import { InviteUserForm } from "@/components/console/invite-user-form";
 
 interface Row {
   id: string;
@@ -34,7 +33,6 @@ interface Membership {
 }
 
 const STATUSES: { value: Row["status"]; label: string }[] = [
-  { value: "invited", label: "Diundang" },
   { value: "active", label: "Aktif" },
   { value: "inactive", label: "Nonaktif" },
   { value: "suspended", label: "Ditangguhkan" },
@@ -117,13 +115,11 @@ export function UsersConsole({
             </select>
           </div>
 
-          <InviteUserForm roles={roles} departments={departments} />
           <UserTable users={filtered} roles={roles} departments={departments} />
 
           <p className="text-label-caps text-on-surface-variant mt-4 leading-relaxed">
             &quot;Kasih admin&quot; = pilih role dengan akses penuh (mis. Ketua Umum / Koordinator Divisi) atau masukkan ke
-            Divisi Teknologi (memberi akses penuh otomatis). Menghapus akses cukup set role/divisi kembali. Status
-            &quot;Diundang&quot; berarti akun dibuat admin tapi baru aktif setelah orangnya pertama kali masuk.
+            Divisi Teknologi (memberi akses penuh otomatis). Menghapus akses cukup set role/divisi kembali.
           </p>
         </>
       ) : (

@@ -214,7 +214,6 @@ function UserRow({
           }}
           className="bg-soft-gray rounded-md px-2 py-1.5 text-body-md"
         >
-          <option value="invited">Diundang</option>
           <option value="active">Aktif</option>
           <option value="inactive">Nonaktif</option>
           <option value="suspended">Ditangguhkan</option>

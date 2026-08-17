@@ -127,9 +127,10 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
   // login. JWT is the supported strategy for a Credentials + OAuth mix.
   session: { strategy: "jwt" },
   callbacks: {
-    // Handles admin-invited accounts (createInvitedUser in admin-users.ts inserts
-    // a `users` row with status "invited" and no passwordHash, before the person
-    // has ever signed in). Auth.js does NOT auto-link an OAuth sign-in to an
+    // Handles admin-invited accounts: a `users` row may exist with status
+    // "invited" and no passwordHash when an admin pre-provisioned an account for
+    // someone before they ever signed in. Auth.js does NOT auto-link an OAuth
+    // sign-in to an
     // existing user by email (by design, to prevent account takeover via a
     // same-email OAuth provider) - without this, the invited person's first
     // Google sign-in would hit OAuthAccountNotLinked and fail. We manually link

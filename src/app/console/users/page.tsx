@@ -28,8 +28,7 @@ export default async function ConsoleUsersPage() {
     <div className="px-4 py-6 sm:px-6 lg:px-8 lg:py-10">
       <h1 className="text-headline-md sm:text-headline-lg text-on-background mb-2">Manajemen Pengguna</h1>
       <p className="text-body-md text-on-surface-variant mb-8">
-        {rows.length} pengguna terdaftar. Akun bisa dibuat admin (status &quot;Diundang&quot;) sebelum orangnya masuk
-        pertama kali, atau muncul otomatis saat masuk dengan Google/daftar kata sandi.
+        {rows.length} pengguna terdaftar. Akun muncul otomatis saat masuk dengan Google atau mendaftar kata sandi.
       </p>
       <UsersConsole
         users={rows}

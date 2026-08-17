@@ -38,34 +38,6 @@ export async function updateUserStatus(userId: string, status: "invited" | "acti
   revalidatePath("/console/users");
 }
 
-// Admin pre-provisions an account ("invited"): no passwordHash yet, so the
-// person can't sign in until they claim it via Google (signIn callback links
-// the OAuth identity) or via /signup with this exact email (signUpWithPassword
-// claims the row). Role/department can be set up front so admin access is live
-// the moment they first sign in.
-export async function createInvitedUser(formData: FormData) {
-  await assertAdmin();
-  const name = String(formData.get("name") ?? "").trim();
-  const email = String(formData.get("email") ?? "").trim().toLowerCase();
-  const roleId = String(formData.get("roleId") ?? "").trim();
-  const departmentId = String(formData.get("departmentId") ?? "").trim();
-  const position = String(formData.get("position") ?? "").trim();
-
-  if (!name || !EMAIL_RE.test(email)) throw new Error("Nama dan email wajib diisi dengan benar");
-  const [existing] = await db.select({ id: users.id }).from(users).where(eq(users.email, email));
-  if (existing) throw new Error("Email sudah digunakan oleh akun lain");
-
-  const [row] = await db
-    .insert(users)
-    .values({ name, email, status: "invited", roleId: roleId || null })
-    .returning();
-
-  if (departmentId) {
-    await db.insert(departmentMembers).values({ userId: row.id, departmentId, position: position || null });
-  }
-  revalidatePath("/console/users");
-}
-
 export async function updateUserDetails(userId: string, name: string, email: string) {
   await assertAdmin();
   const n = name.trim();
