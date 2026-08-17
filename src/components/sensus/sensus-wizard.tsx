@@ -122,7 +122,7 @@ export function SensusWizard({
             onChange={(e) => update(key, e.target.value)}
             placeholder={opts?.placeholder}
             aria-required={opts?.required || undefined}
-            aria-describedby={opts.hint ? hintId : undefined}
+            aria-describedby={opts?.hint ? hintId : undefined}
             className="bg-soft-gray rounded-md p-3 text-body-md focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-container"
           />
         )}
