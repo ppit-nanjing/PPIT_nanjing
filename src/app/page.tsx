@@ -14,6 +14,7 @@ import { CitiesGrid } from "@/components/cities-grid";
 import { QuoteMark } from "@/components/quote-mark";
 import { db } from "@/db";
 import { events, newsArticles } from "@/db/schema";
+import { publishDueEvents } from "@/lib/publish-events";
 
 const CITIES = [
   {
@@ -55,6 +56,8 @@ const CITIES = [
 ];
 
 export default async function Home() {
+  await publishDueEvents();
+
   const latestEvents = await db
     .select()
     .from(events)

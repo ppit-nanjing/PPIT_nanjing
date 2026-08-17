@@ -2,6 +2,7 @@ import { desc } from "drizzle-orm";
 import { db } from "@/db";
 import { events } from "@/db/schema";
 import { createEvent } from "@/app/actions/admin-events";
+import { publishDueEvents } from "@/lib/publish-events";
 import { DeleteEventButton } from "@/components/console/delete-event-button";
 import { requireModuleAccess } from "@/lib/admin-scope";
 import { ImageUploadCropper } from "@/components/upload/image-upload-cropper";
@@ -12,6 +13,7 @@ import { Plus } from "lucide-react";
 
 const STATUS_LABEL: Record<string, string> = {
   draft: "Draf",
+  scheduled: "Terjadwal (belum rilis)",
   published: "Dipublikasikan",
   registration_closed: "Pendaftaran Ditutup",
   completed: "Selesai",
@@ -20,6 +22,7 @@ const STATUS_LABEL: Record<string, string> = {
 
 export default async function ConsoleEventsPage() {
   await requireModuleAccess("events");
+  await publishDueEvents();
   const list = await db.select().from(events).orderBy(desc(events.startAt));
 
   return (
@@ -53,6 +56,7 @@ export default async function ConsoleEventsPage() {
             allowPaste
           />
           <input name="registrationDeadline" type="datetime-local" placeholder="Batas Pendaftaran" className="bg-soft-gray rounded-md p-3 text-body-md" />
+          <input name="scheduledPublishAt" type="datetime-local" placeholder="Jadwal Rilis Publikasi (opsional)" className="bg-soft-gray rounded-md p-3 text-body-md" />
           <div>
             <textarea id="event-description" name="description" placeholder="Deskripsi" rows={3} className="bg-soft-gray rounded-md p-3 text-body-md resize-none w-full" />
             <AIImproveButton context="event" targetId="event-description" className="mt-1" />

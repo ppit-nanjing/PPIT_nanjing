@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { db } from "@/db";
 import { events, eventRegistrations, users } from "@/db/schema";
 import { updateEvent } from "@/app/actions/admin-events";
+import { publishDueEvents } from "@/lib/publish-events";
 import { DeleteEventButton } from "@/components/console/delete-event-button";
 import { RegistrationList } from "@/components/console/registration-list";
 import { requireModuleAccess } from "@/lib/admin-scope";
@@ -14,6 +15,7 @@ import { CollapsibleSection } from "@/components/console/collapsible-section";
 export default async function ConsoleEventDetailPage({ params }: { params: Promise<{ id: string }> }) {
   await requireModuleAccess("events");
   const { id } = await params;
+  await publishDueEvents();
   const [event] = await db.select().from(events).where(eq(events.id, id));
   if (!event) notFound();
 
@@ -73,6 +75,13 @@ export default async function ConsoleEventDetailPage({ params }: { params: Promi
             placeholder="Batas Pendaftaran"
             className="bg-soft-gray rounded-md p-3 text-body-md"
           />
+          <input
+            name="scheduledPublishAt"
+            type="datetime-local"
+            defaultValue={event.scheduledPublishAt ? new Date(event.scheduledPublishAt).toISOString().slice(0, 16) : ""}
+            placeholder="Jadwal Rilis Publikasi (opsional)"
+            className="bg-soft-gray rounded-md p-3 text-body-md"
+          />
           <div>
             <textarea id="event-description" name="description" defaultValue={event.description ?? ""} rows={3} className="bg-soft-gray rounded-md p-3 text-body-md resize-none w-full" />
             <AIImproveButton context="event" targetId="event-description" className="mt-1" />
@@ -97,6 +106,7 @@ export default async function ConsoleEventDetailPage({ params }: { params: Promi
           />
           <select name="status" defaultValue={event.status} className="bg-soft-gray rounded-md p-3 text-body-md">
             <option value="draft">Draf</option>
+            <option value="scheduled">Terjadwal (belum rilis)</option>
             <option value="published">Dipublikasikan</option>
             <option value="registration_closed">Pendaftaran Ditutup</option>
             <option value="completed">Selesai</option>

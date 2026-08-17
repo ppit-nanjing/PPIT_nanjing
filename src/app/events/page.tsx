@@ -1,6 +1,7 @@
 import { asc, eq, and } from "drizzle-orm";
 import { db } from "@/db";
 import { events } from "@/db/schema";
+import { publishDueEvents } from "@/lib/publish-events";
 import { SiteNav } from "@/components/site-nav";
 import { SiteFooter } from "@/components/site-footer";
 import { AnimatedHeroHeading } from "@/components/animated-hero-heading";
@@ -18,6 +19,9 @@ export default async function EventsPage({
   searchParams: Promise<{ category?: string }>;
 }) {
   const { category } = await searchParams;
+
+  // Promote any event whose scheduled publish time has passed before listing.
+  await publishDueEvents();
 
   const conditions = [eq(events.status, "published")];
   if (category) conditions.push(eq(events.category, category));

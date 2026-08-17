@@ -18,6 +18,8 @@ export default async function EventDetailPage({ params }: { params: Promise<{ sl
   const { slug } = await params;
   const [event] = await db.select().from(events).where(eq(events.slug, slug));
   if (!event) notFound();
+  // Scheduled (not-yet-released) events are not reachable from the public site.
+  if (event.status === "scheduled") notFound();
 
   const [{ value: registeredCount }] = await db
     .select({ value: count() })
