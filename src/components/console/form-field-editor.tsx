@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { useFormStatus } from "react-dom";
 import { ChevronDown, ChevronRight, GripVertical, MoreVertical, Copy } from "lucide-react";
 import type { MembershipFieldDef } from "@/lib/membership-form";
-import { OPTION_TYPES, SCALE_TYPES, CHOICE_TYPES, GRID_TYPES, FIELD_TYPE_LABELS, isSectionType } from "@/lib/membership-form";
+import { OPTION_TYPES, SCALE_TYPES, CHOICE_TYPES, GRID_TYPES, FIELD_TYPE_LABELS, isSectionType, canDeleteField } from "@/lib/membership-form";
 import { updateFormField, deleteFormField, moveFormField, duplicateFormField } from "@/app/actions/membership";
 
 const ALL_TYPES: MembershipFieldDef["type"][] = [
@@ -55,6 +55,7 @@ export function FormFieldEditor({ field, index, sectionLabel, isQuiz }: { field:
   const [dropBefore, setDropBefore] = useState<null | boolean>(null);
 
   const isSection = isSectionType(type);
+  const deletable = canDeleteField(field.key);
   const showOptions = OPTION_TYPES.includes(type) || GRID_TYPES.includes(type);
   const showGrid = GRID_TYPES.includes(type);
   const showRating = SCALE_TYPES.includes(type);
@@ -176,7 +177,7 @@ export function FormFieldEditor({ field, index, sectionLabel, isQuiz }: { field:
                     <Copy size={14} /> Salin pertanyaan
                   </button>
                 )}
-                {!field.isCore && (
+                {deletable ? (
                   <button
                     type="button"
                     onClick={() => {
@@ -187,6 +188,10 @@ export function FormFieldEditor({ field, index, sectionLabel, isQuiz }: { field:
                   >
                     Hapus
                   </button>
+                ) : (
+                  <p className="px-4 py-2 text-label-caps text-on-surface-variant border-t border-outline-variant/60 mt-1">
+                    Tidak bisa dihapus &mdash; nama &amp; email dipakai sebagai identitas pendaftar.
+                  </p>
                 )}
               </div>
             </>
@@ -351,7 +356,7 @@ export function FormFieldEditor({ field, index, sectionLabel, isQuiz }: { field:
             <SaveButton />
           </form>
 
-          {!field.isCore && confirmDelete && (
+          {deletable && confirmDelete && (
             <form action={deleteFormField} className="flex items-center gap-2 mt-3">
               <input type="hidden" name="id" value={field.id ?? ""} />
               <button type="submit" className="bg-error text-on-error text-label-caps uppercase tracking-wide px-4 py-2.5 rounded-md">Yakin hapus?</button>
