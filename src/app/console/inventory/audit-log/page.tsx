@@ -32,7 +32,7 @@ export default async function InventoryAuditLogPage() {
       </p>
 
       <CollapsibleSection title="Riwayat Perubahan" description="Perubahan stok dan kondisi barang.">
-        <div className="bg-surface-container-lowest border border-outline-variant rounded-xl overflow-x-auto">
+        <div className="hidden sm:block bg-surface-container-lowest border border-outline-variant rounded-xl overflow-x-auto">
           <table className="w-full text-body-md min-w-[640px]">
             <thead className="bg-surface-container-low text-label-caps uppercase tracking-wide text-on-surface-variant">
               <tr>
@@ -71,6 +71,37 @@ export default async function InventoryAuditLogPage() {
               ))}
             </tbody>
           </table>
+        </div>
+
+        <div className="sm:hidden flex flex-col gap-3">
+          {logs.length === 0 ? (
+            <p className="text-body-md text-on-surface-variant">Belum ada perubahan tercatat.</p>
+          ) : (
+            logs.map(({ log, itemName, actorName, actorEmail }) => (
+              <div key={log.id} className="bg-surface-container-lowest border border-outline-variant rounded-xl p-3 flex flex-col gap-2">
+                <div className="flex items-center justify-between gap-2">
+                  <p className="font-medium text-on-background truncate">{itemName ?? "(barang dihapus)"}</p>
+                  <span className="text-label-caps uppercase tracking-wide bg-surface-container-low px-2 py-1 rounded shrink-0">
+                    {ACTION_LABEL[log.action] ?? log.action}
+                  </span>
+                </div>
+                <div className="flex items-center justify-between text-body-md">
+                  <span className="text-label-caps text-on-surface-variant">Perubahan</span>
+                  <span className="text-on-background">
+                    {log.quantityDelta > 0 ? "+" : ""}
+                    {log.quantityDelta}
+                  </span>
+                </div>
+                <p className="text-body-md">
+                  <span className="text-label-caps text-on-surface-variant">Oleh: </span>
+                  <span className="text-on-surface-variant">{actorName ?? actorEmail ?? "Sistem"}</span>
+                </p>
+                <p className="text-label-caps text-on-surface-variant">
+                  {new Date(log.createdAt).toLocaleString("id-ID")}
+                </p>
+              </div>
+            ))
+          )}
         </div>
       </CollapsibleSection>
     </div>

@@ -41,7 +41,7 @@ export default async function ConsoleMembershipPage() {
       <p className="text-body-md text-on-surface-variant mb-4">{apps.length} pendaftar.</p>
       <MembershipTabs active="list" />
 
-      <div className="bg-surface-container-lowest border border-outline-variant rounded-xl overflow-x-auto">
+      <div className="hidden sm:block bg-surface-container-lowest border border-outline-variant rounded-xl overflow-x-auto">
         <table className="w-full text-body-md min-w-[720px]">
           <thead className="bg-surface-container-low text-label-caps uppercase tracking-wide text-on-surface-variant">
             <tr>
@@ -83,6 +83,47 @@ export default async function ConsoleMembershipPage() {
             ))}
           </tbody>
         </table>
+      </div>
+
+      <div className="sm:hidden flex flex-col gap-3">
+        {apps.length === 0 ? (
+          <p className="text-body-md text-on-surface-variant">Belum ada pendaftar.</p>
+        ) : (
+          apps.map((a) => (
+            <div key={a.id} className="bg-surface-container-lowest border border-outline-variant rounded-xl p-3 flex flex-col gap-2">
+              <div>
+                <a href={`/console/membership/${a.id}`} className="font-medium text-primary-container hover:text-primary">
+                  {a.fullName}
+                </a>
+                <p className="text-label-caps text-on-surface-variant">{a.email}</p>
+              </div>
+              <dl className="grid grid-cols-2 gap-x-4 gap-y-2 text-body-md">
+                <div>
+                  <dt className="text-label-caps text-on-surface-variant">Minat Divisi</dt>
+                  <dd className="text-on-background">{a.divisionInterest ?? "-"}</dd>
+                </div>
+                <div>
+                  <dt className="text-label-caps text-on-surface-variant">Status</dt>
+                  <dd>
+                    <span className={`px-2.5 py-1 rounded-full text-label-caps ${STATUS_CLASS[a.status] ?? STATUS_CLASS.pending}`}>
+                      {STATUS_LABEL[a.status] ?? a.status}
+                    </span>
+                  </dd>
+                </div>
+                <div>
+                  <dt className="text-label-caps text-on-surface-variant">Terkirim</dt>
+                  <dd className="text-on-background">
+                    {a.submittedAt ? new Date(a.submittedAt).toLocaleString("id-ID", { dateStyle: "medium", timeStyle: "short" }) : "-"}
+                  </dd>
+                </div>
+                <div>
+                  <dt className="text-label-caps text-on-surface-variant">Periode</dt>
+                  <dd className="text-on-background">{a.batchLabel ?? "-"}</dd>
+                </div>
+              </dl>
+            </div>
+          ))
+        )}
       </div>
       <p className="text-label-caps text-on-surface-variant mt-4">
         Klik nama pendaftar untuk melihat detail, mengubah status, menambahkan catatan, atau menghapus.

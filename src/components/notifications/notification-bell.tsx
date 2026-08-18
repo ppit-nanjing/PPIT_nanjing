@@ -76,7 +76,7 @@ export function NotificationBell() {
       </Tooltip>
 
       {open && (
-        <div className="absolute top-full mt-2 z-50 overflow-hidden bg-surface-container-lowest border border-outline-variant rounded-lg shadow-lg left-1/2 -translate-x-1/2 w-[calc(100vw-1rem)] m:left-auto m:right-0 m:translate-x-0 m:w-80">
+        <div className="absolute top-full mt-2 z-50 overflow-hidden bg-surface-container-lowest border border-outline-variant rounded-lg shadow-lg right-2 w-[calc(100vw-1rem)] m:right-0 m:w-80">
           <div className="flex items-center justify-between gap-2 px-3 m:px-4 py-3 border-b border-outline-variant">
             <span className="text-body-md font-semibold text-on-background">Notifikasi</span>
             {unread > 0 && (
