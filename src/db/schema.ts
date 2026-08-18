@@ -463,6 +463,8 @@ export const membershipFieldTypeEnum = pgEnum("membership_field_type", [
   "section",
   "time",
   "linear_scale",
+  "grid_radio",
+  "grid_checkbox",
 ]);
 
 // Configurable fields for the public membership application form (Join Us).
