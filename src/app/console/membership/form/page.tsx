@@ -65,6 +65,42 @@ export default async function MembershipFormPage() {
           <input type="checkbox" name="bannerEnabled" defaultChecked={meta.bannerEnabled} />
           Tampilkan banner (header besar) di halaman formulir
         </label>
+        <hr className="border-outline-variant/60" />
+        <p className="text-label-caps uppercase tracking-wide text-on-surface-variant">Jawaban</p>
+        <label className="flex items-center gap-2 text-body-md text-on-background">
+          <input type="checkbox" name="collectEmail" defaultChecked={meta.collectEmail} />
+          Tanyakan alamat email lewat pertanyaan
+        </label>
+        <span className="text-label-caps text-on-surface-variant -mt-1">
+          Kalau dimatikan, email diambil otomatis dari akun yang login. Pengunjung yang belum login tetap diminta mengisi.
+        </span>
+        <p className="text-label-caps uppercase tracking-wide text-on-surface-variant">Presentasi</p>
+        <label className="flex items-center gap-2 text-body-md text-on-background">
+          <input type="checkbox" name="shuffle" defaultChecked={meta.shuffle} />
+          Acak urutan pertanyaan (kecuali data diri)
+        </label>
+        <label className="flex items-center gap-2 text-body-md text-on-background">
+          <input type="checkbox" name="showProgress" defaultChecked={meta.showProgress} />
+          Tampilkan bilah progres pengisian
+        </label>
+        <hr className="border-outline-variant/60" />
+        <p className="text-label-caps uppercase tracking-wide text-on-surface-variant">Kuis</p>
+        <label className="flex items-center gap-2 text-body-md text-on-background">
+          <input type="checkbox" name="isQuiz" defaultChecked={meta.isQuiz} />
+          Jadikan ini sebagai kuis (tiap soal bisa diberi poin &amp; kunci jawaban)
+        </label>
+        <hr className="border-outline-variant/60" />
+        <p className="text-label-caps uppercase tracking-wide text-on-surface-variant">Default Pertanyaan Baru</p>
+        <label className="flex items-center gap-2 text-body-md text-on-background">
+          <input type="checkbox" name="defaultRequired" defaultChecked={meta.defaultRequired} />
+          Pertanyaan baru otomatis ditandai &ldquo;wajib diisi&rdquo;
+        </label>
+        <hr className="border-outline-variant/60" />
+        <div className="flex flex-col gap-2">
+          <span className="text-label-caps uppercase tracking-wide text-on-surface-variant">Tautan Spreadsheet (opsional)</span>
+          <input name="spreadsheetUrl" placeholder="https://docs.google.com/spreadsheets/..." defaultValue={meta.spreadsheetUrl ?? ""} className="bg-soft-gray rounded-md p-3 text-body-md" />
+          <span className="text-label-caps text-on-surface-variant">Muncul sebagai tombol &ldquo;Buka Spreadsheet&rdquo; di halaman Jawaban.</span>
+        </div>
         <button
           type="submit"
           className="self-start bg-primary-container text-on-primary text-label-caps uppercase tracking-wide px-6 py-3 rounded-md hover:bg-primary transition-colors"
@@ -158,7 +194,7 @@ export default async function MembershipFormPage() {
               break;
             }
           }
-          return <FormFieldEditor key={f.id} field={f} index={i} sectionLabel={sectionLabel} />;
+          return <FormFieldEditor key={f.id} field={f} index={i} sectionLabel={sectionLabel} isQuiz={meta.isQuiz} />;
         })}
       </div>
 
@@ -174,6 +210,8 @@ export default async function MembershipFormPage() {
             action={async () => {}}
             authenticated={false}
             preview
+            showProgress={meta.showProgress}
+            shuffle={meta.shuffle}
           />
         </div>
       </CollapsibleSection>
