@@ -3,7 +3,8 @@ import { db } from "@/db";
 import { membershipApplications, recruitmentPeriods } from "@/db/schema";
 import { requireModuleAccess } from "@/lib/admin-scope";
 import { MembershipTabs } from "@/components/console/membership-tabs";
-import { Download } from "lucide-react";
+import { getFormMeta } from "@/app/actions/membership";
+import { Download, ExternalLink } from "lucide-react";
 
 const STATUS_LABEL: Record<string, string> = {
   pending: "Menunggu",
@@ -36,6 +37,8 @@ export default async function MembershipResponsesPage() {
     .leftJoin(recruitmentPeriods, eq(membershipApplications.recruitmentPeriodId, recruitmentPeriods.id))
     .orderBy(desc(membershipApplications.submittedAt));
 
+  const meta = await getFormMeta();
+
   return (
     <div className="px-4 py-6 sm:px-6 lg:px-8 lg:py-10">
       <div className="flex flex-wrap items-center justify-between gap-3 mb-2">
@@ -46,6 +49,16 @@ export default async function MembershipResponsesPage() {
         >
           <Download size={16} /> Export ke CSV
         </a>
+        {meta.spreadsheetUrl && (
+          <a
+            href={meta.spreadsheetUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-2 bg-surface-container-low text-on-background border border-outline-variant text-label-caps uppercase tracking-wide px-4 py-2.5 rounded-md hover:bg-soft-gray transition-colors"
+          >
+            <ExternalLink size={16} /> Buka Spreadsheet
+          </a>
+        )}
       </div>
       <p className="text-body-md text-on-surface-variant mb-4">
         {apps.length} jawaban terkumpul. Export CSV menghasilkan satu baris per pendaftar dengan tiap pertanyaan
