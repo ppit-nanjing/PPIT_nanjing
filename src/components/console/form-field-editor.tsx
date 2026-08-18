@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { useFormStatus } from "react-dom";
 import { ChevronDown, ChevronRight, GripVertical, MoreVertical, Copy } from "lucide-react";
 import type { MembershipFieldDef } from "@/lib/membership-form";
-import { OPTION_TYPES, SCALE_TYPES, GRID_TYPES, FIELD_TYPE_LABELS, isSectionType } from "@/lib/membership-form";
+import { OPTION_TYPES, SCALE_TYPES, CHOICE_TYPES, GRID_TYPES, FIELD_TYPE_LABELS, isSectionType } from "@/lib/membership-form";
 import { updateFormField, deleteFormField, moveFormField, duplicateFormField } from "@/app/actions/membership";
 
 const ALL_TYPES: MembershipFieldDef["type"][] = [
@@ -20,6 +20,9 @@ type FieldConfig = {
   lowLabel?: string;
   highLabel?: string;
   rows?: string[];
+  imageUrl?: string;
+  points?: number;
+  answerKey?: string;
   validations?: { min?: number; max?: number; minLength?: number };
 };
 
@@ -37,7 +40,7 @@ function summary(f: MembershipFieldDef): string {
   return parts.join(" · ");
 }
 
-export function FormFieldEditor({ field, index, sectionLabel }: { field: MembershipFieldDef; index: number; sectionLabel?: string }) {
+export function FormFieldEditor({ field, index, sectionLabel, isQuiz }: { field: MembershipFieldDef; index: number; sectionLabel?: string; isQuiz?: boolean }) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [type, setType] = useState<MembershipFieldDef["type"]>(field.type);
@@ -56,6 +59,9 @@ export function FormFieldEditor({ field, index, sectionLabel }: { field: Members
   const showGrid = GRID_TYPES.includes(type);
   const showRating = SCALE_TYPES.includes(type);
   const configStr = JSON.stringify(cfg) || "";
+  // Derived from the textareas (not the saved field) so the answer key follows edits.
+  const options = optionsText.split("\n").map((o) => o.trim()).filter(Boolean);
+  const rows = rowsText.split("\n").map((r) => r.trim()).filter(Boolean);
 
   async function handleDrop(e: React.DragEvent) {
     e.preventDefault();
@@ -315,6 +321,28 @@ export function FormFieldEditor({ field, index, sectionLabel }: { field: Members
                         <input type="number" defaultValue={cfg.validations?.minLength ?? ""} onChange={(e) => setCfg((c) => ({ ...c, validations: { ...c.validations, minLength: e.target.value ? Number(e.target.value) : undefined } }))} className="bg-surface-container-lowest rounded-md p-2 text-body-md" />
                       </label>
                     )}
+                    <div className="flex flex-col gap-2">
+                      <span className="text-label-caps uppercase tracking-wide text-on-surface-variant">Gambar Pertanyaan (URL, opsional)</span>
+                      <input
+                        placeholder="https://…"
+                        defaultValue={cfg.imageUrl ?? ""}
+                        onChange={(e) => setCfg((c) => ({ ...c, imageUrl: e.target.value.trim() || undefined }))}
+                        className="bg-surface-container-lowest rounded-md p-3 text-body-md"
+                      />
+                      <span className="text-label-caps text-on-surface-variant">Tampil sebaris di bawah pertanyaan (sama seperti Google Form).</span>
+                    </div>
+                    {isQuiz && (
+                      <div className="flex flex-col gap-4 bg-tertiary-container/20 rounded-md p-3">
+                        <label className="flex flex-col gap-1 text-label-caps uppercase tracking-wide text-on-surface-variant sm:max-w-[12rem]">
+                          Nilai Poin
+                          <input type="number" min={0} defaultValue={cfg.points ?? ""} onChange={(e) => setCfg((c) => ({ ...c, points: e.target.value ? Number(e.target.value) : undefined }))} className="bg-surface-container-lowest rounded-md p-2 text-body-md" />
+                        </label>
+                        <div className="flex flex-col gap-2">
+                          <span className="text-label-caps uppercase tracking-wide text-on-surface-variant">Kunci Jawaban</span>
+                          <AnswerKeyEditor scope={field.id ?? field.key} type={type} options={options} rows={rows} value={cfg.answerKey ?? ""} onChange={(v) => setCfg((c) => ({ ...c, answerKey: v || undefined }))} />
+                        </div>
+                      </div>
+                    )}
                   </div>
                 )}
               </>
@@ -346,5 +374,135 @@ function SaveButton() {
     >
       {pending ? "Menyimpan..." : "Simpan"}
     </button>
+  );
+}
+
+// Builds `config.answerKey` in the exact shape the respondent's answer is stored
+// in (see the quiz-scoring notes in lib/membership-form).
+function AnswerKeyEditor({
+  scope,
+  type,
+  options,
+  rows,
+  value,
+  onChange,
+}: {
+  scope: string;
+  type: MembershipFieldDef["type"];
+  options: string[];
+  rows: string[];
+  value: string;
+  onChange: (v: string) => void;
+}) {
+  const cell = "bg-surface-container-lowest rounded-md p-2 text-body-md";
+
+  if (GRID_TYPES.includes(type)) {
+    let map: Record<string, string | string[]> = {};
+    try {
+      const o = JSON.parse(value || "{}");
+      if (o && typeof o === "object" && !Array.isArray(o)) map = o;
+    } catch {
+      /* keep empty */
+    }
+    if (rows.length === 0 || options.length === 0) {
+      return <p className="text-label-caps text-on-surface-variant">Isi baris &amp; kolom dulu untuk memilih kunci jawaban.</p>;
+    }
+    const multi = type === "grid_checkbox";
+    const set = (rowIdx: number, col: string, checked: boolean) => {
+      const next = { ...map };
+      if (multi) {
+        const cur = Array.isArray(next[rowIdx]) ? (next[rowIdx] as string[]) : [];
+        const after = checked ? [...cur, col] : cur.filter((c) => c !== col);
+        if (after.length) next[rowIdx] = after;
+        else delete next[rowIdx];
+      } else if (checked) {
+        next[rowIdx] = col;
+      } else {
+        delete next[rowIdx];
+      }
+      onChange(Object.keys(next).length ? JSON.stringify(next) : "");
+    };
+    return (
+      <div className="overflow-x-auto">
+        <table className="w-full border-collapse text-body-md">
+          <thead>
+            <tr>
+              <th className="text-left p-2 border-b border-outline-variant" />
+              {options.map((c) => (
+                <th key={c} className="p-2 border-b border-outline-variant text-label-caps uppercase tracking-wide text-on-surface-variant font-medium">
+                  {c}
+                </th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {rows.map((r, rIdx) => (
+              <tr key={rIdx} className="border-b border-outline-variant/60">
+                <th scope="row" className="text-left p-2 pr-4 font-normal text-on-background align-top">{r}</th>
+                {options.map((c) => (
+                  <td key={c} className="text-center p-2">
+                    <input
+                      type={multi ? "checkbox" : "radio"}
+                      name={`key-${scope}-${rIdx}`}
+                      checked={multi ? Array.isArray(map[rIdx]) && (map[rIdx] as string[]).includes(c) : map[rIdx] === c}
+                      onChange={(e) => set(rIdx, c, e.target.checked)}
+                    />
+                  </td>
+                ))}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    );
+  }
+
+  if (type === "multiselect") {
+    if (options.length === 0) return <p className="text-label-caps text-on-surface-variant">Isi daftar pilihan dulu.</p>;
+    const picked = value.split(",").map((v) => v.trim()).filter(Boolean);
+    return (
+      <div className="flex flex-col gap-1">
+        {options.map((o) => (
+          <label key={o} className="flex items-center gap-2 text-body-md text-on-background">
+            <input
+              type="checkbox"
+              checked={picked.includes(o)}
+              onChange={(e) => onChange((e.target.checked ? [...picked, o] : picked.filter((p) => p !== o)).join(", "))}
+            />
+            {o}
+          </label>
+        ))}
+        <span className="text-label-caps text-on-surface-variant">Semua pilihan yang dicentang harus dipilih peserta agar dianggap benar.</span>
+      </div>
+    );
+  }
+
+  if (CHOICE_TYPES.includes(type)) {
+    if (options.length === 0) return <p className="text-label-caps text-on-surface-variant">Isi daftar pilihan dulu.</p>;
+    return (
+      <select value={value} onChange={(e) => onChange(e.target.value)} className={cell}>
+        <option value="">—</option>
+        {options.map((o) => (
+          <option key={o} value={o}>{o}</option>
+        ))}
+      </select>
+    );
+  }
+
+  if (type === "checkbox") {
+    return (
+      <select value={value} onChange={(e) => onChange(e.target.value)} className={cell}>
+        <option value="">—</option>
+        <option value="true">Harus dicentang</option>
+        <option value="false">Harus dikosongkan</option>
+      </select>
+    );
+  }
+
+  return (
+    <>
+      <input value={value} onChange={(e) => onChange(e.target.value)} className={cell} />
+      <span className="text-label-caps text-on-surface-variant">Dicocokkan persis, tanpa membedakan huruf besar/kecil.</span>
+    </>
   );
 }
