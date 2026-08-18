@@ -1,6 +1,6 @@
 import Link from "next/link";
 
-export function MembershipTabs({ active }: { active: "list" | "form" }) {
+export function MembershipTabs({ active }: { active: "list" | "form" | "responses" }) {
   const base = "px-4 py-2 text-label-caps uppercase tracking-wide rounded-md transition-colors";
   return (
     <div className="flex gap-2 mb-8">
@@ -15,6 +15,12 @@ export function MembershipTabs({ active }: { active: "list" | "form" }) {
         className={`${base} ${active === "form" ? "bg-surface-container-low text-on-background" : "text-on-surface-variant hover:text-on-background"}`}
       >
         Formulir
+      </Link>
+      <Link
+        href="/console/membership/responses"
+        className={`${base} ${active === "responses" ? "bg-surface-container-low text-on-background" : "text-on-surface-variant hover:text-on-background"}`}
+      >
+        Jawaban
       </Link>
     </div>
   );
