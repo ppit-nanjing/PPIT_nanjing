@@ -23,7 +23,7 @@ export function CollapsibleSection({
         type="button"
         onClick={() => setOpen((o) => !o)}
         aria-expanded={open}
-        className="w-full flex items-center justify-between gap-3 px-6 py-4 text-left hover:bg-surface-container-low/60 transition-colors"
+        className="w-full flex items-center justify-between gap-3 px-4 py-3 sm:px-6 sm:py-4 text-left hover:bg-surface-container-low/60 transition-colors"
       >
         <span className="flex flex-col">
           <span className="text-headline-sm text-on-background">{title}</span>
@@ -37,7 +37,7 @@ export function CollapsibleSection({
           <ChevronRight size={20} className="text-on-surface-variant shrink-0" />
         )}
       </button>
-      {open ? <div className="px-6 pb-6">{children}</div> : null}
+      {open ? <div className="px-4 pb-5 sm:px-6 sm:pb-6">{children}</div> : null}
     </section>
   );
 }
