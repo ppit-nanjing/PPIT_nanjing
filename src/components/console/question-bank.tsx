@@ -19,12 +19,9 @@ export function QuestionBank() {
       })).filter((c) => c.templates.length > 0)
     : QUESTION_BANK;
 
+  // Card chrome + heading come from the CollapsibleSection this sits inside.
   return (
-    <div className="bg-surface-container-lowest border border-outline-variant rounded-xl p-6">
-      <h2 className="text-headline-md text-on-background mb-1">Bank Pertanyaan</h2>
-      <p className="text-body-md text-on-surface-variant mb-4">
-        Klik untuk menambahkan ke formulir &mdash; seperti pertanyaan siap pakai. Cari contoh atau variasi dengan kata kunci.
-      </p>
+    <div>
       <div className="flex items-center gap-2 bg-soft-gray rounded-md px-3 mb-5">
         <Search size={16} className="text-on-surface-variant" />
         <input
