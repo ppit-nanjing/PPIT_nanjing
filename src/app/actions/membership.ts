@@ -7,6 +7,11 @@ import { auth } from "@/auth";
 import { db } from "@/db";
 import { membershipApplications, membershipFormFields, membershipFormMeta, recruitmentPeriods } from "@/db/schema";
 import { requireModuleAccess } from "@/lib/admin-scope";
+import { notificationTemplates } from "@/db/schema";
+import { getTemplateDef, renderTemplate } from "@/lib/notification-templates";
+import { createTemplatedNotification } from "@/lib/notifications";
+import { sendEmail } from "@/lib/email";
+import { renderMembershipEmail, renderMembershipEmailText } from "@/lib/membership-email";
 import { CORE_KEYS, DEFAULT_FIELDS, QUESTION_BY_KEY, GRID_TYPES, canDeleteField, type MembershipFieldDef } from "@/lib/membership-form";
 
 export async function getFormFields(): Promise<MembershipFieldDef[]> {
@@ -118,14 +123,88 @@ export async function submitMembershipApplication(recruitmentPeriodId: string, f
 
 const STATUS_VALUES = ["pending", "reviewed", "accepted", "rejected"] as const;
 
+// Resolves a template to its final subject/body: an admin-edited row in
+// notification_templates wins, otherwise the registry default. Shared by the
+// in-app notification and the email so the two never drift apart.
+async function resolveTemplate(key: string, variables: Record<string, string>) {
+  const def = getTemplateDef(key);
+  if (!def) return null;
+  const [row] = await db
+    .select()
+    .from(notificationTemplates)
+    .where(eq(notificationTemplates.key, key))
+    .limit(1);
+  return {
+    subject: renderTemplate(row?.subject?.trim() || def.defaultSubject, variables),
+    body: renderTemplate(row?.bodyTemplate?.trim() || def.defaultBody, variables),
+  };
+}
+
 export async function updateMembershipStatus(formData: FormData) {
   await requireModuleAccess("membership");
   const id = String(formData.get("id") ?? "");
   const status = String(formData.get("status") ?? "");
   if (!STATUS_VALUES.includes(status as (typeof STATUS_VALUES)[number])) throw new Error("Status tidak valid");
+
+  const [before] = await db
+    .select({ status: membershipApplications.status })
+    .from(membershipApplications)
+    .where(eq(membershipApplications.id, id));
+
   await db.update(membershipApplications).set({ status: status as (typeof STATUS_VALUES)[number], reviewedAt: new Date() }).where(eq(membershipApplications.id, id));
+
+  // Announce the decision once, only when the status actually changes into a
+  // final one - re-saving "Diterima" must not email the applicant again.
+  const isDecision = status === "accepted" || status === "rejected";
+  if (isDecision && before?.status !== status) {
+    await notifyMembershipDecision(id, status);
+  }
+
   revalidatePath("/console/membership");
   revalidatePath(`/console/membership/${id}`);
+}
+
+// Sends the decision to the applicant: in-app when they have an account, and
+// always by email (email is NOT NULL on every application). A failure here must
+// never roll back or throw past the status update the admin just made.
+async function notifyMembershipDecision(applicationId: string, status: "accepted" | "rejected") {
+  try {
+    const [app] = await db
+      .select({
+        fullName: membershipApplications.fullName,
+        email: membershipApplications.email,
+        userId: membershipApplications.userId,
+        batchLabel: recruitmentPeriods.batchLabel,
+      })
+      .from(membershipApplications)
+      .leftJoin(recruitmentPeriods, eq(membershipApplications.recruitmentPeriodId, recruitmentPeriods.id))
+      .where(eq(membershipApplications.id, applicationId));
+    if (!app) return;
+
+    const key = status === "accepted" ? "membership_accepted" : "membership_rejected";
+    const variables = { fullName: app.fullName, batchLabel: app.batchLabel ?? "" };
+    const resolved = await resolveTemplate(key, variables);
+    if (!resolved) return;
+
+    if (app.userId) {
+      await createTemplatedNotification({
+        userId: app.userId,
+        templateKey: key,
+        variables,
+        relatedEntityType: "membership_application",
+        relatedEntityId: applicationId,
+      });
+    }
+
+    await sendEmail({
+      to: app.email,
+      subject: resolved.subject,
+      html: renderMembershipEmail({ heading: resolved.subject, body: resolved.body }),
+      text: renderMembershipEmailText({ heading: resolved.subject, body: resolved.body }),
+    });
+  } catch (err) {
+    console.error("[membership] failed to announce decision:", err);
+  }
 }
 
 export async function updateMembershipNote(formData: FormData) {
