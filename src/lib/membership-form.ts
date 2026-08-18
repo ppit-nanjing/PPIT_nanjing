@@ -168,6 +168,16 @@ export const CORE_KEYS = {
   commitment: "commitment",
 } as const;
 
+// The only two questions that genuinely cannot be removed: membership_applications
+// .full_name and .email are NOT NULL and every submission is keyed on them. Every
+// other core field maps to a nullable column, so admins may delete it like any
+// custom question.
+export const LOCKED_FIELD_KEYS: string[] = [CORE_KEYS.fullName, CORE_KEYS.email];
+
+export function canDeleteField(key: string): boolean {
+  return !LOCKED_FIELD_KEYS.includes(key);
+}
+
 // Shipped as the initial form so /join-us is never empty; admin can edit these
 // from /console/membership/form (labels/types/required/order) and add more.
 export const DEFAULT_FIELDS: MembershipFieldDef[] = [
