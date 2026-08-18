@@ -114,14 +114,14 @@ export default async function ConsoleEventsPage() {
           {list.map((e) => (
             <div
               key={e.id}
-              className="flex items-center justify-between gap-3 sm:gap-4 bg-surface-container-lowest border border-outline-variant rounded-lg pl-4 pr-2 py-2 hover:bg-surface-container-low transition-colors"
+              className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between bg-surface-container-lowest border border-outline-variant rounded-lg pl-4 pr-2 py-2 hover:bg-surface-container-low transition-colors"
             >
               <a
                 href={`/console/events/${e.id}`}
-                className="flex-1 flex items-center justify-between gap-4 py-2"
+                className="w-full sm:flex-1 sm:min-w-0 flex items-center justify-between gap-3 py-2"
               >
-                <div>
-                  <p className="text-body-md font-medium text-on-background">{e.title}</p>
+                <div className="min-w-0">
+                  <p className="text-body-md font-medium text-on-background truncate">{e.title}</p>
                   <p className="text-label-caps text-on-surface-variant">
                     {e.startAt ? new Date(e.startAt).toLocaleDateString("id-ID") : "Belum dijadwalkan"}
                   </p>
@@ -130,7 +130,7 @@ export default async function ConsoleEventsPage() {
                   {STATUS_LABEL[e.status]}
                 </span>
               </a>
-              <div className="flex items-center gap-2 shrink-0">
+              <div className="self-end sm:self-auto flex items-center gap-2 sm:shrink-0">
                  {e.status !== "draft" && (
                    <form action={setEventStatus}>
                      <input type="hidden" name="eventId" value={e.id} />
