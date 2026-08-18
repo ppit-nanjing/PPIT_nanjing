@@ -7,7 +7,7 @@ import { auth } from "@/auth";
 import { db } from "@/db";
 import { membershipApplications, membershipFormFields, membershipFormMeta, recruitmentPeriods } from "@/db/schema";
 import { requireModuleAccess } from "@/lib/admin-scope";
-import { CORE_KEYS, DEFAULT_FIELDS, QUESTION_BY_KEY, type MembershipFieldDef } from "@/lib/membership-form";
+import { CORE_KEYS, DEFAULT_FIELDS, QUESTION_BY_KEY, GRID_TYPES, type MembershipFieldDef } from "@/lib/membership-form";
 
 export async function getFormFields(): Promise<MembershipFieldDef[]> {
   const rows = await db
@@ -39,6 +39,19 @@ export async function submitMembershipApplication(recruitmentPeriodId: string, f
   const responses: Record<string, unknown> = {};
   for (const f of fields) {
     if (f.type === "section") continue;
+    if (GRID_TYPES.includes(f.type)) {
+      const rows = f.config?.rows ?? [];
+      const map: Record<string, unknown> = {};
+      for (let i = 0; i < rows.length; i++) {
+        if (f.type === "grid_checkbox") {
+          map[i] = formData.getAll(`${f.key}::${i}`).map((v) => String(v).trim()).filter(Boolean);
+        } else {
+          map[i] = String(formData.get(`${f.key}::${i}`) ?? "").trim();
+        }
+      }
+      responses[f.key] = map;
+      continue;
+    }
     if (f.type === "multiselect") {
       // Multiple checkbox values arrive as repeated entries; store as a JSON array.
       responses[f.key] = formData.getAll(f.key).map((v) => String(v).trim()).filter(Boolean);
@@ -55,6 +68,20 @@ export async function submitMembershipApplication(recruitmentPeriodId: string, f
 
   for (const f of fields) {
     if (!f.required) continue;
+    if (GRID_TYPES.includes(f.type)) {
+      const rows = f.config?.rows ?? [];
+      const map = (responses[f.key] as Record<string, unknown>) ?? {};
+      let ok = true;
+      for (let i = 0; i < rows.length; i++) {
+        const ans = map[String(i)];
+        if (f.type === "grid_checkbox") {
+          if (!Array.isArray(ans) || ans.length === 0) ok = false;
+        } else if (!ans) ok = false;
+        if (!ok) break;
+      }
+      if (!ok) throw new Error(`Field "${f.label}" wajib diisi`);
+      continue;
+    }
     const v = responses[f.key];
     const empty =
       f.type === "checkbox"
