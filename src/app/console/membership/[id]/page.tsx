@@ -68,7 +68,7 @@ export default async function MembershipDetailPage({ params }: { params: Promise
   const fields = await getFormFields();
   const labelByKey = new Map(fields.map((f) => [f.key, f.label]));
   const coreKeys = new Set(Object.values(CORE_KEYS));
-  const responses = (app.responses as Record<string, string> | null) ?? {};
+  const responses = (app.responses as Record<string, unknown> | null) ?? {};
   const extraAnswers = Object.entries(responses).filter(([k]) => !coreKeys.has(k as never) && k !== "fullName" && k !== "email");
 
   return (
@@ -104,26 +104,48 @@ export default async function MembershipDetailPage({ params }: { params: Promise
         <CollapsibleSection title="Jawaban Tambahan" className="mt-6">
           <div className="bg-surface-container-lowest border border-outline-variant rounded-xl divide-y divide-outline-variant">
             {extraAnswers.map(([k, v]) => {
-              const type = fields.find((f) => f.key === k)?.type;
+              const field = fields.find((f) => f.key === k);
+              const type = field?.type;
+              const raw = typeof v === "string" ? v : v == null ? "" : JSON.stringify(v);
+              let listValues: string[] | null = null;
+              if (type === "multiselect" && raw) {
+                try {
+                  const parsed = JSON.parse(raw);
+                  if (Array.isArray(parsed)) listValues = parsed.map(String);
+                } catch {
+                  listValues = [raw];
+                }
+              }
               return (
                 <div key={k} className="px-6 py-4">
                   <p className="text-label-caps uppercase tracking-wide text-on-surface-variant">{labelByKey.get(k) ?? k}</p>
-                  {type === "image" && v ? (
+                  {type === "image" && raw ? (
                     <Image
-                      src={v}
+                      src={raw}
                       alt={labelByKey.get(k) ?? k}
                       width={640}
                       height={480}
                       className="max-h-48 w-auto h-auto rounded-md object-contain mt-1"
                     />
                   ) : type === "checkbox" ? (
-                    <p className="text-body-md text-on-background mt-1">{v === "true" ? "Ya" : "Tidak"}</p>
-                  ) : type === "url" && v ? (
-                    <a href={v} target="_blank" rel="noopener noreferrer" className="text-body-md text-primary-container underline mt-1 break-all">
-                      {v}
+                    <p className="text-body-md text-on-background mt-1">{raw === "true" ? "Ya" : "Tidak"}</p>
+                  ) : type === "url" && raw ? (
+                    <a href={raw} target="_blank" rel="noopener noreferrer" className="text-body-md text-primary-container underline mt-1 break-all">
+                      {raw}
                     </a>
+                  ) : listValues ? (
+                    <ul className="list-disc list-inside text-body-md text-on-background mt-1">
+                      {listValues.map((item, i) => (
+                        <li key={i}>{item}</li>
+                      ))}
+                    </ul>
+                  ) : type === "rating" && raw ? (
+                    <p className="text-body-md text-on-background mt-1">
+                      {raw}
+                      {field?.config?.max ? ` / ${field.config.max}` : ""}
+                    </p>
                   ) : (
-                    <p className="text-body-md text-on-background whitespace-pre-wrap mt-1">{v || "-"}</p>
+                    <p className="text-body-md text-on-background whitespace-pre-wrap mt-1">{raw || "-"}</p>
                   )}
                 </div>
               );
