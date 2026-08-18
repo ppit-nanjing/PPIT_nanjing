@@ -9,7 +9,7 @@ import { OPTION_TYPES, SCALE_TYPES, GRID_TYPES, FIELD_TYPE_LABELS, isSectionType
 import { updateFormField, deleteFormField, moveFormField, duplicateFormField } from "@/app/actions/membership";
 
 const ALL_TYPES: MembershipFieldDef["type"][] = [
-  "text", "textarea", "email", "tel", "number", "select", "radio", "multiselect", "date", "checkbox", "rating", "image", "url", "section", "time", "linear_scale", "grid_radio", "grid_checkbox",
+  "text", "textarea", "email", "tel", "number", "select", "radio", "multiselect", "date", "checkbox", "rating", "image", "url", "section", "time", "linear_scale",   "grid_radio", "grid_checkbox", "file",
 ];
 
 const TEXT_LIKE: MembershipFieldDef["type"][] = ["text", "textarea", "email", "tel", "url"];

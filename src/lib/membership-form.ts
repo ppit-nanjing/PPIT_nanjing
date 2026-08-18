@@ -16,7 +16,8 @@ export type MembershipFieldType =
   | "time"
   | "linear_scale"
   | "grid_radio"
-  | "grid_checkbox";
+  | "grid_checkbox"
+  | "file";
 
 export interface RatingConfig {
   min?: number;
@@ -60,6 +61,7 @@ export const FIELD_TYPE_LABELS: Record<MembershipFieldType, string> = {
   linear_scale: "Skala Linier",
   grid_radio: "Kisi Pilihan Ganda",
   grid_checkbox: "Petak Kotak Centang",
+  file: "Unggah Berkas",
 };
 
 // Grid question types (rows × columns). `grid_radio` = one choice per row,
@@ -204,6 +206,7 @@ export const QUESTION_BANK: QuestionCategory[] = [
       },
       { key: "portfolioUrl", label: "Tautan Portofolio", type: "url", placeholder: "https://" },
       { key: "cvUrl", label: "Unggah CV (tautan gambar/PDF)", type: "url", placeholder: "https://" },
+      { key: "cvUploadFile", label: "Unggah CV (berkas PDF/Dokumen)", type: "file" },
       { key: "certUpload", label: "Sertifikat (unggah gambar)", type: "image" },
       { key: "socialMedia", label: "Media Sosial aktif", type: "url", placeholder: "https://instagram.com/..." },
     ],
