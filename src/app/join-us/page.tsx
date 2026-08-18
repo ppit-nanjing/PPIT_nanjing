@@ -57,11 +57,13 @@ export default async function JoinUsPage() {
           </div>
         ) : (
           <div className="flex flex-col gap-4">
-            <div className="rounded-t-xl bg-primary-container px-6 py-6">
-              <h2 className="text-headline-lg text-on-primary">{meta.title}</h2>
-              {meta.description && <p className="text-body-md text-on-primary/80 mt-1">{meta.description}</p>}
-            </div>
-            <div className="-mt-4">
+            {meta.bannerEnabled && (
+              <div className="rounded-t-xl bg-primary-container px-6 py-6">
+                <h2 className="text-headline-lg text-on-primary">{meta.title}</h2>
+                {meta.description && <p className="text-body-md text-on-primary/80 mt-1">{meta.description}</p>}
+              </div>
+            )}
+            <div className={meta.bannerEnabled ? "-mt-4" : ""}>
               <MembershipApplicationForm
                 fields={fields}
                 periodId={period.id}
@@ -75,6 +77,9 @@ export default async function JoinUsPage() {
                     : {}
                 }
                 action={submitMembershipApplication}
+                showProgress={meta.showProgress}
+                shuffle={meta.shuffle}
+                collectEmail={meta.collectEmail}
               />
             </div>
           </div>
