@@ -10,7 +10,7 @@ import {
   getFormMeta,
 } from "@/app/actions/membership";
 import { scoreApplication } from "@/lib/membership-form";
-import { emailSenderStatus } from "@/lib/email";
+import { emailSenderStatus, emailSenderAddress } from "@/lib/email";
 import { MembershipDeleteButton } from "@/components/console/membership-delete-button";
 import { MembershipTabs } from "@/components/console/membership-tabs";
 import { CollapsibleSection } from "@/components/console/collapsible-section";
@@ -77,6 +77,7 @@ export default async function MembershipDetailPage({ params }: { params: Promise
   // Nothing useful to show until at least one question carries a point value.
   const quizScore = rawScore && rawScore.max > 0 ? rawScore : null;
   const emailStatus = emailSenderStatus();
+  const emailFrom = emailSenderAddress();
   const extraAnswers = Object.entries(responses).filter(([k]) => !coreKeys.has(k as never) && k !== "fullName" && k !== "email");
 
   return (
@@ -193,22 +194,25 @@ export default async function MembershipDetailPage({ params }: { params: Promise
           {emailStatus === "ready" && (
             <p className="text-label-caps text-on-surface-variant mt-3">
               Memilih &ldquo;{STATUS_LABEL.accepted}&rdquo; atau &ldquo;{STATUS_LABEL.rejected}&rdquo; otomatis mengirim
-              email pengumuman ke <span className="text-on-background">{app.email}</span>. Teksnya bisa diubah di
-              Notifikasi.
+              email pengumuman ke <span className="text-on-background">{app.email}</span>
+              {emailFrom ? <> dari <span className="text-on-background">{emailFrom}</span></> : null}. Teksnya bisa
+              diubah di Notifikasi.
             </p>
           )}
           {emailStatus === "testing" && (
             <p className="text-label-caps text-on-surface-variant mt-3 bg-error-container/30 border border-error/40 rounded-md p-3">
               <span className="text-on-background font-medium">Email belum bisa dikirim ke pendaftar.</span> Resend masih
               memakai pengirim uji coba, yang hanya bisa mengirim ke alamat pemilik akun Resend &mdash; email ke{" "}
-              {app.email} akan ditolak. Verifikasi domain di resend.com/domains, lalu set{" "}
-              <code>EMAIL_FROM</code> ke alamat domain itu.
+              {app.email} akan ditolak. Pakai Gmail PPIT dengan mengisi <code>GMAIL_USER</code> dan{" "}
+              <code>GMAIL_APP_PASSWORD</code>, atau verifikasi domain sendiri di resend.com/domains lalu set{" "}
+              <code>EMAIL_FROM</code>.
             </p>
           )}
           {emailStatus === "off" && (
             <p className="text-label-caps text-on-surface-variant mt-3">
-              Email pengumuman <span className="text-on-background">belum aktif</span> &mdash; set{" "}
-              <code>RESEND_API_KEY</code> di Vercel supaya keputusan terkirim otomatis ke pendaftar.
+              Email pengumuman <span className="text-on-background">belum aktif</span> &mdash; isi{" "}
+              <code>GMAIL_USER</code> + <code>GMAIL_APP_PASSWORD</code> di Vercel supaya keputusan terkirim otomatis
+              ke pendaftar.
             </p>
           )}
           <button
