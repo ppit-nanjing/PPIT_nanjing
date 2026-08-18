@@ -47,67 +47,73 @@ export default async function MembershipFormPage() {
       </p>
       <MembershipTabs active="form" />
 
-      <form action={updateFormMeta} className="bg-surface-container-lowest border border-outline-variant rounded-xl p-6 mb-8 flex flex-col gap-4 max-w-2xl">
-        <h2 className="text-headline-md text-on-background">Setelan Formulir</h2>
-        <div className="flex flex-col gap-2">
-          <span className="text-label-caps uppercase tracking-wide text-on-surface-variant">Judul Formulir</span>
-          <input name="title" defaultValue={meta.title} className="bg-soft-gray rounded-md p-3 text-body-md" />
-        </div>
-        <div className="flex flex-col gap-2">
-          <span className="text-label-caps uppercase tracking-wide text-on-surface-variant">Deskripsi (tampil di atas formulir)</span>
-          <textarea name="description" rows={3} defaultValue={meta.description} className="bg-soft-gray rounded-md p-3 text-body-md resize-none" />
-        </div>
-        <div className="flex flex-col gap-2">
-          <span className="text-label-caps uppercase tracking-wide text-on-surface-variant">Pesan Konfirmasi (setelah kirim)</span>
-          <textarea name="confirmationMessage" rows={2} defaultValue={meta.confirmationMessage} className="bg-soft-gray rounded-md p-3 text-body-md resize-none" />
-        </div>
-        <label className="flex items-center gap-2 text-body-md text-on-background">
-          <input type="checkbox" name="bannerEnabled" defaultChecked={meta.bannerEnabled} />
-          Tampilkan banner (header besar) di halaman formulir
-        </label>
-        <hr className="border-outline-variant/60" />
-        <p className="text-label-caps uppercase tracking-wide text-on-surface-variant">Jawaban</p>
-        <label className="flex items-center gap-2 text-body-md text-on-background">
-          <input type="checkbox" name="collectEmail" defaultChecked={meta.collectEmail} />
-          Tanyakan alamat email lewat pertanyaan
-        </label>
-        <span className="text-label-caps text-on-surface-variant -mt-1">
-          Kalau dimatikan, email diambil otomatis dari akun yang login. Pengunjung yang belum login tetap diminta mengisi.
-        </span>
-        <p className="text-label-caps uppercase tracking-wide text-on-surface-variant">Presentasi</p>
-        <label className="flex items-center gap-2 text-body-md text-on-background">
-          <input type="checkbox" name="shuffle" defaultChecked={meta.shuffle} />
-          Acak urutan pertanyaan (kecuali data diri)
-        </label>
-        <label className="flex items-center gap-2 text-body-md text-on-background">
-          <input type="checkbox" name="showProgress" defaultChecked={meta.showProgress} />
-          Tampilkan bilah progres pengisian
-        </label>
-        <hr className="border-outline-variant/60" />
-        <p className="text-label-caps uppercase tracking-wide text-on-surface-variant">Kuis</p>
-        <label className="flex items-center gap-2 text-body-md text-on-background">
-          <input type="checkbox" name="isQuiz" defaultChecked={meta.isQuiz} />
-          Jadikan ini sebagai kuis (tiap soal bisa diberi poin &amp; kunci jawaban)
-        </label>
-        <hr className="border-outline-variant/60" />
-        <p className="text-label-caps uppercase tracking-wide text-on-surface-variant">Default Pertanyaan Baru</p>
-        <label className="flex items-center gap-2 text-body-md text-on-background">
-          <input type="checkbox" name="defaultRequired" defaultChecked={meta.defaultRequired} />
-          Pertanyaan baru otomatis ditandai &ldquo;wajib diisi&rdquo;
-        </label>
-        <hr className="border-outline-variant/60" />
-        <div className="flex flex-col gap-2">
-          <span className="text-label-caps uppercase tracking-wide text-on-surface-variant">Tautan Spreadsheet (opsional)</span>
-          <input name="spreadsheetUrl" placeholder="https://docs.google.com/spreadsheets/..." defaultValue={meta.spreadsheetUrl ?? ""} className="bg-soft-gray rounded-md p-3 text-body-md" />
-          <span className="text-label-caps text-on-surface-variant">Muncul sebagai tombol &ldquo;Buka Spreadsheet&rdquo; di halaman Jawaban.</span>
-        </div>
-        <button
-          type="submit"
-          className="self-start bg-primary-container text-on-primary text-label-caps uppercase tracking-wide px-6 py-3 rounded-md hover:bg-primary transition-colors"
-        >
-          Simpan Setelan
-        </button>
-      </form>
+      <CollapsibleSection
+        title="Setelan Formulir"
+        description="Judul, deskripsi, pesan konfirmasi, mode kuis, dan tautan spreadsheet."
+        className="mb-8"
+        defaultOpen={false}
+      >
+        <form action={updateFormMeta} className="flex flex-col gap-4 max-w-2xl">
+          <div className="flex flex-col gap-2">
+            <span className="text-label-caps uppercase tracking-wide text-on-surface-variant">Judul Formulir</span>
+            <input name="title" defaultValue={meta.title} className="bg-soft-gray rounded-md p-3 text-body-md" />
+          </div>
+          <div className="flex flex-col gap-2">
+            <span className="text-label-caps uppercase tracking-wide text-on-surface-variant">Deskripsi (tampil di atas formulir)</span>
+            <textarea name="description" rows={3} defaultValue={meta.description} className="bg-soft-gray rounded-md p-3 text-body-md resize-none" />
+          </div>
+          <div className="flex flex-col gap-2">
+            <span className="text-label-caps uppercase tracking-wide text-on-surface-variant">Pesan Konfirmasi (setelah kirim)</span>
+            <textarea name="confirmationMessage" rows={2} defaultValue={meta.confirmationMessage} className="bg-soft-gray rounded-md p-3 text-body-md resize-none" />
+          </div>
+          <label className="flex items-center gap-2 text-body-md text-on-background">
+            <input type="checkbox" name="bannerEnabled" defaultChecked={meta.bannerEnabled} />
+            Tampilkan banner (header besar) di halaman formulir
+          </label>
+          <hr className="border-outline-variant/60" />
+          <p className="text-label-caps uppercase tracking-wide text-on-surface-variant">Jawaban</p>
+          <label className="flex items-center gap-2 text-body-md text-on-background">
+            <input type="checkbox" name="collectEmail" defaultChecked={meta.collectEmail} />
+            Tanyakan alamat email lewat pertanyaan
+          </label>
+          <span className="text-label-caps text-on-surface-variant -mt-1">
+            Kalau dimatikan, email diambil otomatis dari akun yang login. Pengunjung yang belum login tetap diminta mengisi.
+          </span>
+          <p className="text-label-caps uppercase tracking-wide text-on-surface-variant">Presentasi</p>
+          <label className="flex items-center gap-2 text-body-md text-on-background">
+            <input type="checkbox" name="shuffle" defaultChecked={meta.shuffle} />
+            Acak urutan pertanyaan (kecuali data diri)
+          </label>
+          <label className="flex items-center gap-2 text-body-md text-on-background">
+            <input type="checkbox" name="showProgress" defaultChecked={meta.showProgress} />
+            Tampilkan bilah progres pengisian
+          </label>
+          <hr className="border-outline-variant/60" />
+          <p className="text-label-caps uppercase tracking-wide text-on-surface-variant">Kuis</p>
+          <label className="flex items-center gap-2 text-body-md text-on-background">
+            <input type="checkbox" name="isQuiz" defaultChecked={meta.isQuiz} />
+            Jadikan ini sebagai kuis (tiap soal bisa diberi poin &amp; kunci jawaban)
+          </label>
+          <hr className="border-outline-variant/60" />
+          <p className="text-label-caps uppercase tracking-wide text-on-surface-variant">Default Pertanyaan Baru</p>
+          <label className="flex items-center gap-2 text-body-md text-on-background">
+            <input type="checkbox" name="defaultRequired" defaultChecked={meta.defaultRequired} />
+            Pertanyaan baru otomatis ditandai &ldquo;wajib diisi&rdquo;
+          </label>
+          <hr className="border-outline-variant/60" />
+          <div className="flex flex-col gap-2">
+            <span className="text-label-caps uppercase tracking-wide text-on-surface-variant">Tautan Spreadsheet (opsional)</span>
+            <input name="spreadsheetUrl" placeholder="https://docs.google.com/spreadsheets/..." defaultValue={meta.spreadsheetUrl ?? ""} className="bg-soft-gray rounded-md p-3 text-body-md" />
+            <span className="text-label-caps text-on-surface-variant">Muncul sebagai tombol &ldquo;Buka Spreadsheet&rdquo; di halaman Jawaban.</span>
+          </div>
+          <button
+            type="submit"
+            className="self-start bg-primary-container text-on-primary text-label-caps uppercase tracking-wide px-6 py-3 rounded-md hover:bg-primary transition-colors"
+          >
+            Simpan Setelan
+          </button>
+        </form>
+      </CollapsibleSection>
 
       <CollapsibleSection title="Panduan Membuat Formulir" className="mb-8" defaultOpen={false}>
         <ol className="list-decimal list-inside flex flex-col gap-2 text-body-md text-on-background">
@@ -136,72 +142,87 @@ export default async function MembershipFormPage() {
         </ol>
       </CollapsibleSection>
 
-      <form action={createFormField} className="bg-surface-container-lowest border border-outline-variant rounded-xl p-6 mb-8 flex flex-col gap-4 max-w-2xl">
-        <h2 className="text-headline-md text-on-background">Tambah Field Baru</h2>
-        <div className="flex flex-col gap-2">
-          <span className="text-label-caps uppercase tracking-wide text-on-surface-variant">Label Pertanyaan</span>
-          <input name="label" placeholder="mis. Surat Motivasi (link)" className="bg-soft-gray rounded-md p-3 text-body-md" />
-        </div>
-        <div className="flex flex-col gap-2">
-          <span className="text-label-caps uppercase tracking-wide text-on-surface-variant">Tipe</span>
-          <select name="type" className="bg-soft-gray rounded-md p-3 text-body-md">
-            {ADD_TYPES.map((t) => (
-              <option key={t} value={t}>
-                {FIELD_TYPE_LABELS[t]}
-              </option>
-            ))}
-          </select>
-        </div>
-        <button
-          type="submit"
-          className="self-start bg-primary-container text-on-primary text-label-caps uppercase tracking-wide px-6 py-3 rounded-md hover:bg-primary transition-colors"
-        >
-          Tambah Field
-        </button>
-      </form>
+      <CollapsibleSection
+        title="Tambah Field Baru"
+        description="Bikin satu pertanyaan dari nol."
+        className="mb-8"
+        defaultOpen={false}
+      >
+        <form action={createFormField} className="flex flex-col gap-4 max-w-2xl">
+          <div className="flex flex-col gap-2">
+            <span className="text-label-caps uppercase tracking-wide text-on-surface-variant">Label Pertanyaan</span>
+            <input name="label" placeholder="mis. Surat Motivasi (link)" className="bg-soft-gray rounded-md p-3 text-body-md" />
+          </div>
+          <div className="flex flex-col gap-2">
+            <span className="text-label-caps uppercase tracking-wide text-on-surface-variant">Tipe</span>
+            <select name="type" className="bg-soft-gray rounded-md p-3 text-body-md">
+              {ADD_TYPES.map((t) => (
+                <option key={t} value={t}>
+                  {FIELD_TYPE_LABELS[t]}
+                </option>
+              ))}
+            </select>
+          </div>
+          <button
+            type="submit"
+            className="self-start bg-primary-container text-on-primary text-label-caps uppercase tracking-wide px-6 py-3 rounded-md hover:bg-primary transition-colors"
+          >
+            Tambah Field
+          </button>
+        </form>
+      </CollapsibleSection>
 
-      <form action={createFormField} className="bg-surface-container-lowest border border-outline-variant rounded-xl p-6 mb-8 flex flex-col gap-4 max-w-2xl">
-        <h2 className="text-headline-md text-on-background">Tambah Bagian / Tahap</h2>
-        <p className="text-body-md text-on-surface-variant">
-          Bagi form jadi bagian-bagian (mis. Data Diri, Pendidikan, Motivasi) supaya tidak jadi satu dinding pertanyaan.
-        </p>
-        <div className="flex flex-col gap-2">
-          <span className="text-label-caps uppercase tracking-wide text-on-surface-variant">Judul Bagian</span>
-          <input name="label" placeholder="mis. Data Diri" className="bg-soft-gray rounded-md p-3 text-body-md" />
-          <input type="hidden" name="type" value="section" />
-        </div>
-        <button
-          type="submit"
-          className="self-start bg-secondary-container text-on-secondary-container text-label-caps uppercase tracking-wide px-6 py-3 rounded-md hover:opacity-90 transition-colors"
-        >
-          Tambah Bagian
-        </button>
-      </form>
+      <CollapsibleSection
+        title="Tambah Bagian / Tahap"
+        description="Bagi form jadi bagian (mis. Data Diri, Pendidikan, Motivasi) supaya tidak jadi satu dinding pertanyaan."
+        className="mb-8"
+        defaultOpen={false}
+      >
+        <form action={createFormField} className="flex flex-col gap-4 max-w-2xl">
+          <div className="flex flex-col gap-2">
+            <span className="text-label-caps uppercase tracking-wide text-on-surface-variant">Judul Bagian</span>
+            <input name="label" placeholder="mis. Data Diri" className="bg-soft-gray rounded-md p-3 text-body-md" />
+            <input type="hidden" name="type" value="section" />
+          </div>
+          <button
+            type="submit"
+            className="self-start bg-secondary-container text-on-secondary-container text-label-caps uppercase tracking-wide px-6 py-3 rounded-md hover:opacity-90 transition-colors"
+          >
+            Tambah Bagian
+          </button>
+        </form>
+      </CollapsibleSection>
 
-      <div className="mb-8">
+      <CollapsibleSection
+        title="Bank Pertanyaan"
+        description="Pertanyaan siap pakai &mdash; klik untuk menambahkan ke formulir."
+        className="mb-8"
+        defaultOpen={false}
+      >
         <QuestionBank />
-      </div>
+      </CollapsibleSection>
 
-      <h2 className="text-headline-md text-on-background mb-1">Daftar Pertanyaan ({fields.filter((f) => f.type !== "section").length} pertanyaan)</h2>
-      <p className="text-body-md text-on-surface-variant mb-4">Klik tiap kartu untuk membuka/menyusun. Tanda ▸ berarti tertutup.</p>
-      <div className="space-y-3">
-        {fields.map((f, i) => {
-          // Track which section a question belongs to for the overview.
-          let sectionLabel: string | undefined;
-          for (let j = i - 1; j >= 0; j--) {
-            if (fields[j].type === "section") {
-              sectionLabel = fields[j].label;
-              break;
+      <CollapsibleSection
+        title={`Daftar Pertanyaan (${fields.filter((f) => f.type !== "section").length} pertanyaan)`}
+        description="Klik tiap kartu untuk membuka/menyusun. Tanda ▸ berarti tertutup."
+        className="mb-8"
+      >
+        <div className="space-y-3">
+          {fields.map((f, i) => {
+            // Track which section a question belongs to for the overview.
+            let sectionLabel: string | undefined;
+            for (let j = i - 1; j >= 0; j--) {
+              if (fields[j].type === "section") {
+                sectionLabel = fields[j].label;
+                break;
+              }
             }
-          }
-          return <FormFieldEditor key={f.id} field={f} index={i} sectionLabel={sectionLabel} isQuiz={meta.isQuiz} />;
-        })}
-      </div>
+            return <FormFieldEditor key={f.id} field={f} index={i} sectionLabel={sectionLabel} isQuiz={meta.isQuiz} />;
+          })}
+        </div>
+      </CollapsibleSection>
 
-      <CollapsibleSection title="Pratinjau Formulir" className="mt-10">
-        <p className="text-body-md text-on-surface-variant mb-4">
-          Ini tampilan yang akan dilihat pelamar. Belum bisa dikirim &mdash; hanya untuk contoh.
-        </p>
+      <CollapsibleSection title="Pratinjau Formulir" description="Tampilan yang dilihat pelamar. Belum bisa dikirim." defaultOpen={false}>
         <div className="bg-surface-container-lowest border border-outline-variant rounded-xl p-6 max-w-2xl">
           <MembershipApplicationForm
             fields={fields}
