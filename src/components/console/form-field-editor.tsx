@@ -5,11 +5,11 @@ import { useRouter } from "next/navigation";
 import { useFormStatus } from "react-dom";
 import { ChevronDown, ChevronRight, GripVertical, MoreVertical, Copy } from "lucide-react";
 import type { MembershipFieldDef } from "@/lib/membership-form";
-import { OPTION_TYPES, SCALE_TYPES, FIELD_TYPE_LABELS, isSectionType } from "@/lib/membership-form";
+import { OPTION_TYPES, SCALE_TYPES, GRID_TYPES, FIELD_TYPE_LABELS, isSectionType } from "@/lib/membership-form";
 import { updateFormField, deleteFormField, moveFormField, duplicateFormField } from "@/app/actions/membership";
 
 const ALL_TYPES: MembershipFieldDef["type"][] = [
-  "text", "textarea", "email", "tel", "number", "select", "radio", "multiselect", "date", "checkbox", "rating", "image", "url", "section", "time", "linear_scale",
+  "text", "textarea", "email", "tel", "number", "select", "radio", "multiselect", "date", "checkbox", "rating", "image", "url", "section", "time", "linear_scale", "grid_radio", "grid_checkbox",
 ];
 
 const TEXT_LIKE: MembershipFieldDef["type"][] = ["text", "textarea", "email", "tel", "url"];
@@ -19,6 +19,7 @@ type FieldConfig = {
   max?: number;
   lowLabel?: string;
   highLabel?: string;
+  rows?: string[];
   validations?: { min?: number; max?: number; minLength?: number };
 };
 
@@ -41,6 +42,7 @@ export function FormFieldEditor({ field, index, sectionLabel }: { field: Members
   const [open, setOpen] = useState(false);
   const [type, setType] = useState<MembershipFieldDef["type"]>(field.type);
   const [optionsText, setOptionsText] = useState((field.options ?? []).join("\n"));
+  const [rowsText, setRowsText] = useState((field.config?.rows ?? []).join("\n"));
   const [cfg, setCfg] = useState<FieldConfig>(field.config ?? {});
   const [showAdvanced, setShowAdvanced] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
@@ -50,7 +52,8 @@ export function FormFieldEditor({ field, index, sectionLabel }: { field: Members
   const [dropBefore, setDropBefore] = useState<null | boolean>(null);
 
   const isSection = isSectionType(type);
-  const showOptions = OPTION_TYPES.includes(type);
+  const showOptions = OPTION_TYPES.includes(type) || GRID_TYPES.includes(type);
+  const showGrid = GRID_TYPES.includes(type);
   const showRating = SCALE_TYPES.includes(type);
   const configStr = JSON.stringify(cfg) || "";
 
@@ -224,13 +227,32 @@ export function FormFieldEditor({ field, index, sectionLabel }: { field: Members
                 {showOptions && (
                   <div className="flex flex-col gap-2">
                     <span className="text-label-caps uppercase tracking-wide text-on-surface-variant">
-                      Daftar Pilihan (satu per baris{type === "multiselect" ? " — bisa pilih lebih dari satu" : ""})
+                      {showGrid
+                        ? "Kolom (satu per baris — pilihan untuk tiap baris)"
+                        : `Daftar Pilihan (satu per baris${type === "multiselect" ? " — bisa pilih lebih dari satu" : ""})`}
                     </span>
                     <textarea
                       name="options"
                       rows={4}
                       value={optionsText}
                       onChange={(e) => setOptionsText(e.target.value)}
+                      className="bg-soft-gray rounded-md p-3 text-body-md resize-none"
+                    />
+                  </div>
+                )}
+
+                {showGrid && (
+                  <div className="flex flex-col gap-2">
+                    <span className="text-label-caps uppercase tracking-wide text-on-surface-variant">
+                      Baris (satu per baris — pertanyaan/pernyataan di kiri)
+                    </span>
+                    <textarea
+                      rows={4}
+                      value={rowsText}
+                      onChange={(e) => {
+                        setRowsText(e.target.value);
+                        setCfg((c) => ({ ...c, rows: e.target.value.split("\n").map((s) => s.trim()).filter(Boolean) }));
+                      }}
                       className="bg-soft-gray rounded-md p-3 text-body-md resize-none"
                     />
                   </div>
