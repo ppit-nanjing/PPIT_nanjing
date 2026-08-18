@@ -4,7 +4,22 @@ import { put } from "@vercel/blob";
 import { hasModuleAccess, type AdminModule } from "@/lib/admin-scope";
 
 const MAX_BYTES = 10 * 1024 * 1024;
-const ALLOWED_TYPES = ["image/png", "image/jpeg", "image/webp", "image/gif", "application/pdf"];
+const ALLOWED_TYPES = [
+  "image/png",
+  "image/jpeg",
+  "image/webp",
+  "image/gif",
+  "application/pdf",
+  "application/msword",
+  "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+  "application/vnd.ms-excel",
+  "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+  "application/vnd.ms-powerpoint",
+  "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+  "text/plain",
+  "text/csv",
+  "application/zip",
+];
 // Restrict the blob "folder" to known prefixes so a client can't write anywhere.
 // "resume" stays open to any signed-in user (applicants upload their own CV).
 // Every other folder is admin content - map it to the module that already
