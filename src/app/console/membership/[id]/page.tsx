@@ -7,7 +7,9 @@ import {
   updateMembershipStatus,
   updateMembershipNote,
   getFormFields,
+  getFormMeta,
 } from "@/app/actions/membership";
+import { scoreApplication } from "@/lib/membership-form";
 import { MembershipDeleteButton } from "@/components/console/membership-delete-button";
 import { MembershipTabs } from "@/components/console/membership-tabs";
 import { CollapsibleSection } from "@/components/console/collapsible-section";
@@ -66,9 +68,13 @@ export default async function MembershipDetailPage({ params }: { params: Promise
   const row = app as unknown as Record<string, string | null>;
 
   const fields = await getFormFields();
+  const meta = await getFormMeta();
   const labelByKey = new Map(fields.map((f) => [f.key, f.label]));
   const coreKeys = new Set(Object.values(CORE_KEYS));
   const responses = (app.responses as Record<string, unknown> | null) ?? {};
+  const rawScore = meta.isQuiz ? scoreApplication(responses, fields) : null;
+  // Nothing useful to show until at least one question carries a point value.
+  const quizScore = rawScore && rawScore.max > 0 ? rawScore : null;
   const extraAnswers = Object.entries(responses).filter(([k]) => !coreKeys.has(k as never) && k !== "fullName" && k !== "email");
 
   return (
@@ -99,6 +105,14 @@ export default async function MembershipDetailPage({ params }: { params: Promise
           ))}
         </div>
       </CollapsibleSection>
+
+      {quizScore && (
+        <div className="mt-6 bg-tertiary-container/20 border border-outline-variant rounded-xl p-4 flex items-center gap-3">
+          <span className="text-label-caps uppercase tracking-wide text-on-surface-variant">Skor Kuis</span>
+          <span className="text-headline-md text-on-background">{quizScore.score}</span>
+          <span className="text-body-md text-on-surface-variant">/ {quizScore.max} poin</span>
+        </div>
+      )}
 
       {extraAnswers.length > 0 && (
         <CollapsibleSection title="Jawaban Tambahan" className="mt-6">
