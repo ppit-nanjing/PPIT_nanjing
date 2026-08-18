@@ -14,13 +14,16 @@ export type MembershipFieldType =
   | "url"
   | "section"
   | "time"
-  | "linear_scale";
+  | "linear_scale"
+  | "grid_radio"
+  | "grid_checkbox";
 
 export interface RatingConfig {
   min?: number;
   max?: number;
   lowLabel?: string;
   highLabel?: string;
+  rows?: string[];
   validations?: { min?: number; max?: number; minLength?: number };
 }
 
@@ -55,7 +58,13 @@ export const FIELD_TYPE_LABELS: Record<MembershipFieldType, string> = {
   section: "Bagian / Judul Tahap",
   time: "Waktu",
   linear_scale: "Skala Linier",
+  grid_radio: "Kisi Pilihan Ganda",
+  grid_checkbox: "Petak Kotak Centang",
 };
+
+// Grid question types (rows × columns). `grid_radio` = one choice per row,
+// `grid_checkbox` = multiple choices per row.
+export const GRID_TYPES: MembershipFieldType[] = ["grid_radio", "grid_checkbox"];
 
 // A section is a heading/divider with no input — it groups the questions that
 // follow it until the next section.
@@ -126,7 +135,9 @@ export interface QuestionTemplate {
   helpText?: string;
   required?: boolean;
   options?: string[];
-  config?: RatingConfig;
+  // For rating/scale: { min, max, lowLabel, highLabel }.
+  // For grid types: also include `rows` (the grid's row labels).
+  config?: RatingConfig & { rows?: string[] };
 }
 
 export interface QuestionCategory {
@@ -230,6 +241,27 @@ export const QUESTION_BANK: QuestionCategory[] = [
       { key: "emergencyContact", label: "Kontak darurat (nama & nomor)", type: "tel" },
       { key: "dietary", label: "Preferensi makanan", type: "select", options: ["Biasa", "Vegetarian", "Halal saja", "Lainnya"] },
       { key: "suggestion", label: "Saran untuk PPIT Nanjing", type: "textarea" },
+    ],
+  },
+  {
+    title: "Kisi / Grid",
+    templates: [
+      {
+        key: "availabilityGrid",
+        label: "Ketersediaan Waktu untuk Rapat Rutin",
+        type: "grid_checkbox",
+        helpText: "Centang kolom waktu yang kamu bisa untuk tiap hari.",
+        options: ["Pagi", "Siang", "Sore"],
+        config: { rows: ["Senin", "Selasa", "Rabu", "Kamis", "Jumat", "Sabtu", "Minggu"] },
+      },
+      {
+        key: "interestGrid",
+        label: "Tingkat minat pada tiap divisi",
+        type: "grid_radio",
+        helpText: "Pilih satu untuk tiap divisi.",
+        options: ["Tidak tertarik", "Cukup", "Sangat tertarik"],
+        config: { rows: ["Hubungan Masyarakat", "Kesenian dan Olahraga", "Pendidikan dan Litbang", "Kerohanian", "Logistik dan Perlengkapan", "Media dan Kreatif"] },
+      },
     ],
   },
 ];
