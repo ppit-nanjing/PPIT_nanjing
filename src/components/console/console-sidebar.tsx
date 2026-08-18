@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { usePathname } from "next/navigation";
 import {
   Menu,
   X,
@@ -20,40 +21,93 @@ import {
 import { hasModuleAccess, type AdminModule } from "@/lib/admin-scope-constants";
 import Link from "next/link";
 
+type NavItem = { href: string; label: string; icon: typeof LayoutDashboard; module: AdminModule | null };
+
 // `module: null` = always visible to anyone who got past the layout gate
 // (Dashboard, Documentation are meta/support, not sensitive management).
 // `module: "users"/"organization"/"feedback"` aren't delegable via
 // adminModuleScope (no seed row lists them) - full tier only.
-const NAV: { href: string; label: string; icon: typeof LayoutDashboard; module: AdminModule | null }[] = [
-  { href: "/console", label: "Dashboard", icon: LayoutDashboard, module: null },
-  { href: "/console/users", label: "Pengguna", icon: Users, module: "users" },
-  { href: "/console/organization", label: "Organisasi", icon: Building2, module: "organization" },
-  { href: "/console/events", label: "Kegiatan", icon: CalendarDays, module: "events" },
-  { href: "/console/inventory", label: "Inventaris", icon: Package, module: "inventory" },
-  { href: "/console/membership", label: "Pendaftaran", icon: UserPlus, module: "membership" },
-  { href: "/console/content", label: "Konten", icon: Images, module: "content" },
-  { href: "/console/reports", label: "Laporan", icon: FileBarChart, module: "reports" },
-  { href: "/console/notifications", label: "Notifikasi", icon: BellRing, module: "notifications" },
-  { href: "/console/docs", label: "Dokumentasi", icon: BookOpen, module: null },
-  { href: "/console/feedback", label: "Masukan Pengguna", icon: MessageSquare, module: "feedback" },
+const GROUPS: { title: string; items: NavItem[] }[] = [
+  {
+    title: "Utama",
+    items: [{ href: "/console", label: "Dashboard", icon: LayoutDashboard, module: null }],
+  },
+  {
+    title: "Manajemen",
+    items: [
+      { href: "/console/users", label: "Pengguna", icon: Users, module: "users" },
+      { href: "/console/organization", label: "Organisasi", icon: Building2, module: "organization" },
+      { href: "/console/events", label: "Kegiatan", icon: CalendarDays, module: "events" },
+      { href: "/console/inventory", label: "Inventaris", icon: Package, module: "inventory" },
+      { href: "/console/membership", label: "Pendaftaran", icon: UserPlus, module: "membership" },
+      { href: "/console/content", label: "Konten", icon: Images, module: "content" },
+    ],
+  },
+  {
+    title: "Sistem",
+    items: [
+      { href: "/console/reports", label: "Laporan", icon: FileBarChart, module: "reports" },
+      { href: "/console/notifications", label: "Notifikasi", icon: BellRing, module: "notifications" },
+      { href: "/console/docs", label: "Dokumentasi", icon: BookOpen, module: null },
+      { href: "/console/feedback", label: "Masukan Pengguna", icon: MessageSquare, module: "feedback" },
+    ],
+  },
 ];
+
+function NavContent({
+  scope,
+  pathname,
+  onNavigate,
+}: {
+  scope: "full" | string[] | null;
+  pathname: string;
+  onNavigate: () => void;
+}) {
+  const isActive = (href: string) =>
+    href === "/console" ? pathname === "/console" : pathname.startsWith(href);
+
+  return (
+    <nav className="flex-1 py-2 overflow-y-auto">
+      {GROUPS.map((group) => {
+        const items = group.items.filter((i) => i.module === null || hasModuleAccess(scope, i.module));
+        if (items.length === 0) return null;
+        return (
+          <div key={group.title} className="mb-2">
+            <p className="px-6 pt-4 pb-1 text-label-caps uppercase tracking-wide text-on-surface-variant/70 text-xs">
+              {group.title}
+            </p>
+            {items.map((item) => {
+              const active = isActive(item.href);
+              return (
+                <a
+                  key={item.href}
+                  href={item.href}
+                  onClick={onNavigate}
+                  aria-current={active ? "page" : undefined}
+                  className={`relative flex items-center gap-3 px-6 py-3 text-body-md transition-colors ${
+                    active
+                      ? "bg-primary-container/10 text-primary-container font-medium"
+                      : "text-on-surface-variant hover:bg-surface-container-low hover:text-on-background"
+                  }`}
+                >
+                  {active && (
+                    <span className="absolute left-0 top-1/2 -translate-y-1/2 h-6 w-1 rounded-r bg-primary-container" />
+                  )}
+                  <item.icon size={18} className={active ? "text-primary-container" : "text-secondary"} />
+                  {item.label}
+                </a>
+              );
+            })}
+          </div>
+        );
+      })}
+    </nav>
+  );
+}
 
 export function ConsoleSidebar({ userName, scope }: { userName: string; scope: "full" | string[] | null }) {
   const [open, setOpen] = useState(false);
-  const visible = NAV.filter((item) => item.module === null || hasModuleAccess(scope, item.module));
-
-  const links = (onNavigate: () => void) =>
-    visible.map((item) => (
-      <a
-        key={item.href}
-        href={item.href}
-        onClick={onNavigate}
-        className="flex items-center gap-3 px-6 py-3 text-body-md text-on-background hover:bg-surface-container-low transition-colors"
-      >
-        <item.icon size={18} className="text-secondary" />
-        {item.label}
-      </a>
-    ));
+  const pathname = usePathname();
 
   return (
     <>
@@ -63,7 +117,7 @@ export function ConsoleSidebar({ userName, scope }: { userName: string; scope: "
           <p className="text-headline-md font-bold text-primary uppercase tracking-tight">Console</p>
           <p className="text-label-caps text-on-surface-variant mt-1">{userName}</p>
         </div>
-        <nav className="flex-1 py-4">{links(() => {})}</nav>
+        <NavContent scope={scope} pathname={pathname} onNavigate={() => {}} />
         <Link
           href="/"
           className="flex items-center gap-2 px-6 py-4 text-label-caps text-secondary hover:text-on-background border-t border-outline-variant transition-colors"
@@ -93,7 +147,7 @@ export function ConsoleSidebar({ userName, scope }: { userName: string; scope: "
                 <X size={22} />
               </button>
             </div>
-            <nav className="flex-1 py-4">{links(() => setOpen(false))}</nav>
+            <NavContent scope={scope} pathname={pathname} onNavigate={() => setOpen(false)} />
             <Link
               href="/"
               onClick={() => setOpen(false)}
