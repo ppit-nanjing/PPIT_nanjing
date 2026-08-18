@@ -25,6 +25,11 @@ export interface RatingConfig {
   lowLabel?: string;
   highLabel?: string;
   rows?: string[];
+  // Quiz mode: point value + correct answer key for auto-scored questions.
+  points?: number;
+  answerKey?: string;
+  // Inline image shown alongside the question (Google Forms "add image").
+  imageUrl?: string;
   validations?: { min?: number; max?: number; minLength?: number };
 }
 
@@ -79,6 +84,76 @@ export const OPTION_TYPES: MembershipFieldType[] = ["select", "radio", "multisel
 
 // Types rendered as a scale the user rates.
 export const SCALE_TYPES: MembershipFieldType[] = ["rating", "linear_scale"];
+
+// Types whose answer is picked from `options` — the quiz answer key can be
+// built from that same list instead of typed by hand.
+export const CHOICE_TYPES: MembershipFieldType[] = ["select", "radio", "multiselect"];
+
+// --- Quiz scoring -----------------------------------------------------------
+// An answer key lives in `config.answerKey` in the same shape the respondent's
+// answer is stored in, so grading is just a normalised comparison:
+//   select / radio / text / …  → plain string
+//   multiselect               → comma-separated options (order-insensitive)
+//   checkbox                  → "true" / "false"
+//   grid_radio                → JSON { rowIndex: column }
+//   grid_checkbox             → JSON { rowIndex: [columns] }
+
+const norm = (v: unknown) => String(v ?? "").trim().toLowerCase();
+
+function sameSet(a: unknown, b: unknown): boolean {
+  const x = (Array.isArray(a) ? a : []).map(norm).filter(Boolean).sort();
+  const y = (Array.isArray(b) ? b : []).map(norm).filter(Boolean).sort();
+  return x.length === y.length && x.every((v, i) => v === y[i]);
+}
+
+function parseKeyObject(key: string): Record<string, unknown> {
+  try {
+    const o = JSON.parse(key);
+    return o && typeof o === "object" && !Array.isArray(o) ? (o as Record<string, unknown>) : {};
+  } catch {
+    return {};
+  }
+}
+
+// True when a stored answer matches the question's answer key. A missing or
+// blank key means the question is not auto-graded.
+export function isCorrectAnswer(f: MembershipFieldDef, raw: unknown): boolean {
+  const key = f.config?.answerKey;
+  if (!key || !key.trim()) return false;
+
+  if (f.type === "multiselect") {
+    return sameSet(raw, key.split(",").map((s) => s.trim()).filter(Boolean));
+  }
+
+  if (GRID_TYPES.includes(f.type)) {
+    const expected = parseKeyObject(key);
+    const rowKeys = Object.keys(expected);
+    if (rowKeys.length === 0) return false;
+    const given = (raw && typeof raw === "object" ? raw : {}) as Record<string, unknown>;
+    return rowKeys.every((r) =>
+      f.type === "grid_checkbox" ? sameSet(given[r], expected[r]) : norm(given[r]) === norm(expected[r]),
+    );
+  }
+
+  return norm(raw) === norm(key);
+}
+
+// Points earned vs. points available. Only questions carrying a point value
+// count toward the maximum, so a partially-keyed quiz still scores sensibly.
+export function scoreApplication(
+  responses: Record<string, unknown>,
+  fields: MembershipFieldDef[],
+): { score: number; max: number } {
+  let score = 0;
+  let max = 0;
+  for (const f of fields) {
+    const pts = f.config?.points;
+    if (isSectionType(f.type) || !pts || pts <= 0) continue;
+    max += pts;
+    if (isCorrectAnswer(f, responses[f.key])) score += pts;
+  }
+  return { score, max };
+}
 
 // Stable keys that map onto membership_applications' structured columns.
 export const CORE_KEYS = {
