@@ -11,27 +11,36 @@ import type { NextConfig } from "next";
 // the app. We keep 'unsafe-inline' for scripts (React's escaping remains the
 // primary XSS defense) but lock down everything else, especially
 // frame-ancestors 'none' and form-action 'self'.
-const csp = [
-  "default-src 'self'",
-  "script-src 'self' 'unsafe-inline'",
-  "style-src 'self' 'unsafe-inline'",
-  "img-src 'self' data: blob: https://*.public.blob.vercel-storage.com https://*.googleusercontent.com",
-  "font-src 'self'",
-  "connect-src 'self'",
-  // /organization/ad-art previews the admin-uploaded AD/ART PDF in an iframe
-  // served from Blob storage. Without this, frame-src falls back through
-  // child-src to default-src 'self' and the browser silently blocks the
-  // preview - which would only show up once a real PDF is finally uploaded.
-  "frame-src 'self' https://*.public.blob.vercel-storage.com",
-  "frame-ancestors 'none'",
-  "base-uri 'self'",
-  "form-action 'self'",
-  "object-src 'none'",
-  "manifest-src 'self'",
-].join("; ");
+//
+// The Vercel preview toolbar (vercel.live) injects a script on non-production
+// deployments; without allow-listing it the browser logs a CSP violation and
+// the toolbar feedback script is blocked. We only relax for non-production so
+// the production perimeter stays tight.
+const VERCEL_TOOLBAR_HOSTS = " https://vercel.live https://*.vercel.live";
 
-const securityHeaders = [
-  { key: "Content-Security-Policy", value: csp },
+function buildCsp(allowVercelToolbar: boolean) {
+  const v = allowVercelToolbar ? VERCEL_TOOLBAR_HOSTS : "";
+  return [
+    "default-src 'self'",
+    `script-src 'self' 'unsafe-inline'${v}`,
+    "style-src 'self' 'unsafe-inline'",
+    `img-src 'self' data: blob: https://*.public.blob.vercel-storage.com https://*.googleusercontent.com${v}`,
+    "font-src 'self'",
+    `connect-src 'self'${v}`,
+    // /organization/ad-art previews the admin-uploaded AD/ART PDF in an iframe
+    // served from Blob storage. Without this, frame-src falls back through
+    // child-src to default-src 'self' and the browser silently blocks the
+    // preview - which would only show up once a real PDF is finally uploaded.
+    `frame-src 'self' https://*.public.blob.vercel-storage.com${v}`,
+    "frame-ancestors 'none'",
+    "base-uri 'self'",
+    "form-action 'self'",
+    "object-src 'none'",
+    "manifest-src 'self'",
+  ].join("; ");
+}
+
+const baseSecurityHeaders = [
   { key: "Strict-Transport-Security", value: "max-age=63072000; includeSubDomains; preload" },
   { key: "X-Frame-Options", value: "DENY" },
   { key: "X-Content-Type-Options", value: "nosniff" },
@@ -55,10 +64,14 @@ const nextConfig: NextConfig = {
     ],
   },
   async headers() {
+    const allowVercelToolbar = process.env.VERCEL_ENV !== "production";
     return [
       {
         source: "/(.*)",
-        headers: securityHeaders,
+        headers: [
+          { key: "Content-Security-Policy", value: buildCsp(allowVercelToolbar) },
+          ...baseSecurityHeaders,
+        ],
       },
     ];
   },
