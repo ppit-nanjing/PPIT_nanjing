@@ -23,6 +23,19 @@ export function isEmailConfigured(): boolean {
   return Boolean(process.env.RESEND_API_KEY);
 }
 
+// Resend only lets an account send from its shared "onboarding@resend.dev"
+// sender to the address that owns the account. Until a real domain is verified
+// and EMAIL_FROM points at it, mail to applicants is rejected - so the admin UI
+// has to say "testing" rather than pretending the feature is live.
+export type EmailSenderStatus = "off" | "testing" | "ready";
+
+export function emailSenderStatus(): EmailSenderStatus {
+  if (!process.env.RESEND_API_KEY) return "off";
+  const from = process.env.EMAIL_FROM?.trim();
+  if (!from || /@resend\.dev>?\s*$/i.test(from)) return "testing";
+  return "ready";
+}
+
 export async function sendEmail(input: {
   to: string;
   subject: string;
