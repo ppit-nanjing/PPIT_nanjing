@@ -35,6 +35,7 @@ export async function submitMembershipApplication(recruitmentPeriodId: string, f
 
   const session = await auth();
   const fields = await getFormFields();
+  const meta = await getFormMeta();
 
   const responses: Record<string, unknown> = {};
   for (const f of fields) {
@@ -62,6 +63,11 @@ export async function submitMembershipApplication(recruitmentPeriodId: string, f
   }
 
   const fullName = String(responses[CORE_KEYS.fullName] ?? "").trim();
+  // With "kumpulkan email" off the question is hidden for signed-in users, so
+  // take the address from their account instead.
+  if (!meta.collectEmail && !String(responses[CORE_KEYS.email] ?? "").trim() && session?.user?.email) {
+    responses[CORE_KEYS.email] = session.user.email;
+  }
   const email = String(responses[CORE_KEYS.email] ?? "").trim();
   if (!fullName) throw new Error("Nama wajib diisi");
   if (!email) throw new Error("Email wajib diisi");
@@ -164,13 +170,14 @@ export async function createFormField(formData: FormData) {
   await requireModuleAccess("membership");
   const label = String(formData.get("label") ?? "").trim() || "Field baru";
   const type = String(formData.get("type") ?? "text");
+  const [meta] = await db.select({ defaultRequired: membershipFormMeta.defaultRequired }).from(membershipFormMeta).limit(1);
   const maxRow = await db.select({ o: membershipFormFields.orderIndex }).from(membershipFormFields).orderBy(asc(membershipFormFields.orderIndex));
   const nextOrder = maxRow.length ? Math.max(...maxRow.map((r) => r.o)) + 1 : 0;
   await db.insert(membershipFormFields).values({
     key: `custom_${Math.random().toString(36).slice(2, 10)}`,
     label,
     type: type as MembershipFieldDef["type"],
-    required: false,
+    required: meta?.defaultRequired ?? false,
     orderIndex: nextOrder,
     isCore: false,
   });
@@ -323,16 +330,45 @@ export async function updateFormMeta(formData: FormData) {
   const description = String(formData.get("description") ?? "").trim();
   const confirmationMessage = String(formData.get("confirmationMessage") ?? "").toString().trim() || "Terima kasih! Pendaftaran kamu sudah kami terima.";
   const bannerEnabled = formData.get("bannerEnabled") === "on";
+  const isQuiz = formData.get("isQuiz") === "on";
+  const collectEmail = formData.get("collectEmail") === "on";
+  const shuffle = formData.get("shuffle") === "on";
+  const showProgress = formData.get("showProgress") === "on";
+  const defaultRequired = formData.get("defaultRequired") === "on";
+  const spreadsheetUrlVal = String(formData.get("spreadsheetUrl") ?? "").trim() || null;
   const [row] = await db.select({ id: membershipFormMeta.id }).from(membershipFormMeta).limit(1);
   if (row) {
     await db
       .update(membershipFormMeta)
-      .set({ title, description, confirmationMessage, bannerEnabled, updatedAt: new Date() })
+      .set({
+        title,
+        description,
+        confirmationMessage,
+        bannerEnabled,
+        isQuiz,
+        collectEmail,
+        shuffle,
+        showProgress,
+        defaultRequired,
+        spreadsheetUrl: spreadsheetUrlVal,
+        updatedAt: new Date(),
+      })
       .where(eq(membershipFormMeta.id, row.id));
   } else {
     await db
       .insert(membershipFormMeta)
-      .values({ title, description, confirmationMessage, bannerEnabled });
+      .values({
+        title,
+        description,
+        confirmationMessage,
+        bannerEnabled,
+        isQuiz,
+        collectEmail,
+        shuffle,
+        showProgress,
+        defaultRequired,
+        spreadsheetUrl: spreadsheetUrlVal,
+      });
   }
   revalidatePath("/console/membership/form");
   revalidatePath("/join-us");
