@@ -129,6 +129,10 @@ export default async function MembershipDetailPage({ params }: { params: Promise
                     />
                   ) : type === "checkbox" ? (
                     <p className="text-body-md text-on-background mt-1">{raw === "true" ? "Ya" : "Tidak"}</p>
+                  ) : type === "file" && raw ? (
+                    <a href={raw} target="_blank" rel="noopener noreferrer" className="text-body-md text-primary-container underline mt-1 break-all">
+                      {decodeURIComponent(raw.split("/").pop() ?? raw)}
+                    </a>
                   ) : type === "url" && raw ? (
                     <a href={raw} target="_blank" rel="noopener noreferrer" className="text-body-md text-primary-container underline mt-1 break-all">
                       {raw}
