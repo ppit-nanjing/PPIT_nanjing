@@ -8,9 +8,9 @@
 // messages to what it sent before templates existed. A DB row in
 // notification_templates overrides the default; deleting that row restores it.
 //
-// Channel is always "in_app": there is no email/push sending provider wired up
-// (see docs/Progress & Handoff.md). The notification_channel enum keeps the
-// other two values for when one exists, but nothing renders them yet.
+// Most of these are in-app only. The two membership decision templates are also
+// sent as email via Resend (src/lib/email.ts) using the same subject/body, so
+// editing the wording here changes both the notification and the email.
 
 export type NotificationTemplateKey =
   | "event_checkin"
@@ -21,7 +21,9 @@ export type NotificationTemplateKey =
   | "contribution_rejected"
   | "procurement_approved"
   | "procurement_rejected"
-  | "job_application";
+  | "job_application"
+  | "membership_accepted"
+  | "membership_rejected";
 
 export type NotificationTemplateDef = {
   key: NotificationTemplateKey;
@@ -119,6 +121,26 @@ export const NOTIFICATION_TEMPLATES: NotificationTemplateDef[] = [
     variables: ["jobTitle"],
     defaultSubject: "Lamaran pekerjaan terkirim",
     defaultBody: 'Lamaran kamu untuk "{{jobTitle}}" telah terkirim. Tim rekrutmen akan meninjau dan menghubungi kamu bila cocok.',
+  },
+  {
+    key: "membership_accepted",
+    group: "Pendaftaran Anggota",
+    label: "Pendaftar diterima",
+    trigger: 'Dikirim saat admin mengubah status pendaftar menjadi "Diterima" di halaman detail pendaftaran.',
+    variables: ["fullName", "batchLabel"],
+    defaultSubject: "Selamat, kamu diterima sebagai pengurus PPIT Nanjing",
+    defaultBody:
+      "Halo {{fullName}},\n\nSelamat! Setelah melalui seleksi berkas dan wawancara, kamu dinyatakan DITERIMA sebagai pengurus PPIT Nanjing {{batchLabel}}.\n\nLangkah berikutnya akan kami sampaikan lewat email ini dan grup resmi. Mohon tunggu informasi lanjutan dari kami.\n\nTerima kasih sudah mendaftar dan sampai jumpa di kepengurusan!",
+  },
+  {
+    key: "membership_rejected",
+    group: "Pendaftaran Anggota",
+    label: "Pendaftar tidak lolos",
+    trigger: 'Dikirim saat admin mengubah status pendaftar menjadi "Ditolak" di halaman detail pendaftaran.',
+    variables: ["fullName", "batchLabel"],
+    defaultSubject: "Hasil seleksi pengurus PPIT Nanjing",
+    defaultBody:
+      "Halo {{fullName}},\n\nTerima kasih sudah meluangkan waktu mengikuti seleksi pengurus PPIT Nanjing {{batchLabel}}.\n\nSetelah mempertimbangkan seluruh proses seleksi, untuk kali ini kami belum bisa mengajak kamu bergabung di kepengurusan. Keputusan ini tidak mengurangi apresiasi kami atas minat dan usaha kamu.\n\nKami harap kamu tetap aktif di kegiatan PPIT Nanjing, dan semoga bisa bertemu lagi di kesempatan berikutnya.",
   },
 ];
 
