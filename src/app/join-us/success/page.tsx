@@ -2,8 +2,10 @@ import { SiteNav } from "@/components/site-nav";
 import { SiteFooter } from "@/components/site-footer";
 import { CheckCircle2 } from "lucide-react";
 import Link from "next/link";
+import { getFormMeta } from "@/app/actions/membership";
 
-export default function JoinUsSuccessPage() {
+export default async function JoinUsSuccessPage() {
+  const meta = await getFormMeta();
   return (
     <div className="min-h-screen bg-background text-on-background">
       <SiteNav />
@@ -19,10 +21,7 @@ export default function JoinUsSuccessPage() {
           Pendaftaran Terkirim
         </h1>
         <div role="status" className="text-body-md text-on-surface-variant mb-8 space-y-2">
-          <p>
-            Terima kasih sudah mendaftar sebagai calon pengurus PPIT Nanjing. Proses wawancara akan
-            dikabarkan lewat grup rekrutmen.
-          </p>
+          <p>{meta.confirmationMessage}</p>
           <p className="text-body-sm">Cek email dan notifikasi secara berkala ya.</p>
         </div>
         <div className="flex flex-col sm:flex-row gap-3 justify-center">
