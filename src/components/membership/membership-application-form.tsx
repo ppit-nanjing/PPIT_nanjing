@@ -5,6 +5,7 @@ import { useFormStatus } from "react-dom";
 import Link from "next/link";
 import { Loader2, AlertCircle, Star } from "lucide-react";
 import type { MembershipFieldDef } from "@/lib/membership-form";
+import { GRID_TYPES } from "@/lib/membership-form";
 import { ImageUploadCropper } from "@/components/upload/image-upload-cropper";
 
 type Props = {
@@ -67,6 +68,28 @@ export function MembershipApplicationForm({ fields, periodId, defaults, action, 
     for (const f of fields) {
       if (f.type === "section") continue;
       const v = values[f.key] ?? "";
+
+      if (GRID_TYPES.includes(f.type)) {
+        if (f.required) {
+          const rows = f.config?.rows ?? [];
+          let answeredAll = true;
+          try {
+            const map = JSON.parse(v || "{}") as Record<string, unknown>;
+            for (let i = 0; i < rows.length; i++) {
+              const ans = map[String(i)];
+              if (f.type === "grid_checkbox") {
+                if (!Array.isArray(ans) || ans.length === 0) answeredAll = false;
+              } else if (!ans) answeredAll = false;
+              if (!answeredAll) break;
+            }
+          } catch {
+            answeredAll = false;
+          }
+          if (!answeredAll) next[f.key] = "Isi semua baris.";
+        }
+        continue;
+      }
+
       if (f.required && isEmpty(f, v, multi[f.key] ?? [])) {
         next[f.key] =
           f.type === "checkbox"
@@ -134,6 +157,36 @@ export function MembershipApplicationForm({ fields, periodId, defaults, action, 
             <div key={f.id ?? f.key} className="flex flex-col gap-1 bg-secondary-container/30 rounded-xl p-5 border-l-4 border-secondary-container">
               <h3 className="text-headline-sm text-on-background">{f.label}</h3>
               {f.helpText && <p className="text-body-md text-on-surface-variant">{f.helpText}</p>}
+            </div>
+          );
+        }
+
+        if (f.type === "grid_radio" || f.type === "grid_checkbox") {
+          const rows = f.config?.rows ?? [];
+          const cols = f.options ?? [];
+          return (
+            <div key={f.id ?? f.key} className="flex flex-col gap-3 bg-surface-container-lowest rounded-xl p-5 shadow-sm border border-outline-variant/50">
+              <div className="flex flex-col gap-1">
+                <span className="text-body-md font-medium text-on-background">
+                  {f.label}
+                  {f.required && <span className="text-error" aria-hidden="true"> *</span>}
+                </span>
+                {f.helpText && <span className="text-label-caps text-on-surface-variant">{f.helpText}</span>}
+              </div>
+              <GridInput
+                fieldKey={f.key}
+                multi={f.type === "grid_checkbox"}
+                rows={rows}
+                cols={cols}
+                value={value}
+                disabled={preview}
+                onChange={(v) => update(f.key, v)}
+              />
+              {errors[f.key] && (
+                <p id={errId} role="alert" className="text-body-sm text-error flex items-center gap-1">
+                  <AlertCircle size={14} className="shrink-0" /> {errors[f.key]}
+                </p>
+              )}
             </div>
           );
         }
@@ -374,6 +427,94 @@ function RatingInput({
       <input type="hidden" name={fieldKey} value={value} />
       {config?.lowLabel && <span className="text-label-caps text-on-surface-variant">{config.lowLabel}</span>}
       {config?.highLabel && <span className="text-label-caps text-on-surface-variant">{config.highLabel}</span>}
+    </div>
+  );
+}
+
+function GridInput({
+  fieldKey,
+  multi,
+  rows,
+  cols,
+  value,
+  disabled,
+  onChange,
+}: {
+  fieldKey: string;
+  multi: boolean;
+  rows: string[];
+  cols: string[];
+  value: string;
+  disabled?: boolean;
+  onChange: (v: string) => void;
+}) {
+  const parse = (): Record<string, string | string[]> => {
+    try {
+      const o = JSON.parse(value || "{}");
+      if (o && typeof o === "object") return o as Record<string, string | string[]>;
+    } catch {
+      /* ignore */
+    }
+    return {};
+  };
+  const map = parse();
+
+  function handle(rowIdx: number, col: string, checked: boolean) {
+    const next: Record<string, string | string[]> = { ...map };
+    if (multi) {
+      const cur = Array.isArray(next[rowIdx]) ? (next[rowIdx] as string[]) : [];
+      next[rowIdx] = checked ? [...cur, col] : cur.filter((c) => c !== col);
+    } else {
+      next[rowIdx] = col;
+    }
+    onChange(JSON.stringify(next));
+  }
+
+  if (rows.length === 0 || cols.length === 0) {
+    return <p className="text-label-caps text-on-surface-variant">Atur baris &amp; kolom di pengaturan formulir.</p>;
+  }
+
+  return (
+    <div className="overflow-x-auto">
+      <table className="w-full border-collapse text-body-md">
+        <thead>
+          <tr>
+            <th className="text-left p-2 border-b border-outline-variant" />
+            {cols.map((c) => (
+              <th key={c} className="text-center p-2 border-b border-outline-variant text-label-caps uppercase tracking-wide text-on-surface-variant font-medium">
+                {c}
+              </th>
+            ))}
+          </tr>
+        </thead>
+        <tbody>
+          {rows.map((r, rIdx) => (
+            <tr key={rIdx} className="border-b border-outline-variant/60">
+              <th scope="row" className="text-left p-2 pr-4 font-normal text-on-background align-top">
+                {r}
+              </th>
+              {cols.map((c) => {
+                const checked = multi
+                  ? Array.isArray(map[rIdx]) && (map[rIdx] as string[]).includes(c)
+                  : map[rIdx] === c;
+                return (
+                  <td key={c} className="text-center p-2">
+                    <input
+                      type={multi ? "checkbox" : "radio"}
+                      name={`${fieldKey}::${rIdx}`}
+                      value={c}
+                      checked={checked}
+                      disabled={disabled}
+                      onChange={(e) => handle(rIdx, c, e.target.checked)}
+                      className="h-5 w-5 accent-[color:var(--color-primary-container)] focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-container"
+                    />
+                  </td>
+                );
+              })}
+            </tr>
+          ))}
+        </tbody>
+      </table>
     </div>
   );
 }
