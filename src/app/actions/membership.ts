@@ -7,7 +7,7 @@ import { auth } from "@/auth";
 import { db } from "@/db";
 import { membershipApplications, membershipFormFields, membershipFormMeta, recruitmentPeriods } from "@/db/schema";
 import { requireModuleAccess } from "@/lib/admin-scope";
-import { CORE_KEYS, DEFAULT_FIELDS, QUESTION_BY_KEY, GRID_TYPES, type MembershipFieldDef } from "@/lib/membership-form";
+import { CORE_KEYS, DEFAULT_FIELDS, QUESTION_BY_KEY, GRID_TYPES, canDeleteField, type MembershipFieldDef } from "@/lib/membership-form";
 
 export async function getFormFields(): Promise<MembershipFieldDef[]> {
   const rows = await db
@@ -250,8 +250,8 @@ export async function updateFormField(formData: FormData) {
 export async function deleteFormField(formData: FormData) {
   await requireModuleAccess("membership");
   const id = String(formData.get("id") ?? "");
-  const [row] = await db.select({ isCore: membershipFormFields.isCore }).from(membershipFormFields).where(eq(membershipFormFields.id, id));
-  if (row?.isCore) throw new Error("Field inti tidak boleh dihapus");
+  const [row] = await db.select({ key: membershipFormFields.key }).from(membershipFormFields).where(eq(membershipFormFields.id, id));
+  if (row && !canDeleteField(row.key)) throw new Error("Nama dan email tidak bisa dihapus — keduanya dipakai sebagai identitas pendaftar.");
   await db.delete(membershipFormFields).where(eq(membershipFormFields.id, id));
   revalidatePath("/console/membership/form");
 }
