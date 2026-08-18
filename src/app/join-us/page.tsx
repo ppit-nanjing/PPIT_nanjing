@@ -5,13 +5,14 @@ import { recruitmentPeriods } from "@/db/schema";
 import { SiteNav } from "@/components/site-nav";
 import { SiteFooter } from "@/components/site-footer";
 import { Lock } from "lucide-react";
-import { submitMembershipApplication, getFormFields } from "@/app/actions/membership";
+import { submitMembershipApplication, getFormFields, getFormMeta } from "@/app/actions/membership";
 import { MembershipApplicationForm } from "@/components/membership/membership-application-form";
 
 export default async function JoinUsPage() {
   const [period] = await db.select().from(recruitmentPeriods).orderBy(desc(recruitmentPeriods.opensAt)).limit(1);
   const session = await auth();
   const fields = await getFormFields();
+  const meta = await getFormMeta();
 
   return (
     <div className="min-h-screen bg-background text-on-background">
@@ -55,20 +56,28 @@ export default async function JoinUsPage() {
             </p>
           </div>
         ) : (
-          <MembershipApplicationForm
-            fields={fields}
-            periodId={period.id}
-            authenticated={Boolean(session?.user?.id)}
-            defaults={
-              session?.user
-                ? {
-                    fullName: session.user.name ?? "",
-                    email: session.user.email ?? "",
-                  }
-                : {}
-            }
-            action={submitMembershipApplication}
-          />
+          <div className="flex flex-col gap-4">
+            <div className="rounded-t-xl bg-primary-container px-6 py-6">
+              <h2 className="text-headline-lg text-on-primary">{meta.title}</h2>
+              {meta.description && <p className="text-body-md text-on-primary/80 mt-1">{meta.description}</p>}
+            </div>
+            <div className="-mt-4">
+              <MembershipApplicationForm
+                fields={fields}
+                periodId={period.id}
+                authenticated={Boolean(session?.user?.id)}
+                defaults={
+                  session?.user
+                    ? {
+                        fullName: session.user.name ?? "",
+                        email: session.user.email ?? "",
+                      }
+                    : {}
+                }
+                action={submitMembershipApplication}
+              />
+            </div>
+          </div>
         )}
       </main>
 
