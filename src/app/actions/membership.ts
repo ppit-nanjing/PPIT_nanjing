@@ -5,9 +5,9 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { auth } from "@/auth";
 import { db } from "@/db";
-import { membershipApplications, membershipFormFields, recruitmentPeriods } from "@/db/schema";
+import { membershipApplications, membershipFormFields, membershipFormMeta, recruitmentPeriods } from "@/db/schema";
 import { requireModuleAccess } from "@/lib/admin-scope";
-import { CORE_KEYS, DEFAULT_FIELDS, type MembershipFieldDef } from "@/lib/membership-form";
+import { CORE_KEYS, DEFAULT_FIELDS, QUESTION_BY_KEY, type MembershipFieldDef } from "@/lib/membership-form";
 
 export async function getFormFields(): Promise<MembershipFieldDef[]> {
   const rows = await db
@@ -24,6 +24,7 @@ export async function getFormFields(): Promise<MembershipFieldDef[]> {
     helpText: r.helpText ?? undefined,
     required: r.required,
     options: r.options ? r.options.split("\n").map((s) => s.trim()).filter(Boolean) : undefined,
+    config: (r.config as MembershipFieldDef["config"]) ?? undefined,
     isCore: r.isCore,
   }));
 }
@@ -35,19 +36,32 @@ export async function submitMembershipApplication(recruitmentPeriodId: string, f
   const session = await auth();
   const fields = await getFormFields();
 
-  const responses: Record<string, string> = {};
+  const responses: Record<string, unknown> = {};
   for (const f of fields) {
-    responses[f.key] = String(formData.get(f.key) ?? "").trim();
+    if (f.type === "section") continue;
+    if (f.type === "multiselect") {
+      // Multiple checkbox values arrive as repeated entries; store as a JSON array.
+      responses[f.key] = formData.getAll(f.key).map((v) => String(v).trim()).filter(Boolean);
+    } else {
+      const v = String(formData.get(f.key) ?? "").trim();
+      responses[f.key] = f.type === "checkbox" ? (v === "true" ? "true" : "false") : v;
+    }
   }
 
-  const fullName = responses[CORE_KEYS.fullName];
-  const email = responses[CORE_KEYS.email];
-  if (!fullName || !email) throw new Error("Nama dan email wajib diisi");
+  const fullName = String(responses[CORE_KEYS.fullName] ?? "").trim();
+  const email = String(responses[CORE_KEYS.email] ?? "").trim();
+  if (!fullName) throw new Error("Nama wajib diisi");
+  if (!email) throw new Error("Email wajib diisi");
 
   for (const f of fields) {
     if (!f.required) continue;
     const v = responses[f.key];
-    const empty = f.type === "checkbox" ? v !== "true" : !v;
+    const empty =
+      f.type === "checkbox"
+        ? v !== "true"
+        : f.type === "multiselect"
+          ? !Array.isArray(v) || v.length === 0
+          : !String(v ?? "").trim();
     if (empty) throw new Error(`Field "${f.label}" wajib diisi`);
   }
 
@@ -56,13 +70,13 @@ export async function submitMembershipApplication(recruitmentPeriodId: string, f
     userId: session?.user?.id ?? null,
     fullName,
     email,
-    whatsapp: responses[CORE_KEYS.whatsapp] || null,
-    university: responses[CORE_KEYS.university] || null,
-    major: responses[CORE_KEYS.major] || null,
-    expectedGraduation: responses[CORE_KEYS.expectedGraduation] || null,
-    divisionInterest: responses[CORE_KEYS.divisionInterest] || null,
-    motivation: responses[CORE_KEYS.motivation] || null,
-    commitment: responses[CORE_KEYS.commitment] || null,
+    whatsapp: (responses[CORE_KEYS.whatsapp] as string) || null,
+    university: (responses[CORE_KEYS.university] as string) || null,
+    major: (responses[CORE_KEYS.major] as string) || null,
+    expectedGraduation: (responses[CORE_KEYS.expectedGraduation] as string) || null,
+    divisionInterest: (responses[CORE_KEYS.divisionInterest] as string) || null,
+    motivation: (responses[CORE_KEYS.motivation] as string) || null,
+    commitment: (responses[CORE_KEYS.commitment] as string) || null,
     responses,
   });
 
@@ -136,6 +150,35 @@ export async function createFormField(formData: FormData) {
   revalidatePath("/console/membership/form");
 }
 
+// Inserts a question from the built-in question bank (referensi pertanyaan)
+// into the live form. The template key maps to QUESTION_BY_KEY.
+export async function createFormFieldFromTemplate(formData: FormData) {
+  await requireModuleAccess("membership");
+  const templateKey = String(formData.get("templateKey") ?? "");
+  const tpl = QUESTION_BY_KEY[templateKey];
+  if (!tpl) throw new Error("Template tidak ditemukan");
+
+  const maxRow = await db
+    .select({ o: membershipFormFields.orderIndex })
+    .from(membershipFormFields)
+    .orderBy(asc(membershipFormFields.orderIndex));
+  const nextOrder = maxRow.length ? Math.max(...maxRow.map((r) => r.o)) + 1 : 0;
+
+  await db.insert(membershipFormFields).values({
+    key: `tpl_${templateKey}_${Math.random().toString(36).slice(2, 8)}`,
+    label: tpl.label,
+    type: tpl.type,
+    placeholder: tpl.placeholder ?? null,
+    helpText: tpl.helpText ?? null,
+    required: tpl.required ?? false,
+    options: tpl.options ? tpl.options.join("\n") : null,
+    config: tpl.config ?? null,
+    orderIndex: nextOrder,
+    isCore: false,
+  });
+  revalidatePath("/console/membership/form");
+}
+
 export async function updateFormField(formData: FormData) {
   await requireModuleAccess("membership");
   const id = String(formData.get("id") ?? "");
@@ -145,6 +188,16 @@ export async function updateFormField(formData: FormData) {
   const placeholder = String(formData.get("placeholder") ?? "").trim();
   const helpText = String(formData.get("helpText") ?? "").trim();
   const options = String(formData.get("options") ?? "").trim();
+  const configRaw = String(formData.get("config") ?? "").trim();
+  let config: MembershipFieldDef["config"] | null = null;
+  if (configRaw) {
+    try {
+      const parsed = JSON.parse(configRaw);
+      if (parsed && typeof parsed === "object") config = parsed as MembershipFieldDef["config"];
+    } catch {
+      // ignore malformed config; leave as null
+    }
+  }
   await db
     .update(membershipFormFields)
     .set({
@@ -154,6 +207,7 @@ export async function updateFormField(formData: FormData) {
       placeholder: placeholder || null,
       helpText: helpText || null,
       options: options || null,
+      config,
     })
     .where(eq(membershipFormFields.id, id));
   revalidatePath("/console/membership/form");
@@ -182,4 +236,77 @@ export async function reorderFormField(formData: FormData) {
   await db.update(membershipFormFields).set({ orderIndex: b.orderIndex }).where(eq(membershipFormFields.id, a.id));
   await db.update(membershipFormFields).set({ orderIndex: a.orderIndex }).where(eq(membershipFormFields.id, b.id));
   revalidatePath("/console/membership/form");
+}
+
+// Move a field to an absolute position in the ordered list (used by drag & drop).
+export async function moveFormField(id: string, toIndex: number) {
+  await requireModuleAccess("membership");
+  const rows = await db.select().from(membershipFormFields).orderBy(asc(membershipFormFields.orderIndex));
+  const from = rows.findIndex((r) => r.id === id);
+  if (from < 0) return;
+  const [moved] = rows.splice(from, 1);
+  const clamped = Math.max(0, Math.min(toIndex, rows.length));
+  rows.splice(clamped, 0, moved);
+  await db.transaction(async (tx) => {
+    for (let i = 0; i < rows.length; i++) {
+      await tx.update(membershipFormFields).set({ orderIndex: i }).where(eq(membershipFormFields.id, rows[i].id));
+    }
+  });
+  revalidatePath("/console/membership/form");
+}
+
+// Duplicate a field (clone) right after the original — used by the ⋮ menu.
+export async function duplicateFormField(id: string) {
+  await requireModuleAccess("membership");
+  const [src] = await db.select().from(membershipFormFields).where(eq(membershipFormFields.id, id));
+  if (!src) return;
+  await db.insert(membershipFormFields).values({
+    key: src.key,
+    label: `${src.label} (salinan)`,
+    type: src.type,
+    placeholder: src.placeholder,
+    helpText: src.helpText,
+    required: src.required,
+    options: src.options,
+    config: src.config,
+    isCore: false,
+    orderIndex: src.orderIndex + 0.5,
+  });
+  const all = await db.select().from(membershipFormFields).orderBy(asc(membershipFormFields.orderIndex));
+  await db.transaction(async (tx) => {
+    for (let i = 0; i < all.length; i++) {
+      await tx.update(membershipFormFields).set({ orderIndex: i }).where(eq(membershipFormFields.id, all[i].id));
+    }
+  });
+  revalidatePath("/console/membership/form");
+}
+
+// ---- Form settings (admin "Setelan") ----
+
+export async function getFormMeta() {
+  const [row] = await db.select().from(membershipFormMeta).limit(1);
+  if (row) return row;
+  const [created] = await db.insert(membershipFormMeta).values({}).returning();
+  return created;
+}
+
+export async function updateFormMeta(formData: FormData) {
+  await requireModuleAccess("membership");
+  const title = String(formData.get("title") ?? "").trim() || "Formulir Pendaftaran Anggota PPIT Nanjing";
+  const description = String(formData.get("description") ?? "").trim();
+  const confirmationMessage = String(formData.get("confirmationMessage") ?? "").toString().trim() || "Terima kasih! Pendaftaran kamu sudah kami terima.";
+  const bannerEnabled = formData.get("bannerEnabled") === "on";
+  const [row] = await db.select({ id: membershipFormMeta.id }).from(membershipFormMeta).limit(1);
+  if (row) {
+    await db
+      .update(membershipFormMeta)
+      .set({ title, description, confirmationMessage, bannerEnabled, updatedAt: new Date() })
+      .where(eq(membershipFormMeta.id, row.id));
+  } else {
+    await db
+      .insert(membershipFormMeta)
+      .values({ title, description, confirmationMessage, bannerEnabled });
+  }
+  revalidatePath("/console/membership/form");
+  revalidatePath("/join-us");
 }
