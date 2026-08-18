@@ -7,6 +7,7 @@ import { auth } from "@/auth";
 import { db } from "@/db";
 import { events, eventRegistrations } from "@/db/schema";
 import { hasCompletedSensus } from "@/lib/sensus-gate";
+import { createTemplatedNotification } from "@/lib/notifications";
 
 export async function registerForEvent(eventId: string, slug: string) {
   const session = await auth();
@@ -35,6 +36,14 @@ export async function registerForEvent(eventId: string, slug: string) {
       userId: session.user.id,
       status: "confirmed",
       qrCodeToken: randomUUID(),
+    });
+    // In-app confirmation for the member who just registered.
+    await createTemplatedNotification({
+      userId: session.user.id,
+      templateKey: "event_registration",
+      variables: { eventTitle: event.title },
+      relatedEntityType: "event",
+      relatedEntityId: eventId,
     });
   }
 

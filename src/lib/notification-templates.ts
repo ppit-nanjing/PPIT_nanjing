@@ -14,12 +14,14 @@
 
 export type NotificationTemplateKey =
   | "event_checkin"
+  | "event_registration"
   | "borrow_approved"
   | "borrow_rejected"
   | "contribution_approved"
   | "contribution_rejected"
   | "procurement_approved"
-  | "procurement_rejected";
+  | "procurement_rejected"
+  | "job_application";
 
 export type NotificationTemplateDef = {
   key: NotificationTemplateKey;
@@ -43,6 +45,15 @@ export const NOTIFICATION_TEMPLATES: NotificationTemplateDef[] = [
     variables: ["eventTitle"],
     defaultSubject: "Kehadiran terkonfirmasi",
     defaultBody: 'Kehadiran kamu di "{{eventTitle}}" telah dicatat. Terima kasih sudah hadir!',
+  },
+  {
+    key: "event_registration",
+    group: "Kegiatan",
+    label: "Pendaftaran kegiatan",
+    trigger: "Dikirim saat anggota mendaftar ke sebuah kegiatan.",
+    variables: ["eventTitle"],
+    defaultSubject: "Pendaftaran kegiatan berhasil",
+    defaultBody: 'Kamu berhasil mendaftar ke kegiatan "{{eventTitle}}". Tiket masuk bisa dilihat di halaman kegiatan.',
   },
   {
     key: "borrow_approved",
@@ -99,6 +110,15 @@ export const NOTIFICATION_TEMPLATES: NotificationTemplateDef[] = [
     variables: ["itemName"],
     defaultSubject: "Usulan pengadaan ditolak",
     defaultBody: 'Usulan barang "{{itemName}}" telah ditolak oleh admin.',
+  },
+  {
+    key: "job_application",
+    group: "Karier",
+    label: "Lamaran terkirim",
+    trigger: "Dikirim saat anggota melamar sebuah lowongan.",
+    variables: ["jobTitle"],
+    defaultSubject: "Lamaran pekerjaan terkirim",
+    defaultBody: 'Lamaran kamu untuk "{{jobTitle}}" telah terkirim. Tim rekrutmen akan meninjau dan menghubungi kamu bila cocok.',
   },
 ];
 

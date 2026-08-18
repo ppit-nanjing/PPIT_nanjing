@@ -3,8 +3,9 @@
 import { eq, and } from "drizzle-orm";
 import { redirect } from "next/navigation";
 import { db } from "@/db";
-import { jobApplications } from "@/db/schema";
+import { jobApplications, jobPostings } from "@/db/schema";
 import { requireCompletedSensus } from "@/lib/sensus-gate";
+import { createTemplatedNotification } from "@/lib/notifications";
 
 export async function applyToJob(jobId: string, formData: FormData) {
   const session = await requireCompletedSensus(`/jobs/${jobId}/apply`);
@@ -20,11 +21,22 @@ export async function applyToJob(jobId: string, formData: FormData) {
 
   if (existing) redirect(`/jobs/${jobId}/applied`);
 
+  const [job] = await db.select({ title: jobPostings.title }).from(jobPostings).where(eq(jobPostings.id, jobId));
+
   await db.insert(jobApplications).values({
     jobId,
     userId: session.user.id,
     resumeUrl,
     coverLetter: coverLetter || null,
+  });
+
+  // In-app confirmation for the member who just applied.
+  await createTemplatedNotification({
+    userId: session.user.id,
+    templateKey: "job_application",
+    variables: { jobTitle: job?.title ?? "lowongan" },
+    relatedEntityType: "job",
+    relatedEntityId: jobId,
   });
 
   redirect(`/jobs/${jobId}/applied`);
