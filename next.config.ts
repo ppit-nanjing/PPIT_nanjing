@@ -12,14 +12,17 @@ import type { NextConfig } from "next";
 // primary XSS defense) but lock down everything else, especially
 // frame-ancestors 'none' and form-action 'self'.
 //
-// The Vercel preview toolbar (vercel.live) injects a script on non-production
-// deployments; without allow-listing it the browser logs a CSP violation and
-// the toolbar feedback script is blocked. We only relax for non-production so
-// the production perimeter stays tight.
+// The Vercel Toolbar (vercel.live) injects its feedback/assist scripts on
+// Vercel deployments where the toolbar is enabled - which can be a preview OR
+// a production deployment, so gating the allow-list on VERCEL_ENV reliably
+// misses the production case and the browser then blocks the script. We
+// always allow-list Vercel's own toolbar hosts (matching Vercel's own CSP
+// guidance); on self-hosted production the toolbar never injects anything, so
+// the allow-list is inert there.
 const VERCEL_TOOLBAR_HOSTS = " https://vercel.live https://*.vercel.live";
 
-function buildCsp(allowVercelToolbar: boolean) {
-  const v = allowVercelToolbar ? VERCEL_TOOLBAR_HOSTS : "";
+function buildCsp() {
+  const v = VERCEL_TOOLBAR_HOSTS;
   return [
     "default-src 'self'",
     `script-src 'self' 'unsafe-inline'${v}`,
@@ -64,12 +67,11 @@ const nextConfig: NextConfig = {
     ],
   },
   async headers() {
-    const allowVercelToolbar = process.env.VERCEL_ENV !== "production";
     return [
       {
         source: "/(.*)",
         headers: [
-          { key: "Content-Security-Policy", value: buildCsp(allowVercelToolbar) },
+          { key: "Content-Security-Policy", value: buildCsp() },
           ...baseSecurityHeaders,
         ],
       },
