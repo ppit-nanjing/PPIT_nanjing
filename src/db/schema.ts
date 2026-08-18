@@ -487,7 +487,7 @@ export const membershipFormFields = pgTable("membership_form_fields", {
 });
 
 // Single-row settings for the membership form itself (the "Setelan" panel):
-// title, description, confirmation message, banner toggle, etc.
+// title, description, confirmation message, banner toggle, quiz mode, etc.
 export const membershipFormMeta = pgTable("membership_form_meta", {
   id: uuid("id").defaultRandom().primaryKey(),
   title: text("title").notNull().default("Formulir Pendaftaran Anggota PPIT Nanjing"),
@@ -498,6 +498,12 @@ export const membershipFormMeta = pgTable("membership_form_meta", {
   confirmationMessage: text("confirmation_message").notNull().default(
     "Terima kasih! Pendaftaran kamu sudah kami terima.",
   ),
+  isQuiz: boolean("is_quiz").notNull().default(false),
+  collectEmail: boolean("collect_email").notNull().default(true),
+  shuffle: boolean("shuffle").notNull().default(false),
+  showProgress: boolean("show_progress").notNull().default(false),
+  defaultRequired: boolean("default_required").notNull().default(false),
+  spreadsheetUrl: text("spreadsheet_url"),
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
 });
 
