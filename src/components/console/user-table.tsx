@@ -31,6 +31,12 @@ interface Department {
   parentDepartmentId: string | null;
 }
 
+type Layout = "table" | "card";
+
+const selectCls = "bg-soft-gray rounded-md px-2 py-1.5 text-body-md";
+const selectClsFull = "bg-soft-gray rounded-md px-2 py-1.5 text-body-md w-full";
+const labelCls = "text-label-caps text-on-surface-variant";
+
 function isAssignable(dept: Department, all: Department[]): boolean {
   // Leaf divisions (have a parent) plus top-level nodes without children
   // (e.g. BPH). The 3 grouping "Departemen" rows are just containers.
@@ -62,36 +68,58 @@ export function UserTable({
   const assignable = departments.filter((d) => isAssignable(d, departments));
 
   return (
-    <div className="bg-surface-container-lowest border border-outline-variant rounded-xl overflow-x-auto">
-      <table className="w-full text-body-md min-w-[780px]">
-        <thead className="bg-surface-container-low text-label-caps uppercase tracking-wide text-on-surface-variant">
-          <tr>
-            <th className="text-left px-5 py-3">Pengguna</th>
-            <th className="text-left px-5 py-3">Role / Ruang Lingkup</th>
-            <th className="text-left px-5 py-3">Status</th>
-            <th className="text-right px-5 py-3">Aksi</th>
-          </tr>
-        </thead>
-        <tbody>
-          {users.map((u) => (
+    <>
+      {/* Tablet / desktop: tabel biasa */}
+      <div className="hidden sm:block bg-surface-container-lowest border border-outline-variant rounded-xl overflow-x-auto">
+        <table className="w-full text-body-md">
+          <thead className="bg-surface-container-low text-label-caps uppercase tracking-wide text-on-surface-variant">
+            <tr>
+              <th className="text-left px-5 py-3">Pengguna</th>
+              <th className="text-left px-5 py-3">Role / Ruang Lingkup</th>
+              <th className="text-left px-5 py-3">Status</th>
+              <th className="text-right px-5 py-3">Aksi</th>
+            </tr>
+          </thead>
+          <tbody>
+            {users.map((u) => (
+              <UserRow
+                key={u.id}
+                user={u}
+                roles={roles}
+                departments={assignable}
+                byId={byId}
+                layout="table"
+              />
+            ))}
+            {users.length === 0 && (
+              <tr>
+                <td colSpan={4} className="text-center py-10 text-on-surface-variant">
+                  Tidak ada pengguna yang cocok dengan filter.
+                </td>
+              </tr>
+            )}
+          </tbody>
+        </table>
+      </div>
+
+      {/* Mobile (S/M/L): kartu vertikal */}
+      <div className="sm:hidden flex flex-col gap-3">
+        {users.length === 0 ? (
+          <p className="text-body-md text-on-surface-variant">Tidak ada pengguna yang cocok dengan filter.</p>
+        ) : (
+          users.map((u) => (
             <UserRow
               key={u.id}
               user={u}
               roles={roles}
               departments={assignable}
               byId={byId}
+              layout="card"
             />
-          ))}
-          {users.length === 0 && (
-            <tr>
-              <td colSpan={4} className="text-center py-10 text-on-surface-variant">
-                Tidak ada pengguna yang cocok dengan filter.
-              </td>
-            </tr>
-          )}
-        </tbody>
-      </table>
-    </div>
+          ))
+        )}
+      </div>
+    </>
   );
 }
 
@@ -100,11 +128,13 @@ function UserRow({
   roles,
   departments,
   byId,
+  layout,
 }: {
   user: Row;
   roles: Role[];
   departments: Department[];
   byId: Map<string, Department>;
+  layout: Layout;
 }) {
   const router = useRouter();
   const [roleId, setRoleId] = useState(user.roleId ?? "");
@@ -124,29 +154,82 @@ function UserRow({
 
   const roleName = roles.find((r) => r.id === user.roleId)?.name;
 
+  const avatar = user.image ? (
+    <Image src={user.image} alt="" width={32} height={32} className="w-8 h-8 rounded-full object-cover" />
+  ) : (
+    <div className="w-8 h-8 rounded-full bg-surface-container-low shrink-0" />
+  );
+
   if (editing) {
+    if (layout === "card") {
+      return (
+        <div className="bg-surface-container-lowest border border-outline-variant rounded-xl p-3 flex flex-col gap-2">
+          <input
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            placeholder="Nama"
+            className={`${selectClsFull}`}
+          />
+          <input
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            type="email"
+            placeholder="Email"
+            className={`${selectClsFull}`}
+          />
+          <select value={roleId} onChange={(e) => setRoleId(e.target.value)} className={`${selectClsFull}`}>
+            <option value="">— Tanpa akses admin —</option>
+            {roles.map((r) => (
+              <option key={r.id} value={r.id}>
+                {r.name}
+              </option>
+            ))}
+          </select>
+          <div className="flex gap-2">
+            <button
+              type="button"
+              disabled={!name.trim() || !email.trim()}
+              onClick={() =>
+                startTransition(async () => {
+                  await updateUserDetails(user.id, name, email);
+                  await updateUserRole(user.id, roleId);
+                  setEditing(false);
+                  router.refresh();
+                })
+              }
+              className="flex-1 text-label-caps uppercase tracking-wide px-3 py-1.5 rounded-md bg-primary-container text-on-primary hover:bg-primary transition-colors disabled:opacity-50"
+            >
+              Simpan
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setName(user.name ?? "");
+                setEmail(user.email);
+                setRoleId(user.roleId ?? "");
+                setEditing(false);
+              }}
+              className="flex-1 text-label-caps uppercase tracking-wide px-3 py-1.5 rounded-md border border-outline-variant text-on-surface-variant hover:text-on-background transition-colors"
+            >
+              Batal
+            </button>
+          </div>
+        </div>
+      );
+    }
     return (
       <tr className="border-t border-outline-variant">
         <td className="px-5 py-3">
           <div className="flex flex-col gap-2">
-            <input
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              placeholder="Nama"
-              className="bg-soft-gray rounded-md px-2 py-1.5 text-body-md"
-            />
+            <input value={name} onChange={(e) => setName(e.target.value)} placeholder="Nama" className={selectCls} />
             <input
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               type="email"
               placeholder="Email"
-              className="bg-soft-gray rounded-md px-2 py-1.5 text-body-md"
+              className={selectCls}
             />
-            <select
-              value={roleId}
-              onChange={(e) => setRoleId(e.target.value)}
-              className="bg-soft-gray rounded-md px-2 py-1.5 text-body-md"
-            >
+            <select value={roleId} onChange={(e) => setRoleId(e.target.value)} className={selectCls}>
               <option value="">— Tanpa akses admin —</option>
               {roles.map((r) => (
                 <option key={r.id} value={r.id}>
@@ -156,9 +239,7 @@ function UserRow({
             </select>
           </div>
         </td>
-        <td className="px-5 py-3 text-on-surface-variant">
-          {scopeLabel(byId.get(user.departmentId ?? ""), byId)}
-        </td>
+        <td className="px-5 py-3 text-on-surface-variant">{scopeLabel(byId.get(user.departmentId ?? ""), byId)}</td>
         <td className="px-5 py-3 text-on-surface-variant">{status}</td>
         <td className="px-5 py-3 text-right">
           <div className="flex justify-end gap-2">
@@ -195,21 +276,86 @@ function UserRow({
     );
   }
 
+  if (layout === "card") {
+    return (
+      <div className="bg-surface-container-lowest border border-outline-variant rounded-xl p-3 flex flex-col gap-3">
+        <div className="flex items-center gap-3">
+          {avatar}
+          <div className="min-w-0">
+            <p className="font-medium text-on-background truncate">{user.name ?? "(tanpa nama)"}</p>
+            <p className="text-label-caps text-on-surface-variant truncate">{user.email}</p>
+          </div>
+        </div>
+
+        <div className="flex flex-col gap-1">
+          <span className={labelCls}>Role / Ruang Lingkup</span>
+          <select
+            value={departmentId}
+            onChange={(e) => {
+              setDepartmentId(e.target.value);
+              startTransition(() => assignUserDepartment(user.id, e.target.value, user.position));
+            }}
+            className={selectClsFull}
+          >
+            <option value="">— Belum ada —</option>
+            {options.map((d) => (
+              <option key={d.id} value={d.id}>
+                {scopeLabel(d, byId)}
+              </option>
+            ))}
+          </select>
+          {roleName && <p className={labelCls}>Akses: {roleName}</p>}
+        </div>
+
+        <div className="flex flex-col gap-1">
+          <span className={labelCls}>Status</span>
+          <select
+            value={status}
+            onChange={(e) => {
+              const next = e.target.value as Row["status"];
+              setStatus(next);
+              startTransition(() => updateUserStatus(user.id, next));
+            }}
+            className={selectClsFull}
+          >
+            <option value="active">Aktif</option>
+            <option value="inactive">Nonaktif</option>
+            <option value="suspended">Ditangguhkan</option>
+          </select>
+        </div>
+
+        <div className="flex gap-2">
+          <button
+            type="button"
+            onClick={() => setEditing(true)}
+            className="flex-1 text-label-caps uppercase tracking-wide px-3 py-1.5 rounded-md border border-outline-variant text-on-surface-variant hover:text-on-background transition-colors"
+          >
+            Edit
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              if (confirm("Hapus pengguna ini? Tindakan tidak dapat dibatalkan.")) {
+                startTransition(async () => {
+                  await deleteUser(user.id);
+                  router.refresh();
+                });
+              }
+            }}
+            className="flex-1 text-label-caps uppercase tracking-wide px-3 py-1.5 rounded-md border border-error/40 text-error hover:bg-error/10 transition-colors"
+          >
+            Hapus
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <tr className="border-t border-outline-variant">
       <td className="px-5 py-3">
         <div className="flex items-center gap-3">
-          {user.image ? (
-            <Image
-              src={user.image}
-              alt=""
-              width={32}
-              height={32}
-              className="w-8 h-8 rounded-full object-cover"
-            />
-          ) : (
-            <div className="w-8 h-8 rounded-full bg-surface-container-low" />
-          )}
+          {avatar}
           <div>
             <p className="font-medium text-on-background">{user.name ?? "(tanpa nama)"}</p>
             <p className="text-label-caps text-on-surface-variant">{user.email}</p>
@@ -223,7 +369,7 @@ function UserRow({
             setDepartmentId(e.target.value);
             startTransition(() => assignUserDepartment(user.id, e.target.value, user.position));
           }}
-          className="bg-soft-gray rounded-md px-2 py-1.5 text-body-md"
+          className={selectCls}
         >
           <option value="">— Belum ada —</option>
           {options.map((d) => (
@@ -232,9 +378,7 @@ function UserRow({
             </option>
           ))}
         </select>
-        {roleName && (
-          <p className="text-label-caps text-on-surface-variant mt-1">Akses: {roleName}</p>
-        )}
+        {roleName && <p className="text-label-caps text-on-surface-variant mt-1">Akses: {roleName}</p>}
       </td>
       <td className="px-5 py-3">
         <select
@@ -244,7 +388,7 @@ function UserRow({
             setStatus(next);
             startTransition(() => updateUserStatus(user.id, next));
           }}
-          className="bg-soft-gray rounded-md px-2 py-1.5 text-body-md"
+          className={selectCls}
         >
           <option value="active">Aktif</option>
           <option value="inactive">Nonaktif</option>
