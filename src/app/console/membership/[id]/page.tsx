@@ -11,7 +11,7 @@ import {
 import { MembershipDeleteButton } from "@/components/console/membership-delete-button";
 import { MembershipTabs } from "@/components/console/membership-tabs";
 import { CollapsibleSection } from "@/components/console/collapsible-section";
-import { CORE_KEYS } from "@/lib/membership-form";
+import { CORE_KEYS, type MembershipFieldDef } from "@/lib/membership-form";
 import Image from "next/image";
 import Link from "next/link";
 
@@ -139,6 +139,8 @@ export default async function MembershipDetailPage({ params }: { params: Promise
                         <li key={i}>{item}</li>
                       ))}
                     </ul>
+                  ) : type === "grid_radio" || type === "grid_checkbox" ? (
+                    <GridAnswer field={field} value={v} />
                   ) : type === "rating" && raw ? (
                     <p className="text-body-md text-on-background mt-1">
                       {raw}
@@ -203,5 +205,27 @@ export default async function MembershipDetailPage({ params }: { params: Promise
         <MembershipDeleteButton id={app.id} />
       </div>
     </div>
+  );
+}
+
+function GridAnswer({ field, value }: { field: MembershipFieldDef | undefined; value: unknown }) {
+  const rows = field?.config?.rows ?? [];
+  const map = value && typeof value === "object" ? (value as Record<string, unknown>) : {};
+  if (rows.length === 0) return <p className="text-body-md text-on-background mt-1">-</p>;
+  return (
+    <table className="mt-1 text-body-md w-full max-w-md">
+      <tbody>
+        {rows.map((r, i) => {
+          const ans = map[String(i)];
+          const text = Array.isArray(ans) ? ans.join(", ") : ans ? String(ans) : "-";
+          return (
+            <tr key={i} className="border-b border-outline-variant/60">
+              <td className="py-1 pr-4 text-on-surface-variant">{r}</td>
+              <td className="py-1 text-on-background">{text}</td>
+            </tr>
+          );
+        })}
+      </tbody>
+    </table>
   );
 }
