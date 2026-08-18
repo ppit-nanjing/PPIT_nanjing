@@ -10,6 +10,7 @@ import {
   getFormMeta,
 } from "@/app/actions/membership";
 import { scoreApplication } from "@/lib/membership-form";
+import { isEmailConfigured } from "@/lib/email";
 import { MembershipDeleteButton } from "@/components/console/membership-delete-button";
 import { MembershipTabs } from "@/components/console/membership-tabs";
 import { CollapsibleSection } from "@/components/console/collapsible-section";
@@ -75,6 +76,7 @@ export default async function MembershipDetailPage({ params }: { params: Promise
   const rawScore = meta.isQuiz ? scoreApplication(responses, fields) : null;
   // Nothing useful to show until at least one question carries a point value.
   const quizScore = rawScore && rawScore.max > 0 ? rawScore : null;
+  const emailReady = isEmailConfigured();
   const extraAnswers = Object.entries(responses).filter(([k]) => !coreKeys.has(k as never) && k !== "fullName" && k !== "email");
 
   return (
@@ -188,6 +190,20 @@ export default async function MembershipDetailPage({ params }: { params: Promise
             <option value="accepted">{STATUS_LABEL.accepted}</option>
             <option value="rejected">{STATUS_LABEL.rejected}</option>
           </select>
+          <p className="text-label-caps text-on-surface-variant mt-3">
+            {emailReady ? (
+              <>
+                Memilih &ldquo;{STATUS_LABEL.accepted}&rdquo; atau &ldquo;{STATUS_LABEL.rejected}&rdquo; otomatis mengirim
+                email pengumuman ke <span className="text-on-background">{app.email}</span>. Teksnya bisa diubah di
+                Notifikasi.
+              </>
+            ) : (
+              <>
+                Email pengumuman <span className="text-on-background">belum aktif</span> &mdash; set
+                {" "}<code>RESEND_API_KEY</code> di Vercel supaya keputusan terkirim otomatis ke pendaftar.
+              </>
+            )}
+          </p>
           <button
             type="submit"
             className="mt-4 bg-primary-container text-on-primary text-label-caps uppercase tracking-wide px-6 py-3 rounded-md hover:bg-primary transition-colors"
