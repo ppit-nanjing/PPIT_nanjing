@@ -40,7 +40,10 @@ export default async function ConsoleEventsPage() {
             <input id="event-location" name="location" placeholder="Lokasi" className="bg-soft-gray rounded-md p-3 text-body-md" />
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <input name="startAt" type="datetime-local" className="bg-soft-gray rounded-md p-3 text-body-md" />
+            <div className="flex flex-col gap-1">
+              <input name="startAt" type="datetime-local" className="bg-soft-gray rounded-md p-3 text-body-md" />
+              <p className="text-xs text-on-surface-variant">Kapan acara berlangsung (tanggal & jam mulai).</p>
+            </div>
             <input name="capacity" type="number" min={1} placeholder="Kapasitas" className="bg-soft-gray rounded-md p-3 text-body-md" />
           </div>
           <label className="flex items-center gap-2 bg-soft-gray rounded-md p-3 text-body-md cursor-pointer">
@@ -55,8 +58,14 @@ export default async function ConsoleEventsPage() {
             aspect={16 / 9}
             allowPaste
           />
-          <input name="registrationDeadline" type="datetime-local" placeholder="Batas Pendaftaran" className="bg-soft-gray rounded-md p-3 text-body-md" />
-          <input name="scheduledPublishAt" type="datetime-local" placeholder="Jadwal Rilis Publikasi (opsional)" className="bg-soft-gray rounded-md p-3 text-body-md" />
+          <div className="flex flex-col gap-1">
+            <input name="registrationDeadline" type="datetime-local" placeholder="Batas Pendaftaran" className="bg-soft-gray rounded-md p-3 text-body-md" />
+            <p className="text-xs text-on-surface-variant">Batas waktu peserta boleh mendaftar. Lewat dari ini tombol daftar tertutup otomatis. Kosongkan bila tak ada batas.</p>
+          </div>
+          <div className="flex flex-col gap-1">
+            <input name="scheduledPublishAt" type="datetime-local" placeholder="Jadwal Rilis Publikasi (opsional)" className="bg-soft-gray rounded-md p-3 text-body-md" />
+            <p className="text-xs text-on-surface-variant">Isi bila acara mau tampil ke publik hanya SETELAH tanggal/waktu ini (status &quot;Terjadwal&quot; dulu, rilis sendiri nanti). Kosongkan = langsung Draf, rilis saat kamu klik Publish manual.</p>
+          </div>
           <div>
             <textarea id="event-description" name="description" placeholder="Deskripsi" rows={3} className="bg-soft-gray rounded-md p-3 text-body-md resize-none w-full" />
             <AIImproveButton context="event" targetId="event-description" className="mt-1" />
