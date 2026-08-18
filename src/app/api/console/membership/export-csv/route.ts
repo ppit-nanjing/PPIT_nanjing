@@ -24,6 +24,14 @@ export async function GET() {
   ]);
 
   const answerFields = fields.filter((f) => f.type !== "section");
+  const isGrid = (t: string) => t === "grid_radio" || t === "grid_checkbox";
+  // `config` is jsonb, so narrow it before reading the grid row labels.
+  const gridRows = (f: (typeof fields)[number]): string[] => {
+    const rows = (f.config as { rows?: unknown } | null)?.rows;
+    return Array.isArray(rows) ? rows.map(String) : [];
+  };
+
+  // Grid questions expand into one column per row so the CSV stays flat/readable.
   const header = [
     "Nama Lengkap",
     "Email",
@@ -32,7 +40,9 @@ export async function GET() {
     "WhatsApp",
     "Status",
     "Tanggal Kirim",
-    ...answerFields.map((f) => f.label),
+    ...answerFields.flatMap((f) =>
+      isGrid(f.type) ? gridRows(f).map((r) => `${f.label} — ${r}`) : [f.label],
+    ),
   ];
 
   const lines = [header.map(csvCell).join(",")];
@@ -46,7 +56,17 @@ export async function GET() {
       app.whatsapp,
       app.status,
       app.submittedAt ? new Date(app.submittedAt).toLocaleDateString("id-ID", { dateStyle: "medium" }) : "",
-      ...answerFields.map((f) => csvCell(responses[f.key ?? ""])),
+      ...answerFields.flatMap((f) => {
+        if (isGrid(f.type)) {
+          const raw = responses[f.key ?? ""];
+          const map = (raw && typeof raw === "object" ? raw : {}) as Record<string, unknown>;
+          return gridRows(f).map((_, i) => {
+            const ans = map[String(i)];
+            return Array.isArray(ans) ? ans.join(", ") : ans ? String(ans) : "";
+          });
+        }
+        return [csvCell(responses[f.key ?? ""])];
+      }),
     ];
     lines.push(row.map(csvCell).join(","));
   }
