@@ -1,11 +1,11 @@
 "use client";
 
-import { useRef, useState, type FormEvent } from "react";
+import { useRef, useState, useMemo, useEffect, type FormEvent } from "react";
 import { useFormStatus } from "react-dom";
 import Link from "next/link";
 import { Loader2, AlertCircle, Star } from "lucide-react";
 import type { MembershipFieldDef } from "@/lib/membership-form";
-import { GRID_TYPES } from "@/lib/membership-form";
+import { GRID_TYPES, CORE_KEYS, isSectionType } from "@/lib/membership-form";
 import { ImageUploadCropper } from "@/components/upload/image-upload-cropper";
 import { FileUploadField } from "@/components/upload/file-upload-field";
 
@@ -16,6 +16,9 @@ type Props = {
   action: (recruitmentPeriodId: string, formData: FormData) => void;
   authenticated?: boolean;
   preview?: boolean;
+  showProgress?: boolean;
+  shuffle?: boolean;
+  collectEmail?: boolean;
 };
 
 function SubmitButton({ preview }: { preview?: boolean }) {
@@ -38,12 +41,67 @@ function isEmpty(f: MembershipFieldDef, value: string, multi: string[]): boolean
   return !value.trim();
 }
 
-export function MembershipApplicationForm({ fields, periodId, defaults, action, authenticated, preview }: Props) {
+export function MembershipApplicationForm({ fields, periodId, defaults, action, authenticated, preview, showProgress, shuffle, collectEmail = true }: Props) {
   const [values, setValues] = useState<Record<string, string>>(() => ({ ...defaults }));
   const [multi, setMulti] = useState<Record<string, string[]>>({});
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [serverError, setServerError] = useState<string | null>(null);
   const formRef = useRef<HTMLFormElement>(null);
+
+  // With "kumpulkan email" off we take the address from the signed-in account
+  // instead of asking again. Anonymous visitors still have to type it — the
+  // application row needs an email either way.
+  const hideEmail = !collectEmail && Boolean(authenticated) && Boolean(defaults.email);
+  const visible = useMemo(
+    () => fields.filter((f) => !(hideEmail && f.key === CORE_KEYS.email)),
+    [fields, hideEmail],
+  );
+
+  // Shuffle the custom questions once, after mount. The order has to be random
+  // per visitor, so it cannot be computed during render — that would be impure
+  // and would desync the server-rendered order from the client's. Section
+  // headers and core data-diri fields stay put, and questions only move within
+  // their own section, same as Google Forms.
+  const [shuffled, setShuffled] = useState<MembershipFieldDef[] | null>(null);
+  useEffect(() => {
+    if (!shuffle) return;
+    const out = [...visible];
+    let blockStart = 0;
+    const shuffleBlock = (end: number) => {
+      const slots: number[] = [];
+      for (let i = blockStart; i < end; i++) {
+        if (!out[i].isCore && !isSectionType(out[i].type)) slots.push(i);
+      }
+      for (let i = slots.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [out[slots[i]], out[slots[j]]] = [out[slots[j]], out[slots[i]]];
+      }
+    };
+    for (let i = 0; i < out.length; i++) {
+      if (isSectionType(out[i].type)) {
+        shuffleBlock(i);
+        blockStart = i + 1;
+      }
+    }
+    shuffleBlock(out.length);
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- client-only randomness; see above
+    setShuffled(out);
+  }, [visible, shuffle]);
+  const ordered = shuffle && shuffled ? shuffled : visible;
+
+  const questionFields = visible.filter((f) => !isSectionType(f.type));
+  const answeredCount = questionFields.filter((f) => {
+    const v = values[f.key] ?? "";
+    if (GRID_TYPES.includes(f.type)) {
+      try {
+        const map = JSON.parse(v || "{}") as Record<string, unknown>;
+        return Object.values(map).some((a) => (Array.isArray(a) ? a.length > 0 : Boolean(a)));
+      } catch {
+        return false;
+      }
+    }
+    return !isEmpty(f, v, multi[f.key] ?? []);
+  }).length;
 
   function update(key: string, value: string) {
     setValues((v) => ({ ...v, [key]: value }));
@@ -66,7 +124,8 @@ export function MembershipApplicationForm({ fields, periodId, defaults, action, 
     }
     setServerError(null);
     const next: Record<string, string> = {};
-    for (const f of fields) {
+    // `visible`, not `fields` — a question that isn't rendered must never block submit.
+    for (const f of visible) {
       if (f.type === "section") continue;
       const v = values[f.key] ?? "";
 
@@ -143,7 +202,28 @@ export function MembershipApplicationForm({ fields, periodId, defaults, action, 
         </div>
       )}
 
-      {fields.map((f) => {
+      {showProgress && questionFields.length > 0 && (
+        <div className="bg-surface-container-lowest border border-outline-variant rounded-xl p-4">
+          <div className="flex items-center justify-between text-label-caps text-on-surface-variant mb-1">
+            <span>Progres Pengisian</span>
+            <span>
+              {answeredCount}/{questionFields.length}
+            </span>
+          </div>
+          <div
+            role="progressbar"
+            aria-label="Progres pengisian formulir"
+            aria-valuemin={0}
+            aria-valuemax={questionFields.length}
+            aria-valuenow={answeredCount}
+            className="h-2 rounded-full bg-soft-gray overflow-hidden"
+          >
+            <div className="h-full bg-primary-container transition-all" style={{ width: `${(answeredCount / questionFields.length) * 100}%` }} />
+          </div>
+        </div>
+      )}
+
+      {ordered.map((f) => {
         const id = `field-${f.key}`;
         const errId = `err-${f.key}`;
         const helpId = `help-${f.key}`;
@@ -194,6 +274,10 @@ export function MembershipApplicationForm({ fields, periodId, defaults, action, 
 
         return (
           <div key={f.id ?? f.key} className="flex flex-col gap-3 bg-surface-container-lowest rounded-xl p-5 shadow-sm border border-outline-variant/50">
+            {f.config?.imageUrl && (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={f.config.imageUrl} alt="" className="rounded-md max-h-56 w-auto object-contain" />
+            )}
             {f.type === "checkbox" ? (
               <div className="flex items-start gap-3">
                 <input
