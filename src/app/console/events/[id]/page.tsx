@@ -113,7 +113,7 @@ export default async function ConsoleEventDetailPage({ params }: { params: Promi
               { id: "event-agenda", label: "Agenda" },
             ]}
           />
-          <select name="status" defaultValue={event.status} className="bg-soft-gray rounded-md p-3 text-body-md">
+          <select name="statusSelect" defaultValue={event.status} className="bg-soft-gray rounded-md p-3 text-body-md">
             <option value="draft">Draf</option>
             <option value="scheduled">Terjadwal (belum rilis)</option>
             <option value="published">Dipublikasikan</option>
@@ -121,12 +121,30 @@ export default async function ConsoleEventDetailPage({ params }: { params: Promi
             <option value="completed">Selesai</option>
             <option value="cancelled">Dibatalkan</option>
           </select>
-          <button
-            type="submit"
-            className="self-start bg-primary-container text-on-primary text-label-caps uppercase tracking-wide px-6 py-3 rounded-md hover:bg-primary transition-colors"
-          >
-            Simpan Perubahan
-          </button>
+          <div className="flex flex-wrap gap-3">
+            <button
+              type="submit"
+              name="status"
+              value="draft"
+              className="self-start bg-surface-container-low text-on-background text-label-caps uppercase tracking-wide px-6 py-3 rounded-md border border-outline-variant hover:bg-surface-container transition-colors"
+            >
+              Simpan sebagai Draft
+            </button>
+            <button
+              type="submit"
+              name="status"
+              value="published"
+              className="self-start bg-primary-container text-on-primary text-label-caps uppercase tracking-wide px-6 py-3 rounded-md hover:bg-primary transition-colors"
+            >
+              Publikasikan
+            </button>
+            <button
+              type="submit"
+              className="self-start bg-surface-container-low text-on-background text-label-caps uppercase tracking-wide px-6 py-3 rounded-md border border-outline-variant hover:bg-surface-container transition-colors"
+            >
+              Simpan Perubahan
+            </button>
+          </div>
         </form>
       </details>
 
