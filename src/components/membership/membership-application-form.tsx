@@ -7,6 +7,7 @@ import { Loader2, AlertCircle, Star } from "lucide-react";
 import type { MembershipFieldDef } from "@/lib/membership-form";
 import { GRID_TYPES } from "@/lib/membership-form";
 import { ImageUploadCropper } from "@/components/upload/image-upload-cropper";
+import { FileUploadField } from "@/components/upload/file-upload-field";
 
 type Props = {
   fields: MembershipFieldDef[];
@@ -335,13 +336,26 @@ export function MembershipApplicationForm({ fields, periodId, defaults, action, 
                       </option>
                     ))}
                   </select>
-                ) : f.type === "image" ? (
+                 ) : f.type === "image" ? (
                   authenticated ? (
                     <ImageUploadCropper name={f.key} folder="membership" aspect={1} required={f.required} />
                   ) : (
                     <div className="flex flex-col gap-1 rounded-md border border-dashed border-outline-variant bg-soft-gray p-4">
                       <p className="text-body-sm text-on-surface-variant">
                         Untuk unggah gambar, silakan masuk terlebih dahulu.
+                      </p>
+                      <Link href="/login" className="text-body-sm text-primary-container underline rounded-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-container">
+                        Masuk
+                      </Link>
+                    </div>
+                  )
+                ) : f.type === "file" ? (
+                  authenticated ? (
+                    <FileUploadField name={f.key} folder="membership" required={f.required} value={value} disabled={preview} />
+                  ) : (
+                    <div className="flex flex-col gap-1 rounded-md border border-dashed border-outline-variant bg-soft-gray p-4">
+                      <p className="text-body-sm text-on-surface-variant">
+                        Untuk unggah berkas, silakan masuk terlebih dahulu.
                       </p>
                       <Link href="/login" className="text-body-sm text-primary-container underline rounded-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-container">
                         Masuk
