@@ -35,11 +35,11 @@ export async function createEvent(formData: FormData) {
   const scheduledPublishAt = formData.get("scheduledPublishAt")
     ? new Date(String(formData.get("scheduledPublishAt")))
     : null;
-  // When a publish schedule is set, the event stays in a 'scheduled' state
-  // (hidden from the public) until its time arrives, instead of a plain draft.
-  const status: (typeof events.status.enumValues)[number] = scheduledPublishAt
-    ? "scheduled"
-    : "draft";
+  // "intent=draft" forces a plain draft even when a publish schedule is set;
+  // otherwise a set schedule keeps the event in 'scheduled' (hidden) state.
+  const intent = String(formData.get("intent") ?? "schedule");
+  const status: (typeof events.status.enumValues)[number] =
+    intent === "draft" ? "draft" : scheduledPublishAt ? "scheduled" : "draft";
 
   const [created] = await db
     .insert(events)
@@ -74,7 +74,9 @@ export async function updateEvent(id: string, formData: FormData) {
   const scheduledPublishAt = formData.get("scheduledPublishAt")
     ? new Date(String(formData.get("scheduledPublishAt")))
     : null;
-  let status = String(formData.get("status") ?? "draft") as (typeof events.status.enumValues)[number];
+  // A quick button (name="status") overrides the status <select> (name="statusSelect").
+  const quickStatus = formData.get("status") as string | null;
+  let status = (quickStatus ?? formData.get("statusSelect") ?? "draft") as (typeof events.status.enumValues)[number];
   // If a publish schedule is set but the admin left it as a draft, move it to
   // the 'scheduled' state so it auto-publishes when the time arrives.
   if (scheduledPublishAt && status === "draft") status = "scheduled";
@@ -100,6 +102,20 @@ export async function updateEvent(id: string, formData: FormData) {
     .where(eq(events.id, id));
 
   revalidatePath(`/console/events/${id}`);
+}
+
+// Quick status change from the event list (e.g. a "Jadikan Draft" button).
+// Accepts FormData so it can be wired directly to a <form action> without .bind().
+export async function setEventStatus(formData: FormData) {
+  const id = String(formData.get("eventId") ?? "");
+  const status = String(formData.get("status") ?? "");
+  if (!id || !status) throw new Error("eventId dan status wajib diisi");
+  await requireAdmin();
+  await db
+    .update(events)
+    .set({ status: status as (typeof events.status.enumValues)[number] })
+    .where(eq(events.id, id));
+  revalidatePath("/console/events");
 }
 
 export async function checkInRegistration(registrationId: string, eventId: string) {

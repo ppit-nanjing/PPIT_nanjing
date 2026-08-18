@@ -131,16 +131,18 @@ export default async function ConsoleEventsPage() {
                 </span>
               </a>
               <div className="flex items-center gap-2 shrink-0">
-                {e.status !== "draft" && (
-                  <form action={setEventStatus.bind(null, e.id, "draft")}>
-                    <button
-                      type="submit"
-                      className="text-label-caps uppercase tracking-wide px-2.5 py-1 sm:px-3 sm:py-1.5 rounded-md border border-outline-variant text-on-surface-variant hover:bg-surface-container-low transition-colors"
-                    >
-                      Jadikan Draft
-                    </button>
-                  </form>
-                )}
+                 {e.status !== "draft" && (
+                   <form action={setEventStatus}>
+                     <input type="hidden" name="eventId" value={e.id} />
+                     <input type="hidden" name="status" value="draft" />
+                     <button
+                       type="submit"
+                       className="text-label-caps uppercase tracking-wide px-2.5 py-1 sm:px-3 sm:py-1.5 rounded-md border border-outline-variant text-on-surface-variant hover:bg-surface-container-low transition-colors"
+                     >
+                       Jadikan Draft
+                     </button>
+                   </form>
+                 )}
                 <DeleteEventButton eventId={e.id} />
               </div>
             </div>
