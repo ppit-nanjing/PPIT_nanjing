@@ -31,6 +31,24 @@ interface Department {
   parentDepartmentId: string | null;
 }
 
+function isAssignable(dept: Department, all: Department[]): boolean {
+  // Leaf divisions (have a parent) plus top-level nodes without children
+  // (e.g. BPH). The 3 grouping "Departemen" rows are just containers.
+  if (dept.parentDepartmentId !== null) return true;
+  return !all.some((c) => c.parentDepartmentId === dept.id);
+}
+
+function scopeLabel(dept: Department | undefined, byId: Map<string, Department>): string {
+  if (!dept) return "— Belum ada —";
+  if (dept.parentDepartmentId) {
+    const parent = byId.get(dept.parentDepartmentId);
+    const parentShort = parent ? parent.name.replace(/^Departemen\s+/i, "") : "";
+    const childShort = dept.name.replace(/^Divisi\s+/i, "");
+    return parentShort ? `${parentShort} · ${childShort}` : dept.name;
+  }
+  return dept.name.replace(/^Departemen\s+/i, "") || dept.name;
+}
+
 export function UserTable({
   users,
   roles,
@@ -40,31 +58,33 @@ export function UserTable({
   roles: Role[];
   departments: Department[];
 }) {
-  // Only leaf departments (divisions/BPH) make sense to assign someone to -
-  // the 3 top-level "Departemen" rows are just groupings.
-  const assignable = departments.filter(
-    (d) => d.parentDepartmentId !== null || !departments.some((c) => c.parentDepartmentId === d.id)
-  );
+  const byId = new Map(departments.map((d) => [d.id, d]));
+  const assignable = departments.filter((d) => isAssignable(d, departments));
 
   return (
     <div className="bg-surface-container-lowest border border-outline-variant rounded-xl overflow-x-auto">
-      <table className="w-full text-body-md min-w-[860px]">
+      <table className="w-full text-body-md min-w-[780px]">
         <thead className="bg-surface-container-low text-label-caps uppercase tracking-wide text-on-surface-variant">
           <tr>
             <th className="text-left px-5 py-3">Pengguna</th>
-            <th className="text-left px-5 py-3">Role</th>
-            <th className="text-left px-5 py-3">Divisi</th>
+            <th className="text-left px-5 py-3">Role / Ruang Lingkup</th>
             <th className="text-left px-5 py-3">Status</th>
             <th className="text-right px-5 py-3">Aksi</th>
           </tr>
         </thead>
         <tbody>
           {users.map((u) => (
-            <UserRow key={u.id} user={u} roles={roles} departments={assignable} />
+            <UserRow
+              key={u.id}
+              user={u}
+              roles={roles}
+              departments={assignable}
+              byId={byId}
+            />
           ))}
           {users.length === 0 && (
             <tr>
-              <td colSpan={5} className="text-center py-10 text-on-surface-variant">
+              <td colSpan={4} className="text-center py-10 text-on-surface-variant">
                 Tidak ada pengguna yang cocok dengan filter.
               </td>
             </tr>
@@ -79,10 +99,12 @@ function UserRow({
   user,
   roles,
   departments,
+  byId,
 }: {
   user: Row;
   roles: Role[];
   departments: Department[];
+  byId: Map<string, Department>;
 }) {
   const router = useRouter();
   const [roleId, setRoleId] = useState(user.roleId ?? "");
@@ -92,6 +114,15 @@ function UserRow({
   const [name, setName] = useState(user.name ?? "");
   const [email, setEmail] = useState(user.email);
   const [, startTransition] = useTransition();
+
+  // Options: assignable departments, plus the user's current one if not assignable.
+  const options = departments.some((d) => d.id === user.departmentId)
+    ? departments
+    : user.departmentId
+      ? [...departments, byId.get(user.departmentId)!].filter(Boolean)
+      : departments;
+
+  const roleName = roles.find((r) => r.id === user.roleId)?.name;
 
   if (editing) {
     return (
@@ -111,10 +142,23 @@ function UserRow({
               placeholder="Email"
               className="bg-soft-gray rounded-md px-2 py-1.5 text-body-md"
             />
+            <select
+              value={roleId}
+              onChange={(e) => setRoleId(e.target.value)}
+              className="bg-soft-gray rounded-md px-2 py-1.5 text-body-md"
+            >
+              <option value="">— Tanpa akses admin —</option>
+              {roles.map((r) => (
+                <option key={r.id} value={r.id}>
+                  {r.name}
+                </option>
+              ))}
+            </select>
           </div>
         </td>
-        <td className="px-5 py-3 text-on-surface-variant">—</td>
-        <td className="px-5 py-3 text-on-surface-variant">—</td>
+        <td className="px-5 py-3 text-on-surface-variant">
+          {scopeLabel(byId.get(user.departmentId ?? ""), byId)}
+        </td>
         <td className="px-5 py-3 text-on-surface-variant">{status}</td>
         <td className="px-5 py-3 text-right">
           <div className="flex justify-end gap-2">
@@ -124,6 +168,7 @@ function UserRow({
               onClick={() =>
                 startTransition(async () => {
                   await updateUserDetails(user.id, name, email);
+                  await updateUserRole(user.id, roleId);
                   setEditing(false);
                   router.refresh();
                 })
@@ -137,6 +182,7 @@ function UserRow({
               onClick={() => {
                 setName(user.name ?? "");
                 setEmail(user.email);
+                setRoleId(user.roleId ?? "");
                 setEditing(false);
               }}
               className="text-label-caps uppercase tracking-wide px-3 py-1.5 rounded-md border border-outline-variant text-on-surface-variant hover:text-on-background transition-colors"
@@ -172,23 +218,6 @@ function UserRow({
       </td>
       <td className="px-5 py-3">
         <select
-          value={roleId}
-          onChange={(e) => {
-            setRoleId(e.target.value);
-            startTransition(() => updateUserRole(user.id, e.target.value));
-          }}
-          className="bg-soft-gray rounded-md px-2 py-1.5 text-body-md"
-        >
-          <option value="">— Belum ada —</option>
-          {roles.map((r) => (
-            <option key={r.id} value={r.id}>
-              {r.name}
-            </option>
-          ))}
-        </select>
-      </td>
-      <td className="px-5 py-3">
-        <select
           value={departmentId}
           onChange={(e) => {
             setDepartmentId(e.target.value);
@@ -197,12 +226,15 @@ function UserRow({
           className="bg-soft-gray rounded-md px-2 py-1.5 text-body-md"
         >
           <option value="">— Belum ada —</option>
-          {departments.map((d) => (
+          {options.map((d) => (
             <option key={d.id} value={d.id}>
-              {d.name}
+              {scopeLabel(d, byId)}
             </option>
           ))}
         </select>
+        {roleName && (
+          <p className="text-label-caps text-on-surface-variant mt-1">Akses: {roleName}</p>
+        )}
       </td>
       <td className="px-5 py-3">
         <select

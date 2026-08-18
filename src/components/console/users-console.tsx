@@ -51,7 +51,6 @@ export function UsersConsole({
 }) {
   const [tab, setTab] = useState<"list" | "structure">("list");
   const [q, setQ] = useState("");
-  const [roleFilter, setRoleFilter] = useState("");
   const [deptFilter, setDeptFilter] = useState("");
   const [statusFilter, setStatusFilter] = useState("");
   const [catFilter, setCatFilter] = useState("all");
@@ -59,7 +58,6 @@ export function UsersConsole({
   const query = q.trim().toLowerCase();
   const filtered = users.filter((u) => {
     if (query && !`${u.name}\n${u.email}`.toLowerCase().includes(query)) return false;
-    if (roleFilter && u.roleId !== roleFilter) return false;
     if (deptFilter && u.departmentId !== deptFilter) return false;
     if (statusFilter && u.status !== statusFilter) return false;
     if (catFilter === "member" && !u.departmentId) return false;
@@ -83,14 +81,6 @@ export function UsersConsole({
               placeholder="Cari nama/email…"
               className={`${selectCls} sm:col-span-2 lg:col-span-1`}
             />
-            <select value={roleFilter} onChange={(e) => setRoleFilter(e.target.value)} className={selectCls}>
-              <option value="">Semua Role</option>
-              {roles.map((r) => (
-                <option key={r.id} value={r.id}>
-                  {r.name}
-                </option>
-              ))}
-            </select>
             <select value={deptFilter} onChange={(e) => setDeptFilter(e.target.value)} className={selectCls}>
               <option value="">Semua Divisi</option>
               {departments.map((d) => (
@@ -111,15 +101,15 @@ export function UsersConsole({
               <option value="all">Semua Kategori</option>
               <option value="member">Anggota PPIT (punya divisi)</option>
               <option value="noDivision">Belum ada divisi</option>
-              <option value="noRole">Belum ada role</option>
+              <option value="noRole">Belum ada akses admin</option>
             </select>
           </div>
 
           <UserTable users={filtered} roles={roles} departments={departments} />
 
           <p className="text-label-caps text-on-surface-variant mt-4 leading-relaxed">
-            &quot;Kasih admin&quot; = pilih role dengan akses penuh (mis. Ketua Umum / Koordinator Divisi) atau masukkan ke
-            Divisi Teknologi (memberi akses penuh otomatis). Menghapus akses cukup set role/divisi kembali.
+            Kolom <strong>Role / Ruang Lingkup</strong> menyesuaikan divisi pengguna (mis. BPH, Program &amp; Acara · Akademia).
+            Akses admin (penuh/terbatas) diatur lewat tombol Edit. Masukkan ke Divisi Teknologi memberi akses penuh otomatis.
           </p>
         </>
       ) : (
