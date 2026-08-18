@@ -453,10 +453,16 @@ export const membershipFieldTypeEnum = pgEnum("membership_field_type", [
   "tel",
   "number",
   "select",
+  "radio",
+  "multiselect",
   "date",
   "checkbox",
+  "rating",
   "image",
   "url",
+  "section",
+  "time",
+  "linear_scale",
 ]);
 
 // Configurable fields for the public membership application form (Join Us).
@@ -471,9 +477,28 @@ export const membershipFormFields = pgTable("membership_form_fields", {
   helpText: text("help_text"),
   required: boolean("required").notNull().default(false),
   options: text("options"),
+  // Extra per-type settings, e.g. rating scale { min, max, lowLabel, highLabel }.
+  config: jsonb("config"),
   orderIndex: integer("order_index").notNull().default(0),
   isCore: boolean("is_core").notNull().default(false),
 });
+
+// Single-row settings for the membership form itself (the "Setelan" panel):
+// title, description, confirmation message, banner toggle, etc.
+export const membershipFormMeta = pgTable("membership_form_meta", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  title: text("title").notNull().default("Formulir Pendaftaran Anggota PPIT Nanjing"),
+  description: text("description").notNull().default(
+    "Formulir ini digunakan untuk mendata mahasiswa Indonesia yang ingin bergabung sebagai anggota resmi PPIT Nanjing. Pastikan data yang diisi valid.",
+  ),
+  bannerEnabled: boolean("banner_enabled").notNull().default(false),
+  confirmationMessage: text("confirmation_message").notNull().default(
+    "Terima kasih! Pendaftaran kamu sudah kami terima.",
+  ),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+});
+
+export type MembershipFormMetaRow = typeof membershipFormMeta.$inferSelect;
 
 // ---------- 7. Inventory & Borrowing ----------
 
