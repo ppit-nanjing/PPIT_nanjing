@@ -34,7 +34,7 @@ export default async function ConsoleNotificationsPage() {
 
   return (
     <div className="px-4 py-6 sm:px-6 lg:px-8 lg:py-10">
-      <div className="mb-8">
+      <div className="mb-6 l:mb-8">
         <h1 className="text-headline-md sm:text-headline-lg text-on-background mb-2">
           Template Notifikasi
         </h1>

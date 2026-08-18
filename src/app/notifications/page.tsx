@@ -16,9 +16,9 @@ export default async function NotificationsPage() {
   return (
     <div className="min-h-screen bg-background text-on-background">
       <SiteNav />
-      <main className="max-w-2xl mx-auto px-[var(--spacing-container-padding)] py-16">
-        <div className="flex items-center justify-between mb-8">
-          <h1 className="text-headline-lg text-on-background">Notifikasi</h1>
+      <main className="max-w-2xl mx-auto px-[var(--spacing-container-padding)] py-10 sm:py-12 l:py-16">
+        <div className="flex items-center justify-between gap-3 flex-wrap mb-6 l:mb-8">
+          <h1 className="text-headline-md l:text-headline-lg text-on-background">Notifikasi</h1>
           {items.some((i) => !i.isRead) && <NotificationMarkAllReadButton />}
         </div>
 
@@ -39,7 +39,7 @@ export default async function NotificationsPage() {
                 // bg-surface-container-lowest and bg-primary-container/5 were
                 // emitted for unread rows and which one won depended on CSS
                 // order, not intent.
-                className={`border rounded-xl p-4 ${
+                className={`border rounded-xl p-3 l:p-4 ${
                   item.isRead
                     ? "bg-surface-container-lowest border-outline-variant"
                     : "bg-primary-container/5 border-primary-container/30"

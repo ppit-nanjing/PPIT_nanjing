@@ -93,6 +93,13 @@
 
   /* Container */
   --container-max: 1200px;
+
+  /* Mobile tier breakpoints (S/M/L) for phone-first responsive tuning.
+     Ordered below Tailwind's default sm(640)/md(768)/lg(1024) so the
+     cascade stays base < s < m < l < sm < md < lg. */
+  --breakpoint-s: 320px;
+  --breakpoint-m: 375px;
+  --breakpoint-l: 414px;
 }
 
 body {

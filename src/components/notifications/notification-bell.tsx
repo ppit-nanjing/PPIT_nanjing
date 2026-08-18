@@ -76,8 +76,8 @@ export function NotificationBell() {
       </Tooltip>
 
       {open && (
-        <div className="absolute right-0 top-full mt-2 w-80 max-w-[90vw] bg-surface-container-lowest border border-outline-variant rounded-lg shadow-lg z-50 overflow-hidden">
-          <div className="flex items-center justify-between px-4 py-3 border-b border-outline-variant">
+        <div className="absolute top-full mt-2 z-50 overflow-hidden bg-surface-container-lowest border border-outline-variant rounded-lg shadow-lg left-1/2 -translate-x-1/2 w-[calc(100vw-1rem)] m:left-auto m:right-0 m:translate-x-0 m:w-80">
+          <div className="flex items-center justify-between gap-2 px-3 m:px-4 py-3 border-b border-outline-variant">
             <span className="text-body-md font-semibold text-on-background">Notifikasi</span>
             {unread > 0 && (
               <button
@@ -111,14 +111,14 @@ export function NotificationBell() {
                     key={item.id}
                     href={href}
                     onClick={() => setOpen(false)}
-                    className={`block px-4 py-3 border-b border-outline-variant hover:bg-surface-container-low transition-colors ${item.isRead ? "" : "bg-primary-container/5"}`}
-                  >
+                className={`block px-3 m:px-4 py-3 border-b border-outline-variant hover:bg-surface-container-low transition-colors ${item.isRead ? "" : "bg-primary-container/5"}`}
+                   >
                     {content}
                   </a>
                 ) : (
                   <div
                     key={item.id}
-                    className={`block px-4 py-3 border-b border-outline-variant ${item.isRead ? "" : "bg-primary-container/5"}`}
+                    className={`block px-3 m:px-4 py-3 border-b border-outline-variant ${item.isRead ? "" : "bg-primary-container/5"}`}
                   >
                     {content}
                   </div>
@@ -129,7 +129,7 @@ export function NotificationBell() {
           <Link
             href="/notifications"
             onClick={() => setOpen(false)}
-            className="block px-4 py-2 text-center text-label-caps uppercase tracking-wide text-primary-container hover:bg-surface-container-low transition-colors border-t border-outline-variant"
+            className="block px-3 m:px-4 py-2 text-center text-label-caps uppercase tracking-wide text-primary-container hover:bg-surface-container-low transition-colors border-t border-outline-variant"
           >
             Lihat semua
           </Link>
