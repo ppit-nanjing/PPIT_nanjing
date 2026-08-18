@@ -13,7 +13,7 @@ type Props = {
   fields: MembershipFieldDef[];
   periodId: string;
   defaults: Record<string, string>;
-  action: (recruitmentPeriodId: string, formData: FormData) => void;
+  action?: (recruitmentPeriodId: string, formData: FormData) => void;
   authenticated?: boolean;
   preview?: boolean;
   showProgress?: boolean;
@@ -186,7 +186,7 @@ export function MembershipApplicationForm({ fields, periodId, defaults, action, 
   return (
     <form
       ref={formRef}
-      action={(fd: FormData) => action(periodId, fd)}
+      action={preview || !action ? undefined : (fd: FormData) => action(periodId, fd)}
       onSubmit={handleSubmit}
       className="flex flex-col gap-6"
       noValidate

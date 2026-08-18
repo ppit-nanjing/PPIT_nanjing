@@ -207,7 +207,6 @@ export default async function MembershipFormPage() {
             fields={fields}
             periodId="preview"
             defaults={{}}
-            action={async () => {}}
             authenticated={false}
             preview
             showProgress={meta.showProgress}
