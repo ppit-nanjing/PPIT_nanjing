@@ -23,7 +23,7 @@ export type TemplatedNotificationInput = {
   relatedEntityId?: string | null;
 };
 
-// In-app notifications only (no email - there is no sending provider). Backs the
+// In-app notifications. Backs the
 // /notifications page + nav bell. Triggered from admin status changes that affect
 // a specific user (borrow approve/reject, event check-in).
 export async function createNotification(input: NotificationInput) {
