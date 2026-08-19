@@ -12,6 +12,65 @@ const STUDENT_STATUS_OPTIONS = ["Mahasiswa Aktif", "Mahasiswa Non-Aktif", "Cuti"
 const DEGREE_OPTIONS = ["D3", "S1", "S2", "S3", "Sekolah Bahasa", "Lainnya"];
 const FUNDING_OPTIONS = ["Self-funded", "Partial Scholarship", "Full Scholarship"];
 
+function PhoneField({
+  label,
+  value,
+  onChange,
+}: {
+  label: string;
+  value: string;
+  onChange: (v: string) => void;
+}) {
+  const prefix = value.startsWith("+86") ? "+86" : value.startsWith("+62") ? "+62" : "+62";
+  const national = value.replace(/^\+62/, "").replace(/^\+86/, "").replace(/^0+/, "");
+
+  function handlePrefix(next: string) {
+    let n = national.replace(/^0+/, "");
+    if (next === "+62" && n.startsWith("62")) n = n.slice(2);
+    if (next === "+86" && n.startsWith("86")) n = n.slice(2);
+    onChange(next + n);
+  }
+
+  function handleNational(raw: string) {
+    let n = raw.replace(/[^\d]/g, "").replace(/^0+/, "");
+    if (prefix === "+62" && n.startsWith("62")) n = n.slice(2);
+    if (prefix === "+86" && n.startsWith("86")) n = n.slice(2);
+    onChange(prefix + n);
+  }
+
+  return (
+    <div className="flex flex-col gap-2">
+      <span className="text-label-caps uppercase tracking-wide text-on-surface-variant">
+        {label}
+        <span className="text-error" aria-hidden="true"> *</span>
+      </span>
+      <div className="flex gap-2">
+        <select
+          value={prefix}
+          onChange={(e) => handlePrefix(e.target.value)}
+          aria-label="Kode negara"
+          className="bg-soft-gray rounded-md p-3 text-body-md focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-container shrink-0"
+        >
+          <option value="+62">+62</option>
+          <option value="+86">+86</option>
+        </select>
+        <input
+          type="tel"
+          inputMode="numeric"
+          value={national}
+          onChange={(e) => handleNational(e.target.value)}
+          placeholder="85211849390"
+          aria-required="true"
+          className="bg-soft-gray rounded-md p-3 text-body-md flex-1 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-container"
+        />
+      </div>
+      <span className="text-xs text-on-surface-variant">
+        Kode negara langsung terpilih (+62 Indonesia / +86 China). Isi hanya angka, tanpa 0 di depan.
+      </span>
+    </div>
+  );
+}
+
 export function SensusWizard({
   initial,
   returnTo,
@@ -217,16 +276,16 @@ export function SensusWizard({
           <fieldset className="contents">
             <legend className="sr-only">{STEPS[2]}</legend>
             {field("WeChat ID", "wechatId", { required: true, placeholder: "Xevuin12" })}
-            {field("Nomor Telepon Aktif (+86)", "phoneActive", {
-              type: "tel",
-              required: true,
-              placeholder: "+8615851866267",
-            })}
-            {field("Nomor WhatsApp (+62/+86)", "whatsappNumber", {
-              type: "tel",
-              required: true,
-              placeholder: "+6285211849390",
-            })}
+            <PhoneField
+              label="Nomor Telepon Aktif"
+              value={form.phoneActive}
+              onChange={(v) => update("phoneActive", v)}
+            />
+            <PhoneField
+              label="Nomor WhatsApp"
+              value={form.whatsappNumber}
+              onChange={(v) => update("whatsappNumber", v)}
+            />
             <label className="flex items-start gap-3 bg-soft-gray rounded-md p-3 cursor-pointer">
               <input
                 id="sensus-agreeTerms"
