@@ -107,6 +107,10 @@ export function ImageUploadCropper({
       const data = await res.json();
       if (!res.ok) throw new Error(data.error ?? "Gagal mengunggah");
       commit(data.url);
+      if (previewUrl) {
+        URL.revokeObjectURL(previewUrl);
+        setPreviewUrl(null);
+      }
     } catch (e) {
       setError(e instanceof Error ? e.message : "Gagal mengunggah");
     } finally {
@@ -115,15 +119,20 @@ export function ImageUploadCropper({
   }
 
   function onSelectFile(f: File) {
-    setFile(f);
     setError(null);
     if (previewUrl) URL.revokeObjectURL(previewUrl);
     const url = URL.createObjectURL(f);
     setPreviewUrl(url);
     if (aspect) {
+      setFile(f);
       setCrop({ x: 0, y: 0 });
       setZoom(1);
       setCropping(true);
+    } else {
+      // No crop step: upload immediately so the value is committed without an
+      // extra "Unggah" click (e.g. Sensus student card). The user shouldn't have
+      // to know the preview alone doesn't save anything.
+      void uploadBlob(f, f.name);
     }
   }
 
@@ -187,8 +196,11 @@ export function ImageUploadCropper({
         }`}
       >
         {displayUrl ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img src={displayUrl} alt="Pratinjau" className="max-h-40 rounded-md object-contain" />
+          <div className="flex flex-col items-center gap-1">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={displayUrl} alt="Pratinjau" className="max-h-40 rounded-md object-contain border border-outline-variant" />
+            <span className="text-label-caps text-on-surface-variant">Pratinjau</span>
+          </div>
         ) : (
           <ImageIcon className="text-secondary" size={28} />
         )}
