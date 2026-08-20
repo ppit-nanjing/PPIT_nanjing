@@ -527,6 +527,10 @@ export const inventoryItems = pgTable("inventory_items", {
   availableQuantity: integer("available_quantity").notNull().default(0),
   condition: inventoryConditionEnum("condition").notNull().default("good"),
   location: text("location"),
+  // Person currently responsible for the item day-to-day (e.g. "STEFAN") -
+  // distinct from location (which koper/box it lives in). Sourced from the
+  // "PEMEGANG" column when the physical inventory spreadsheet was imported.
+  custodian: text("custodian"),
 });
 
 export const borrowRequests = pgTable("borrow_requests", {

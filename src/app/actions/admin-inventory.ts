@@ -27,6 +27,7 @@ export async function createInventoryItem(formData: FormData) {
       category: String(formData.get("category") ?? "").trim() || null,
       description: String(formData.get("description") ?? "").trim() || null,
       location: String(formData.get("location") ?? "").trim() || null,
+      custodian: String(formData.get("custodian") ?? "").trim() || null,
       imageUrl: String(formData.get("imageUrl") ?? "").trim() || null,
       totalQuantity,
       availableQuantity: totalQuantity,

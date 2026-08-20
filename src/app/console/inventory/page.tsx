@@ -125,9 +125,10 @@ export default async function ConsoleInventoryPage() {
             </summary>
             <form action={createInventoryItem} className="px-6 pb-6 flex flex-col gap-4">
               <input name="name" placeholder="Nama Barang *" required className="bg-soft-gray rounded-md p-3 text-body-md" />
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                 <input name="category" placeholder="Kategori" className="bg-soft-gray rounded-md p-3 text-body-md" />
                 <input name="location" placeholder="Lokasi Penyimpanan" className="bg-soft-gray rounded-md p-3 text-body-md" />
+                <input name="custodian" placeholder="Pemegang (opsional)" className="bg-soft-gray rounded-md p-3 text-body-md" />
               </div>
               <input name="totalQuantity" type="number" min={1} placeholder="Jumlah Total *" required className="bg-soft-gray rounded-md p-3 text-body-md" />
               <textarea name="description" placeholder="Deskripsi" rows={2} className="bg-soft-gray rounded-md p-3 text-body-md resize-none" />
@@ -154,6 +155,13 @@ export default async function ConsoleInventoryPage() {
                 <p className="text-label-caps text-on-surface-variant">
                   {item.availableQuantity} / {item.totalQuantity} tersedia &middot; {conditionLabel(item.condition)}
                 </p>
+                {(item.category || item.location || item.custodian) && (
+                  <p className="text-label-caps text-on-surface-variant/70 mt-1">
+                    {[item.category, item.location, item.custodian && `Pemegang: ${item.custodian}`]
+                      .filter(Boolean)
+                      .join(" · ")}
+                  </p>
+                )}
               </div>
             ))}
           </div>
