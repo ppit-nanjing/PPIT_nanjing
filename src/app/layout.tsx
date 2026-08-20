@@ -33,17 +33,18 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
   const session = await auth();
   return (
     <html lang="id" className={`${inter.variable} ${spectral.variable} scroll-smooth`}>
-      <head>
-        {/* Applies the saved city theme before first paint. Without this the
-            default palette renders first and visibly flips on hydration. */}
+      <body className="antialiased">
+        {/* Applies the saved city theme + colour mode before anything paints.
+            Without it the default palette renders first and visibly flips. */}
         <script
           dangerouslySetInnerHTML={{
             __html:
-              "try{var t=localStorage.getItem('ppit-city-theme');if(t&&t!=='zijin')document.documentElement.dataset.theme=t;}catch(e){}",
+              "try{var d=document.documentElement,t=localStorage.getItem('ppit-city-theme'),m=localStorage.getItem('ppit-color-mode');" +
+              "if(t&&t!=='zijin')d.dataset.theme=t;" +
+              "d.dataset.mode=(m==='dark'||m==='light')?m:(matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light');" +
+              "}catch(e){}",
           }}
         />
-      </head>
-      <body className="antialiased">
         <Providers session={session}>
           {children}
           <HelpCenter authed={!!session?.user} />
