@@ -32,11 +32,13 @@ export const id = {
 
   "discover.trigger": "Jelajahi",
   "discover.universities.label": "Kampus",
-  "discover.universities.desc": "Direktori universitas di Nanjing",
+  "discover.universities.desc": "Direktori kampus di 9 kota naungan",
   "discover.places.label": "Tempat",
   "discover.places.desc": "Wisata, rumah ibadah, dan lokasi penting",
   "discover.coverage.label": "Wilayah",
   "discover.coverage.desc": "9 kota naungan PPIT Nanjing",
+  "discover.map.label": "Peta Distrik",
+  "discover.map.desc": "11 distrik Kota Nanjing",
   "discover.catalogue.label": "Katalog",
   "discover.catalogue.desc": "Merchandise, donasi, dan sponsorship",
 

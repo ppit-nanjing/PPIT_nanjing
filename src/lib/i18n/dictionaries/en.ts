@@ -29,11 +29,13 @@ export const en = {
 
   "discover.trigger": "Explore",
   "discover.universities.label": "Universities",
-  "discover.universities.desc": "Directory of universities in Nanjing",
+  "discover.universities.desc": "Campus directory across the 9 covered cities",
   "discover.places.label": "Places",
   "discover.places.desc": "Attractions, places of worship, and key locations",
   "discover.coverage.label": "Coverage",
   "discover.coverage.desc": "9 cities under PPIT Nanjing",
+  "discover.map.label": "District Map",
+  "discover.map.desc": "The 11 districts of Nanjing",
   "discover.catalogue.label": "Catalogue",
   "discover.catalogue.desc": "Merchandise, donations, and sponsorship",
 

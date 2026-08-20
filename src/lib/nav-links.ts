@@ -26,5 +26,6 @@ export const DISCOVER_LINKS = [
   { href: "/universities", labelKey: "discover.universities.label", descKey: "discover.universities.desc" },
   { href: "/places", labelKey: "discover.places.label", descKey: "discover.places.desc" },
   { href: "/coverage", labelKey: "discover.coverage.label", descKey: "discover.coverage.desc" },
+  { href: "/map", labelKey: "discover.map.label", descKey: "discover.map.desc" },
   { href: "/catalogue", labelKey: "discover.catalogue.label", descKey: "discover.catalogue.desc" },
 ] as const;
