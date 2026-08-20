@@ -5,6 +5,11 @@ import { useRouter } from "next/navigation";
 import { useSession, signOut } from "next-auth/react";
 import { Search, CornerDownLeft, Lock } from "lucide-react";
 import { NAV_LINKS } from "@/lib/nav-links";
+import { useT } from "@/lib/i18n/client";
+// NOTE: NAV_LINKS labels below are resolved through t(l.labelKey) so they
+// follow the active locale. The rest of this file's own strings (section
+// headers, action labels) are still hardcoded Indonesian - out of scope for
+// this pass, left for the next i18n wave (chrome beyond nav/footer/profile).
 
 type ApiResult = {
   type: "event" | "news" | "job" | "gallery" | "inventory" | "page";
@@ -43,6 +48,7 @@ function buildActions(session: { user?: { isAdmin?: boolean } } | null, isAdmin?
 export function CommandPalette({ onClose }: { onClose: () => void }) {
   const router = useRouter();
   const { data: session } = useSession();
+  const t = useT();
   const [query, setQuery] = useState("");
   const [active, setActive] = useState(0);
   const [results, setResults] = useState<ApiResult[]>([]);
@@ -89,7 +95,7 @@ export function CommandPalette({ onClose }: { onClose: () => void }) {
           label: "Halaman",
           items: NAV_LINKS.map((l) => ({
             key: `page:${l.href}`,
-            label: l.label,
+            label: t(l.labelKey),
             href: l.href,
             kind: "page" as const,
           })),
@@ -99,12 +105,12 @@ export function CommandPalette({ onClose }: { onClose: () => void }) {
       return { sections: secs, flatItems: secs.flatMap((s) => s.items) };
     }
 
-    const pageItems = NAV_LINKS.filter((l) => l.label.toLowerCase().includes(q)).map((l) => ({
+    const pageItems = NAV_LINKS.map((l) => ({
       key: `page:${l.href}`,
-      label: l.label,
+      label: t(l.labelKey),
       href: l.href,
       kind: "page" as const,
-    }));
+    })).filter((l) => l.label.toLowerCase().includes(q));
     const actionItems = buildActions(session, isAdmin).filter((a) => a.label.toLowerCase().includes(q));
 
     const byType: Record<string, ResultItem[]> = {
@@ -143,7 +149,7 @@ export function CommandPalette({ onClose }: { onClose: () => void }) {
     if (actionItems.length) secs.push({ label: "Aksi", items: actionItems });
 
     return { sections: secs, flatItems: secs.flatMap((s) => s.items) };
-  }, [query, results, session, isAdmin]);
+  }, [query, results, session, isAdmin, t]);
 
   useEffect(() => {
     inputRef.current?.focus();

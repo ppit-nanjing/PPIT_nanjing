@@ -3,12 +3,15 @@
 import { useEffect, useState } from "react";
 import { usePathname } from "next/navigation";
 import { useSession, signIn } from "next-auth/react";
-import { Menu, X, Search, User, ChevronDown } from "lucide-react";
+import { Menu, X, Search, User, ChevronDown, Languages } from "lucide-react";
 import Image from "next/image";
 import { AccountMenu } from "@/components/account-menu";
 import { NotificationBell } from "@/components/notifications/notification-bell";
 import { CommandPalette, useCommandPalette } from "@/components/command-palette";
 import { NAV_LINKS, DISCOVER_LINKS } from "@/lib/nav-links";
+import { useT, useLocale, useLocaleSwitch } from "@/lib/i18n/client";
+import { LOCALE_LABEL, LOCALE_SHORT, otherLocale, type Locale } from "@/lib/i18n/config";
+import type { T } from "@/lib/i18n/translate";
 import Link from "next/link";
 
 // Scroll state: a gentle, intentional pill. We use a boolean threshold
@@ -39,6 +42,9 @@ export function SiteNav() {
   const { open: paletteOpen, setOpen: setPaletteOpen } = useCommandPalette();
   const { data: session } = useSession();
   const [showHint, setShowHint] = useState(false);
+  const t = useT();
+  const locale = useLocale();
+  const { switchLocale } = useLocaleSwitch();
 
   const dismissHint = () => {
     setShowHint(false);
@@ -157,11 +163,17 @@ export function SiteNav() {
                       active ? "text-primary" : "text-secondary"
                     }`}
                   >
-                    <span className="block transition-transform duration-200 ease-out group-hover:-translate-y-5 font-medium">
-                      {link.label}
+                    {/* leading-5: text-body-md's line-height (26.4px) is taller than
+                        this h-5 (20px) box, so without pinning line-height to match,
+                        the glyph sits at "top of an oversized line box, clipped" -
+                        a different vertical position than Jelajahi's span, which is
+                        what made the row read as unaligned. Also keeps the hover
+                        roll swap trading exactly one 20px slot, matching translate-y-5. */}
+                    <span className="block leading-5 transition-transform duration-200 ease-out group-hover:-translate-y-5 font-medium">
+                      {t(link.labelKey)}
                     </span>
-                    <span className="block absolute inset-0 translate-y-5 transition-transform duration-200 ease-out group-hover:translate-y-0 text-primary-container font-medium">
-                      {link.label}
+                    <span className="block leading-5 absolute inset-0 translate-y-5 transition-transform duration-200 ease-out group-hover:translate-y-0 text-primary-container font-medium">
+                      {t(link.labelKey)}
                     </span>
                   </a>
                 );
@@ -174,7 +186,7 @@ export function SiteNav() {
                 {/* Desktop, expanded: labeled search pill that advertises the
                     shortcut. Collapses to icon-only when the navbar shrinks. */}
                 <button
-                  aria-label="Cari (Ctrl/⌘ + K)"
+                  aria-label={t("nav.searchAria")}
                   type="button"
                   onClick={() => {
                     setPaletteOpen(true);
@@ -183,13 +195,13 @@ export function SiteNav() {
                   className={`${compact ? "hidden" : "hidden lg:flex"} items-center gap-2 bg-surface-container-low text-on-surface-variant rounded-full pl-3 pr-2 py-1.5 text-body-md hover:bg-surface-container transition-colors`}
                 >
                   <Search size={16} />
-                  <span>Cari…</span>
+                  <span>{t("nav.searchPlaceholder")}</span>
                   <kbd className="text-label-caps border border-outline-variant rounded px-1.5 py-0.5">⌘K</kbd>
                 </button>
                 {/* Icon-only trigger: mobile/tablet, and also desktop once the
                     navbar has shrunk (no keyboard shortcut hint needed then). */}
                 <button
-                  aria-label="Cari"
+                  aria-label={t("nav.search")}
                   type="button"
                   onClick={() => setPaletteOpen(true)}
                   className={`${compact ? "lg:flex" : "lg:hidden"} text-on-background p-1 shrink-0`}
@@ -201,7 +213,7 @@ export function SiteNav() {
                 {showHint && isDesktop && (
                   <div className="absolute right-0 top-full mt-2 z-[55] w-60 bg-surface-container-lowest border border-outline-variant rounded-xl shadow-lg p-3">
                     <p className="text-body-md text-on-background">
-                      Tekan{" "}
+                      {t("nav.searchHintPrefix")}{" "}
                       <kbd className="text-label-caps border border-outline-variant rounded px-1 py-0.5">
                         ⌘K
                       </kbd>{" "}
@@ -209,22 +221,23 @@ export function SiteNav() {
                       <kbd className="text-label-caps border border-outline-variant rounded px-1 py-0.5">
                         Ctrl K
                       </kbd>{" "}
-                      untuk mencari cepat di semua halaman.
+                      {t("nav.searchHintSuffix")}
                     </p>
                     <button
                       type="button"
                       onClick={dismissHint}
                       className="mt-2 text-label-caps text-primary-container hover:text-primary"
                     >
-                      Mengerti
+                      {t("nav.searchHintDismiss")}
                     </button>
                   </div>
                 )}
               </div>
+              <LanguageToggle compact={compact} locale={locale} switchLocale={switchLocale} t={t} />
               <NotificationBell />
               <AccountMenu compact={compact} />
               <button
-                aria-label={menuOpen ? "Tutup menu" : "Buka menu"}
+                aria-label={menuOpen ? t("nav.menuClose") : t("nav.menuOpen")}
                 type="button"
                 className="lg:hidden text-on-background p-1 shrink-0"
                 onClick={() => setMenuOpen((v) => !v)}
@@ -272,7 +285,7 @@ export function SiteNav() {
                     onClick={() => setMenuOpen(false)}
                     className="text-label-caps text-primary-container hover:text-primary"
                   >
-                    Lihat Profil
+                    {t("nav.viewProfile")}
                   </Link>
                 </div>
               </div>
@@ -284,7 +297,7 @@ export function SiteNav() {
                 }}
                 className="w-full bg-primary-container text-on-primary text-label-caps uppercase tracking-wide px-6 py-3 rounded-md hover:bg-primary transition-colors"
               >
-                Login
+                {t("nav.login")}
               </button>
             )}
           </div>
@@ -304,10 +317,14 @@ export function SiteNav() {
                     : "text-on-background hover:bg-surface-container-low"
                 }`}
               >
-                {link.label}
+                {t(link.labelKey)}
               </a>
             );
           })}
+
+          <div className="px-1 mt-3 pt-3 border-t border-outline-variant flex justify-center">
+            <LanguageToggle compact={false} locale={locale} switchLocale={switchLocale} t={t} />
+          </div>
         </nav>
       </div>
 
@@ -316,10 +333,12 @@ export function SiteNav() {
   );
 }
 
-// "Jelajahi" group. The flat bar cannot hold these three as well - measured at
-// 1256px of links inside a 1200px pill - so they collapse into one trigger.
+// "Jelajahi"/"Explore" group. The flat bar cannot hold these three as well -
+// measured at 1256px of links inside a 1200px pill - so they collapse into
+// one trigger.
 function DiscoverMenu({ pathname }: { pathname: string }) {
   const [open, setOpen] = useState(false);
+  const t = useT();
   const active = DISCOVER_LINKS.some((l) => pathname === l.href || pathname.startsWith(l.href + "/"));
   return (
     <div className="relative" onMouseEnter={() => setOpen(true)} onMouseLeave={() => setOpen(false)}>
@@ -332,7 +351,11 @@ function DiscoverMenu({ pathname }: { pathname: string }) {
           active ? "text-primary" : "text-secondary hover:text-primary-container"
         }`}
       >
-        Jelajahi
+        {/* `block` + `leading-5` (not a bare text node) so this text's line box
+            centers exactly like the sibling links' spans below - a flex child
+            text node centers ~3px higher than a block span at the same font
+            size, which read as the nav row being vertically unaligned. */}
+        <span className="block leading-5">{t("discover.trigger")}</span>
         <ChevronDown size={14} className={`transition-transform ${open ? "rotate-180" : ""}`} aria-hidden />
       </button>
       {open && (
@@ -345,13 +368,45 @@ function DiscoverMenu({ pathname }: { pathname: string }) {
                 onClick={() => setOpen(false)}
                 className="block rounded-lg px-3 py-2.5 hover:bg-surface-container-low focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-container"
               >
-                <span className="block text-body-md text-on-background font-medium">{l.label}</span>
-                <span className="block text-label-caps text-on-surface-variant">{l.desc}</span>
+                <span className="block text-body-md text-on-background font-medium">{t(l.labelKey)}</span>
+                <span className="block text-label-caps text-on-surface-variant">{t(l.descKey)}</span>
               </Link>
             ))}
           </div>
         </div>
       )}
     </div>
+  );
+}
+
+// Compact quick-toggle - one click flips id <-> en, no dropdown, mirroring
+// the "Switch to X" button on chongqing.ppitiongkok.com (the sibling chapter
+// site this was asked to match). The visible label is the language you'd
+// switch TO, same as that reference. Full save-to-profile picker lives at
+// /profile (src/components/profile/language-selector.tsx) - this is just the
+// always-visible shortcut.
+function LanguageToggle({
+  compact,
+  locale,
+  switchLocale,
+  t,
+}: {
+  compact: boolean;
+  locale: Locale;
+  switchLocale: (next: Locale) => void;
+  t: T;
+}) {
+  const target = otherLocale(locale);
+  return (
+    <button
+      type="button"
+      onClick={() => switchLocale(target)}
+      aria-label={t("nav.switchLanguageAria", { lang: LOCALE_LABEL[target] })}
+      title={LOCALE_LABEL[target]}
+      className="flex items-center gap-1.5 text-on-background hover:bg-surface-container-low px-2 py-1.5 rounded-lg transition-colors shrink-0"
+    >
+      <Languages size={compact ? 20 : 18} />
+      {!compact && <span className="text-label-caps font-medium">{LOCALE_SHORT[target]}</span>}
+    </button>
   );
 }

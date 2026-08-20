@@ -3,6 +3,7 @@
 import { useSession, signIn, signOut } from "next-auth/react";
 import { useState } from "react";
 import { ChevronDown, ShieldCheck, User, LogOut, Inbox } from "lucide-react";
+import { useT } from "@/lib/i18n/client";
 import Image from "next/image";
 import Link from "next/link";
 
@@ -22,6 +23,7 @@ export function AccountMenu({ compact = false }: { compact?: boolean }) {
   const { data: session, status } = useSession();
   const [open, setOpen] = useState(false);
   const [showTooltip, setShowTooltip] = useState(false);
+  const t = useT();
 
   if (status === "loading") return null;
 
@@ -31,7 +33,7 @@ export function AccountMenu({ compact = false }: { compact?: boolean }) {
         onClick={() => signIn("google")}
         className="bg-primary-container text-on-primary text-label-caps uppercase tracking-wide px-5 py-2.5 rounded-md hover:bg-primary transition-colors"
       >
-        Login
+        {t("accountMenu.login")}
       </button>
     );
   }
@@ -99,17 +101,17 @@ export function AccountMenu({ compact = false }: { compact?: boolean }) {
       {open && (
         <div className="absolute right-0 top-full w-52 bg-surface-container-lowest border border-outline-variant rounded-lg shadow-lg py-2 z-50">
           <Link href="/profile" className="flex items-center gap-2 px-4 py-2 text-sm hover:bg-surface-container-high transition-colors">
-            <User size={16} /> Profil Saya
+            <User size={16} /> {t("accountMenu.myProfile")}
           </Link>
           <Link href="/profile/submissions" className="flex items-center gap-2 px-4 py-2 text-sm hover:bg-surface-container-high transition-colors">
-            <Inbox size={16} /> Riwayat Pengajuan
+            <Inbox size={16} /> {t("accountMenu.submissions")}
           </Link>
           {session.user.isAdmin && (
             <Link
               href="/console"
               className="flex items-center gap-2 px-4 py-2 text-sm text-primary-container font-medium hover:bg-surface-container-high transition-colors"
             >
-              <ShieldCheck size={16} /> Masuk ke Console
+              <ShieldCheck size={16} /> {t("accountMenu.console")}
             </Link>
           )}
           <div className="border-t border-outline-variant my-1" />
@@ -117,7 +119,7 @@ export function AccountMenu({ compact = false }: { compact?: boolean }) {
             onClick={() => signOut()}
             className="flex items-center gap-2 w-full text-left px-4 py-2 text-sm text-error hover:bg-error-container hover:text-on-error-container transition-colors"
           >
-            <LogOut size={16} /> Logout
+            <LogOut size={16} /> {t("accountMenu.logout")}
           </button>
         </div>
       )}

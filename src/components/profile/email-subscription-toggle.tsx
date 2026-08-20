@@ -2,10 +2,12 @@
 
 import { useState, useTransition } from "react";
 import { setEmailSubscription } from "@/app/actions/user";
+import { useT } from "@/lib/i18n/client";
 
 export function EmailSubscriptionToggle({ initialSubscribed }: { initialSubscribed: boolean | null }) {
   const [subscribed, setSubscribed] = useState(initialSubscribed ?? false);
   const [pending, startTransition] = useTransition();
+  const t = useT();
 
   function toggle() {
     const next = !subscribed;
@@ -18,10 +20,8 @@ export function EmailSubscriptionToggle({ initialSubscribed }: { initialSubscrib
   return (
     <div className="flex items-center justify-between gap-4 bg-surface-container-low border border-outline-variant rounded-lg p-5">
       <div>
-        <p className="text-body-md font-medium text-on-background">Email Berita &amp; Kegiatan</p>
-        <p className="text-label-caps text-on-surface-variant">
-          Dapatkan info berita dan event PPIT Nanjing lewat email
-        </p>
+        <p className="text-body-md font-medium text-on-background">{t("emailSub.title")}</p>
+        <p className="text-label-caps text-on-surface-variant">{t("emailSub.desc")}</p>
       </div>
       <button
         onClick={toggle}

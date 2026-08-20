@@ -4,6 +4,8 @@ import { Providers } from "@/components/providers";
 import { OnboardingModal } from "@/components/onboarding-modal";
 import { HelpCenter } from "@/components/ai/help-center";
 import { auth } from "@/auth";
+import { getT } from "@/lib/i18n/server";
+import { LocaleProvider } from "@/lib/i18n/client";
 import "./globals.css";
 
 // next/font/google downloads and self-hosts the font at build time - no runtime
@@ -31,8 +33,9 @@ export const metadata: Metadata = {
 
 export default async function RootLayout({ children }: LayoutProps<"/">) {
   const session = await auth();
+  const { locale, dict } = await getT();
   return (
-    <html lang="id" className={`${inter.variable} ${spectral.variable} scroll-smooth`}>
+    <html lang={locale} className={`${inter.variable} ${spectral.variable} scroll-smooth`}>
       <body className="antialiased">
         {/* Applies the saved city theme + colour mode before anything paints.
             Without it the default palette renders first and visibly flips. */}
@@ -46,9 +49,11 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
           }}
         />
         <Providers session={session}>
-          {children}
-          <HelpCenter authed={!!session?.user} />
-          <OnboardingModal />
+          <LocaleProvider locale={locale} dict={dict}>
+            {children}
+            <HelpCenter authed={!!session?.user} />
+            <OnboardingModal />
+          </LocaleProvider>
         </Providers>
       </body>
     </html>

@@ -7,8 +7,10 @@ import { SiteNav } from "@/components/site-nav";
 import { SiteFooter } from "@/components/site-footer";
 import { EmailSubscriptionToggle } from "@/components/profile/email-subscription-toggle";
 import { BackButton } from "@/components/profile/back-button";
+import { LanguageSelector } from "@/components/profile/language-selector";
 import { ImageUploadCropper } from "@/components/upload/image-upload-cropper";
 import { updateProfile } from "@/app/actions/user";
+import { getT } from "@/lib/i18n/server";
 import { ClipboardCheck, ClipboardList, UserRound } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
@@ -19,13 +21,14 @@ export default async function ProfilePage() {
 
   const [user] = await db.select().from(users).where(eq(users.id, session.user.id));
   const [sensus] = await db.select().from(sensusProfiles).where(eq(sensusProfiles.userId, session.user.id));
+  const { t } = await getT();
 
   return (
     <>
       <SiteNav />
       <div className="min-h-screen bg-background px-[var(--spacing-container-padding)] py-16">
         <div className="max-w-2xl mx-auto">
-        <h1 className="text-headline-lg text-on-background mb-8">Profil Saya</h1>
+        <h1 className="text-headline-lg text-on-background mb-8">{t("profile.title")}</h1>
 
         <div className="flex items-center gap-4 mb-10">
           {user?.avatarUrl || session.user.image ? (
@@ -47,26 +50,26 @@ export default async function ProfilePage() {
           </div>
         </div>
 
-        <h2 className="text-label-caps uppercase tracking-widest text-secondary mb-4">Profil</h2>
+        <h2 className="text-label-caps uppercase tracking-widest text-secondary mb-4">{t("profile.sectionProfile")}</h2>
         <form action={updateProfile} className="flex flex-col gap-4 mb-10">
           <label className="flex flex-col gap-2">
-            <span className="text-label-caps uppercase tracking-wide text-on-surface-variant">Nama Tampilan</span>
+            <span className="text-label-caps uppercase tracking-wide text-on-surface-variant">{t("profile.displayName")}</span>
             <input
               name="name"
               defaultValue={user?.name ?? session.user.name ?? ""}
-              placeholder="Nama yang ditampilkan di situs"
+              placeholder={t("profile.displayNamePlaceholder")}
               className="bg-soft-gray rounded-md p-3 text-body-md focus:outline-none focus:ring-2 focus:ring-primary-container"
             />
           </label>
           <ImageUploadCropper
             name="avatarUrl"
             folder="avatar"
-            label="Foto Profil"
+            label={t("profile.photo")}
             defaultValue={user?.avatarUrl ?? ""}
             aspect={1}
           />
           <label className="flex flex-col gap-2">
-            <span className="text-label-caps uppercase tracking-wide text-on-surface-variant">No. Telepon/WhatsApp</span>
+            <span className="text-label-caps uppercase tracking-wide text-on-surface-variant">{t("profile.phone")}</span>
             <input
               name="phone"
               defaultValue={user?.phone ?? ""}
@@ -75,7 +78,7 @@ export default async function ProfilePage() {
             />
           </label>
           <label className="flex flex-col gap-2">
-            <span className="text-label-caps uppercase tracking-wide text-on-surface-variant">WeChat ID</span>
+            <span className="text-label-caps uppercase tracking-wide text-on-surface-variant">{t("profile.wechat")}</span>
             <input
               name="wechatId"
               defaultValue={user?.wechatId ?? ""}
@@ -84,7 +87,7 @@ export default async function ProfilePage() {
           </label>
 
           <h3 className="text-label-caps uppercase tracking-wide text-secondary mt-2">
-            Media Sosial (opsional)
+            {t("profile.socialHeading")}
           </h3>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {(
@@ -101,7 +104,7 @@ export default async function ProfilePage() {
                 <input
                   name={fieldName}
                   defaultValue={current ?? ""}
-                  placeholder="URL atau handle"
+                  placeholder={t("profile.urlPlaceholder")}
                   className="bg-soft-gray rounded-md p-3 text-body-md focus:outline-none focus:ring-2 focus:ring-primary-container"
                 />
               </label>
@@ -113,13 +116,13 @@ export default async function ProfilePage() {
               type="submit"
               className="bg-primary-container text-on-primary text-label-caps uppercase tracking-wide px-6 py-3 rounded-md hover:bg-primary transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-container focus-visible:ring-offset-2 focus-visible:ring-offset-background motion-reduce:transition-none"
             >
-              Simpan Profil
+              {t("profile.saveButton")}
             </button>
-            <BackButton label="Batal" />
+            <BackButton label={t("profile.cancel")} />
           </div>
         </form>
 
-        <h2 className="text-label-caps uppercase tracking-widest text-secondary mb-4">Data Sensus</h2>
+        <h2 className="text-label-caps uppercase tracking-widest text-secondary mb-4">{t("profile.sensusHeading")}</h2>
         <Link
           href="/sensus"
           className="flex items-center justify-between gap-4 bg-surface-container-lowest border border-outline-variant rounded-lg p-5 mb-10 hover:bg-surface-container-low transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-container focus-visible:ring-offset-2 focus-visible:ring-offset-background motion-reduce:transition-none"
@@ -132,19 +135,22 @@ export default async function ProfilePage() {
             )}
             <div>
               <p className="text-body-md font-medium text-on-background">
-                {sensus?.completionStatus === "complete" ? "Data sensus lengkap" : "Data sensus belum diisi"}
+                {sensus?.completionStatus === "complete" ? t("profile.sensusComplete") : t("profile.sensusIncomplete")}
               </p>
-              <p className="text-label-caps text-on-surface-variant">
-                Universitas, program studi, kontak darurat, dan data akademik lainnya
-              </p>
+              <p className="text-label-caps text-on-surface-variant">{t("profile.sensusDesc")}</p>
             </div>
           </div>
           <span className="text-label-caps text-primary-container shrink-0">
-            {sensus ? "Ubah" : "Isi Sekarang"}
+            {sensus ? t("profile.sensusEdit") : t("profile.sensusFill")}
           </span>
         </Link>
 
-        <h2 className="text-label-caps uppercase tracking-widest text-secondary mb-4">Preferensi Notifikasi</h2>
+        <h2 className="text-label-caps uppercase tracking-widest text-secondary mb-4">{t("settings.language.label")}</h2>
+        <div className="mb-10">
+          <LanguageSelector />
+        </div>
+
+        <h2 className="text-label-caps uppercase tracking-widest text-secondary mb-4">{t("profile.notificationHeading")}</h2>
         <EmailSubscriptionToggle initialSubscribed={session.user.emailSubscribed} />
         </div>
       </div>

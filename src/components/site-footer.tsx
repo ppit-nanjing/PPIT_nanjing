@@ -1,32 +1,41 @@
+"use client";
+
+// Was a server component before (comment below used to explain why -
+// NAV_LINKS being a plain, non-"use client" module let a server component
+// import its real value). It needs useT() now, which only works under
+// <LocaleProvider>'s client context, so it has to render on the client.
+// NAV_LINKS still works fine imported from either side.
 import { NAV_LINKS } from "@/lib/nav-links";
 import { ThemeSwitcher } from "@/components/theme-switcher";
 import { AnimatedLettersHeading } from "@/components/animated-letters-heading";
+import { useT } from "@/lib/i18n/client";
 import { ArrowRight } from "lucide-react";
 import Link from "next/link";
 
-const SOCIALS = [{ label: "Instagram PPIT Nanjing", href: "https://www.instagram.com/ppit_nanjing/" }];
-
 const ABOUT_LINKS = [
-  { href: "/organization", label: "Struktur Organisasi" },
-  { href: "/sensus", label: "Isi Sensus" },
-  { href: "/terms", label: "Ketentuan" },
-  { href: "/privacy", label: "Privasi" },
-  { href: "/organization/ad-art", label: "AD/ART" },
-];
+  { href: "/organization", labelKey: "footer.aboutLinks.structure" },
+  { href: "/sensus", labelKey: "footer.aboutLinks.sensus" },
+  { href: "/terms", labelKey: "footer.aboutLinks.terms" },
+  { href: "/privacy", labelKey: "footer.aboutLinks.privacy" },
+  { href: "/organization/ad-art", labelKey: "footer.aboutLinks.adart" },
+] as const;
 
 export function SiteFooter() {
+  const t = useT();
+  const socials = [{ label: t("footer.instagramAria"), href: "https://www.instagram.com/ppit_nanjing/" }];
+
   return (
     <footer className="w-full mt-16 px-[var(--spacing-container-padding)]">
       <div className="max-w-[var(--container-max)] mx-auto bg-primary-container text-on-primary rounded-2xl px-8 py-14 flex flex-col items-center text-center gap-8">
         <AnimatedLettersHeading
-          text="Ayo bergabung dengan PPIT Nanjing."
+          text={t("footer.joinHeading")}
           className="text-display-hero-mobile md:text-display-hero"
         />
         <Link
           href="/join-us"
           className="inline-flex items-center gap-2 bg-on-primary text-primary-container text-label-caps uppercase tracking-wide px-8 py-3.5 rounded-full hover:bg-on-primary/90 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-on-primary focus-visible:ring-offset-2 focus-visible:ring-offset-primary-container"
         >
-          Gabung Sekarang <ArrowRight size={16} />
+          {t("footer.joinCta")} <ArrowRight size={16} />
         </Link>
       </div>
 
@@ -37,19 +46,19 @@ export function SiteFooter() {
             {NAV_LINKS.map((link, i) => (
               <span key={link.href}>
                 <a href={link.href} className="hover:text-primary-fixed-dim transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-on-primary focus-visible:ring-offset-2 focus-visible:ring-offset-inverse-surface">
-                  {link.label}
+                  {t(link.labelKey)}
                 </a>
                 {i < NAV_LINKS.length - 1 && <span className="mx-2 opacity-40">|</span>}
               </span>
             ))}
           </div>
           <div className="flex flex-col items-center md:items-start gap-2">
-            <span className="text-label-caps uppercase opacity-70">Tentang</span>
+            <span className="text-label-caps uppercase opacity-70">{t("footer.about")}</span>
             <div className="text-body-md flex gap-2 flex-wrap justify-center">
               {ABOUT_LINKS.map((link, i) => (
                 <span key={link.href}>
                   <a href={link.href} className="hover:text-primary-fixed-dim transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-on-primary focus-visible:ring-offset-2 focus-visible:ring-offset-inverse-surface">
-                    {link.label}
+                    {t(link.labelKey)}
                   </a>
                   {i < ABOUT_LINKS.length - 1 && <span className="mx-2 opacity-40">|</span>}
                 </span>
@@ -57,7 +66,7 @@ export function SiteFooter() {
             </div>
           </div>
           <div className="flex items-center gap-4">
-            {SOCIALS.map((s) => (
+            {socials.map((s) => (
               <a
                 key={s.href}
                 href={s.href}

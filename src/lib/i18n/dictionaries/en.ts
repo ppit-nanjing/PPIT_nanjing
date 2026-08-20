@@ -1,0 +1,83 @@
+import type { Dictionary } from "./id";
+
+// `satisfies Dictionary` (not `: Dictionary`) so this stays a literal type -
+// a key that's missing or misspelled fails `tsc --noEmit` right here, which
+// is this project's stand-in for a library's "missing translation" report,
+// caught at compile time instead of at runtime.
+export const en = {
+  "common.save": "Save",
+  "common.cancel": "Cancel",
+
+  "nav.home": "Home",
+  "nav.about": "About",
+  "nav.events": "Events",
+  "nav.news": "News",
+  "nav.gallery": "Gallery",
+  "nav.jobs": "Jobs",
+  "nav.inventory": "Inventory",
+  "nav.search": "Search",
+  "nav.searchPlaceholder": "Search…",
+  "nav.searchAria": "Search (Ctrl/⌘ + K)",
+  "nav.searchHintPrefix": "Press",
+  "nav.searchHintSuffix": "to search quickly across every page.",
+  "nav.searchHintDismiss": "Got it",
+  "nav.menuOpen": "Open menu",
+  "nav.menuClose": "Close menu",
+  "nav.login": "Log in",
+  "nav.viewProfile": "View Profile",
+  "nav.switchLanguageAria": "Switch language to {{lang}}",
+
+  "discover.trigger": "Explore",
+  "discover.universities.label": "Universities",
+  "discover.universities.desc": "Directory of universities in Nanjing",
+  "discover.places.label": "Places",
+  "discover.places.desc": "Attractions, places of worship, and key locations",
+  "discover.coverage.label": "Coverage",
+  "discover.coverage.desc": "9 cities under PPIT Nanjing",
+  "discover.catalogue.label": "Catalogue",
+  "discover.catalogue.desc": "Merchandise, donations, and sponsorship",
+
+  "footer.joinHeading": "Join PPIT Nanjing.",
+  "footer.joinCta": "Join Now",
+  "footer.about": "About",
+  "footer.aboutLinks.structure": "Organization Structure",
+  "footer.aboutLinks.sensus": "Fill Census",
+  "footer.aboutLinks.terms": "Terms",
+  "footer.aboutLinks.privacy": "Privacy",
+  "footer.aboutLinks.adart": "AD/ART",
+  "footer.instagramAria": "PPIT Nanjing Instagram",
+
+  "accountMenu.myProfile": "My Profile",
+  "accountMenu.submissions": "My Submissions",
+  "accountMenu.console": "Go to Console",
+  "accountMenu.logout": "Log out",
+  "accountMenu.login": "Log in",
+
+  "profile.title": "My Profile",
+  "profile.sectionProfile": "Profile",
+  "profile.displayName": "Display Name",
+  "profile.displayNamePlaceholder": "The name shown on the site",
+  "profile.photo": "Profile Photo",
+  "profile.phone": "Phone/WhatsApp No.",
+  "profile.wechat": "WeChat ID",
+  "profile.socialHeading": "Social Media (optional)",
+  "profile.urlPlaceholder": "URL or handle",
+  "profile.saveButton": "Save Profile",
+  "profile.cancel": "Cancel",
+  "profile.sensusHeading": "Census Data",
+  "profile.sensusComplete": "Census data complete",
+  "profile.sensusIncomplete": "Census data not filled in yet",
+  "profile.sensusDesc": "University, program, emergency contact, and other academic data",
+  "profile.sensusEdit": "Edit",
+  "profile.sensusFill": "Fill Now",
+  "profile.notificationHeading": "Notification Preferences",
+
+  "emailSub.title": "News & Event Emails",
+  "emailSub.desc": "Get PPIT Nanjing news and event updates by email",
+
+  "settings.language.label": "Language",
+  "settings.language.help": "Changes the site's display language.",
+  "settings.language.contentNotice":
+    "News, events, and other content written by the committee still appear in their original language.",
+  "settings.language.switching": "Switching language…",
+} satisfies Dictionary;

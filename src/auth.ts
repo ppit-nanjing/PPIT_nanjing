@@ -67,6 +67,15 @@ async function resolveEmailSubscribed(userId: string): Promise<boolean | null> {
   return user?.emailSubscribed ?? null;
 }
 
+// Same shape as resolveEmailSubscribed - resolved fresh per session() call
+// rather than baked into the JWT at sign-in, so it stays simple. This value
+// is only a fallback for a device with no NEXT_LOCALE cookie yet; see the
+// cookie-wins-over-session note in src/lib/i18n/server.ts.
+async function resolveLocale(userId: string): Promise<string | null> {
+  const [user] = await db.select({ locale: users.locale }).from(users).where(eq(users.id, userId));
+  return user?.locale ?? null;
+}
+
 export const { handlers, auth, signIn, signOut } = NextAuth({
   // DrizzleAdapter's second arg is required whenever the table names/columns
   // don't match its own defaults (singular "user"/"account"/"session" and
@@ -182,6 +191,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       session.user.adminScope = scope;
       session.user.isAdmin = scope === "full" || (Array.isArray(scope) && scope.length > 0);
       session.user.emailSubscribed = await resolveEmailSubscribed(userId);
+      session.user.locale = await resolveLocale(userId);
       return session;
     },
   },
