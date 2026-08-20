@@ -148,6 +148,12 @@ export const users = pgTable("users", {
   // Null = never asked yet (triggers the first-login onboarding prompt). True/false
   // once the user has answered. Opt-in by design - never defaults to true.
   emailSubscribed: boolean("email_subscribed"),
+  // "id" | "en" (see src/lib/i18n/config.ts LOCALES). Null = never chosen
+  // explicitly - render falls back to the NEXT_LOCALE cookie, then
+  // Accept-Language, then "id". Nullable on purpose, same pattern as
+  // emailSubscribed above: "never chosen" must stay distinguishable from
+  // "deliberately chose id".
+  locale: text("locale"),
   // bcrypt hash of the user's password for the email/password (Credentials) sign-in
   // path. Null for Google-OAuth-only accounts (they have no password). Never returned
   // to the client and never logged - see src/lib/password.ts.
@@ -768,7 +774,14 @@ export const universities = pgTable("universities", {
   name: text("name").notNull(),
   nameZh: text("name_zh"),
   abbreviation: text("abbreviation"),
+  // Sumbu pengelompokan yang benar adalah KOTA, bukan distrik: kampus-kampus ini
+  // tersebar di 9 kota naungan (lihat coverageCities), bukan cuma di Nanjing.
+  // `district` tetap ada untuk kampus Nanjing yang diketahui distriknya.
+  city: text("city"),
   district: text("district"),
+  // Nama penanggung jawab & kontaknya diisi pengurus - tidak boleh ditebak.
+  coordinatorName: text("coordinator_name"),
+  coordinatorEmail: text("coordinator_email"),
   description: text("description"),
   websiteUrl: text("website_url"),
   logoUrl: text("logo_url"),
