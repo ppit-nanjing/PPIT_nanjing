@@ -914,3 +914,23 @@ export const certificatesRelations = relations(certificates, ({ one }) => ({
   event: one(events, { fields: [certificates.eventId], references: [events.id] }),
   user: one(users, { fields: [certificates.userId], references: [users.id] }),
 }));
+
+// ---------- Wilayah naungan PPIT Nanjing ----------
+// SENGAJA TERPISAH dari `regionalBranches`. Yang itu berisi 32 cabang PPI
+// se-Tiongkok; yang ini 9 kota di bawah naungan PPIT Nanjing (Nanjing, Huai'an,
+// Jurong, Lianyungang, Ma'anshan, Taizhou, Xuzhou, Yancheng, Zhenjiang) yang
+// bahkan melintasi provinsi - Ma'anshan ada di Anhui, sisanya Jiangsu.
+// Mencampur keduanya akan merusak peta cabang nasional yang sudah ada.
+//
+// Batas wilayahnya statis di src/data/nanjing-coverage.geo.json; tabel ini hanya
+// menyimpan yang berubah: jumlah mahasiswa dan kontak. `slug` mencocokkan
+// properties.id di berkas GeoJSON.
+export const coverageCities = pgTable("coverage_cities", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  slug: text("slug").notNull().unique(),
+  label: text("label").notNull(),
+  memberCount: integer("member_count"),
+  contactInfo: text("contact_info"),
+  note: text("note"),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+});
