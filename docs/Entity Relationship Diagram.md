@@ -255,12 +255,12 @@ erDiagram
 
 ## Keputusan Desain Data
 
-- **`auth.users` bawaan Supabase dipakai sebagai basis `USER`**, bukan tabel auth custom — `USER` di atas merepresentasikan tabel `profiles` yang extend `auth.users` (pola standar Supabase). Password hashing, session, OAuth Google (sudah diprototipe di layar Login) ditangani penuh oleh Supabase Auth, tidak perlu dimodelkan manual. Lihat [Tech Stack](./Tech%20Stack.md).
-- **Tidak ada tabel `MEDIA` polymorphic terpisah** — URL gambar/file disimpan langsung sebagai kolom string (`image_url`, `cover_image_url`, `file_url`) di tabel pemilik, menunjuk ke path di Supabase Storage. Ini pilihan sadar untuk kesederhanaan; pertimbangkan ulang hanya jika nanti dibutuhkan CMS media penuh dengan reuse antar entitas.
+- **`USER` adalah tabel `users` itu sendiri**, yang sekaligus menjadi tabel Auth.js (adapter Drizzle). Password hashing (bcrypt), session JWT, dan OAuth Google ditangani Auth.js v5. Lihat [Tech Stack](./Tech%20Stack.md).
+- **Tidak ada tabel `MEDIA` polymorphic terpisah** — URL gambar/file disimpan langsung sebagai kolom string (`image_url`, `cover_image_url`, `file_url`) di tabel pemilik, menunjuk ke URL Vercel Blob. Ini pilihan sadar untuk kesederhanaan; pertimbangkan ulang hanya jika nanti dibutuhkan CMS media penuh dengan reuse antar entitas.
 - **`REPORT` generik** menaungi 4 jenis laporan yang punya layar sendiri di admin console (`event_attendance`, `inventory_audit`, `sensus_summary`, `student_export`) — dibedakan lewat kolom `type` + `parameters_json`, bukan 4 tabel terpisah, karena strukturnya (siapa generate, kapan, filter apa, file hasil) identik.
 - **`AUDIT_LOG` vs `RELEASE_NOTE`**: dua konsep berbeda yang keduanya muncul sebagai "changelog" di prototipe. `AUDIT_LOG` = jejak perubahan data organisasi (siapa mengubah apa) dari layar *Organizational Change Log*. `RELEASE_NOTE` = catatan rilis fitur produk dari layar *Full Changelog* (System Changelog) — ditulis manual oleh admin/dev, bukan otomatis dari aksi user.
 
 ## Terkait
 
 - [Data Dictionary](./Data%20Dictionary.md) — kolom lengkap tiap entitas + enum values
-- [Tech Stack](./Tech%20Stack.md) — implementasi (Postgres/Supabase, RLS policy per role)
+- [Tech Stack](./Tech%20Stack.md) — implementasi (Neon Postgres, kontrol akses per role di application layer)

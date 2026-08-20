@@ -25,4 +25,4 @@ Pola navigasi: "Slide & Push" sidebar — lihat [Motion & Animation](./Motion%20
 
 ## Akses
 
-Dashboard & seluruh `/admin/*` di-gate oleh role (`ROLE` bukan `member`) via middleware + Supabase RLS — lihat [Tech Stack](./Tech%20Stack.md) dan [Data Dictionary](./Data%20Dictionary.md) § ROLE/PERMISSION. Department Head kemungkinan hanya melihat data departemennya sendiri (RLS filter by `department_id`), sementara Super Admin/Admin melihat semua.
+Dashboard & seluruh `/admin/*` di-gate oleh role (`ROLE` bukan `member`) via middleware + pengecekan scope di application layer (`requireModuleAccess`) — lihat [Tech Stack](./Tech%20Stack.md) dan [Data Dictionary](./Data%20Dictionary.md) § ROLE/PERMISSION. Department Head kemungkinan hanya melihat data departemennya sendiri (filter per `department_id` di query Drizzle), sementara Super Admin/Admin melihat semua.

@@ -15,13 +15,13 @@ Jangan gabungkan keduanya jadi satu tabel — `DEPARTMENT` khusus struktur inter
 
 ## 1. Identitas & Akses
 
-### USER (extends `auth.users` Supabase)
+### USER (tabel `users`, sekaligus tabel Auth.js)
 | Kolom | Tipe | Keterangan |
 |---|---|---|
 | id | uuid PK | = `auth.users.id` |
 | full_name | text | |
 | email | text unique | |
-| avatar_url | text | Supabase Storage path |
+| avatar_url | text | URL Vercel Blob |
 | role_id | uuid FK → ROLE | |
 | phone / wechat_id | text | Kontak — umum dipakai mahasiswa Indonesia di Tiongkok |
 | status | enum | `active`, `inactive`, `suspended` |

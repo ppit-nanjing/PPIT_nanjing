@@ -24,7 +24,7 @@ Struktur konten (dikonfirmasi dari markup + konten referensi situs nasional `ppi
 3 varian: `login_ppit_nanjing` (dasar), `login_refined_inputs` (pola input final — lihat [Components](./Components.md) § Input Field), `login_with_google` (OAuth).
 
 - Form: email + password, checkbox "remember me", link "forgot password" (bukan layar terpisah di prototipe — perlu ditambahkan saat build).
-- **Login with Google** — tombol OAuth terpisah, mengonfirmasi Supabase Auth Google Provider sebagai pilihan tepat (lihat [Tech Stack](./Tech%20Stack.md)).
+- **Login with Google** — tombol OAuth terpisah, diimplementasikan lewat Auth.js v5 Google Provider (lihat [Tech Stack](./Tech%20Stack.md)).
 
 ## Entitas terkait
 

@@ -28,7 +28,7 @@
 
 ## ⚙️ Tech Stack
 
-- [Tech Stack](./Tech%20Stack.md) — Next.js + Supabase + Vercel, termasuk catatan reachability Tiongkok
+- [Tech Stack](./Tech%20Stack.md) — Next.js + Neon Postgres + Vercel, termasuk catatan reachability Tiongkok
 
 ## 🖥️ Screens — Public Website
 

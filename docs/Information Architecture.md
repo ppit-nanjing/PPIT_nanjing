@@ -122,7 +122,7 @@ flowchart LR
 
 ## Prinsip Navigasi
 
-- **Publik vs Member vs Admin** dipisah tegas lewat middleware Next.js + RLS Supabase (lihat [Tech Stack](./Tech%20Stack.md)) — bukan sekadar sembunyi-tampil di UI.
+- **Publik vs Member vs Admin** dipisah tegas lewat proxy Next.js + `requireModuleAccess` di server (lihat [Tech Stack](./Tech%20Stack.md)) — bukan sekadar sembunyi-tampil di UI.
 - **State bersyarat di layar yang sama** (bukan rute terpisah): Homepage berubah tampilan saat logged-in (`ppit_nanjing_homepage_logged_in_workflow_connected`), Join Us berubah saat periode pendaftaran ditutup (`join_us_closed_state`, dikontrol oleh `RECRUITMENT_PERIOD.is_open` — lihat [Data Dictionary](./Data%20Dictionary.md)).
 - **Success/confirmation state** selalu jadi langkah eksplisit setelah form submit (Event Registration, Job Application, Borrow Request) — bukan sekadar toast — supaya user punya bukti visual & CTA lanjutan (lihat [Components](./Components.md) § Empty/Success State).
 - **Admin console berbasis modul + dokumentasi terpasang** — setiap modul (User, Organization, Event, Inventory) punya halaman *Guide* sendiri di dalam produk (bukan wiki eksternal), cocok untuk pengurus baru yang bergantian tiap periode kepengurusan (turnover tinggi khas organisasi mahasiswa).

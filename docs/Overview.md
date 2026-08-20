@@ -3,7 +3,7 @@
 | | |
 |---|---|
 | **Tipe** | Main — Web Portal Organisasi |
-| **Status** | 🎨 Design → Dev-ready (dokumentasi lengkap, belum ada kode produksi) |
+| **Status** | 🚀 Produksi — live di Vercel, database Neon Postgres |
 | **Sumber prototipe** | `stitch_ppit_nanjing_web_portal/` + `stitch_ppit_nanjing_web_portal (1)/` (folder lokal, hasil generate Google Stitch) |
 | **Peta navigasi** | [PPIT Nanjing MOC](./README.md) |
 
@@ -23,14 +23,23 @@ Prototipe UI (95 file `code.html` dari Google Stitch, ~63 layar fungsional unik)
 - ✅ [Information Architecture](./Information%20Architecture.md) — peta 63 layar, rute usulan, dikelompokkan per flow
 - ✅ [Design System](./Design%20System%20Overview.md) lengkap (warna, tipografi, **spacing system**, elevasi, ikonografi, komponen, motion) — direkonstruksi dari `DESIGN.md` + `tailwind.config` yang di-embed di kode prototipe, termasuk temuan drift/inkonsistensi yang perlu diselaraskan sebelum build
 - ✅ [Entity Relationship Diagram](./Entity%20Relationship%20Diagram.md) — 27 entitas, diturunkan dari analisis fungsional seluruh layar
-- ✅ [Tech Stack](./Tech%20Stack.md) — rekomendasi Next.js + Supabase + Vercel, dengan catatan khusus reachability jaringan Tiongkok
+- ✅ [Tech Stack](./Tech%20Stack.md) — Next.js + **Neon Postgres** + Vercel, dengan catatan khusus reachability jaringan Tiongkok
 
 ## Yang belum ada / langkah selanjutnya
 
-- Belum ada kode produksi (repo Next.js belum dibuat).
-- Belum ada Supabase project untuk PPIT Nanjing (MCP Supabase tersedia di environment ini, siap dipakai begitu keputusan stack difinalkan bersama pengurus).
-- Beberapa gap fungsional ditemukan saat analisis (lihat catatan "⚠️" di masing-masing modul admin, mis. tidak ada layar CRUD *tambah barang inventaris baru* di [Inventory Management](./Inventory%20Management.md)) — perlu diputuskan/ditambah saat build.
-- Forgot-password flow belum ada di prototipe Login.
+> Bagian ini dulunya menulis *"belum ada kode produksi"* — itu **sudah lama tidak benar**.
+> Aplikasinya sudah dibangun penuh dan berjalan di produksi. Status per-fitur yang
+> terverifikasi ada di Obsidian: `Projects/PPIT Nanjing/Status Pekerjaan.md`.
+
+Yang masih terbuka per 2026-08-20:
+
+- **Front-end berbahasa Inggris (i18n)** — Website Ideas menetapkannya sebagai syarat
+  audiens; situs masih sepenuhnya bahasa Indonesia dan belum ada kode i18n sama sekali.
+- **Migrasi ke `nanjing.ppitiongkok.com`** — menunggu pusat memasang record DNS.
+- **Vercel Blob belum disetel** (`BLOB_READ_WRITE_TOKEN`), jadi unggah berkas masih mati.
+- **Pengiriman email** belum aktif — butuh `GMAIL_USER`/`GMAIL_APP_PASSWORD` atau domain
+  terverifikasi di Resend.
+- **Verifikasi WeChat** di akhir sensus masih manual.
 
 ## Peta cepat
 
