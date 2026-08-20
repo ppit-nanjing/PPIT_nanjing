@@ -34,6 +34,10 @@ export const eventRegistrationStatusEnum = pgEnum("event_registration_status", [
   "attended",
   "cancelled",
 ]);
+// Pembayaran acara diverifikasi bendahara, bukan lewat payment gateway: Alipay/
+// WeChat Pay butuh merchant account berbadan hukum Tiongkok dan QR pribadi tidak
+// punya webhook (lihat catatan di src/lib/email.ts & halaman donasi).
+export const paymentStatusEnum = pgEnum("payment_status", ["not_required", "unpaid", "submitted", "verified", "rejected"]);
 export const publishStatusEnum = pgEnum("publish_status", ["draft", "published"]);
 export const jobTypeEnum = pgEnum("job_type", ["internship", "full_time", "part_time", "volunteer"]);
 export const jobPostingStatusEnum = pgEnum("job_posting_status", ["open", "closed"]);
@@ -321,8 +325,12 @@ export const events = pgTable("events", {
   scheduledPublishAt: timestamp("scheduled_publish_at"),
   departmentId: uuid("department_id").references(() => departments.id),
   createdBy: uuid("created_by").references(() => users.id),
+  // null / 0 = acara gratis. Kalau diisi, formulir pendaftaran meminta bukti bayar.
+  feeCny: integer("fee_cny"),
+  paymentInstructions: text("payment_instructions"),
 });
 
+// `feeCny` null = acara gratis; > 0 = peserta perlu membayar dan mengunggah bukti.
 export const eventRegistrations = pgTable(
   "event_registrations",
   {
@@ -333,6 +341,12 @@ export const eventRegistrations = pgTable(
     qrCodeToken: text("qr_code_token").unique(),
     registeredAt: timestamp("registered_at").notNull().defaultNow(),
     checkedInAt: timestamp("checked_in_at"),
+    // Pembayaran: peserta mengunggah bukti, bendahara acara memverifikasi.
+    paymentStatus: paymentStatusEnum("payment_status").notNull().default("not_required"),
+    paymentProofUrl: text("payment_proof_url"),
+    paymentNote: text("payment_note"),
+    paymentVerifiedAt: timestamp("payment_verified_at"),
+    paymentVerifiedBy: uuid("payment_verified_by").references((): AnyPgColumn => users.id),
   },
   (t) => [uniqueIndex("event_user_unique").on(t.eventId, t.userId)]
 );
@@ -839,3 +853,64 @@ export const donationChannels = pgTable("donation_channels", {
   orderIndex: integer("order_index").notNull().default(0),
   published: boolean("published").notNull().default(true),
 });
+
+// ---------- Panitia acara, sertifikat, pembayaran ----------
+// Menutup "Work Ledger", "Daftar jadi panitia + sertifikat", dan "Verifikasi
+// Pembayaran" dari Website Ideas. Lihat Obsidian: Projects/PPIT Nanjing/Status Pekerjaan.
+
+// Peran panitia bersifat PER-ACARA, bukan per-kabinet: bendahara sebuah acara
+// belum tentu bendahara kabinet (ini keluhan eksplisit di dokumen ide). Karena
+// itu tabelnya terpisah dari departmentMembers.
+export const eventCommitteeRoleEnum = pgEnum("event_committee_role", [
+  "ketua",
+  "wakil",
+  "sekretaris",
+  "bendahara",
+  "humas",
+  "acara",
+  "logistik",
+  "dokumentasi",
+  "anggota",
+]);
+
+export const eventCommittee = pgTable(
+  "event_committee",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    eventId: uuid("event_id").notNull().references(() => events.id, { onDelete: "cascade" }),
+    userId: uuid("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+    role: eventCommitteeRoleEnum("role").notNull().default("anggota"),
+    // Catatan tugas spesifik, mis. "PJ konsumsi". Bebas supaya tidak perlu
+    // menambah enum tiap kali ada peran baru.
+    note: text("note"),
+    assignedAt: timestamp("assigned_at").notNull().defaultNow(),
+  },
+  // Satu orang satu peran per acara; ganti peran = update, bukan baris baru.
+  (t) => [uniqueIndex("event_committee_unique").on(t.eventId, t.userId)],
+);
+
+// Sertifikat tidak dibuat otomatis: file-nya diunggah/dibuat di luar aplikasi,
+// di sini hanya dicatat + ditautkan. `fileUrl` boleh berupa tautan Google Drive
+// (dokumen ide menyebut ini eksplisit kalau storage terbatas).
+export const certificateKindEnum = pgEnum("certificate_kind", ["peserta", "panitia", "pemateri", "lainnya"]);
+
+export const certificates = pgTable("certificates", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  userId: uuid("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  eventId: uuid("event_id").references(() => events.id, { onDelete: "set null" }),
+  kind: certificateKindEnum("kind").notNull().default("peserta"),
+  title: text("title").notNull(),
+  fileUrl: text("file_url"),
+  issuedAt: timestamp("issued_at").notNull().defaultNow(),
+  issuedBy: uuid("issued_by").references(() => users.id),
+});
+
+export const eventCommitteeRelations = relations(eventCommittee, ({ one }) => ({
+  event: one(events, { fields: [eventCommittee.eventId], references: [events.id] }),
+  user: one(users, { fields: [eventCommittee.userId], references: [users.id] }),
+}));
+
+export const certificatesRelations = relations(certificates, ({ one }) => ({
+  event: one(events, { fields: [certificates.eventId], references: [events.id] }),
+  user: one(users, { fields: [certificates.userId], references: [users.id] }),
+}));
