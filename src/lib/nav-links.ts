@@ -12,3 +12,13 @@ export const NAV_LINKS = [
   { href: "/jobs", label: "Lowongan" },
   { href: "/inventory", label: "Inventaris" },
 ];
+
+// Grouped behind a "Jelajahi" dropdown in the desktop bar. Measured: putting
+// these inline takes the link row to 1256px inside a 1200px pill, so it
+// overflows on ordinary laptop widths. The footer and burger menu still list
+// them flat, where there is room.
+export const DISCOVER_LINKS = [
+  { href: "/universities", label: "Kampus", desc: "Direktori universitas di Nanjing" },
+  { href: "/places", label: "Tempat", desc: "Wisata, rumah ibadah, dan lokasi penting" },
+  { href: "/catalogue", label: "Katalog", desc: "Merchandise, donasi, dan sponsorship" },
+];

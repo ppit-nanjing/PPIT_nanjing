@@ -3,12 +3,12 @@
 import { useEffect, useState } from "react";
 import { usePathname } from "next/navigation";
 import { useSession, signIn } from "next-auth/react";
-import { Menu, X, Search, User } from "lucide-react";
+import { Menu, X, Search, User, ChevronDown } from "lucide-react";
 import Image from "next/image";
 import { AccountMenu } from "@/components/account-menu";
 import { NotificationBell } from "@/components/notifications/notification-bell";
 import { CommandPalette, useCommandPalette } from "@/components/command-palette";
-import { NAV_LINKS } from "@/lib/nav-links";
+import { NAV_LINKS, DISCOVER_LINKS } from "@/lib/nav-links";
 import Link from "next/link";
 
 // Scroll state: a gentle, intentional pill. We use a boolean threshold
@@ -146,7 +146,7 @@ export function SiteNav() {
 
             {/* Inline links: desktop (lg) and up only - narrower viewports use
                 the burger menu below. */}
-            <div className="hidden lg:flex items-center gap-5 xl:gap-7 text-body-md shrink-0">
+            <div className="hidden lg:flex items-center gap-3 xl:gap-7 text-body-md shrink-0">
               {NAV_LINKS.map((link) => {
                 const active = pathname === link.href;
                 return (
@@ -166,6 +166,7 @@ export function SiteNav() {
                   </a>
                 );
               })}
+              <DiscoverMenu pathname={pathname} />
             </div>
 
             <div className="flex items-center gap-1 sm:gap-2 shrink-0">
@@ -288,7 +289,9 @@ export function SiteNav() {
             )}
           </div>
 
-          {NAV_LINKS.map((link) => {
+          {/* The burger menu is a vertical list, so the Jelajahi group that had
+              to collapse on desktop can stay flat here. */}
+          {[...NAV_LINKS, ...DISCOVER_LINKS].map((link) => {
             const active = pathname === link.href;
             return (
               <a
@@ -310,5 +313,45 @@ export function SiteNav() {
 
       {paletteOpen && <CommandPalette onClose={() => setPaletteOpen(false)} />}
     </>
+  );
+}
+
+// "Jelajahi" group. The flat bar cannot hold these three as well - measured at
+// 1256px of links inside a 1200px pill - so they collapse into one trigger.
+function DiscoverMenu({ pathname }: { pathname: string }) {
+  const [open, setOpen] = useState(false);
+  const active = DISCOVER_LINKS.some((l) => pathname === l.href || pathname.startsWith(l.href + "/"));
+  return (
+    <div className="relative" onMouseEnter={() => setOpen(true)} onMouseLeave={() => setOpen(false)}>
+      <button
+        type="button"
+        aria-expanded={open}
+        aria-haspopup="true"
+        onClick={() => setOpen((o) => !o)}
+        className={`flex items-center gap-1 h-5 shrink-0 whitespace-nowrap font-medium ${
+          active ? "text-primary" : "text-secondary hover:text-primary-container"
+        }`}
+      >
+        Jelajahi
+        <ChevronDown size={14} className={`transition-transform ${open ? "rotate-180" : ""}`} aria-hidden />
+      </button>
+      {open && (
+        <div className="absolute left-0 top-full pt-3 z-50">
+          <div className="w-72 bg-surface-container-lowest border border-outline-variant rounded-xl shadow-lg p-2">
+            {DISCOVER_LINKS.map((l) => (
+              <Link
+                key={l.href}
+                href={l.href}
+                onClick={() => setOpen(false)}
+                className="block rounded-lg px-3 py-2.5 hover:bg-surface-container-low focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-container"
+              >
+                <span className="block text-body-md text-on-background font-medium">{l.label}</span>
+                <span className="block text-label-caps text-on-surface-variant">{l.desc}</span>
+              </Link>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
   );
 }
