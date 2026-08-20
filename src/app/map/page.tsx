@@ -75,29 +75,36 @@ export default async function NanjingMapPage() {
       </header>
 
       <main className="max-w-[var(--container-max)] mx-auto px-[var(--spacing-container-padding)] pb-20">
-        <CoverageMap
-          features={features}
-          counts={counts}
-          ariaLabel={`Peta ${features.length} distrik Kota Nanjing`}
-          hint="Arahkan kursor atau ketuk sebuah distrik untuk melihat namanya. Batas wilayah dari data administrasi resmi Tiongkok."
-          unit="tempat & kampus tercatat"
-          emptyUnit="belum ada yang ditandai di distrik ini"
-        />
+        {/* Nanjing is tall and narrow, so the map is a slim column. Pairing it
+            with the district list fills the row instead of leaving dead space. */}
+        <div className="grid grid-cols-1 lg:grid-cols-[26rem_minmax(0,1fr)] gap-6 items-start">
+          <CoverageMap
+            features={features}
+            counts={counts}
+            ariaLabel={`Peta ${features.length} distrik Kota Nanjing`}
+            hint="Cari, arahkan kursor, atau ketuk sebuah distrik. Batas wilayah dari data administrasi resmi Tiongkok."
+            searchLabel="Cari distrik"
+            unit="tempat & kampus tercatat"
+            emptyUnit="belum ada yang ditandai di distrik ini"
+          />
 
-        <ul className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 mt-8">
-          {features.map((f) => (
-            <li
-              key={f.properties.id}
-              className="bg-surface-container-lowest border border-outline-variant rounded-xl px-4 py-3"
-            >
-              <p className="text-body-md text-on-background">{f.properties.label}</p>
-              <p className="text-label-caps text-on-surface-variant">
-                {f.properties.zh}
-                {counts[f.properties.id] != null ? ` · ${counts[f.properties.id]}` : ""}
-              </p>
-            </li>
-          ))}
-        </ul>
+          <ul className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+            {features.map((f) => (
+              <li
+                key={f.properties.id}
+                className="flex items-baseline justify-between gap-3 bg-surface-container-lowest border border-outline-variant rounded-xl px-4 py-3"
+              >
+                <span className="min-w-0">
+                  <span className="block text-body-md text-on-background">{f.properties.label}</span>
+                  <span className="block text-label-caps text-on-surface-variant">{f.properties.zh}</span>
+                </span>
+                <span className="text-label-caps uppercase tracking-wide text-on-surface-variant shrink-0">
+                  {counts[f.properties.id] ?? "—"}
+                </span>
+              </li>
+            ))}
+          </ul>
+        </div>
 
         {/* Tiga peta di situs ini memang berbeda cakupan - tautkan supaya tidak tertukar. */}
         <div className="mt-10 bg-surface-container-low border border-outline-variant rounded-xl p-5">
