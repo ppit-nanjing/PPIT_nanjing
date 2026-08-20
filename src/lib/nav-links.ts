@@ -20,5 +20,6 @@ export const NAV_LINKS = [
 export const DISCOVER_LINKS = [
   { href: "/universities", label: "Kampus", desc: "Direktori universitas di Nanjing" },
   { href: "/places", label: "Tempat", desc: "Wisata, rumah ibadah, dan lokasi penting" },
+  { href: "/coverage", label: "Wilayah", desc: "9 kota naungan PPIT Nanjing" },
   { href: "/catalogue", label: "Katalog", desc: "Merchandise, donasi, dan sponsorship" },
 ];
