@@ -723,3 +723,119 @@ export const inventoryItemsRelations = relations(inventoryItems, ({ many }) => (
 export const jobPostingsRelations = relations(jobPostings, ({ many }) => ({
   applications: many(jobApplications),
 }));
+
+// ---------- Konten kota Nanjing (Places, Universities) ----------
+// Mirrors what the Chongqing chapter site offers under "Discover", adapted to
+// Nanjing. See docs/Perbandingan dengan PPIT Chongqing.md.
+
+export const placeCategoryEnum = pgEnum("place_category", ["tourism", "spiritual", "practical"]);
+
+// Tempat wisata / ibadah / fasilitas penting, dikelompokkan per distrik Nanjing.
+export const places = pgTable("places", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  name: text("name").notNull(),
+  nameZh: text("name_zh"),
+  category: placeCategoryEnum("category").notNull().default("tourism"),
+  district: text("district"),
+  description: text("description"),
+  address: text("address"),
+  addressZh: text("address_zh"),
+  imageUrl: text("image_url"),
+  mapUrl: text("map_url"),
+  orderIndex: integer("order_index").notNull().default(0),
+  published: boolean("published").notNull().default(true),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
+// Direktori kampus. `district` sengaja teks bebas, bukan enum: daftar distrik
+// Nanjing bisa berubah dan admin harus bisa menambah tanpa migrasi.
+export const universities = pgTable("universities", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  name: text("name").notNull(),
+  nameZh: text("name_zh"),
+  abbreviation: text("abbreviation"),
+  district: text("district"),
+  description: text("description"),
+  websiteUrl: text("website_url"),
+  logoUrl: text("logo_url"),
+  studentCount: integer("student_count"),
+  isPartner: boolean("is_partner").notNull().default(false),
+  orderIndex: integer("order_index").notNull().default(0),
+  published: boolean("published").notNull().default(true),
+});
+
+// Teks pengantar per distrik pada halaman Universities (Chongqing memberi tiap
+// distrik satu paragraf konteks). Dipisah dari `universities` supaya tidak
+// diulang di setiap baris kampus.
+export const districts = pgTable("districts", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  name: text("name").notNull().unique(),
+  nameZh: text("name_zh"),
+  description: text("description"),
+  orderIndex: integer("order_index").notNull().default(0),
+});
+
+// ---------- Catalogue (merchandise, sponsorship, donasi) ----------
+
+export const merchandiseStatusEnum = pgEnum("merchandise_status", ["available", "preorder", "unavailable"]);
+
+// Etalase, bukan toko: tidak ada keranjang atau pembayaran. Chongqing pun
+// menandai seluruh itemnya "Unavailable".
+export const merchandise = pgTable("merchandise", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  name: text("name").notNull(),
+  description: text("description"),
+  priceCny: integer("price_cny"),
+  imageUrl: text("image_url"),
+  status: merchandiseStatusEnum("status").notNull().default("unavailable"),
+  contactNote: text("contact_note"),
+  orderIndex: integer("order_index").notNull().default(0),
+  published: boolean("published").notNull().default(true),
+});
+
+export const sponsorTierEnum = pgEnum("sponsor_tier", ["platinum", "gold", "silver", "partner"]);
+
+export const sponsors = pgTable("sponsors", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  name: text("name").notNull(),
+  tier: sponsorTierEnum("tier").notNull().default("partner"),
+  logoUrl: text("logo_url"),
+  websiteUrl: text("website_url"),
+  description: text("description"),
+  orderIndex: integer("order_index").notNull().default(0),
+  published: boolean("published").notNull().default(true),
+});
+
+export const donationStatusEnum = pgEnum("donation_status", ["pending", "verified", "rejected"]);
+
+// Donasi dicatat, BUKAN diproses. Alipay/WeChat Pay tidak bisa diintegrasikan
+// tanpa merchant account berbadan hukum Tiongkok, dan QR pribadi tidak punya
+// webhook - jadi donatur mengirim lewat QR lalu melaporkannya di sini, dan
+// admin memverifikasi manual. Aplikasi tidak pernah menyentuh uang.
+export const donations = pgTable("donations", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  userId: uuid("user_id").references(() => users.id),
+  donorName: text("donor_name").notNull(),
+  amountCny: integer("amount_cny"),
+  method: text("method"),
+  message: text("message"),
+  proofUrl: text("proof_url"),
+  anonymous: boolean("anonymous").notNull().default(false),
+  status: donationStatusEnum("status").notNull().default("pending"),
+  note: text("note"),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  verifiedAt: timestamp("verified_at"),
+});
+
+// Nomor/QR tujuan donasi, dikelola admin. Satu baris per kanal supaya bisa
+// ditambah (Alipay, WeChat, transfer bank Indonesia) tanpa ubah kode.
+export const donationChannels = pgTable("donation_channels", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  label: text("label").notNull(),
+  accountName: text("account_name"),
+  accountDetail: text("account_detail"),
+  qrImageUrl: text("qr_image_url"),
+  instructions: text("instructions"),
+  orderIndex: integer("order_index").notNull().default(0),
+  published: boolean("published").notNull().default(true),
+});
