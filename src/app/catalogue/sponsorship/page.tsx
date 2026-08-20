@@ -1,8 +1,8 @@
-import { asc, eq } from "drizzle-orm";
+import { asc, desc, eq, sql, count } from "drizzle-orm";
 import Image from "next/image";
 import { Handshake, ExternalLink } from "lucide-react";
 import { db } from "@/db";
-import { sponsors } from "@/db/schema";
+import { sponsors, events, eventRegistrations, eventCommittee } from "@/db/schema";
 
 const TIER_LABEL: Record<string, string> = {
   platinum: "Platinum",
@@ -13,11 +13,43 @@ const TIER_LABEL: Record<string, string> = {
 const TIER_ORDER = ["platinum", "gold", "silver", "partner"];
 
 export default async function SponsorshipPage() {
-  const rows = await db
-    .select()
-    .from(sponsors)
-    .where(eq(sponsors.published, true))
-    .orderBy(asc(sponsors.orderIndex), asc(sponsors.name));
+  const [rows, participation] = await Promise.all([
+    db
+      .select()
+      .from(sponsors)
+      .where(eq(sponsors.published, true))
+      .orderBy(asc(sponsors.orderIndex), asc(sponsors.name)),
+    // Kehadiran nyata per acara: peserta yang benar-benar check-in, plus panitia
+    // yang hadir - dokumen ide meminta "gak hanya peserta tapi panit yg dtng juga".
+    db
+      .select({
+        id: events.id,
+        title: events.title,
+        startAt: events.startAt,
+        attendees: count(eventRegistrations.id),
+      })
+      .from(events)
+      .leftJoin(
+        eventRegistrations,
+        sql`${eventRegistrations.eventId} = ${events.id} AND ${eventRegistrations.status} = 'attended'`,
+      )
+      .where(eq(events.status, "published"))
+      .groupBy(events.id, events.title, events.startAt)
+      .orderBy(desc(events.startAt))
+      .limit(12),
+  ]);
+
+  const committeeCounts = await db
+    .select({ eventId: eventCommittee.eventId, n: count(eventCommittee.id) })
+    .from(eventCommittee)
+    .groupBy(eventCommittee.eventId);
+  const committeeByEvent = new Map(committeeCounts.map((c) => [c.eventId, c.n]));
+  const withCommittee = participation.map((p) => ({
+    ...p,
+    committee: committeeByEvent.get(p.id) ?? 0,
+    total: p.attendees + (committeeByEvent.get(p.id) ?? 0),
+  }));
+  const totalReach = withCommittee.reduce((s, p) => s + p.total, 0);
 
   const byTier = TIER_ORDER.map((t) => ({ tier: t, list: rows.filter((s) => s.tier === t) })).filter(
     (g) => g.list.length > 0,
@@ -29,6 +61,49 @@ export default async function SponsorshipPage() {
         Mitra dan sponsor yang mendukung program PPIT Nanjing. Tertarik bekerja sama? Hubungi pengurus
         lewat halaman Tentang Kami.
       </p>
+
+      {/* Participation: angka yang dicari sponsor sebelum memutuskan. */}
+      {withCommittee.length > 0 && (
+        <div className="mb-12">
+          <h2 className="text-headline-md text-on-background mb-1">Jangkauan Acara</h2>
+          <p className="text-body-md text-on-surface-variant mb-5">
+            Kehadiran tercatat pada {withCommittee.length} acara terakhir &mdash; peserta yang benar-benar
+            hadir ditambah panitia, total <strong className="text-on-background">{totalReach} orang</strong>.
+          </p>
+          <div className="overflow-x-auto">
+            <table className="w-full border-collapse text-body-md">
+              <thead>
+                <tr className="border-b border-outline-variant">
+                  <th className="text-left p-3 text-label-caps uppercase tracking-wide text-on-surface-variant font-medium">Acara</th>
+                  <th className="text-right p-3 text-label-caps uppercase tracking-wide text-on-surface-variant font-medium">Peserta hadir</th>
+                  <th className="text-right p-3 text-label-caps uppercase tracking-wide text-on-surface-variant font-medium">Panitia</th>
+                  <th className="text-right p-3 text-label-caps uppercase tracking-wide text-on-surface-variant font-medium">Total</th>
+                </tr>
+              </thead>
+              <tbody>
+                {withCommittee.map((p) => (
+                  <tr key={p.id} className="border-b border-outline-variant/60">
+                    <td className="p-3 text-on-background">
+                      {p.title}
+                      {p.startAt && (
+                        <span className="block text-label-caps text-on-surface-variant">
+                          {new Date(p.startAt).toLocaleDateString("id-ID", { dateStyle: "medium" })}
+                        </span>
+                      )}
+                    </td>
+                    <td className="p-3 text-right text-on-surface-variant">{p.attendees}</td>
+                    <td className="p-3 text-right text-on-surface-variant">{p.committee}</td>
+                    <td className="p-3 text-right text-on-background font-medium">{p.total}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          <p className="text-label-caps text-on-surface-variant mt-3">
+            Dihitung dari check-in QR di acara, bukan dari jumlah pendaftar.
+          </p>
+        </div>
+      )}
 
       {rows.length === 0 ? (
         <div className="bg-surface-container-low border border-outline-variant rounded-xl p-10 text-center">
