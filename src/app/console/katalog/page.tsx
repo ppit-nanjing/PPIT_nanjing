@@ -251,8 +251,20 @@ export default async function ConsoleKatalogPage() {
               <input name="abbreviation" placeholder="NJU" className={input} />
             </label>
             <label className="flex flex-col gap-2">
-              <span className={label}>Distrik</span>
+              <span className={label}>Kota *</span>
+              <input name="city" placeholder="Nanjing" className={input} />
+            </label>
+            <label className="flex flex-col gap-2">
+              <span className={label}>Distrik (opsional, khusus Nanjing)</span>
               <input name="district" placeholder="Gulou" className={input} />
+            </label>
+            <label className="flex flex-col gap-2">
+              <span className={label}>Koordinator</span>
+              <input name="coordinatorName" className={input} />
+            </label>
+            <label className="flex flex-col gap-2">
+              <span className={label}>Email koordinator</span>
+              <input name="coordinatorEmail" type="email" className={input} />
             </label>
             <label className="flex flex-col gap-2">
               <span className={label}>Situs</span>
@@ -294,7 +306,8 @@ export default async function ConsoleKatalogPage() {
                   {u.name} {u.abbreviation && <span className="text-on-surface-variant">({u.abbreviation})</span>}
                 </p>
                 <p className="text-label-caps text-on-surface-variant">
-                  {u.district ?? "tanpa distrik"}
+                  {u.city ?? "tanpa kota"}
+                  {u.coordinatorName ? ` · ${u.coordinatorName}` : ""}
                   {u.isPartner ? " · mitra" : ""}
                 </p>
               </Row>

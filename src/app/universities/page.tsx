@@ -2,39 +2,37 @@ import { asc, eq } from "drizzle-orm";
 import Image from "next/image";
 import { GraduationCap, ExternalLink } from "lucide-react";
 import { db } from "@/db";
-import { universities, districts as districtsTable } from "@/db/schema";
+import { universities, coverageCities } from "@/db/schema";
 import { SiteNav } from "@/components/site-nav";
 import { SiteFooter } from "@/components/site-footer";
 
 export const metadata = {
   title: "Direktori Universitas - PPIT Nanjing",
-  description: "Daftar universitas di Nanjing beserta distriknya, untuk mahasiswa Indonesia yang akan atau sedang kuliah di Nanjing.",
+  description: "Daftar universitas di 9 kota naungan PPIT Nanjing, untuk mahasiswa Indonesia yang akan atau sedang kuliah di wilayah ini.",
 };
 
-const UNASSIGNED = "Distrik lainnya";
+const UNASSIGNED = "Kota lainnya";
 
 export default async function UniversitiesPage() {
-  const [rows, districtInfo] = await Promise.all([
+  const [rows, cityInfo] = await Promise.all([
     db
       .select()
       .from(universities)
       .where(eq(universities.published, true))
       .orderBy(asc(universities.orderIndex), asc(universities.name)),
-    db.select().from(districtsTable).orderBy(asc(districtsTable.orderIndex), asc(districtsTable.name)),
+    // Kampus dikelompokkan per KOTA — mereka tersebar di 9 kota naungan, bukan
+    // cuma di distrik-distrik Nanjing.
+    db.select().from(coverageCities).orderBy(asc(coverageCities.label)),
   ]);
 
-  // Group by district, keeping the admin-defined district order first and any
-  // district that has no `districts` row after it.
-  const byDistrict = new Map<string, typeof rows>();
+  const byCity = new Map<string, typeof rows>();
   for (const u of rows) {
-    const key = u.district?.trim() || UNASSIGNED;
-    byDistrict.set(key, [...(byDistrict.get(key) ?? []), u]);
+    const key = u.city?.trim() || UNASSIGNED;
+    byCity.set(key, [...(byCity.get(key) ?? []), u]);
   }
-  const ordered = [
-    ...districtInfo.map((d) => d.name).filter((n) => byDistrict.has(n)),
-    ...[...byDistrict.keys()].filter((k) => !districtInfo.some((d) => d.name === k)),
-  ];
-  const infoByName = new Map(districtInfo.map((d) => [d.name, d]));
+  // Kota terbanyak dulu; Nanjing hampir pasti di atas.
+  const ordered = [...byCity.keys()].sort((a, b) => (byCity.get(b)?.length ?? 0) - (byCity.get(a)?.length ?? 0));
+  const infoByName = new Map(cityInfo.map((c) => [c.label, c]));
   const partnerCount = rows.filter((u) => u.isPartner).length;
 
   return (
@@ -48,8 +46,8 @@ export default async function UniversitiesPage() {
         </h1>
         <p className="text-body-lg text-on-surface-variant max-w-2xl">
           {rows.length > 0
-            ? `${rows.length} universitas di ${ordered.length} distrik Nanjing${partnerCount ? `, ${partnerCount} di antaranya kampus mitra` : ""}.`
-            : "Daftar universitas di Nanjing beserta distriknya."}
+            ? `${rows.length} universitas di ${ordered.length} kota naungan PPIT Nanjing${partnerCount ? `, ${partnerCount} di antaranya kampus mitra` : ""}.`
+            : "Daftar universitas di wilayah naungan PPIT Nanjing."}
         </p>
       </header>
 
@@ -64,21 +62,21 @@ export default async function UniversitiesPage() {
           </div>
         ) : (
           <div className="flex flex-col gap-12">
-            {ordered.map((district) => {
-              const info = infoByName.get(district);
-              const list = byDistrict.get(district) ?? [];
+            {ordered.map((city) => {
+              const info = infoByName.get(city);
+              const list = byCity.get(city) ?? [];
               return (
-                <section key={district}>
+                <section key={city}>
                   <div className="border-b border-outline-variant pb-4 mb-5">
                     <h2 className="text-headline-md text-on-background">
-                      {district}
-                      {info?.nameZh && <span className="text-body-lg text-on-surface-variant"> {info.nameZh}</span>}
+                      {city}
                     </h2>
                     <p className="text-label-caps uppercase tracking-wide text-on-surface-variant mt-1">
                       {list.length} universitas
+                      {info?.memberCount != null ? ` · ± ${info.memberCount} mahasiswa Indonesia` : ""}
                     </p>
-                    {info?.description && (
-                      <p className="text-body-md text-on-surface-variant mt-3 max-w-3xl">{info.description}</p>
+                    {info?.note && (
+                      <p className="text-body-md text-on-surface-variant mt-3 max-w-3xl">{info.note}</p>
                     )}
                   </div>
 
@@ -120,6 +118,19 @@ export default async function UniversitiesPage() {
                               <span className="text-label-caps text-on-surface-variant">
                                 ± {u.studentCount} mahasiswa Indonesia
                               </span>
+                            )}
+                            {u.coordinatorName && (
+                              <span className="text-label-caps text-on-surface-variant">
+                                Koordinator: <span className="text-on-background">{u.coordinatorName}</span>
+                              </span>
+                            )}
+                            {u.coordinatorEmail && (
+                              <a
+                                href={`mailto:${u.coordinatorEmail}`}
+                                className="text-label-caps text-primary-container hover:underline"
+                              >
+                                {u.coordinatorEmail}
+                              </a>
                             )}
                             {u.websiteUrl && (
                               <a
