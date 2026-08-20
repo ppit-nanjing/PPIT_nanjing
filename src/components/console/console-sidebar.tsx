@@ -16,6 +16,7 @@ import {
   BookOpen,
   Images,
   Store,
+  ClipboardList,
   UserPlus,
   BellRing,
 } from "lucide-react";
@@ -39,6 +40,7 @@ const GROUPS: { title: string; items: NavItem[] }[] = [
       { href: "/console/users", label: "Pengguna", icon: Users, module: "users" },
       { href: "/console/organization", label: "Organisasi", icon: Building2, module: "organization" },
       { href: "/console/events", label: "Kegiatan", icon: CalendarDays, module: "events" },
+      { href: "/console/work-ledger", label: "Work Ledger", icon: ClipboardList, module: "events" },
       { href: "/console/inventory", label: "Inventaris", icon: Package, module: "inventory" },
       { href: "/console/membership", label: "Pendaftaran", icon: UserPlus, module: "membership" },
       { href: "/console/content", label: "Konten", icon: Images, module: "content" },
