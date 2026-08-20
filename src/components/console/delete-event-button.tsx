@@ -22,7 +22,7 @@ export function DeleteEventButton({
         }}
         className={
           className ??
-          "text-label-caps uppercase tracking-wide text-red-600 hover:text-red-700 px-3 py-2 rounded-md hover:bg-red-50 transition-colors"
+          "text-label-caps uppercase tracking-wide text-error hover:opacity-80 px-3 py-2 rounded-md hover:bg-error-container/30 transition-colors"
         }
       >
         {label}
