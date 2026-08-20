@@ -3,7 +3,7 @@
 import { asc, eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { db } from "@/db";
-import { places, universities, districts, merchandise, sponsors } from "@/db/schema";
+import { places, universities, districts, merchandise, sponsors, coverageCities } from "@/db/schema";
 import { requireModuleAccess } from "@/lib/admin-scope";
 
 // Places, universities, merchandise and sponsors are all editorial content, so
@@ -28,6 +28,7 @@ function refresh() {
   revalidatePath("/universities");
   revalidatePath("/catalogue");
   revalidatePath("/catalogue/sponsorship");
+  revalidatePath("/coverage");
 }
 
 // ---------- reads ----------
@@ -171,5 +172,29 @@ export async function createSponsor(formData: FormData) {
 export async function deleteSponsor(formData: FormData) {
   await requireModuleAccess(CONTENT);
   await db.delete(sponsors).where(eq(sponsors.id, String(formData.get("id") ?? "")));
+  refresh();
+}
+
+// ---------- wilayah naungan ----------
+// Barisnya sudah di-seed sesuai berkas GeoJSON; admin hanya memperbarui angka
+// dan kontak, tidak menambah/menghapus kota.
+export async function listCoverageCities() {
+  await requireModuleAccess(CONTENT);
+  return db.select().from(coverageCities).orderBy(asc(coverageCities.label));
+}
+
+export async function updateCoverageCity(formData: FormData) {
+  await requireModuleAccess(CONTENT);
+  const id = String(formData.get("id") ?? "");
+  if (!id) throw new Error("Kota tidak dikenal");
+  await db
+    .update(coverageCities)
+    .set({
+      memberCount: num(formData, "memberCount"),
+      contactInfo: str(formData, "contactInfo"),
+      note: str(formData, "note"),
+      updatedAt: new Date(),
+    })
+    .where(eq(coverageCities.id, id));
   refresh();
 }

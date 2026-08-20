@@ -12,6 +12,8 @@ import {
   deleteMerchandise,
   createSponsor,
   deleteSponsor,
+  listCoverageCities,
+  updateCoverageCity,
 } from "@/app/actions/city-content";
 import {
   listDonationsForAdmin,
@@ -45,6 +47,7 @@ function Row({ children, onDelete, id }: { children: React.ReactNode; onDelete: 
 export default async function ConsoleKatalogPage() {
   const session = await requireModuleAccess("content");
   const data = await listCityContent();
+  const coverage = await listCoverageCities();
 
   // Donations are gated harder than the rest of this page, so the section is
   // only rendered for scopes that may actually act on it.
@@ -129,6 +132,53 @@ export default async function ConsoleKatalogPage() {
               </Row>
             ))
           )}
+        </ul>
+      </CollapsibleSection>
+
+      {/* ---------- Wilayah naungan ---------- */}
+      <CollapsibleSection
+        title="Wilayah Naungan"
+        description={`${coverage.filter((c) => c.memberCount != null).length} dari ${coverage.length} kota sudah ada angkanya`}
+        className="mb-6"
+        defaultOpen={false}
+      >
+        <p className="text-body-md text-on-surface-variant mb-4 max-w-2xl">
+          Sembilan kota naungan PPIT Nanjing. Batas wilayahnya tetap (dari data administrasi resmi Tiongkok),
+          jadi di sini hanya jumlah mahasiswa dan kontak yang bisa diubah.
+        </p>
+        <ul className="flex flex-col gap-3">
+          {coverage.map((c) => (
+            <li key={c.id} className="bg-surface-container-lowest border border-outline-variant rounded-xl p-4">
+              <form action={updateCoverageCity} className="flex flex-wrap items-end gap-3">
+                <input type="hidden" name="id" value={c.id} />
+                <span className="text-body-md text-on-background min-w-[7rem]">{c.label}</span>
+                <label className="flex flex-col gap-1">
+                  <span className={label}>Jumlah mahasiswa</span>
+                  <input
+                    name="memberCount"
+                    type="number"
+                    min={0}
+                    defaultValue={c.memberCount ?? ""}
+                    className="bg-soft-gray rounded-md p-2 text-body-md w-32"
+                  />
+                </label>
+                <label className="flex flex-col gap-1 flex-1 min-w-[12rem]">
+                  <span className={label}>Kontak</span>
+                  <input name="contactInfo" defaultValue={c.contactInfo ?? ""} className="bg-soft-gray rounded-md p-2 text-body-md" />
+                </label>
+                <label className="flex flex-col gap-1 flex-1 min-w-[12rem]">
+                  <span className={label}>Catatan</span>
+                  <input name="note" defaultValue={c.note ?? ""} className="bg-soft-gray rounded-md p-2 text-body-md" />
+                </label>
+                <button
+                  type="submit"
+                  className="bg-primary-container text-on-primary text-label-caps uppercase tracking-wide px-4 py-2 rounded-md hover:bg-primary transition-colors"
+                >
+                  Simpan
+                </button>
+              </form>
+            </li>
+          ))}
         </ul>
       </CollapsibleSection>
 
