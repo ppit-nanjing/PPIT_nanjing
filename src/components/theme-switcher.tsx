@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { Sun, Moon, Monitor } from "lucide-react";
 
 // Each theme is a palette named after something that actually identifies Nanjing,
 // so the site reads as this city and not as a generic chapter template. The
@@ -14,7 +15,24 @@ export const CITY_THEMES = [
 export type CityThemeId = (typeof CITY_THEMES)[number]["id"];
 
 export const THEME_STORAGE_KEY = "ppit-city-theme";
+export const MODE_STORAGE_KEY = "ppit-color-mode";
 const DEFAULT_THEME: CityThemeId = "zijin";
+
+// "system" is a stored *absence* of preference: the attribute still gets an
+// explicit light/dark value so the CSS never needs a duplicate @media block.
+type ColorMode = "light" | "dark" | "system";
+const MODES: { id: ColorMode; label: string; Icon: typeof Sun }[] = [
+  { id: "light", label: "Terang", Icon: Sun },
+  { id: "dark", label: "Gelap", Icon: Moon },
+  { id: "system", label: "Ikut sistem", Icon: Monitor },
+];
+
+const prefersDark = () => window.matchMedia("(prefers-color-scheme: dark)").matches;
+
+function applyMode(mode: ColorMode) {
+  document.documentElement.dataset.mode =
+    mode === "system" ? (prefersDark() ? "dark" : "light") : mode;
+}
 
 function apply(id: CityThemeId) {
   // The default palette lives on bare :root, so it must not carry an attribute.
@@ -24,6 +42,7 @@ function apply(id: CityThemeId) {
 
 export function ThemeSwitcher() {
   const [active, setActive] = useState<CityThemeId>(DEFAULT_THEME);
+  const [mode, setMode] = useState<ColorMode>("system");
 
   // Read once on mount rather than during render: the server has no access to
   // localStorage, so touching it while rendering would desync hydration.
@@ -33,7 +52,25 @@ export function ThemeSwitcher() {
       // eslint-disable-next-line react-hooks/set-state-in-effect -- client-only storage read
       setActive(stored);
     }
+    const storedMode = localStorage.getItem(MODE_STORAGE_KEY) as ColorMode | null;
+    if (storedMode === "light" || storedMode === "dark") setMode(storedMode);
   }, []);
+
+  // While on "system", follow the OS if it flips mid-session.
+  useEffect(() => {
+    if (mode !== "system") return;
+    const mq = window.matchMedia("(prefers-color-scheme: dark)");
+    const onChange = () => applyMode("system");
+    mq.addEventListener("change", onChange);
+    return () => mq.removeEventListener("change", onChange);
+  }, [mode]);
+
+  function chooseMode(next: ColorMode) {
+    setMode(next);
+    applyMode(next);
+    if (next === "system") localStorage.removeItem(MODE_STORAGE_KEY);
+    else localStorage.setItem(MODE_STORAGE_KEY, next);
+  }
 
   function choose(id: CityThemeId) {
     setActive(id);
@@ -43,7 +80,7 @@ export function ThemeSwitcher() {
 
   return (
     <div className="flex flex-col gap-2">
-      <span className="text-label-caps uppercase tracking-wide text-on-surface-variant">Tema Kota</span>
+      <span className="text-label-caps uppercase tracking-wide opacity-70">Tema Kota</span>
       <div role="radiogroup" aria-label="Pilih tema kota" className="flex flex-wrap gap-2">
         {CITY_THEMES.map((t) => {
           const selected = t.id === active;
@@ -55,20 +92,41 @@ export function ThemeSwitcher() {
               aria-checked={selected}
               onClick={() => choose(t.id)}
               title={`${t.hanzi} — ${t.note}`}
-              className={`flex items-center gap-2 rounded-md border px-3 py-2 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-container focus-visible:ring-offset-2 focus-visible:ring-offset-background ${
-                selected
-                  ? "border-primary-container bg-surface-container-high"
-                  : "border-outline-variant hover:bg-surface-container-low"
+              className={`flex items-center gap-2 rounded-md border px-3 py-2 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-current focus-visible:ring-offset-2 focus-visible:ring-offset-transparent ${
+                selected ? "border-current bg-current/15" : "border-current/30 hover:bg-current/10"
               }`}
             >
               <span
                 aria-hidden
-                className="h-4 w-4 rounded-full border border-outline-variant"
+                className="h-4 w-4 rounded-full border border-current/30"
                 style={{ background: t.swatch }}
               />
-              <span className="text-body-sm text-on-background">{t.hanzi}</span>
+              <span className="text-body-sm">{t.hanzi}</span>
               {/* Selection is conveyed by more than colour alone. */}
-              {selected && <span className="text-label-caps text-on-surface-variant">✓</span>}
+              {selected && <span className="text-label-caps opacity-70">✓</span>}
+            </button>
+          );
+        })}
+      </div>
+
+      <span className="text-label-caps uppercase tracking-wide opacity-70 mt-3">Tampilan</span>
+      <div role="radiogroup" aria-label="Pilih mode terang atau gelap" className="flex flex-wrap gap-2">
+        {MODES.map(({ id, label, Icon }) => {
+          const selected = id === mode;
+          return (
+            <button
+              key={id}
+              type="button"
+              role="radio"
+              aria-checked={selected}
+              onClick={() => chooseMode(id)}
+              className={`flex items-center gap-2 rounded-md border px-3 py-2 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-current focus-visible:ring-offset-2 focus-visible:ring-offset-transparent ${
+                selected ? "border-current bg-current/15" : "border-current/30 hover:bg-current/10"
+              }`}
+            >
+              <Icon size={14} aria-hidden />
+              <span className="text-body-sm">{label}</span>
+              {selected && <span className="text-label-caps opacity-70">✓</span>}
             </button>
           );
         })}
