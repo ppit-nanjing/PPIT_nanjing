@@ -44,6 +44,7 @@ export default async function CoveragePage() {
 
       <main className="max-w-[var(--container-max)] mx-auto px-[var(--spacing-container-padding)] pb-20">
         <CoverageMap
+          ariaLabel={`Peta ${features.length} kota naungan PPIT Nanjing`}
           features={features}
           counts={Object.fromEntries(
             features.map((f) => [f.properties.id, bySlug.get(f.properties.id)?.memberCount ?? null]),

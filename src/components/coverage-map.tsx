@@ -25,9 +25,17 @@ function ringsOf(f: CoverageFeature): Ring[] {
 export function CoverageMap({
   features,
   counts,
+  ariaLabel = "Peta wilayah",
+  hint = "Arahkan kursor atau ketuk sebuah wilayah untuk melihat namanya. Batas wilayah dari data administrasi resmi Tiongkok.",
+  unit = "mahasiswa Indonesia",
+  emptyUnit = "jumlah mahasiswa belum diisi",
 }: {
   features: CoverageFeature[];
   counts: Record<string, number | null>;
+  ariaLabel?: string;
+  hint?: string;
+  unit?: string;
+  emptyUnit?: string;
 }) {
   const [active, setActive] = useState<string | null>(null);
 
@@ -75,8 +83,7 @@ export function CoverageMap({
   return (
     <div className="bg-surface-container-lowest border border-outline-variant rounded-xl p-4 sm:p-6">
       <p className="text-body-md text-on-surface-variant mb-4">
-        Arahkan kursor atau ketuk sebuah wilayah untuk melihat namanya. Batas wilayah dari data administrasi resmi
-        Tiongkok.
+        {hint}
       </p>
 
       <div className="overflow-x-auto">
@@ -84,7 +91,7 @@ export function CoverageMap({
           viewBox={`0 0 ${VIEW.w} ${VIEW.h}`}
           className="w-full h-auto min-w-[320px]"
           role="img"
-          aria-label={`Peta ${features.length} kota naungan PPIT Nanjing`}
+          aria-label={ariaLabel}
         >
           {ordered.map((p) => {
             const isActive = active === p.id;
@@ -104,7 +111,7 @@ export function CoverageMap({
                   onFocus={() => setActive(p.id)}
                   onBlur={() => setActive(null)}
                   role="button"
-                  aria-label={`${p.label}${n != null ? `, ${n} mahasiswa` : ""}`}
+                  aria-label={`${p.label}${n != null ? `, ${n} ${unit}` : ""}`}
                   style={{ cursor: "pointer", outline: "none" }}
                 />
               </g>
@@ -133,9 +140,7 @@ export function CoverageMap({
           <p className="text-body-md text-on-background">
             <strong>{activeInfo.label}</strong> <span className="text-on-surface-variant">{activeInfo.zh}</span>
             {" — "}
-            {counts[activeInfo.id] != null
-              ? `${counts[activeInfo.id]} mahasiswa Indonesia`
-              : "jumlah mahasiswa belum diisi"}
+            {counts[activeInfo.id] != null ? `${counts[activeInfo.id]} ${unit}` : emptyUnit}
             {activeInfo.within && (
               <span className="text-on-surface-variant">
                 {" "}
@@ -145,7 +150,7 @@ export function CoverageMap({
           </p>
         ) : (
           <p className="text-body-md text-on-surface-variant">
-            {features.length} kota · {bounds.minLat.toFixed(1)}&ndash;{bounds.maxLat.toFixed(1)}&deg;LU
+            {features.length} wilayah · {bounds.minLat.toFixed(1)}&ndash;{bounds.maxLat.toFixed(1)}&deg;LU
           </p>
         )}
       </div>
