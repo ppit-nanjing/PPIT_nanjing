@@ -85,9 +85,58 @@ dan kode pemulihannya benar-benar diserahterimakan.
 > **Tapi kalau nanti benar-benar berjualan lewat situs, Hobby jadi melanggar ToS** dan
 > harus naik ke Pro.
 
-### 4. Sisanya, daftarkan ulang dengan akun PPIT
+### 4. Google OAuth — cukup buat project baru di akun PPIT
 
-Google Cloud (OAuth), Groq, Resend. Ini bukan "pindah" melainkan **buat baru lalu
+Benar, tidak perlu transfer apa pun: buat project baru di Google Cloud dengan akun
+Google PPIT, bikin OAuth client, lalu ganti `AUTH_GOOGLE_ID` + `AUTH_GOOGLE_SECRET`.
+
+**Tapi ada satu hal yang perlu diperiksa sebelum ditukar.** Auth.js menautkan akun
+Google ke user lewat tabel `accounts`, dengan primary key `(provider,
+provider_account_id)`. Untuk Google, `provider_account_id` itu klaim **`sub`**.
+
+Pertanyaannya: apakah `sub` berubah kalau OAuth client-nya beda project?
+
+- Google mendokumentasikan `sub` sebagai *"an identifier for the user, unique among
+  all Google Accounts and never reused"* — itu identitas **per akun Google**, bukan
+  per client. Jadi kemungkinan besar **tautan lama tetap utuh**.
+- **Tapi Google tidak menyatakannya eksplisit** untuk lintas client ID. Jadi jangan
+  dianggap pasti.
+
+**Kondisi kita sekarang (dicek 2026-08-20):**
+
+| | |
+|---|---|
+| User dengan akun Google tertaut | **3** |
+| Total user | 5 |
+| Punya password (bisa login tanpa Google) | 2 |
+
+Taruhannya kecil, dan justru **inilah saat termurah untuk menukarnya** — sebelum
+jumlah anggota tumbuh.
+
+**Pengaman sebelum menukar:**
+
+1. Pastikan **minimal satu admin punya login password**, supaya kalau tautan Google
+   putus, console tidak terkunci sama sekali. (Sekarang ada 2 — aman.)
+2. Tukar env var, lalu **uji login dengan satu akun Google yang sudah ada**.
+3. Kalau tautannya ternyata putus, gejalanya error Auth.js **`OAuthAccountNotLinked`**.
+   Perbaikannya sederhana: hapus baris lama di tabel `accounts` untuk user itu, lalu
+   login Google lagi supaya tertaut ulang.
+
+**Jebakan lain di project Google Cloud baru:**
+
+- **OAuth consent screen wajib dipublish ke "Production".** Selama masih mode
+  "Testing", hanya akun yang didaftarkan sebagai test user (maks. 100) yang bisa login
+  — pendaftar biasa akan ditolak.
+- Scope-nya cuma `openid`, `email`, `profile`, jadi **tidak perlu proses verifikasi
+  Google** yang panjang.
+- **Daftarkan dua redirect URI sekaligus** selama masa migrasi:
+  `https://ppit-nanjing.vercel.app/api/auth/callback/google` dan
+  `https://nanjing.ppitiongkok.com/api/auth/callback/google` — supaya login tidak
+  putus di tengah perpindahan domain.
+
+### 5. Sisanya, daftarkan ulang dengan akun PPIT
+
+Groq dan Resend. Ini bukan "pindah" melainkan **buat baru lalu
 ganti env var** — lebih cepat daripada transfer, dan sekalian me-rotate kredensial lama.
 
 ## Jebakan yang sudah pernah menggigit proyek ini
@@ -122,7 +171,11 @@ Simpan di tempat milik organisasi — Google Drive PPIT atau password manager be
 - [ ] Putuskan Vercel: Pro berbayar atau Hobby akun bersama
 - [ ] Pindahkan/buat ulang project Vercel, masukkan ulang semua env var
 - [ ] Pindahkan Neon (atau dump-restore), perbarui `DATABASE_URL` bersamaan
-- [ ] Buat ulang OAuth Google, Groq, Resend dengan akun PPIT
+- [ ] Buat project Google Cloud + OAuth client dengan akun PPIT
+- [ ] Publish consent screen ke **Production** (jangan tinggal di Testing)
+- [ ] Daftarkan **dua** redirect URI (vercel.app lama + subdomain baru)
+- [ ] Uji login dengan akun Google yang sudah ada; kalau `OAuthAccountNotLinked`, hapus baris `accounts` lama
+- [ ] Buat ulang Groq & Resend dengan akun PPIT
 - [ ] Rotate key Resend lama (sudah bocor di chat)
 - [ ] Cek `git config --local user.email` cocok & terverifikasi di GitHub baru
 - [ ] Baru setelah itu: selesaikan migrasi domain + setup email
