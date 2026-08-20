@@ -15,6 +15,7 @@ import {
   FileBarChart,
   BookOpen,
   Images,
+  Store,
   UserPlus,
   BellRing,
 } from "lucide-react";
@@ -41,6 +42,7 @@ const GROUPS: { title: string; items: NavItem[] }[] = [
       { href: "/console/inventory", label: "Inventaris", icon: Package, module: "inventory" },
       { href: "/console/membership", label: "Pendaftaran", icon: UserPlus, module: "membership" },
       { href: "/console/content", label: "Konten", icon: Images, module: "content" },
+      { href: "/console/katalog", label: "Kota & Katalog", icon: Store, module: "content" },
     ],
   },
   {
