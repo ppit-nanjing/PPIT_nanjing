@@ -1,4 +1,5 @@
 import { NAV_LINKS } from "@/lib/nav-links";
+import { ThemeSwitcher } from "@/components/theme-switcher";
 import { AnimatedLettersHeading } from "@/components/animated-letters-heading";
 import { ArrowRight } from "lucide-react";
 import Link from "next/link";
@@ -83,6 +84,9 @@ export function SiteFooter() {
               </a>
             ))}
             <p className="text-label-caps opacity-70">&copy; 2026 PPIT Nanjing</p>
+          </div>
+          <div className="mt-6 pt-6 border-t border-current/15">
+            <ThemeSwitcher />
           </div>
         </div>
       </div>
