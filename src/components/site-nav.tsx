@@ -126,7 +126,9 @@ export function SiteNav() {
           style={{
             width: "100%",
             maxWidth,
-            backgroundColor: `rgba(255,248,247,${bgAlpha})`,
+            // Follows the active palette instead of the old hardcoded cream,
+            // so the nav is not stuck light in dark mode.
+            backgroundColor: `color-mix(in srgb, var(--color-background) ${Math.round(bgAlpha * 100)}%, transparent)`,
             backdropFilter: `blur(${blurPx}px) saturate(140%)`,
             WebkitBackdropFilter: `blur(${blurPx}px) saturate(140%)`,
             boxShadow: `0 10px 30px rgba(39,23,22,${shadowAlpha})`,
