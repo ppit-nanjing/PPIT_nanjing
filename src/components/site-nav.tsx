@@ -9,7 +9,7 @@ import { AccountMenu } from "@/components/account-menu";
 import { NotificationBell } from "@/components/notifications/notification-bell";
 import { CommandPalette, useCommandPalette } from "@/components/command-palette";
 import { NAV_LINKS, DISCOVER_LINKS } from "@/lib/nav-links";
-import { useT, useLocale, useLocaleSwitch } from "@/lib/i18n/client";
+import { useT, useLocale, useLocaleSwitch, type Origin } from "@/lib/i18n/client";
 import { LOCALE_LABEL, LOCALE_SHORT, otherLocale, type Locale } from "@/lib/i18n/config";
 import type { T } from "@/lib/i18n/translate";
 import Link from "next/link";
@@ -393,14 +393,17 @@ function LanguageToggle({
 }: {
   compact: boolean;
   locale: Locale;
-  switchLocale: (next: Locale) => void;
+  switchLocale: (next: Locale, origin?: Origin) => void;
   t: T;
 }) {
   const target = otherLocale(locale);
   return (
     <button
       type="button"
-      onClick={() => switchLocale(target)}
+      onClick={(e) => {
+        const r = e.currentTarget.getBoundingClientRect();
+        switchLocale(target, { x: r.left + r.width / 2, y: r.top + r.height / 2 });
+      }}
       aria-label={t("nav.switchLanguageAria", { lang: LOCALE_LABEL[target] })}
       title={LOCALE_LABEL[target]}
       className="flex items-center gap-1.5 text-on-background hover:bg-surface-container-low px-2 py-1.5 rounded-lg transition-colors shrink-0"

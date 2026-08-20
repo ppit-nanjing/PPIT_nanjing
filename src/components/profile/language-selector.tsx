@@ -29,7 +29,10 @@ export function LanguageSelector() {
               role="radio"
               aria-checked={selected}
               disabled={switching}
-              onClick={() => switchLocale(l)}
+              onClick={(e) => {
+                const r = e.currentTarget.getBoundingClientRect();
+                switchLocale(l, { x: r.left + r.width / 2, y: r.top + r.height / 2 });
+              }}
               className={`flex items-center gap-2 rounded-md border px-3 py-2 transition-colors disabled:opacity-60 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-container focus-visible:ring-offset-2 focus-visible:ring-offset-surface-container-low ${
                 selected
                   ? "border-primary-container bg-primary-container/15 text-on-background"
