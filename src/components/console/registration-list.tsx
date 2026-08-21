@@ -10,6 +10,11 @@ interface Registration {
   userEmail: string | null;
   status: "pending" | "confirmed" | "attended" | "cancelled";
   registeredAt: string;
+  // Turunan dari sensus (lihat src/lib/membership-status.ts), bukan kolom di
+  // database. `branch` diisi dari sensus kalau lengkap, kalau tidak dari jawaban
+  // peserta saat mendaftar; null untuk pendaftaran lama sebelum ditanyakan.
+  membership: string;
+  branch: string | null;
 }
 
 const STATUS_LABEL: Record<Registration["status"], string> = {
@@ -33,6 +38,7 @@ export function RegistrationList({ eventId, registrations }: { eventId: string; 
           <thead className="bg-surface-container-low text-label-caps uppercase tracking-wide text-on-surface-variant">
             <tr>
               <th className="text-left px-5 py-3">Peserta</th>
+              <th className="text-left px-5 py-3">Asal</th>
               <th className="text-left px-5 py-3">Status</th>
               <th className="text-left px-5 py-3">Aksi</th>
             </tr>
@@ -43,6 +49,10 @@ export function RegistrationList({ eventId, registrations }: { eventId: string; 
                 <td className="px-5 py-3">
                   <p className="font-medium text-on-background">{r.userName ?? "(tanpa nama)"}</p>
                   <p className="text-label-caps text-on-surface-variant">{r.userEmail}</p>
+                </td>
+                <td className="px-5 py-3">
+                  <p className="text-on-background">{r.branch ?? "—"}</p>
+                  <p className="text-label-caps text-on-surface-variant">{r.membership}</p>
                 </td>
                 <td className="px-5 py-3">
                   <span className="text-label-caps uppercase tracking-wide bg-surface-container-low px-2 py-1 rounded">
@@ -71,6 +81,9 @@ export function RegistrationList({ eventId, registrations }: { eventId: string; 
             <div>
               <p className="font-medium text-on-background">{r.userName ?? "(tanpa nama)"}</p>
               <p className="text-label-caps text-on-surface-variant">{r.userEmail}</p>
+              <p className="text-label-caps text-on-surface-variant">
+                {r.branch ?? "—"} &middot; {r.membership}
+              </p>
             </div>
             <div className="flex items-center justify-between gap-2">
               <span className="text-label-caps uppercase tracking-wide bg-surface-container-low px-2 py-1 rounded">
