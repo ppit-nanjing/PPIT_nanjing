@@ -947,12 +947,57 @@ export const eventCommitteeRoleEnum = pgEnum("event_committee_role", [
   "anggota",
 ]);
 
+// Struktur kepanitiaan SATU acara: Departemen → sub-tim, mis. "Perlengkapan"
+// yang menaungi "Konsumsi", "Perlengkapan", dan "Sound System".
+//
+// Bertingkat lewat `parentDivisionId` ke dirinya sendiri, pola yang sama dengan
+// `departments.parentDepartmentId` — sengaja, supaya kedalamannya tidak dikunci
+// dua tingkat. Nama divisinya teks bebas, BUKAN enum: tiap acara boleh punya
+// susunan sendiri (WIF cuma satu contoh; acara berikutnya belum tentu sama),
+// dan menambah enum tiap kali ada acara baru akan berarti migrasi tiap kali.
+//
+// Sengaja TERPISAH dari `departments` (struktur kepengurusan kabinet). Itulah
+// inti keluhan yang mendasari fitur ini: bendahara acara ≠ bendahara kabinet,
+// dan seseorang bisa jadi Ketua Departemen Perlengkapan di satu acara tanpa
+// memegang jabatan struktural apa pun.
+//
+// Belum ada lapisan template ("simpan struktur WIF, pakai ulang tahun depan").
+// Baris ini sudah berdiri sendiri per acara, jadi template nanti cukup jadi
+// tabel baru yang MENYALIN ke sini — tidak perlu memigrasikan data yang ada.
+export const eventDivisions = pgTable("event_divisions", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  eventId: uuid("event_id").notNull().references(() => events.id, { onDelete: "cascade" }),
+  parentDivisionId: uuid("parent_division_id").references((): AnyPgColumn => eventDivisions.id, {
+    onDelete: "cascade",
+  }),
+  name: text("name").notNull(),
+  // Target jumlah orang, mis. "(2 orang)" di slide job description. Nullable —
+  // tidak semua divisi punya target, dan menebak angkanya lebih buruk daripada
+  // mengosongkan. Dipakai untuk menampilkan "masih kurang N".
+  quota: integer("quota"),
+  // Jobdesc bebas, satu poin per baris — pola yang sama dengan `events.agenda`,
+  // karena formulir adminnya juga satu textarea. Sebelumnya isi slide seperti
+  // "Menyiapkan konsumsi saat acara" hidup di PowerPoint saja dan panitianya
+  // tidak bisa membukanya di portal.
+  jobDescription: text("job_description"),
+  orderIndex: integer("order_index").notNull().default(0),
+});
+
 export const eventCommittee = pgTable(
   "event_committee",
   {
     id: uuid("id").defaultRandom().primaryKey(),
     eventId: uuid("event_id").notNull().references(() => events.id, { onDelete: "cascade" }),
     userId: uuid("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+    // Divisi tempat orang ini ditempatkan di acara tsb. NULL = ditugaskan
+    // sebelum struktur divisi ada, atau memang panitia inti tanpa divisi.
+    // onDelete "set null": menghapus divisi tidak boleh ikut menghapus catatan
+    // bahwa orangnya pernah jadi panitia acara itu.
+    divisionId: uuid("division_id").references((): AnyPgColumn => eventDivisions.id, { onDelete: "set null" }),
+    // Peran DI DALAM divisinya. Digabung dengan nama divisi, inilah yang
+    // membentuk sebutan lengkapnya: "ketua" + divisi "Perlengkapan" =
+    // Ketua Departemen Perlengkapan. Karena itu enumnya tidak perlu memuat
+    // tiap kombinasi jabatan-kali-divisi.
     role: eventCommitteeRoleEnum("role").notNull().default("anggota"),
     // Catatan tugas spesifik, mis. "PJ konsumsi". Bebas supaya tidak perlu
     // menambah enum tiap kali ada peran baru.
@@ -979,8 +1024,20 @@ export const certificates = pgTable("certificates", {
   issuedBy: uuid("issued_by").references(() => users.id),
 });
 
+export const eventDivisionsRelations = relations(eventDivisions, ({ one, many }) => ({
+  event: one(events, { fields: [eventDivisions.eventId], references: [events.id] }),
+  parent: one(eventDivisions, {
+    fields: [eventDivisions.parentDivisionId],
+    references: [eventDivisions.id],
+    relationName: "divisionParent",
+  }),
+  children: many(eventDivisions, { relationName: "divisionParent" }),
+  members: many(eventCommittee),
+}));
+
 export const eventCommitteeRelations = relations(eventCommittee, ({ one }) => ({
   event: one(events, { fields: [eventCommittee.eventId], references: [events.id] }),
+  division: one(eventDivisions, { fields: [eventCommittee.divisionId], references: [eventDivisions.id] }),
   user: one(users, { fields: [eventCommittee.userId], references: [users.id] }),
 }));
 
