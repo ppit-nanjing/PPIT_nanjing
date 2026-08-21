@@ -12,6 +12,8 @@ import { ArticleShare } from "@/components/article-share";
 import { ArrowLeft } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
+import { getT } from "@/lib/i18n/server";
+import { INTL_LOCALE } from "@/lib/i18n/config";
 
 export default async function NewsDetailPage({
   params,
@@ -19,6 +21,7 @@ export default async function NewsDetailPage({
   params: Promise<{ slug: string }>;
 }) {
   const { slug } = await params;
+  const { t, locale } = await getT();
   const [row] = await db
     .select({ article: newsArticles, authorName: users.name })
     .from(newsArticles)
@@ -51,24 +54,24 @@ export default async function NewsDetailPage({
       <main className="max-w-3xl mx-auto px-[var(--spacing-container-padding)] py-16">
         <Link
           href="/news"
-          aria-label="Kembali ke daftar berita"
+          aria-label={t("news.back")}
           className="inline-flex items-center gap-1.5 rounded-md text-label-caps uppercase tracking-wide text-on-surface-variant hover:text-primary-container hover:bg-surface-container-low transition-colors mb-8 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-container focus-visible:ring-offset-2 focus-visible:ring-offset-background"
         >
-          <ArrowLeft size={16} aria-hidden="true" /> Kembali ke Berita
+          <ArrowLeft size={16} aria-hidden="true" /> {t("news.back")}
         </Link>
 
         <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-label-caps uppercase text-on-surface-variant mb-4">
           {a.publishedAt && (
             <span>
               <time dateTime={new Date(a.publishedAt).toISOString()}>
-                {new Date(a.publishedAt).toLocaleDateString("id-ID", { dateStyle: "long" })}
+                {new Date(a.publishedAt).toLocaleDateString(INTL_LOCALE[locale], { dateStyle: "long" })}
               </time>
             </span>
           )}
           {authorName && (
             <>
               <span className="text-secondary" aria-hidden="true">&bull;</span>
-              <span className="inline-flex items-center gap-2" aria-label={`Ditulis oleh ${authorName}`}>
+              <span className="inline-flex items-center gap-2" aria-label={t("news.writtenBy", { name: authorName })}>
                 <span
                   aria-hidden="true"
                   className="flex items-center justify-center w-6 h-6 rounded-full bg-primary-container/10 text-primary-container text-[10px] font-semibold uppercase"
@@ -86,7 +89,7 @@ export default async function NewsDetailPage({
             </>
           )}
           <span className="text-secondary" aria-hidden="true">&bull;</span>
-          <span>{readMin} min baca</span>
+          <span>{t("news.minRead", { n: readMin })}</span>
         </div>
 
         <AnimatedHeroHeading
@@ -111,12 +114,12 @@ export default async function NewsDetailPage({
 
         <div className="flex items-center justify-between gap-4 mb-10 pb-6 border-b border-outline-variant">
           <span className="text-label-caps uppercase tracking-wide text-on-surface-variant">
-            Bagikan artikel
+            {t("news.share")}
           </span>
           <ArticleShare />
         </div>
 
-        <article lang="id" className="flex flex-col gap-5 text-body-lg text-on-surface-variant leading-relaxed text-pretty">
+        <article lang={locale} className="flex flex-col gap-5 text-body-lg text-on-surface-variant leading-relaxed text-pretty">
           {paragraphs.length > 0 ? (
             paragraphs.map((p, i) => (
               <p
@@ -134,7 +137,7 @@ export default async function NewsDetailPage({
         {related.length > 0 && (
           <section className="mt-20 pt-10 border-t border-outline-variant">
             <Reveal>
-              <h2 className="text-headline-lg text-on-background mb-8">Baca Juga</h2>
+              <h2 className="text-headline-lg text-on-background mb-8">{t("news.readAlso")}</h2>
             </Reveal>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
               {related.map((r, i) => (
