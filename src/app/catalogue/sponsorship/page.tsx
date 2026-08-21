@@ -3,16 +3,16 @@ import Image from "next/image";
 import { Handshake, ExternalLink } from "lucide-react";
 import { db } from "@/db";
 import { sponsors, events, eventRegistrations, eventCommittee } from "@/db/schema";
+import { getT } from "@/lib/i18n/server";
+import { INTL_LOCALE } from "@/lib/i18n/config";
+import type { TKey } from "@/lib/i18n/dictionaries/id";
 
-const TIER_LABEL: Record<string, string> = {
-  platinum: "Platinum",
-  gold: "Gold",
-  silver: "Silver",
-  partner: "Mitra",
-};
+const TIER_NAME: Record<string, string> = { platinum: "Platinum", gold: "Gold", silver: "Silver" };
+const TIER_KEY: Record<string, TKey> = { partner: "sponsor.tierPartner" };
 const TIER_ORDER = ["platinum", "gold", "silver", "partner"];
 
 export default async function SponsorshipPage() {
+  const { t, locale } = await getT();
   const [rows, participation] = await Promise.all([
     db
       .select()
@@ -58,26 +58,25 @@ export default async function SponsorshipPage() {
   return (
     <section className="pt-8">
       <p className="text-body-lg text-on-surface-variant max-w-2xl mb-8">
-        Mitra dan sponsor yang mendukung program PPIT Nanjing. Tertarik bekerja sama? Hubungi pengurus
-        lewat halaman Tentang Kami.
+        {t("sponsor.intro")}
       </p>
 
       {/* Participation: angka yang dicari sponsor sebelum memutuskan. */}
       {withCommittee.length > 0 && (
         <div className="mb-12">
-          <h2 className="text-headline-md text-on-background mb-1">Jangkauan Acara</h2>
+          <h2 className="text-headline-md text-on-background mb-1">{t("sponsor.reachTitle")}</h2>
           <p className="text-body-md text-on-surface-variant mb-5">
-            Kehadiran tercatat pada {withCommittee.length} acara terakhir &mdash; peserta yang benar-benar
-            hadir ditambah panitia, total <strong className="text-on-background">{totalReach} orang</strong>.
+            {t("sponsor.reachDesc", { events: withCommittee.length })}{" "}
+            <strong className="text-on-background">{t("sponsor.reachTotal", { n: totalReach })}</strong>.
           </p>
           <div className="overflow-x-auto">
             <table className="w-full border-collapse text-body-md">
               <thead>
                 <tr className="border-b border-outline-variant">
-                  <th className="text-left p-3 text-label-caps uppercase tracking-wide text-on-surface-variant font-medium">Acara</th>
-                  <th className="text-right p-3 text-label-caps uppercase tracking-wide text-on-surface-variant font-medium">Peserta hadir</th>
-                  <th className="text-right p-3 text-label-caps uppercase tracking-wide text-on-surface-variant font-medium">Panitia</th>
-                  <th className="text-right p-3 text-label-caps uppercase tracking-wide text-on-surface-variant font-medium">Total</th>
+                  <th className="text-left p-3 text-label-caps uppercase tracking-wide text-on-surface-variant font-medium">{t("sponsor.thEvent")}</th>
+                  <th className="text-right p-3 text-label-caps uppercase tracking-wide text-on-surface-variant font-medium">{t("sponsor.thAttendees")}</th>
+                  <th className="text-right p-3 text-label-caps uppercase tracking-wide text-on-surface-variant font-medium">{t("sponsor.thCommittee")}</th>
+                  <th className="text-right p-3 text-label-caps uppercase tracking-wide text-on-surface-variant font-medium">{t("sponsor.thTotal")}</th>
                 </tr>
               </thead>
               <tbody>
@@ -87,7 +86,7 @@ export default async function SponsorshipPage() {
                       {p.title}
                       {p.startAt && (
                         <span className="block text-label-caps text-on-surface-variant">
-                          {new Date(p.startAt).toLocaleDateString("id-ID", { dateStyle: "medium" })}
+                          {new Date(p.startAt).toLocaleDateString(INTL_LOCALE[locale], { dateStyle: "medium" })}
                         </span>
                       )}
                     </td>
@@ -100,7 +99,7 @@ export default async function SponsorshipPage() {
             </table>
           </div>
           <p className="text-label-caps text-on-surface-variant mt-3">
-            Dihitung dari check-in QR di acara, bukan dari jumlah pendaftar.
+            {t("sponsor.countedNote")}
           </p>
         </div>
       )}
@@ -108,9 +107,9 @@ export default async function SponsorshipPage() {
       {rows.length === 0 ? (
         <div className="bg-surface-container-low border border-outline-variant rounded-xl p-10 text-center">
           <Handshake className="mx-auto mb-4 text-on-surface-variant" size={28} />
-          <p className="text-body-lg text-on-background mb-1">Belum ada sponsor terdaftar</p>
+          <p className="text-body-lg text-on-background mb-1">{t("sponsor.empty")}</p>
           <p className="text-body-md text-on-surface-variant">
-            Pengurus bisa menambahkannya lewat Console &rarr; Katalog.
+            {t("sponsor.emptyDesc")}
           </p>
         </div>
       ) : (
@@ -118,7 +117,7 @@ export default async function SponsorshipPage() {
           {byTier.map(({ tier, list }) => (
             <div key={tier}>
               <h2 className="text-label-caps uppercase tracking-wide text-on-surface-variant border-b border-outline-variant pb-2 mb-5">
-                {TIER_LABEL[tier]}
+                {TIER_KEY[tier] ? t(TIER_KEY[tier]) : (TIER_NAME[tier] ?? tier)}
               </h2>
               <ul className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
                 {list.map((s) => (
@@ -140,7 +139,7 @@ export default async function SponsorshipPage() {
                           rel="noopener noreferrer"
                           className="inline-flex items-center gap-1 mt-2 text-label-caps uppercase tracking-wide text-primary-container hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-container focus-visible:ring-offset-2 focus-visible:ring-offset-surface-container-lowest rounded"
                         >
-                          Situs <ExternalLink size={12} aria-hidden />
+                          {t("sponsor.website")} <ExternalLink size={12} aria-hidden />
                         </a>
                       )}
                     </div>
