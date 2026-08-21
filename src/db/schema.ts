@@ -935,11 +935,23 @@ export const donationChannels = pgTable("donation_channels", {
 // Peran panitia bersifat PER-ACARA, bukan per-kabinet: bendahara sebuah acara
 // belum tentu bendahara kabinet (ini keluhan eksplisit di dokumen ide). Karena
 // itu tabelnya terpisah dari departmentMembers.
+// Peran seseorang DI DALAM unitnya, bukan nama unitnya. Digabung dengan nama
+// divisi inilah sebutan lengkapnya terbentuk: "ketua" + divisi "Perlengkapan"
+// = Ketua Departemen Perlengkapan; "ketua" tanpa divisi = Ketua Pelaksana.
+//
+// CATATAN: "humas", "acara", "logistik", dan "dokumentasi" sudah tidak relevan
+// sejak `eventDivisions` ada — itu nama DIVISI, bukan peran, dan sekarang
+// tempatnya di sana sebagai teks bebas. Nilainya sengaja tidak dihapus: baris
+// lama mungkin memakainya, dan menghapus nilai enum di Postgres berarti membuat
+// ulang seluruh tipenya. Jangan dipakai untuk penugasan baru.
 export const eventCommitteeRoleEnum = pgEnum("event_committee_role", [
   "ketua",
   "wakil",
   "sekretaris",
   "bendahara",
+  // Supervisory Committee — pengawas dari kabinet yang tidak memegang jabatan
+  // pelaksana di acaranya, tapi harus tercatat sebagai bagian kepanitiaan.
+  "supervisor",
   "humas",
   "acara",
   "logistik",
