@@ -7,6 +7,7 @@ import { Package, MapPin, Search } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { conditionLabel } from "@/lib/inventory-labels";
+import { getT } from "@/lib/i18n/server";
 
 export default async function InventoryPage({
   searchParams,
@@ -27,16 +28,18 @@ export default async function InventoryPage({
   const allItems = await db.select({ category: inventoryItems.category }).from(inventoryItems);
   const categories = [...new Set(allItems.map((i) => i.category).filter((c): c is string => !!c))];
 
+  const { t } = await getT();
+
   return (
     <div className="min-h-screen bg-background text-on-background">
       <SiteNav />
 
       <header className="max-w-[var(--container-max)] mx-auto px-[var(--spacing-container-padding)] pt-16 pb-8">
         <h1 className="text-display-hero-mobile md:text-display-hero text-on-background mb-4">
-          Inventaris &amp; Peminjaman
+          {t("inventory.title")}
         </h1>
         <p className="text-body-lg text-on-surface-variant max-w-2xl mb-8">
-          Pinjam peralatan organisasi untuk kebutuhan kegiatan PPIT Nanjing.
+          {t("inventory.intro")}
         </p>
 
         <div className="flex flex-wrap gap-3 mb-8">
@@ -44,19 +47,19 @@ export default async function InventoryPage({
             href="/inventory/contribute"
             className="bg-primary-container text-on-primary text-label-caps uppercase tracking-wide px-5 py-2.5 rounded-md hover:bg-primary transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-container focus-visible:ring-offset-2 focus-visible:ring-offset-background motion-reduce:transition-none"
           >
-            Sumbangkan / Pinjamkan Barang
+            {t("inventory.contribute")}
           </Link>
           <Link
             href="/inventory/request-new"
             className="bg-surface-container-low text-on-background text-label-caps uppercase tracking-wide px-5 py-2.5 rounded-md border border-outline-variant hover:bg-surface-container-lowest transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-container focus-visible:ring-offset-2 focus-visible:ring-offset-background motion-reduce:transition-none"
           >
-            Usulkan Barang Baru
+            {t("inventory.requestNew")}
           </Link>
         </div>
 
         <form action="/inventory" role="search" className="relative max-w-xl mb-6">
           <label htmlFor="inventory-search" className="sr-only">
-            Cari barang inventaris
+            {t("inventory.searchLabel")}
           </label>
           <Search
             className="absolute left-4 top-1/2 -translate-y-1/2 text-secondary"
@@ -68,7 +71,7 @@ export default async function InventoryPage({
             name="q"
             type="search"
             defaultValue={q}
-            placeholder="Cari barang..."
+            placeholder={t("inventory.searchPlaceholder")}
             className="w-full pl-12 pr-28 py-3.5 bg-surface-container-lowest border border-outline-variant rounded-md text-body-md focus:outline-none focus:ring-2 focus:ring-primary-container"
           />
           {category && <input type="hidden" name="category" value={category} />}
@@ -76,12 +79,12 @@ export default async function InventoryPage({
             type="submit"
             className="absolute right-2 top-1/2 -translate-y-1/2 bg-primary-container text-on-primary text-label-caps uppercase px-5 py-2 rounded-md hover:bg-primary transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-container focus-visible:ring-offset-2 focus-visible:ring-offset-background motion-reduce:transition-none"
           >
-            Cari
+            {t("nav.search")}
           </button>
         </form>
 
         {categories.length > 0 && (
-          <nav aria-label="Filter kategori barang" className="flex flex-wrap gap-2">
+          <nav aria-label={t("inventory.filterAria")} className="flex flex-wrap gap-2">
             <Link
               href={q ? `/inventory?q=${encodeURIComponent(q)}` : "/inventory"}
               aria-current={!category ? "page" : undefined}
@@ -91,7 +94,7 @@ export default async function InventoryPage({
                   : "bg-surface-container-low text-secondary border border-outline-variant hover:bg-surface-container-lowest"
               }`}
             >
-              Semua
+              {t("events.filterAll")}
             </Link>
             {categories.map((c) => {
               const params = new URLSearchParams();
@@ -121,28 +124,28 @@ export default async function InventoryPage({
           <div role="status" aria-live="polite" className="flex flex-col items-center text-center py-24">
             <Package className="text-outline-variant mb-4" size={40} aria-hidden />
             <h2 className="text-headline-md text-on-background mb-2">
-              {q || category ? "Tidak ada barang yang cocok" : "Belum ada barang inventaris"}
+              {q || category ? t("inventory.emptyFilteredTitle") : t("inventory.emptyAllTitle")}
             </h2>
             <p className="text-body-md text-on-surface-variant max-w-md">
               {q || category
-                ? "Coba kata kunci lain atau hapus filter kategori."
-                : "Barang inventaris akan muncul di sini setelah pengurus menambahkannya."}
+                ? t("inventory.emptyFilteredDesc")
+                : t("inventory.emptyAllDesc")}
             </p>
             {(q || category) && (
               <Link
                 href="/inventory"
                 className="mt-6 bg-primary-container text-on-primary text-label-caps uppercase tracking-wide px-6 py-3 rounded-md hover:bg-primary transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-container focus-visible:ring-offset-2 focus-visible:ring-offset-background motion-reduce:transition-none"
               >
-                Hapus semua filter
+                {t("inventory.clearFilters")}
               </Link>
             )}
           </div>
         ) : (
           <>
             <p className="sr-only" aria-live="polite">
-              {items.length} barang ditemukan
+              {t("inventory.itemsFound", { count: items.length })}
             </p>
-            <ul aria-label="Daftar barang inventaris" className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+            <ul aria-label={t("inventory.listLabel")} className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
             {items.map((item) => (
               <li
                 key={item.id}
@@ -155,7 +158,7 @@ export default async function InventoryPage({
                     }`}
                   >
                     <span className={`w-1.5 h-1.5 rounded-full ${item.availableQuantity > 0 ? "bg-primary-container" : "bg-secondary"}`} />
-                    {item.availableQuantity > 0 ? "Tersedia" : "Tidak Tersedia"}
+                    {item.availableQuantity > 0 ? t("inventory.available") : t("inventory.unavailable")}
                   </span>
                   {item.imageUrl ? (
                     <Image
@@ -181,7 +184,7 @@ export default async function InventoryPage({
                         <MapPin size={13} aria-hidden /> {item.location}
                       </span>
                     )}
-                    <span>Kondisi: {conditionLabel(item.condition)}</span>
+                    <span>{t("inventory.conditionLabel")}: {conditionLabel(item.condition)}</span>
                   </div>
                   <div className="flex items-center justify-between mt-auto">
                     <span
@@ -191,16 +194,16 @@ export default async function InventoryPage({
                           : "bg-outline-variant/30 text-secondary"
                       }`}
                     >
-                      {item.availableQuantity} / {item.totalQuantity} tersedia
+                      {t("inventory.stockCount", { available: item.availableQuantity, total: item.totalQuantity })}
                     </span>
                   </div>
                   {item.availableQuantity > 0 && (
                     <Link
                       href={`/inventory/${item.id}/borrow`}
-                      aria-label={`Ajukan peminjaman ${item.name}`}
+                      aria-label={t("inventory.borrowAria", { name: item.name })}
                       className="mt-4 text-center bg-primary-container text-on-primary text-label-caps uppercase tracking-wide py-2.5 rounded-md hover:bg-primary transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-container focus-visible:ring-offset-2 focus-visible:ring-offset-background motion-reduce:transition-none"
                     >
-                      Ajukan Peminjaman
+                      {t("inventory.borrowButton")}
                     </Link>
                   )}
                 </div>
