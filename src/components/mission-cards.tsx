@@ -2,24 +2,17 @@
 
 import { motion } from "motion/react";
 import { Users, Layers, Handshake } from "lucide-react";
+import { useT } from "@/lib/i18n/client";
 
 // Owned here, not passed in from the server page: lucide icon components are
 // functions, and Next.js's RSC boundary can't serialize functions/classes as
 // props from a Server Component into a Client Component like this one.
+const ICONS = { Users, Layers, Handshake };
 const MISI = [
-  {
-    icon: Users,
-    text: "Menambah dan memperluas program kerja dari PPIT Nanjing untuk menambah kesempatan mahasiswa dalam kota ini untuk interaksi dan saling connect.",
-  },
-  {
-    icon: Layers,
-    text: "Menyusun struktur organisasi yang efisien dan jelas untuk mendukung misi pertama.",
-  },
-  {
-    icon: Handshake,
-    text: "Membangun koordinasi erat dan positif antara PPIT Cabang Nanjing dengan ranting dan PPI Tiongkok.",
-  },
-];
+  { icon: "Users", textKey: "mission.1" },
+  { icon: "Layers", textKey: "mission.2" },
+  { icon: "Handshake", textKey: "mission.3" },
+] as const;
 
 /**
  * About page's Misi cards: scroll-triggered stagger reveal + hover lift,
@@ -30,6 +23,7 @@ const MISI = [
  * a flat, undifferentiated row.
  */
 export function MissionCards() {
+  const t = useT();
   return (
     <motion.div
       className="grid grid-cols-1 sm:grid-cols-3 gap-6"
@@ -38,7 +32,9 @@ export function MissionCards() {
       viewport={{ once: true, amount: 0.3 }}
       variants={{ visible: { transition: { staggerChildren: 0.12 } } }}
     >
-      {MISI.map(({ icon: Icon, text }, i) => (
+      {MISI.map(({ icon, textKey }, i) => {
+        const Icon = ICONS[icon];
+        return (
         <motion.div
           key={i}
           variants={{
@@ -61,9 +57,10 @@ export function MissionCards() {
               {String(i + 1).padStart(2, "0")}
             </span>
           </div>
-          <p className="text-body-md text-on-surface-variant">{text}</p>
+          <p className="text-body-md text-on-surface-variant">{t(textKey)}</p>
         </motion.div>
-      ))}
+        );
+      })}
     </motion.div>
   );
 }
