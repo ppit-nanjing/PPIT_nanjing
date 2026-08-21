@@ -40,7 +40,7 @@ const FOLDER_MODULE: Record<string, AdminModule | null> = {
 
 export async function POST(req: NextRequest) {
   const session = await auth();
-  if (!session?.user?.id) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  if (!session?.user?.id) return NextResponse.json({ errorKey: "upload.errUnauthorized" }, { status: 401 });
 
   const form = await req.formData();
   const file = form.get("file");
@@ -51,23 +51,27 @@ export async function POST(req: NextRequest) {
   // match our host - cheap and stops same-site-but-cross-origin trickery.
   const origin = req.headers.get("origin");
   if (origin && new URL(origin).host !== req.nextUrl.host) {
-    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    return NextResponse.json({ errorKey: "upload.errForbidden" }, { status: 403 });
   }
 
-  if (!(file instanceof File)) return NextResponse.json({ error: "Tidak ada berkas" }, { status: 400 });
-  if (!(folder in FOLDER_MODULE)) return NextResponse.json({ error: "Folder tidak valid" }, { status: 400 });
+  if (!(file instanceof File)) return NextResponse.json({ errorKey: "upload.errNoFile" }, { status: 400 });
+  if (!(folder in FOLDER_MODULE)) return NextResponse.json({ errorKey: "upload.errFolder" }, { status: 400 });
   const requiredModule = FOLDER_MODULE[folder];
   if (requiredModule && !hasModuleAccess(session.user.adminScope, requiredModule)) {
-    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    return NextResponse.json({ errorKey: "upload.errForbidden" }, { status: 403 });
   }
-  if (file.size > MAX_BYTES) return NextResponse.json({ error: "Berkas terlalu besar (maks 10MB)" }, { status: 413 });
-  if (!ALLOWED_TYPES.includes(file.type)) return NextResponse.json({ error: "Tipe berkas tidak didukung" }, { status: 415 });
+  if (file.size > MAX_BYTES)
+    return NextResponse.json(
+      { errorKey: "upload.errTooLarge", vars: { mb: MAX_BYTES / 1024 / 1024 } },
+      { status: 413 },
+    );
+  if (!ALLOWED_TYPES.includes(file.type)) return NextResponse.json({ errorKey: "upload.errType" }, { status: 415 });
 
   if (!process.env.BLOB_READ_WRITE_TOKEN) {
     // The Vercel Blob store + BLOB_READ_WRITE_TOKEN aren't provisioned yet
     // (owner/dashboard access required). Fail loudly rather than silently
     // storing nothing - see docs/Progress & Handoff.md Known gaps #3.
-    return NextResponse.json({ error: "Unggah berkas belum dikonfigurasi" }, { status: 503 });
+    return NextResponse.json({ errorKey: "upload.errNotConfigured" }, { status: 503 });
   }
 
   // Strip path separators / control chars so a malicious filename can't
