@@ -2,6 +2,8 @@
 
 import { useState, useRef, type DragEvent } from "react";
 import { Upload, Loader2, ImageIcon, X } from "lucide-react";
+import { useT } from "@/lib/i18n/client";
+import { uploadErrorMessage } from "./upload-error";
 
 type Props = {
   name: string;
@@ -25,6 +27,7 @@ export function FileUpload({
   accept = "image/*",
   allowPaste = true,
 }: Props) {
+  const t = useT();
   const [value, setValue] = useState(defaultValue ?? "");
   const [file, setFile] = useState<File | null>(null);
   const [preview, setPreview] = useState<string | null>(null);
@@ -62,10 +65,10 @@ export function FileUpload({
       fd.append("folder", folder);
       const res = await fetch("/api/upload", { method: "POST", body: fd });
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error ?? "Gagal mengunggah");
+      if (!res.ok) throw new Error(uploadErrorMessage(t, data));
       setValue(data.url);
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Gagal mengunggah");
+      setError(e instanceof Error ? e.message : t("upload.errFailed"));
     } finally {
       setUploading(false);
     }
@@ -81,7 +84,7 @@ export function FileUpload({
           value={value}
           required={required && !file}
           onChange={(e) => setValue(e.target.value)}
-          placeholder={placeholder ?? "Tempel URL atau unggah berkas"}
+          placeholder={placeholder ?? t("upload.pasteOrFile")}
           className="bg-soft-gray rounded-md p-3 text-body-md focus:outline-none focus:ring-2 focus:ring-primary-container"
         />
       )}
@@ -103,12 +106,12 @@ export function FileUpload({
       >
         {preview ? (
           // eslint-disable-next-line @next/next/no-img-element
-          <img src={preview} alt="Pratinjau" className="max-h-40 rounded-md object-contain" />
+          <img src={preview} alt={t("upload.preview")} className="max-h-40 rounded-md object-contain" />
         ) : (
           <ImageIcon className="text-outline-variant" size={28} />
         )}
         <p className="text-body-sm text-on-surface-variant">
-          {file ? file.name : "Seret & jatuhkan gambar ke sini, atau klik untuk pilih"}
+          {file ? file.name : t("upload.dropImage")}
         </p>
         <input
           ref={inputRef}
@@ -128,7 +131,7 @@ export function FileUpload({
             className="flex items-center gap-2 bg-surface-container-low text-on-background text-body-sm font-medium px-4 py-2.5 rounded-md border border-outline-variant hover:bg-surface-container-lowest transition-colors disabled:opacity-60"
           >
             {uploading ? <Loader2 size={14} className="animate-spin" /> : <Upload size={14} />}
-            Unggah
+            {t("upload.submit")}
           </button>
           <button
             type="button"
@@ -139,7 +142,7 @@ export function FileUpload({
             }}
             className="flex items-center gap-1 text-body-sm text-on-surface-variant hover:text-error transition-colors"
           >
-            <X size={14} /> Batal
+            <X size={14} /> {t("common.cancel")}
           </button>
         </div>
       )}
