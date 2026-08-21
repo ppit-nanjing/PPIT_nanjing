@@ -3,6 +3,7 @@
 import { useMemo, useState } from "react";
 import { Search, X } from "lucide-react";
 import type { CoverageFeature } from "@/app/coverage/page";
+import { useT } from "@/lib/i18n/client";
 
 // Real administrative boundaries drawn as plain SVG paths - no tile provider,
 // same reasoning as the national branch map (see app/organization/map): a tile
@@ -47,11 +48,11 @@ const overlaps = (a: Box, b: Box) => a.x1 < b.x2 && b.x1 < a.x2 && a.y1 < b.y2 &
 export function CoverageMap({
   features,
   counts,
-  ariaLabel = "Peta wilayah",
-  hint = "Cari, arahkan kursor, atau ketuk sebuah wilayah. Batas wilayah dari data administrasi resmi Tiongkok.",
-  unit = "mahasiswa Indonesia",
-  emptyUnit = "jumlah mahasiswa belum diisi",
-  searchLabel = "Cari wilayah",
+  ariaLabel: ariaLabelProp,
+  hint: hintProp,
+  unit: unitProp,
+  emptyUnit: emptyUnitProp,
+  searchLabel: searchLabelProp,
 }: {
   features: CoverageFeature[];
   counts: Record<string, number | null>;
@@ -61,6 +62,15 @@ export function CoverageMap({
   emptyUnit?: string;
   searchLabel?: string;
 }) {
+  const t = useT();
+  // Defaults resolved here, not as default parameter values - a default can't
+  // call useT(). Callers that pass their own copy (e.g. /map, which talks about
+  // districts rather than cities) still win.
+  const ariaLabel = ariaLabelProp ?? t("cmap.ariaDefault");
+  const hint = hintProp ?? t("cmap.hintDefault");
+  const unit = unitProp ?? t("cmap.unitDefault");
+  const emptyUnit = emptyUnitProp ?? t("cmap.emptyUnitDefault");
+  const searchLabel = searchLabelProp ?? t("cmap.searchDefault");
   const [active, setActive] = useState<string | null>(null);
   const [query, setQuery] = useState("");
   // Viewport coordinates, because the tooltip is position:fixed. Anchoring it to
@@ -195,7 +205,7 @@ export function CoverageMap({
           <button
             type="button"
             onClick={() => setQuery("")}
-            aria-label="Hapus pencarian"
+            aria-label={t("cmap.clearSearch")}
             className="text-on-surface-variant hover:text-on-background p-1"
           >
             <X size={14} />
@@ -206,8 +216,8 @@ export function CoverageMap({
       {q && (
         <p aria-live="polite" className="text-label-caps text-on-surface-variant mb-3">
           {matches.length === 0
-            ? "Tidak ada wilayah yang cocok."
-            : `${matches.length} cocok: ${matches.map((m) => m.label).join(", ")}`}
+            ? t("cmap.noMatch")
+            : t("cmap.matchCount", { n: matches.length, list: matches.map((m) => m.label).join(", ") })}
         </p>
       )}
 
