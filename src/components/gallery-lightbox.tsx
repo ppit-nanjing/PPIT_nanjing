@@ -4,10 +4,12 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { motion, AnimatePresence, useReducedMotion } from "motion/react";
 import Image from "next/image";
 import { X, ChevronLeft, ChevronRight } from "lucide-react";
+import { useT } from "@/lib/i18n/client";
 
 type Photo = { id: string; imageUrl: string; caption: string | null };
 
 export function GalleryLightbox({ photos }: { photos: Photo[] }) {
+  const t = useT();
   const reduce = useReducedMotion();
   const [index, setIndex] = useState<number | null>(null);
   const open = index !== null && index >= 0;
@@ -83,18 +85,18 @@ export function GalleryLightbox({ photos }: { photos: Photo[] }) {
 
   return (
     <>
-      <ul className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4" aria-label="Foto dalam album">
+      <ul className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4" aria-label={t("lightbox.albumAria")}>
         {photos.map((p, i) => (
           <li key={p.id} className="list-none">
             <button
               type="button"
               onClick={() => setIndex(i)}
               className="group relative block w-full aspect-square rounded-lg overflow-hidden bg-surface-container-low focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-container focus-visible:ring-offset-2 focus-visible:ring-offset-background"
-              aria-label={p.caption ? `Buka foto: ${p.caption}` : "Buka foto"}
+              aria-label={p.caption ? t("lightbox.openPhotoNamed", { caption: p.caption }) : t("lightbox.openPhoto")}
             >
               <Image
                 src={p.imageUrl}
-                alt={p.caption ?? `Foto ${i + 1}`}
+                alt={p.caption ?? t("lightbox.photoAlt", { index: i + 1 })}
                 fill
                 loading="lazy"
                 decoding="async"
@@ -123,10 +125,10 @@ export function GalleryLightbox({ photos }: { photos: Photo[] }) {
             onClick={close}
             role="dialog"
             aria-modal="true"
-            aria-label={`Penampil foto, ${index + 1} dari ${photos.length}`}
+            aria-label={t("lightbox.viewerAria", { index: index + 1, total: photos.length })}
           >
             <p className="sr-only" aria-live="polite">
-              {`Foto ${index + 1} dari ${photos.length}`}
+              {t("lightbox.photoOfTotal", { index: index + 1, total: photos.length })}
               {photos[index].caption ? `: ${photos[index].caption}` : ""}
             </p>
 
@@ -142,7 +144,7 @@ export function GalleryLightbox({ photos }: { photos: Photo[] }) {
               type="button"
               onClick={close}
               className="absolute top-4 right-4 sm:top-6 sm:right-6 w-11 h-11 flex items-center justify-center rounded-full bg-white/10 text-white hover:bg-white/20 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-white"
-              aria-label="Tutup"
+              aria-label={t("common.close")}
             >
               <X size={22} />
             </button>
@@ -155,7 +157,7 @@ export function GalleryLightbox({ photos }: { photos: Photo[] }) {
                   prev();
                 }}
                 className="absolute left-3 sm:left-6 top-1/2 -translate-y-1/2 w-11 h-11 flex items-center justify-center rounded-full bg-white/10 text-white hover:bg-white/20 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-white"
-                aria-label="Foto sebelumnya"
+                aria-label={t("lightbox.prev")}
               >
                 <ChevronLeft size={24} />
               </button>
@@ -165,7 +167,7 @@ export function GalleryLightbox({ photos }: { photos: Photo[] }) {
               <motion.img
                 key={photos[index].id}
                 src={photos[index].imageUrl}
-                alt={photos[index].caption ?? `Foto ${index + 1}`}
+                alt={photos[index].caption ?? t("lightbox.photoAlt", { index: index + 1 })}
                 initial={{ opacity: 0, scale: reduce ? 1 : 0.98 }}
                 animate={{ opacity: 1, scale: 1 }}
                 exit={{ opacity: 0, scale: reduce ? 1 : 0.98 }}
@@ -183,7 +185,7 @@ export function GalleryLightbox({ photos }: { photos: Photo[] }) {
                   next();
                 }}
                 className="absolute right-3 sm:right-6 top-1/2 -translate-y-1/2 w-11 h-11 flex items-center justify-center rounded-full bg-white/10 text-white hover:bg-white/20 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-white"
-                aria-label="Foto berikutnya"
+                aria-label={t("lightbox.next")}
               >
                 <ChevronRight size={24} />
               </button>
