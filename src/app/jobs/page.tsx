@@ -6,20 +6,22 @@ import { SiteFooter } from "@/components/site-footer";
 import { formatRelativeTime } from "@/lib/format-relative-time";
 import { Briefcase, MapPin, Search, SlidersHorizontal, BookOpen, Users } from "lucide-react";
 import Link from "next/link";
+import { getT } from "@/lib/i18n/server";
+import type { TKey } from "@/lib/i18n/dictionaries/id";
 
-const TYPE_LABEL = {
-  internship: "Magang",
-  full_time: "Full-time",
-  part_time: "Part-time",
-  volunteer: "Volunteer",
-} as const;
-type JobType = keyof typeof TYPE_LABEL;
-const TYPES = Object.keys(TYPE_LABEL) as JobType[];
-
-export const metadata = {
-  title: "Lowongan Karir - PPIT Nanjing",
-  description: "Cari magang dan lowongan kerja untuk mahasiswa Indonesia di Nanjing dan sekitarnya.",
+const TYPE_KEYS: Record<string, TKey> = {
+  internship: "jobs.type.internship",
+  full_time: "jobs.type.full_time",
+  part_time: "jobs.type.part_time",
+  volunteer: "jobs.type.volunteer",
 };
+type JobType = "internship" | "full_time" | "part_time" | "volunteer";
+const TYPES = Object.keys(TYPE_KEYS) as JobType[];
+
+export async function generateMetadata() {
+  const { t } = await getT();
+  return { title: t("meta.jobsTitle"), description: t("meta.jobsDesc") };
+}
 
 export default async function JobsPage({
   searchParams,
@@ -27,8 +29,14 @@ export default async function JobsPage({
   searchParams: Promise<{ q?: string; type?: string | string[]; location?: string }>;
 }) {
   const { q, type, location } = await searchParams;
+  const { t } = await getT();
   const rawTypes = type ? (Array.isArray(type) ? type : [type]) : [];
   const selectedTypes = rawTypes.filter((t): t is JobType => (TYPES as string[]).includes(t));
+
+  function typeLabel(key: string): string {
+    const k = TYPE_KEYS[key];
+    return k ? t(k) : key;
+  }
 
   // Real filters over Drizzle, not the prototype's static/decorative checkboxes -
   // location options are derived from what's actually posted, not hardcoded
@@ -63,38 +71,38 @@ export default async function JobsPage({
 
       <header className="max-w-2xl mx-auto px-[var(--spacing-container-padding)] pt-16 pb-10 text-center flex flex-col items-center">
         <h1 className="text-display-hero-mobile md:text-display-hero text-on-background mb-4">
-          Peluang Karir di Nanjing
+          {t("jobs.title")}
         </h1>
         <p className="text-body-lg text-on-surface-variant mb-8">
-          Lowongan magang dan kerja untuk mahasiswa Indonesia, dari startup lokal hingga peran akademik.
+          {t("jobs.subtitle")}
         </p>
-        <form action="/jobs" role="search" aria-label="Cari lowongan pekerjaan" className="w-full relative">
+        <form action="/jobs" role="search" aria-label={t("jobs.searchAria")} className="w-full relative">
           <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-secondary" size={18} aria-hidden />
           <input
             name="q"
             defaultValue={q}
-            aria-label="Cari berdasarkan posisi atau perusahaan"
-            placeholder="Cari posisi, perusahaan..."
+            aria-label={t("jobs.searchInputAria")}
+            placeholder={t("jobs.searchPlaceholder")}
             className="w-full pl-12 pr-28 py-4 bg-surface-container-lowest border border-outline-variant rounded-md text-body-lg focus:outline-none focus:ring-2 focus:ring-primary-container focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-container focus-visible:ring-offset-2 focus-visible:ring-offset-background"
           />
           <button
             type="submit"
             className="absolute right-2 top-1/2 -translate-y-1/2 bg-primary-container text-on-primary text-label-caps uppercase px-5 py-2.5 rounded-md hover:bg-primary transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background motion-reduce:transition-none"
           >
-            Cari
+            {t("nav.search")}
           </button>
         </form>
       </header>
 
       <main className="max-w-[var(--container-max)] mx-auto px-[var(--spacing-container-padding)] pb-24 grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
-        <aside aria-label="Filter lowongan" className="lg:col-span-3 bg-surface-container-lowest border border-outline-variant rounded-lg p-6">
+        <aside aria-label={t("jobs.filterAria")} className="lg:col-span-3 bg-surface-container-lowest border border-outline-variant rounded-lg p-6">
           <div className="flex items-center gap-2 mb-6 border-b border-outline-variant pb-4">
             <SlidersHorizontal size={18} className="text-on-background" />
-            <h2 className="text-headline-md text-on-background">Filter</h2>
+            <h2 className="text-headline-md text-on-background">{t("jobs.filterHeading")}</h2>
           </div>
 
           <div className="mb-8">
-            <h3 className="text-label-caps uppercase text-on-surface-variant mb-3">Jenis Pekerjaan</h3>
+            <h3 className="text-label-caps uppercase text-on-surface-variant mb-3">{t("jobs.typeHeading")}</h3>
             <div className="flex flex-col gap-2">
               {TYPES.map((t) => {
                 const nextTypes = selectedTypes.includes(t)
@@ -118,7 +126,7 @@ export default async function JobsPage({
                     >
                       {selectedTypes.includes(t) && <span className="w-2 h-2 bg-on-primary rounded-sm" />}
                     </span>
-                    {TYPE_LABEL[t]}
+                    {typeLabel(t)}
                   </a>
                 );
               })}
@@ -127,7 +135,7 @@ export default async function JobsPage({
 
           {locations.length > 0 && (
             <div>
-              <h3 className="text-label-caps uppercase text-on-surface-variant mb-3">Lokasi</h3>
+              <h3 className="text-label-caps uppercase text-on-surface-variant mb-3">{t("jobs.locationHeading")}</h3>
               <div className="flex flex-col gap-2">
                 {locations.map((loc) => (
                   <a
@@ -148,14 +156,14 @@ export default async function JobsPage({
         <div className="lg:col-span-9 flex flex-col gap-4">
           <div className="flex items-center justify-between gap-4 mb-2">
             <p className="text-label-caps uppercase tracking-wide text-on-surface-variant" aria-live="polite">
-              {jobs.length} lowongan ditemukan
+              {t("jobs.found", { count: jobs.length })}
             </p>
             {(q || selectedTypes.length > 0 || location) && (
               <Link
                 href="/jobs"
                 className="text-label-caps uppercase tracking-wide text-primary-container hover:text-primary transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-container focus-visible:ring-offset-2 focus-visible:ring-offset-background rounded-md motion-reduce:transition-none"
               >
-                Hapus filter
+                {t("jobs.clearFilter")}
               </Link>
             )}
           </div>
@@ -163,19 +171,19 @@ export default async function JobsPage({
             <div className="flex flex-col items-center text-center py-20 bg-surface-container-lowest border border-outline-variant border-dashed rounded-xl px-6">
               <Briefcase className="text-outline-variant mb-4" size={40} aria-hidden />
               <h2 className="text-headline-md text-on-background mb-2">
-                {q || selectedTypes.length > 0 || location ? "Tidak ada hasil" : "Belum ada lowongan"}
+                {q || selectedTypes.length > 0 || location ? t("jobs.emptyResultsTitle") : t("jobs.emptyTitle")}
               </h2>
               <p className="text-body-md text-on-surface-variant mb-6 max-w-sm">
                 {q || selectedTypes.length > 0 || location
-                  ? "Tidak ada lowongan yang cocok dengan filter ini. Coba ubah kata kunci atau hapus filter."
-                  : "Lowongan magang dan kerja akan ditampilkan di sini saat tersedia."}
+                  ? t("jobs.emptyResultsDesc")
+                  : t("jobs.emptyDesc")}
               </p>
               {(q || selectedTypes.length > 0 || location) && (
                 <Link
                   href="/jobs"
                   className="bg-primary-container text-on-primary text-label-caps uppercase tracking-wide px-6 py-3 rounded-md hover:bg-primary transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-container focus-visible:ring-offset-2 focus-visible:ring-offset-background motion-reduce:transition-none"
                 >
-                  Hapus semua filter
+                  {t("jobs.clearAllFilters")}
                 </Link>
               )}
             </div>
@@ -184,15 +192,15 @@ export default async function JobsPage({
               <a
                 key={j.id}
                 href={`/jobs/${j.id}`}
-                aria-label={`Lihat detail lowongan ${j.title} di ${j.company}`}
+                aria-label={t("jobs.detailAria", { title: j.title, company: j.company })}
                 className="group flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-surface-container-lowest border border-outline-variant rounded-lg p-6 hover:shadow-[0_10px_30px_rgba(39,23,22,0.06)] transition-shadow focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-container focus-visible:ring-offset-2 focus-visible:ring-offset-background motion-reduce:transition-none"
               >
                 <div>
                   <div className="flex items-center gap-2 mb-1">
                     <span className="text-label-caps uppercase tracking-wide bg-surface-container-low px-2 py-0.5 rounded">
-                      {TYPE_LABEL[j.type] ?? j.type}
+                      {typeLabel(j.type)}
                     </span>
-                    <span className="text-label-caps text-secondary">{formatRelativeTime(j.createdAt)}</span>
+                    <span className="text-label-caps text-secondary">{formatRelativeTime(j.createdAt, t)}</span>
                   </div>
                   <h2 className="text-headline-md text-on-background mb-1">{j.title}</h2>
                   <p className="text-body-md text-on-surface-variant mb-2">{j.company}</p>
@@ -206,7 +214,7 @@ export default async function JobsPage({
                   aria-hidden
                   className="shrink-0 border border-primary-container text-primary-container text-label-caps uppercase tracking-wide px-5 py-2 rounded-md group-hover:bg-primary-container group-hover:text-on-primary transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-container focus-visible:ring-offset-2 focus-visible:ring-offset-background motion-reduce:transition-none"
                 >
-                  Lihat Detail
+                  {t("jobs.viewDetail")}
                 </span>
               </a>
             ))
@@ -216,7 +224,7 @@ export default async function JobsPage({
 
       {/* Career Resources - inline per the prototype rather than link-out only, mirrors comprehensive_career_center_ppit_nanjing */}
       <section className="max-w-[var(--container-max)] mx-auto px-[var(--spacing-container-padding)] pb-24 border-t border-outline-variant pt-16">
-        <h2 className="text-headline-lg text-on-background mb-8">Career Resources</h2>
+        <h2 className="text-headline-lg text-on-background mb-8">{t("jobs.resourcesHeading")}</h2>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           {guides.map((g) => (
             <a
@@ -238,7 +246,7 @@ export default async function JobsPage({
             <Users className="text-primary-container shrink-0" size={22} />
             <div>
               <h3 className="text-body-md font-semibold text-on-background mb-1">Alumni Network Mentorship</h3>
-              <p className="text-label-caps text-on-surface-variant">Terhubung dengan alumni untuk bimbingan karir</p>
+              <p className="text-label-caps text-on-surface-variant">{t("jobs.mentorshipDesc")}</p>
             </div>
           </Link>
         </div>
