@@ -8,6 +8,7 @@ import type { MembershipFieldDef } from "@/lib/membership-form";
 import { GRID_TYPES, CORE_KEYS, isSectionType } from "@/lib/membership-form";
 import { ImageUploadCropper } from "@/components/upload/image-upload-cropper";
 import { FileUploadField } from "@/components/upload/file-upload-field";
+import { useT } from "@/lib/i18n/client";
 
 type Props = {
   fields: MembershipFieldDef[];
@@ -22,6 +23,7 @@ type Props = {
 };
 
 function SubmitButton({ preview }: { preview?: boolean }) {
+  const t = useT();
   const { pending } = useFormStatus();
   return (
     <button
@@ -30,7 +32,11 @@ function SubmitButton({ preview }: { preview?: boolean }) {
       className="bg-primary-container text-on-primary text-label-caps uppercase tracking-wide py-3.5 rounded-md hover:bg-primary transition-colors flex items-center justify-center gap-2 disabled:opacity-60 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-container focus-visible:ring-offset-2 focus-visible:ring-offset-surface-container-lowest"
     >
       {pending && <Loader2 size={16} className="animate-spin" />}
-      {preview ? "Pratinjau (tidak dikirim)" : pending ? "Mengirim..." : "Kirim Pendaftaran"}
+      {preview
+        ? t("membership.form.previewBtn")
+        : pending
+          ? t("membership.form.submitting")
+          : t("membership.form.submit")}
     </button>
   );
 }
@@ -42,6 +48,7 @@ function isEmpty(f: MembershipFieldDef, value: string, multi: string[]): boolean
 }
 
 export function MembershipApplicationForm({ fields, periodId, defaults, action, authenticated, preview, showProgress, shuffle, collectEmail = true }: Props) {
+  const t = useT();
   const [values, setValues] = useState<Record<string, string>>(() => ({ ...defaults }));
   const [multi, setMulti] = useState<Record<string, string[]>>({});
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -145,7 +152,7 @@ export function MembershipApplicationForm({ fields, periodId, defaults, action, 
           } catch {
             answeredAll = false;
           }
-          if (!answeredAll) next[f.key] = "Isi semua baris.";
+          if (!answeredAll) next[f.key] = t("membership.form.errGridRows");
         }
         continue;
       }
@@ -153,20 +160,20 @@ export function MembershipApplicationForm({ fields, periodId, defaults, action, 
       if (f.required && isEmpty(f, v, multi[f.key] ?? [])) {
         next[f.key] =
           f.type === "checkbox"
-            ? "Harus dicentang."
+            ? t("membership.form.errCheckbox")
             : f.type === "multiselect"
-              ? "Pilih minimal satu."
-              : "Field ini wajib diisi.";
+              ? t("membership.form.errMultiselect")
+              : t("membership.form.errRequired");
         continue;
       }
       const val = f.config?.validations;
       if (val && !isEmpty(f, v, multi[f.key] ?? [])) {
         if (f.type === "number") {
           const num = Number(v);
-          if (val.min != null && num < val.min) next[f.key] = `Nilai minimal ${val.min}.`;
-          else if (val.max != null && num > val.max) next[f.key] = `Nilai maksimal ${val.max}.`;
+          if (val.min != null && num < val.min) next[f.key] = t("membership.form.errMin", { n: val.min });
+          else if (val.max != null && num > val.max) next[f.key] = t("membership.form.errMax", { n: val.max });
         } else if (typeof val.minLength === "number" && v.trim().length < val.minLength) {
-          next[f.key] = `Minimal ${val.minLength} karakter.`;
+          next[f.key] = t("membership.form.errMinLength", { n: val.minLength });
         }
       }
     }
@@ -205,14 +212,14 @@ export function MembershipApplicationForm({ fields, periodId, defaults, action, 
       {showProgress && questionFields.length > 0 && (
         <div className="bg-surface-container-lowest border border-outline-variant rounded-xl p-4">
           <div className="flex items-center justify-between text-label-caps text-on-surface-variant mb-1">
-            <span>Progres Pengisian</span>
+            <span>{t("membership.form.progress")}</span>
             <span>
               {answeredCount}/{questionFields.length}
             </span>
           </div>
           <div
             role="progressbar"
-            aria-label="Progres pengisian formulir"
+            aria-label={t("membership.form.progressAria")}
             aria-valuemin={0}
             aria-valuemax={questionFields.length}
             aria-valuenow={answeredCount}
@@ -412,7 +419,7 @@ export function MembershipApplicationForm({ fields, periodId, defaults, action, 
                     className={common}
                   >
                     <option value="" disabled>
-                      Pilih…
+                      {t("membership.form.selectPlaceholder")}
                     </option>
                     {(f.options ?? []).map((opt) => (
                       <option key={opt} value={opt}>
@@ -426,10 +433,10 @@ export function MembershipApplicationForm({ fields, periodId, defaults, action, 
                   ) : (
                     <div className="flex flex-col gap-1 rounded-md border border-dashed border-outline-variant bg-soft-gray p-4">
                       <p className="text-body-sm text-on-surface-variant">
-                        Untuk unggah gambar, silakan masuk terlebih dahulu.
+                        {t("membership.form.loginForImage")}
                       </p>
                       <Link href="/login" className="text-body-sm text-primary-container underline rounded-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-container">
-                        Masuk
+                        {t("membership.form.loginLink")}
                       </Link>
                     </div>
                   )
@@ -439,10 +446,10 @@ export function MembershipApplicationForm({ fields, periodId, defaults, action, 
                   ) : (
                     <div className="flex flex-col gap-1 rounded-md border border-dashed border-outline-variant bg-soft-gray p-4">
                       <p className="text-body-sm text-on-surface-variant">
-                        Untuk unggah berkas, silakan masuk terlebih dahulu.
+                        {t("membership.form.loginForFile")}
                       </p>
                       <Link href="/login" className="text-body-sm text-primary-container underline rounded-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-container">
-                        Masuk
+                        {t("membership.form.loginLink")}
                       </Link>
                     </div>
                   )
@@ -546,6 +553,7 @@ function GridInput({
   disabled?: boolean;
   onChange: (v: string) => void;
 }) {
+  const t = useT();
   const parse = (): Record<string, string | string[]> => {
     try {
       const o = JSON.parse(value || "{}");
@@ -569,7 +577,7 @@ function GridInput({
   }
 
   if (rows.length === 0 || cols.length === 0) {
-    return <p className="text-label-caps text-on-surface-variant">Atur baris &amp; kolom di pengaturan formulir.</p>;
+    return <p className="text-label-caps text-on-surface-variant">{t("membership.form.gridNotConfigured")}</p>;
   }
 
   return (
