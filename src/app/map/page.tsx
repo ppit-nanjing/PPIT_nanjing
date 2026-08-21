@@ -7,13 +7,15 @@ import { SiteFooter } from "@/components/site-footer";
 import { CoverageMap } from "@/components/coverage-map";
 import type { CoverageFeature } from "@/app/coverage/page";
 import geo from "@/data/nanjing-districts.geo.json";
+import { getT } from "@/lib/i18n/server";
 
-export const metadata = {
-  title: "Peta Distrik Nanjing - PPIT Nanjing",
-  description: "Sebelas distrik Kota Nanjing beserta tempat dan kampus yang tercatat di masing-masing distrik.",
-};
+export async function generateMetadata() {
+  const { t } = await getT();
+  return { title: t("njmap.metaTitle"), description: t("njmap.metaDesc") };
+}
 
 export default async function NanjingMapPage() {
+  const { t } = await getT();
   const features = (geo as unknown as { features: CoverageFeature[] }).features;
 
   // Distrik dicocokkan lewat nama Inggris maupun Mandarin, karena admin bisa
@@ -64,13 +66,11 @@ export default async function NanjingMapPage() {
       <SiteNav />
 
       <header className="max-w-[var(--container-max)] mx-auto px-[var(--spacing-container-padding)] pt-16 pb-8">
-        <p className="text-label-caps uppercase tracking-wide text-on-surface-variant mb-2">Jelajahi</p>
-        <h1 className="text-display-hero-mobile md:text-display-hero text-on-background mb-4">Peta Distrik Nanjing</h1>
+        <p className="text-label-caps uppercase tracking-wide text-on-surface-variant mb-2">{t("explore.kicker")}</p>
+        <h1 className="text-display-hero-mobile md:text-display-hero text-on-background mb-4">{t("njmap.title")}</h1>
         <p className="text-body-lg text-on-surface-variant max-w-2xl">
-          Kota Nanjing terbagi ke dalam {features.length} distrik.{" "}
-          {totalTagged > 0
-            ? `${totalTagged} tempat dan kampus sudah ditandai distriknya.`
-            : "Tempat dan kampus belum ditandai distriknya, jadi hitungannya masih kosong."}
+          {t("njmap.lead", { n: features.length })}{" "}
+          {totalTagged > 0 ? t("njmap.tagged", { n: totalTagged }) : t("njmap.untagged")}
         </p>
       </header>
 
@@ -81,11 +81,11 @@ export default async function NanjingMapPage() {
           <CoverageMap
             features={features}
             counts={counts}
-            ariaLabel={`Peta ${features.length} distrik Kota Nanjing`}
-            hint="Cari, arahkan kursor, atau ketuk sebuah distrik. Batas wilayah dari data administrasi resmi Tiongkok."
-            searchLabel="Cari distrik"
-            unit="tempat & kampus tercatat"
-            emptyUnit="belum ada yang ditandai di distrik ini"
+            ariaLabel={t("njmap.mapAria", { n: features.length })}
+            hint={t("njmap.hint")}
+            searchLabel={t("njmap.searchLabel")}
+            unit={t("njmap.unit")}
+            emptyUnit={t("njmap.emptyUnit")}
           />
 
           <ul className="grid grid-cols-1 sm:grid-cols-2 gap-2">
@@ -108,19 +108,19 @@ export default async function NanjingMapPage() {
 
         {/* Tiga peta di situs ini memang berbeda cakupan - tautkan supaya tidak tertukar. */}
         <div className="mt-10 bg-surface-container-low border border-outline-variant rounded-xl p-5">
-          <p className="text-label-caps uppercase tracking-wide text-on-surface-variant mb-2">Peta lain</p>
+          <p className="text-label-caps uppercase tracking-wide text-on-surface-variant mb-2">{t("njmap.otherMaps")}</p>
           <ul className="flex flex-col sm:flex-row gap-4 text-body-md">
             <li>
               <Link href="/coverage" className="text-primary-container hover:underline">
-                Wilayah Naungan
+                {t("coverage.title")}
               </Link>
-              <span className="text-on-surface-variant"> — 9 kota di bawah PPIT Nanjing</span>
+              <span className="text-on-surface-variant"> — {t("njmap.coverageNote")}</span>
             </li>
             <li>
               <Link href="/organization/map" className="text-primary-container hover:underline">
-                Cabang PPI Tiongkok
+                {t("org.branches.title")}
               </Link>
-              <span className="text-on-surface-variant"> — 32 cabang se-Tiongkok</span>
+              <span className="text-on-surface-variant"> — {t("njmap.branchesNote")}</span>
             </li>
           </ul>
         </div>
