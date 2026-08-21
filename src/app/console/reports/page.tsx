@@ -1,7 +1,8 @@
 import { desc, eq } from "drizzle-orm";
 import { db } from "@/db";
-import { departments, reports, sensusProfiles, users } from "@/db/schema";
+import { departments, regionalBranches, reports, sensusProfiles, users } from "@/db/schema";
 import { requireModuleAccess } from "@/lib/admin-scope";
+import { HOME_BRANCH, MEMBERSHIP_LABEL, membershipStatus } from "@/lib/membership-status";
 import { CollapsibleSection } from "@/components/console/collapsible-section";
 import { Download, Users as UsersIcon, GraduationCap, MapPin } from "lucide-react";
 
@@ -27,6 +28,9 @@ export default async function ConsoleReportsPage() {
   const allUsers = await db.select().from(users);
   const allSensus = await db.select().from(sensusProfiles);
   const allDepartments = await db.select().from(departments);
+  const allBranches = (await db.select({ cityName: regionalBranches.cityName }).from(regionalBranches))
+    .map((b) => b.cityName)
+    .sort((a, b) => a.localeCompare(b));
   const recentReports = await db
     .select({ report: reports, generatedByName: users.name })
     .from(reports)
@@ -38,6 +42,11 @@ export default async function ConsoleReportsPage() {
   const byUniversity = tally(allSensus.map((s) => s.university));
   const byDegree = tally(allSensus.map((s) => s.degreeLevel));
   const byBranch = tally(allSensus.map((s) => s.branch));
+  // Dihitung dari SEMUA akun, bukan dari allSensus: orang yang belum pernah
+  // menyentuh sensus tidak punya baris di sana sama sekali, dan justru merekalah
+  // "Tamu" — kalau dihitung dari allSensus, ember itu selalu terlihat kosong.
+  const sensusByUser = new Map(allSensus.map((s) => [s.userId, s]));
+  const byMembership = tally(allUsers.map((u) => MEMBERSHIP_LABEL[membershipStatus(sensusByUser.get(u.id))]));
 
   return (
     <div className="px-4 py-6 sm:px-6 lg:px-8 lg:py-10">
@@ -84,12 +93,44 @@ export default async function ConsoleReportsPage() {
                 <input type="date" name="dateTo" className="bg-soft-gray rounded-md p-3 text-body-md" />
               </label>
             </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <label className="flex flex-col gap-2">
+                <span className="text-label-caps uppercase tracking-wide text-on-surface-variant">
+                  Cabang (Ringkasan Sensus)
+                </span>
+                <select name="sensusBranch" defaultValue={HOME_BRANCH} className="bg-soft-gray rounded-md p-3 text-body-md">
+                  <option value={HOME_BRANCH}>{HOME_BRANCH} (cabang kita)</option>
+                  <option value="">Semua cabang</option>
+                  {allBranches
+                    .filter((b) => b !== HOME_BRANCH)
+                    .map((b) => (
+                      <option key={b} value={b}>
+                        {b}
+                      </option>
+                    ))}
+                </select>
+              </label>
+              <label className="flex flex-col gap-2">
+                <span className="text-label-caps uppercase tracking-wide text-on-surface-variant">
+                  Kelengkapan (Ringkasan Sensus)
+                </span>
+                <select name="sensusCompletion" defaultValue="complete" className="bg-soft-gray rounded-md p-3 text-body-md">
+                  <option value="complete">Hanya yang lengkap (siap setor ke pusat)</option>
+                  <option value="">Semua, termasuk yang belum lengkap</option>
+                </select>
+              </label>
+            </div>
             <label className="flex flex-col gap-2">
               <span className="text-label-caps uppercase tracking-wide text-on-surface-variant">Catatan (untuk laporan Kustom)</span>
               <input name="note" placeholder="mis. Ringkasan kegiatan Q3" className="bg-soft-gray rounded-md p-3 text-body-md" />
             </label>
             <p className="text-label-caps text-on-surface-variant">
               Departemen dan tanggal hanya berlaku untuk jenis laporan yang relevan — abaikan yang tidak dipakai.
+            </p>
+            <p className="text-label-caps text-on-surface-variant">
+              Ringkasan Sensus defaultnya cabang {HOME_BRANCH} + hanya yang lengkap — persis baris yang siap disetor ke
+              PPI Tiongkok pusat. Baris yang belum lengkap ditolak di sana karena field wajibnya bolong, dan baris
+              cabang lain masuk hitungan rekap cabang mereka, bukan kita.
             </p>
             <button
               type="submit"
@@ -136,6 +177,15 @@ export default async function ConsoleReportsPage() {
               <p className="text-label-caps text-on-surface-variant uppercase">Cabang Tercatat</p>
             </div>
           </div>
+        </CollapsibleSection>
+
+        <CollapsibleSection title="Status Keanggotaan">
+          <SummaryList items={byMembership} />
+          <p className="text-label-caps text-on-surface-variant mt-3">
+            Diturunkan dari sensus + cabang, bukan kolom tersendiri. &ldquo;Tamu&rdquo; = sensusnya belum lengkap, jadi
+            belum bisa dibedakan antara warga Nanjing yang belum sempat mengisi dan tamu dari luar — jawaban cabang di
+            form pendaftaran acara yang memisahkan keduanya.
+          </p>
         </CollapsibleSection>
 
         <CollapsibleSection title="Universitas">
