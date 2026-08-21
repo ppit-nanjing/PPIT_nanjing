@@ -1,12 +1,14 @@
-import { eq, desc } from "drizzle-orm";
+import { and, eq, desc } from "drizzle-orm";
 import { notFound } from "next/navigation";
 import { db } from "@/db";
-import { events, eventRegistrations, sensusProfiles, users } from "@/db/schema";
+import { certificates, events, eventRegistrations, sensusProfiles, users } from "@/db/schema";
 import { MEMBERSHIP_LABEL, effectiveBranch, membershipStatus } from "@/lib/membership-status";
 import { updateEvent } from "@/app/actions/admin-events";
 import { publishDueEvents } from "@/lib/publish-events";
 import { DeleteEventButton } from "@/components/console/delete-event-button";
 import { RegistrationList } from "@/components/console/registration-list";
+import { EventCommitteeStructure } from "@/components/console/event-committee-structure";
+import { listEventDivisions } from "@/app/actions/committee";
 import { requireModuleAccess } from "@/lib/admin-scope";
 import { ImageUploadCropper } from "@/components/upload/image-upload-cropper";
 import { AIImproveButton } from "@/components/ai/ai-improve-button";
@@ -35,6 +37,19 @@ export default async function ConsoleEventDetailPage({ params }: { params: Promi
     .leftJoin(sensusProfiles, eq(sensusProfiles.userId, eventRegistrations.userId))
     .where(eq(eventRegistrations.eventId, id))
     .orderBy(desc(eventRegistrations.registeredAt));
+
+  // Struktur kepanitiaan acara ini (Departemen -> sub-tim) + daftar orang yang
+  // bisa ditugaskan. Kandidatnya SEMUA akun, bukan cuma anggota departemen:
+  // kepanitiaan acara memang tidak terikat jabatan struktural.
+  const { divisions, members: committee } = await listEventDivisions(id);
+  const candidates = await db
+    .select({ id: users.id, name: users.name, email: users.email })
+    .from(users)
+    .orderBy(users.name);
+  const issuedCerts = await db
+    .select({ userId: certificates.userId })
+    .from(certificates)
+    .where(and(eq(certificates.eventId, id), eq(certificates.kind, "panitia")));
 
   const attended = registrations.filter((r) => r.reg.status === "attended").length;
 
@@ -157,6 +172,19 @@ export default async function ConsoleEventDetailPage({ params }: { params: Promi
           </div>
         </form>
       </details>
+
+      <CollapsibleSection
+        title="Struktur Kepanitiaan"
+        description={`${divisions.length} divisi · ${committee.length} panitia`}
+      >
+        <EventCommitteeStructure
+          eventId={id}
+          divisions={divisions}
+          members={committee}
+          candidates={candidates}
+          certifiedUserIds={issuedCerts.map((c) => c.userId)}
+        />
+      </CollapsibleSection>
 
       <CollapsibleSection title="Daftar Pendaftar" description={`${registrations.length} terdaftar · ${attended} hadir`}>
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between mb-4">
