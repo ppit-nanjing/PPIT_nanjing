@@ -1,10 +1,10 @@
 "use server";
 
-import { and, desc, eq, sql as raw } from "drizzle-orm";
+import { and, desc, eq, inArray, sql as raw } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { auth } from "@/auth";
 import { db } from "@/db";
-import { eventCommittee, certificates, events, users, eventRegistrations } from "@/db/schema";
+import { eventCommittee, eventDivisions, certificates, events, users, eventRegistrations } from "@/db/schema";
 import { requireModuleAccess } from "@/lib/admin-scope";
 
 // Committee membership is per-event on purpose: the treasurer of one event is
@@ -36,14 +36,21 @@ export async function assignCommittee(formData: FormData) {
   const role = String(formData.get("role") ?? "anggota");
   if (!eventId || !userId) throw new Error("Acara dan pengurus wajib dipilih");
 
+  const assignment = {
+    role: role as "anggota",
+    note: String(formData.get("note") ?? "").trim() || null,
+    // "" dari <select> kosong = panitia inti tanpa divisi, bukan uuid kosong.
+    divisionId: String(formData.get("divisionId") ?? "").trim() || null,
+  };
+
   // One row per person per event: re-assigning changes their role instead of
   // stacking duplicates (the unique index would reject a second insert anyway).
   await db
     .insert(eventCommittee)
-    .values({ eventId, userId, role: role as "anggota", note: String(formData.get("note") ?? "").trim() || null })
+    .values({ eventId, userId, ...assignment })
     .onConflictDoUpdate({
       target: [eventCommittee.eventId, eventCommittee.userId],
-      set: { role: role as "anggota", note: String(formData.get("note") ?? "").trim() || null },
+      set: assignment,
     });
 
   revalidatePath(`/console/events/${eventId}`);
@@ -204,4 +211,151 @@ export async function submitPaymentProof(formData: FormData) {
     .where(and(eq(eventRegistrations.id, id), eq(eventRegistrations.userId, session.user.id)));
 
   revalidatePath("/profile/submissions");
+}
+
+// ---------------------------------------------------------------------------
+// Struktur kepanitiaan per acara (Departemen → sub-tim)
+// ---------------------------------------------------------------------------
+
+/** Seluruh divisi satu acara, induk lebih dulu, beserta jumlah anggotanya. */
+export async function listEventDivisions(eventId: string) {
+  await requireModuleAccess("events");
+  const divisions = await db
+    .select()
+    .from(eventDivisions)
+    .where(eq(eventDivisions.eventId, eventId))
+    .orderBy(eventDivisions.orderIndex, eventDivisions.name);
+
+  const members = await db
+    .select({
+      id: eventCommittee.id,
+      divisionId: eventCommittee.divisionId,
+      role: eventCommittee.role,
+      note: eventCommittee.note,
+      userId: users.id,
+      name: users.name,
+      email: users.email,
+    })
+    .from(eventCommittee)
+    .leftJoin(users, eq(eventCommittee.userId, users.id))
+    .where(eq(eventCommittee.eventId, eventId))
+    .orderBy(eventCommittee.role);
+
+  return { divisions, members };
+}
+
+export async function saveEventDivision(formData: FormData) {
+  await requireModuleAccess("events");
+  const eventId = String(formData.get("eventId") ?? "");
+  const name = String(formData.get("name") ?? "").trim();
+  if (!eventId || !name) throw new Error("Acara dan nama divisi wajib diisi");
+
+  const quotaRaw = String(formData.get("quota") ?? "").trim();
+  const values = {
+    eventId,
+    // "" dari <select> kosong berarti divisi tingkat atas, bukan string kosong
+    // yang akan ditolak sebagai uuid tidak valid.
+    parentDivisionId: String(formData.get("parentDivisionId") ?? "").trim() || null,
+    name,
+    quota: quotaRaw ? Number(quotaRaw) : null,
+    jobDescription: String(formData.get("jobDescription") ?? "").trim() || null,
+    orderIndex: Number(String(formData.get("orderIndex") ?? "0")) || 0,
+  };
+
+  const id = String(formData.get("id") ?? "").trim();
+  if (id) {
+    // Divisi tidak boleh jadi induk dirinya sendiri - itu bikin pohonnya
+    // memutar dan halaman strukturnya tidak akan pernah selesai dirender.
+    if (values.parentDivisionId === id) throw new Error("Divisi tidak bisa menjadi induk dirinya sendiri");
+    await db.update(eventDivisions).set(values).where(eq(eventDivisions.id, id));
+  } else {
+    await db.insert(eventDivisions).values(values);
+  }
+
+  revalidatePath(`/console/events/${eventId}`);
+}
+
+export async function deleteEventDivision(formData: FormData) {
+  await requireModuleAccess("events");
+  const id = String(formData.get("id") ?? "");
+  const [row] = await db.select({ eventId: eventDivisions.eventId }).from(eventDivisions).where(eq(eventDivisions.id, id));
+  // Sub-tim ikut terhapus (cascade), tapi panitianya tidak - kolom division_id
+  // mereka jadi NULL, jadi catatan kepanitiaannya tetap utuh.
+  await db.delete(eventDivisions).where(eq(eventDivisions.id, id));
+  if (row) revalidatePath(`/console/events/${row.eventId}`);
+  revalidatePath("/console/work-ledger");
+}
+
+/**
+ * Menerbitkan sertifikat panitia untuk semua anggota satu divisi sekaligus,
+ * termasuk sub-timnya. Judulnya dirakit dari peran + nama divisi + nama acara,
+ * jadi "Ketua Departemen Perlengkapan — WIF 2026" tidak perlu diketik satu per
+ * satu untuk tiap orang.
+ *
+ * Berkas PDF-nya tetap ditautkan manual belakangan: tidak ada generator PDF di
+ * proyek ini, dan menerbitkan baris sertifikat tanpa berkas masih berguna -
+ * anggota bisa melihat perannya tercatat, pengurus tinggal menambah tautannya.
+ *
+ * Tidak mengembalikan hitungan "N terbit / N dilewati": dipakai langsung sebagai
+ * <form action>, yang hanya menerima void. Umpan baliknya dibuat permanen saja -
+ * halaman strukturnya menandai siapa yang sudah bersertifikat, jadi hasilnya
+ * masih terbaca setelah halaman di-reload, bukan pesan sekilas yang hilang.
+ */
+export async function issueDivisionCertificates(formData: FormData): Promise<void> {
+  const session = await requireModuleAccess("events");
+  const divisionId = String(formData.get("divisionId") ?? "");
+  if (!divisionId) throw new Error("Divisi wajib dipilih");
+
+  const [division] = await db.select().from(eventDivisions).where(eq(eventDivisions.id, divisionId));
+  if (!division) throw new Error("Divisi tidak ditemukan");
+  const [event] = await db.select().from(events).where(eq(events.id, division.eventId));
+
+  const children = await db
+    .select({ id: eventDivisions.id })
+    .from(eventDivisions)
+    .where(eq(eventDivisions.parentDivisionId, divisionId));
+  const scope = [divisionId, ...children.map((c) => c.id)];
+
+  const members = await db
+    .select({ userId: eventCommittee.userId, role: eventCommittee.role, divisionId: eventCommittee.divisionId })
+    .from(eventCommittee)
+    .where(and(eq(eventCommittee.eventId, division.eventId), inArray(eventCommittee.divisionId, scope)));
+
+  if (members.length === 0) return;
+
+  // Sertifikat panitia yang sudah ada untuk acara ini, supaya menekan tombolnya
+  // dua kali tidak menggandakan sertifikat orang yang sama.
+  const existing = await db
+    .select({ userId: certificates.userId })
+    .from(certificates)
+    .where(and(eq(certificates.eventId, division.eventId), eq(certificates.kind, "panitia")));
+  const already = new Set(existing.map((e) => e.userId));
+
+  const divisionNames = new Map(
+    (await db.select().from(eventDivisions).where(eq(eventDivisions.eventId, division.eventId))).map((d) => [d.id, d.name])
+  );
+
+  const toInsert = members
+    .filter((m) => !already.has(m.userId))
+    .map((m) => {
+      const unitName = divisionNames.get(m.divisionId ?? "") ?? division.name;
+      const roleLabel = m.role === "anggota" ? `Anggota ${unitName}` : `${titleCase(m.role)} ${unitName}`;
+      return {
+        userId: m.userId,
+        eventId: division.eventId,
+        kind: "panitia" as const,
+        title: event?.title ? `${roleLabel} — ${event.title}` : roleLabel,
+        issuedBy: session.user.id,
+      };
+    });
+
+  if (toInsert.length > 0) await db.insert(certificates).values(toInsert);
+
+  revalidatePath(`/console/events/${division.eventId}`);
+  revalidatePath("/console/work-ledger");
+  revalidatePath("/profile/submissions");
+}
+
+function titleCase(value: string): string {
+  return value.charAt(0).toUpperCase() + value.slice(1);
 }
