@@ -3,22 +3,35 @@
 import { useEffect, useRef, useState } from "react";
 import { Send, Loader2, Check, Pencil } from "lucide-react";
 import { chatWithAIAction, updateProfileFieldAction } from "@/app/actions/ai";
+import { useT } from "@/lib/i18n/client";
+import type { TKey } from "@/lib/i18n/dictionaries/id";
+import type { T } from "@/lib/i18n/translate";
 
 type Msg = { role: "user" | "assistant"; content: string };
 
-const FIELD_LABELS: Record<string, string> = {
-  name: "Nama",
-  phone: "Nomor telepon",
+// Only the three descriptive labels are translatable; the rest are product
+// names ("WeChat ID", "LinkedIn"), which read the same in both locales.
+const FIELD_LABEL_KEYS: Record<string, TKey> = {
+  name: "chat.field.name",
+  phone: "chat.field.phone",
+  avatarUrl: "chat.field.avatarUrl",
+};
+const FIELD_NAMES: Record<string, string> = {
   wechatId: "WeChat ID",
   linkedinUrl: "LinkedIn",
   instagramUrl: "Instagram",
   githubUrl: "GitHub",
   spotifyUrl: "Spotify",
   tiktokUrl: "TikTok",
-  avatarUrl: "URL foto profil",
 };
 
+function fieldLabel(t: T, field: string): string {
+  const key = FIELD_LABEL_KEYS[field];
+  return key ? t(key) : (FIELD_NAMES[field] ?? field);
+}
+
 export function ChatbotPanel() {
+  const t = useT();
   const [messages, setMessages] = useState<Msg[]>([]);
   const [input, setInput] = useState("");
   const [busy, setBusy] = useState(false);
@@ -46,7 +59,7 @@ export function ChatbotPanel() {
         setMessages([...next, { role: "assistant", content: result.reply }]);
       }
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Gagal menghubungi asisten AI");
+      setError(e instanceof Error ? e.message : t("chat.errContact"));
     } finally {
       setBusy(false);
     }
@@ -55,16 +68,22 @@ export function ChatbotPanel() {
   async function confirmEdit() {
     if (!pendingEdit) return;
     const { field, value } = pendingEdit;
-    const label = FIELD_LABELS[field] ?? field;
+    const label = fieldLabel(t, field);
     setPendingEdit(null);
     setBusy(true);
     try {
       await updateProfileFieldAction(field, value);
-      setMessages((m) => [...m, { role: "assistant", content: `${label} berhasil diperbarui.` }]);
+      setMessages((m) => [...m, { role: "assistant", content: t("chat.updated", { label }) }]);
     } catch (e) {
       setMessages((m) => [
         ...m,
-        { role: "assistant", content: `Gagal memperbarui ${label}: ${e instanceof Error ? e.message : "terjadi kesalahan"}` },
+        {
+          role: "assistant",
+          content: t("chat.updateFailed", {
+            label,
+            reason: e instanceof Error ? e.message : t("chat.genericError"),
+          }),
+        },
       ]);
     } finally {
       setBusy(false);
@@ -73,9 +92,9 @@ export function ChatbotPanel() {
 
   function cancelEdit() {
     if (!pendingEdit) return;
-    const label = FIELD_LABELS[pendingEdit.field] ?? pendingEdit.field;
+    const label = fieldLabel(t, pendingEdit.field);
     setPendingEdit(null);
-    setMessages((m) => [...m, { role: "assistant", content: `Oke, tidak jadi mengubah ${label}.` }]);
+    setMessages((m) => [...m, { role: "assistant", content: t("chat.cancelled", { label }) }]);
   }
 
   const bubbleClass = (role: string) =>
@@ -88,8 +107,7 @@ export function ChatbotPanel() {
       <div ref={scrollRef} className="flex flex-col gap-3 p-5 h-80 overflow-y-auto">
         {messages.length === 0 && !pendingEdit && (
           <p className="text-body-md text-on-surface-variant">
-            Halo! Saya asisten PPIT Nanjing. Tanya apa saja seputar kegiatan, cara bergabung, atau
-            kehidupan mahasiswa Indonesia di Nanjing. Saya juga bisa membantu mengubah data profilmu.
+            {t("chat.greeting")}
           </p>
         )}
         {messages.map((m, i) => (
@@ -102,7 +120,7 @@ export function ChatbotPanel() {
           <div className="self-start max-w-[90%] rounded-lg border border-primary-container bg-surface-container-low p-3 text-body-md">
             <p className="flex items-center gap-1.5 text-on-background mb-1">
               <Pencil size={14} className="text-primary-container" />
-              Ubah {FIELD_LABELS[pendingEdit.field] ?? pendingEdit.field}?
+              {t("chat.confirmChange", { label: fieldLabel(t, pendingEdit.field) })}
             </p>
             <p className="text-on-surface-variant mb-3 break-words">{pendingEdit.value}</p>
             <div className="flex gap-2">
@@ -111,20 +129,20 @@ export function ChatbotPanel() {
                 disabled={busy}
                 className="flex items-center gap-1 bg-primary-container text-on-primary text-label-caps uppercase tracking-wide px-3 py-2 rounded-md hover:bg-primary transition-colors disabled:opacity-50"
               >
-                <Check size={14} /> Ya, ubah
+                <Check size={14} /> {t("chat.yesChange")}
               </button>
               <button
                 onClick={cancelEdit}
                 disabled={busy}
                 className="flex items-center gap-1 text-label-caps px-3 py-2 rounded-md text-secondary hover:text-on-background disabled:opacity-50"
               >
-                Batal
+                {t("common.cancel")}
               </button>
             </div>
           </div>
         )}
 
-        {busy && !pendingEdit && <p className="self-start text-label-caps text-on-surface-variant">Mengetik...</p>}
+        {busy && !pendingEdit && <p className="self-start text-label-caps text-on-surface-variant">{t("chat.typing")}</p>}
         {error && <p className="self-start text-label-caps text-error">{error}</p>}
       </div>
 
@@ -138,14 +156,14 @@ export function ChatbotPanel() {
         <input
           value={input}
           onChange={(e) => setInput(e.target.value)}
-          placeholder="Tulis pertanyaan..."
+          placeholder={t("chat.placeholder")}
           className="flex-1 bg-soft-gray rounded-md p-3 text-body-md text-on-background placeholder:text-on-surface-variant focus:outline-none focus:ring-2 focus:ring-primary-container"
         />
         <button
           type="submit"
           disabled={busy || !input.trim()}
           className="bg-primary-container text-on-primary rounded-md p-3 hover:bg-primary transition-colors disabled:opacity-50"
-          aria-label="Kirim"
+          aria-label={t("chat.send")}
         >
           {busy ? <Loader2 size={18} className="animate-spin" /> : <Send size={18} />}
         </button>
