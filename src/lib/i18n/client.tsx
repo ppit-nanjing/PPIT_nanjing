@@ -181,6 +181,19 @@ function LocaleRevealOverlay({ target, origin }: { target: Locale; origin: Origi
 // to, it's stamped on top of the page, so `whileInView` would never fire.
 function LetterReveal({ text }: { text: string }) {
   const words = text.split(" ");
+  const letterCount = words.reduce((n, w) => n + w.length, 0);
+  // Total cascade span is held roughly constant regardless of word length,
+  // not the per-letter delay - "English" (7 letters) vs "Bahasa Indonesia"
+  // (15 letters) at a fixed staggerChildren meant the longer word's reveal
+  // took ~2x as long overall, which reads as two different speeds even
+  // though each individual letter animates identically. Dividing the target
+  // span by the letter count keeps the whole word's reveal/exit taking
+  // about the same wall-clock time either way.
+  const ENTER_SPAN = 0.3;
+  const EXIT_SPAN = 0.22;
+  const enterStagger = letterCount > 0 ? ENTER_SPAN / letterCount : 0;
+  const exitStagger = letterCount > 0 ? EXIT_SPAN / letterCount : 0;
+
   return (
     <motion.p
       className="text-display-hero-mobile md:text-display-hero font-bold uppercase tracking-tight text-center px-6"
@@ -195,8 +208,8 @@ function LetterReveal({ text }: { text: string }) {
       // a flat fade.
       exit="exit"
       variants={{
-        visible: { transition: { staggerChildren: 0.025, delayChildren: 0.3 } },
-        exit: { transition: { staggerChildren: 0.02, staggerDirection: -1 } },
+        visible: { transition: { staggerChildren: enterStagger, delayChildren: 0.3 } },
+        exit: { transition: { staggerChildren: exitStagger, staggerDirection: -1 } },
       }}
       aria-label={text}
     >
