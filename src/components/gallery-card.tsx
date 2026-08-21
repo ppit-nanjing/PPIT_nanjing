@@ -2,6 +2,7 @@ import Link from "next/link";
 import { Reveal } from "@/components/reveal";
 import { Images, Expand } from "lucide-react";
 import Image from "next/image";
+import { getT } from "@/lib/i18n/server";
 
 export type GalleryCardAlbum = {
   id: string;
@@ -13,7 +14,7 @@ export type GalleryCardAlbum = {
  * scroll-in via <Reveal>, with a hover lift, cover zoom, and optional
  * year badge. Shared across both gallery index pages.
  */
-export function GalleryCard({
+export async function GalleryCard({
   album,
   cover,
   count,
@@ -26,20 +27,21 @@ export function GalleryCard({
   year?: number;
   index?: number;
 }) {
-  const photoLabel = count === 1 ? "1 foto" : `${count} foto`;
+  const { t } = await getT();
+  const photoLabel = t("gallery.photoLabel", { n: count });
 
   return (
     <Reveal delay={Math.min(index * 0.06, 0.4)}>
       <Link
         href={`/gallery/${album.id}`}
-        aria-label={`Lihat album ${album.title}`}
+        aria-label={t("gallery.cardAria", { title: album.title })}
         className="group block h-full bg-surface-container-lowest border border-outline-variant rounded-xl overflow-hidden hover:shadow-[0_14px_40px_rgba(39,23,22,0.10)] hover:-translate-y-1 focus-visible:outline-none focus-visible:-translate-y-1 focus-visible:ring-2 focus-visible:ring-primary-container focus-visible:ring-offset-2 focus-visible:ring-offset-background focus-visible:shadow-[0_14px_40px_rgba(39,23,22,0.10)] transition-all duration-300 motion-reduce:transition-none motion-reduce:hover:translate-y-0 motion-reduce:focus-visible:translate-y-0"
       >
         <div className="relative h-52 bg-surface-container-low flex items-center justify-center overflow-hidden">
           {cover ? (
             <Image
               src={cover}
-              alt={`Sampul album ${album.title}`}
+              alt={t("gallery.cardCover", { title: album.title })}
               fill
               loading="lazy"
               decoding="async"
