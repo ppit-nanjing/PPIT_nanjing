@@ -6,14 +6,16 @@ import { X, MousePointerClick, RotateCcw, Bug, Palette, Lightbulb, MessageCircle
 import { submitFeedback } from "@/app/actions/feedback";
 import { AIImproveButton } from "@/components/ai/ai-improve-button";
 import { pickElementAt, type PickedElement } from "./element-picker";
+import { useT } from "@/lib/i18n/client";
+import type { TKey } from "@/lib/i18n/dictionaries/id";
 
 type Category = "bug" | "design" | "feature" | "general";
 
-const CATEGORIES: { key: Category; label: string; icon: typeof Bug; placeholder: string }[] = [
-  { key: "bug", label: "Bug", icon: Bug, placeholder: "Apa yang error? Langkah apa yang kamu lakukan sebelum bug ini muncul?" },
-  { key: "design", label: "Desain", icon: Palette, placeholder: "Bagian mana yang menurutmu kurang pas secara tampilan?" },
-  { key: "feature", label: "Ide", icon: Lightbulb, placeholder: "Fitur atau perbaikan apa yang menurutmu perlu ditambahkan?" },
-  { key: "general", label: "Umum", icon: MessageCircle, placeholder: "Masukan atau pertanyaan lainnya..." },
+const CATEGORIES: { key: Category; labelKey: TKey; icon: typeof Bug; placeholderKey: TKey }[] = [
+  { key: "bug", labelKey: "feedback.catBug", icon: Bug, placeholderKey: "feedback.phBug" },
+  { key: "design", labelKey: "feedback.catDesign", icon: Palette, placeholderKey: "feedback.phDesign" },
+  { key: "feature", labelKey: "feedback.catFeature", icon: Lightbulb, placeholderKey: "feedback.phFeature" },
+  { key: "general", labelKey: "feedback.catGeneral", icon: MessageCircle, placeholderKey: "feedback.phGeneral" },
 ];
 
 const DRAFT_KEY = "ppitn_feedback_drafts";
@@ -29,6 +31,7 @@ function loadDrafts(): Record<Category, string> {
 }
 
 export function FeedbackPanel() {
+  const t = useT();
   const pathname = usePathname();
   const [category, setCategory] = useState<Category>("bug");
   const [drafts, setDrafts] = useState<Record<Category, string>>({ bug: "", design: "", feature: "", general: "" });
@@ -125,7 +128,7 @@ export function FeedbackPanel() {
       />
       {picking && (
         <div className="fixed top-4 left-1/2 -translate-x-1/2 z-[200] bg-on-background text-inverse-on-surface text-label-caps px-4 py-2 rounded-full shadow-lg flex items-center gap-2">
-          <MousePointerClick size={14} /> Klik elemen yang ingin kamu laporkan
+          <MousePointerClick size={14} /> {t("feedback.pickHint")}
         </div>
       )}
 
@@ -141,7 +144,7 @@ export function FeedbackPanel() {
             }`}
           >
             <c.icon size={16} />
-            {c.label}
+            {t(c.labelKey)}
           </button>
         ))}
       </div>
@@ -149,14 +152,14 @@ export function FeedbackPanel() {
       <div className="p-5">
         {submitted ? (
           <p className="text-body-md text-center py-6 text-on-background">
-            Terima kasih! Masukan kamu sudah terkirim.
+            {t("feedback.thanks")}
           </p>
         ) : (
           <>
             <textarea
               value={drafts[category]}
               onChange={(e) => updateDraft(e.target.value)}
-              placeholder={activeCategory.placeholder}
+              placeholder={t(activeCategory.placeholderKey)}
               rows={4}
               className="w-full bg-soft-gray rounded-md p-3 text-body-md text-on-background placeholder:text-on-surface-variant resize-none focus:outline-none focus:ring-2 focus:ring-primary-container mb-2"
             />
@@ -164,7 +167,7 @@ export function FeedbackPanel() {
               context="feedback"
               value={drafts[category]}
               onImproved={(text) => updateDraft(text)}
-              label="Bantu tulis dengan AI"
+              label={t("ai.improveFeedback")}
               className="mb-2"
             />
 
@@ -180,7 +183,7 @@ export function FeedbackPanel() {
                 onClick={() => setPicking(true)}
                 className="flex items-center gap-2 text-label-caps text-primary-container hover:text-primary mb-3"
               >
-                <MousePointerClick size={14} /> Tandai elemen di halaman
+                <MousePointerClick size={14} /> {t("feedback.markElement")}
               </button>
             )}
 
@@ -190,14 +193,14 @@ export function FeedbackPanel() {
                 disabled={!drafts[category] && !picked}
                 className="flex items-center gap-1 text-label-caps text-secondary hover:text-on-background disabled:opacity-40"
               >
-                <RotateCcw size={14} /> Reset
+                <RotateCcw size={14} /> {t("feedback.reset")}
               </button>
               <button
                 onClick={handleSubmit}
                 disabled={!drafts[category].trim() || submitting}
                 className="flex-1 bg-primary-container text-on-primary text-label-caps uppercase tracking-wide py-2.5 rounded-md hover:bg-primary transition-colors disabled:opacity-50"
               >
-                {submitting ? "Mengirim..." : "Kirim"}
+                {submitting ? t("feedback.submitting") : t("feedback.submit")}
               </button>
             </div>
           </>
