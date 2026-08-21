@@ -4,6 +4,7 @@ import { useState } from "react";
 import { Sparkles, Loader2 } from "lucide-react";
 import { improveTextAction } from "@/app/actions/ai";
 import type { ImproveContext } from "@/lib/groq";
+import { useT } from "@/lib/i18n/client";
 
 type Props = {
   context: ImproveContext;
@@ -16,14 +17,15 @@ type Props = {
   className?: string;
 };
 
-export function AIImproveButton({ context, label = "Perbagus dengan AI", targetId, value, onImproved, className }: Props) {
+export function AIImproveButton({ context, label, targetId, value, onImproved, className }: Props) {
+  const t = useT();
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
 
   async function run() {
     const source = value !== undefined ? value : targetId ? ((document.getElementById(targetId) as HTMLTextAreaElement | HTMLInputElement | null)?.value ?? "") : "";
     if (!source.trim()) {
-      setErr("Isi dulu teksnya");
+      setErr(t("ai.errEmpty"));
       return;
     }
     setBusy(true);
@@ -40,7 +42,7 @@ export function AIImproveButton({ context, label = "Perbagus dengan AI", targetI
         }
       }
     } catch (e) {
-      setErr(e instanceof Error ? e.message : "Gagal memanggil AI");
+      setErr(e instanceof Error ? e.message : t("ai.errFailed"));
     } finally {
       setBusy(false);
     }
@@ -55,7 +57,7 @@ export function AIImproveButton({ context, label = "Perbagus dengan AI", targetI
         className="inline-flex items-center gap-1.5 text-label-caps text-primary-container hover:text-primary disabled:opacity-50"
       >
         {busy ? <Loader2 size={14} className="animate-spin" /> : <Sparkles size={14} />}
-        {busy ? "Memproses..." : label}
+        {busy ? t("ai.processing") : (label ?? t("ai.improveDefault"))}
       </button>
       {err && <p className="text-error text-label-caps mt-1">{err}</p>}
     </div>
