@@ -5,15 +5,18 @@ import { db } from "@/db";
 import { universities, coverageCities } from "@/db/schema";
 import { SiteNav } from "@/components/site-nav";
 import { SiteFooter } from "@/components/site-footer";
+import { getT } from "@/lib/i18n/server";
 
-export const metadata = {
-  title: "Direktori Universitas - PPIT Nanjing",
-  description: "Daftar universitas di 9 kota naungan PPIT Nanjing, untuk mahasiswa Indonesia yang akan atau sedang kuliah di wilayah ini.",
-};
-
-const UNASSIGNED = "Kota lainnya";
+export async function generateMetadata() {
+  const { t } = await getT();
+  return { title: t("uni.metaTitle"), description: t("uni.metaDesc") };
+}
 
 export default async function UniversitiesPage() {
+  const { t } = await getT();
+  // Bucket label for rows with no city set - translated, so it has to be
+  // resolved inside the component rather than as a module constant.
+  const UNASSIGNED = t("uni.unassigned");
   const [rows, cityInfo] = await Promise.all([
     db
       .select()
@@ -40,14 +43,18 @@ export default async function UniversitiesPage() {
       <SiteNav />
 
       <header className="max-w-[var(--container-max)] mx-auto px-[var(--spacing-container-padding)] pt-16 pb-8">
-        <p className="text-label-caps uppercase tracking-wide text-on-surface-variant mb-2">Jelajahi</p>
+        <p className="text-label-caps uppercase tracking-wide text-on-surface-variant mb-2">{t("explore.kicker")}</p>
         <h1 className="text-display-hero-mobile md:text-display-hero text-on-background mb-4">
-          Direktori Universitas
+          {t("uni.title")}
         </h1>
         <p className="text-body-lg text-on-surface-variant max-w-2xl">
           {rows.length > 0
-            ? `${rows.length} universitas di ${ordered.length} kota naungan PPIT Nanjing${partnerCount ? `, ${partnerCount} di antaranya kampus mitra` : ""}.`
-            : "Daftar universitas di wilayah naungan PPIT Nanjing."}
+            ? t("uni.lead", {
+                n: rows.length,
+                cities: ordered.length,
+                partners: partnerCount ? t("uni.leadPartners", { n: partnerCount }) : "",
+              })
+            : t("uni.leadEmpty")}
         </p>
       </header>
 
@@ -55,9 +62,9 @@ export default async function UniversitiesPage() {
         {rows.length === 0 ? (
           <div className="bg-surface-container-low border border-outline-variant rounded-xl p-10 text-center">
             <GraduationCap className="mx-auto mb-4 text-on-surface-variant" size={28} />
-            <p className="text-body-lg text-on-background mb-1">Belum ada universitas yang ditampilkan</p>
+            <p className="text-body-lg text-on-background mb-1">{t("uni.empty")}</p>
             <p className="text-body-md text-on-surface-variant">
-              Pengurus bisa menambahkannya lewat Console &rarr; Universitas.
+              {t("uni.emptyDesc")}
             </p>
           </div>
         ) : (
@@ -72,8 +79,10 @@ export default async function UniversitiesPage() {
                       {city}
                     </h2>
                     <p className="text-label-caps uppercase tracking-wide text-on-surface-variant mt-1">
-                      {list.length} universitas
-                      {info?.memberCount != null ? ` · ± ${info.memberCount} mahasiswa Indonesia` : ""}
+                      {t("uni.count", { n: list.length })}
+                      {info?.memberCount != null
+                        ? ` · ${t("uni.studentsApprox", { n: info.memberCount })}`
+                        : ""}
                     </p>
                     {info?.note && (
                       <p className="text-body-md text-on-surface-variant mt-3 max-w-3xl">{info.note}</p>
@@ -111,17 +120,17 @@ export default async function UniversitiesPage() {
                           <div className="flex flex-wrap items-center gap-3 mt-1">
                             {u.isPartner && (
                               <span className="text-label-caps uppercase tracking-wide bg-tertiary-container text-on-tertiary-container px-2 py-0.5 rounded">
-                                Kampus mitra
+                                {t("uni.partner")}
                               </span>
                             )}
                             {u.studentCount != null && (
                               <span className="text-label-caps text-on-surface-variant">
-                                ± {u.studentCount} mahasiswa Indonesia
+                                {t("uni.studentsApprox", { n: u.studentCount })}
                               </span>
                             )}
                             {u.coordinatorName && (
                               <span className="text-label-caps text-on-surface-variant">
-                                Koordinator: <span className="text-on-background">{u.coordinatorName}</span>
+                                {t("uni.coordinator")} <span className="text-on-background">{u.coordinatorName}</span>
                               </span>
                             )}
                             {u.coordinatorEmail && (
@@ -139,7 +148,7 @@ export default async function UniversitiesPage() {
                                 rel="noopener noreferrer"
                                 className="inline-flex items-center gap-1 text-label-caps uppercase tracking-wide text-primary-container hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-container focus-visible:ring-offset-2 focus-visible:ring-offset-surface-container-lowest rounded"
                               >
-                                Situs <ExternalLink size={12} aria-hidden />
+                                {t("uni.website")} <ExternalLink size={12} aria-hidden />
                               </a>
                             )}
                           </div>
