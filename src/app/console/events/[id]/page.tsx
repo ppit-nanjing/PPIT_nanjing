@@ -1,7 +1,8 @@
 import { eq, desc } from "drizzle-orm";
 import { notFound } from "next/navigation";
 import { db } from "@/db";
-import { events, eventRegistrations, users } from "@/db/schema";
+import { events, eventRegistrations, sensusProfiles, users } from "@/db/schema";
+import { MEMBERSHIP_LABEL, effectiveBranch, membershipStatus } from "@/lib/membership-status";
 import { updateEvent } from "@/app/actions/admin-events";
 import { publishDueEvents } from "@/lib/publish-events";
 import { DeleteEventButton } from "@/components/console/delete-event-button";
@@ -20,9 +21,18 @@ export default async function ConsoleEventDetailPage({ params }: { params: Promi
   if (!event) notFound();
 
   const registrations = await db
-    .select({ reg: eventRegistrations, userName: users.name, userEmail: users.email })
+    .select({
+      reg: eventRegistrations,
+      userName: users.name,
+      userEmail: users.email,
+      // Sensus di-join supaya roster bisa menjawab "siapa saja yang hadir":
+      // anggota Nanjing, mahasiswa dari cabang lain, atau tamu luar.
+      sensusBranch: sensusProfiles.branch,
+      sensusCompletion: sensusProfiles.completionStatus,
+    })
     .from(eventRegistrations)
     .leftJoin(users, eq(eventRegistrations.userId, users.id))
+    .leftJoin(sensusProfiles, eq(sensusProfiles.userId, eventRegistrations.userId))
     .where(eq(eventRegistrations.eventId, id))
     .orderBy(desc(eventRegistrations.registeredAt));
 
@@ -168,6 +178,14 @@ export default async function ConsoleEventDetailPage({ params }: { params: Promi
             userEmail: r.userEmail,
             status: r.reg.status,
             registeredAt: r.reg.registeredAt.toISOString(),
+            membership: MEMBERSHIP_LABEL[
+              membershipStatus(
+                r.sensusCompletion ? { branch: r.sensusBranch, completionStatus: r.sensusCompletion } : null
+              )
+            ],
+            // Sensus lengkap lebih berwenang daripada jawaban sekali-pakai di
+            // form pendaftaran; null = pendaftaran lama, sebelum pertanyaannya ada.
+            branch: effectiveBranch(r.sensusCompletion === "complete" ? r.sensusBranch : null, r.reg.branch),
           }))}
         />
       </CollapsibleSection>
