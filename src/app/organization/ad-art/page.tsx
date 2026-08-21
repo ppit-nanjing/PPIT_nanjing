@@ -5,8 +5,11 @@ import { SiteNav } from "@/components/site-nav";
 import { SiteFooter } from "@/components/site-footer";
 import { FileText, Download } from "lucide-react";
 import Link from "next/link";
+import { getT } from "@/lib/i18n/server";
+import { INTL_LOCALE } from "@/lib/i18n/config";
 
 export default async function AdArtPage() {
+  const { t, locale } = await getT();
   const [doc] = await db
     .select()
     .from(organizationDocuments)
@@ -20,12 +23,11 @@ export default async function AdArtPage() {
 
       <main className="max-w-3xl mx-auto px-[var(--spacing-container-padding)] py-16">
         <span className="text-label-caps text-primary-container tracking-widest uppercase mb-2 block">
-          Dokumen Resmi
+          {t("org.adart.officialDoc")}
         </span>
-        <h1 className="text-headline-lg text-on-background mb-6">Anggaran Dasar &amp; Rumah Tangga</h1>
+        <h1 className="text-headline-lg text-on-background mb-6">{t("org.adart.title")}</h1>
         <p className="text-body-lg text-on-surface-variant mb-10">
-          AD/ART merupakan dokumen fundamental organisasi yang memuat Anggaran Dasar (AD) dan
-          Anggaran Rumah Tangga (ART) &mdash; landasan hukum dan operasional PPIT Nanjing.
+          {t("org.adart.intro")}
         </p>
 
         <div className="bg-surface-container-lowest border border-outline-variant rounded-xl p-6 sm:p-8 flex flex-col sm:flex-row sm:items-center gap-5 sm:gap-6">
@@ -33,11 +35,14 @@ export default async function AdArtPage() {
             <FileText className="text-primary-container" size={26} aria-hidden />
           </div>
           <div className="flex-1">
-            <h2 className="text-headline-md text-on-background">{doc?.title ?? "AD/ART PPIT Nanjing"}</h2>
+            <h2 className="text-headline-md text-on-background">{doc?.title ?? t("org.adart.docFallback")}</h2>
             <p className="text-body-md text-on-surface-variant">
               {doc
-                ? `Versi ${doc.version ?? "terbaru"} · diterbitkan ${doc.publishedAt.toLocaleDateString("id-ID", { dateStyle: "long" })}`
-                : "Belum ada dokumen yang diunggah admin."}
+                ? t("org.adart.versionLine", {
+                    version: doc.version ?? t("org.adart.latest"),
+                    date: doc.publishedAt.toLocaleDateString(INTL_LOCALE[locale], { dateStyle: "long" }),
+                  })
+                : t("org.adart.noDoc")}
             </p>
           </div>
           {doc?.fileUrl && (
@@ -45,10 +50,10 @@ export default async function AdArtPage() {
               href={doc.fileUrl}
               target="_blank"
               rel="noopener noreferrer"
-              aria-label={`Unduh PDF ${doc.title} (membuka tab baru)`}
+              aria-label={t("org.adart.downloadAria", { title: doc.title })}
               className="flex items-center justify-center gap-2 bg-primary-container text-on-primary text-label-caps uppercase tracking-wide px-5 py-3 rounded-md hover:bg-primary transition-colors shrink-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-container focus-visible:ring-offset-2 focus-visible:ring-offset-background motion-reduce:transition-none"
             >
-              <Download size={16} aria-hidden /> Unduh PDF
+              <Download size={16} aria-hidden /> {t("org.adart.download")}
             </a>
           )}
         </div>
@@ -63,7 +68,7 @@ export default async function AdArtPage() {
           href="/organization/ad-art/review"
           className="inline-flex items-center gap-2 text-label-caps text-primary-container hover:text-primary transition-colors mt-6 rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-container focus-visible:ring-offset-2 focus-visible:ring-offset-background motion-reduce:transition-none"
         >
-          Baca Ringkasan Panduan &rarr;
+          {t("org.adart.readGuide")} &rarr;
         </Link>
       </main>
 
