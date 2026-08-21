@@ -1,36 +1,15 @@
 "use server";
 
-import { eq } from "drizzle-orm";
+import { and, eq, ne } from "drizzle-orm";
 import { redirect } from "next/navigation";
 import { auth } from "@/auth";
 import { db } from "@/db";
 import { sensusProfiles } from "@/db/schema";
+import { validateSensus, type SensusInput, type SensusIssue } from "@/lib/sensus-form";
 
-export interface SensusInput {
-  // BIODATA
-  fullName: string;
-  passportNumber: string;
-  gender: string;
-  passportExpiry: string;
-  province: string;
-  birthDate: string;
-  // DATA MAHASISWA
-  branch: string;
-  studentStatus: string;
-  university: string;
-  degreeLevel: string;
-  major: string;
-  fundingSource: string;
-  entryYear: string;
-  graduationYear: string;
-  // KONTAK
-  wechatId: string;
-  phoneActive: string;
-  whatsappNumber: string;
-  // Dokumen & persetujuan
-  studentCardUrl: string;
-  agreeTerms: boolean;
-}
+// Tipe & aturan validasinya ada di src/lib/sensus-form.ts — berkas "use server"
+// hanya boleh mengekspor fungsi async, jadi tipe dan konstanta tidak bisa
+// tinggal di sini; pemakainya mengimpor langsung dari lib itu.
 
 function toValues(input: SensusInput) {
   return {
@@ -53,21 +32,47 @@ function toValues(input: SensusInput) {
     whatsappNumber: input.whatsappNumber || null,
     studentCardUrl: input.studentCardUrl || null,
     agreeTerms: Boolean(input.agreeTerms),
+    subscribeNewsletter: Boolean(input.subscribeNewsletter),
   };
 }
 
-export async function submitSensusProfile(returnTo: string | null, input: SensusInput) {
+// Satu orang bisa punya dua akun Google (pribadi + kampus). Kalau keduanya
+// mengisi sensus dengan paspor yang sama, orang itu terhitung dua anggota di
+// sini dan terkirim dobel ke pusat.
+//
+// Sengaja TIDAK memindahkan profil lama ke akun baru secara otomatis: nomor
+// paspor di sini adalah klaim identitas yang belum diverifikasi siapa pun, jadi
+// pemindahan otomatis berarti siapa saja yang tahu nomor paspor orang lain bisa
+// mengambil alih baris sensusnya. Kembar ditolak, penyelesaiannya lewat
+// pengurus (hapus akun yang tidak dipakai di /console/users — sensus_profiles
+// ikut terhapus lewat cascade).
+async function passportTakenByAnotherUser(userId: string, passportNumber: string): Promise<boolean> {
+  const value = passportNumber.trim();
+  if (!value) return false;
+  const [clash] = await db
+    .select({ id: sensusProfiles.id })
+    .from(sensusProfiles)
+    .where(and(eq(sensusProfiles.passportNumber, value), ne(sensusProfiles.userId, userId)))
+    .limit(1);
+  return Boolean(clash);
+}
+
+export async function submitSensusProfile(
+  returnTo: string | null,
+  input: SensusInput
+): Promise<{ issues: SensusIssue[] } | undefined> {
   const session = await auth();
   if (!session?.user?.id) redirect("/login");
 
-  // Kartu Tanda Mahasiswa wajib - bukti mahasiswa aktif di Tiongkok.
-  if (!input.studentCardUrl.trim()) {
-    return { error: "student_card_required" as const };
+  // Data sensus dipakai untuk rekap ke PPI Tiongkok pusat, dan di sana SEMUA
+  // field ini wajib — profil yang bolong tidak bisa dimasukkan ke sistem
+  // mereka. Jadi kelengkapannya ditegakkan di server, bukan cuma di wizard
+  // (`completionStatus: "complete"` harus benar-benar berarti lengkap).
+  const issues = validateSensus(input);
+  if (await passportTakenByAnotherUser(session.user.id, input.passportNumber)) {
+    issues.push({ field: "passportNumber", step: 0, kind: "passportTaken" });
   }
-  // Persetujuan syarat, ketentuan, dan kebijakan privasi wajib dicentang.
-  if (!input.agreeTerms) {
-    return { error: "terms_required" as const };
-  }
+  if (issues.length > 0) return { issues };
 
   const values = { ...toValues(input), completionStatus: "complete" as const, updatedAt: new Date() };
 
@@ -88,6 +93,14 @@ export async function submitSensusProfile(returnTo: string | null, input: Sensus
 export async function saveSensusStep(input: SensusInput): Promise<{ savedAt: string } | { error: string }> {
   const session = await auth();
   if (!session?.user?.id) return { error: "unauthenticated" };
+
+  // Dicegat sebelum menyentuh database: tanpa ini, unique constraint pada
+  // passport_number melempar error mentah di tengah wizard. Ditolak sejak
+  // langkah Biodata juga berarti pengisi tahu lebih awal, bukan setelah
+  // menghabiskan tiga langkah.
+  if (await passportTakenByAnotherUser(session.user.id, input.passportNumber)) {
+    return { error: "passport_taken" };
+  }
 
   const [existing] = await db
     .select({ completionStatus: sensusProfiles.completionStatus })
