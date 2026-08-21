@@ -2,6 +2,8 @@ import Link from "next/link";
 import Image from "next/image";
 import { Reveal } from "@/components/reveal";
 import { CalendarDays, MapPin, CalendarX, Clock, ArrowRight } from "lucide-react";
+import { getT } from "@/lib/i18n/server";
+import { INTL_LOCALE } from "@/lib/i18n/config";
 
 export type EventCardEvent = {
   id: string;
@@ -20,7 +22,7 @@ export type EventCardEvent = {
  * hover lift, cover zoom, and an optional "SELESAI" badge + grayscale
  * treatment for past events.
  */
-export function EventCard({
+export async function EventCard({
   event,
   isPast = false,
   index = 0,
@@ -29,23 +31,24 @@ export function EventCard({
   isPast?: boolean;
   index?: number;
 }) {
+  const { t, locale } = await getT();
   const date = event.startAt ? new Date(event.startAt) : null;
   const hasTime = date ? date.getHours() !== 0 || date.getMinutes() !== 0 : false;
   const timeLabel = date
-    ? date.toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit" })
+    ? date.toLocaleTimeString(INTL_LOCALE[locale], { hour: "2-digit", minute: "2-digit" })
     : "";
 
   return (
     <Reveal delay={Math.min(index * 0.06, 0.4)}>
       <Link
         href={`/events/${event.slug}`}
-        aria-label={`Lihat detail kegiatan ${event.title}`}
+        aria-label={t("events.viewDetail", { title: event.title })}
         className="group relative block h-full bg-surface-container-lowest border border-outline-variant rounded-xl overflow-hidden hover:shadow-[0_14px_40px_rgba(39,23,22,0.10)] hover:-translate-y-1 transition-all duration-300 motion-reduce:transition-none motion-reduce:transform-none focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-container focus-visible:ring-offset-2 focus-visible:ring-offset-background flex flex-col"
       >
         <div className="h-44 bg-surface-container-low overflow-hidden relative">
           {isPast && (
             <span className="absolute top-3 left-3 z-10 bg-surface-container-lowest text-on-background px-3 py-1.5 rounded-lg text-label-caps font-bold tracking-widest shadow-sm">
-              SELESAI
+              {t("events.ended")}
             </span>
           )}
           {event.coverImageUrl ? (
@@ -83,7 +86,7 @@ export function EventCard({
             {date && (
               <span className="flex items-center gap-1.5">
                 <CalendarDays size={14} aria-hidden="true" />{" "}
-                {date.toLocaleDateString("id-ID", {
+                {date.toLocaleDateString(INTL_LOCALE[locale], {
                   day: "numeric",
                   month: "short",
                   year: "numeric",
