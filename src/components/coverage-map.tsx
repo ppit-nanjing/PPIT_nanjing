@@ -12,11 +12,13 @@ import type { CoverageFeature } from "@/app/coverage/page";
 
 const WIDTH = 800;
 const PAD = 16;
-// A polygon narrower than this share of the map cannot hold its own name, so it
-// gets a dot instead and is identified through search, hover, or the list below.
-// Expressed as a fraction because the SVG is scaled to fit the viewport, so an
-// absolute pixel threshold would mean different things on different screens.
-const MIN_LABEL_SHARE = 0.11;
+// Rough advance width per character for the UI sans at a given font size. Only
+// needs to be close enough to detect collisions, not to lay out text.
+const CHAR_W = 0.58;
+// Must match the tooltip's own max width, or the flip lands it half off-screen.
+const TIP_W = 240;
+const TIP_H = 100;
+const EDGE = 8;
 
 type Ring = number[][];
 
@@ -26,9 +28,21 @@ function ringsOf(f: CoverageFeature): Ring[] {
   return (g.coordinates as number[][][][]).flat() as Ring[];
 }
 
+/** Shoelace area, used only to rank which label wins a collision. */
+function ringArea(ring: number[][]): number {
+  let a = 0;
+  for (let i = 0, j = ring.length - 1; i < ring.length; j = i++) {
+    a += (ring[j][0] + ring[i][0]) * (ring[j][1] - ring[i][1]);
+  }
+  return Math.abs(a / 2);
+}
+
 /** Strip accents/case so "Huai'an" matches "huaian" and "Ma’anshan" matches "maanshan". */
 const norm = (s: string) =>
   s.toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "").replace(/['’\-\s]/g, "");
+
+type Box = { x1: number; y1: number; x2: number; y2: number };
+const overlaps = (a: Box, b: Box) => a.x1 < b.x2 && b.x1 < a.x2 && a.y1 < b.y2 && b.y1 < a.y2;
 
 export function CoverageMap({
   features,
@@ -49,8 +63,13 @@ export function CoverageMap({
 }) {
   const [active, setActive] = useState<string | null>(null);
   const [query, setQuery] = useState("");
+  // Viewport coordinates, because the tooltip is position:fixed. Anchoring it to
+  // the map container instead looked fine until the map sat in a 416px grid
+  // column: the tooltip was squeezed to ~139px, wrapped to 186px tall and spilled
+  // off-screen. Fixed also escapes the container's overflow-x clipping.
+  const [pointer, setPointer] = useState<{ left: number; top: number; maxW: number } | null>(null);
 
-  const { paths, height } = useMemo(() => {
+  const { paths, height, labelled } = useMemo(() => {
     let minLng = Infinity, maxLng = -Infinity, minLat = Infinity, maxLat = -Infinity;
     for (const f of features) {
       for (const ring of ringsOf(f)) {
@@ -74,6 +93,7 @@ export function CoverageMap({
     // 53% of the width empty while squashing the districts into a column.
     const scale = (WIDTH - PAD * 2) / spanX;
     const h = Math.round(spanY * scale + PAD * 2);
+    const fontSize = 13 * (h / 620);
 
     const project = ([lng, lat]: number[]) => [
       PAD + (lng - minLng) * cosLat * scale,
@@ -83,22 +103,45 @@ export function CoverageMap({
 
     const paths = features.map((f) => {
       const rings = ringsOf(f);
-      let wMin = Infinity, wMax = -Infinity;
-      for (const r of rings) for (const [lng] of r) { if (lng < wMin) wMin = lng; if (lng > wMax) wMax = lng; }
+      const projected = rings.map((r) => r.map(project));
       return {
         id: f.properties.id,
         label: f.properties.label,
         zh: f.properties.zh,
         within: f.properties.within,
         center: project(f.properties.center),
-        widthShare: ((wMax - wMin) * cosLat * scale) / (WIDTH - PAD * 2),
-        d: rings
-          .map((ring) => "M" + ring.map(project).map(([x, y]) => `${x.toFixed(1)},${y.toFixed(1)}`).join("L") + "Z")
+        area: projected.reduce((s, r) => s + ringArea(r), 0),
+        d: projected
+          .map((ring) => "M" + ring.map(([x, y]) => `${x.toFixed(1)},${y.toFixed(1)}`).join("L") + "Z")
           .join(" "),
       };
     });
-    return { paths, height: h };
+
+    // Which labels can be drawn without colliding. The previous rule only asked
+    // whether a name fit inside its own polygon, which is the wrong question:
+    // Xuanwu, Qinhuai and Jianye each passed that test while sitting 5-47 units
+    // apart, so their labels still landed on top of each other. Place biggest
+    // first and drop any label whose box hits one already placed - the dense
+    // urban core then falls back to dots and is named by the tooltip.
+    const placed: Box[] = [];
+    const labelled = new Set<string>();
+    for (const p of [...paths].sort((a, b) => b.area - a.area)) {
+      const w = p.label.length * fontSize * CHAR_W;
+      const box: Box = {
+        x1: p.center[0] - w / 2,
+        y1: p.center[1] - fontSize * 0.75,
+        x2: p.center[0] + w / 2,
+        y2: p.center[1] + fontSize * 0.35,
+      };
+      if (placed.some((q) => overlaps(box, q))) continue;
+      placed.push(box);
+      labelled.add(p.id);
+    }
+
+    return { paths, height: h, labelled, fontSize };
   }, [features]);
+
+  const fontSize = 13 * (height / 620);
 
   const q = norm(query.trim());
   const matches = q ? paths.filter((p) => norm(p.label).includes(q) || p.zh.includes(query.trim())) : [];
@@ -108,6 +151,31 @@ export function CoverageMap({
   // Jurong sits inside Zhenjiang, so it must be painted after it or it vanishes.
   const ordered = [...paths].sort((a, b) => (a.within ? 1 : 0) - (b.within ? 1 : 0));
   const activeInfo = paths.find((p) => p.id === active) ?? (matches.length === 1 ? matches[0] : undefined);
+
+  // Prefer the bottom-right of the cursor, flip when that would overflow, then
+  // clamp. Flipping alone is not enough on a phone: a 240px tooltip flipped at
+  // x=216 on a 375px screen still hangs 38px off the left edge.
+  function track(e: React.MouseEvent) {
+    const vw = window.innerWidth;
+    const vh = window.innerHeight;
+    const maxW = Math.min(TIP_W, vw - EDGE * 2);
+
+    let left = e.clientX + 14;
+    if (left + maxW > vw - EDGE) left = e.clientX - 14 - maxW;
+    left = Math.max(EDGE, Math.min(left, vw - maxW - EDGE));
+
+    let top = e.clientY + 14;
+    if (top + TIP_H > vh - EDGE) top = e.clientY - 14 - TIP_H;
+    top = Math.max(EDGE, Math.min(top, vh - TIP_H - EDGE));
+
+    setPointer({ left, top, maxW });
+  }
+
+  const tipStyle: React.CSSProperties | undefined = pointer
+    ? { left: pointer.left, top: pointer.top, maxWidth: pointer.maxW }
+    : undefined;
+
+  const tipFor = activeInfo;
 
   return (
     <div className="bg-surface-container-lowest border border-outline-variant rounded-xl p-4 sm:p-6">
@@ -143,12 +211,13 @@ export function CoverageMap({
         </p>
       )}
 
-      <div className="overflow-x-auto flex justify-center">
+      <div className="relative overflow-x-auto flex justify-center">
         <svg
           viewBox={`0 0 ${WIDTH} ${height}`}
           className="h-auto w-auto max-w-full min-w-[300px] max-h-[78vh]"
           role="img"
           aria-label={ariaLabel}
+          onMouseLeave={() => setPointer(null)}
         >
           {ordered.map((p) => {
             const isActive = active === p.id;
@@ -168,9 +237,11 @@ export function CoverageMap({
                 } stroke-outline`}
                 strokeWidth={p.within ? 1.6 : 1}
                 opacity={dimmed ? 0.35 : 1}
-                onMouseEnter={() => setActive(p.id)}
+                onMouseEnter={(e) => { setActive(p.id); track(e); }}
+                onMouseMove={track}
                 onMouseLeave={() => setActive(null)}
-                onClick={() => setActive(isActive ? null : p.id)}
+                // Touch has no hover, so the tap itself has to place the tooltip.
+                onClick={(e) => { setActive(isActive ? null : p.id); track(e); }}
                 tabIndex={0}
                 onFocus={() => setActive(p.id)}
                 onBlur={() => setActive(null)}
@@ -181,18 +252,18 @@ export function CoverageMap({
             );
           })}
 
-          {/* Labels last so no polygon can cover them. Districts too narrow to
-              hold their name get a dot; the search box and the list name them. */}
+          {/* Only non-colliding labels are drawn. Everything else gets a dot and
+              is named by the tooltip, the search box, or the list beside the map. */}
           {paths.map((p) => {
-            const fits = p.widthShare >= MIN_LABEL_SHARE;
             const dimmed = highlighted != null && !highlighted.has(p.id);
-            if (!fits) {
+            const isOn = active === p.id || (highlighted?.has(p.id) ?? false);
+            if (!labelled.has(p.id)) {
               return (
                 <circle
                   key={`d-${p.id}`}
                   cx={p.center[0]}
                   cy={p.center[1]}
-                  r={(active === p.id || highlighted?.has(p.id) ? 5 : 3.5) * (height / 620)}
+                  r={(isOn ? 5 : 3.5) * (height / 620)}
                   className="fill-on-background pointer-events-none"
                   opacity={dimmed ? 0.3 : 0.85}
                 />
@@ -206,19 +277,38 @@ export function CoverageMap({
                 textAnchor="middle"
                 className="fill-on-background pointer-events-none"
                 opacity={dimmed ? 0.35 : 1}
-                style={{ fontSize: (p.within ? 11 : 13) * (height / 620), fontWeight: 500 }}
+                style={{ fontSize: p.within ? fontSize * 0.85 : fontSize, fontWeight: 500 }}
               >
                 {p.label}
               </text>
             );
           })}
         </svg>
+
+        {/* HTML, not <text>: the SVG is scaled to fit the viewport, so anything
+            inside it would scale with the map. pointer-events-none keeps the
+            tooltip from stealing the hover and making itself flicker. */}
+        {tipFor && pointer && (
+          <div
+            role="tooltip"
+            style={tipStyle}
+            className="pointer-events-none fixed z-50 w-max rounded-lg border border-outline-variant bg-surface-container shadow-lg px-3 py-2"
+          >
+            <p className="text-body-md text-on-background leading-tight">
+              {tipFor.label} <span className="text-on-surface-variant">{tipFor.zh}</span>
+            </p>
+            <p className="text-label-caps text-on-surface-variant mt-0.5">
+              {counts[tipFor.id] != null ? `${counts[tipFor.id]} ${unit}` : emptyUnit}
+            </p>
+          </div>
+        )}
       </div>
 
-      {/* A visible readout, because colour alone must not carry the information. */}
+      {/* A visible readout, because colour alone must not carry the information,
+          and because touch users may not keep the tooltip open. */}
       <div className="mt-4 min-h-[3rem] border-t border-outline-variant pt-4">
         {activeInfo ? (
-          <p className="text-body-md text-on-background">
+          <p aria-live="polite" className="text-body-md text-on-background">
             <strong>{activeInfo.label}</strong> <span className="text-on-surface-variant">{activeInfo.zh}</span>
             {" — "}
             {counts[activeInfo.id] != null ? `${counts[activeInfo.id]} ${unit}` : emptyUnit}
@@ -231,7 +321,7 @@ export function CoverageMap({
           </p>
         ) : (
           <p className="text-body-md text-on-surface-variant">
-            {features.length} wilayah · titik kecil = wilayah yang terlalu sempit untuk diberi nama di peta
+            {features.length} wilayah · titik kecil = wilayah yang terlalu berdempetan untuk diberi nama
           </p>
         )}
       </div>
