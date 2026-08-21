@@ -37,7 +37,20 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
   const session = await auth();
   const { locale, dict } = await getT();
   return (
-    <html lang={locale} className={`${inter.variable} ${spectral.variable} scroll-smooth`}>
+    // suppressHydrationWarning ada karena skrip tema di bawah MEMANG mengubah
+    // <html> sebelum React hydrate: server merender tanpa data-mode, skrip
+    // menambahkannya, lalu React mengeluh atributnya tidak cocok. Itu bukan bug
+    // yang bisa diperbaiki tanpa membuang skripnya - dan membuangnya berarti
+    // palet bawaan sempat terlihat lalu berkedip ganti.
+    //
+    // Efeknya cuma satu tingkat: atribut & teks elemen INI saja. Ketidakcocokan
+    // hydration di dalam pohonnya tetap dilaporkan seperti biasa, jadi ini tidak
+    // membungkam error lain.
+    <html
+      lang={locale}
+      suppressHydrationWarning
+      className={`${inter.variable} ${spectral.variable} scroll-smooth`}
+    >
       <body className="antialiased">
         {/* Applies the saved city theme + colour mode before anything paints.
             Without it the default palette renders first and visibly flips. */}
