@@ -23,8 +23,16 @@ export default async function EventDetailPage({ params }: { params: Promise<{ sl
   const { t, locale } = await getT();
   const [event] = await db.select().from(events).where(eq(events.slug, slug));
   if (!event) notFound();
-  // Scheduled (not-yet-released) events are not reachable from the public site.
-  if (event.status === "scheduled") notFound();
+  // Belum dirilis = tidak bisa dijangkau dari sisi publik.
+  //
+  // `draft` ikut ditambahkan 2026-08-21. Sebelumnya hanya `scheduled` yang
+  // diblokir, padahal draft justru yang belum pernah siap tampil: acara draft
+  // memang tidak terdaftar di /events, beranda, atau pencarian (semuanya
+  // memfilter status "published"), tapi halamannya tetap terbuka bagi siapa pun
+  // yang tahu URL-nya, lengkap dengan judul, tanggal, dan lokasi. Slug-nya
+  // berakhiran acak jadi praktis tak tertebak, tapi itu ketidakcocokan, bukan
+  // penjagaan.
+  if (event.status === "scheduled" || event.status === "draft") notFound();
 
   const [{ value: registeredCount }] = await db
     .select({ value: count() })
