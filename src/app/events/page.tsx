@@ -12,6 +12,8 @@ import { EventCard } from "@/components/event-card";
 import { CalendarDays, MapPin, CalendarX, Star, ArrowRight, CalendarPlus } from "lucide-react";
 import Link from "next/link";
 import Image from "next/image";
+import { getT } from "@/lib/i18n/server";
+import { INTL_LOCALE } from "@/lib/i18n/config";
 
 export default async function EventsPage({
   searchParams,
@@ -19,6 +21,7 @@ export default async function EventsPage({
   searchParams: Promise<{ category?: string }>;
 }) {
   const { category } = await searchParams;
+  const { t, locale } = await getT();
 
   // Promote any event whose scheduled publish time has passed before listing.
   await publishDueEvents();
@@ -41,7 +44,7 @@ export default async function EventsPage({
   ];
 
   const filterOptions = [
-    { key: "all", label: "Semua", href: "/events", active: !category },
+    { key: "all", label: t("events.filterAll"), href: "/events", active: !category },
     ...categories.map((c) => ({
       key: c,
       label: c,
@@ -61,10 +64,10 @@ export default async function EventsPage({
       <header className="max-w-[var(--container-max)] mx-auto px-[var(--spacing-container-padding)] pt-20 sm:pt-24 pb-8 flex flex-col md:flex-row justify-between items-start md:items-end gap-8 border-b border-outline-variant">
         <div className="max-w-2xl">
           <AnimatedHeroHeading
-            words={["Kegiatan"]}
+            words={[t("events.title")]}
             className="text-display-hero-mobile md:text-display-hero text-on-background mb-4"
           />
-          <AnimatedRevealText text="Ikuti kegiatan PPIT Nanjing dan daftar langsung lewat situs ini." />
+          <AnimatedRevealText text={t("events.intro")} />
         </div>
         {categories.length > 0 && <FilterTabs options={filterOptions} layoutId="events-filter-pill" />}
       </header>
@@ -81,18 +84,16 @@ export default async function EventsPage({
                 <CalendarX className="text-outline-variant" size={32} aria-hidden="true" />
               </div>
               <h2 className="text-headline-md text-on-background mb-2">
-                {category ? "Belum ada kegiatan di kategori ini" : "Belum ada kegiatan yang dijadwalkan"}
+                {category ? t("events.emptyCat") : t("events.emptyAll")}
               </h2>
               <p className="text-body-md text-on-surface-variant mb-6 max-w-md">
-                {category
-                  ? "Coba kategori lain atau lihat seluruh kegiatan PPIT Nanjing."
-                  : "Pantau terus situs ini — kegiatan baru akan muncul di sini."}
+                {category ? t("events.emptyCatDesc") : t("events.emptyAllDesc")}
               </p>
               <Link
                 href="/events"
                 className="inline-flex items-center gap-2 bg-primary-container text-on-primary text-label-caps uppercase tracking-wide px-6 py-3 rounded-md hover:bg-primary transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-container focus-visible:ring-offset-2 focus-visible:ring-offset-background"
               >
-                <CalendarPlus size={16} aria-hidden="true" /> Lihat Semua Kegiatan
+                <CalendarPlus size={16} aria-hidden="true" /> {t("events.viewAllEvents")}
               </Link>
             </div>
           </Reveal>
@@ -103,11 +104,11 @@ export default async function EventsPage({
                 <Reveal>
                   <h2 className="text-headline-lg text-on-background mb-6 flex items-center gap-2">
                     <Star className="text-primary-container" size={22} fill="currentColor" />
-                    Kegiatan Mendatang
+                    {t("events.upcoming")}
                   </h2>
                   <a
                     href={`/events/${featured.slug}`}
-                    aria-label={`Lihat detail kegiatan ${featured.title}`}
+                    aria-label={t("events.viewDetail", { title: featured.title })}
                     className="group grid grid-cols-1 lg:grid-cols-12 bg-surface-container-lowest border border-outline-variant rounded-xl overflow-hidden hover:shadow-[0_14px_40px_rgba(39,23,22,0.10)] hover:-translate-y-1 transition-all duration-300 motion-reduce:transform-none motion-reduce:transition-none focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-container focus-visible:ring-offset-2 focus-visible:ring-offset-background"
                   >
                     <div className="lg:col-span-7 h-64 lg:h-auto relative overflow-hidden bg-surface-container-low">
@@ -124,8 +125,8 @@ export default async function EventsPage({
                           <CalendarDays className="text-outline-variant" size={40} />
                         </div>
                       )}
-                      <span className="absolute top-6 left-6 bg-primary-container text-on-primary px-4 py-2 rounded-lg text-label-caps uppercase tracking-wide shadow-md">
-                        Mendatang
+                       <span className="absolute top-6 left-6 bg-primary-container text-on-primary px-4 py-2 rounded-lg text-label-caps uppercase tracking-wide shadow-md">
+                        {t("events.badgeUpcoming")}
                       </span>
                     </div>
                     <div className="lg:col-span-5 p-10 flex flex-col justify-center">
@@ -138,17 +139,17 @@ export default async function EventsPage({
                         {featured.startAt && (
                           <span className="text-body-md text-secondary flex items-center gap-1.5">
                             <CalendarDays size={16} aria-hidden="true" />{" "}
-                            {new Date(featured.startAt).toLocaleDateString("id-ID", {
-                              day: "numeric",
-                              month: "long",
-                              year: "numeric",
-                            })}
-                            {(() => {
-                              const d = new Date(featured.startAt);
-                              return d.getHours() !== 0 || d.getMinutes() !== 0
-                                ? ` · ${d.toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit" })}`
-                                : null;
-                            })()}
+                             {new Date(featured.startAt).toLocaleDateString(INTL_LOCALE[locale], {
+                               day: "numeric",
+                               month: "long",
+                               year: "numeric",
+                             })}
+                             {(() => {
+                               const d = new Date(featured.startAt);
+                               return d.getHours() !== 0 || d.getMinutes() !== 0
+                                 ? ` · ${d.toLocaleTimeString(INTL_LOCALE[locale], { hour: "2-digit", minute: "2-digit" })}`
+                                 : null;
+                             })()}
                           </span>
                         )}
                       </div>
@@ -170,8 +171,8 @@ export default async function EventsPage({
                           aria-hidden="true"
                           className="flex items-center gap-2 bg-primary-container text-on-primary px-6 py-3 rounded-lg text-label-caps uppercase tracking-wide group-hover:bg-primary transition-colors"
                         >
-                          Daftar Sekarang{" "}
-                          <ArrowRight size={16} className="group-hover:translate-x-1 transition-transform motion-reduce:transform-none" />
+                           {t("events.registerNow")}{" "}
+                           <ArrowRight size={16} className="group-hover:translate-x-1 transition-transform motion-reduce:transform-none" />
                         </span>
                       </div>
                     </div>
@@ -184,7 +185,7 @@ export default async function EventsPage({
               <section className="flex flex-col gap-8">
                 <Reveal>
                   <h2 className="text-headline-lg text-on-background border-b border-outline-variant pb-6">
-                    {featured ? "Kegiatan Lainnya" : "Semua Kegiatan"}
+                    {featured ? t("events.others") : t("events.all")}
                   </h2>
                 </Reveal>
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
