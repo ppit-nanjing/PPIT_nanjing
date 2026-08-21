@@ -3,44 +3,47 @@ import { auth } from "@/auth";
 import { SiteNav } from "@/components/site-nav";
 import { SiteFooter } from "@/components/site-footer";
 import { MentorshipForm } from "@/components/mentorship-form";
+import { getT } from "@/lib/i18n/server";
 import { TrendingUp, Map, Users2 } from "lucide-react";
-
-const STEPS = [
-  {
-    title: "Daftar",
-    description: "Isi formulir dengan latar belakang dan bidang yang kamu minati.",
-  },
-  {
-    title: "Dicocokkan",
-    description: "Kami mencarikan mentor alumni yang paling relevan dengan profilmu.",
-  },
-  {
-    title: "Sesi Bimbingan",
-    description: "Terhubung langsung dengan mentor untuk sesi bimbingan 1-on-1.",
-  },
-];
 
 const BENEFITS = [
   {
     icon: TrendingUp,
-    title: "Wawasan Industri",
-    description: "Pelajari ekspektasi dan tren dunia kerja langsung dari alumni yang sudah berkarir.",
+    titleKey: "career.mentorship.benefit.industry.title",
+    descKey: "career.mentorship.benefit.industry.desc",
   },
   {
     icon: Map,
-    title: "Peta Karir",
-    description: "Dapatkan saran yang relevan untuk menghadapi tantangan dan peluang setelah lulus.",
+    titleKey: "career.mentorship.benefit.careerMap.title",
+    descKey: "career.mentorship.benefit.careerMap.desc",
   },
   {
     icon: Users2,
-    title: "Perluasan Jaringan",
-    description: "Bangun koneksi yang berarti dalam jaringan alumni PPIT yang lebih luas.",
+    titleKey: "career.mentorship.benefit.network.title",
+    descKey: "career.mentorship.benefit.network.desc",
   },
-];
+] as const;
+
+const STEPS = [
+  {
+    titleKey: "career.mentorship.step.register.title",
+    descKey: "career.mentorship.step.register.desc",
+  },
+  {
+    titleKey: "career.mentorship.step.match.title",
+    descKey: "career.mentorship.step.match.desc",
+  },
+  {
+    titleKey: "career.mentorship.step.session.title",
+    descKey: "career.mentorship.step.session.desc",
+  },
+] as const;
 
 export default async function MentorshipPage() {
   const session = await auth();
   if (!session) redirect(`/login?returnTo=${encodeURIComponent("/career/mentorship")}`);
+
+  const { t } = await getT();
 
   return (
     <div className="min-h-screen bg-background text-on-background">
@@ -52,23 +55,21 @@ export default async function MentorshipPage() {
               Alumni Network <span className="text-primary-container">Mentorship</span>
             </h1>
             <p className="text-body-lg text-on-surface-variant">
-              Terhubung dengan alumni yang berpengalaman di bidangmu. Dapatkan wawasan industri,
-              bimbingan karir, dan perluas jaringan profesionalmu di komunitas Indonesia di
-              Tiongkok dan sekitarnya.
+              {t("career.mentorship.intro")}
             </p>
           </div>
 
           <div className="bg-surface-container-lowest border border-outline-variant rounded-xl p-6">
-            <h2 className="text-headline-md text-on-background mb-4">Kenapa Ikut?</h2>
+            <h2 className="text-headline-md text-on-background mb-4">{t("career.mentorship.whyTitle")}</h2>
             <ul className="flex flex-col gap-4">
-              {BENEFITS.map(({ icon: Icon, title, description }) => (
-                <li key={title} className="flex items-start gap-4">
+              {BENEFITS.map(({ icon: Icon, titleKey, descKey }) => (
+                <li key={titleKey} className="flex items-start gap-4">
                   <span className="bg-surface-container-low text-primary-container p-2 rounded-full shrink-0">
                     <Icon size={18} />
                   </span>
                   <div>
-                    <h3 className="text-body-md font-bold text-on-surface">{title}</h3>
-                    <p className="text-body-md text-on-surface-variant mt-1">{description}</p>
+                    <h3 className="text-body-md font-bold text-on-surface">{t(titleKey)}</h3>
+                    <p className="text-body-md text-on-surface-variant mt-1">{t(descKey)}</p>
                   </div>
                 </li>
               ))}
@@ -76,10 +77,10 @@ export default async function MentorshipPage() {
           </div>
 
           <div className="bg-surface-container-lowest border border-outline-variant rounded-xl p-6">
-            <h2 className="text-headline-md text-on-background mb-4">Cara Kerja</h2>
+            <h2 className="text-headline-md text-on-background mb-4">{t("career.mentorship.howTitle")}</h2>
             <ol className="flex flex-col gap-4">
-              {STEPS.map(({ title, description }, i) => (
-                <li key={title} className="flex items-start gap-4">
+              {STEPS.map(({ titleKey, descKey }, i) => (
+                <li key={titleKey} className="flex items-start gap-4">
                   <span
                     aria-hidden
                     className="bg-primary-container/10 text-primary-container font-bold text-body-md flex items-center justify-center w-8 h-8 rounded-full shrink-0"
@@ -87,8 +88,8 @@ export default async function MentorshipPage() {
                     {i + 1}
                   </span>
                   <div>
-                    <h3 className="text-body-md font-bold text-on-surface">{title}</h3>
-                    <p className="text-body-md text-on-surface-variant mt-1">{description}</p>
+                    <h3 className="text-body-md font-bold text-on-surface">{t(titleKey)}</h3>
+                    <p className="text-body-md text-on-surface-variant mt-1">{t(descKey)}</p>
                   </div>
                 </li>
               ))}
@@ -98,13 +99,12 @@ export default async function MentorshipPage() {
 
         <div className="lg:col-span-7 bg-surface-container-lowest border border-outline-variant rounded-xl p-6 md:p-10">
           <div className="mb-8 border-b border-outline-variant pb-6">
-            <h2 className="text-headline-lg text-on-background">Formulir Pendaftaran</h2>
+            <h2 className="text-headline-lg text-on-background">{t("career.mentorship.formTitle")}</h2>
             <p className="text-body-md text-on-surface-variant mt-2">
-              Ceritakan sedikit tentang dirimu supaya kami bisa mencarikan mentor alumni yang
-              paling cocok untukmu.
+              {t("career.mentorship.formDesc")}
             </p>
             <p className="text-label-caps text-on-surface-variant mt-4">
-              Data yang kamu berikan bersifat rahasia dan hanya digunakan untuk mencocokkan mentor.
+              {t("career.mentorship.formPrivacy")}
             </p>
           </div>
           <MentorshipForm />
