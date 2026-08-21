@@ -3,19 +3,21 @@
 import { useState } from "react";
 import { ChevronLeft, ChevronRight, CheckCircle2 } from "lucide-react";
 import { applyForMentorship } from "@/app/actions/mentorship";
+import { useT } from "@/lib/i18n/client";
 
 const INDUSTRIES = [
-  "Teknologi & Software",
-  "Keuangan & Perbankan",
-  "Teknik & Manufaktur",
-  "Konsultasi & Strategi Bisnis",
-  "Seni Kreatif & Desain",
-  "Akademia & Riset",
-];
+  { value: "Teknologi & Software", key: "career.mentorship.industry.tech" },
+  { value: "Keuangan & Perbankan", key: "career.mentorship.industry.finance" },
+  { value: "Teknik & Manufaktur", key: "career.mentorship.industry.engineering" },
+  { value: "Konsultasi & Strategi Bisnis", key: "career.mentorship.industry.consulting" },
+  { value: "Seni Kreatif & Desain", key: "career.mentorship.industry.creative" },
+  { value: "Akademia & Riset", key: "career.mentorship.industry.academia" },
+] as const;
 
-const STEPS = ["Bidang & Latar Belakang", "Motivasi"] as const;
+const STEPS = ["career.mentorship.formStep1", "career.mentorship.formStep2"] as const;
 
 export function MentorshipForm() {
+  const t = useT();
   const [step, setStep] = useState(0);
   const [preferredField, setPreferredField] = useState("");
   const [background, setBackground] = useState("");
@@ -31,7 +33,7 @@ export function MentorshipForm() {
         {STEPS.map((s, i) => (
           <div key={s} className="flex-1 flex flex-col gap-2">
             <div className={`h-2 rounded-full transition-colors ${i <= step ? "bg-primary-container" : "bg-surface-container-low"}`} />
-            <span className={`text-label-caps ${i === step ? "text-on-background font-medium" : "text-on-surface-variant"}`}>{s}</span>
+            <span className={`text-label-caps ${i === step ? "text-on-background font-medium" : "text-on-surface-variant"}`}>{t(s)}</span>
           </div>
         ))}
       </div>
@@ -39,27 +41,27 @@ export function MentorshipForm() {
       {step === 0 && (
         <div className="flex flex-col gap-6">
           <label className="flex flex-col gap-2">
-            <span className="text-label-caps uppercase tracking-wide text-on-surface-variant">Bidang yang Diminati</span>
+            <span className="text-label-caps uppercase tracking-wide text-on-surface-variant">{t("career.mentorship.fieldLabel")}</span>
             <select
               value={preferredField}
               onChange={(e) => setPreferredField(e.target.value)}
               className="bg-soft-gray rounded-md p-3 text-body-md focus:outline-none focus:ring-2 focus:ring-primary-container"
             >
-              <option value="">Pilih bidang industri</option>
+              <option value="">{t("career.mentorship.fieldPlaceholder")}</option>
               {INDUSTRIES.map((i) => (
-                <option key={i} value={i}>
-                  {i}
+                <option key={i.value} value={i.value}>
+                  {t(i.key)}
                 </option>
               ))}
             </select>
           </label>
           <label className="flex flex-col gap-2">
-            <span className="text-label-caps uppercase tracking-wide text-on-surface-variant">Latar Belakang Singkat</span>
+            <span className="text-label-caps uppercase tracking-wide text-on-surface-variant">{t("career.mentorship.backgroundLabel")}</span>
             <textarea
               value={background}
               onChange={(e) => setBackground(e.target.value)}
               rows={4}
-              placeholder="Ceritakan pengalaman akademik/organisasi/kerja yang relevan"
+              placeholder={t("career.mentorship.backgroundPlaceholder")}
               className="bg-soft-gray rounded-md p-3 text-body-md focus:outline-none focus:ring-2 focus:ring-primary-container resize-none"
             />
           </label>
@@ -69,7 +71,7 @@ export function MentorshipForm() {
               onClick={() => setStep(1)}
               className="flex items-center gap-1 bg-primary-container text-on-primary text-label-caps uppercase tracking-wide px-6 py-3 rounded-md hover:bg-primary transition-colors"
             >
-              Selanjutnya <ChevronRight size={16} />
+              {t("career.mentorship.next")} <ChevronRight size={16} />
             </button>
           </div>
         </div>
@@ -79,14 +81,14 @@ export function MentorshipForm() {
         <div className="flex flex-col gap-6">
           <label className="flex flex-col gap-2">
             <span className="text-label-caps uppercase tracking-wide text-on-surface-variant">
-              Motivasi Mengikuti Mentorship *
+              {t("career.mentorship.motivationLabel")}
             </span>
             <textarea
               value={motivation}
               onChange={(e) => setMotivation(e.target.value)}
               rows={5}
               required
-              placeholder="Apa yang ingin kamu capai lewat program ini?"
+              placeholder={t("career.mentorship.motivationPlaceholder")}
               className="bg-soft-gray rounded-md p-3 text-body-md focus:outline-none focus:ring-2 focus:ring-primary-container resize-none"
             />
           </label>
@@ -96,13 +98,13 @@ export function MentorshipForm() {
               onClick={() => setStep(0)}
               className="flex items-center gap-1 text-label-caps text-secondary hover:text-on-background transition-colors"
             >
-              <ChevronLeft size={16} /> Sebelumnya
+              <ChevronLeft size={16} /> {t("career.mentorship.prev")}
             </button>
             <button
               type="submit"
               className="flex items-center gap-2 bg-primary-container text-on-primary text-label-caps uppercase tracking-wide px-6 py-3 rounded-md hover:bg-primary transition-colors"
             >
-              Kirim Pendaftaran <CheckCircle2 size={16} />
+              {t("career.mentorship.submit")} <CheckCircle2 size={16} />
             </button>
           </div>
         </div>
