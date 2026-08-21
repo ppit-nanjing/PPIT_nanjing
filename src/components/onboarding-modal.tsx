@@ -4,6 +4,7 @@ import { useSession } from "next-auth/react";
 import { useState, useTransition } from "react";
 import { Mail } from "lucide-react";
 import { setEmailSubscription } from "@/app/actions/user";
+import { useT } from "@/lib/i18n/client";
 
 /**
  * Shown once, right after a user's first Google sign-in - session.user.emailSubscribed
@@ -11,6 +12,7 @@ import { setEmailSubscription } from "@/app/actions/user";
  * ever renders for someone who hasn't been asked yet.
  */
 export function OnboardingModal() {
+  const t = useT();
   const { data: session, update } = useSession();
   const [checked, setChecked] = useState(true);
   const [pending, startTransition] = useTransition();
@@ -38,11 +40,10 @@ export function OnboardingModal() {
           <Mail className="text-primary-container" size={22} />
         </div>
         <h2 className="text-headline-md text-on-background mb-2">
-          Selamat datang, {session.user.name?.split(" ")[0]}!
+          {t("onboarding.welcome", { name: session.user.name?.split(" ")[0] ?? "" })}
         </h2>
         <p className="text-body-md text-on-surface-variant mb-6">
-          Mau tetap dapat kabar dari PPIT Nanjing? Kami bisa kirim info berita dan kegiatan
-          (event) langsung ke email kamu.
+          {t("onboarding.desc")}
         </p>
         <label className="flex items-start gap-3 mb-8 cursor-pointer">
           <input
@@ -52,7 +53,7 @@ export function OnboardingModal() {
             className="mt-1 w-4 h-4 accent-primary-container"
           />
           <span className="text-body-md text-on-background">
-            Ya, kirimkan saya berita &amp; info kegiatan PPIT Nanjing ke {session.user.email}
+            {t("onboarding.optIn", { email: session.user.email ?? "" })}
           </span>
         </label>
         <button
@@ -60,17 +61,17 @@ export function OnboardingModal() {
           disabled={pending}
           className="w-full bg-primary-container text-on-primary text-label-caps uppercase tracking-wide py-3 rounded-md hover:bg-primary transition-colors disabled:opacity-60"
         >
-          {pending ? "Menyimpan..." : "Lanjutkan"}
+          {pending ? t("onboarding.saving") : t("onboarding.continue")}
         </button>
         <button
           onClick={handleSkip}
           disabled={pending}
           className="w-full mt-3 bg-transparent text-on-surface-variant uppercase tracking-wide text-label-caps py-2 rounded-md border border-outline-variant hover:text-on-background disabled:opacity-60"
         >
-          Lewati
+          {t("onboarding.skip")}
         </button>
         <p className="text-label-caps text-secondary text-center mt-4">
-          Bisa diubah kapan saja lewat halaman Profil
+          {t("onboarding.changeLater")}
         </p>
       </div>
     </div>
