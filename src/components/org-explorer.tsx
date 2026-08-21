@@ -15,6 +15,7 @@ import {
   ChevronRight,
   X,
 } from "lucide-react";
+import { useT } from "@/lib/i18n/client";
 
 export type OrgMember = {
   name: string | null;
@@ -38,9 +39,9 @@ export type OrgNodeData = {
 };
 
 const VIEWS = [
-  { key: "interactive", label: "Bagan" },
-  { key: "cards", label: "Kartu" },
-  { key: "tree", label: "Pohon" },
+  { key: "interactive", labelKey: "org.explorer.view.chart" },
+  { key: "cards", labelKey: "org.explorer.view.cards" },
+  { key: "tree", labelKey: "org.explorer.view.tree" },
 ] as const;
 
 type ViewKey = (typeof VIEWS)[number]["key"];
@@ -82,6 +83,7 @@ function MemberRow({
   compact?: boolean;
   showSocials?: boolean;
 }) {
+  const t = useT();
   const avatar = compact ? "w-6 h-6" : "w-7 h-7";
   const avatarSize = compact ? 24 : 28;
   return (
@@ -100,9 +102,9 @@ function MemberRow({
         </div>
       )}
       <div className="min-w-0">
-        <p className="text-label-caps font-semibold text-on-background leading-tight truncate">
-          {member.name ?? "Anggota"}
-        </p>
+          <p className="text-label-caps font-semibold text-on-background leading-tight truncate">
+            {member.name ?? t("org.explorer.member")}
+          </p>
         {member.position && (
           <p className="text-label-caps text-on-surface-variant leading-tight truncate">{member.position}</p>
         )}
@@ -137,6 +139,7 @@ function NodeCard({
   compact?: boolean;
   onClick?: (n: OrgNodeData) => void;
 }) {
+  const t = useT();
   const members = node.members;
   const cap = compact ? 3 : 5;
   const Wrapper = onClick ? "button" : "div";
@@ -166,7 +169,7 @@ function NodeCard({
             <MemberRow key={i} member={m} compact={compact} showSocials={!onClick} />
           ))}
           {members.length > cap && (
-            <p className="text-label-caps text-on-surface-variant">+{members.length - cap} lainnya</p>
+            <p className="text-label-caps text-on-surface-variant">{t("org.explorer.more", { n: members.length - cap })}</p>
           )}
         </div>
       )}
@@ -209,6 +212,7 @@ function ChartView({
 }
 
 function CardsView({ units }: { units: OrgNodeData[] }) {
+  const t = useT();
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-5">
       {units.map((u) => (
@@ -231,7 +235,7 @@ function CardsView({ units }: { units: OrgNodeData[] }) {
           )}
           {u.children.length > 0 && (
             <div className="flex flex-col gap-2 pt-3 border-t border-outline-variant">
-              <p className="text-label-caps text-on-surface-variant uppercase tracking-wide">Divisi</p>
+              <p className="text-label-caps text-on-surface-variant uppercase tracking-wide">{t("org.explorer.divisions")}</p>
               {u.children.map((c) => (
                 <div key={c.id} className="bg-surface-container-low rounded-lg p-3">
                   <p className="text-body-md font-semibold text-on-background">{c.name}</p>
@@ -264,6 +268,7 @@ function TreeNode({
   depth: number;
   defaultOpen?: boolean;
 }) {
+  const t = useT();
   const [open, setOpen] = useState(depth === 0 ? true : defaultOpen ?? false);
   const hasChildren = node.children.length > 0;
   const isRoot = depth === 0;
@@ -287,7 +292,7 @@ function TreeNode({
           {node.name}
         </span>
         {node.members.length > 0 && (
-          <span className="text-label-caps text-on-surface-variant ml-auto">{node.members.length} orang</span>
+          <span className="text-label-caps text-on-surface-variant ml-auto">{t("org.explorer.memberCount", { n: node.members.length })}</span>
         )}
       </button>
       {open && (hasChildren || node.members.length > 0) && (
@@ -329,6 +334,7 @@ function TreeView({ units }: { units: OrgNodeData[] }) {
 }
 
 function ProfileModal({ node, onClose }: { node: OrgNodeData; onClose: () => void }) {
+  const t = useT();
   // ESC to close + lock background scroll while open (matches the command
   // palette / mobile-menu behaviour).
   useEffect(() => {
@@ -364,7 +370,7 @@ function ProfileModal({ node, onClose }: { node: OrgNodeData; onClose: () => voi
           <button
             type="button"
             onClick={onClose}
-            aria-label="Tutup"
+            aria-label={t("cities.close")}
             className="ml-auto text-on-surface-variant hover:text-on-background rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-container focus-visible:ring-offset-2 focus-visible:ring-offset-background motion-reduce:transition-none"
           >
             <X size={20} />
@@ -377,7 +383,7 @@ function ProfileModal({ node, onClose }: { node: OrgNodeData; onClose: () => voi
             ))}
           </div>
         ) : (
-          <p className="text-label-caps text-on-surface-variant mt-3">Belum ada anggota terdaftar.</p>
+          <p className="text-label-caps text-on-surface-variant mt-3">{t("org.explorer.noMembers")}</p>
         )}
       </div>
     </div>
@@ -385,6 +391,7 @@ function ProfileModal({ node, onClose }: { node: OrgNodeData; onClose: () => voi
 }
 
 export function OrgExplorer({ units }: { units: OrgNodeData[] }) {
+  const t = useT();
   const [view, setView] = useState<ViewKey>("interactive");
   const [active, setActive] = useState<OrgNodeData | null>(null);
 
@@ -402,7 +409,7 @@ export function OrgExplorer({ units }: { units: OrgNodeData[] }) {
                 : "bg-surface-container-low text-on-surface-variant border-outline-variant hover:text-on-background"
             }`}
           >
-            {v.label}
+            {t(v.labelKey)}
           </button>
         ))}
       </div>
