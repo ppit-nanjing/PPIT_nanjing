@@ -3,6 +3,7 @@ import {
   saveEventDivision,
   deleteEventDivision,
   issueDivisionCertificates,
+  issueEventCertificates,
   assignCommittee,
   removeCommittee,
 } from "@/app/actions/committee";
@@ -57,6 +58,7 @@ export function EventCommitteeStructure({
   certifiedUserIds: string[];
 }) {
   const certified = new Set(certifiedUserIds);
+  const certifiedCount = members.filter((m) => m.userId && certified.has(m.userId)).length;
   const roots = divisions.filter((d) => !d.parentDivisionId);
   const childrenOf = (id: string) => divisions.filter((d) => d.parentDivisionId === id);
   const membersOf = (id: string) => members.filter((m) => m.divisionId === id);
@@ -76,9 +78,27 @@ export function EventCommitteeStructure({
 
   return (
     <div className="flex flex-col gap-6">
-      <p className="text-body-md text-on-surface-variant">
-        Susunan panitia acara ini. <strong className="text-on-background">Berbeda dari jabatan struktural</strong> —
-        seseorang bisa jadi Ketua Departemen Perlengkapan di acara ini tanpa memegang jabatan apa pun di kabinet.
+      <div className="flex items-start justify-between gap-4 flex-wrap">
+        <p className="text-body-md text-on-surface-variant max-w-xl">
+          Susunan panitia acara ini. <strong className="text-on-background">Berbeda dari jabatan struktural</strong> —
+          seseorang bisa jadi Ketua Departemen Perlengkapan di acara ini tanpa memegang jabatan apa pun di kabinet.
+        </p>
+        {members.length > 0 && (
+          <form action={issueEventCertificates}>
+            <input type="hidden" name="eventId" value={eventId} />
+            <button
+              type="submit"
+              className="flex items-center gap-2 bg-primary-container text-on-primary text-label-caps uppercase tracking-wide px-4 py-3 rounded-md hover:bg-primary transition-colors"
+            >
+              <Award size={16} /> Terbitkan Sertifikat Semua Panitia ({members.length - certifiedCount})
+            </button>
+          </form>
+        )}
+      </div>
+      <p className="text-xs text-on-surface-variant -mt-3">
+        Setiap peran di kepanitiaan dapat sertifikat, termasuk BPH &amp; Supervisory Committee yang tidak berada di
+        divisi mana pun — tombol per-departemen di bawah tidak menjangkau mereka, tombol ini menjangkau.
+        Yang sudah punya dilewati, jadi menekannya lagi setelah menambah orang hanya menerbitkan untuk yang baru.
       </p>
 
       {divisions.length === 0 && (
