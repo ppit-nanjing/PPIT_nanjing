@@ -2,15 +2,17 @@
 
 import { useEffect, useState } from "react";
 import { Sun, Moon, Monitor } from "lucide-react";
+import { useT } from "@/lib/i18n/client";
+import type { TKey } from "@/lib/i18n/dictionaries/id";
 
 // Each theme is a palette named after something that actually identifies Nanjing,
 // so the site reads as this city and not as a generic chapter template. The
 // palettes themselves live in globals.css - this only flips data-theme.
 export const CITY_THEMES = [
-  { id: "zijin", label: "Zijin", hanzi: "紫金山", note: "Gunung Ungu-Emas", swatch: "#4a3b78" },
-  { id: "meihua", label: "Meihua", hanzi: "梅花", note: "Bunga prem, bunga kota", swatch: "#8e2b41" },
-  { id: "mingwall", label: "Ming", hanzi: "明城墙", note: "Tembok kota Ming", swatch: "#3f4e5e" },
-] as const;
+  { id: "zijin", label: "Zijin", hanzi: "紫金山", noteKey: "theme.note.zijin", swatch: "#4a3b78" },
+  { id: "meihua", label: "Meihua", hanzi: "梅花", noteKey: "theme.note.meihua", swatch: "#8e2b41" },
+  { id: "mingwall", label: "Ming", hanzi: "明城墙", noteKey: "theme.note.mingwall", swatch: "#3f4e5e" },
+] as const satisfies readonly { id: string; label: string; hanzi: string; noteKey: TKey; swatch: string }[];
 
 export type CityThemeId = (typeof CITY_THEMES)[number]["id"];
 
@@ -21,10 +23,10 @@ const DEFAULT_THEME: CityThemeId = "zijin";
 // "system" is a stored *absence* of preference: the attribute still gets an
 // explicit light/dark value so the CSS never needs a duplicate @media block.
 type ColorMode = "light" | "dark" | "system";
-const MODES: { id: ColorMode; label: string; Icon: typeof Sun }[] = [
-  { id: "light", label: "Terang", Icon: Sun },
-  { id: "dark", label: "Gelap", Icon: Moon },
-  { id: "system", label: "Ikut sistem", Icon: Monitor },
+const MODES: { id: ColorMode; labelKey: TKey; Icon: typeof Sun }[] = [
+  { id: "light", labelKey: "theme.light", Icon: Sun },
+  { id: "dark", labelKey: "theme.dark", Icon: Moon },
+  { id: "system", labelKey: "theme.system", Icon: Monitor },
 ];
 
 const prefersDark = () => window.matchMedia("(prefers-color-scheme: dark)").matches;
@@ -41,6 +43,7 @@ function apply(id: CityThemeId) {
 }
 
 export function ThemeSwitcher() {
+  const t = useT();
   const [active, setActive] = useState<CityThemeId>(DEFAULT_THEME);
   const [mode, setMode] = useState<ColorMode>("system");
 
@@ -80,18 +83,18 @@ export function ThemeSwitcher() {
 
   return (
     <div className="flex flex-col gap-2">
-      <span className="text-label-caps uppercase tracking-wide opacity-70">Tema Kota</span>
-      <div role="radiogroup" aria-label="Pilih tema kota" className="flex flex-wrap gap-2">
-        {CITY_THEMES.map((t) => {
-          const selected = t.id === active;
+      <span className="text-label-caps uppercase tracking-wide opacity-70">{t("theme.cityTheme")}</span>
+      <div role="radiogroup" aria-label={t("theme.cityThemeAria")} className="flex flex-wrap gap-2">
+        {CITY_THEMES.map((ct) => {
+          const selected = ct.id === active;
           return (
             <button
-              key={t.id}
+              key={ct.id}
               type="button"
               role="radio"
               aria-checked={selected}
-              onClick={() => choose(t.id)}
-              title={`${t.hanzi} — ${t.note}`}
+              onClick={() => choose(ct.id)}
+              title={`${ct.hanzi} — ${t(ct.noteKey)}`}
               className={`flex items-center gap-2 rounded-md border px-3 py-2 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-current focus-visible:ring-offset-2 focus-visible:ring-offset-transparent ${
                 selected ? "border-current bg-current/15" : "border-current/30 hover:bg-current/10"
               }`}
@@ -99,9 +102,9 @@ export function ThemeSwitcher() {
               <span
                 aria-hidden
                 className="h-4 w-4 rounded-full border border-current/30"
-                style={{ background: t.swatch }}
+                style={{ background: ct.swatch }}
               />
-              <span className="text-body-sm">{t.hanzi}</span>
+              <span className="text-body-sm">{ct.hanzi}</span>
               {/* Selection is conveyed by more than colour alone. */}
               {selected && <span className="text-label-caps opacity-70">✓</span>}
             </button>
@@ -109,9 +112,9 @@ export function ThemeSwitcher() {
         })}
       </div>
 
-      <span className="text-label-caps uppercase tracking-wide opacity-70 mt-3">Tampilan</span>
-      <div role="radiogroup" aria-label="Pilih mode terang atau gelap" className="flex flex-wrap gap-2">
-        {MODES.map(({ id, label, Icon }) => {
+      <span className="text-label-caps uppercase tracking-wide opacity-70 mt-3">{t("theme.appearance")}</span>
+      <div role="radiogroup" aria-label={t("theme.appearanceAria")} className="flex flex-wrap gap-2">
+        {MODES.map(({ id, labelKey, Icon }) => {
           const selected = id === mode;
           return (
             <button
@@ -125,7 +128,7 @@ export function ThemeSwitcher() {
               }`}
             >
               <Icon size={14} aria-hidden />
-              <span className="text-body-sm">{label}</span>
+              <span className="text-body-sm">{t(labelKey)}</span>
               {selected && <span className="text-label-caps opacity-70">✓</span>}
             </button>
           );
