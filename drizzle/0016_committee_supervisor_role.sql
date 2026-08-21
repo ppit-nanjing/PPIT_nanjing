@@ -1,0 +1,13 @@
+-- Peran "Supervisory Committee" di kepanitiaan acara.
+--
+-- Struktur WIF 2026 memuatnya di tingkat BPH+SC, di samping Ketua Pelaksana dan
+-- Wakil Ketua Pelaksana: pengawas dari kabinet yang tidak memegang jabatan
+-- pelaksana, tapi tetap harus tercatat sebagai bagian kepanitiaan (dan berhak
+-- atas sertifikatnya).
+--
+-- Nilai enum "humas"/"acara"/"logistik"/"dokumentasi" sengaja TIDAK dihapus.
+-- Itu nama divisi, bukan peran, dan sudah tidak relevan sejak event_divisions
+-- ada - tapi baris lama mungkin memakainya, dan menghapus nilai enum di
+-- Postgres berarti membuat ulang seluruh tipenya beserta semua kolom yang
+-- memakainya. Dibiarkan mati saja, dengan catatan di schema.ts.
+ALTER TYPE "event_committee_role" ADD VALUE IF NOT EXISTS 'supervisor';
