@@ -9,12 +9,14 @@ import { makeT, type T } from "./translate";
 
 // Floor on how long the transition overlay stays up, so a change that
 // resolves in 80ms doesn't just flicker. Sized for the radial-reveal
-// sequence below (grow ~550ms, staggered letters, hold, shrink) - not a
+// sequence below (grow ~380ms, staggered letters, hold, shrink) - not a
 // literal recreation of chongqing.ppitiongkok.com's switch (that site turned
 // out to just swap text instantly, no dedicated animation - checked directly
 // against the live site rather than assumed), just built to feel as
-// deliberate as what was asked for.
-const MIN_OVERLAY_MS = 950;
+// deliberate as what was asked for. Trimmed down from an initial 950ms -
+// user feedback was that the whole thing felt too slow, particularly the
+// exit.
+const MIN_OVERLAY_MS = 720;
 
 // Screen point the reveal grows from/shrinks back to - the clicked button's
 // centre, not the pointer position, so keyboard activation (Enter/Space,
@@ -166,7 +168,7 @@ function LocaleRevealOverlay({ target, origin }: { target: Locale; origin: Origi
         initial={{ scale: 0 }}
         animate={{ scale: 1 }}
         exit={{ scale: 0 }}
-        transition={{ duration: 0.55, ease: [0.65, 0, 0.35, 1] }}
+        transition={{ duration: 0.38, ease: [0.65, 0, 0.35, 1] }}
       />
       <div className="absolute inset-0 flex items-center justify-center text-on-primary">
         <LetterReveal text={LOCALE_LABEL[target]} />
@@ -189,8 +191,11 @@ function LetterReveal({ text }: { text: string }) {
   // though each individual letter animates identically. Dividing the target
   // span by the letter count keeps the whole word's reveal/exit taking
   // about the same wall-clock time either way.
-  const ENTER_SPAN = 0.3;
-  const EXIT_SPAN = 0.22;
+  // Exit is deliberately quicker than the entrance (smaller span + shorter
+  // per-letter duration below) - user feedback was that the disappearing
+  // half specifically dragged, not the appearing half.
+  const ENTER_SPAN = 0.22;
+  const EXIT_SPAN = 0.12;
   const enterStagger = letterCount > 0 ? ENTER_SPAN / letterCount : 0;
   const exitStagger = letterCount > 0 ? EXIT_SPAN / letterCount : 0;
 
@@ -208,7 +213,7 @@ function LetterReveal({ text }: { text: string }) {
       // a flat fade.
       exit="exit"
       variants={{
-        visible: { transition: { staggerChildren: enterStagger, delayChildren: 0.3 } },
+        visible: { transition: { staggerChildren: enterStagger, delayChildren: 0.22 } },
         exit: { transition: { staggerChildren: exitStagger, staggerDirection: -1 } },
       }}
       aria-label={text}
@@ -220,13 +225,21 @@ function LetterReveal({ text }: { text: string }) {
               key={li}
               variants={{
                 hidden: { opacity: 0, y: 24 },
-                visible: { opacity: 1, y: 0 },
-                // Mirrors the entrance (y: 24 -> 0) in the opposite
-                // direction (rises and fades out, y: 0 -> -16) instead of
-                // just cutting to nothing.
-                exit: { opacity: 0, y: -16 },
+                visible: {
+                  opacity: 1,
+                  y: 0,
+                  transition: { duration: 0.24, ease: [0.25, 0.1, 0.25, 1] },
+                },
+                // Mirrors the entrance (y: 24 -> 0) in the opposite direction
+                // (rises and fades out, y: 0 -> -14) instead of just cutting
+                // to nothing - and noticeably faster than the entrance, per
+                // feedback that the disappearing half felt slow.
+                exit: {
+                  opacity: 0,
+                  y: -14,
+                  transition: { duration: 0.16, ease: [0.25, 0.1, 0.25, 1] },
+                },
               }}
-              transition={{ duration: 0.3, ease: [0.25, 0.1, 0.25, 1] }}
               className="inline-block"
             >
               {letter}
