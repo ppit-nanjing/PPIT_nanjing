@@ -4,14 +4,18 @@ import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { createProcurementRequest } from "@/app/actions/procurement";
 import { FileUpload } from "@/components/upload/file-upload";
+import { useT } from "@/lib/i18n/client";
+import type { TKey } from "@/lib/i18n/dictionaries/id";
 
-const URGENCY = [
-  { value: "low", label: "Rendah" },
-  { value: "medium", label: "Sedang" },
-  { value: "high", label: "Tinggi" },
-];
+const URGENCY_KEYS: Record<string, TKey> = {
+  low: "inventory.urgency.low",
+  medium: "inventory.urgency.medium",
+  high: "inventory.urgency.high",
+};
+const URGENCY_VALUES = Object.keys(URGENCY_KEYS);
 
 export function ProcurementForm({ categories }: { categories: string[] }) {
+  const t = useT();
   const router = useRouter();
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
@@ -27,7 +31,7 @@ export function ProcurementForm({ categories }: { categories: string[] }) {
         setDone(true);
         router.refresh();
       } catch (err) {
-        setError(err instanceof Error ? err.message : "Gagal mengirim");
+        setError(err instanceof Error ? err.message : t("inventory.form.submitError"));
       }
     });
   }
@@ -36,7 +40,7 @@ export function ProcurementForm({ categories }: { categories: string[] }) {
     return (
       <div className="flex items-start gap-3 bg-primary-container/10 border border-primary-container/20 rounded-lg p-5">
         <p className="text-body-md text-on-background">
-          Usulan pengadaan terkirim. Admin akan meninjau dan mengabari kamu lewat notifikasi.
+          {t("inventory.procurementSuccess")}
         </p>
       </div>
     );
@@ -45,12 +49,12 @@ export function ProcurementForm({ categories }: { categories: string[] }) {
   return (
     <form onSubmit={handleSubmit} className="flex flex-col gap-4 max-w-xl">
       <label className="flex flex-col gap-2">
-        <span className="text-label-caps uppercase tracking-wide text-on-surface-variant">Nama Barang *</span>
+        <span className="text-label-caps uppercase tracking-wide text-on-surface-variant">{t("inventory.form.itemName")} *</span>
         <input name="itemName" required className="bg-soft-gray rounded-md p-3 text-body-md focus:outline-none focus:ring-2 focus:ring-primary-container" />
       </label>
 
       <label className="flex flex-col gap-2">
-        <span className="text-label-caps uppercase tracking-wide text-on-surface-variant">Kategori</span>
+        <span className="text-label-caps uppercase tracking-wide text-on-surface-variant">{t("inventory.form.category")}</span>
         <input
           name="category"
           list="procurement-categories"
@@ -64,26 +68,26 @@ export function ProcurementForm({ categories }: { categories: string[] }) {
       </label>
 
       <label className="flex flex-col gap-2">
-        <span className="text-label-caps uppercase tracking-wide text-on-surface-variant">Alasan / Justifikasi</span>
+        <span className="text-label-caps uppercase tracking-wide text-on-surface-variant">{t("inventory.form.justification")}</span>
         <textarea name="justification" rows={3} className="bg-soft-gray rounded-md p-3 text-body-md resize-none" />
       </label>
 
       <div className="flex flex-col gap-2">
-        <span className="text-label-caps uppercase tracking-wide text-on-surface-variant">Foto Barang (opsional)</span>
-        <FileUpload name="imageUrl" folder="inventory" placeholder="URL atau seret gambar ke sini" />
+        <span className="text-label-caps uppercase tracking-wide text-on-surface-variant">{t("inventory.form.photoOptional")}</span>
+        <FileUpload name="imageUrl" folder="inventory" placeholder={t("inventory.form.uploadPlaceholder")} />
       </div>
 
       <label className="flex flex-col gap-2">
-        <span className="text-label-caps uppercase tracking-wide text-on-surface-variant">Perkiraan Biaya (RMB, opsional)</span>
+        <span className="text-label-caps uppercase tracking-wide text-on-surface-variant">{t("inventory.form.estimatedCost")}</span>
         <input type="number" min={0} name="estimatedCost" placeholder="contoh: 350" className="bg-soft-gray rounded-md p-3 text-body-md" />
       </label>
 
       <label className="flex flex-col gap-2">
-        <span className="text-label-caps uppercase tracking-wide text-on-surface-variant">Tingkat Urgensi</span>
+        <span className="text-label-caps uppercase tracking-wide text-on-surface-variant">{t("inventory.form.urgency")}</span>
         <select name="urgency" defaultValue="medium" className="bg-soft-gray rounded-md p-3 text-body-md">
-          {URGENCY.map((u) => (
-            <option key={u.value} value={u.value}>
-              {u.label}
+          {URGENCY_VALUES.map((v) => (
+            <option key={v} value={v}>
+              {t(URGENCY_KEYS[v])}
             </option>
           ))}
         </select>
@@ -96,7 +100,7 @@ export function ProcurementForm({ categories }: { categories: string[] }) {
         disabled={pending}
         className="self-start bg-primary-container text-on-primary text-label-caps uppercase tracking-wide px-6 py-3 rounded-md hover:bg-primary transition-colors disabled:opacity-60"
       >
-        {pending ? "Mengirim..." : "Kirim Usulan"}
+        {pending ? t("inventory.form.sending") : t("inventory.form.procSubmit")}
       </button>
     </form>
   );
