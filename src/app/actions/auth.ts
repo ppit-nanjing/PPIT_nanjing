@@ -7,8 +7,12 @@ import { users } from "@/db/schema";
 import { signIn } from "@/auth";
 import { hashPassword } from "@/lib/password";
 import { safeRedirect } from "@/lib/safe-redirect";
+import type { TKey } from "@/lib/i18n/dictionaries/id";
 
-export type AuthFormState = { error?: string };
+// Carries a dictionary KEY, not a finished sentence: this runs on the server
+// where the request locale is known but the dictionary is not the natural
+// place to reach for, and <CredentialForm> already has useT() to render it.
+export type AuthFormState = { errorKey?: TKey; vars?: Record<string, string | number> };
 
 // Minimal, non-pedantic email shape check - enough to reject obvious junk
 // without inventing a strict RFC validator.
@@ -28,9 +32,9 @@ export async function signUpWithPassword(_prev: AuthFormState, formData: FormDat
   const password = String(formData.get("password") ?? "");
   const confirm = String(formData.get("confirm") ?? "");
 
-  if (!EMAIL_RE.test(email)) return { error: "Format email tidak valid." };
-  if (password.length < MIN_PASSWORD) return { error: `Kata sandi minimal ${MIN_PASSWORD} karakter.` };
-  if (password !== confirm) return { error: "Konfirmasi kata sandi tidak cocok." };
+  if (!EMAIL_RE.test(email)) return { errorKey: "auth.errEmailInvalid" };
+  if (password.length < MIN_PASSWORD) return { errorKey: "auth.errPasswordShort", vars: { n: MIN_PASSWORD } };
+  if (password !== confirm) return { errorKey: "auth.errConfirmMismatch" };
 
   const [existing] = await db
     .select({ id: users.id, passwordHash: users.passwordHash, status: users.status })
@@ -46,9 +50,9 @@ export async function signUpWithPassword(_prev: AuthFormState, formData: FormDat
   //    is told to sign in with Google.
   //  - an account that already has a password is told to sign in.
   if (existing) {
-    if (existing.passwordHash) return { error: "Email sudah terdaftar. Masuk dengan kata sandi kamu." };
+    if (existing.passwordHash) return { errorKey: "auth.errEmailTaken" };
     if (existing.status !== "invited") {
-      return { error: "Email ini sudah terdaftar lewat Google. Masuk dengan Google." };
+      return { errorKey: "auth.errEmailGoogle" };
     }
     const passwordHash = await hashPassword(password);
     await db
@@ -66,7 +70,7 @@ export async function signUpWithPassword(_prev: AuthFormState, formData: FormDat
     await signIn("credentials", { email, password, redirectTo: returnTo });
   } catch (error) {
     if (error instanceof AuthError) {
-      return { error: "Pendaftaran berhasil, tapi gagal masuk otomatis. Coba masuk manual." };
+      return { errorKey: "auth.errAutoSignIn" };
     }
     throw error;
   }
@@ -78,13 +82,13 @@ export async function signUpWithPassword(_prev: AuthFormState, formData: FormDat
 export async function signInWithPassword(_prev: AuthFormState, formData: FormData): Promise<AuthFormState> {
   const email = String(formData.get("email") ?? "").trim().toLowerCase();
   const password = String(formData.get("password") ?? "");
-  if (!email || !password) return { error: "Email dan kata sandi wajib diisi." };
+  if (!email || !password) return { errorKey: "auth.errCredentialsRequired" };
 
   const returnTo = safeRedirect(String(formData.get("returnTo") ?? ""));
   try {
     await signIn("credentials", { email, password, redirectTo: returnTo });
   } catch (error) {
-    if (error instanceof AuthError) return { error: "Email atau kata sandi salah." };
+    if (error instanceof AuthError) return { errorKey: "auth.errCredentialsWrong" };
     throw error;
   }
   return {};
