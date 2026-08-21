@@ -13,9 +13,12 @@ import { CalendarDays, MapPin, Users, Ticket, ArrowLeft, ListChecks, Images, Arr
 import Image from "next/image";
 import { registerForEvent } from "@/app/actions/events";
 import Link from "next/link";
+import { getT } from "@/lib/i18n/server";
+import { INTL_LOCALE } from "@/lib/i18n/config";
 
 export default async function EventDetailPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
+  const { t, locale } = await getT();
   const [event] = await db.select().from(events).where(eq(events.slug, slug));
   if (!event) notFound();
   // Scheduled (not-yet-released) events are not reachable from the public site.
@@ -66,8 +69,8 @@ export default async function EventDetailPage({ params }: { params: Promise<{ sl
           href="/events"
           className="inline-flex items-center gap-2 text-label-caps uppercase tracking-wide text-primary-container hover:text-primary transition-colors mb-6 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-container focus-visible:ring-offset-2 focus-visible:ring-offset-background rounded"
         >
-          <ArrowLeft size={16} aria-hidden="true" /> Kembali ke Kegiatan
-        </Link>
+           <ArrowLeft size={16} aria-hidden="true" /> {t("events.back")}
+         </Link>
 
         {event.coverImageUrl && (
           <Reveal>
@@ -93,7 +96,7 @@ export default async function EventDetailPage({ params }: { params: Promise<{ sl
             )}
             {event.requiresSensus && (
               <span className="text-label-caps uppercase tracking-wide bg-surface-container-low text-primary-container px-2.5 py-1 rounded mb-3 block w-fit">
-                Khusus peserta tersensus
+                {t("events.sensusOnly")}
               </span>
             )}
             <AnimatedHeroHeading
@@ -113,7 +116,7 @@ export default async function EventDetailPage({ params }: { params: Promise<{ sl
               <Reveal>
                 <section className="mb-10">
                   <h2 className="text-headline-md text-on-background mb-6 flex items-center gap-2">
-                    <ListChecks className="text-primary-container" size={20} /> Agenda Acara
+                    <ListChecks className="text-primary-container" size={20} /> {t("events.agenda")}
                   </h2>
                   <ul className="flex flex-col gap-4">
                     {agendaItems.map((item, i) => (
@@ -130,8 +133,8 @@ export default async function EventDetailPage({ params }: { params: Promise<{ sl
               <Reveal>
                 <section className="mb-10">
                   <h2 className="text-headline-md text-on-background mb-6 flex items-center gap-2">
-                    <Images className="text-primary-container" size={20} /> Galeri
-                  </h2>
+                    <Images className="text-primary-container" size={20} /> {t("events.gallery")}
+                      </h2>
                   <GalleryLightbox
                     photos={photos.map((p) => ({
                       id: p.id,
@@ -144,7 +147,7 @@ export default async function EventDetailPage({ params }: { params: Promise<{ sl
                       href={`/gallery/${album.id}`}
                       className="inline-flex items-center gap-1 text-label-caps uppercase text-primary-container hover:text-primary transition-colors mt-4"
                     >
-                      Lihat Album Lengkap <ArrowRight size={14} />
+                       {t("events.viewAlbum")} <ArrowRight size={14} />
                     </a>
                   )}
                 </section>
@@ -159,21 +162,21 @@ export default async function EventDetailPage({ params }: { params: Promise<{ sl
                   <div className="flex items-start gap-3">
                     <CalendarDays className="text-primary-container shrink-0 mt-0.5" size={18} aria-hidden="true" />
                     <div>
-                      <p className="text-label-caps uppercase text-on-surface-variant mb-0.5">Tanggal & Waktu</p>
-                      <p className="text-body-md text-on-background font-semibold">
-                        {new Date(event.startAt).toLocaleDateString("id-ID", { dateStyle: "full" })}
-                      </p>
-                      {(() => {
-                        const start = new Date(event.startAt);
-                        const startTime =
-                          start.getHours() !== 0 || start.getMinutes() !== 0
-                            ? start.toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit" })
-                            : null;
-                        const endTime =
-                          event.endAt &&
-                          (new Date(event.endAt).getHours() !== 0 || new Date(event.endAt).getMinutes() !== 0)
-                            ? new Date(event.endAt).toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit" })
-                            : null;
+                       <p className="text-label-caps uppercase text-on-surface-variant mb-0.5">{t("events.dateTime")}</p>
+                       <p className="text-body-md text-on-background font-semibold">
+                         {new Date(event.startAt).toLocaleDateString(INTL_LOCALE[locale], { dateStyle: "full" })}
+                       </p>
+                       {(() => {
+                         const start = new Date(event.startAt);
+                         const startTime =
+                           start.getHours() !== 0 || start.getMinutes() !== 0
+                             ? start.toLocaleTimeString(INTL_LOCALE[locale], { hour: "2-digit", minute: "2-digit" })
+                             : null;
+                         const endTime =
+                           event.endAt &&
+                           (new Date(event.endAt).getHours() !== 0 || new Date(event.endAt).getMinutes() !== 0)
+                             ? new Date(event.endAt).toLocaleTimeString(INTL_LOCALE[locale], { hour: "2-digit", minute: "2-digit" })
+                             : null;
                         if (!startTime && !endTime) return null;
                         return (
                           <p className="text-body-sm text-on-surface-variant">
@@ -189,7 +192,7 @@ export default async function EventDetailPage({ params }: { params: Promise<{ sl
                   <div className="flex items-start gap-3">
                     <MapPin className="text-primary-container shrink-0 mt-0.5" size={18} aria-hidden="true" />
                     <div>
-                      <p className="text-label-caps uppercase text-on-surface-variant mb-0.5">Lokasi</p>
+                      <p className="text-label-caps uppercase text-on-surface-variant mb-0.5">{t("events.location")}</p>
                       <p className="text-body-md text-on-background font-semibold">{event.location}</p>
                     </div>
                   </div>
@@ -197,21 +200,21 @@ export default async function EventDetailPage({ params }: { params: Promise<{ sl
                 <div className="flex items-start gap-3">
                   <Users className="text-primary-container shrink-0 mt-0.5" size={18} aria-hidden="true" />
                   <div className="flex-1">
-                    <p className="text-label-caps uppercase text-on-surface-variant mb-0.5">Peserta</p>
+                    <p className="text-label-caps uppercase text-on-surface-variant mb-0.5">{t("events.attendees")}</p>
                     <p className="text-body-md text-on-background font-semibold">
-                      {registeredCount}
-                      {event.capacity ? ` / ${event.capacity}` : ""} terdaftar
+                      {t("events.registered", { count: registeredCount })}
+                      {event.capacity ? ` / ${event.capacity}` : ""}
                     </p>
                     {event.capacity != null && !isFull && (
                       <p className="text-label-caps text-primary-container mt-0.5">
-                        Sisa {event.capacity - registeredCount} slot
+                        {t("events.slotsLeft", { n: event.capacity - registeredCount })}
                       </p>
                     )}
                     {event.capacity != null && (
                       <div
                         className="mt-2 h-2 w-full rounded-full bg-surface-container-low overflow-hidden"
                         role="progressbar"
-                        aria-label="Kapasitas pendaftaran"
+                        aria-label={t("events.capacityLabel")}
                         aria-valuemin={0}
                         aria-valuemax={event.capacity}
                         aria-valuenow={Math.min(registeredCount, event.capacity)}
@@ -228,8 +231,11 @@ export default async function EventDetailPage({ params }: { params: Promise<{ sl
                 </div>
                 {event.registrationDeadline && (
                   <p className="text-label-caps text-on-surface-variant">
-                    Pendaftaran ditutup{" "}
-                    {new Date(event.registrationDeadline).toLocaleDateString("id-ID", { dateStyle: "long" })}
+                    {t("events.regDeadline", {
+                      date: new Date(event.registrationDeadline).toLocaleDateString(INTL_LOCALE[locale], {
+                        dateStyle: "long",
+                      }),
+                    })}
                   </p>
                 )}
 
@@ -237,16 +243,16 @@ export default async function EventDetailPage({ params }: { params: Promise<{ sl
                   {event.requiresSensus && !alreadyRegistered && (
                     <>
                       <p className="text-label-caps text-on-surface-variant mb-3 text-center">
-                        Event ini hanya untuk peserta yang sudah lengkap mengisi sensus.
+                        {t("events.sensusRequiredNote")}
                       </p>
                       <p className="text-body-md text-on-surface-variant text-center mb-4">
-                        Lengkapi data sensus untuk mendaftar — kamu akan kembali ke halaman ini.
+                        {t("events.sensusCompleteMsg")}
                       </p>
                       <Link
                         href={`/sensus?returnTo=${encodeURIComponent(`/events/${slug}`)}`}
                         className="w-full inline-flex items-center justify-center gap-2 bg-primary-container text-on-primary text-label-caps uppercase tracking-wide px-6 py-4 rounded-md hover:bg-primary transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-container focus-visible:ring-offset-2 focus-visible:ring-offset-surface-container-low"
                       >
-                        <ListChecks size={18} aria-hidden="true" /> Isi Sensus untuk Daftar
+                        <ListChecks size={18} aria-hidden="true" /> {t("events.fillSensus")}
                       </Link>
                     </>
                   )}
@@ -255,7 +261,7 @@ export default async function EventDetailPage({ params }: { params: Promise<{ sl
                       href={`/events/${slug}/ticket`}
                       className="w-full inline-flex items-center justify-center gap-2 bg-primary-container text-on-primary text-label-caps uppercase tracking-wide px-6 py-4 rounded-md hover:bg-primary transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-container focus-visible:ring-offset-2 focus-visible:ring-offset-surface-container-low"
                     >
-                      <Ticket size={18} aria-hidden="true" /> Lihat Tiket Saya
+                      <Ticket size={18} aria-hidden="true" /> {t("events.myTicket")}
                     </a>
                   ) : canRegister ? (
                     session?.user?.id ? (
@@ -264,7 +270,7 @@ export default async function EventDetailPage({ params }: { params: Promise<{ sl
                           type="submit"
                           className="w-full inline-flex items-center justify-center gap-2 bg-primary-container text-on-primary text-label-caps uppercase tracking-wide px-6 py-4 rounded-md hover:bg-primary transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-container focus-visible:ring-offset-2 focus-visible:ring-offset-surface-container-low"
                         >
-                          <Ticket size={18} aria-hidden="true" /> Daftar Sekarang
+                          <Ticket size={18} aria-hidden="true" /> {t("events.registerNow")}
                         </button>
                       </form>
                     ) : (
@@ -272,21 +278,21 @@ export default async function EventDetailPage({ params }: { params: Promise<{ sl
                         href={`/login?returnTo=${encodeURIComponent(`/events/${slug}`)}`}
                         className="w-full inline-flex items-center justify-center gap-2 bg-primary-container text-on-primary text-label-caps uppercase tracking-wide px-6 py-4 rounded-md hover:bg-primary transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-container focus-visible:ring-offset-2 focus-visible:ring-offset-surface-container-low"
                       >
-                        <ArrowRight size={18} aria-hidden="true" /> Masuk untuk Daftar
+                        <ArrowRight size={18} aria-hidden="true" /> {t("events.loginToRegister")}
                       </Link>
                     )
                   ) : (
                     <p className="flex items-center justify-center gap-2 text-body-md text-on-surface-variant text-center bg-surface-container-low rounded-md px-4 py-3">
                       {isFull ? (
                         <>
-                          <Users size={16} aria-hidden="true" /> Pendaftaran sudah penuh.
+                          <Users size={16} aria-hidden="true" /> {t("events.full")}
                         </>
                       ) : deadlinePassed ? (
                         <>
-                          <CalendarX size={16} aria-hidden="true" /> Batas waktu pendaftaran sudah lewat.
+                          <CalendarX size={16} aria-hidden="true" /> {t("events.deadlinePassed")}
                         </>
                       ) : (
-                        "Pendaftaran untuk kegiatan ini belum/tidak dibuka."
+                        t("events.notOpen")
                       )}
                     </p>
                   )}
@@ -299,7 +305,7 @@ export default async function EventDetailPage({ params }: { params: Promise<{ sl
         {related.length > 0 && (
           <section className="mt-20 pt-12 border-t border-outline-variant">
             <Reveal>
-              <h2 className="text-headline-lg text-on-background mb-8">Kegiatan Lainnya</h2>
+              <h2 className="text-headline-lg text-on-background mb-8">{t("events.others")}</h2>
             </Reveal>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
               {related.map((e, i) => (
