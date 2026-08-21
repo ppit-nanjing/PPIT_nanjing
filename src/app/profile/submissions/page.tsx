@@ -6,6 +6,10 @@ import { eventRegistrations, events, borrowRequests, inventoryItems, jobApplicat
 import { SiteNav } from "@/components/site-nav";
 import { SiteFooter } from "@/components/site-footer";
 import { CalendarDays, Package, Briefcase, Inbox } from "lucide-react";
+import { getT } from "@/lib/i18n/server";
+import { INTL_LOCALE } from "@/lib/i18n/config";
+import type { TKey } from "@/lib/i18n/dictionaries/id";
+import type { T } from "@/lib/i18n/translate";
 import Link from "next/link";
 
 const STATUS_STYLE: Record<string, string> = {
@@ -25,29 +29,37 @@ const STATUS_STYLE: Record<string, string> = {
 };
 
 // The raw enum value was rendered straight to the page, so members saw
-// "under_review" / "pending" instead of Indonesian. Unknown values fall back to
-// a de-underscored version rather than disappearing.
-const STATUS_LABEL: Record<string, string> = {
-  pending: "Menunggu",
-  confirmed: "Terkonfirmasi",
-  attended: "Hadir",
-  approved: "Disetujui",
-  rejected: "Ditolak",
-  cancelled: "Dibatalkan",
-  returned: "Dikembalikan",
-  overdue: "Terlambat",
-  borrowed: "Dipinjam",
-  submitted: "Terkirim",
-  under_review: "Ditinjau",
-  interview: "Wawancara",
-  offered: "Ditawari",
+// "under_review" / "pending" instead of readable text. Unknown values fall back
+// to a de-underscored version rather than disappearing.
+const STATUS_KEY: Record<string, TKey> = {
+  pending: "submissions.status.pending",
+  confirmed: "submissions.status.confirmed",
+  attended: "submissions.status.attended",
+  approved: "submissions.status.approved",
+  rejected: "submissions.status.rejected",
+  cancelled: "submissions.status.cancelled",
+  returned: "submissions.status.returned",
+  overdue: "submissions.status.overdue",
+  borrowed: "submissions.status.borrowed",
+  submitted: "submissions.status.submitted",
+  under_review: "submissions.status.under_review",
+  interview: "submissions.status.interview",
+  offered: "submissions.status.offered",
 };
 
-function statusLabel(status: string): string {
-  return STATUS_LABEL[status] ?? status.replace(/_/g, " ");
+const KIND_KEY = {
+  event: "submissions.kind.event",
+  borrow: "submissions.kind.borrow",
+  job: "submissions.kind.job",
+} as const satisfies Record<string, TKey>;
+
+function statusLabel(t: T, status: string): string {
+  const key = STATUS_KEY[status];
+  return key ? t(key) : status.replace(/_/g, " ");
 }
 
 export default async function SubmissionHistoryPage() {
+  const { t, locale } = await getT();
   const session = await auth();
   if (!session?.user?.id) redirect(`/login?returnTo=${encodeURIComponent("/profile/submissions")}`);
   const userId = session.user.id;
@@ -100,54 +112,57 @@ export default async function SubmissionHistoryPage() {
   ].sort((a, b) => b.date.getTime() - a.date.getTime());
 
   const ICON = { event: CalendarDays, borrow: Package, job: Briefcase };
-  const KIND_LABEL = { event: "Kegiatan", borrow: "Peminjaman", job: "Lamaran Kerja" };
 
   return (
     <div className="min-h-screen bg-background text-on-background">
       <SiteNav />
       <main className="max-w-2xl mx-auto px-[var(--spacing-container-padding)] py-16">
-        <h1 className="text-headline-lg text-on-background mb-2">Riwayat Pengajuan</h1>
+        <h1 className="text-headline-lg text-on-background mb-2">{t("submissions.title")}</h1>
         <p className="text-body-md text-on-surface-variant mb-10">
-          Semua pendaftaran kegiatan, pengajuan peminjaman, dan lamaran kerja kamu di satu tempat.
+          {t("submissions.desc")}
         </p>
 
         {items.length === 0 ? (
           <div role="status" aria-live="polite" className="flex flex-col items-center text-center py-24">
             <Inbox className="text-outline-variant mb-4" size={40} aria-hidden />
-            <h2 className="text-headline-md text-on-background mb-2">Belum ada pengajuan</h2>
+            <h2 className="text-headline-md text-on-background mb-2">{t("submissions.empty")}</h2>
             <p className="text-body-md text-on-surface-variant max-w-sm mb-6">
-              Pendaftaran kegiatan, peminjaman barang, dan lamaran kerja kamu akan tercatat di sini.
+              {t("submissions.emptyDesc")}
             </p>
             <div className="flex flex-wrap gap-3 justify-center">
               <Link
                 href="/events"
                 className="bg-primary-container text-on-primary text-label-caps uppercase tracking-wide px-6 py-3 rounded-md hover:bg-primary transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-container focus-visible:ring-offset-2 focus-visible:ring-offset-background motion-reduce:transition-none"
               >
-                Lihat Kegiatan
+                {t("submissions.viewEvents")}
               </Link>
               <Link
                 href="/inventory"
                 className="border border-outline-variant text-on-background text-label-caps uppercase tracking-wide px-6 py-3 rounded-md hover:bg-surface-container-low transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-container focus-visible:ring-offset-2 focus-visible:ring-offset-background motion-reduce:transition-none"
               >
-                Lihat Inventaris
+                {t("submissions.viewInventory")}
               </Link>
             </div>
           </div>
         ) : (
-          <ul aria-label="Daftar pengajuan" className="flex flex-col gap-3">
+          <ul aria-label={t("submissions.listAria")} className="flex flex-col gap-3">
             {items.map((item) => {
               const Icon = ICON[item.kind];
               return (
                 <li key={`${item.kind}-${item.id}`}>
                   <Link
                     href={item.href}
-                    aria-label={`${KIND_LABEL[item.kind]}: ${item.title} — status ${statusLabel(item.status)}`}
+                    aria-label={t("submissions.itemAria", {
+                      kind: t(KIND_KEY[item.kind]),
+                      title: item.title,
+                      status: statusLabel(t, item.status),
+                    })}
                     className="flex items-center gap-4 bg-surface-container-lowest border border-outline-variant rounded-lg p-5 hover:bg-surface-container-low transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-container focus-visible:ring-offset-2 focus-visible:ring-offset-background motion-reduce:transition-none"
                   >
                     <Icon className="text-secondary shrink-0" size={20} aria-hidden />
                     <div className="flex-1 min-w-0">
                       <p className="text-label-caps text-on-surface-variant uppercase">
-                        {KIND_LABEL[item.kind]}
+                        {t(KIND_KEY[item.kind])}
                       </p>
                       <p className="text-body-md font-medium text-on-background truncate">{item.title}</p>
                       {/* The date was computed for sorting but never shown - on a
@@ -156,7 +171,7 @@ export default async function SubmissionHistoryPage() {
                         dateTime={item.date.toISOString()}
                         className="text-label-caps text-on-surface-variant"
                       >
-                        {item.date.toLocaleDateString("id-ID", {
+                        {item.date.toLocaleDateString(INTL_LOCALE[locale], {
                           day: "numeric",
                           month: "long",
                           year: "numeric",
@@ -166,7 +181,7 @@ export default async function SubmissionHistoryPage() {
                     <span
                       className={`text-label-caps uppercase tracking-wide px-2.5 py-1 rounded shrink-0 ${STATUS_STYLE[item.status] ?? "bg-surface-container-low text-on-surface-variant"}`}
                     >
-                      {statusLabel(item.status)}
+                      {statusLabel(t, item.status)}
                     </span>
                   </Link>
                 </li>
