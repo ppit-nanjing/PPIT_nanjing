@@ -61,3 +61,48 @@ export async function deleteUser(userId: string) {
   await db.delete(users).where(eq(users.id, userId));
   revalidatePath("/console/users");
 }
+
+/**
+ * Membuat akun berstatus "invited" secara massal dari daftar tempel.
+ *
+ * KENAPA INI ADA: seluruh sisi "klaim" sudah terbangun sejak lama — `src/auth.ts`
+ * menautkan sign-in Google ke baris ber-status "invited", dan `signUpWithPassword`
+ * mengklaimnya lewat jalur email/password. Tapi TIDAK ADA yang bisa membuat baris
+ * itu, jadi kedua jalur tersebut tidak pernah bisa dijangkau. Ini bagian yang
+ * hilang.
+ *
+ * Massal, bukan satu-satu, karena bentuk kebutuhannya memang begitu: satu
+ * kepanitiaan acara bisa berisi 30 orang yang belum punya akun, dan mereka harus
+ * ada lebih dulu sebelum bisa ditugaskan ke divisi atau diberi sertifikat.
+ *
+ * Format tiap baris: "Nama, email@contoh.com" — atau email saja.
+ */
+export async function inviteUsers(formData: FormData): Promise<void> {
+  await assertAdmin();
+  const raw = String(formData.get("bulk") ?? "");
+
+  const parsed: { name: string | null; email: string }[] = [];
+  for (const line of raw.split("\n")) {
+    const trimmed = line.trim();
+    if (!trimmed) continue;
+    // Pemisah terakhir yang dipakai, supaya nama yang mengandung koma
+    // ("Tan, Vennesia") tidak terpotong di tempat yang salah.
+    const cut = trimmed.lastIndexOf(",");
+    const name = cut > 0 ? trimmed.slice(0, cut).trim() : null;
+    const email = (cut > 0 ? trimmed.slice(cut + 1) : trimmed).trim().toLowerCase();
+    if (!EMAIL_RE.test(email)) continue;
+    parsed.push({ name: name || null, email });
+  }
+  if (parsed.length === 0) return;
+
+  // Akun yang sudah ada DILEWATI, tidak ditimpa: menimpanya bisa menurunkan
+  // orang yang sudah aktif kembali jadi "invited" dan memutus loginnya.
+  // onConflictDoNothing menyerahkan penilaiannya ke constraint unique(email),
+  // jadi tidak ada jendela balapan antara memeriksa dan menyisipkan.
+  await db
+    .insert(users)
+    .values(parsed.map((p) => ({ email: p.email, name: p.name, status: "invited" as const })))
+    .onConflictDoNothing({ target: users.email });
+
+  revalidatePath("/console/users");
+}
