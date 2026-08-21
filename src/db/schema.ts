@@ -208,7 +208,15 @@ export const sensusProfiles = pgTable("sensus_profiles", {
 
   // BIODATA
   fullName: text("full_name"),
-  passportNumber: text("passport_number"),
+  // UNIQUE: satu orang = satu baris sensus, ditegakkan lewat nomor paspor.
+  // `user_id` yang unik saja tidak cukup — satu orang bisa punya dua akun
+  // Google (pribadi + kampus), mengisi sensus dua kali, lalu terhitung dua
+  // anggota di sini DAN terkirim dobel ke pusat. Nomor paspor adalah satu-
+  // satunya identitas yang benar-benar unik per orang di form ini (email tidak
+  // ada di form pusat sama sekali). NULL boleh berulang — profil yang belum
+  // diisi memang belum punya nomor paspor, dan Postgres mengizinkan banyak NULL
+  // pada kolom unique, jadi itu persis perilaku yang diinginkan.
+  passportNumber: text("passport_number").unique(),
   gender: text("gender"),
   passportExpiry: date("passport_expiry"),
   province: text("province"),
@@ -234,6 +242,10 @@ export const sensusProfiles = pgTable("sensus_profiles", {
   // profil sebagai verifikasi identitas, sesuai form PPIT Tiongkok).
   studentCardUrl: text("student_card_url"),
   agreeTerms: boolean("agree_terms").notNull().default(false),
+  // Opt-in newsletter — field terakhir di form PPI Tiongkok pusat, satu-satunya
+  // yang TIDAK wajib di sana. Disimpan supaya rekap yang dikirim ke pusat bisa
+  // ikut membawa preferensi ini, bukan menebaknya.
+  subscribeNewsletter: boolean("subscribe_newsletter").notNull().default(false),
 
   completionStatus: sensusCompletionEnum("completion_status").notNull().default("incomplete"),
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
@@ -303,6 +315,35 @@ export const regionalBranches = pgTable("regional_branches", {
   contactInfo: text("contact_info"),
 });
 
+// Daftar kampus per cabang PPI Tiongkok, sumber untuk dropdown bertingkat
+// "Asal Cabang" → "Nama Universitas" di form Sensus (form pusat mengunci field
+// universitas sampai cabangnya dipilih: "Pilih Cabang terlebih dahulu").
+//
+// SENGAJA TERPISAH dari tabel `universities`. Yang itu direktori kampus di
+// 9 kota naungan PPIT Nanjing untuk halaman publik /universities (punya logo,
+// koordinator, deskripsi, flag `published`); yang ini cuma daftar pilihan
+// se-Tiongkok untuk satu dropdown. Menggabungkannya akan menyeret ±300 kampus
+// nasional ke halaman direktori Nanjing.
+//
+// `name` selalu nama Inggris — label field-nya sendiri berbunyi "Nama
+// Universitas (Dalam Bahasa Inggris)", dan itulah bentuk yang direkap pusat.
+export const branchUniversities = pgTable(
+  "branch_universities",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    branchId: uuid("branch_id")
+      .notNull()
+      .references(() => regionalBranches.id, { onDelete: "cascade" }),
+    name: text("name").notNull(),
+    nameZh: text("name_zh"),
+    abbreviation: text("abbreviation"),
+    orderIndex: integer("order_index").notNull().default(0),
+  },
+  // Satu kampus hanya boleh muncul sekali per cabang — bikin seed idempoten dan
+  // mencegah dua baris "Nanjing University" yang tak bisa dibedakan di dropdown.
+  (t) => [uniqueIndex("branch_universities_branch_name_idx").on(t.branchId, t.name)]
+);
+
 // ---------- 3. Events ----------
 
 export const events = pgTable("events", {
@@ -346,6 +387,15 @@ export const eventRegistrations = pgTable(
     status: eventRegistrationStatusEnum("status").notNull().default("pending"),
     qrCodeToken: text("qr_code_token").unique(),
     registeredAt: timestamp("registered_at").notNull().defaultNow(),
+    // Cabang PPI yang dijawab peserta saat mendaftar, ATAU
+    // NON_STUDENT_BRANCH kalau dia bukan mahasiswa Indonesia di Tiongkok.
+    // Hanya ditanyakan ke orang yang sensusnya belum lengkap — tanpa ini,
+    // "Nanjinger yang belum isi sensus" dan "tamu dari luar" sama-sama muncul
+    // sebagai baris kosong dan tidak bisa dibedakan. Jawaban sekali-pakai untuk
+    // acara ini saja: TIDAK disalin ke profil user dan tidak dipakai untuk
+    // rekap ke pusat (sensus yang berwenang, lihat effectiveBranch()).
+    // NULL = pendaftaran lama, sebelum pertanyaan ini ada.
+    branch: text("branch"),
     checkedInAt: timestamp("checked_in_at"),
     // Pembayaran: peserta mengunggah bukti, bendahara acara memverifikasi.
     paymentStatus: paymentStatusEnum("payment_status").notNull().default("not_required"),
@@ -716,6 +766,17 @@ export const usersRelations = relations(users, ({ one, many }) => ({
   eventRegistrations: many(eventRegistrations),
   jobApplications: many(jobApplications),
   borrowRequests: many(borrowRequests),
+}));
+
+export const regionalBranchesRelations = relations(regionalBranches, ({ many }) => ({
+  universities: many(branchUniversities),
+}));
+
+export const branchUniversitiesRelations = relations(branchUniversities, ({ one }) => ({
+  branch: one(regionalBranches, {
+    fields: [branchUniversities.branchId],
+    references: [regionalBranches.id],
+  }),
 }));
 
 export const rolesRelations = relations(roles, ({ many }) => ({
