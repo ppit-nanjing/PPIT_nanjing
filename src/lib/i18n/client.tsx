@@ -171,7 +171,7 @@ function LocaleRevealOverlay({ target, origin }: { target: Locale; origin: Origi
         transition={{ duration: 0.38, ease: [0.65, 0, 0.35, 1] }}
       />
       <div className="absolute inset-0 flex items-center justify-center text-on-primary">
-        <LetterReveal text={LOCALE_LABEL[target]} />
+        <LetterReveal text={LOCALE_LABEL[target]} locale={target} />
       </div>
     </div>
   );
@@ -181,23 +181,32 @@ function LocaleRevealOverlay({ target, origin }: { target: Locale; origin: Origi
 // AnimatedLettersHeading (src/components/animated-letters-heading.tsx) but
 // driven by mount instead of scroll-into-view - this overlay isn't scrolled
 // to, it's stamped on top of the page, so `whileInView` would never fire.
-function LetterReveal({ text }: { text: string }) {
+// Exit timing tuned per target word, not derived from a shared formula -
+// length-normalizing the span (dividing by letter count) still left "Bahasa
+// Indonesia" reading as slower to disappear than "English", presumably
+// because it's also visually wider at this font size, not just longer.
+// User's own reference point: "Bahasa Indonesia" should finish disappearing
+// faster than the radial circle takes to grow in (0.38s, see the circle's
+// transition above); "English" only needed a small extra nudge down from
+// where it already was.
+const EXIT_TUNING: Record<Locale, { span: number; duration: number }> = {
+  id: { span: 0.06, duration: 0.1 }, // ~0.16s total, well under the circle's 0.38s grow
+  en: { span: 0.09, duration: 0.13 }, // ~0.22s total, a modest trim from the previous ~0.28s
+};
+
+function LetterReveal({ text, locale }: { text: string; locale: Locale }) {
   const words = text.split(" ");
   const letterCount = words.reduce((n, w) => n + w.length, 0);
-  // Total cascade span is held roughly constant regardless of word length,
-  // not the per-letter delay - "English" (7 letters) vs "Bahasa Indonesia"
-  // (15 letters) at a fixed staggerChildren meant the longer word's reveal
-  // took ~2x as long overall, which reads as two different speeds even
-  // though each individual letter animates identically. Dividing the target
-  // span by the letter count keeps the whole word's reveal/exit taking
-  // about the same wall-clock time either way.
-  // Exit is deliberately quicker than the entrance (smaller span + shorter
-  // per-letter duration below) - user feedback was that the disappearing
-  // half specifically dragged, not the appearing half.
+  // Entrance span is held roughly constant regardless of word length, not
+  // the per-letter delay - "English" (7 letters) vs "Bahasa Indonesia" (15
+  // letters) at a fixed staggerChildren meant the longer word's reveal took
+  // ~2x as long overall. Dividing the target span by the letter count keeps
+  // the whole word's entrance taking about the same wall-clock time either
+  // way. Exit doesn't use this formula - see EXIT_TUNING above.
   const ENTER_SPAN = 0.22;
-  const EXIT_SPAN = 0.12;
   const enterStagger = letterCount > 0 ? ENTER_SPAN / letterCount : 0;
-  const exitStagger = letterCount > 0 ? EXIT_SPAN / letterCount : 0;
+  const exitTuning = EXIT_TUNING[locale];
+  const exitStagger = letterCount > 0 ? exitTuning.span / letterCount : 0;
 
   return (
     <motion.p
@@ -232,12 +241,12 @@ function LetterReveal({ text }: { text: string }) {
                 },
                 // Mirrors the entrance (y: 24 -> 0) in the opposite direction
                 // (rises and fades out, y: 0 -> -14) instead of just cutting
-                // to nothing - and noticeably faster than the entrance, per
-                // feedback that the disappearing half felt slow.
+                // to nothing - duration comes from EXIT_TUNING[locale] above,
+                // not a shared constant.
                 exit: {
                   opacity: 0,
                   y: -14,
-                  transition: { duration: 0.16, ease: [0.25, 0.1, 0.25, 1] },
+                  transition: { duration: exitTuning.duration, ease: [0.25, 0.1, 0.25, 1] },
                 },
               }}
               className="inline-block"
