@@ -3,6 +3,7 @@ import { regionalBranches } from "@/db/schema";
 import { SiteNav } from "@/components/site-nav";
 import { SiteFooter } from "@/components/site-footer";
 import { MapPin } from "lucide-react";
+import { getT } from "@/lib/i18n/server";
 
 // Simple equirectangular projection over China's approximate bounding box
 // (lat 18-53N, lng 73-135E) - not a licensed map tile provider (Google
@@ -20,6 +21,7 @@ function project(lat: number, lng: number) {
 }
 
 export default async function DistributionMapPage() {
+  const { t } = await getT();
   const branches = await db.select().from(regionalBranches);
   const plottable = branches.filter((b) => b.lat != null && b.lng != null);
 
@@ -28,26 +30,25 @@ export default async function DistributionMapPage() {
       <SiteNav />
 
       <header className="max-w-[var(--container-max)] mx-auto px-[var(--spacing-container-padding)] pt-16 pb-8">
-        <span className="text-label-caps text-primary-container tracking-widest uppercase mb-2 block">
-          Widespread Connection
-        </span>
-        <h1 className="text-display-hero-mobile md:text-display-hero text-on-background mb-4">
-          Peta Persebaran PPI Tiongkok
-        </h1>
-        <p className="text-body-lg text-on-surface-variant max-w-2xl">
-          Sebaran cabang PPI Tiongkok di seluruh negeri. Peta skematik berdasarkan koordinat kota
-          asli, bukan peta kartografis presisi tinggi.
-        </p>
+          <span className="text-label-caps text-primary-container tracking-widest uppercase mb-2 block">
+            {t("org.spreadKicker")}
+          </span>
+          <h1 className="text-display-hero-mobile md:text-display-hero text-on-background mb-4">
+            {t("org.map.title")}
+          </h1>
+          <p className="text-body-lg text-on-surface-variant max-w-2xl">
+            {t("org.map.intro")}
+          </p>
       </header>
 
       <main className="max-w-[var(--container-max)] mx-auto px-[var(--spacing-container-padding)] pb-24">
         {plottable.length === 0 ? (
           <p className="text-body-md text-on-surface-variant text-center py-24">
-            Belum ada cabang dengan koordinat terdaftar.
+            {t("org.map.empty")}
           </p>
         ) : (
           <div className="bg-surface-container-low border border-outline-variant rounded-xl p-6 md:p-10">
-            <svg viewBox={`0 0 ${VIEW.width} ${VIEW.height}`} className="w-full h-auto" role="img" aria-label="Peta persebaran cabang">
+            <svg viewBox={`0 0 ${VIEW.width} ${VIEW.height}`} className="w-full h-auto" role="img" aria-label={t("org.map.svgAria")}>
               <rect x={0} y={0} width={VIEW.width} height={VIEW.height} rx={16} fill="var(--color-surface-container-lowest)" />
               {/* light reference grid, not a real coastline - kept honest, no fabricated map outline */}
               {[0.25, 0.5, 0.75].map((f) => (
@@ -92,7 +93,7 @@ export default async function DistributionMapPage() {
         )}
 
         <ul
-          aria-label="Daftar kota cabang"
+          aria-label={t("org.map.listAria")}
           className="grid grid-cols-2 md:grid-cols-4 gap-3 mt-8"
         >
           {branches.map((b) => (
