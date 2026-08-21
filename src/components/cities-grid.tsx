@@ -3,8 +3,10 @@
 import { useState } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import { MapPin, ChevronDown } from "lucide-react";
+import { useT } from "@/lib/i18n/client";
 
 export function CitiesGrid({ cities }: { cities: { name: string; blurb: string; detail: string }[] }) {
+  const t = useT();
   const [open, setOpen] = useState<string | null>(null);
 
   return (
@@ -39,7 +41,7 @@ export function CitiesGrid({ cities }: { cities: { name: string; blurb: string; 
             <span
               className="self-start flex items-center gap-1 text-label-caps text-primary-container"
             >
-              {isOpen ? "Tutup" : "Baca selengkapnya"}
+              {isOpen ? t("cities.close") : t("cities.readMore")}
               <ChevronDown size={14} aria-hidden="true" className={`transition-transform duration-300 ${isOpen ? "rotate-180" : ""}`} />
             </span>
 
