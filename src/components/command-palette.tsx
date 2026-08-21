@@ -6,6 +6,7 @@ import { useSession, signOut } from "next-auth/react";
 import { Search, CornerDownLeft, Lock } from "lucide-react";
 import { NAV_LINKS } from "@/lib/nav-links";
 import { useT } from "@/lib/i18n/client";
+import type { T } from "@/lib/i18n/translate";
 // NOTE: NAV_LINKS labels below are resolved through t(l.labelKey) so they
 // follow the active locale. The rest of this file's own strings (section
 // headers, action labels) are still hardcoded Indonesian - out of scope for
@@ -31,16 +32,16 @@ type ResultItem = {
 
 type Section = { label: string; items: ResultItem[] };
 
-function buildActions(session: { user?: { isAdmin?: boolean } } | null, isAdmin?: boolean): ResultItem[] {
+function buildActions(t: T, session: { user?: { isAdmin?: boolean } } | null, isAdmin?: boolean): ResultItem[] {
   const actions: ResultItem[] = [
-    { key: "action:profil", label: "Profil Saya", href: "/profile", kind: "action" },
+    { key: "action:profil", label: t("command.profile"), href: "/profile", kind: "action" },
   ];
-  if (isAdmin) actions.push({ key: "action:console", label: "Masuk ke Console", href: "/console", kind: "action" });
-  actions.push({ key: "action:sensus", label: "Isi Sensus", href: "/sensus", kind: "action" });
+  if (isAdmin) actions.push({ key: "action:console", label: t("command.console"), href: "/console", kind: "action" });
+  actions.push({ key: "action:sensus", label: t("command.sensus"), href: "/sensus", kind: "action" });
   if (session) {
-    actions.push({ key: "action:logout", label: "Logout", href: "#", kind: "action", action: "logout" });
+    actions.push({ key: "action:logout", label: t("command.logout"), href: "#", kind: "action", action: "logout" });
   } else {
-    actions.push({ key: "action:login", label: "Login", href: "/login", kind: "action" });
+    actions.push({ key: "action:login", label: t("command.login"), href: "/login", kind: "action" });
   }
   return actions;
 }
@@ -92,7 +93,7 @@ export function CommandPalette({ onClose }: { onClose: () => void }) {
     if (!q) {
       const secs: Section[] = [
         {
-          label: "Halaman",
+          label: t("command.pages"),
           items: NAV_LINKS.map((l) => ({
             key: `page:${l.href}`,
             label: t(l.labelKey),
@@ -100,7 +101,7 @@ export function CommandPalette({ onClose }: { onClose: () => void }) {
             kind: "page" as const,
           })),
         },
-        { label: "Aksi", items: buildActions(session, isAdmin) },
+        { label: t("command.actions"), items: buildActions(t, session, isAdmin) },
       ];
       return { sections: secs, flatItems: secs.flatMap((s) => s.items) };
     }
@@ -111,7 +112,7 @@ export function CommandPalette({ onClose }: { onClose: () => void }) {
       href: l.href,
       kind: "page" as const,
     })).filter((l) => l.label.toLowerCase().includes(q));
-    const actionItems = buildActions(session, isAdmin).filter((a) => a.label.toLowerCase().includes(q));
+    const actionItems = buildActions(t, session, isAdmin).filter((a) => a.label.toLowerCase().includes(q));
 
     const byType: Record<string, ResultItem[]> = {
       event: [],
@@ -133,16 +134,16 @@ export function CommandPalette({ onClose }: { onClose: () => void }) {
     );
 
     const groups: { label: string; type: keyof typeof byType }[] = [
-      { label: "Events", type: "event" },
-      { label: "Berita", type: "news" },
-      { label: "Lowongan", type: "job" },
-      { label: "Galeri", type: "gallery" },
-      { label: "Inventaris", type: "inventory" },
-      { label: "Halaman", type: "page" },
+      { label: t("command.events"), type: "event" },
+      { label: t("command.news"), type: "news" },
+      { label: t("command.jobs"), type: "job" },
+      { label: t("command.gallery"), type: "gallery" },
+      { label: t("command.inventory"), type: "inventory" },
+      { label: t("command.pages"), type: "page" },
     ];
 
     const secs: Section[] = [];
-    if (pageItems.length) secs.push({ label: "Halaman", items: pageItems });
+    if (pageItems.length) secs.push({ label: t("command.pages"), items: pageItems });
     groups.forEach((g) => {
       if (byType[g.type].length) secs.push({ label: g.label, items: byType[g.type] });
     });
@@ -215,7 +216,7 @@ export function CommandPalette({ onClose }: { onClose: () => void }) {
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             onKeyDown={onKeyDown}
-            placeholder="Cari event, berita, lowongan, galeri…"
+            placeholder={t("command.searchPlaceholder")}
             className="flex-1 bg-transparent outline-none text-body-md text-on-background placeholder:text-on-surface-variant"
           />
           {loading && <span className="text-label-caps text-on-surface-variant shrink-0">…</span>}
@@ -225,7 +226,7 @@ export function CommandPalette({ onClose }: { onClose: () => void }) {
         </div>
 
         <ul className="max-h-80 overflow-y-auto py-2">
-          {showEmpty && <li className="px-4 py-3 text-body-md text-on-surface-variant">Tidak ada hasil</li>}
+           {showEmpty && <li className="px-4 py-3 text-body-md text-on-surface-variant">{t("command.noResults")}</li>}
           {sections.map((section) => (
             <li key={section.label}>
               <p className="px-4 pt-3 pb-1 text-label-caps text-on-surface-variant">{section.label}</p>
@@ -259,7 +260,7 @@ export function CommandPalette({ onClose }: { onClose: () => void }) {
                         <span className="flex items-center gap-1.5 shrink-0">
                           {item.locked && (
                             <span className="flex items-center gap-1 text-label-caps text-on-surface-variant">
-                              <Lock size={13} /> sensus
+                               <Lock size={13} /> {t("command.sensusLock")}
                             </span>
                           )}
                           {isActive && <CornerDownLeft size={16} className="text-secondary" />}
@@ -274,9 +275,9 @@ export function CommandPalette({ onClose }: { onClose: () => void }) {
         </ul>
 
         <div className="flex items-center gap-3 px-4 py-2 border-t border-outline-variant text-label-caps text-on-surface-variant">
-          <span>↑↓ navigasi</span>
-          <span>↵ pilih</span>
-          <span>esc tutup</span>
+          <span>{t("command.navUpDown")}</span>
+          <span>{t("command.enterSelect")}</span>
+          <span>{t("command.escClose")}</span>
         </div>
       </div>
     </div>
