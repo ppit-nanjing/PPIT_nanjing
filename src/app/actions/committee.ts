@@ -339,12 +339,11 @@ export async function issueDivisionCertificates(formData: FormData): Promise<voi
     .filter((m) => !already.has(m.userId))
     .map((m) => {
       const unitName = divisionNames.get(m.divisionId ?? "") ?? division.name;
-      const roleLabel = m.role === "anggota" ? `Anggota ${unitName}` : `${titleCase(m.role)} ${unitName}`;
       return {
         userId: m.userId,
         eventId: division.eventId,
         kind: "panitia" as const,
-        title: event?.title ? `${roleLabel} — ${event.title}` : roleLabel,
+        title: buildCertificateTitle(m.role, unitName, event?.title ?? null),
         issuedBy: session.user.id,
       };
     });
@@ -354,6 +353,82 @@ export async function issueDivisionCertificates(formData: FormData): Promise<voi
   revalidatePath(`/console/events/${division.eventId}`);
   revalidatePath("/console/work-ledger");
   revalidatePath("/profile/submissions");
+}
+
+/**
+ * Menerbitkan sertifikat panitia untuk SELURUH panitia acara, termasuk yang
+ * tidak berada di divisi mana pun.
+ *
+ * Tombol per-divisi tidak cukup: BPH + SC (Supervisory Committee, Ketua
+ * Pelaksana, Wakil, Bendahara, Sekretaris) memang berdiri di luar divisi mana
+ * pun, jadi mereka tidak akan pernah terjangkau kalau penerbitannya hanya bisa
+ * lewat divisi — padahal setiap peran di kepanitiaan berhak atas sertifikatnya.
+ *
+ * Sama seperti versi per-divisi: yang sudah punya sertifikat panitia untuk acara
+ * ini dilewati, jadi menekan tombolnya setelah menambah orang baru hanya
+ * menerbitkan untuk yang baru itu.
+ */
+export async function issueEventCertificates(formData: FormData): Promise<void> {
+  const session = await requireModuleAccess("events");
+  const eventId = String(formData.get("eventId") ?? "");
+  if (!eventId) throw new Error("Acara wajib dipilih");
+
+  const [event] = await db.select().from(events).where(eq(events.id, eventId));
+  const members = await db
+    .select({ userId: eventCommittee.userId, role: eventCommittee.role, divisionId: eventCommittee.divisionId })
+    .from(eventCommittee)
+    .where(eq(eventCommittee.eventId, eventId));
+  if (members.length === 0) return;
+
+  const existing = await db
+    .select({ userId: certificates.userId })
+    .from(certificates)
+    .where(and(eq(certificates.eventId, eventId), eq(certificates.kind, "panitia")));
+  const already = new Set(existing.map((e) => e.userId));
+
+  const divisionNames = new Map(
+    (await db.select().from(eventDivisions).where(eq(eventDivisions.eventId, eventId))).map((d) => [d.id, d.name])
+  );
+
+  const toInsert = members
+    .filter((m) => !already.has(m.userId))
+    .map((m) => ({
+      userId: m.userId,
+      eventId,
+      kind: "panitia" as const,
+      title: buildCertificateTitle(m.role, divisionNames.get(m.divisionId ?? "") ?? null, event?.title ?? null),
+      issuedBy: session.user.id,
+    }));
+
+  if (toInsert.length > 0) await db.insert(certificates).values(toInsert);
+
+  revalidatePath(`/console/events/${eventId}`);
+  revalidatePath("/console/work-ledger");
+  revalidatePath("/profile/submissions");
+}
+
+/**
+ * Merakit judul sertifikat dari peran + unit + acara.
+ *
+ * Tanpa divisi, peran berdiri sendiri sebagai jabatan tingkat acara: "ketua"
+ * jadi Ketua Pelaksana, bukan "Ketua " menggantung tanpa nama unit. Itu yang
+ * membuat BPH + SC terbaca benar.
+ */
+function buildCertificateTitle(role: string, unitName: string | null, eventTitle: string | null): string {
+  const TOP_LEVEL: Record<string, string> = {
+    ketua: "Ketua Pelaksana",
+    wakil: "Wakil Ketua Pelaksana",
+    supervisor: "Supervisory Committee",
+    sekretaris: "Sekretaris",
+    bendahara: "Bendahara",
+    anggota: "Panitia",
+  };
+  const label = unitName
+    ? role === "anggota"
+      ? `Anggota ${unitName}`
+      : `${titleCase(role)} ${unitName}`
+    : TOP_LEVEL[role] ?? titleCase(role);
+  return eventTitle ? `${label} — ${eventTitle}` : label;
 }
 
 function titleCase(value: string): string {
