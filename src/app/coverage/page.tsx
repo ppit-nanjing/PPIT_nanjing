@@ -5,12 +5,12 @@ import { SiteNav } from "@/components/site-nav";
 import { SiteFooter } from "@/components/site-footer";
 import { CoverageMap } from "@/components/coverage-map";
 import geo from "@/data/nanjing-coverage.geo.json";
+import { getT } from "@/lib/i18n/server";
 
-export const metadata = {
-  title: "Wilayah Naungan - PPIT Nanjing",
-  description:
-    "Sembilan kota di bawah naungan PPIT Nanjing: Nanjing, Huai'an, Jurong, Lianyungang, Ma'anshan, Taizhou, Xuzhou, Yancheng, dan Zhenjiang.",
-};
+export async function generateMetadata() {
+  const { t } = await getT();
+  return { title: t("coverage.metaTitle"), description: t("coverage.metaDesc") };
+}
 
 export type CoverageFeature = {
   type: "Feature";
@@ -19,6 +19,7 @@ export type CoverageFeature = {
 };
 
 export default async function CoveragePage() {
+  const { t } = await getT();
   const rows = await db.select().from(coverageCities).orderBy(asc(coverageCities.label));
   const bySlug = new Map(rows.map((r) => [r.slug, r]));
 
@@ -31,20 +32,21 @@ export default async function CoveragePage() {
       <SiteNav />
 
       <header className="max-w-[var(--container-max)] mx-auto px-[var(--spacing-container-padding)] pt-16 pb-8">
-        <p className="text-label-caps uppercase tracking-wide text-on-surface-variant mb-2">Jelajahi</p>
-        <h1 className="text-display-hero-mobile md:text-display-hero text-on-background mb-4">Wilayah Naungan</h1>
+        <p className="text-label-caps uppercase tracking-wide text-on-surface-variant mb-2">{t("explore.kicker")}</p>
+        <h1 className="text-display-hero-mobile md:text-display-hero text-on-background mb-4">{t("coverage.title")}</h1>
         <p className="text-body-lg text-on-surface-variant max-w-2xl">
-          PPIT Nanjing menaungi <strong className="text-on-background">{features.length} kota</strong> di Jiangsu dan
-          Anhui.{" "}
+          {t("coverage.leadPrefix")}{" "}
+          <strong className="text-on-background">{t("coverage.leadCities", { n: features.length })}</strong>{" "}
+          {t("coverage.leadSuffix")}{" "}
           {counted.length > 0
-            ? `Tercatat ${total} mahasiswa Indonesia di ${counted.length} kota.`
-            : "Jumlah mahasiswa per kota belum diisi pengurus."}
+            ? t("coverage.counted", { total, cities: counted.length })
+            : t("coverage.notCounted")}
         </p>
       </header>
 
       <main className="max-w-[var(--container-max)] mx-auto px-[var(--spacing-container-padding)] pb-20">
         <CoverageMap
-          ariaLabel={`Peta ${features.length} kota naungan PPIT Nanjing`}
+          ariaLabel={t("coverage.mapAria", { n: features.length })}
           features={features}
           counts={Object.fromEntries(
             features.map((f) => [f.properties.id, bySlug.get(f.properties.id)?.memberCount ?? null]),
@@ -64,12 +66,15 @@ export default async function CoveragePage() {
                     {f.properties.label} <span className="text-body-md text-on-surface-variant">{f.properties.zh}</span>
                   </h2>
                   <span className="text-label-caps uppercase tracking-wide text-on-surface-variant shrink-0">
-                    {row?.memberCount != null ? `${row.memberCount} orang` : "—"}
+                    {row?.memberCount != null ? t("coverage.people", { n: row.memberCount }) : "—"}
                   </span>
                 </div>
                 {f.properties.within && (
                   <p className="text-label-caps text-on-surface-variant mt-1">
-                    Bagian dari {features.find((x) => x.properties.id === f.properties.within)?.properties.label}
+                    {t("coverage.partOf", {
+                      parent:
+                        features.find((x) => x.properties.id === f.properties.within)?.properties.label ?? "",
+                    })}
                   </p>
                 )}
                 {row?.contactInfo && <p className="text-body-md text-on-surface-variant mt-2">{row.contactInfo}</p>}
