@@ -5,10 +5,12 @@ import { X, Bot, MessageSquarePlus } from "lucide-react";
 import { ChatbotPanel } from "@/components/ai/ai-chatbot";
 import { FeedbackPanel } from "@/components/feedback/feedback-widget";
 import { useDraggable } from "@/components/ai/use-draggable";
+import { useT } from "@/lib/i18n/client";
 
 type Tab = "chat" | "feedback";
 
 export function HelpCenter({ authed }: { authed: boolean }) {
+  const t = useT();
   const [open, setOpen] = useState(false);
   const [tab, setTab] = useState<Tab>(authed ? "chat" : "feedback");
   const launcherRef = useRef<HTMLButtonElement>(null);
@@ -44,7 +46,7 @@ export function HelpCenter({ authed }: { authed: boolean }) {
           className={`fixed z-[60] bg-primary-container text-on-primary rounded-full p-4 shadow-lg hover:bg-primary transition-colors touch-none select-none cursor-grab active:cursor-grabbing ${
             launcher.pos ? "" : "bottom-24 right-4 sm:bottom-6 sm:right-6"
           }`}
-          aria-label="Bantuan & Masukan"
+          aria-label={t("help.launcherAria")}
         >
           <MessageSquarePlus size={22} />
         </button>
@@ -72,7 +74,7 @@ export function HelpCenter({ authed }: { authed: boolean }) {
                     : "text-secondary hover:text-on-background"
                 } ${!authed ? "opacity-40 cursor-not-allowed" : ""}`}
               >
-                <Bot size={16} /> Asisten AI
+                <Bot size={16} /> {t("help.tabChat")}
               </button>
               <button
                 onClick={() => setTab("feedback")}
@@ -82,10 +84,10 @@ export function HelpCenter({ authed }: { authed: boolean }) {
                     : "text-secondary hover:text-on-background"
                 }`}
               >
-                <MessageSquarePlus size={16} /> Masukan
+                <MessageSquarePlus size={16} /> {t("help.tabFeedback")}
               </button>
             </div>
-            <button onClick={close} className="text-secondary hover:text-on-background" aria-label="Tutup">
+            <button onClick={close} className="text-secondary hover:text-on-background" aria-label={t("common.close")}>
               <X size={18} />
             </button>
           </div>
