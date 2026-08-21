@@ -2,18 +2,25 @@
 
 import { useEffect, useRef, useState, useTransition } from "react";
 import { ChevronRight, ChevronLeft, Check, AlertTriangle, Loader2 } from "lucide-react";
-import { submitSensusProfile, saveSensusStep, type SensusInput } from "@/app/actions/sensus";
+import { submitSensusProfile, saveSensusStep } from "@/app/actions/sensus";
 import { ImageUploadCropper } from "@/components/upload/image-upload-cropper";
 import { useT, useLocale } from "@/lib/i18n/client";
 import { INTL_LOCALE } from "@/lib/i18n/config";
+import { INDONESIA_PROVINCES } from "@/lib/indonesia-provinces";
+import {
+  DEGREE_OPTIONS,
+  FUNDING_OPTIONS,
+  GENDER_OPTIONS,
+  STUDENT_STATUS_OPTIONS,
+  UNIVERSITY_OTHER,
+  validateSensus,
+  type SensusInput,
+  type SensusIssue,
+} from "@/lib/sensus-form";
 import type { TKey } from "@/lib/i18n/dictionaries/id";
+import type { T } from "@/lib/i18n/translate";
 
 const STEP_KEYS = ["sensus.stepBiodata", "sensus.stepStudentData", "sensus.stepContact"] as const;
-
-const GENDER_OPTIONS = ["Laki-Laki", "Perempuan"];
-const STUDENT_STATUS_OPTIONS = ["Mahasiswa Aktif", "Mahasiswa Non-Aktif", "Cuti", "Lulus"];
-const DEGREE_OPTIONS = ["D3", "S1", "S2", "S3", "Sekolah Bahasa", "Lainnya"];
-const FUNDING_OPTIONS = ["Self-funded", "Partial Scholarship", "Full Scholarship"];
 
 // Maps a stored option value to its dictionary key. The submitted/stored value
 // stays the Indonesian source string (data integrity), only the displayed
@@ -36,36 +43,88 @@ const OPTION_KEYS: Record<string, TKey> = {
   "Full Scholarship": "sensus.fundFull",
 };
 
-function optionLabel(t: (k: TKey, vars?: Record<string, string | number>) => string, value: string): string {
+// Label tiap field, dipakai untuk menyusun pesan error ("<label> wajib diisi").
+const FIELD_LABEL_KEYS: Partial<Record<keyof SensusInput, TKey>> = {
+  fullName: "sensus.fullName",
+  passportNumber: "sensus.passportNumber",
+  gender: "sensus.gender",
+  passportExpiry: "sensus.passportExpiry",
+  province: "sensus.province",
+  birthDate: "sensus.birthDate",
+  branch: "sensus.branch",
+  studentStatus: "sensus.studentStatus",
+  university: "sensus.university",
+  degreeLevel: "sensus.degreeLevel",
+  major: "sensus.major",
+  fundingSource: "sensus.fundingSource",
+  entryYear: "sensus.entryYear",
+  graduationYear: "sensus.graduationYear",
+  wechatId: "sensus.wechatId",
+  phoneActive: "sensus.phoneActive",
+  whatsappNumber: "sensus.whatsappNumber",
+  studentCardUrl: "sensus.studentCardLabel",
+  agreeTerms: "sensus.agreeTerms",
+};
+
+function optionLabel(t: T, value: string): string {
   const key = OPTION_KEYS[value];
-  return key ? t(key as TKey) : value;
+  return key ? t(key) : value;
+}
+
+function issueMessage(t: T, issue: SensusIssue): string {
+  switch (issue.kind) {
+    case "wechat":
+      return t("sensus.errWechat");
+    case "phone":
+      return t("sensus.errPhone");
+    case "whatsapp":
+      return t("sensus.errWhatsapp");
+    case "year":
+      return t("sensus.errYear");
+    case "gradBeforeEntry":
+      return t("sensus.errGradBeforeEntry");
+    case "passportTaken":
+      return t("sensus.errPassportTaken");
+    case "required":
+      // Dua field ini punya pesan sendiri karena bukan "isian kosong" biasa:
+      // satu unggahan berkas, satu kotak persetujuan.
+      if (issue.field === "studentCardUrl") return t("sensus.errStudentCardRequired");
+      if (issue.field === "agreeTerms") return t("sensus.errTermsRequired");
+      return t("sensus.errRequired", { label: t(FIELD_LABEL_KEYS[issue.field] ?? "sensus.fullName") });
+  }
 }
 
 function PhoneField({
   label,
   value,
   onChange,
+  // Satu prefiks = kode negaranya dikunci (form pusat menulis "Nomor Telepon
+  // Aktif (+86)" — memang harus nomor Tiongkok). Dua prefiks = pengisi memilih.
+  prefixes,
+  hint,
+  error,
 }: {
   label: string;
   value: string;
   onChange: (v: string) => void;
+  prefixes: string[];
+  hint: string;
+  error?: string;
 }) {
   const t = useT();
-  const prefix = value.startsWith("+86") ? "+86" : value.startsWith("+62") ? "+62" : "+62";
-  const national = value.replace(/^\+62/, "").replace(/^\+86/, "").replace(/^0+/, "");
+  const locked = prefixes.length === 1;
+  const matched = prefixes.find((p) => value.startsWith(p));
+  const prefix = locked ? prefixes[0] : matched ?? prefixes[0];
+  const national = prefixes.reduce((acc, p) => acc.replace(p, ""), value).replace(/^0+/, "");
+  const errorId = `sensus-err-phone-${label.replace(/\s+/g, "-")}`;
 
-  function handlePrefix(next: string) {
-    let n = national.replace(/^0+/, "");
-    if (next === "+62" && n.startsWith("62")) n = n.slice(2);
-    if (next === "+86" && n.startsWith("86")) n = n.slice(2);
-    onChange(next + n);
-  }
-
-  function handleNational(raw: string) {
+  function normalize(raw: string, withPrefix: string) {
     let n = raw.replace(/[^\d]/g, "").replace(/^0+/, "");
-    if (prefix === "+62" && n.startsWith("62")) n = n.slice(2);
-    if (prefix === "+86" && n.startsWith("86")) n = n.slice(2);
-    onChange(prefix + n);
+    // Buang kode negara yang telanjur diketik ulang di kolom nomor
+    // ("+62" lalu "62812..." akan jadi "+6262812..." kalau tidak dipangkas).
+    const bare = withPrefix.replace("+", "");
+    if (n.startsWith(bare)) n = n.slice(bare.length);
+    return withPrefix + n;
   }
 
   return (
@@ -75,28 +134,45 @@ function PhoneField({
         <span className="text-error" aria-hidden="true"> *</span>
       </span>
       <div className="flex gap-2">
-        <select
-          value={prefix}
-          onChange={(e) => handlePrefix(e.target.value)}
-          aria-label={t("sensus.countryCodeAria")}
-          className="bg-soft-gray rounded-md p-3 text-body-md focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-container shrink-0"
-        >
-          <option value="+62">+62</option>
-          <option value="+86">+86</option>
-        </select>
+        {locked ? (
+          <span
+            className="bg-soft-gray rounded-md p-3 text-body-md shrink-0 text-on-surface-variant"
+            aria-hidden="true"
+          >
+            {prefix}
+          </span>
+        ) : (
+          <select
+            value={prefix}
+            onChange={(e) => onChange(normalize(national, e.target.value))}
+            aria-label={t("sensus.countryCodeAria")}
+            className="bg-soft-gray rounded-md p-3 text-body-md focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-container shrink-0"
+          >
+            {prefixes.map((p) => (
+              <option key={p} value={p}>
+                {p}
+              </option>
+            ))}
+          </select>
+        )}
         <input
           type="tel"
           inputMode="numeric"
           value={national}
-          onChange={(e) => handleNational(e.target.value)}
-          placeholder="85211849390"
+          onChange={(e) => onChange(normalize(e.target.value, prefix))}
+          placeholder={prefix === "+86" ? "13712345678" : "85211849390"}
           aria-required="true"
+          aria-invalid={error ? true : undefined}
+          aria-describedby={error ? errorId : undefined}
           className="bg-soft-gray rounded-md p-3 text-body-md flex-1 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-container"
         />
       </div>
-      <span className="text-xs text-on-surface-variant">
-        {t("sensus.phoneHint")}
-      </span>
+      <span className="text-xs text-on-surface-variant">{hint}</span>
+      {error && (
+        <span id={errorId} className="text-xs text-error">
+          {error}
+        </span>
+      )}
     </div>
   );
 }
@@ -105,10 +181,13 @@ export function SensusWizard({
   initial,
   returnTo,
   branchOptions,
+  universitiesByBranch,
 }: {
   initial: Partial<SensusInput>;
   returnTo?: string;
   branchOptions: string[];
+  // Kampus per cabang, sumber dropdown bertingkat Cabang → Universitas.
+  universitiesByBranch: Record<string, string[]>;
 }) {
   const t = useT();
   const locale = useLocale();
@@ -133,12 +212,23 @@ export function SensusWizard({
     whatsappNumber: initial.whatsappNumber ?? "",
     studentCardUrl: initial.studentCardUrl ?? "",
     agreeTerms: initial.agreeTerms ?? false,
+    subscribeNewsletter: initial.subscribeNewsletter ?? false,
   });
+  // Profil lama bisa menyimpan kampus yang tidak ada di daftar cabangnya (dulu
+  // field ini teks bebas) - buka langsung dalam mode "Lainnya" supaya nilainya
+  // tampil dan bisa disunting, bukan hilang diam-diam saat dropdown dirender.
+  const [universityOther, setUniversityOther] = useState(() => {
+    const uni = initial.university ?? "";
+    const branch = initial.branch ?? "";
+    return Boolean(uni) && !(universitiesByBranch[branch] ?? []).includes(uni);
+  });
+  const [issues, setIssues] = useState<SensusIssue[]>([]);
   const [pending, startTransition] = useTransition();
   const [saving, setSaving] = useState(false);
   const [lastSaved, setLastSaved] = useState<Date | null>(null);
-  const [submitError, setSubmitError] = useState<string | null>(null);
   const stepRef = useRef<HTMLDivElement>(null);
+
+  const branchUniversities = form.branch ? universitiesByBranch[form.branch] ?? [] : [];
 
   useEffect(() => {
     const first = stepRef.current?.querySelector<HTMLElement>("input, select, textarea, button");
@@ -147,6 +237,17 @@ export function SensusWizard({
 
   function update<K extends keyof SensusInput>(key: K, value: string | boolean) {
     setForm((f) => ({ ...f, [key]: value }));
+    // Begitu sebuah field disentuh, error-nya dilepas — biar tidak ada tulisan
+    // merah yang bertahan padahal isiannya sudah dibetulkan.
+    setIssues((prev) => prev.filter((i) => i.field !== key));
+  }
+
+  // Ganti cabang = daftar kampusnya ikut ganti, jadi pilihan lama hampir pasti
+  // tidak valid lagi di cabang baru dan harus dikosongkan.
+  function updateBranch(value: string) {
+    setForm((f) => ({ ...f, branch: value, university: "" }));
+    setUniversityOther(false);
+    setIssues((prev) => prev.filter((i) => i.field !== "branch" && i.field !== "university"));
   }
 
   function goNext() {
@@ -154,35 +255,70 @@ export function SensusWizard({
     startTransition(async () => {
       const result = await saveSensusStep(form);
       setSaving(false);
-      if (!("error" in result)) setLastSaved(new Date(result.savedAt));
+      if ("error" in result) {
+        // Paspor kembar = satu-satunya kegagalan simpan yang harus menahan
+        // pengisi di tempat; nomornya harus dibetulkan sebelum apa pun bisa
+        // tersimpan. Kegagalan lain (mis. sesi habis) tidak boleh menjebak
+        // orang di tengah wizard - progresnya masih ada di state, biarkan maju.
+        if (result.error === "passport_taken") {
+          setIssues([{ field: "passportNumber", step: 0, kind: "passportTaken" }]);
+          setStep(0);
+          return;
+        }
+      } else {
+        setLastSaved(new Date(result.savedAt));
+      }
       setStep((s) => Math.min(STEP_KEYS.length - 1, s + 1));
     });
   }
 
   function handleSubmit() {
-    setSubmitError(null);
+    // Divalidasi dulu di sini supaya pengisi form langsung dapat penanda merah
+    // tanpa menunggu perjalanan ke server; server tetap memvalidasi ulang
+    // dengan aturan yang sama (src/lib/sensus-form.ts).
+    const local = validateSensus(form);
+    if (local.length > 0) {
+      setIssues(local);
+      setStep(local[0].step);
+      return;
+    }
+    setIssues([]);
     startTransition(async () => {
       const result = await submitSensusProfile(returnTo ?? null, form);
       // A successful submit redirects server-side and never returns here.
-      if (result && "error" in result) {
-        if (result.error === "student_card_required") {
-          setSubmitError(t("sensus.errStudentCardRequired"));
-          setStep(1);
-        } else if (result.error === "terms_required") {
-          setSubmitError(t("sensus.errTermsRequired"));
-          setStep(2);
-        }
+      if (result?.issues?.length) {
+        setIssues(result.issues);
+        setStep(result.issues[0].step);
       }
     });
   }
 
+  const issueFor = (key: keyof SensusInput) => issues.find((i) => i.field === key);
+  const errorFor = (key: keyof SensusInput) => {
+    const issue = issueFor(key);
+    return issue ? issueMessage(t, issue) : undefined;
+  };
+
   const field = (
     label: string,
     key: keyof SensusInput,
-    opts?: { type?: string; hint?: string; options?: string[]; required?: boolean; placeholder?: string }
+    opts?: {
+      type?: string;
+      hint?: string;
+      options?: string[];
+      required?: boolean;
+      placeholder?: string;
+      disabled?: boolean;
+      emptyLabel?: string;
+      onChange?: (value: string) => void;
+    }
   ) => {
     const id = `sensus-${key}`;
     const hintId = `sensus-hint-${key}`;
+    const errorId = `sensus-err-${key}`;
+    const error = errorFor(key);
+    const describedBy = [opts?.hint ? hintId : null, error ? errorId : null].filter(Boolean).join(" ");
+    const onChange = opts?.onChange ?? ((value: string) => update(key, value));
     return (
       <div className="flex flex-col gap-2">
         <label htmlFor={id} className="text-label-caps uppercase tracking-wide text-on-surface-variant">
@@ -193,12 +329,14 @@ export function SensusWizard({
           <select
             id={id}
             value={form[key] as string}
-            onChange={(e) => update(key, e.target.value)}
+            onChange={(e) => onChange(e.target.value)}
+            disabled={opts.disabled}
             aria-required={opts.required || undefined}
-            aria-describedby={opts.hint ? hintId : undefined}
-            className="bg-soft-gray rounded-md p-3 text-body-md focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-container"
+            aria-invalid={error ? true : undefined}
+            aria-describedby={describedBy || undefined}
+            className="bg-soft-gray rounded-md p-3 text-body-md focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-container disabled:opacity-60 disabled:cursor-not-allowed"
           >
-            <option value="">{t("sensus.selectPlaceholder", { label })}</option>
+            <option value="">{opts.emptyLabel ?? t("sensus.selectPlaceholder", { label })}</option>
             {opts.options.map((o) => (
               <option key={o} value={o}>
                 {optionLabel(t, o)}
@@ -210,16 +348,23 @@ export function SensusWizard({
             id={id}
             type={opts?.type ?? "text"}
             value={form[key] as string}
-            onChange={(e) => update(key, e.target.value)}
+            onChange={(e) => onChange(e.target.value)}
             placeholder={opts?.placeholder}
+            disabled={opts?.disabled}
             aria-required={opts?.required || undefined}
-            aria-describedby={opts?.hint ? hintId : undefined}
-            className="bg-soft-gray rounded-md p-3 text-body-md focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-container"
+            aria-invalid={error ? true : undefined}
+            aria-describedby={describedBy || undefined}
+            className="bg-soft-gray rounded-md p-3 text-body-md focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-container disabled:opacity-60"
           />
         )}
         {opts?.hint && (
           <span id={hintId} className="text-xs text-on-surface-variant">
             {opts.hint}
+          </span>
+        )}
+        {error && (
+          <span id={errorId} className="text-xs text-error">
+            {error}
           </span>
         )}
       </div>
@@ -255,6 +400,9 @@ export function SensusWizard({
       </div>
 
       <div ref={stepRef} className="flex flex-col gap-6 mb-10">
+        {/* Urutan field tiap langkah sengaja mengikuti form PPI Tiongkok pusat,
+            supaya pengurus yang memindahkan data bisa membaca dua form itu
+            berdampingan tanpa loncat-loncat. */}
         {step === 0 && (
           <fieldset className="contents">
             <legend className="sr-only">{t(STEP_KEYS[0])}</legend>
@@ -262,88 +410,171 @@ export function SensusWizard({
             {field(t("sensus.passportNumber"), "passportNumber", {
               required: true,
               hint: t("sensus.passportHint"),
-              placeholder: "X3XXXX18",
+              placeholder: "A12345678",
             })}
             {field(t("sensus.gender"), "gender", { options: GENDER_OPTIONS, required: true })}
-            {field(t("sensus.birthDate"), "birthDate", { type: "date", required: true })}
+            {field(t("sensus.passportExpiry"), "passportExpiry", { type: "date", required: true })}
             {field(t("sensus.province"), "province", {
+              options: [...INDONESIA_PROVINCES],
               required: true,
               hint: t("sensus.provinceHint"),
-              placeholder: "Banten",
             })}
-            {field(t("sensus.passportExpiry"), "passportExpiry", { type: "date", required: true })}
+            {field(t("sensus.birthDate"), "birthDate", { type: "date", required: true })}
           </fieldset>
         )}
         {step === 1 && (
           <fieldset className="contents">
             <legend className="sr-only">{t(STEP_KEYS[1])}</legend>
-            {field(t("sensus.branch"), "branch", { options: branchOptions, required: true })}
-            {field(t("sensus.studentStatus"), "studentStatus", { options: STUDENT_STATUS_OPTIONS, required: true })}
-            {field(t("sensus.university"), "university", {
+            {field(t("sensus.branch"), "branch", {
+              options: branchOptions,
               required: true,
-              placeholder: "Nanjing Xiaozhuang University",
+              onChange: updateBranch,
             })}
+            {field(t("sensus.studentStatus"), "studentStatus", { options: STUDENT_STATUS_OPTIONS, required: true })}
+            {/* Universitas terkunci sampai cabang dipilih - daftar kampusnya
+                memang diambil per cabang, sama seperti form pusat. */}
+            {universityOther
+              ? field(t("sensus.university"), "university", {
+                  required: true,
+                  placeholder: "Nanjing Xiaozhuang University",
+                  hint: t("sensus.universityOtherHint"),
+                })
+              : field(t("sensus.university"), "university", {
+                  required: true,
+                  disabled: !form.branch,
+                  options: [...branchUniversities, UNIVERSITY_OTHER],
+                  emptyLabel: form.branch
+                    ? t("sensus.selectPlaceholder", { label: t("sensus.university") })
+                    : t("sensus.universityLockedHint"),
+                  hint: form.branch && branchUniversities.length === 0 ? t("sensus.universityEmptyHint") : undefined,
+                  onChange: (value) => {
+                    if (value === UNIVERSITY_OTHER) {
+                      setUniversityOther(true);
+                      update("university", "");
+                    } else {
+                      update("university", value);
+                    }
+                  },
+                })}
+            {universityOther && (
+              <button
+                type="button"
+                onClick={() => {
+                  setUniversityOther(false);
+                  update("university", "");
+                }}
+                className="self-start -mt-4 text-xs text-secondary hover:text-on-background underline rounded-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-container"
+              >
+                {t("sensus.universityBackToList")}
+              </button>
+            )}
             {field(t("sensus.degreeLevel"), "degreeLevel", { options: DEGREE_OPTIONS, required: true })}
             {field(t("sensus.major"), "major", {
               required: true,
-              placeholder: "Software Engineer",
+              placeholder: "Computer Science",
             })}
             {field(t("sensus.fundingSource"), "fundingSource", { options: FUNDING_OPTIONS, required: true })}
-            {field(t("sensus.entryYear"), "entryYear", { type: "number", required: true, placeholder: "2025" })}
+            {field(t("sensus.entryYear"), "entryYear", { type: "number", required: true, placeholder: "2024" })}
             {field(t("sensus.graduationYear"), "graduationYear", {
               type: "number",
               required: true,
-              placeholder: "2027",
+              placeholder: "2028",
             })}
-            <ImageUploadCropper
-              folder="sensus"
-              label={t("sensus.studentCardLabel")}
-              required
-              value={form.studentCardUrl}
-              onValueChange={(url) => update("studentCardUrl", url)}
-            />
+            <div className="flex flex-col gap-2">
+              <ImageUploadCropper
+                folder="sensus"
+                label={t("sensus.studentCardLabel")}
+                required
+                value={form.studentCardUrl}
+                onValueChange={(url) => update("studentCardUrl", url)}
+              />
+              <span className="text-xs text-on-surface-variant">{t("sensus.studentCardHint")}</span>
+              {errorFor("studentCardUrl") && (
+                <span className="text-xs text-error">{errorFor("studentCardUrl")}</span>
+              )}
+            </div>
           </fieldset>
         )}
         {step === 2 && (
           <fieldset className="contents">
             <legend className="sr-only">{t(STEP_KEYS[2])}</legend>
-            {field(t("sensus.wechatId"), "wechatId", { required: true, placeholder: "Xevuin12" })}
+            {field(t("sensus.wechatId"), "wechatId", {
+              required: true,
+              placeholder: "Xevuin12",
+              hint: t("sensus.wechatHint"),
+            })}
             <PhoneField
               label={t("sensus.phoneActive")}
               value={form.phoneActive}
               onChange={(v) => update("phoneActive", v)}
+              prefixes={["+86"]}
+              hint={t("sensus.phoneActiveHint")}
+              error={errorFor("phoneActive")}
             />
             <PhoneField
               label={t("sensus.whatsappNumber")}
               value={form.whatsappNumber}
               onChange={(v) => update("whatsappNumber", v)}
+              prefixes={["+62", "+86"]}
+              hint={t("sensus.whatsappHint")}
+              error={errorFor("whatsappNumber")}
             />
+            <div className="flex flex-col gap-2">
+              <label className="flex items-start gap-3 bg-soft-gray rounded-md p-3 cursor-pointer">
+                <input
+                  id="sensus-agreeTerms"
+                  type="checkbox"
+                  checked={form.agreeTerms}
+                  onChange={(e) => update("agreeTerms", e.target.checked)}
+                  aria-required="true"
+                  aria-invalid={issueFor("agreeTerms") ? true : undefined}
+                  className="mt-1 accent-[var(--color-primary-container)]"
+                />
+                <span className="text-body-md text-on-background">
+                  {t("sensus.agreeTerms")}
+                  <span className="text-error" aria-hidden="true"> *</span>
+                </span>
+              </label>
+              {errorFor("agreeTerms") && <span className="text-xs text-error">{errorFor("agreeTerms")}</span>}
+            </div>
+            {/* Satu-satunya field opsional di form pusat. */}
             <label className="flex items-start gap-3 bg-soft-gray rounded-md p-3 cursor-pointer">
               <input
-                id="sensus-agreeTerms"
+                id="sensus-subscribeNewsletter"
                 type="checkbox"
-                checked={form.agreeTerms}
-                onChange={(e) => update("agreeTerms", e.target.checked)}
-                aria-required="true"
+                checked={form.subscribeNewsletter}
+                onChange={(e) => update("subscribeNewsletter", e.target.checked)}
                 className="mt-1 accent-[var(--color-primary-container)]"
               />
               <span className="text-body-md text-on-background">
-                {t("sensus.agreeTerms")}
-                <span className="text-error" aria-hidden="true"> *</span>
+                {t("sensus.newsletter")}{" "}
+                <span className="text-xs text-on-surface-variant">({t("sensus.optional")})</span>
               </span>
             </label>
           </fieldset>
         )}
       </div>
 
-      {submitError && (
+      {issues.length > 0 && (
         <div
           role="alert"
           aria-live="assertive"
           className="flex items-start gap-3 bg-error-container/40 border-l-4 border-error rounded-r-lg p-4 mb-6"
         >
           <AlertTriangle className="text-error shrink-0 mt-0.5" size={18} />
-          <p className="text-body-md text-on-background">{submitError}</p>
+          <div>
+            <p className="text-body-md text-on-background">{t("sensus.errFixFields", { n: issues.length })}</p>
+            {/* Error dari langkah lain tidak kelihatan di layar ini, jadi
+                disebutkan namanya supaya pengisi tahu harus mundur ke mana. */}
+            {issues.some((i) => i.step !== step) && (
+              <p className="text-xs text-on-surface-variant mt-1">
+                {issues
+                  .filter((i) => i.step !== step)
+                  .map((i) => `${t(STEP_KEYS[i.step])}: ${t(FIELD_LABEL_KEYS[i.field] ?? "sensus.fullName")}`)
+                  .join(", ")}
+              </p>
+            )}
+          </div>
         </div>
       )}
 
