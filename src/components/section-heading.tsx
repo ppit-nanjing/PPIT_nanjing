@@ -1,15 +1,16 @@
 import { ArrowRight } from "lucide-react";
+import { getT } from "@/lib/i18n/server";
 
 /**
  * Shared section header: kicker (eyebrow) + title + optional "view all" link.
  * Used by the Cities, Latest Events, and Latest News sections on the home page
  * to remove the repeated header markup.
  */
-export function SectionHeading({
+export async function SectionHeading({
   kicker,
   title,
   href,
-  linkLabel = "Lihat Semua",
+  linkLabel,
   description,
 }: {
   kicker: string;
@@ -18,6 +19,8 @@ export function SectionHeading({
   linkLabel?: string;
   description?: string;
 }) {
+  const { t } = await getT();
+  const resolvedLinkLabel = linkLabel ?? t("common.viewAll");
   return (
     <div className="flex flex-col md:flex-row md:justify-between md:items-end gap-4 border-b border-outline-variant pb-6">
       <div>
@@ -34,7 +37,7 @@ export function SectionHeading({
           href={href}
           className="mt-2 md:mt-0 md:ml-auto inline-flex items-center gap-1 text-label-caps text-primary-container hover:text-primary transition-colors shrink-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background"
         >
-          {linkLabel} <ArrowRight size={16} aria-hidden="true" />
+          {resolvedLinkLabel} <ArrowRight size={16} aria-hidden="true" />
         </a>
       )}
     </div>
