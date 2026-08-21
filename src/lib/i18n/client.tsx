@@ -186,7 +186,18 @@ function LetterReveal({ text }: { text: string }) {
       className="text-display-hero-mobile md:text-display-hero font-bold uppercase tracking-tight text-center px-6"
       initial="hidden"
       animate="visible"
-      variants={{ visible: { transition: { staggerChildren: 0.025, delayChildren: 0.3 } } }}
+      // Without its own `exit` state, this text had no exit animation at
+      // all - AnimatePresence only waits on motion components that declare
+      // `exit`, and only the radial circle did, so the text sat static at
+      // full opacity while the circle shrank away, then vanished abruptly
+      // the instant the whole overlay actually unmounted. `staggerDirection:
+      // -1` also gives the close a reverse letter-by-letter feel, not just
+      // a flat fade.
+      exit="exit"
+      variants={{
+        visible: { transition: { staggerChildren: 0.025, delayChildren: 0.3 } },
+        exit: { transition: { staggerChildren: 0.02, staggerDirection: -1 } },
+      }}
       aria-label={text}
     >
       {words.map((word, wi) => (
@@ -194,8 +205,15 @@ function LetterReveal({ text }: { text: string }) {
           {word.split("").map((letter, li) => (
             <motion.span
               key={li}
-              variants={{ hidden: { opacity: 0, y: 24 }, visible: { opacity: 1, y: 0 } }}
-              transition={{ duration: 0.4, ease: [0.25, 0.1, 0.25, 1] }}
+              variants={{
+                hidden: { opacity: 0, y: 24 },
+                visible: { opacity: 1, y: 0 },
+                // Mirrors the entrance (y: 24 -> 0) in the opposite
+                // direction (rises and fades out, y: 0 -> -16) instead of
+                // just cutting to nothing.
+                exit: { opacity: 0, y: -16 },
+              }}
+              transition={{ duration: 0.3, ease: [0.25, 0.1, 0.25, 1] }}
               className="inline-block"
             >
               {letter}
