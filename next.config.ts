@@ -21,11 +21,22 @@ import type { NextConfig } from "next";
 // the allow-list is inert there.
 const VERCEL_TOOLBAR_HOSTS = " https://vercel.live https://*.vercel.live";
 
+// React dalam mode pengembangan memakai eval() untuk fitur debug-nya (antara
+// lain menyusun ulang callstack lintas lingkungan). Tanpa 'unsafe-eval', konsol
+// dipenuhi "eval() is not supported in this environment" di setiap halaman dan
+// jejak error jadi lebih miskin.
+//
+// HANYA saat development. NODE_ENV bernilai "production" waktu `next build`
+// dijalankan, jadi ini tidak pernah ikut ke berkas produksi - dan memang tidak
+// boleh: 'unsafe-eval' mencabut salah satu perlindungan utama CSP terhadap XSS.
+// React sendiri tidak pernah memakai eval() di mode produksi.
+const DEV_EVAL = process.env.NODE_ENV === "development" ? " 'unsafe-eval'" : "";
+
 function buildCsp() {
   const v = VERCEL_TOOLBAR_HOSTS;
   return [
     "default-src 'self'",
-    `script-src 'self' 'unsafe-inline'${v}`,
+    `script-src 'self' 'unsafe-inline'${DEV_EVAL}${v}`,
     "style-src 'self' 'unsafe-inline'",
     `img-src 'self' data: blob: https://*.public.blob.vercel-storage.com https://*.googleusercontent.com${v}`,
     "font-src 'self'",
