@@ -4,13 +4,42 @@ import { useEffect, useRef, useState, useTransition } from "react";
 import { ChevronRight, ChevronLeft, Check, AlertTriangle, Loader2 } from "lucide-react";
 import { submitSensusProfile, saveSensusStep, type SensusInput } from "@/app/actions/sensus";
 import { ImageUploadCropper } from "@/components/upload/image-upload-cropper";
+import { useT, useLocale } from "@/lib/i18n/client";
+import { INTL_LOCALE } from "@/lib/i18n/config";
+import type { TKey } from "@/lib/i18n/dictionaries/id";
 
-const STEPS = ["Biodata", "Data Mahasiswa", "Kontak"] as const;
+const STEP_KEYS = ["sensus.stepBiodata", "sensus.stepStudentData", "sensus.stepContact"] as const;
 
 const GENDER_OPTIONS = ["Laki-Laki", "Perempuan"];
 const STUDENT_STATUS_OPTIONS = ["Mahasiswa Aktif", "Mahasiswa Non-Aktif", "Cuti", "Lulus"];
 const DEGREE_OPTIONS = ["D3", "S1", "S2", "S3", "Sekolah Bahasa", "Lainnya"];
 const FUNDING_OPTIONS = ["Self-funded", "Partial Scholarship", "Full Scholarship"];
+
+// Maps a stored option value to its dictionary key. The submitted/stored value
+// stays the Indonesian source string (data integrity), only the displayed
+// label is translated.
+const OPTION_KEYS: Record<string, TKey> = {
+  "Laki-Laki": "sensus.genderMale",
+  "Perempuan": "sensus.genderFemale",
+  "Mahasiswa Aktif": "sensus.statusActive",
+  "Mahasiswa Non-Aktif": "sensus.statusInactive",
+  "Cuti": "sensus.statusLeave",
+  "Lulus": "sensus.statusGraduate",
+  "D3": "sensus.degreeD3",
+  "S1": "sensus.degreeS1",
+  "S2": "sensus.degreeS2",
+  "S3": "sensus.degreeS3",
+  "Sekolah Bahasa": "sensus.degreeLang",
+  "Lainnya": "sensus.degreeOther",
+  "Self-funded": "sensus.fundSelf",
+  "Partial Scholarship": "sensus.fundPartial",
+  "Full Scholarship": "sensus.fundFull",
+};
+
+function optionLabel(t: (k: TKey, vars?: Record<string, string | number>) => string, value: string): string {
+  const key = OPTION_KEYS[value];
+  return key ? t(key as TKey) : value;
+}
 
 function PhoneField({
   label,
@@ -21,6 +50,7 @@ function PhoneField({
   value: string;
   onChange: (v: string) => void;
 }) {
+  const t = useT();
   const prefix = value.startsWith("+86") ? "+86" : value.startsWith("+62") ? "+62" : "+62";
   const national = value.replace(/^\+62/, "").replace(/^\+86/, "").replace(/^0+/, "");
 
@@ -48,7 +78,7 @@ function PhoneField({
         <select
           value={prefix}
           onChange={(e) => handlePrefix(e.target.value)}
-          aria-label="Kode negara"
+          aria-label={t("sensus.countryCodeAria")}
           className="bg-soft-gray rounded-md p-3 text-body-md focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-container shrink-0"
         >
           <option value="+62">+62</option>
@@ -65,7 +95,7 @@ function PhoneField({
         />
       </div>
       <span className="text-xs text-on-surface-variant">
-        Kode negara langsung terpilih (+62 Indonesia / +86 China). Isi hanya angka, tanpa 0 di depan.
+        {t("sensus.phoneHint")}
       </span>
     </div>
   );
@@ -80,6 +110,8 @@ export function SensusWizard({
   returnTo?: string;
   branchOptions: string[];
 }) {
+  const t = useT();
+  const locale = useLocale();
   const [step, setStep] = useState(0);
   const [form, setForm] = useState<SensusInput>({
     fullName: initial.fullName ?? "",
@@ -123,7 +155,7 @@ export function SensusWizard({
       const result = await saveSensusStep(form);
       setSaving(false);
       if (!("error" in result)) setLastSaved(new Date(result.savedAt));
-      setStep((s) => Math.min(STEPS.length - 1, s + 1));
+      setStep((s) => Math.min(STEP_KEYS.length - 1, s + 1));
     });
   }
 
@@ -134,10 +166,10 @@ export function SensusWizard({
       // A successful submit redirects server-side and never returns here.
       if (result && "error" in result) {
         if (result.error === "student_card_required") {
-          setSubmitError("Kartu Tanda Mahasiswa wajib diunggah sebelum sensus bisa disimpan sebagai lengkap.");
+          setSubmitError(t("sensus.errStudentCardRequired"));
           setStep(1);
         } else if (result.error === "terms_required") {
-          setSubmitError("Kamu harus menyetujui syarat, ketentuan, dan kebijakan privasi.");
+          setSubmitError(t("sensus.errTermsRequired"));
           setStep(2);
         }
       }
@@ -166,10 +198,10 @@ export function SensusWizard({
             aria-describedby={opts.hint ? hintId : undefined}
             className="bg-soft-gray rounded-md p-3 text-body-md focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-container"
           >
-            <option value="">Pilih {label.toLowerCase()}</option>
+            <option value="">{t("sensus.selectPlaceholder", { label })}</option>
             {opts.options.map((o) => (
               <option key={o} value={o}>
-                {o}
+                {optionLabel(t, o)}
               </option>
             ))}
           </select>
@@ -197,11 +229,11 @@ export function SensusWizard({
   return (
     <div>
       <p className="text-label-caps uppercase tracking-wide text-on-surface-variant mb-3" aria-live="polite">
-        Langkah {step + 1} dari {STEPS.length}: {STEPS[step]}
+        {t("sensus.stepProgress", { current: step + 1, total: STEP_KEYS.length, step: t(STEP_KEYS[step]) })}
       </p>
       <div className="flex items-center gap-2 mb-8">
-        {STEPS.map((s, i) => (
-          <div key={s} className="flex items-center gap-2 flex-1">
+        {STEP_KEYS.map((k, i) => (
+          <div key={k} className="flex items-center gap-2 flex-1">
             <div
               aria-current={i === step ? "step" : undefined}
               className={`w-8 h-8 rounded-full flex items-center justify-center text-label-caps font-semibold shrink-0 ${
@@ -215,9 +247,9 @@ export function SensusWizard({
                 i === step ? "text-on-background font-medium" : "text-on-surface-variant"
               }`}
             >
-              {s}
+              {t(k)}
             </span>
-            {i < STEPS.length - 1 && <div className="flex-1 h-px bg-outline-variant" />}
+            {i < STEP_KEYS.length - 1 && <div className="flex-1 h-px bg-outline-variant" />}
           </div>
         ))}
       </div>
@@ -225,47 +257,47 @@ export function SensusWizard({
       <div ref={stepRef} className="flex flex-col gap-6 mb-10">
         {step === 0 && (
           <fieldset className="contents">
-            <legend className="sr-only">{STEPS[0]}</legend>
-            {field("Nama Lengkap", "fullName", { required: true })}
-            {field("Nomor Paspor", "passportNumber", {
+            <legend className="sr-only">{t(STEP_KEYS[0])}</legend>
+            {field(t("sensus.fullName"), "fullName", { required: true })}
+            {field(t("sensus.passportNumber"), "passportNumber", {
               required: true,
-              hint: "Sesuai paspor, contoh: X3XXXX18",
+              hint: t("sensus.passportHint"),
               placeholder: "X3XXXX18",
             })}
-            {field("Jenis Kelamin", "gender", { options: GENDER_OPTIONS, required: true })}
-            {field("Tanggal Lahir", "birthDate", { type: "date", required: true })}
-            {field("Asal Provinsi", "province", {
+            {field(t("sensus.gender"), "gender", { options: GENDER_OPTIONS, required: true })}
+            {field(t("sensus.birthDate"), "birthDate", { type: "date", required: true })}
+            {field(t("sensus.province"), "province", {
               required: true,
-              hint: "Provinsi asal di Indonesia, contoh: Banten",
+              hint: t("sensus.provinceHint"),
               placeholder: "Banten",
             })}
-            {field("Tanggal Maksimal Berlaku Paspor", "passportExpiry", { type: "date", required: true })}
+            {field(t("sensus.passportExpiry"), "passportExpiry", { type: "date", required: true })}
           </fieldset>
         )}
         {step === 1 && (
           <fieldset className="contents">
-            <legend className="sr-only">{STEPS[1]}</legend>
-            {field("Asal Cabang", "branch", { options: branchOptions, required: true })}
-            {field("Status Mahasiswa", "studentStatus", { options: STUDENT_STATUS_OPTIONS, required: true })}
-            {field("Nama Universitas (dalam Bahasa Inggris)", "university", {
+            <legend className="sr-only">{t(STEP_KEYS[1])}</legend>
+            {field(t("sensus.branch"), "branch", { options: branchOptions, required: true })}
+            {field(t("sensus.studentStatus"), "studentStatus", { options: STUDENT_STATUS_OPTIONS, required: true })}
+            {field(t("sensus.university"), "university", {
               required: true,
               placeholder: "Nanjing Xiaozhuang University",
             })}
-            {field("Jenjang Pendidikan", "degreeLevel", { options: DEGREE_OPTIONS, required: true })}
-            {field("Jurusan (dalam Bahasa Inggris)", "major", {
+            {field(t("sensus.degreeLevel"), "degreeLevel", { options: DEGREE_OPTIONS, required: true })}
+            {field(t("sensus.major"), "major", {
               required: true,
               placeholder: "Software Engineer",
             })}
-            {field("Sumber Pembiayaan Pendidikan", "fundingSource", { options: FUNDING_OPTIONS, required: true })}
-            {field("Tahun Masuk", "entryYear", { type: "number", required: true, placeholder: "2025" })}
-            {field("Perkiraan Tahun Kelulusan", "graduationYear", {
+            {field(t("sensus.fundingSource"), "fundingSource", { options: FUNDING_OPTIONS, required: true })}
+            {field(t("sensus.entryYear"), "entryYear", { type: "number", required: true, placeholder: "2025" })}
+            {field(t("sensus.graduationYear"), "graduationYear", {
               type: "number",
               required: true,
               placeholder: "2027",
             })}
             <ImageUploadCropper
               folder="sensus"
-              label="Kartu Tanda Mahasiswa"
+              label={t("sensus.studentCardLabel")}
               required
               value={form.studentCardUrl}
               onValueChange={(url) => update("studentCardUrl", url)}
@@ -274,15 +306,15 @@ export function SensusWizard({
         )}
         {step === 2 && (
           <fieldset className="contents">
-            <legend className="sr-only">{STEPS[2]}</legend>
-            {field("WeChat ID", "wechatId", { required: true, placeholder: "Xevuin12" })}
+            <legend className="sr-only">{t(STEP_KEYS[2])}</legend>
+            {field(t("sensus.wechatId"), "wechatId", { required: true, placeholder: "Xevuin12" })}
             <PhoneField
-              label="Nomor Telepon Aktif"
+              label={t("sensus.phoneActive")}
               value={form.phoneActive}
               onChange={(v) => update("phoneActive", v)}
             />
             <PhoneField
-              label="Nomor WhatsApp"
+              label={t("sensus.whatsappNumber")}
               value={form.whatsappNumber}
               onChange={(v) => update("whatsappNumber", v)}
             />
@@ -296,7 +328,7 @@ export function SensusWizard({
                 className="mt-1 accent-[var(--color-primary-container)]"
               />
               <span className="text-body-md text-on-background">
-                Saya menyetujui syarat dan ketentuan serta kebijakan privasi.
+                {t("sensus.agreeTerms")}
                 <span className="text-error" aria-hidden="true"> *</span>
               </span>
             </label>
@@ -322,26 +354,28 @@ export function SensusWizard({
             disabled={step === 0 || pending}
             className="flex items-center gap-1 text-label-caps text-secondary hover:text-on-background disabled:opacity-30 transition-colors rounded-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-container"
           >
-            <ChevronLeft size={16} /> Sebelumnya
+            <ChevronLeft size={16} /> {t("sensus.prev")}
           </button>
           <span aria-live="polite" className="flex items-center gap-2">
             {lastSaved && !saving && (
               <span className="flex items-center gap-1 text-xs text-on-surface-variant">
                 <Check size={12} className="text-primary-container" />
-                Tersimpan {lastSaved.toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit" })}
+                {t("sensus.savedAt", {
+                  time: lastSaved.toLocaleTimeString(INTL_LOCALE[locale], { hour: "2-digit", minute: "2-digit" }),
+                })}
               </span>
             )}
-            {saving && <span className="text-xs text-on-surface-variant">Menyimpan progres...</span>}
+            {saving && <span className="text-xs text-on-surface-variant">{t("sensus.savingProgress")}</span>}
           </span>
         </div>
 
-        {step < STEPS.length - 1 ? (
+        {step < STEP_KEYS.length - 1 ? (
           <button
             onClick={goNext}
             disabled={pending}
             className="flex items-center gap-1 bg-primary-container text-on-primary text-label-caps uppercase tracking-wide px-6 py-3 rounded-md hover:bg-primary transition-colors disabled:opacity-60 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-container focus-visible:ring-offset-2 focus-visible:ring-offset-background"
           >
-            Selanjutnya <ChevronRight size={16} />
+            {t("sensus.next")} <ChevronRight size={16} />
           </button>
         ) : (
           <button
@@ -350,7 +384,7 @@ export function SensusWizard({
             className="bg-primary-container text-on-primary text-label-caps uppercase tracking-wide px-6 py-3 rounded-md hover:bg-primary transition-colors disabled:opacity-60 flex items-center justify-center gap-2 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-container focus-visible:ring-offset-2 focus-visible:ring-offset-background"
           >
             {pending && <Loader2 />}
-            {pending ? "Menyimpan..." : "Simpan Sensus"}
+            {pending ? t("sensus.saving") : t("sensus.saveSensus")}
           </button>
         )}
       </div>
