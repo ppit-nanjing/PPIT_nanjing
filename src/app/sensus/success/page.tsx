@@ -2,8 +2,10 @@ import { SiteNav } from "@/components/site-nav";
 import { SiteFooter } from "@/components/site-footer";
 import { CheckCircle2 } from "lucide-react";
 import Link from "next/link";
+import { getT } from "@/lib/i18n/server";
 
-export default function SensusSuccessPage() {
+export default async function SensusSuccessPage() {
+  const { t } = await getT();
   return (
     <div className="min-h-screen bg-background text-on-background">
       <SiteNav />
@@ -16,23 +18,23 @@ export default function SensusSuccessPage() {
           autoFocus
           className="text-headline-lg text-on-background mb-2 outline-none focus-visible:ring-2 focus-visible:ring-primary-container rounded-sm"
         >
-          Sensus Tersimpan
+          {t("sensus.successTitle")}
         </h1>
         <div role="status" className="text-body-md text-on-surface-variant mb-10">
-          Terima kasih sudah mengisi data sensus. Kamu bisa memperbaruinya kapan saja.
+          {t("sensus.successNote")}
         </div>
         <div className="flex flex-col sm:flex-row gap-3 justify-center">
           <Link
             href="/sensus"
             className="border border-outline-variant text-on-background text-label-caps uppercase tracking-wide px-6 py-3 rounded-md hover:bg-surface-container-low transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-container focus-visible:ring-offset-2 focus-visible:ring-offset-background"
           >
-            Lihat/Ubah Data
+            {t("sensus.viewData")}
           </Link>
           <Link
             href="/"
             className="bg-primary-container text-on-primary text-label-caps uppercase tracking-wide px-6 py-3 rounded-md hover:bg-primary transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-container focus-visible:ring-offset-2 focus-visible:ring-offset-background"
           >
-            Kembali ke Beranda
+            {t("sensus.backHome")}
           </Link>
         </div>
       </main>
