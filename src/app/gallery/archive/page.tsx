@@ -10,6 +10,7 @@ import { FilterTabs } from "@/components/filter-tabs";
 import { GalleryCard } from "@/components/gallery-card";
 import { Images } from "lucide-react";
 import Link from "next/link";
+import { getT } from "@/lib/i18n/server";
 
 export default async function GalleryArchivePage({
   searchParams,
@@ -17,6 +18,7 @@ export default async function GalleryArchivePage({
   searchParams: Promise<{ year?: string }>;
 }) {
   const { year } = await searchParams;
+  const { t } = await getT();
   const albums = await db.select().from(galleryAlbums).orderBy(desc(galleryAlbums.createdAt));
   const allPhotos = await db.select().from(galleryPhotos);
 
@@ -31,7 +33,7 @@ export default async function GalleryArchivePage({
   const countFor = (albumId: string) => allPhotos.filter((p) => p.albumId === albumId).length;
 
   const filterOptions = [
-    { key: "all", label: "Semua", href: "/gallery/archive", active: !year },
+    { key: "all", label: t("events.filterAll"), href: "/gallery/archive", active: !year },
     ...years.map((y) => ({
       key: String(y),
       label: String(y),
@@ -46,10 +48,10 @@ export default async function GalleryArchivePage({
 
       <header className="max-w-[var(--container-max)] mx-auto px-[var(--spacing-container-padding)] pt-20 sm:pt-24 pb-8">
         <AnimatedHeroHeading
-          words={["Arsip", "Galeri"]}
+          words={[t("gallery.archiveTitle")]}
           className="text-display-hero-mobile md:text-display-hero text-on-background mb-4"
         />
-        <AnimatedRevealText text="Jelajahi dokumentasi kegiatan PPIT Nanjing dari tahun ke tahun." />
+        <AnimatedRevealText text={t("gallery.archiveIntro")} />
       </header>
 
       <main className="max-w-[var(--container-max)] mx-auto px-[var(--spacing-container-padding)] pb-24">
@@ -60,25 +62,25 @@ export default async function GalleryArchivePage({
             <div role="status" aria-live="polite" className="flex flex-col items-center text-center py-24">
               <Images className="text-outline-variant mb-4" size={40} aria-hidden />
               <h2 className="text-headline-md text-on-background mb-2">
-                {year ? `Tidak ada album di tahun ${year}` : "Belum ada album"}
+                {year ? t("gallery.archiveEmptyYear", { year }) : t("gallery.emptyTitle")}
               </h2>
               <p className="text-body-md text-on-surface-variant max-w-md">
                 {year
-                  ? "Coba pilih tahun lain, atau lihat seluruh arsip."
-                  : "Dokumentasi kegiatan akan muncul di sini setelah album dipublikasikan."}
+                  ? t("gallery.archiveEmptyYearDesc")
+                  : t("gallery.archiveEmptyAllDesc")}
               </p>
               {year && (
                 <Link
                   href="/gallery/archive"
                   className="mt-6 bg-primary-container text-on-primary text-label-caps uppercase tracking-wide px-6 py-3 rounded-md hover:bg-primary transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-container focus-visible:ring-offset-2 focus-visible:ring-offset-background motion-reduce:transition-none"
                 >
-                  Lihat semua tahun
+                  {t("gallery.viewAllYears")}
                 </Link>
               )}
             </div>
           </Reveal>
         ) : (
-          <section aria-label="Daftar album" className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+          <section aria-label={t("gallery.listLabel")} className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
             {filtered.map((album, i) => (
               <GalleryCard
                 key={album.id}
