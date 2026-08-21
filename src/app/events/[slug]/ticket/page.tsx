@@ -11,9 +11,12 @@ import { CopyButton } from "@/components/copy-button";
 import Image from "next/image";
 import Link from "next/link";
 import { CheckCircle2, CalendarDays, MapPin, ArrowLeft, CalendarPlus } from "lucide-react";
+import { getT } from "@/lib/i18n/server";
+import { INTL_LOCALE } from "@/lib/i18n/config";
 
 export default async function EventTicketPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
+  const { t, locale } = await getT();
   const session = await auth();
   if (!session?.user?.id) redirect(`/login?returnTo=${encodeURIComponent(`/events/${slug}/ticket`)}`);
 
@@ -44,7 +47,7 @@ export default async function EventTicketPage({ params }: { params: Promise<{ sl
         event.title
       )}&dates=${fmtCal(new Date(event.startAt))}/${fmtCal(event.endAt ? new Date(event.endAt) : new Date(event.startAt))}&location=${encodeURIComponent(
         event.location ?? ""
-      )}&details=${encodeURIComponent("Tunjukkan QR code ini saat check-in di lokasi acara.")}`
+      )}&details=${encodeURIComponent(t("ticket.calDetails"))}`
     : null;
 
   return (
@@ -56,17 +59,16 @@ export default async function EventTicketPage({ params }: { params: Promise<{ sl
           <CheckCircle2 className="text-primary-container" size={28} aria-hidden="true" />
         </div>
         <div role="status" aria-live="polite">
-          <h1 className="text-headline-lg text-on-background mb-2">Pendaftaran Berhasil</h1>
+          <h1 className="text-headline-lg text-on-background mb-2">{t("ticket.success")}</h1>
           <p className="text-body-md text-on-surface-variant mb-10">
-            Halo {session.user.name?.split(" ")[0] ?? ""}, simpan halaman ini dan tunjukkan QR code saat check-in di
-            lokasi acara.
+            {t("ticket.successDesc", { name: session.user.name?.split(" ")[0] ?? "" })}
           </p>
         </div>
 
         <div className="bg-surface-container-lowest border border-outline-variant rounded-xl p-8">
           <Image
             src={qrDataUrl}
-            alt={`QR code tiket untuk ${event.title}`}
+            alt={t("ticket.qrAlt", { title: event.title })}
             width={240}
             height={240}
             unoptimized
@@ -81,21 +83,21 @@ export default async function EventTicketPage({ params }: { params: Promise<{ sl
               rel="noopener noreferrer"
               className="inline-flex items-center justify-center gap-2 border border-outline-variant text-on-background text-label-caps uppercase tracking-wide px-4 py-2.5 rounded-md hover:bg-surface-container-low transition-colors mb-5 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-container focus-visible:ring-offset-2 focus-visible:ring-offset-surface-container-lowest"
             >
-              <CalendarPlus size={16} aria-hidden="true" /> Tambah ke Kalender
+              <CalendarPlus size={16} aria-hidden="true" /> {t("ticket.addCalendar")}
             </a>
           )}
 
           <div className="flex flex-col items-center gap-2 mb-4">
-            <p className="text-label-caps text-on-surface-variant">Token check-in (cadangan jika QR tak terbaca)</p>
+            <p className="text-label-caps text-on-surface-variant">{t("ticket.checkinToken")}</p>
             <code className="bg-surface-container-low px-3 py-1.5 rounded-md text-body-sm break-all select-all">{token}</code>
-            <CopyButton value={token} label="Salin Token" />
+            <CopyButton value={token} label={t("ticket.copyToken")} />
           </div>
 
           <div className="flex flex-col gap-1.5 text-label-caps text-on-surface-variant items-center">
             {event.startAt && (
               <span className="flex items-center gap-1.5">
                 <CalendarDays size={14} aria-hidden="true" />{" "}
-                {new Date(event.startAt).toLocaleDateString("id-ID", { dateStyle: "full" })}
+                {new Date(event.startAt).toLocaleDateString(INTL_LOCALE[locale], { dateStyle: "full" })}
               </span>
             )}
             {event.location && (
@@ -111,13 +113,13 @@ export default async function EventTicketPage({ params }: { params: Promise<{ sl
             href={`/events/${slug}`}
             className="inline-flex items-center justify-center gap-2 border border-outline-variant text-on-background text-label-caps uppercase tracking-wide px-6 py-3 rounded-md hover:bg-surface-container-low transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-container focus-visible:ring-offset-2 focus-visible:ring-offset-background"
           >
-            <ArrowLeft size={16} aria-hidden="true" /> Ke Detail Kegiatan
+            <ArrowLeft size={16} aria-hidden="true" /> {t("ticket.toDetail")}
           </Link>
           <Link
             href="/events"
             className="border border-outline-variant text-on-background text-label-caps uppercase tracking-wide px-6 py-3 rounded-md hover:bg-surface-container-low transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-container focus-visible:ring-offset-2 focus-visible:ring-offset-background"
           >
-            Kegiatan Lainnya
+            {t("events.others")}
           </Link>
         </div>
       </main>
