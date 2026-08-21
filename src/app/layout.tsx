@@ -25,11 +25,13 @@ const spectral = Spectral({
   weight: ["400", "600", "800"],
 });
 
-export const metadata: Metadata = {
-  title: "PPIT Nanjing - Wadah Sinergi dan Kontribusi",
-  description:
-    "Perhimpunan Pelajar Indonesia Tiongkok Cabang Nanjing - wadah resmi mahasiswa Indonesia di Nanjing untuk bersinergi, berkarya, dan berkontribusi.",
-};
+// generateMetadata, not a static object, so the tab title follows the reader's
+// language. Crawlers carry no locale cookie, so they always see the id default
+// and indexing stays stable - there is no URL prefix to split it across.
+export async function generateMetadata(): Promise<Metadata> {
+  const { t } = await getT();
+  return { title: t("meta.homeTitle"), description: t("meta.homeDesc") };
+}
 
 export default async function RootLayout({ children }: LayoutProps<"/">) {
   const session = await auth();
