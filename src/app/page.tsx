@@ -15,48 +15,21 @@ import { QuoteMark } from "@/components/quote-mark";
 import { db } from "@/db";
 import { events, newsArticles } from "@/db/schema";
 import { publishDueEvents } from "@/lib/publish-events";
+import { getT } from "@/lib/i18n/server";
+import { INTL_LOCALE } from "@/lib/i18n/config";
 
 const CITIES = [
-  {
-    name: "Nanjing",
-    blurb: "Ibu kota provinsi Jiangsu sekaligus markas utama PPIT Nanjing.",
-    detail:
-      "Sebagai pusat PPIT Cabang Nanjing, kota ini jadi rumah bagi sebagian besar pelajar Indonesia di wilayah ini. Di sini berpusat kegiatan rutin, forum, hingga kolaborasi antar-ranting.",
-  },
-  {
-    name: "Xuzhou",
-    blurb: "Kota industri & transportasi di utara Jiangsu dengan komunitas pelajar aktif.",
-    detail:
-      "Terkenal sebagai hub kereta api utara Jiangsu, Xuzhou menghimpun pelajar dari beberapa kampus dengan kegiatan komunitas yang solid dan saling suport.",
-  },
-  {
-    name: "Jurong",
-    blurb: "Kawasan kampus yang menghimpun pelajar Indonesia di sekitarnya.",
-    detail:
-      "Kawasan ini menjadi titik kumpul yang hangat bagi mahasiswa Indonesia setempat, sering kali terhubung dengan kegiatan di Nanjing.",
-  },
-  {
-    name: "Ma'anshan",
-    blurb: "Kota di Anhui yang berbatasan dekat dengan Nanjing.",
-    detail:
-      "Kota industri di provinsi Anhui yang letaknya sangat dekat dengan Nanjing, sehingga kerap terlibat dalam kegiatan lintas-kota PPIT.",
-  },
-  {
-    name: "Zhenjiang",
-    blurb: "Kota tepi Sungai Yangtze dengan cukup banyak mahasiswa Indonesia.",
-    detail:
-      "Berada di tepi Sungai Yangtze, Zhenjiang dihuni cukup banyak mahasiswa Indonesia yang aktif dalam jaringan PPIT Nanjing.",
-  },
-  {
-    name: "Huai'an",
-    blurb: "Kota historis di utara Jiangsu, salah satu ranting aktif PPIT.",
-    detail:
-      "Kota bersejarah di utara Jiangsu yang merupakan salah satu ranting aktif, turut memperluas jangkauan PPIT di luar Nanjing.",
-  },
-];
+  { name: "Nanjing", slug: "nanjing" },
+  { name: "Xuzhou", slug: "xuzhou" },
+  { name: "Jurong", slug: "jurong" },
+  { name: "Ma'anshan", slug: "manshan" },
+  { name: "Zhenjiang", slug: "zhenjiang" },
+  { name: "Huai'an", slug: "huaian" },
+] as const;
 
 export default async function Home() {
   await publishDueEvents();
+  const { t, locale } = await getT();
 
   const latestEvents = await db
     .select()
@@ -100,18 +73,18 @@ export default async function Home() {
             EST. 2008
           </span>
           <AnimatedHeroHeading
-            words={["Menghubungkan", "Mahasiswa", "Indonesia", "di", "Nanjing"]}
+            words={t("home.hero.words").split("|")}
             className="text-display-hero-mobile md:text-display-hero text-on-primary mb-[var(--spacing-stack-md)]"
           />
           <AnimatedRevealText
-            text="Wadah resmi Perhimpunan Pelajar Indonesia Tiongkok (PPIT) Cabang Nanjing untuk bersinergi, berkarya, dan berkontribusi bagi bangsa — sejak 2008."
+            text={t("home.hero.subtext")}
             className="text-body-lg text-on-primary-container mb-[var(--spacing-stack-md)] max-w-2xl"
           />
           <Link
             href="/events"
             className="inline-flex items-center gap-2 bg-on-primary text-primary text-label-caps uppercase tracking-wide px-8 py-4 rounded-md hover:scale-105 transition-transform motion-reduce:hover:scale-100 motion-reduce:transition-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-on-primary focus-visible:ring-offset-2 focus-visible:ring-offset-on-background"
           >
-            Jelajahi Kegiatan <ArrowRight size={18} aria-hidden="true" />
+            {t("home.hero.cta")} <ArrowRight size={18} aria-hidden="true" />
           </Link>
         </div>
       </header>
@@ -126,19 +99,10 @@ export default async function Home() {
             <div className="bg-surface-container-lowest border border-outline-variant rounded-xl overflow-hidden shadow-[0_10px_30px_rgba(39,23,22,0.04)] max-w-4xl w-full p-10 md:p-16">
               <QuoteMark />
               <p className="text-quote-text text-on-surface italic mb-8">
-                &ldquo;PPIT Nanjing adalah{" "}
-                <span className="font-bold text-primary-container not-italic">
-                  rumah bagi ribuan mimpi
-                </span>{" "}
-                anak bangsa di kota bersejarah ini. Melalui{" "}
-                <span className="font-bold text-primary-container not-italic">kolaborasi</span> dan
-                semangat{" "}
-                <span className="font-bold text-primary-container not-italic">gotong royong</span>,
-                kita pastikan setiap pelajar Indonesia di sini memiliki support system terbaik untuk
-                berkarya dan berkontribusi.&rdquo;
+                &ldquo;{t("home.quote.text")}&rdquo;
               </p>
-              <p className="text-headline-md text-on-background mb-1">Ketua Umum PPIT Nanjing</p>
-              <p className="text-label-caps text-secondary uppercase">Periode 2026-2027</p>
+              <p className="text-headline-md text-on-background mb-1">{t("home.quote.author")}</p>
+              <p className="text-label-caps text-secondary uppercase">{t("home.quote.period")}</p>
             </div>
           </section>
         </Reveal>
@@ -147,18 +111,24 @@ export default async function Home() {
         <Reveal>
           <section className="flex flex-col gap-8">
             <SectionHeading
-              kicker="Jangkauan Wilayah"
-              title="Kota di Bawah Naungan PPIT Nanjing"
-              description="Selain Kota Nanjing, PPIT Nanjing turut menaungi pelajar dan mahasiswa Indonesia di kota-kota sekitarnya. Klik tiap kartu untuk membaca selengkapnya tentang peran masing-masing kota."
+              kicker={t("home.cities.kicker")}
+              title={t("home.cities.title")}
+              description={t("home.cities.description")}
             />
-            <CitiesGrid cities={CITIES} />
+            <CitiesGrid
+              cities={CITIES.map((c) => ({
+                name: c.name,
+                blurb: t(`home.city.${c.slug}.blurb`),
+                detail: t(`home.city.${c.slug}.detail`),
+              }))}
+            />
           </section>
         </Reveal>
 
         {/* Latest Events - honest empty state guides users when nothing is published yet */}
         <Reveal>
           <section className="flex flex-col gap-8">
-            <SectionHeading kicker="Agenda" title="Kegiatan Terbaru" href="/events" />
+            <SectionHeading kicker={t("home.events.kicker")} title={t("home.events.title")} href="/events" />
             <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
               {latestEvents.length > 0 ? (
                 latestEvents.map((e) => (
@@ -167,7 +137,7 @@ export default async function Home() {
                     href={`/events/${e.slug}`}
                     imageUrl={e.coverImageUrl}
                     eyebrow={e.category}
-                    meta={e.startAt ? new Date(e.startAt).toLocaleDateString("id-ID", { dateStyle: "medium" }) : ""}
+                    meta={e.startAt ? new Date(e.startAt).toLocaleDateString(INTL_LOCALE[locale], { dateStyle: "medium" }) : ""}
                     title={e.title}
                     excerpt={e.description}
                   />
@@ -175,10 +145,10 @@ export default async function Home() {
               ) : (
                 <EmptyState
                   icon="calendar"
-                  title="Belum ada kegiatan"
-                  description="Kegiatan terbaru akan muncul di sini setelah dipublikasikan. Sementara itu, lihat seluruh agenda PPIT Nanjing."
+                  title={t("home.empty.events.title")}
+                  description={t("home.empty.events.desc")}
                   ctaHref="/events"
-                  ctaLabel="Lihat semua kegiatan"
+                  ctaLabel={t("home.empty.events.cta")}
                 />
               )}
             </div>
@@ -188,7 +158,7 @@ export default async function Home() {
         {/* Latest News - same honesty rule, with a graceful empty state */}
         <Reveal>
           <section className="flex flex-col gap-8">
-            <SectionHeading kicker="Publikasi" title="Kabar Terbaru" href="/news" />
+            <SectionHeading kicker={t("home.news.kicker")} title={t("home.news.title")} href="/news" />
             <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
               {latestNews.length > 0 ? (
                 latestNews.map((a) => (
@@ -198,7 +168,7 @@ export default async function Home() {
                     imageUrl={a.coverImageUrl}
                     fallbackIcon="news"
                     metaIcon={false}
-                    meta={a.publishedAt ? new Date(a.publishedAt).toLocaleDateString("id-ID") : ""}
+                    meta={a.publishedAt ? new Date(a.publishedAt).toLocaleDateString(INTL_LOCALE[locale]) : ""}
                     title={a.title}
                     excerpt={a.content}
                   />
@@ -206,10 +176,10 @@ export default async function Home() {
               ) : (
                 <EmptyState
                   icon="news"
-                  title="Belum ada kabar terbaru"
-                  description="Informasi dan pengumuman terbaru dari PPIT Nanjing akan tampil di sini. Cek halaman berita untuk kabar terkini."
+                  title={t("home.empty.news.title")}
+                  description={t("home.empty.news.desc")}
                   ctaHref="/news"
-                  ctaLabel="Lihat semua berita"
+                  ctaLabel={t("home.empty.news.cta")}
                 />
               )}
             </div>
