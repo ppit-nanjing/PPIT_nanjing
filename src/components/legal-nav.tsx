@@ -1,17 +1,19 @@
 import { ChevronRight } from "lucide-react";
+import { getT } from "@/lib/i18n/server";
 
-const LINKS = [
-  { key: "terms", label: "Syarat & Ketentuan", href: "/terms" },
-  { key: "privacy", label: "Kebijakan Privasi", href: "/privacy" },
-  { key: "ad-art", label: "AD/ART", href: "/organization/ad-art" },
-] as const;
+export async function LegalNav({ active }: { active: string }) {
+  const { t } = await getT();
+  const LINKS = [
+    { key: "terms", label: t("legal.navTerms"), href: "/terms" },
+    { key: "privacy", label: t("legal.navPrivacy"), href: "/privacy" },
+    { key: "ad-art", label: t("footer.aboutLinks.adart"), href: "/organization/ad-art" },
+  ] as const;
 
-export function LegalNav({ active }: { active: (typeof LINKS)[number]["key"] }) {
   return (
     <aside className="w-full md:w-64 shrink-0 md:sticky md:top-24 h-fit">
       <div className="bg-surface-container-lowest border border-outline-variant rounded-xl p-6">
         <h2 className="text-headline-md text-on-background mb-4 border-b border-outline-variant pb-4">
-          Dokumen Legal
+          {t("legal.navTitle")}
         </h2>
         <nav className="flex flex-col gap-1">
           {LINKS.map((l) => (
