@@ -6,32 +6,35 @@ import { db } from "@/db";
 import { places } from "@/db/schema";
 import { SiteNav } from "@/components/site-nav";
 import { SiteFooter } from "@/components/site-footer";
+import { getT } from "@/lib/i18n/server";
+import type { TKey } from "@/lib/i18n/dictionaries/id";
 
-const CATEGORY_LABEL: Record<string, string> = {
-  tourism: "Wisata",
-  spiritual: "Ibadah",
-  practical: "Kebutuhan Sehari-hari",
+const CATEGORY_KEY: Record<string, TKey> = {
+  tourism: "places.catTourism",
+  spiritual: "places.catSpiritual",
+  practical: "places.catPractical",
 };
 
-const FILTERS = [
-  { id: "", label: "Semua" },
-  { id: "tourism", label: CATEGORY_LABEL.tourism },
-  { id: "spiritual", label: CATEGORY_LABEL.spiritual },
-  { id: "practical", label: CATEGORY_LABEL.practical },
+const FILTERS: { id: string; labelKey: TKey }[] = [
+  { id: "", labelKey: "places.filterAll" },
+  { id: "tourism", labelKey: "places.catTourism" },
+  { id: "spiritual", labelKey: "places.catSpiritual" },
+  { id: "practical", labelKey: "places.catPractical" },
 ];
 
-export const metadata = {
-  title: "Tempat di Nanjing - PPIT Nanjing",
-  description: "Tempat wisata, rumah ibadah, dan lokasi penting di Nanjing untuk mahasiswa Indonesia.",
-};
+export async function generateMetadata() {
+  const { t } = await getT();
+  return { title: t("places.metaTitle"), description: t("places.metaDesc") };
+}
 
 export default async function PlacesPage({
   searchParams,
 }: {
   searchParams: Promise<{ kategori?: string }>;
 }) {
+  const { t } = await getT();
   const { kategori } = await searchParams;
-  const valid = kategori && kategori in CATEGORY_LABEL ? kategori : undefined;
+  const valid = kategori && kategori in CATEGORY_KEY ? kategori : undefined;
 
   const rows = await db
     .select()
@@ -50,17 +53,20 @@ export default async function PlacesPage({
       <SiteNav />
 
       <header className="max-w-[var(--container-max)] mx-auto px-[var(--spacing-container-padding)] pt-16 pb-8">
-        <p className="text-label-caps uppercase tracking-wide text-on-surface-variant mb-2">Jelajahi</p>
+        <p className="text-label-caps uppercase tracking-wide text-on-surface-variant mb-2">{t("explore.kicker")}</p>
         <h1 className="text-display-hero-mobile md:text-display-hero text-on-background mb-4">
-          Tempat di Nanjing
+          {t("places.title")}
         </h1>
         <p className="text-body-lg text-on-surface-variant max-w-2xl mb-8">
           {rows.length > 0
-            ? `${rows.length} tempat pilihan${districts.length ? ` di ${districts.length} distrik` : ""} — dari situs bersejarah sampai rumah ibadah, masing-masing dengan sedikit konteks.`
-            : "Daftar tempat pilihan di Nanjing untuk mahasiswa Indonesia."}
+            ? t("places.lead", {
+                n: rows.length,
+                districts: districts.length ? t("places.leadDistricts", { n: districts.length }) : "",
+              })
+            : t("places.leadEmpty")}
         </p>
 
-        <nav aria-label="Saring menurut kategori" className="flex flex-wrap gap-2">
+        <nav aria-label={t("places.filterAria")} className="flex flex-wrap gap-2">
           {FILTERS.map((f) => {
             const active = (valid ?? "") === f.id;
             return (
@@ -74,7 +80,7 @@ export default async function PlacesPage({
                     : "border-outline-variant text-on-surface-variant hover:bg-surface-container-low"
                 }`}
               >
-                {f.label}
+                {t(f.labelKey)}
               </Link>
             );
           })}
@@ -85,9 +91,9 @@ export default async function PlacesPage({
         {rows.length === 0 ? (
           <div className="bg-surface-container-low border border-outline-variant rounded-xl p-10 text-center">
             <MapPin className="mx-auto mb-4 text-on-surface-variant" size={28} />
-            <p className="text-body-lg text-on-background mb-1">Belum ada tempat yang ditampilkan</p>
+            <p className="text-body-lg text-on-background mb-1">{t("places.empty")}</p>
             <p className="text-body-md text-on-surface-variant">
-              Pengurus bisa menambahkannya lewat Console &rarr; Tempat.
+              {t("places.emptyDesc")}
             </p>
           </div>
         ) : (
@@ -104,7 +110,7 @@ export default async function PlacesPage({
                 )}
                 <div className="flex flex-col gap-2 p-5 flex-1">
                   <span className="text-label-caps uppercase tracking-wide text-on-surface-variant">
-                    {CATEGORY_LABEL[p.category]}
+                    {CATEGORY_KEY[p.category] ? t(CATEGORY_KEY[p.category]) : p.category}
                     {p.district ? ` · ${p.district}` : ""}
                   </span>
                   <h2 className="text-headline-sm text-on-background">
@@ -128,7 +134,7 @@ export default async function PlacesPage({
                       rel="noopener noreferrer"
                       className="self-start inline-flex items-center gap-1.5 text-label-caps uppercase tracking-wide text-primary-container hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-container focus-visible:ring-offset-2 focus-visible:ring-offset-surface-container-lowest rounded"
                     >
-                      Buka peta <ExternalLink size={13} aria-hidden />
+                      {t("places.openMap")} <ExternalLink size={13} aria-hidden />
                     </a>
                   )}
                 </div>
