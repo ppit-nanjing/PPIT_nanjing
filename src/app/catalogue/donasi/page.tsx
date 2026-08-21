@@ -3,8 +3,10 @@ import Link from "next/link";
 import { Heart, Info, Lock } from "lucide-react";
 import { auth } from "@/auth";
 import { getDonationChannels, getVerifiedDonations, submitDonation } from "@/app/actions/donations";
+import { getT } from "@/lib/i18n/server";
 
 export default async function DonasiPage() {
+  const { t } = await getT();
   const [session, channels, supporters] = await Promise.all([
     auth(),
     getDonationChannels(),
@@ -15,28 +17,26 @@ export default async function DonasiPage() {
   return (
     <section className="pt-8 flex flex-col gap-10">
       <p className="text-body-lg text-on-surface-variant max-w-2xl">
-        Sedikit dukungan sangat berarti &mdash; donasi membantu membiayai kegiatan, cetak buku panduan,
-        dan kebutuhan harian program PPIT Nanjing.
+        {t("donation.intro")}
       </p>
 
       {/* Being upfront beats a surprise: donors should know a human checks this. */}
       <div className="flex items-start gap-3 bg-surface-container-low border border-outline-variant rounded-xl p-4 max-w-3xl">
         <Info size={18} className="text-on-surface-variant shrink-0 mt-0.5" aria-hidden />
         <p className="text-body-md text-on-surface-variant">
-          Transfer dilakukan langsung ke kanal di bawah &mdash; situs ini{" "}
-          <strong className="text-on-background">tidak memproses pembayaran</strong> dan tidak menyimpan
-          data kartu atau saldo apa pun. Setelah transfer, laporkan lewat formulir agar pengurus bisa
-          memverifikasi dan mencatatnya.
+          {t("donation.noticeBefore")}{" "}
+          <strong className="text-on-background">{t("donation.noticeStrong")}</strong>{" "}
+          {t("donation.noticeAfter")}
         </p>
       </div>
 
       <div>
-        <h2 className="text-headline-md text-on-background mb-1">Kanal Donasi</h2>
-        <p className="text-body-md text-on-surface-variant mb-5">Pindai QR atau salin detail rekening berikut.</p>
+        <h2 className="text-headline-md text-on-background mb-1">{t("donation.channelsTitle")}</h2>
+        <p className="text-body-md text-on-surface-variant mb-5">{t("donation.channelsDesc")}</p>
         {channels.length === 0 ? (
           <div className="bg-surface-container-low border border-outline-variant rounded-xl p-8 text-center">
             <p className="text-body-md text-on-surface-variant">
-              Belum ada kanal donasi. Pengurus bisa menambahkannya lewat Console &rarr; Katalog.
+              {t("donation.channelsEmpty")}
             </p>
           </div>
         ) : (
@@ -50,7 +50,7 @@ export default async function DonasiPage() {
                 {c.qrImageUrl && (
                   <Image
                     src={c.qrImageUrl}
-                    alt={`Kode QR ${c.label}`}
+                    alt={t("donation.qrAlt", { label: c.label })}
                     width={200}
                     height={200}
                     className="w-44 h-44 object-contain rounded-md self-start"
@@ -68,19 +68,19 @@ export default async function DonasiPage() {
       </div>
 
       <div>
-        <h2 className="text-headline-md text-on-background mb-1">Laporkan Donasi</h2>
+        <h2 className="text-headline-md text-on-background mb-1">{t("donation.reportTitle")}</h2>
         <p className="text-body-md text-on-surface-variant mb-5">
-          Sudah transfer? Isi formulir ini supaya donasimu tercatat dan muncul di daftar pendukung.
+          {t("donation.reportDesc")}
         </p>
         {!authed ? (
           <div className="bg-surface-container-low border border-outline-variant rounded-xl p-8 text-center max-w-xl">
             <Lock className="mx-auto mb-3 text-on-surface-variant" size={22} aria-hidden />
-            <p className="text-body-md text-on-background mb-3">Masuk dulu untuk melaporkan donasi.</p>
+            <p className="text-body-md text-on-background mb-3">{t("donation.loginPrompt")}</p>
             <Link
               href="/login"
               className="inline-block bg-primary-container text-on-primary text-label-caps uppercase tracking-wide px-5 py-2.5 rounded-md hover:bg-primary transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-container focus-visible:ring-offset-2 focus-visible:ring-offset-surface-container-low"
             >
-              Masuk
+              {t("donation.loginBtn")}
             </Link>
           </div>
         ) : (
@@ -90,7 +90,7 @@ export default async function DonasiPage() {
           >
             <label className="flex flex-col gap-2">
               <span className="text-label-caps uppercase tracking-wide text-on-surface-variant">
-                Nama yang ditampilkan
+                {t("donation.displayName")}
               </span>
               <input
                 name="donorName"
@@ -100,13 +100,13 @@ export default async function DonasiPage() {
             </label>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <label className="flex flex-col gap-2">
-                <span className="text-label-caps uppercase tracking-wide text-on-surface-variant">Jumlah (&yen;)</span>
+                <span className="text-label-caps uppercase tracking-wide text-on-surface-variant">{t("donation.amount")}</span>
                 <input name="amountCny" type="number" min={1} className="bg-soft-gray rounded-md p-3 text-body-md" />
               </label>
               <label className="flex flex-col gap-2">
-                <span className="text-label-caps uppercase tracking-wide text-on-surface-variant">Lewat kanal</span>
+                <span className="text-label-caps uppercase tracking-wide text-on-surface-variant">{t("donation.viaChannel")}</span>
                 <select name="method" className="bg-soft-gray rounded-md p-3 text-body-md">
-                  <option value="">Pilih&hellip;</option>
+                  <option value="">{t("donation.selectPlaceholder")}</option>
                   {channels.map((c) => (
                     <option key={c.id} value={c.label}>
                       {c.label}
@@ -116,45 +116,45 @@ export default async function DonasiPage() {
               </label>
             </div>
             <label className="flex flex-col gap-2">
-              <span className="text-label-caps uppercase tracking-wide text-on-surface-variant">Pesan (opsional)</span>
+              <span className="text-label-caps uppercase tracking-wide text-on-surface-variant">{t("donation.message")}</span>
               <textarea name="message" rows={3} className="bg-soft-gray rounded-md p-3 text-body-md resize-none" />
             </label>
             <label className="flex flex-col gap-2">
               <span className="text-label-caps uppercase tracking-wide text-on-surface-variant">
-                Tautan bukti transfer (opsional)
+                {t("donation.proofUrl")}
               </span>
               <input name="proofUrl" placeholder="https://…" className="bg-soft-gray rounded-md p-3 text-body-md" />
             </label>
             <label className="flex items-center gap-2 text-body-md text-on-background">
               <input type="checkbox" name="anonymous" />
-              Tampilkan sebagai anonim
+              {t("donation.anonymous")}
             </label>
             <button
               type="submit"
               className="self-start bg-primary-container text-on-primary text-label-caps uppercase tracking-wide px-6 py-3 rounded-md hover:bg-primary transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-container focus-visible:ring-offset-2 focus-visible:ring-offset-surface-container-lowest"
             >
-              Kirim Laporan
+              {t("donation.submit")}
             </button>
             <p className="text-label-caps text-on-surface-variant">
-              Laporan diverifikasi pengurus dulu sebelum tampil di daftar pendukung.
+              {t("donation.verifyNote")}
             </p>
           </form>
         )}
       </div>
 
       <div>
-        <h2 className="text-headline-md text-on-background mb-1">Daftar Pendukung</h2>
-        <p className="text-body-md text-on-surface-variant mb-5">Terima kasih atas dukungannya.</p>
+        <h2 className="text-headline-md text-on-background mb-1">{t("donation.supportersTitle")}</h2>
+        <p className="text-body-md text-on-surface-variant mb-5">{t("donation.supportersDesc")}</p>
         {supporters.length === 0 ? (
           <div className="bg-surface-container-low border border-outline-variant rounded-xl p-8 text-center">
             <Heart className="mx-auto mb-3 text-on-surface-variant" size={22} aria-hidden />
-            <p className="text-body-md text-on-surface-variant">Jadilah pendukung pertama!</p>
+            <p className="text-body-md text-on-surface-variant">{t("donation.supportersEmpty")}</p>
           </div>
         ) : (
           <ul className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
             {supporters.map((s) => (
               <li key={s.id} className="bg-surface-container-lowest border border-outline-variant rounded-xl p-4">
-                <p className="text-body-lg text-on-background">{s.anonymous ? "Anonim" : s.donorName}</p>
+                <p className="text-body-lg text-on-background">{s.anonymous ? t("donation.anonymousName") : s.donorName}</p>
                 {s.amountCny != null && !s.anonymous && (
                   <p className="text-label-caps uppercase tracking-wide text-on-surface-variant">
                     &yen; {s.amountCny}
