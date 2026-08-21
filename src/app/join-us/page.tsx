@@ -7,34 +7,37 @@ import { SiteFooter } from "@/components/site-footer";
 import { Lock } from "lucide-react";
 import { submitMembershipApplication, getFormFields, getFormMeta } from "@/app/actions/membership";
 import { MembershipApplicationForm } from "@/components/membership/membership-application-form";
+import { getT } from "@/lib/i18n/server";
+import { INTL_LOCALE } from "@/lib/i18n/config";
 
 export default async function JoinUsPage() {
   const [period] = await db.select().from(recruitmentPeriods).orderBy(desc(recruitmentPeriods.opensAt)).limit(1);
   const session = await auth();
   const fields = await getFormFields();
   const meta = await getFormMeta();
+  const { t, locale } = await getT();
 
   return (
     <div className="min-h-screen bg-background text-on-background">
       <SiteNav />
 
       <main className="max-w-xl mx-auto px-[var(--spacing-container-padding)] py-16">
-        <h1 className="text-headline-lg text-on-background mb-2">Join Us</h1>
+        <h1 className="text-headline-lg text-on-background mb-2">{t("joinus.title")}</h1>
         <p className="text-body-md text-on-surface-variant mb-6">
-          Bergabung menjadi pengurus PPIT Nanjing {period?.batchLabel ?? ""}.
+          {t("joinus.subtitle", { batch: period?.batchLabel ?? "" })}
         </p>
 
         <section className="bg-surface-container-lowest border border-outline-variant rounded-xl p-6 mb-10">
-          <h2 className="text-headline-md text-on-background mb-3">Panduan Pendaftaran</h2>
+          <h2 className="text-headline-md text-on-background mb-3">{t("joinus.guideHeading")}</h2>
           <ol className="list-decimal list-inside space-y-2 text-body-md text-on-surface-variant">
-            <li>Pastikan kamu mahasiswa Indonesia di Nanjing yang masih aktif kuliah.</li>
-            <li>Isi formulir di bawah dengan data yang benar dan lengkap.</li>
-            <li>Tuliskan motivasi &amp; komitmen dengan jelas agar panitia seleksi dapat menilai.</li>
-            <li>Setelah mengirim, kamu akan mendapat kabar via email untuk tahap wawancara/oke.</li>
+            <li>{t("joinus.guide1")}</li>
+            <li>{t("joinus.guide2")}</li>
+            <li>{t("joinus.guide3")}</li>
+            <li>{t("joinus.guide4")}</li>
           </ol>
-          <p className="text-label-caps text-secondary uppercase mt-4">Yang perlu disiapkan</p>
+          <p className="text-label-caps text-secondary uppercase mt-4">{t("joinus.prepHeading")}</p>
           <p className="text-body-sm text-on-surface-variant mt-1">
-            Siapkan data diri dan jawaban motivasi/komitmen kamu. Field yang bertanda * wajib diisi.
+            {t("joinus.prepDesc")}
           </p>
         </section>
 
@@ -43,16 +46,19 @@ export default async function JoinUsPage() {
             <div className="w-14 h-14 rounded-full bg-outline-variant/30 flex items-center justify-center mx-auto mb-6">
               <Lock className="text-secondary" size={24} />
             </div>
-            <h2 className="text-headline-md text-on-background mb-3">Pendaftaran Sedang Ditutup</h2>
+            <h2 className="text-headline-md text-on-background mb-3">{t("joinus.closedHeading")}</h2>
             <p className="text-body-md text-on-surface-variant mb-4">
               {period
-                ? `Periode pendaftaran ${period.batchLabel} telah berakhir pada ${new Date(
-                    period.closesAt!
-                  ).toLocaleDateString("id-ID", { dateStyle: "long" })}.`
-                : "Belum ada periode pendaftaran yang dibuka."}
+                ? t("joinus.closedEnded", {
+                    batch: period.batchLabel ?? "",
+                    date: new Date(period.closesAt!).toLocaleDateString(INTL_LOCALE[locale], {
+                      dateStyle: "long",
+                    }),
+                  })
+                : t("joinus.closedNone")}
             </p>
             <p className="text-label-caps text-secondary uppercase">
-              Pantau Instagram @ppit_nanjing untuk info pendaftaran periode berikutnya
+              {t("joinus.closedInstagram")}
             </p>
           </div>
         ) : (
