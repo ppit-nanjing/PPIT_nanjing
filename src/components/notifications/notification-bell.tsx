@@ -6,6 +6,7 @@ import { useSession } from "next-auth/react";
 import { Bell, CheckCheck } from "lucide-react";
 import { formatRelativeTime } from "@/lib/format-relative-time";
 import { Tooltip } from "@/components/ui/tooltip";
+import { useT } from "@/lib/i18n/client";
 import Link from "next/link";
 
 type NItem = {
@@ -25,6 +26,7 @@ function hrefFor(item: NItem): string | null {
 }
 
 export function NotificationBell() {
+  const t = useT();
   const { status } = useSession();
   const pathname = usePathname();
   const [items, setItems] = useState<NItem[]>([]);
@@ -59,10 +61,10 @@ export function NotificationBell() {
 
   return (
     <div className="relative">
-      <Tooltip label="Notifikasi">
+      <Tooltip label={t("notifications.title")}>
         <button
           type="button"
-          aria-label="Notifikasi"
+          aria-label={t("notifications.title")}
           onClick={() => setOpen((v) => !v)}
           className="relative text-on-background p-1 hover:bg-surface-container-low rounded-lg transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-container focus-visible:ring-offset-2 focus-visible:ring-offset-background motion-reduce:transition-none"
         >
@@ -78,20 +80,20 @@ export function NotificationBell() {
       {open && (
         <div className="fixed top-[72px] left-1/2 -translate-x-1/2 z-[60] w-[calc(100vw-2rem)] max-w-md overflow-hidden bg-surface-container-lowest border border-outline-variant rounded-lg shadow-lg sm:absolute sm:top-full sm:left-auto sm:right-0 sm:translate-x-0 sm:z-50 sm:w-80 sm:max-w-none">
           <div className="flex items-center justify-between gap-2 px-3 m:px-4 py-3 border-b border-outline-variant">
-            <span className="text-body-md font-semibold text-on-background">Notifikasi</span>
+            <span className="text-body-md font-semibold text-on-background">{t("notifications.title")}</span>
             {unread > 0 && (
               <button
                 type="button"
                 onClick={markAllRead}
                 className="flex items-center gap-1 text-label-caps uppercase tracking-wide text-primary-container hover:underline rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-container focus-visible:ring-offset-2 focus-visible:ring-offset-background motion-reduce:transition-none"
               >
-                <CheckCheck size={14} /> Tandai dibaca
+                <CheckCheck size={14} /> {t("notifications.markShort")}
               </button>
             )}
           </div>
           <div className="max-h-96 overflow-y-auto">
             {items.length === 0 ? (
-              <p className="px-4 py-6 text-body-sm text-on-surface-variant text-center">Belum ada notifikasi.</p>
+              <p className="px-4 py-6 text-body-sm text-on-surface-variant text-center">{t("notifications.emptyShort")}</p>
             ) : (
               items.map((item) => {
                 const href = hrefFor(item);
@@ -102,7 +104,7 @@ export function NotificationBell() {
                     </p>
                     {item.body && <p className="text-body-sm text-on-surface-variant mt-0.5 line-clamp-2">{item.body}</p>}
                     <p className="text-label-caps uppercase tracking-wide text-on-surface-variant mt-1">
-                      {formatRelativeTime(new Date(item.createdAt))}
+                      {formatRelativeTime(new Date(item.createdAt), t)}
                     </p>
                   </>
                 );
@@ -141,6 +143,7 @@ export function NotificationBell() {
 
 export function NotificationMarkAllReadButton() {
   const router = useRouter();
+  const t = useT();
   const [done, setDone] = useState(false);
 
   async function onClick() {
@@ -156,7 +159,7 @@ export function NotificationMarkAllReadButton() {
       disabled={done}
       className="flex items-center gap-2 text-label-caps uppercase tracking-wide text-primary-container hover:underline disabled:opacity-60"
     >
-      <CheckCheck size={14} /> {done ? "Sudah dibaca" : "Tandai semua dibaca"}
+      <CheckCheck size={14} /> {done ? t("notifications.markedRead") : t("notifications.markAllRead")}
     </button>
   );
 }
