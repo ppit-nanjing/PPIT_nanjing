@@ -2,7 +2,9 @@ import { eq, and, ne, count, desc } from "drizzle-orm";
 import { notFound } from "next/navigation";
 import { auth } from "@/auth";
 import { db } from "@/db";
-import { events, eventRegistrations, galleryAlbums, galleryPhotos } from "@/db/schema";
+import { events, eventRegistrations, galleryAlbums, galleryPhotos, regionalBranches } from "@/db/schema";
+import { NON_STUDENT_BRANCH } from "@/lib/membership-status";
+import { hasCompletedSensus } from "@/lib/sensus-gate";
 import { SiteNav } from "@/components/site-nav";
 import { SiteFooter } from "@/components/site-footer";
 import { AnimatedHeroHeading } from "@/components/animated-hero-heading";
@@ -31,13 +33,29 @@ export default async function EventDetailPage({ params }: { params: Promise<{ sl
 
   const session = await auth();
   let alreadyRegistered = false;
+  // Cabang hanya ditanyakan ke peserta yang sensusnya belum lengkap - kalau
+  // sudah, cabangnya sudah kita ketahui dan menanyakan ulang cuma menambah
+  // gesekan pada tombol yang tadinya sekali klik.
+  //
+  // Acara ber-requiresSensus dikecualikan: siapa pun yang berhasil mendaftar ke
+  // sana pasti sensusnya sudah lengkap (kalau belum, registerForEvent
+  // mengalihkannya ke /sensus), jadi menanyakan cabang di situ hanya memasang
+  // dropdown wajib di depan tombol yang ujungnya mengalihkan juga.
+  let askBranch = false;
   if (session?.user?.id) {
     const [existing] = await db
       .select()
       .from(eventRegistrations)
       .where(and(eq(eventRegistrations.eventId, event.id), eq(eventRegistrations.userId, session.user.id)));
     alreadyRegistered = !!existing;
+    askBranch =
+      !alreadyRegistered && !event.requiresSensus && !(await hasCompletedSensus(session.user.id));
   }
+  const branchOptions = askBranch
+    ? (await db.select({ cityName: regionalBranches.cityName }).from(regionalBranches))
+        .map((b) => b.cityName)
+        .sort((a, b) => a.localeCompare(b))
+    : [];
 
   const now = new Date();
   const deadlinePassed = event.registrationDeadline ? new Date(event.registrationDeadline) < now : false;
@@ -265,7 +283,32 @@ export default async function EventDetailPage({ params }: { params: Promise<{ sl
                     </a>
                   ) : canRegister ? (
                     session?.user?.id ? (
-                      <form action={registerForEvent.bind(null, event.id, slug)}>
+                      <form action={registerForEvent.bind(null, event.id, slug)} className="flex flex-col gap-3">
+                        {askBranch && (
+                          <label className="flex flex-col gap-2 text-left">
+                            <span className="text-label-caps uppercase tracking-wide text-on-surface-variant">
+                              {t("events.branchQuestion")}
+                              <span className="text-error" aria-hidden="true"> *</span>
+                            </span>
+                            <select
+                              name="branch"
+                              required
+                              defaultValue=""
+                              className="bg-soft-gray rounded-md p-3 text-body-md focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-container"
+                            >
+                              <option value="" disabled>
+                                {t("events.branchPlaceholder")}
+                              </option>
+                              {branchOptions.map((b) => (
+                                <option key={b} value={b}>
+                                  {b}
+                                </option>
+                              ))}
+                              <option value={NON_STUDENT_BRANCH}>{t("events.branchNonStudent")}</option>
+                            </select>
+                            <span className="text-xs text-on-surface-variant">{t("events.branchHint")}</span>
+                          </label>
+                        )}
                         <button
                           type="submit"
                           className="w-full inline-flex items-center justify-center gap-2 bg-primary-container text-on-primary text-label-caps uppercase tracking-wide px-6 py-4 rounded-md hover:bg-primary transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-container focus-visible:ring-offset-2 focus-visible:ring-offset-surface-container-low"
