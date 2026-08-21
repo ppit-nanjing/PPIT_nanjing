@@ -3,14 +3,17 @@ import Image from "next/image";
 import { ShoppingBag } from "lucide-react";
 import { db } from "@/db";
 import { merchandise } from "@/db/schema";
+import { getT } from "@/lib/i18n/server";
+import type { TKey } from "@/lib/i18n/dictionaries/id";
 
-const STATUS: Record<string, { label: string; cls: string }> = {
-  available: { label: "Tersedia", cls: "bg-tertiary-container text-on-tertiary-container" },
-  preorder: { label: "Pre-order", cls: "bg-secondary-container text-on-secondary-container" },
-  unavailable: { label: "Belum tersedia", cls: "bg-surface-container-high text-on-surface-variant" },
+const STATUS: Record<string, { labelKey: TKey; cls: string }> = {
+  available: { labelKey: "merch.statusAvailable", cls: "bg-tertiary-container text-on-tertiary-container" },
+  preorder: { labelKey: "merch.statusPreorder", cls: "bg-secondary-container text-on-secondary-container" },
+  unavailable: { labelKey: "merch.statusUnavailable", cls: "bg-surface-container-high text-on-surface-variant" },
 };
 
 export default async function MerchandisePage() {
+  const { t } = await getT();
   const items = await db
     .select()
     .from(merchandise)
@@ -20,16 +23,15 @@ export default async function MerchandisePage() {
   return (
     <section className="pt-8">
       <p className="text-body-lg text-on-surface-variant max-w-2xl mb-8">
-        Merchandise resmi PPIT Nanjing. Ini etalase &mdash; pemesanan dilakukan lewat kontak pengurus,
-        belum ada pembayaran langsung di situs.
+        {t("merch.intro")}
       </p>
 
       {items.length === 0 ? (
         <div className="bg-surface-container-low border border-outline-variant rounded-xl p-10 text-center">
           <ShoppingBag className="mx-auto mb-4 text-on-surface-variant" size={28} />
-          <p className="text-body-lg text-on-background mb-1">Belum ada merchandise</p>
+          <p className="text-body-lg text-on-background mb-1">{t("merch.empty")}</p>
           <p className="text-body-md text-on-surface-variant">
-            Pengurus bisa menambahkannya lewat Console &rarr; Katalog.
+            {t("merch.emptyDesc")}
           </p>
         </div>
       ) : (
@@ -49,7 +51,7 @@ export default async function MerchandisePage() {
                 </div>
                 <div className="flex flex-col gap-2 p-5 flex-1">
                   <span className={`self-start text-label-caps uppercase tracking-wide px-2 py-0.5 rounded ${s.cls}`}>
-                    {s.label}
+                    {t(s.labelKey)}
                   </span>
                   <h2 className="text-headline-sm text-on-background">{m.name}</h2>
                   {m.description && <p className="text-body-md text-on-surface-variant flex-1">{m.description}</p>}
