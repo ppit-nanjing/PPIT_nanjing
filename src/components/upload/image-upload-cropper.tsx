@@ -3,6 +3,9 @@
 import { useRef, useState } from "react";
 import Cropper, { type Area } from "react-easy-crop";
 import { Upload, Loader2, ImageIcon, X, Crop } from "lucide-react";
+import { useT } from "@/lib/i18n/client";
+import type { T } from "@/lib/i18n/translate";
+import { uploadErrorMessage } from "./upload-error";
 
 type Props = {
   // Uncontrolled (form-submit) mode: a hidden input named `name` carries the
@@ -26,7 +29,7 @@ type Props = {
   onValueChange?: (url: string) => void;
 };
 
-function getCroppedBlob(imageSrc: string, pixelCrop: Area): Promise<Blob> {
+function getCroppedBlob(imageSrc: string, pixelCrop: Area, t: T): Promise<Blob> {
   return new Promise((resolve, reject) => {
     const image = new Image();
     image.onload = () => {
@@ -35,7 +38,7 @@ function getCroppedBlob(imageSrc: string, pixelCrop: Area): Promise<Blob> {
       canvas.height = pixelCrop.height;
       const ctx = canvas.getContext("2d");
       if (!ctx) {
-        reject(new Error("Tidak dapat memproses gambar"));
+        reject(new Error(t("upload.errProcess")));
         return;
       }
       ctx.drawImage(
@@ -50,12 +53,12 @@ function getCroppedBlob(imageSrc: string, pixelCrop: Area): Promise<Blob> {
         pixelCrop.height
       );
       canvas.toBlob(
-        (blob) => (blob ? resolve(blob) : reject(new Error("Gagal memotong gambar"))),
+        (blob) => (blob ? resolve(blob) : reject(new Error(t("upload.errCrop")))),
         "image/jpeg",
         0.92
       );
     };
-    image.onerror = () => reject(new Error("Gambar gagal dimuat"));
+    image.onerror = () => reject(new Error(t("upload.errLoad")));
     image.src = imageSrc;
   });
 }
@@ -73,6 +76,7 @@ export function ImageUploadCropper({
   value,
   onValueChange,
 }: Props) {
+  const t = useT();
   const isControlled = onValueChange !== undefined;
   const [internalValue, setInternalValue] = useState(defaultValue ?? "");
   const currentValue = isControlled ? value ?? "" : internalValue || value || "";
@@ -105,14 +109,14 @@ export function ImageUploadCropper({
       fd.append("folder", folder);
       const res = await fetch("/api/upload", { method: "POST", body: fd });
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error ?? "Gagal mengunggah");
+      if (!res.ok) throw new Error(uploadErrorMessage(t, data));
       commit(data.url);
       if (previewUrl) {
         URL.revokeObjectURL(previewUrl);
         setPreviewUrl(null);
       }
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Gagal mengunggah");
+      setError(e instanceof Error ? e.message : t("upload.errFailed"));
     } finally {
       setUploading(false);
     }
@@ -139,11 +143,11 @@ export function ImageUploadCropper({
   async function handleCropConfirm() {
     if (!previewUrl || !croppedAreaPixels) return;
     try {
-      const blob = await getCroppedBlob(previewUrl, croppedAreaPixels);
+      const blob = await getCroppedBlob(previewUrl, croppedAreaPixels, t);
       await uploadBlob(blob, file?.name ?? "image.jpg");
       setCropping(false);
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Gagal memotong gambar");
+      setError(e instanceof Error ? e.message : t("upload.errCrop"));
     }
   }
 
@@ -171,7 +175,7 @@ export function ImageUploadCropper({
           value={currentValue}
           required={required && !isControlled}
           onChange={(e) => commit(e.target.value)}
-          placeholder={placeholder ?? "Tempel URL atau unggah gambar"}
+          placeholder={placeholder ?? t("upload.pasteOrImage")}
           className="bg-soft-gray rounded-md p-3 text-body-md focus:outline-none focus:ring-2 focus:ring-primary-container"
         />
       )}
@@ -198,16 +202,16 @@ export function ImageUploadCropper({
         {displayUrl ? (
           <div className="flex flex-col items-center gap-1">
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={displayUrl} alt="Pratinjau" className="max-h-40 rounded-md object-contain border border-outline-variant" />
-            <span className="text-label-caps text-on-surface-variant">Pratinjau</span>
+            <img src={displayUrl} alt={t("upload.preview")} className="max-h-40 rounded-md object-contain border border-outline-variant" />
+            <span className="text-label-caps text-on-surface-variant">{t("upload.preview")}</span>
           </div>
         ) : (
           <ImageIcon className="text-secondary" size={28} />
         )}
         <p className="text-label-caps text-on-surface-variant text-center">
           {displayUrl
-            ? "Klik atau seret gambar lain untuk mengganti"
-            : "Seret gambar ke sini atau klik untuk pilih"}
+            ? t("upload.replaceImage")
+            : t("upload.dropImageShort")}
         </p>
         <input
           ref={fileInputRef}
@@ -227,13 +231,13 @@ export function ImageUploadCropper({
           onClick={handleDirectUpload}
           className="self-start flex items-center gap-2 bg-surface-container-low text-on-background text-body-sm font-medium px-4 py-2.5 rounded-md border border-outline-variant hover:bg-surface-container-lowest transition-colors"
         >
-          <Upload size={14} /> Unggah
+          <Upload size={14} /> {t("upload.submit")}
         </button>
       )}
 
       {uploading && (
         <span className="flex items-center gap-2 text-body-sm text-on-surface-variant">
-          <Loader2 size={14} className="animate-spin" /> Mengunggah...
+          <Loader2 size={14} className="animate-spin" /> {t("upload.uploading")}
         </span>
       )}
       {currentValue && !uploading && (
@@ -247,12 +251,12 @@ export function ImageUploadCropper({
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
           <div className="bg-surface-container-lowest border border-outline-variant rounded-xl w-full max-w-lg overflow-hidden">
             <div className="flex items-center justify-between px-5 py-3 border-b border-outline-variant">
-              <p className="text-body-md font-semibold text-on-background">Potong Gambar</p>
+              <p className="text-body-md font-semibold text-on-background">{t("upload.cropTitle")}</p>
               <button
                 type="button"
                 onClick={() => setCropping(false)}
                 className="text-secondary hover:text-on-background"
-                aria-label="Batal"
+                aria-label={t("common.cancel")}
               >
                 <X size={18} />
               </button>
@@ -273,7 +277,7 @@ export function ImageUploadCropper({
             </div>
             <div className="flex flex-col gap-3 px-5 py-4">
               <label className="flex items-center gap-3 text-body-md text-on-surface-variant">
-                <span className="text-label-caps uppercase tracking-wide w-16">Zoom</span>
+                <span className="text-label-caps uppercase tracking-wide w-16">{t("upload.zoom")}</span>
                 <input
                   type="range"
                   min={1}
@@ -290,7 +294,7 @@ export function ImageUploadCropper({
                   onClick={() => setCropping(false)}
                   className="text-body-sm text-secondary px-4 py-2.5 rounded-md hover:text-on-background transition-colors"
                 >
-                  Batal
+                  {t("common.cancel")}
                 </button>
                 <button
                   type="button"
@@ -298,7 +302,7 @@ export function ImageUploadCropper({
                   disabled={uploading}
                   className="flex items-center gap-2 bg-primary-container text-on-primary text-label-caps uppercase tracking-wide px-6 py-2.5 rounded-md hover:bg-primary transition-colors disabled:opacity-60"
                 >
-                  {uploading ? <Loader2 size={14} className="animate-spin" /> : <Crop size={14} />} Gunakan
+                  {uploading ? <Loader2 size={14} className="animate-spin" /> : <Crop size={14} />} {t("upload.cropUse")}
                 </button>
               </div>
             </div>
