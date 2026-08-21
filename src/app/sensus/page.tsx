@@ -1,8 +1,8 @@
-import { eq } from "drizzle-orm";
+import { asc, eq } from "drizzle-orm";
 import { redirect } from "next/navigation";
 import { auth } from "@/auth";
 import { db } from "@/db";
-import { regionalBranches, sensusProfiles } from "@/db/schema";
+import { branchUniversities, regionalBranches, sensusProfiles } from "@/db/schema";
 import { SiteNav } from "@/components/site-nav";
 import { SiteFooter } from "@/components/site-footer";
 import { SensusWizard } from "@/components/sensus/sensus-wizard";
@@ -19,9 +19,28 @@ export default async function SensusPage({
   if (!session?.user?.id) redirect(`/login?returnTo=${encodeURIComponent("/sensus")}`);
 
   const [existing] = await db.select().from(sensusProfiles).where(eq(sensusProfiles.userId, session.user.id));
-  const branches = (await db.select({ cityName: regionalBranches.cityName }).from(regionalBranches))
-    .map((b) => b.cityName)
-    .sort((a, b) => a.localeCompare(b));
+  // Satu query untuk cabang + kampusnya: dropdown Universitas difilter di
+  // klien berdasarkan cabang yang dipilih (form pusat pun begitu — "Pilih
+  // Cabang terlebih dahulu"), jadi tidak perlu bolak-balik ke server tiap kali
+  // cabangnya diganti. Seluruh daftarnya hanya beberapa ratus baris teks.
+  const rows = await db
+    .select({
+      cityName: regionalBranches.cityName,
+      universityName: branchUniversities.name,
+      orderIndex: branchUniversities.orderIndex,
+    })
+    .from(regionalBranches)
+    .leftJoin(branchUniversities, eq(branchUniversities.branchId, regionalBranches.id))
+    .orderBy(asc(regionalBranches.cityName), asc(branchUniversities.orderIndex));
+
+  const universitiesByBranch: Record<string, string[]> = {};
+  for (const row of rows) {
+    // leftJoin: cabang tanpa kampus terdaftar tetap muncul (dengan daftar
+    // kosong) supaya masih bisa dipilih — pengisinya lalu memakai "Lainnya".
+    universitiesByBranch[row.cityName] ??= [];
+    if (row.universityName) universitiesByBranch[row.cityName].push(row.universityName);
+  }
+  const branches = Object.keys(universitiesByBranch).sort((a, b) => a.localeCompare(b));
   const { t } = await getT();
 
   return (
@@ -60,6 +79,7 @@ export default async function SensusPage({
         <SensusWizard
           returnTo={returnTo}
           branchOptions={branches}
+          universitiesByBranch={universitiesByBranch}
           initial={{
             fullName: existing?.fullName ?? "",
             passportNumber: existing?.passportNumber ?? "",
@@ -80,6 +100,7 @@ export default async function SensusPage({
             whatsappNumber: existing?.whatsappNumber ?? "",
             studentCardUrl: existing?.studentCardUrl ?? "",
             agreeTerms: existing?.agreeTerms ?? false,
+            subscribeNewsletter: existing?.subscribeNewsletter ?? false,
           }}
         />
       </main>
