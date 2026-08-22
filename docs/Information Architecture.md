@@ -114,6 +114,7 @@ flowchart LR
 | Documentation Hub | `/admin/docs` | [Documentation & Help Center](./Documentation%20&%20Help%20Center.md) | documentation_hub_admin_console |
 | Help & Documentation | `/admin/docs/help` | idem | help_documentation_admin_console |
 | Full Changelog (System) | `/admin/docs/changelog` | idem | full_changelog_admin_console |
+| Tautan (Short Link) | `/console/links` | Short Link & Redirect | tautan_short_link_admin_console |
 | Guide: Notification Templates | `/admin/docs/guides/notification-templates` | idem | guide_configuring_notification_templates |
 
 **29 layar admin unik.**

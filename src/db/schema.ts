@@ -1077,3 +1077,59 @@ export const coverageCities = pgTable("coverage_cities", {
   note: text("note"),
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
 });
+
+// ---------- Short link (custom redirect) ----------
+// Tautan pendek khusus PPIT Nanjing, mis. nanjing.ppitiongkok.com/l/xxx yang
+// meneruskan ke dokumen/berkas (Google Drive, Vercel Blob, dsb). Dipakai pengurus
+// untuk menyebarkan dokumentasi & berkas selama satu periode kepengurusan.
+// Grup per periode lewat tabel `managementPeriods` (FK opsional) supaya link bisa
+// difilter/diarsipkan saat turnover kepengurusan berganti.
+export const shortLinkCategoryEnum = pgEnum("short_link_category", [
+  "documentation",
+  "file",
+  "form",
+  "other",
+]);
+
+export const managementPeriods = pgTable("management_periods", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  label: text("label").notNull().unique(),
+  startsAt: timestamp("starts_at"),
+  endsAt: timestamp("ends_at"),
+  isCurrent: boolean("is_current").notNull().default(false),
+  createdBy: uuid("created_by").references(() => users.id),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
+export const shortLinks = pgTable(
+  "short_links",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    slug: text("slug").notNull().unique(),
+    targetUrl: text("target_url").notNull(),
+    title: text("title").notNull(),
+    description: text("description"),
+    category: shortLinkCategoryEnum("category").notNull().default("other"),
+    managementPeriodId: uuid("management_period_id").references(() => managementPeriods.id),
+    isActive: boolean("is_active").notNull().default(true),
+    expiresAt: timestamp("expires_at"),
+    clickCount: integer("click_count").notNull().default(0),
+    createdBy: uuid("created_by").references(() => users.id),
+    createdAt: timestamp("created_at").notNull().defaultNow(),
+    updatedAt: timestamp("updated_at").notNull().defaultNow(),
+  },
+  (t) => [uniqueIndex("short_links_slug_idx").on(t.slug)],
+);
+
+export const managementPeriodRelations = relations(managementPeriods, ({ many, one }) => ({
+  links: many(shortLinks),
+  creator: one(users, { fields: [managementPeriods.createdBy], references: [users.id] }),
+}));
+
+export const shortLinkRelations = relations(shortLinks, ({ one }) => ({
+  managementPeriod: one(managementPeriods, {
+    fields: [shortLinks.managementPeriodId],
+    references: [managementPeriods.id],
+  }),
+  creator: one(users, { fields: [shortLinks.createdBy], references: [users.id] }),
+}));

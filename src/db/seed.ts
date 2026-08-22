@@ -4,7 +4,7 @@
  * Run with: npx tsx src/db/seed.ts
  */
 import { db } from "./index";
-import { roles, departments } from "./schema";
+import { roles, departments, managementPeriods } from "./schema";
 
 async function main() {
   // ---------- Roles (access tiers per the admin-access rule) ----------
@@ -151,6 +151,12 @@ async function main() {
       description: "Pengelolaan aset, peminjaman, dan pemeliharaan barang PPIT Nanjing.",
     },
   ]);
+
+  // Management period for short-link grouping (one tenure of kepengurusan).
+  await db
+    .insert(managementPeriods)
+    .values({ label: "2026/2027", isCurrent: true })
+    .onConflictDoNothing();
 
   console.log("Seed complete:", {
     bph: bph.id,

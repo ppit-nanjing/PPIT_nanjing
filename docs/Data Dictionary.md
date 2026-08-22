@@ -168,6 +168,14 @@ Data sensus/pendataan detail mahasiswa — terpisah dari `USER` dasar karena for
 ### RELEASE_NOTE
 `id`, `version`, `summary`, `details` (markdown), `published_by` FK → USER, `published_at`. Sumber: layar *Full Changelog (System Changelog)*.
 
+### MANAGEMENT_PERIOD
+Satu periode kepengurusan — digunakan untuk mengelompokkan/mengarsipkan tautan pendek saat turnover pengurus berganti. `id`, `label` (unik, mis. "2026/2027"), `starts_at`, `ends_at`, `is_current` boolean, `created_by` FK → USER, `created_at`. Sumber: layar *Tautan* (modul `links`).
+
+### SHORT_LINK
+Tautan pendek khusus PPIT Nanjing, mis. `nanjing.ppitiongkok.com/l/xxx`, yang meneruskan (302 redirect) ke dokumen/berkas (Google Drive, Vercel Blob, dll). `id`, `slug` (unik, bagian dari `/l/xxx`), `target_url`, `title`, `description` nullable, `category` (enum: `documentation`/`file`/`form`/`other`), `management_period_id` FK → MANAGEMENT_PERIOD nullable, `is_active` boolean, `expires_at` timestamp nullable, `click_count` int, `created_by` FK → USER nullable, `created_at`, `updated_at`. Sumber: layar *Tautan*.
+
+> Catatan GFW: target berbasis Google (Drive, Forms) **tidak bisa dibuka dari dalam Tiongkok** — saranakan pengguna menyimpan berkas di Vercel Blob atau host ramah-China bila penerima berada di Tiongkok (lihat [Tech Stack](./Tech%20Stack.md)).
+
 ## Terkait
 
 - [Entity Relationship Diagram](./Entity%20Relationship%20Diagram.md)

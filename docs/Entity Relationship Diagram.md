@@ -41,6 +41,9 @@ erDiagram
     USER ||--o{ HELP_ARTICLE : authors
     USER ||--o{ ORGANIZATION_DOCUMENT : publishes
     DEPARTMENT ||--o{ ORGANIZATION_DOCUMENT : "owns (optional)"
+    USER ||--o{ MANAGEMENT_PERIOD : "created by"
+    USER ||--o{ SHORT_LINK : "created by"
+    MANAGEMENT_PERIOD ||--o{ SHORT_LINK : "groups"
 
     USER {
         uuid id PK
@@ -228,6 +231,26 @@ erDiagram
         uuid department_id FK
         uuid published_by FK
     }
+    MANAGEMENT_PERIOD {
+        uuid id PK
+        string label
+        timestamp starts_at
+        timestamp ends_at
+        bool is_current
+        uuid created_by FK
+    }
+    SHORT_LINK {
+        uuid id PK
+        string slug
+        string target_url
+        string title
+        enum category
+        uuid management_period_id FK
+        bool is_active
+        timestamp expires_at
+        int click_count
+        uuid created_by FK
+    }
     REGIONAL_BRANCH {
         uuid id PK
         string city_name
@@ -251,7 +274,7 @@ erDiagram
 | **Karir** | JOB_POSTING, JOB_APPLICATION, CAREER_GUIDE_ARTICLE, MENTORSHIP_APPLICATION | [Career Flow](./Career%20Flow.md) |
 | **Keanggotaan** | RECRUITMENT_PERIOD, MEMBERSHIP_APPLICATION | [Join Us Flow](./Join%20Us%20Flow.md) |
 | **Inventaris** | INVENTORY_ITEM, BORROW_REQUEST, INVENTORY_AUDIT_LOG | [Equipment Lending Flow](./Equipment%20Lending%20Flow.md), [Inventory Management](./Inventory%20Management.md) |
-| **Admin & Sistem** | REPORT, NOTIFICATION_TEMPLATE, NOTIFICATION, HELP_ARTICLE, RELEASE_NOTE | [Reports & Analytics](./Reports%20&%20Analytics.md), [Documentation & Help Center](./Documentation%20&%20Help%20Center.md) |
+| **Admin & Sistem** | REPORT, NOTIFICATION_TEMPLATE, NOTIFICATION, HELP_ARTICLE, RELEASE_NOTE, MANAGEMENT_PERIOD, SHORT_LINK | [Reports & Analytics](./Reports%20&%20Analytics.md), [Documentation & Help Center](./Documentation%20&%20Help%20Center.md) |
 
 ## Keputusan Desain Data
 
