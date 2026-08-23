@@ -43,9 +43,6 @@ export default async function ConsoleDocumentsPage({
     }
   }
 
-  const makeFolderHref = (id: string) =>
-    `/console/documents?folder=${encodeURIComponent(id)}${activePeriodId ? `&period=${activePeriodId}` : ""}`;
-
   return (
     <div className="px-4 py-6 sm:px-6 lg:px-8 lg:py-10">
       <h1 className="text-headline-md sm:text-headline-lg text-on-background">Dokumen</h1>
@@ -104,7 +101,7 @@ export default async function ConsoleDocumentsPage({
             periodId={contents.periodId}
             departmentId={contents.departmentId}
             items={contents.items}
-            makeFolderHref={makeFolderHref}
+            folderNavigable
           />
         </>
       )}

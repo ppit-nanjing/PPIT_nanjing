@@ -19,7 +19,7 @@ type Props = {
   periodId: string | null;
   departmentId: string | null;
   items: DriveItem[];
-  makeFolderHref?: (driveFolderId: string) => string;
+  folderNavigable?: boolean;
 };
 
 function HiddenContext({ periodId, departmentId, parent }: {
@@ -43,7 +43,7 @@ export function DriveExplorer({
   periodId,
   departmentId,
   items,
-  makeFolderHref,
+  folderNavigable,
 }: Props) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
@@ -179,7 +179,10 @@ export function DriveExplorer({
       ) : (
         <ul className="divide-y divide-outline-variant">
           {items.map((item) => {
-            const folderHref = item.isFolder && makeFolderHref ? makeFolderHref(item.id) : null;
+            const folderHref =
+              item.isFolder && folderNavigable
+                ? `/console/documents?folder=${encodeURIComponent(item.id)}${periodId ? `&period=${periodId}` : ""}`
+                : null;
             return (
               <li key={item.id} className="flex items-center gap-3 py-2.5">
                 {item.isFolder ? (
