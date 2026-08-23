@@ -3,10 +3,12 @@ import Link from "next/link";
 import { db } from "@/db";
 import { managementPeriods, shortLinks } from "@/db/schema";
 import { requireModuleAccess } from "@/lib/admin-scope";
-import { deleteShortLink, toggleShortLink } from "@/app/actions/short-links";
+import { deleteShortLink, toggleShortLink, setActivePeriod } from "@/app/actions/short-links";
 import { CopyLinkButton } from "@/components/console/copy-link-button";
 import { ShortLinkDeleteButton } from "@/components/console/short-link-delete-button";
 import { PeriodForm } from "@/components/console/management-period-form";
+import { GuideButton } from "@/components/console/guide-button";
+import { getGuide } from "@/lib/guides";
 
 const CATEGORY_LABEL: Record<string, string> = {
   documentation: "Dokumentasi",
@@ -53,7 +55,10 @@ export default async function ConsoleLinksPage({
     .where(conditions.length ? and(...conditions) : undefined)
     .orderBy(desc(shortLinks.createdAt));
 
-  const periods = await db.select({ id: managementPeriods.id, label: managementPeriods.label }).from(managementPeriods).orderBy(managementPeriods.label);
+  const periods = await db
+    .select({ id: managementPeriods.id, label: managementPeriods.label, isCurrent: managementPeriods.isCurrent })
+    .from(managementPeriods)
+    .orderBy(managementPeriods.label);
 
 
   const exportParams = new URLSearchParams();
@@ -67,11 +72,13 @@ export default async function ConsoleLinksPage({
   const statusOf = (l: (typeof links)[number]) =>
     !l.isActive ? "inactive" : l.expiresAt && l.expiresAt.getTime() <= now ? "expired" : "active";
   const statusLabel: Record<string, string> = { active: "Aktif", inactive: "Nonaktif", expired: "Kedaluwarsa" };
+  const guide = await getGuide("tautan");
 
   return (
     <div className="px-4 py-6 sm:px-6 lg:px-8 lg:py-10">
       <div className="flex flex-wrap items-center justify-between gap-3 mb-2">
         <h1 className="text-headline-md sm:text-headline-lg text-on-background">Tautan</h1>
+        {guide && <GuideButton title={guide.title} content={guide.content} docSlug="tautan" />}
         <Link
           href="/console/links/new"
           className="bg-primary-container text-on-primary text-label-caps uppercase tracking-wide px-5 py-2.5 rounded-lg hover:opacity-90 transition-colors"
@@ -138,8 +145,36 @@ export default async function ConsoleLinksPage({
       </form>
 
       <details className="mb-6 bg-surface-container-lowest border border-outline-variant rounded-xl p-4">
-        <summary className="cursor-pointer text-body-md text-on-background">Tambah periode kepengurusan</summary>
+        <summary className="cursor-pointer text-body-md text-on-background">Kelola periode kepengurusan</summary>
         <PeriodForm />
+        {periods.length > 0 && (
+          <div className="mt-4 flex flex-col divide-y divide-outline-variant border border-outline-variant rounded-lg overflow-hidden">
+            {periods.map((p) => (
+              <div key={p.id} className="flex items-center justify-between gap-3 px-4 py-2.5 bg-surface-container-lowest">
+                <span className="text-body-md text-on-background">{p.label}</span>
+                {p.isCurrent ? (
+                  <span className="px-2.5 py-1 rounded-full text-label-caps bg-primary-container/40 text-on-primary-container shrink-0">
+                    Aktif
+                  </span>
+                ) : (
+                  <form action={setActivePeriod.bind(null, p.id)}>
+                    <button
+                      type="submit"
+                      className="text-label-caps uppercase tracking-wide text-primary-container hover:text-primary transition-colors shrink-0"
+                    >
+                      Tandai Aktif
+                    </button>
+                  </form>
+                )}
+              </div>
+            ))}
+          </div>
+        )}
+        <p className="text-body-sm text-on-surface-variant mt-3">
+          Periode yang ditandai Aktif adalah yang dipakai modul Dokumen untuk menentukan folder mana yang bisa
+          dibuka anggota. Cuma satu periode yang bisa aktif sekaligus &mdash; menandai satu otomatis menonaktifkan
+          yang lain.
+        </p>
       </details>
 
       <div className="hidden sm:block bg-surface-container-lowest border border-outline-variant rounded-xl overflow-x-auto">

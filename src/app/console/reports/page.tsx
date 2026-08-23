@@ -4,6 +4,8 @@ import { departments, regionalBranches, reports, sensusProfiles, users } from "@
 import { requireModuleAccess } from "@/lib/admin-scope";
 import { HOME_BRANCH, MEMBERSHIP_LABEL, membershipStatus } from "@/lib/membership-status";
 import { CollapsibleSection } from "@/components/console/collapsible-section";
+import { GuideButton } from "@/components/console/guide-button";
+import { getGuide } from "@/lib/guides";
 import { Download, Users as UsersIcon, GraduationCap, MapPin } from "lucide-react";
 
 const REPORT_TYPE_LABEL: Record<string, string> = {
@@ -25,6 +27,10 @@ function tally(values: (string | null)[]): { label: string; count: number }[] {
 
 export default async function ConsoleReportsPage() {
   await requireModuleAccess("reports");
+  // Kicked off now, awaited later - no dependency on the queries below, so it
+  // runs concurrently instead of adding another link to an already-serial
+  // chain of independent round-trips.
+  const guidePromise = getGuide("laporan");
   const allUsers = await db.select().from(users);
   const allSensus = await db.select().from(sensusProfiles);
   const allDepartments = await db.select().from(departments);
@@ -48,11 +54,16 @@ export default async function ConsoleReportsPage() {
   const sensusByUser = new Map(allSensus.map((s) => [s.userId, s]));
   const byMembership = tally(allUsers.map((u) => MEMBERSHIP_LABEL[membershipStatus(sensusByUser.get(u.id))]));
 
+  const guide = await guidePromise;
+
   return (
     <div className="px-4 py-6 sm:px-6 lg:px-8 lg:py-10">
-      <div className="mb-8">
-        <h1 className="text-headline-md sm:text-headline-lg text-on-background mb-2">Laporan</h1>
-        <p className="text-body-md text-on-surface-variant">Ringkasan sensus dan generator laporan.</p>
+      <div className="flex flex-wrap items-start justify-between gap-3 mb-8">
+        <div>
+          <h1 className="text-headline-md sm:text-headline-lg text-on-background mb-2">Laporan</h1>
+          <p className="text-body-md text-on-surface-variant">Ringkasan sensus dan generator laporan.</p>
+        </div>
+        {guide && <GuideButton title={guide.title} content={guide.content} docSlug="laporan" />}
       </div>
 
       <div className="flex flex-col gap-6">

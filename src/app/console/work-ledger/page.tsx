@@ -3,6 +3,8 @@ import { db } from "@/db";
 import { events, users, certificates } from "@/db/schema";
 import { requireModuleAccess } from "@/lib/admin-scope";
 import { CollapsibleSection } from "@/components/console/collapsible-section";
+import { GuideButton } from "@/components/console/guide-button";
+import { getGuide } from "@/lib/guides";
 import {
   getWorkLedger,
   assignCommittee,
@@ -52,10 +54,14 @@ export default async function WorkLedgerPage() {
   ]);
 
   const overloaded = ledger.filter((p) => p.assignments.length >= 3);
+  const guide = await getGuide("work-ledger");
 
   return (
     <div className="px-4 py-6 sm:px-6 lg:px-8 lg:py-10">
-      <h1 className="text-headline-md sm:text-headline-lg text-on-background mb-2">Work Ledger</h1>
+      <div className="flex flex-wrap items-start justify-between gap-3 mb-2">
+        <h1 className="text-headline-md sm:text-headline-lg text-on-background">Work Ledger</h1>
+        {guide && <GuideButton title={guide.title} content={guide.content} docSlug="work-ledger" />}
+      </div>
       <p className="text-body-md text-on-surface-variant mb-6 max-w-3xl">
         Siapa jadi panitia di acara apa. Peran di sini berlaku <strong className="text-on-background">per acara</strong>{" "}
         &mdash; bendahara sebuah acara tidak harus bendahara kabinet.

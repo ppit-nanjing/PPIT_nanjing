@@ -3,6 +3,8 @@ import { db } from "@/db";
 import { membershipApplications, recruitmentPeriods } from "@/db/schema";
 import { requireModuleAccess } from "@/lib/admin-scope";
 import { MembershipTabs } from "@/components/console/membership-tabs";
+import { GuideButton } from "@/components/console/guide-button";
+import { getGuide } from "@/lib/guides";
 
 const STATUS_LABEL: Record<string, string> = {
   pending: "Menunggu",
@@ -34,10 +36,14 @@ export default async function ConsoleMembershipPage() {
     .from(membershipApplications)
     .leftJoin(recruitmentPeriods, eq(membershipApplications.recruitmentPeriodId, recruitmentPeriods.id))
     .orderBy(desc(membershipApplications.submittedAt));
+  const guide = await getGuide("pendaftaran");
 
   return (
     <div className="px-4 py-6 sm:px-6 lg:px-8 lg:py-10">
-      <h1 className="text-headline-md sm:text-headline-lg text-on-background mb-2">Pendaftaran Anggota</h1>
+      <div className="flex flex-wrap items-start justify-between gap-3 mb-2">
+        <h1 className="text-headline-md sm:text-headline-lg text-on-background">Pendaftaran Anggota</h1>
+        {guide && <GuideButton title={guide.title} content={guide.content} docSlug="pendaftaran" />}
+      </div>
       <p className="text-body-md text-on-surface-variant mb-4">{apps.length} pendaftar.</p>
       <MembershipTabs active="list" />
 

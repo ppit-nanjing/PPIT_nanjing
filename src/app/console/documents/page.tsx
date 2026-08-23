@@ -6,6 +6,8 @@ import { getCurrentPeriodId } from "@/lib/drive-access";
 import { getFolderContents } from "@/lib/drive-queries";
 import { DriveExplorer } from "@/components/documents/drive-explorer";
 import { PeriodPicker } from "@/components/documents/period-picker";
+import { GuideButton } from "@/components/console/guide-button";
+import { getGuide } from "@/lib/guides";
 
 export default async function ConsoleDocumentsPage({
   searchParams,
@@ -44,9 +46,14 @@ export default async function ConsoleDocumentsPage({
     }
   }
 
+  const guide = await getGuide("dokumen");
+
   return (
     <div className="px-4 py-6 sm:px-6 lg:px-8 lg:py-10">
-      <h1 className="text-headline-md sm:text-headline-lg text-on-background">Dokumen</h1>
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <h1 className="text-headline-md sm:text-headline-lg text-on-background">Dokumen</h1>
+        {guide && <GuideButton title={guide.title} content={guide.content} docSlug="dokumen" />}
+      </div>
       <p className="text-body-md text-on-surface-variant mb-4">
         Berkas organisasi di Google Drive. Admin bisa mengelola semua folder periode &amp; divisi.
       </p>

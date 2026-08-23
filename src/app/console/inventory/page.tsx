@@ -8,6 +8,8 @@ import { ContributionReview } from "@/components/console/contribution-review";
 import { ProcurementReview } from "@/components/console/procurement-review";
 import { ExternalLoanManager } from "@/components/console/external-loan-manager";
 import { CollapsibleSection } from "@/components/console/collapsible-section";
+import { GuideButton } from "@/components/console/guide-button";
+import { getGuide } from "@/lib/guides";
 import { requireModuleAccess } from "@/lib/admin-scope";
 import { Plus, Package } from "lucide-react";
 import Link from "next/link";
@@ -16,6 +18,10 @@ import { conditionLabel } from "@/lib/inventory-labels";
 
 export default async function ConsoleInventoryPage() {
   await requireModuleAccess("inventory");
+  // Kicked off now, awaited later - has no dependency on the queries below, so
+  // it runs concurrently with them instead of adding another link to an
+  // already-serial chain of independent round-trips.
+  const guidePromise = getGuide("inventaris");
   const items = await db.select().from(inventoryItems);
   const requests = await db
     .select({ req: borrowRequests, itemName: inventoryItems.name, userName: users.name, userEmail: users.email })
@@ -44,14 +50,18 @@ export default async function ConsoleInventoryPage() {
     .orderBy(desc(externalLoans.loanedAt));
 
   const itemOptions = items.map((i) => ({ id: i.id, name: i.name, availableQuantity: i.availableQuantity }));
+  const guide = await guidePromise;
 
   return (
     <div className="px-4 py-6 sm:px-6 lg:px-8 lg:py-10">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between mb-8">
         <h1 className="text-headline-md sm:text-headline-lg text-on-background">Manajemen Inventaris</h1>
-        <Link href="/console/inventory/audit-log" className="text-label-caps text-primary-container hover:text-primary transition-colors">
-          Log Audit &rarr;
-        </Link>
+        <div className="flex items-center gap-3">
+          {guide && <GuideButton title={guide.title} content={guide.content} docSlug="inventaris" />}
+          <Link href="/console/inventory/audit-log" className="text-label-caps text-primary-container hover:text-primary transition-colors">
+            Log Audit &rarr;
+          </Link>
+        </div>
       </div>
 
       <div className="flex flex-col gap-6">

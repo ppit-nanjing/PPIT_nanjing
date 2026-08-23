@@ -1,7 +1,7 @@
 import { upsertHelpArticle } from "@/app/actions/admin-docs";
 import { CollapsibleSection } from "@/components/console/collapsible-section";
 
-const SECTIONS = ["Pengguna", "Organisasi", "Kegiatan", "Inventaris", "Laporan"];
+const SECTIONS = ["Sering Dipakai", "Sering Membingungkan"];
 
 export default function NewHelpArticlePage() {
   return (

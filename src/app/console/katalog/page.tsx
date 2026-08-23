@@ -1,5 +1,7 @@
 import { requireModuleAccess, hasModuleAccess } from "@/lib/admin-scope";
 import { CollapsibleSection } from "@/components/console/collapsible-section";
+import { GuideButton } from "@/components/console/guide-button";
+import { getGuide } from "@/lib/guides";
 import {
   listCityContent,
   createPlace,
@@ -56,9 +58,14 @@ export default async function ConsoleKatalogPage() {
     ? await Promise.all([listDonationsForAdmin(), listChannelsForAdmin()])
     : [[], []];
 
+  const guide = await getGuide("katalog");
+
   return (
     <div className="px-4 py-6 sm:px-6 lg:px-8 lg:py-10">
-      <h1 className="text-headline-md sm:text-headline-lg text-on-background mb-2">Konten Kota &amp; Katalog</h1>
+      <div className="flex flex-wrap items-start justify-between gap-3 mb-2">
+        <h1 className="text-headline-md sm:text-headline-lg text-on-background">Konten Kota &amp; Katalog</h1>
+        {guide && <GuideButton title={guide.title} content={guide.content} docSlug="katalog" />}
+      </div>
       <p className="text-body-md text-on-surface-variant mb-6 max-w-3xl">
         Mengisi halaman Tempat, Kampus, dan Katalog di situs publik.
       </p>

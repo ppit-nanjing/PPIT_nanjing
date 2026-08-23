@@ -9,6 +9,8 @@ import { ImageUploadCropper } from "@/components/upload/image-upload-cropper";
 import { AIImproveButton } from "@/components/ai/ai-improve-button";
 import { AIReviewButton } from "@/components/ai/ai-review-popup";
 import { CollapsibleSection } from "@/components/console/collapsible-section";
+import { GuideButton } from "@/components/console/guide-button";
+import { getGuide } from "@/lib/guides";
 import { Plus } from "lucide-react";
 
 const STATUS_LABEL: Record<string, string> = {
@@ -24,10 +26,14 @@ export default async function ConsoleEventsPage() {
   await requireModuleAccess("events");
   await publishDueEvents();
   const list = await db.select().from(events).orderBy(desc(events.startAt));
+  const guide = await getGuide("kegiatan");
 
   return (
     <div className="px-3 py-4 sm:px-6 lg:px-8 lg:py-10">
-      <h1 className="text-headline-md sm:text-headline-lg text-on-background mb-4 sm:mb-6 lg:mb-8">Manajemen Kegiatan</h1>
+      <div className="flex flex-wrap items-start justify-between gap-3 mb-4 sm:mb-6 lg:mb-8">
+        <h1 className="text-headline-md sm:text-headline-lg text-on-background">Manajemen Kegiatan</h1>
+        {guide && <GuideButton title={guide.title} content={guide.content} docSlug="kegiatan" />}
+      </div>
 
       <details className="mb-6 sm:mb-8 bg-surface-container-lowest border border-outline-variant rounded-xl">
         <summary className="flex items-center gap-2 px-4 py-3 sm:px-6 sm:py-4 cursor-pointer text-label-caps text-primary-container uppercase tracking-wide">

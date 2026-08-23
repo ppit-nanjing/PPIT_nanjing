@@ -1,11 +1,12 @@
 ﻿"use server";
 
-import { eq } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { auth } from "@/auth";
 import { db } from "@/db";
 import { managementPeriods, shortLinks } from "@/db/schema";
+import { hasModuleAccess } from "@/lib/admin-scope-constants";
 
 export type ShortLinkFormState = { error?: string };
 
@@ -162,6 +163,36 @@ export async function toggleShortLink(id: string) {
   if (!link) return;
   await db.update(shortLinks).set({ isActive: !link.isActive, updatedAt: new Date() }).where(eq(shortLinks.id, id));
   revalidatePath("/console/links");
+}
+
+// Nothing else in the codebase ever sets isCurrent=true except src/db/seed.ts -
+// there was no admin-facing way to activate a period at all, despite the
+// Dokumen module's own page telling admins to do exactly this from here.
+// Only one period is ever "current" at a time, since folderAccess()/
+// getCurrentPeriodId() in the Dokumen module assume a single active period.
+//
+// Unlike the other actions in this file, this one has org-wide blast radius -
+// it changes which Drive folders every member sees in the Dokumen module, not
+// just a single short link - so it's gated on the "links" module scope
+// specifically rather than reusing requireLinksAdmin()'s generic isAdmin
+// check (which passes for any admin holding any single module, e.g. one
+// scoped only to "events").
+export async function setActivePeriod(id: string) {
+  const session = await auth();
+  if (!session?.user || !hasModuleAccess(session.user.adminScope, "links")) throw new Error("Forbidden");
+
+  const [target] = await db.select({ id: managementPeriods.id }).from(managementPeriods).where(eq(managementPeriods.id, id)).limit(1);
+  if (!target) throw new Error("Periode tidak ditemukan.");
+
+  // Single statement, not select-then-two-updates: correct even under
+  // concurrent calls, and avoids the failure mode where an update against a
+  // stale/nonexistent id would unset isCurrent on every row while setting it
+  // on none, leaving no period active with no error surfaced anywhere.
+  await db.update(managementPeriods).set({ isCurrent: sql`${managementPeriods.id} = ${id}` });
+
+  revalidatePath("/console/links");
+  revalidatePath("/documents");
+  revalidatePath("/console/documents");
 }
 
 export async function createManagementPeriod(

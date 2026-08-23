@@ -4,6 +4,8 @@ import { UsersConsole } from "@/components/console/users-console";
 import { requireModuleAccess } from "@/lib/admin-scope";
 import { inviteUsers } from "@/app/actions/admin-users";
 import { CollapsibleSection } from "@/components/console/collapsible-section";
+import { GuideButton } from "@/components/console/guide-button";
+import { getGuide } from "@/lib/guides";
 import { UserPlus } from "lucide-react";
 
 export default async function ConsoleUsersPage() {
@@ -27,9 +29,14 @@ export default async function ConsoleUsersPage() {
     };
   });
 
+  const guide = await getGuide("pengguna");
+
   return (
     <div className="px-4 py-6 sm:px-6 lg:px-8 lg:py-10">
-      <h1 className="text-headline-md sm:text-headline-lg text-on-background mb-2">Manajemen Pengguna</h1>
+      <div className="flex flex-wrap items-start justify-between gap-3 mb-2">
+        <h1 className="text-headline-md sm:text-headline-lg text-on-background">Manajemen Pengguna</h1>
+        {guide && <GuideButton title={guide.title} content={guide.content} docSlug="pengguna" />}
+      </div>
       <p className="text-body-md text-on-surface-variant mb-8">
         {rows.length} pengguna terdaftar. Akun muncul otomatis saat masuk dengan Google atau mendaftar kata sandi.
       </p>

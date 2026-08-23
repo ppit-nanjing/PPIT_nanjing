@@ -19,6 +19,8 @@ import {
   feedback,
 } from "@/db/schema";
 import { CollapsibleSection } from "@/components/console/collapsible-section";
+import { GuideButton } from "@/components/console/guide-button";
+import { getGuide } from "@/lib/guides";
 import { ArrowRight, type LucideIcon } from "lucide-react";
 import Link from "next/link";
 import {
@@ -204,12 +206,16 @@ export default async function ConsoleDashboardPage() {
   ];
 
   const today = new Date().toLocaleDateString("id-ID", { weekday: "long", day: "numeric", month: "long", year: "numeric" });
+  const guide = await getGuide("dashboard");
 
   return (
     <div className="px-4 py-6 sm:px-6 lg:px-8 lg:py-10">
-      <div className="mb-8">
-        <h1 className="text-headline-md sm:text-headline-lg text-on-background">Dashboard</h1>
-        <p className="text-body-md text-on-surface-variant mt-1">Ringkasan aktivitas PPIT Nanjing · {today}</p>
+      <div className="flex flex-wrap items-start justify-between gap-3 mb-8">
+        <div>
+          <h1 className="text-headline-md sm:text-headline-lg text-on-background">Dashboard</h1>
+          <p className="text-body-md text-on-surface-variant mt-1">Ringkasan aktivitas PPIT Nanjing · {today}</p>
+        </div>
+        {guide && <GuideButton title={guide.title} content={guide.content} docSlug="dashboard" />}
       </div>
 
       <div className="flex flex-col gap-6">

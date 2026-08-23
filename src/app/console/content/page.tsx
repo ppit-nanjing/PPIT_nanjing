@@ -4,6 +4,8 @@ import { newsArticles, galleryAlbums } from "@/db/schema";
 import { requireModuleAccess } from "@/lib/admin-scope";
 import { Plus } from "lucide-react";
 import { CollapsibleSection } from "@/components/console/collapsible-section";
+import { GuideButton } from "@/components/console/guide-button";
+import { getGuide } from "@/lib/guides";
 import Link from "next/link";
 
 const STATUS_LABEL: Record<string, string> = { draft: "Draf", published: "Dipublikasikan" };
@@ -12,10 +14,14 @@ export default async function ConsoleContentPage() {
   await requireModuleAccess("content");
   const articles = await db.select().from(newsArticles).orderBy(desc(newsArticles.publishedAt));
   const albums = await db.select().from(galleryAlbums).orderBy(desc(galleryAlbums.createdAt));
+  const guide = await getGuide("konten");
 
   return (
     <div className="px-4 py-6 sm:px-6 lg:px-8 lg:py-10">
-      <h1 className="text-headline-md sm:text-headline-lg text-on-background mb-8">Konten</h1>
+      <div className="flex flex-wrap items-start justify-between gap-3 mb-8">
+        <h1 className="text-headline-md sm:text-headline-lg text-on-background">Konten</h1>
+        {guide && <GuideButton title={guide.title} content={guide.content} docSlug="konten" />}
+      </div>
 
       <div className="flex flex-col gap-6">
         <CollapsibleSection title="Berita" description="Artikel berita yang dipublikasikan.">

@@ -2,10 +2,12 @@ import { db } from "@/db";
 import { helpArticles } from "@/db/schema";
 import { Plus, FileText, History } from "lucide-react";
 import { CollapsibleSection } from "@/components/console/collapsible-section";
+import { GuideButton } from "@/components/console/guide-button";
 import Link from "next/link";
 
 export default async function ConsoleDocsPage() {
   const articles = await db.select().from(helpArticles);
+  const guide = articles.find((a) => a.slug === "dokumentasi");
   const bySection = articles.reduce<Record<string, typeof articles>>((acc, a) => {
     (acc[a.section] ??= []).push(a);
     return acc;
@@ -21,6 +23,7 @@ export default async function ConsoleDocsPage() {
           </p>
         </div>
         <div className="flex flex-wrap gap-3 shrink-0">
+          {guide && <GuideButton title={guide.title} content={guide.content ?? ""} />}
           <Link
             href="/console/docs/changelog"
             className="flex items-center gap-2 border border-outline-variant text-on-background text-label-caps uppercase tracking-wide px-5 py-3 rounded-md hover:bg-surface-container-low transition-colors"

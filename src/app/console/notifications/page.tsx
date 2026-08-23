@@ -5,6 +5,8 @@ import { notificationTemplates, users } from "@/db/schema";
 import { requireModuleAccess } from "@/lib/admin-scope";
 import { NOTIFICATION_TEMPLATES } from "@/lib/notification-templates";
 import { NotificationTemplateEditor } from "@/components/console/notification-template-editor";
+import { GuideButton } from "@/components/console/guide-button";
+import { getGuide } from "@/lib/guides";
 
 export default async function ConsoleNotificationsPage() {
   await requireModuleAccess("notifications");
@@ -32,17 +34,22 @@ export default async function ConsoleNotificationsPage() {
     {},
   );
 
+  const guide = await getGuide("notifikasi");
+
   return (
     <div className="px-4 py-6 sm:px-6 lg:px-8 lg:py-10">
-      <div className="mb-6 l:mb-8">
-        <h1 className="text-headline-md sm:text-headline-lg text-on-background mb-2">
-          Template Notifikasi
-        </h1>
-        <p className="text-body-md text-on-surface-variant max-w-2xl">
+      <div className="flex flex-wrap items-start justify-between gap-3 mb-6 l:mb-8">
+        <div>
+          <h1 className="text-headline-md sm:text-headline-lg text-on-background mb-2">
+            Template Notifikasi
+          </h1>
+          <p className="text-body-md text-on-surface-variant max-w-2xl">
           Ubah kata-kata notifikasi otomatis yang diterima anggota. Setiap template di bawah ini
           benar-benar terpakai di aplikasi — tidak ada template yang tidak pernah terkirim. Template
           yang belum pernah diubah memakai teks bawaan.
         </p>
+        </div>
+        {guide && <GuideButton title={guide.title} content={guide.content} docSlug="notifikasi" />}
       </div>
 
       <div className="bg-surface-container-low border border-outline-variant rounded-lg p-4 mb-8 flex items-start gap-3 max-w-2xl">
