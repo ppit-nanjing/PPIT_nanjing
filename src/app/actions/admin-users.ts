@@ -1,6 +1,6 @@
 "use server";
 
-import { eq } from "drizzle-orm";
+import { and, eq, ne } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { auth } from "@/auth";
 import { db } from "@/db";
@@ -29,7 +29,21 @@ export async function assignUserDepartment(userId: string, departmentId: string,
   if (departmentId) {
     await db.insert(departmentMembers).values({ userId, departmentId, position: position || null });
   }
+  // updateDepartment (admin-departments.ts) only lets headUserId be set to a
+  // CURRENT member, but this is the action that actually moves someone out
+  // of a department - without this, reassigning a department's head to a
+  // different division would silently leave departments.headUserId pointing
+  // at someone who's no longer a member there.
+  await db
+    .update(departments)
+    .set({ headUserId: null })
+    .where(
+      departmentId
+        ? and(eq(departments.headUserId, userId), ne(departments.id, departmentId))
+        : eq(departments.headUserId, userId),
+    );
   revalidatePath("/console/users");
+  revalidatePath("/console/organization");
 }
 
 export async function updateUserStatus(userId: string, status: "invited" | "active" | "inactive" | "suspended") {

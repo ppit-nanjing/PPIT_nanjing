@@ -1,10 +1,10 @@
 "use server";
 
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { auth } from "@/auth";
 import { db } from "@/db";
-import { departments, auditLogs } from "@/db/schema";
+import { departments, departmentMembers, auditLogs } from "@/db/schema";
 import { hasModuleAccess } from "@/lib/admin-scope";
 import { SENSITIVE_SCOPE_KEYS } from "@/lib/admin-scope-constants";
 
@@ -49,6 +49,23 @@ export async function updateDepartment(id: string, formData: FormData) {
   const description = String(formData.get("description") ?? "").trim();
   if (!name) throw new Error("Nama wajib diisi");
 
+  // The Struktur table on /console/users shows a "Kepala" column that reads
+  // this field, but until now nothing anywhere ever wrote to it - so it
+  // always rendered blank. Kept as a plain nullable pick from the
+  // department's own current members (not any user org-wide), so "Kepala"
+  // stays a subset of "Anggota" rather than an unrelated third list.
+  const headUserIdRaw = String(formData.get("headUserId") ?? "").trim();
+  let headUserId: string | null = null;
+  if (headUserIdRaw) {
+    const [isMember] = await db
+      .select({ userId: departmentMembers.userId })
+      .from(departmentMembers)
+      .where(and(eq(departmentMembers.departmentId, id), eq(departmentMembers.userId, headUserIdRaw)))
+      .limit(1);
+    if (!isMember) throw new Error("Kepala harus anggota departemen ini.");
+    headUserId = headUserIdRaw;
+  }
+
   // grantsFullAdminAccess and the SENSITIVE_SCOPE_KEYS ("users"/"organization"/
   // "feedback") are self-escalation vectors: anyone with plain "organization"
   // scope could otherwise flip their own department to full admin, or hand it
@@ -72,7 +89,7 @@ export async function updateDepartment(id: string, formData: FormData) {
 
   const [after] = await db
     .update(departments)
-    .set({ name, description: description || null, grantsFullAdminAccess, adminModuleScope })
+    .set({ name, description: description || null, headUserId, grantsFullAdminAccess, adminModuleScope })
     .where(eq(departments.id, id))
     .returning();
 
@@ -86,6 +103,10 @@ export async function updateDepartment(id: string, formData: FormData) {
   });
 
   revalidatePath("/console/organization");
+  // headUserId set here also feeds the Struktur tab's "Kepala" column on
+  // /console/users - without this, a just-set head wouldn't show up there
+  // until something else happened to revalidate that route.
+  revalidatePath("/console/users");
 }
 
 export async function moveDepartment(id: string, direction: "up" | "down") {

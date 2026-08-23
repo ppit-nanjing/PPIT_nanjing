@@ -1,5 +1,6 @@
+import { eq } from "drizzle-orm";
 import { db } from "@/db";
-import { departments } from "@/db/schema";
+import { departments, departmentMembers, users } from "@/db/schema";
 import { DepartmentManager } from "@/components/console/department-manager";
 import { CollapsibleSection } from "@/components/console/collapsible-section";
 import { GuideButton } from "@/components/console/guide-button";
@@ -10,6 +11,10 @@ import Link from "next/link";
 export default async function ConsoleOrganizationPage() {
   const session = await requireModuleAccess("organization");
   const all = await db.select().from(departments);
+  const members = await db
+    .select({ userId: departmentMembers.userId, departmentId: departmentMembers.departmentId, name: users.name, email: users.email })
+    .from(departmentMembers)
+    .innerJoin(users, eq(departmentMembers.userId, users.id));
   const isFullAdmin = session.user.adminScope === "full";
   const guide = await getGuide("organisasi");
 
@@ -29,7 +34,7 @@ export default async function ConsoleOrganizationPage() {
         {guide && <GuideButton title={guide.title} content={guide.content} docSlug="organisasi" />}
       </div>
       <CollapsibleSection title="Manajemen Departemen & Divisi">
-        <DepartmentManager departments={all} isFullAdmin={isFullAdmin} />
+        <DepartmentManager departments={all} members={members} isFullAdmin={isFullAdmin} />
       </CollapsibleSection>
     </div>
   );

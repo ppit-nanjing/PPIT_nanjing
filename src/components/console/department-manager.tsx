@@ -11,11 +11,27 @@ interface Department {
   description: string | null;
   parentDepartmentId: string | null;
   orderIndex: number;
+  headUserId: string | null;
   grantsFullAdminAccess: boolean;
   adminModuleScope: string[];
 }
 
-export function DepartmentManager({ departments, isFullAdmin }: { departments: Department[]; isFullAdmin: boolean }) {
+interface Member {
+  userId: string;
+  departmentId: string;
+  name: string | null;
+  email: string;
+}
+
+export function DepartmentManager({
+  departments,
+  members,
+  isFullAdmin,
+}: {
+  departments: Department[];
+  members: Member[];
+  isFullAdmin: boolean;
+}) {
   const [showAddFor, setShowAddFor] = useState<string | "root" | null>(null);
   const topLevel = departments.filter((d) => d.parentDepartmentId === null).sort((a, b) => a.orderIndex - b.orderIndex);
 
@@ -25,9 +41,11 @@ export function DepartmentManager({ departments, isFullAdmin }: { departments: D
         <DepartmentCard
           key={dept.id}
           dept={dept}
+          members={members.filter((m) => m.departmentId === dept.id)}
           childDepartments={departments
             .filter((d) => d.parentDepartmentId === dept.id)
             .sort((a, b) => a.orderIndex - b.orderIndex)}
+          allMembers={members}
           isFirst={i === 0}
           isLast={i === topLevel.length - 1}
           showAddFor={showAddFor}
@@ -96,9 +114,37 @@ function AccessFields({ dept, isFullAdmin }: { dept: Department; isFullAdmin: bo
   );
 }
 
+function HeadSelect({ dept, members }: { dept: Department; members: Member[] }) {
+  return (
+    <label className="flex flex-col gap-1">
+      <span className="text-label-caps uppercase tracking-wide text-on-surface-variant">Kepala</span>
+      <select
+        key={dept.headUserId ?? "none"}
+        name="headUserId"
+        defaultValue={dept.headUserId ?? ""}
+        className="bg-soft-gray rounded-md p-2 text-body-md"
+      >
+        <option value="">— Tidak ada —</option>
+        {members.map((m) => (
+          <option key={m.userId} value={m.userId}>
+            {m.name ?? m.email}
+          </option>
+        ))}
+      </select>
+      {members.length === 0 && (
+        <span className="text-label-caps text-on-surface-variant normal-case">
+          Belum ada anggota di sini — tambahkan lewat halaman Pengguna dulu, baru bisa dipilih jadi kepala.
+        </span>
+      )}
+    </label>
+  );
+}
+
 function DepartmentCard({
   dept,
+  members,
   childDepartments,
+  allMembers,
   isFirst,
   isLast,
   showAddFor,
@@ -106,7 +152,9 @@ function DepartmentCard({
   isFullAdmin,
 }: {
   dept: Department;
+  members: Member[];
   childDepartments: Department[];
+  allMembers: Member[];
   isFirst: boolean;
   isLast: boolean;
   showAddFor: string | "root" | null;
@@ -115,6 +163,7 @@ function DepartmentCard({
 }) {
   const [editing, setEditing] = useState(false);
   const [, startTransition] = useTransition();
+  const headName = dept.headUserId ? (members.find((m) => m.userId === dept.headUserId)?.name ?? "—") : null;
 
   return (
     <div className="bg-surface-container-lowest border border-outline-variant rounded-xl p-6">
@@ -138,8 +187,12 @@ function DepartmentCard({
           </div>
           <div>
             <h2 className="text-headline-md text-on-background">{dept.name}</h2>
-            {dept.description && !editing && (
-              <p className="text-body-md text-on-surface-variant mt-1">{dept.description}</p>
+            {!editing && (
+              <p className="text-body-md text-on-surface-variant mt-1">
+                {headName && <span className="text-on-background">Kepala: {headName}</span>}
+                {headName && dept.description && " · "}
+                {dept.description}
+              </p>
             )}
           </div>
         </div>
@@ -163,6 +216,7 @@ function DepartmentCard({
             rows={2}
             className="bg-soft-gray rounded-md p-2 text-body-md resize-none"
           />
+          <HeadSelect dept={dept} members={members} />
           <AccessFields dept={dept} isFullAdmin={isFullAdmin} />
           <button
             type="submit"
@@ -176,7 +230,14 @@ function DepartmentCard({
       {childDepartments.length > 0 && (
         <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mt-4">
           {childDepartments.map((c, i) => (
-            <DivisionCard key={c.id} division={c} isFirst={i === 0} isLast={i === childDepartments.length - 1} isFullAdmin={isFullAdmin} />
+            <DivisionCard
+              key={c.id}
+              division={c}
+              members={allMembers.filter((m) => m.departmentId === c.id)}
+              isFirst={i === 0}
+              isLast={i === childDepartments.length - 1}
+              isFullAdmin={isFullAdmin}
+            />
           ))}
         </div>
       )}
@@ -194,17 +255,20 @@ function DepartmentCard({
 
 function DivisionCard({
   division,
+  members,
   isFirst,
   isLast,
   isFullAdmin,
 }: {
   division: Department;
+  members: Member[];
   isFirst: boolean;
   isLast: boolean;
   isFullAdmin: boolean;
 }) {
   const [editing, setEditing] = useState(false);
   const [, startTransition] = useTransition();
+  const headName = division.headUserId ? (members.find((m) => m.userId === division.headUserId)?.name ?? "—") : null;
 
   return (
     <div className="bg-surface-container-low border border-outline-variant rounded-lg p-4">
@@ -232,6 +296,10 @@ function DivisionCard({
           {editing ? <X size={13} /> : <Pencil size={13} />}
         </button>
       </div>
+
+      {!editing && headName && (
+        <p className="text-label-caps text-on-surface-variant mt-0.5">Kepala: <span className="text-on-background">{headName}</span></p>
+      )}
 
       {!editing && (
         <div className="flex flex-wrap gap-1 mt-2">
@@ -263,6 +331,7 @@ function DivisionCard({
             rows={2}
             className="bg-surface-container-lowest rounded-md p-2 text-body-md resize-none"
           />
+          <HeadSelect dept={division} members={members} />
           <AccessFields dept={division} isFullAdmin={isFullAdmin} />
           <button
             type="submit"

@@ -257,7 +257,11 @@ export const departments = pgTable("departments", {
   id: uuid("id").defaultRandom().primaryKey(),
   name: text("name").notNull(),
   parentDepartmentId: uuid("parent_department_id").references((): AnyPgColumn => departments.id),
-  headUserId: uuid("head_user_id").references(() => users.id),
+  // set null (not the default no-action) so deleting a user who happens to be
+  // a department head doesn't fail with a raw FK-violation error - app code
+  // (deleteUser in admin-users.ts, assignUserDepartment) also clears this
+  // proactively, but this is the backstop for any path that doesn't.
+  headUserId: uuid("head_user_id").references(() => users.id, { onDelete: "set null" }),
   orderIndex: integer("order_index").notNull().default(0),
   description: text("description"),
   // True only for Divisi Teknologi: every member of this department gets full admin
