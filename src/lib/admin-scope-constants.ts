@@ -15,7 +15,7 @@
 // deliberately absent from ASSIGNABLE_SCOPE_KEYS below, so hasModuleAccess()
 // only ever returns true for it via the `scope === "full"` short-circuit -
 // same non-delegable treatment as users/organization/feedback.
-export type AdminModule = "users" | "organization" | "events" | "inventory" | "reports" | "content" | "feedback" | "membership" | "notifications" | "links";
+export type AdminModule = "users" | "organization" | "events" | "inventory" | "reports" | "content" | "feedback" | "membership" | "notifications" | "links" | "documents";
 
 const MODULE_ALIASES: Partial<Record<AdminModule, string[]>> = {
   reports: ["reports", "sensus"],
@@ -40,6 +40,7 @@ export const ASSIGNABLE_SCOPE_KEYS: { key: string; label: string }[] = [
   { key: "feedback", label: "Masukan Pengguna (sensitif — hanya BPH)" },
   { key: "membership", label: "Pendaftaran Anggota (rekrutmen)" },
   { key: "links", label: "Tautan (short link)" },
+  { key: "documents", label: "Dokumen (Google Drive)" },
 ];
 
 // Keys that only a "full" tier actor may grant to a department - handing these

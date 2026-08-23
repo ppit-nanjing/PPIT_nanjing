@@ -1133,3 +1133,17 @@ export const shortLinkRelations = relations(shortLinks, ({ one }) => ({
   }),
   creator: one(users, { fields: [shortLinks.createdBy], references: [users.id] }),
 }));
+
+// ---------- Drive folder mapping ----------
+// Pemetaan (periode, divisi) -> folder id di Google Drive, supaya kita tidak
+// membuat ulang folder tiap kali dan tahu persis letak tiap folder untuk
+// enforce akses (anggota boleh CRUD folder divisinya, divisi lain read-only).
+export const driveFolders = pgTable("drive_folders", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  managementPeriodId: uuid("management_period_id").references(() => managementPeriods.id),
+  departmentId: uuid("department_id").references(() => departments.id),
+  name: text("name").notNull(),
+  driveFolderId: text("drive_folder_id").notNull(),
+  parentDriveFolderId: text("parent_drive_folder_id"),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});

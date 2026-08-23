@@ -20,6 +20,7 @@ import {
   UserPlus,
   BellRing,
   Link2,
+  Folder,
 } from "lucide-react";
 import { hasModuleAccess, type AdminModule } from "@/lib/admin-scope-constants";
 import Link from "next/link";
@@ -56,6 +57,7 @@ const GROUPS: { title: string; items: NavItem[] }[] = [
       { href: "/console/docs", label: "Dokumentasi", icon: BookOpen, module: null },
       { href: "/console/feedback", label: "Masukan Pengguna", icon: MessageSquare, module: "feedback" },
       { href: "/console/links", label: "Tautan", icon: Link2, module: "links" },
+      { href: "/console/documents", label: "Dokumen", icon: Folder, module: "documents" },
     ],
   },
 ];
