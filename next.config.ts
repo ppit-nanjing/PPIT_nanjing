@@ -69,6 +69,21 @@ const baseSecurityHeaders = [
 ];
 
 const nextConfig: NextConfig = {
+  // Default Server Action body limit is 1MB, which silently rejects most
+  // real documents (scanned PDFs, signed contracts) uploaded via
+  // uploadDriveFileAction in the Dokumen module. Raised, but capped at 4mb -
+  // NOT higher - because Vercel Functions enforce a hard, non-configurable
+  // 4.5MB request body ceiling (https://vercel.com/docs/functions/limitations)
+  // that this setting cannot override; anything closer to 4.5MB risks
+  // tripping it once multipart/form-data boundary overhead is added. Files
+  // larger than this will still fail; that requires bypassing the
+  // serverless function entirely (e.g. direct-to-storage upload), which is
+  // out of scope for this limit bump.
+  experimental: {
+    serverActions: {
+      bodySizeLimit: "4mb",
+    },
+  },
   images: {
     remotePatterns: [
       { protocol: "https", hostname: "*.public.blob.vercel-storage.com" },

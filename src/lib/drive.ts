@@ -81,6 +81,15 @@ export async function trashFile(fileId: string): Promise<void> {
   await drive.files.update({ fileId, requestBody: { trashed: true } });
 }
 
+// Used by rename/trash actions to verify a client-supplied fileId actually
+// lives inside the folder the caller was authorized to write to, and to look
+// up the webViewLink so a trashed file's short link can be deactivated.
+export async function getFileMeta(fileId: string): Promise<{ parents: string[]; webViewLink: string | null }> {
+  const { drive } = getDrive();
+  const res = await drive.files.get({ fileId, fields: "parents, webViewLink" });
+  return { parents: res.data.parents ?? [], webViewLink: res.data.webViewLink ?? null };
+}
+
 // Make the file openable by anyone with the link (read-only) so the short link
 // works for recipients without Google auth.
 export async function setLinkViewer(fileId: string): Promise<string> {

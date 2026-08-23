@@ -1,7 +1,12 @@
 import { redirect } from "next/navigation";
 import { auth } from "@/auth";
-import { getFolderContents, getMemberDepartments } from "@/app/actions/drive";
+import { getFolderContents, getMemberDepartments } from "@/lib/drive-queries";
+import { preloadDriveFolders, resolveDriveFolder } from "@/lib/drive-folders";
 import { DriveExplorer } from "@/components/documents/drive-explorer";
+
+type Section =
+  | { id: string; name: string; ok: true; contents: Awaited<ReturnType<typeof getFolderContents>> }
+  | { id: string; name: string; ok: false };
 
 export default async function MemberDocumentsPage() {
   const session = await auth();
@@ -20,10 +25,32 @@ export default async function MemberDocumentsPage() {
     );
   }
 
-  const sections = await Promise.all(
-    departments.map(async (d) => {
-      const contents = await getFolderContents({ periodId, departmentId: d.id });
-      return { id: d.id, name: d.name, contents };
+  // One query for every division's already-resolved Drive folder instead of
+  // resolveDriveFolder() re-querying per division below.
+  const preloadedFolders = await preloadDriveFolders(periodId);
+
+  // Every department's resolveDriveFolder call below falls back to creating
+  // this same shared period-level parent folder if it doesn't exist yet.
+  // Resolving it here, sequentially, before the parallel fan-out guarantees
+  // only one of those N calls ever needs to create it - otherwise, on the
+  // very first page load for a brand-new period, all N department branches
+  // would independently miss it in the (still-empty) preload map and race
+  // each other to create duplicate Drive folders for it.
+  if (!preloadedFolders.has("")) {
+    preloadedFolders.set("", await resolveDriveFolder({ periodId, departmentId: null, preloaded: preloadedFolders }));
+  }
+
+  const sections: Section[] = await Promise.all(
+    departments.map(async (d): Promise<Section> => {
+      try {
+        const contents = await getFolderContents({ periodId, departmentId: d.id, title: d.name, preloadedFolders });
+        return { id: d.id, name: d.name, ok: true, contents };
+      } catch {
+        // One division's Drive call failing (SA not shared on that folder,
+        // transient error, quota) shouldn't take down every other section
+        // that would have loaded fine.
+        return { id: d.id, name: d.name, ok: false };
+      }
     }),
   );
 
@@ -35,17 +62,26 @@ export default async function MemberDocumentsPage() {
       </p>
 
       <div className="flex flex-col gap-5">
-        {sections.map((s) => (
-          <DriveExplorer
-            key={s.id}
-            driveFolderId={s.contents.driveFolderId}
-            access={s.contents.access}
-            title={s.contents.title}
-            periodId={s.contents.periodId}
-            departmentId={s.contents.departmentId}
-            items={s.contents.items}
-          />
-        ))}
+        {sections.map((s) =>
+          s.ok ? (
+            <DriveExplorer
+              key={s.id}
+              driveFolderId={s.contents.driveFolderId}
+              access={s.contents.access}
+              title={s.contents.title}
+              periodId={s.contents.periodId}
+              departmentId={s.contents.departmentId}
+              items={s.contents.items}
+            />
+          ) : (
+            <div
+              key={s.id}
+              className="bg-surface-container-lowest border border-outline-variant rounded-xl p-4 text-body-md text-on-surface-variant"
+            >
+              Folder {s.name} tidak bisa dimuat saat ini.
+            </div>
+          ),
+        )}
       </div>
     </div>
   );

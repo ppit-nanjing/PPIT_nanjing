@@ -1,4 +1,4 @@
-import { relations } from "drizzle-orm";
+import { relations, sql } from "drizzle-orm";
 import {
   pgTable,
   pgEnum,
@@ -1138,12 +1138,28 @@ export const shortLinkRelations = relations(shortLinks, ({ one }) => ({
 // Pemetaan (periode, divisi) -> folder id di Google Drive, supaya kita tidak
 // membuat ulang folder tiap kali dan tahu persis letak tiap folder untuk
 // enforce akses (anggota boleh CRUD folder divisinya, divisi lain read-only).
-export const driveFolders = pgTable("drive_folders", {
-  id: uuid("id").defaultRandom().primaryKey(),
-  managementPeriodId: uuid("management_period_id").references(() => managementPeriods.id),
-  departmentId: uuid("department_id").references(() => departments.id),
-  name: text("name").notNull(),
-  driveFolderId: text("drive_folder_id").notNull(),
-  parentDriveFolderId: text("parent_drive_folder_id"),
-  createdAt: timestamp("created_at").notNull().defaultNow(),
-});
+export const driveFolders = pgTable(
+  "drive_folders",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    managementPeriodId: uuid("management_period_id").references(() => managementPeriods.id),
+    departmentId: uuid("department_id").references(() => departments.id),
+    name: text("name").notNull(),
+    driveFolderId: text("drive_folder_id").notNull(),
+    parentDriveFolderId: text("parent_drive_folder_id"),
+    createdAt: timestamp("created_at").notNull().defaultNow(),
+  },
+  (t) => [
+    // Prevents resolveDriveFolder()'s select-then-insert race from forking a
+    // (period, division) pair into two Drive folders + two DB rows. Two
+    // partial indexes because Postgres treats NULL as distinct in a plain
+    // unique index, which would let the period-level row (departmentId
+    // NULL) duplicate freely otherwise.
+    uniqueIndex("drive_folders_period_dept_idx")
+      .on(t.managementPeriodId, t.departmentId)
+      .where(sql`${t.departmentId} IS NOT NULL`),
+    uniqueIndex("drive_folders_period_only_idx")
+      .on(t.managementPeriodId)
+      .where(sql`${t.departmentId} IS NULL`),
+  ],
+);

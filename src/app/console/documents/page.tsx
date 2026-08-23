@@ -3,8 +3,9 @@ import { db } from "@/db";
 import { managementPeriods } from "@/db/schema";
 import { requireModuleAccess } from "@/lib/admin-scope";
 import { getCurrentPeriodId } from "@/lib/drive-access";
-import { getFolderContents } from "@/app/actions/drive";
+import { getFolderContents } from "@/lib/drive-queries";
 import { DriveExplorer } from "@/components/documents/drive-explorer";
+import { PeriodPicker } from "@/components/documents/period-picker";
 
 export default async function ConsoleDocumentsPage({
   searchParams,
@@ -66,24 +67,7 @@ export default async function ConsoleDocumentsPage({
       {contents && (
         <>
           <div className="flex flex-wrap items-center gap-3 mb-4">
-            <form method="get" className="flex items-end gap-2">
-              <label className="flex flex-col gap-1.5">
-                <span className="text-label-caps uppercase tracking-wide text-on-surface-variant">Periode</span>
-                <select
-                  name="period"
-                  defaultValue={activePeriodId ?? "all"}
-                  onChange={(e) => e.currentTarget.form?.requestSubmit()}
-                  className="bg-surface-container-lowest border border-outline-variant rounded-lg px-3 py-2 text-body-md"
-                >
-                  <option value="all">Pilih periode…</option>
-                  {periods.map((p) => (
-                    <option key={p.id} value={p.id}>
-                      {p.label}
-                    </option>
-                  ))}
-                </select>
-              </label>
-            </form>
+            <PeriodPicker periods={periods} activePeriodId={activePeriodId} />
             {folder && (
               <Link
                 href={`/console/documents${activePeriodId ? `?period=${activePeriodId}` : ""}`}
