@@ -1,7 +1,8 @@
 "use client";
 
-import { useSession, signIn, signOut } from "next-auth/react";
+import { useSession, signOut } from "next-auth/react";
 import { useState } from "react";
+import { usePathname, useSearchParams } from "next/navigation";
 import { ChevronDown, ShieldCheck, User, LogOut, Inbox } from "lucide-react";
 import { useT } from "@/lib/i18n/client";
 import Image from "next/image";
@@ -24,17 +25,20 @@ export function AccountMenu({ compact = false }: { compact?: boolean }) {
   const [open, setOpen] = useState(false);
   const [showTooltip, setShowTooltip] = useState(false);
   const t = useT();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const currentPath = searchParams.size ? `${pathname}?${searchParams.toString()}` : pathname;
 
   if (status === "loading") return null;
 
   if (!session) {
     return (
-      <button
-        onClick={() => signIn("google")}
+      <Link
+        href={`/login?returnTo=${encodeURIComponent(currentPath)}`}
         className="bg-primary-container text-on-primary text-label-caps uppercase tracking-wide px-5 py-2.5 rounded-md hover:bg-primary transition-colors"
       >
         {t("accountMenu.login")}
-      </button>
+      </Link>
     );
   }
 

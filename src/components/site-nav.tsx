@@ -1,8 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { usePathname } from "next/navigation";
-import { useSession, signIn } from "next-auth/react";
+import { usePathname, useSearchParams } from "next/navigation";
+import { useSession } from "next-auth/react";
 import { Menu, X, Search, User, ChevronDown, Languages } from "lucide-react";
 import Image from "next/image";
 import { AccountMenu } from "@/components/account-menu";
@@ -37,6 +37,8 @@ function useScrolled(threshold = 24) {
 
 export function SiteNav() {
   const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const currentPath = searchParams.size ? `${pathname}?${searchParams.toString()}` : pathname;
   const scrolled = useScrolled();
   const [menuOpen, setMenuOpen] = useState(false);
   const { open: paletteOpen, setOpen: setPaletteOpen } = useCommandPalette();
@@ -290,15 +292,13 @@ export function SiteNav() {
                 </div>
               </div>
             ) : (
-              <button
-                onClick={() => {
-                  setMenuOpen(false);
-                  signIn("google");
-                }}
-                className="w-full bg-primary-container text-on-primary text-label-caps uppercase tracking-wide px-6 py-3 rounded-md hover:bg-primary transition-colors"
+              <Link
+                href={`/login?returnTo=${encodeURIComponent(currentPath)}`}
+                onClick={() => setMenuOpen(false)}
+                className="w-full block text-center bg-primary-container text-on-primary text-label-caps uppercase tracking-wide px-6 py-3 rounded-md hover:bg-primary transition-colors"
               >
                 {t("nav.login")}
-              </button>
+              </Link>
             )}
           </div>
 
