@@ -10,6 +10,7 @@ import {
   updateUserDetails,
   deleteUser,
 } from "@/app/actions/admin-users";
+import { ConfirmButton } from "@/components/console/confirm-button";
 
 interface Row {
   id: string;
@@ -332,20 +333,17 @@ function UserRow({
           >
             Edit
           </button>
-          <button
-            type="button"
-            onClick={() => {
-              if (confirm("Hapus pengguna ini? Tindakan tidak dapat dibatalkan.")) {
-                startTransition(async () => {
-                  await deleteUser(user.id);
-                  router.refresh();
-                });
-              }
+          <ConfirmButton
+            onConfirm={async () => {
+              await deleteUser(user.id);
+              router.refresh();
             }}
+            title="Hapus pengguna?"
+            message="Tindakan ini tidak dapat dibatalkan."
             className="flex-1 text-label-caps uppercase tracking-wide px-3 py-1.5 rounded-md border border-error/40 text-error hover:bg-error/10 transition-colors"
           >
             Hapus
-          </button>
+          </ConfirmButton>
         </div>
       </div>
     );
@@ -404,20 +402,17 @@ function UserRow({
           >
             Edit
           </button>
-          <button
-            type="button"
-            onClick={() => {
-              if (confirm("Hapus pengguna ini? Tindakan tidak dapat dibatalkan.")) {
-                startTransition(async () => {
-                  await deleteUser(user.id);
-                  router.refresh();
-                });
-              }
+          <ConfirmButton
+            onConfirm={async () => {
+              await deleteUser(user.id);
+              router.refresh();
             }}
+            title="Hapus pengguna?"
+            message="Tindakan ini tidak dapat dibatalkan."
             className="text-label-caps uppercase tracking-wide px-3 py-1.5 rounded-md border border-error/40 text-error hover:bg-error/10 transition-colors"
           >
             Hapus
-          </button>
+          </ConfirmButton>
         </div>
       </td>
     </tr>

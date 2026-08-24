@@ -215,9 +215,8 @@ export async function updateMembershipNote(formData: FormData) {
   revalidatePath(`/console/membership/${id}`);
 }
 
-export async function deleteMembershipApplication(formData: FormData) {
+export async function deleteMembershipApplication(id: string) {
   await requireModuleAccess("membership");
-  const id = String(formData.get("id") ?? "");
   await db.delete(membershipApplications).where(eq(membershipApplications.id, id));
   revalidatePath("/console/membership");
   redirect("/console/membership");

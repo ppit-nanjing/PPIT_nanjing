@@ -4,6 +4,7 @@ import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { Folder as FolderIcon, File as FileIcon, Trash2, Pencil, FolderPlus } from "lucide-react";
 import { CopyLinkButton } from "@/components/console/copy-link-button";
+import { ConfirmButton } from "@/components/console/confirm-button";
 import type { DriveItem } from "@/app/actions/drive";
 import {
   createDriveFolderAction,
@@ -106,7 +107,6 @@ export function DriveExplorer({
   }
 
   async function onDelete(item: DriveItem) {
-    if (!window.confirm(`Hapus "${item.name}"? (dipindahkan ke sampah Drive)`)) return;
     setError(null);
     const fd = new FormData();
     fd.set("fileId", item.id);
@@ -209,9 +209,15 @@ export function DriveExplorer({
                     <button onClick={() => onRename(item)} aria-label="Ubah nama" className="text-on-surface-variant hover:text-on-background p-1.5">
                       <Pencil size={16} />
                     </button>
-                    <button onClick={() => onDelete(item)} aria-label="Hapus" className="text-on-surface-variant hover:text-error p-1.5">
+                    <ConfirmButton
+                      onConfirm={() => onDelete(item)}
+                      title="Hapus berkas?"
+                      message={`"${item.name}" akan dipindahkan ke sampah Drive.`}
+                      aria-label="Hapus"
+                      className="text-on-surface-variant hover:text-error p-1.5"
+                    >
                       <Trash2 size={16} />
-                    </button>
+                    </ConfirmButton>
                   </div>
                 )}
               </li>
