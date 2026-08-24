@@ -50,6 +50,9 @@ export const id = {
   "footer.aboutLinks.privacy": "Privasi",
   "footer.aboutLinks.adart": "AD/ART",
   "footer.instagramAria": "Instagram PPIT Nanjing",
+  "footer.tagline": "Organisasi pelajar dan mahasiswa Indonesia di Nanjing, Tiongkok.",
+  "footer.exploreHeading": "Jelajahi",
+  "footer.discoverHeading": "Temukan",
 
   "accountMenu.myProfile": "Profil Saya",
   "accountMenu.submissions": "Riwayat Pengajuan",

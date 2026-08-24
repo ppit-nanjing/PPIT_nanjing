@@ -47,6 +47,9 @@ export const en = {
   "footer.aboutLinks.privacy": "Privacy",
   "footer.aboutLinks.adart": "AD/ART",
   "footer.instagramAria": "PPIT Nanjing Instagram",
+  "footer.tagline": "The Indonesian student community in Nanjing, China.",
+  "footer.exploreHeading": "Explore",
+  "footer.discoverHeading": "Discover",
 
   "accountMenu.myProfile": "My Profile",
   "accountMenu.submissions": "My Submissions",
