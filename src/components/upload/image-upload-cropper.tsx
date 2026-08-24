@@ -13,7 +13,7 @@ type Props = {
   // the Sensus wizard, which collects values into local state and submits via a
   // server action) instead passes `value` + `onValueChange` and omits `name`.
   name?: string;
-  folder: "resume" | "news" | "gallery" | "album" | "inventory" | "avatar" | "sensus" | "events" | "membership";
+  folder: "resume" | "news" | "gallery" | "album" | "inventory" | "avatar" | "sensus" | "events" | "membership" | "catalog" | "donation";
   label?: string;
   placeholder?: string;
   required?: boolean;
@@ -204,6 +204,29 @@ export function ImageUploadCropper({
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src={displayUrl} alt={t("upload.preview")} className="max-h-40 rounded-md object-contain border border-outline-variant" />
             <span className="text-label-caps text-on-surface-variant">{t("upload.preview")}</span>
+            <div className="flex items-center gap-2 mt-1" onClick={(e) => e.stopPropagation()}>
+              <button
+                type="button"
+                onClick={() => fileInputRef.current?.click()}
+                className="flex items-center gap-1 text-label-caps text-primary-container hover:text-secondary transition-colors"
+              >
+                <Upload size={12} /> {t("upload.changeImage")}
+              </button>
+              <span className="text-outline-variant" aria-hidden>|</span>
+              <button
+                type="button"
+                onClick={() => {
+                  if (previewUrl) URL.revokeObjectURL(previewUrl);
+                  setPreviewUrl(null);
+                  setFile(null);
+                  setError(null);
+                  commit("");
+                }}
+                className="flex items-center gap-1 text-label-caps text-error hover:opacity-80 transition-opacity"
+              >
+                <X size={12} /> {t("upload.removeImage")}
+              </button>
+            </div>
           </div>
         ) : (
           <ImageIcon className="text-secondary" size={28} />

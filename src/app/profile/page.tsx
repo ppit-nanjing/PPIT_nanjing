@@ -11,13 +11,18 @@ import { LanguageSelector } from "@/components/profile/language-selector";
 import { ImageUploadCropper } from "@/components/upload/image-upload-cropper";
 import { updateProfile } from "@/app/actions/user";
 import { getT } from "@/lib/i18n/server";
-import { ClipboardCheck, ClipboardList, UserRound } from "lucide-react";
+import { ClipboardCheck, ClipboardList, UserRound, CheckCircle2 } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 
-export default async function ProfilePage() {
+export default async function ProfilePage({
+  searchParams,
+}: {
+  searchParams: Promise<{ saved?: string }>;
+}) {
   const session = await auth();
   if (!session?.user?.id) redirect(`/login?returnTo=${encodeURIComponent("/profile")}`);
+  const { saved } = await searchParams;
 
   const [user] = await db.select().from(users).where(eq(users.id, session.user.id));
   const [sensus] = await db.select().from(sensusProfiles).where(eq(sensusProfiles.userId, session.user.id));
@@ -29,6 +34,16 @@ export default async function ProfilePage() {
       <div className="min-h-screen bg-background px-[var(--spacing-container-padding)] py-16">
         <div className="max-w-2xl mx-auto">
         <h1 className="text-headline-lg text-on-background mb-8">{t("profile.title")}</h1>
+
+        {saved === "1" && (
+          <div
+            role="status"
+            className="flex items-center gap-2 bg-surface-container border border-outline-variant rounded-md px-4 py-3 mb-6"
+          >
+            <CheckCircle2 size={18} className="text-primary-container shrink-0" aria-hidden />
+            <span className="text-body-sm text-on-background">{t("profile.savedNotice")}</span>
+          </div>
+        )}
 
         <div className="flex items-center gap-4 mb-10">
           {user?.avatarUrl || session.user.image ? (

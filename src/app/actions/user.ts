@@ -1,6 +1,8 @@
 "use server";
 
 import { eq } from "drizzle-orm";
+import { revalidatePath } from "next/cache";
+import { redirect } from "next/navigation";
 import { auth } from "@/auth";
 import { db } from "@/db";
 import { users } from "@/db/schema";
@@ -47,4 +49,9 @@ export async function updateProfile(formData: FormData) {
       tiktokUrl: tiktokUrl || null,
     })
     .where(eq(users.id, session.user.id));
+
+  // Fresh data on the re-render + explicit success signal via query param -
+  // without this the page looks untouched and users assume nothing saved.
+  revalidatePath("/profile");
+  redirect("/profile?saved=1");
 }
