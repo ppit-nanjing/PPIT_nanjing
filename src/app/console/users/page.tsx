@@ -7,6 +7,7 @@ import { CollapsibleSection } from "@/components/console/collapsible-section";
 import { GuideButton } from "@/components/console/guide-button";
 import { getGuide } from "@/lib/guides";
 import { Field, fieldInput, FormActions, primaryBtn } from "@/components/console/form";
+import { Download } from "lucide-react";
 
 export default async function ConsoleUsersPage() {
   await requireModuleAccess("users");
@@ -41,7 +42,10 @@ export default async function ConsoleUsersPage() {
         {guide && <GuideButton title={guide.title} content={guide.content} docSlug="pengguna" />}
       </div>
       <p className="text-body-md text-on-surface-variant mb-8">
-        {rows.length} pengguna terdaftar. Akun muncul otomatis saat masuk dengan Google atau mendaftar kata sandi.
+        {rows.length} pengguna terdaftar. Akun muncul otomatis saat masuk dengan Google atau mendaftar kata sandi.{" "}
+        <a href="/api/console/users/export" download className="text-primary-container hover:text-primary inline-flex items-center gap-1">
+          <Download size={13} aria-hidden /> Export ke CSV
+        </a>
       </p>
       <div className="mb-8">
         <CollapsibleSection

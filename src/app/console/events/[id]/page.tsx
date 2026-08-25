@@ -19,6 +19,7 @@ import { HtmFields } from "@/components/console/htm-fields";
 import { PAYMENT_STATUS_LABEL } from "@/lib/payment-status-labels";
 import { toDateLocalInput } from "@/lib/datetime";
 import { ConfirmButton } from "@/components/console/confirm-button";
+import { Download } from "lucide-react";
 
 const QUESTION_TYPE_LABELS: Record<string, string> = {
   text: "Teks Pendek",
@@ -430,6 +431,15 @@ export default async function ConsoleEventDetailPage({ params }: { params: Promi
       </CollapsibleSection>
 
       <CollapsibleSection title="Daftar Pendaftar" description={`${registrations.length} terdaftar · ${attended} hadir`}>
+        {registrations.length > 0 && (
+          <a
+            href={`/api/console/events/${id}/registrations/export`}
+            className="self-start inline-flex items-center gap-1.5 text-label-caps uppercase tracking-wide text-primary-container hover:text-primary transition-colors mb-3"
+            download
+          >
+            <Download size={13} aria-hidden /> Export ke CSV
+          </a>
+        )}
         <RegistrationList
           eventId={id}
           questions={questions.map((q) => ({ id: q.id, label: q.label }))}
