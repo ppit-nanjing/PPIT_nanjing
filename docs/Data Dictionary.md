@@ -104,7 +104,10 @@ Data sensus/pendataan detail mahasiswa — terpisah dari `USER` dasar karena for
 | certificate_for_participants | boolean, default `true` | saklar "semua peserta dapat e-certificate"; penerbitannya tetap manual lewat tombol Terbitkan Sertifikat Peserta |
 
 ### EVENT_REGISTRATION
-`id`, `event_id` FK, `user_id` FK (unik per pasangan event+user), `status` (enum: `pending`, `confirmed`, `attended`, `cancelled`), `qr_code_token` (unik, untuk check-in — sumber: layar *Event Registration Success (QR Ticket)*), `registered_at`, `checked_in_at` nullable, `branch` (jawaban cabang sekali-pakai khusus acara ini, tidak disalin ke profil). Pembayaran manual per-orangan: `payment_status` (`not_required`, `unpaid`, `submitted`, `verified`, `rejected`), `payment_proof_url` (bukti transfer yang dikirim peserta), `payment_note`, `payment_verified_at`, `payment_verified_by` FK → USER.
+`id`, `event_id` FK, `user_id` FK (unik per pasangan event+user), `status` (enum: `pending`, `confirmed`, `attended`, `cancelled`), `qr_code_token` (unik, untuk check-in — sumber: layar *Event Registration Success (QR Ticket)*), `registered_at`, `checked_in_at` nullable, `branch` (jawaban cabang sekali-pakai khusus acara ini, tidak disalin ke profil), `answers_json` (jawaban pertanyaan kustom `{ [questionId]: string }`; kunci pertanyaan yang dihapus dibiarkan mati). Pembayaran manual per-orangan: `payment_status` (`not_required`, `unpaid`, `submitted`, `verified`, `rejected`), `payment_proof_url` (bukti transfer yang dikirim peserta), `payment_note`, `payment_verified_at`, `payment_verified_by` FK → USER.
+
+### EVENT_QUESTION
+Pertanyaan tambahan form pendaftaran satu acara — kosong berarti form standar. `id`, `event_id` FK (cascade), `label`, `type` enum (`text`, `textarea`, `select`, `radio`, `multiselect`), `options` (satu opsi per baris, wajib untuk tipe pilihan), `required`, `order_index`.
 
 ### EVENT_DIVISION
 Struktur divisi kepanitiaan satu acara. `id`, `event_id` FK, `parent_division_id` FK → dirinya sendiri (bertingkat bebas), `name` (**teks bebas** — tiap acara boleh punya susunan sendiri, bukan enum), `quota` (target jumlah orang, nullable), `job_description` (satu poin per baris), `order_index`.

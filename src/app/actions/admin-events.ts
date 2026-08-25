@@ -1,11 +1,11 @@
 "use server";
 
-import { eq, and } from "drizzle-orm";
+import { eq, and, sql } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { auth } from "@/auth";
 import { db } from "@/db";
-import { events, eventRegistrations, galleryAlbums } from "@/db/schema";
+import { events, eventRegistrations, eventQuestions, galleryAlbums } from "@/db/schema";
 import { hasModuleAccess } from "@/lib/admin-scope";
 import { createTemplatedNotification } from "@/lib/notifications";
 
@@ -151,6 +151,66 @@ export async function setEventStatus(formData: FormData) {
     .set({ status: status as (typeof events.status.enumValues)[number] })
     .where(eq(events.id, id));
   revalidatePath("/console/events");
+}
+
+// ---------- Pertanyaan pendaftaran kustom per-acara ----------
+
+const QUESTION_TYPES = ["text", "textarea", "select", "radio", "multiselect"] as const;
+
+function parseQuestionOptions(formData: FormData, type: string): string | null {
+  const raw = String(formData.get("options") ?? "")
+    .split("\n")
+    .map((l) => l.trim())
+    .filter(Boolean)
+    .join("\n");
+  // Pilihan tanpa opsi = pertanyaan yang tidak bisa dijawab - tolak di sini,
+  // bukan saat peserta kebingungan menghadapi dropdown kosong.
+  if ((type === "select" || type === "radio" || type === "multiselect") && !raw) {
+    throw new Error("Tipe pilihan butuh minimal satu opsi (satu per baris)");
+  }
+  return raw || null;
+}
+
+/** Tambah / ubah satu pertanyaan. Ada `id` = ubah; tanpa `id` = tambah di urutan terakhir. */
+export async function saveEventQuestion(formData: FormData) {
+  await requireAdmin();
+  const eventId = String(formData.get("eventId") ?? "");
+  const label = String(formData.get("label") ?? "").trim();
+  const type = String(formData.get("type") ?? "text");
+  if (!eventId || !label) throw new Error("Acara dan label pertanyaan wajib diisi");
+  if (!QUESTION_TYPES.includes(type as (typeof QUESTION_TYPES)[number])) {
+    throw new Error("Tipe pertanyaan tidak valid");
+  }
+  const values = {
+    eventId,
+    label,
+    type: type as (typeof QUESTION_TYPES)[number],
+    options: parseQuestionOptions(formData, type),
+    required: formData.get("required") === "on",
+  };
+
+  const id = String(formData.get("id") ?? "").trim();
+  if (id) {
+    await db.update(eventQuestions).set(values).where(eq(eventQuestions.id, id));
+  } else {
+    const [{ maxOrder }] = await db
+      .select({ maxOrder: sql`coalesce(max(${eventQuestions.orderIndex}), 0)` })
+      .from(eventQuestions)
+      .where(eq(eventQuestions.eventId, eventId));
+    await db.insert(eventQuestions).values({ ...values, orderIndex: Number(maxOrder) + 1 });
+  }
+  revalidatePath(`/console/events/${eventId}`);
+}
+
+export async function deleteEventQuestion(formData: FormData) {
+  await requireAdmin();
+  const id = String(formData.get("id") ?? "");
+  const [row] = await db
+    .select({ eventId: eventQuestions.eventId })
+    .from(eventQuestions)
+    .where(eq(eventQuestions.id, id));
+  await db.delete(eventQuestions).where(eq(eventQuestions.id, id));
+  if (row) revalidatePath(`/console/events/${row.eventId}`);
 }
 
 export async function checkInRegistration(registrationId: string, eventId: string) {

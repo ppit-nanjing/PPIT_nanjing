@@ -424,9 +424,37 @@ export const eventRegistrations = pgTable(
     paymentNote: text("payment_note"),
     paymentVerifiedAt: timestamp("payment_verified_at"),
     paymentVerifiedBy: uuid("payment_verified_by").references((): AnyPgColumn => users.id),
+    // Jawaban pertanyaan kustom acara (event_questions): { [questionId]: string }.
+    // Multiselect digabung koma. JSON, bukan tabel anak, karena bentuknya bebas
+    // per acara dan selalu dibaca bersama registrasinya; pertanyaan yang sudah
+    // dihapus menyisakan kunci mati di sini - tidak masalah, diabaikan saat render.
+    answersJson: jsonb("answers_json").$type<Record<string, string>>().default({}),
   },
   (t) => [uniqueIndex("event_user_unique").on(t.eventId, t.userId)]
 );
+
+// Pertanyaan tambahan pada form pendaftaran SATU acara. Tidak semua acara
+// butuh - kosong berarti form publik persis seperti dulu (cuma cabang bila
+// perlu). Tipe dibatasi lima yang benar-benar terpakai untuk acara, bukan
+// seluruh 18 tipe form keanggotaan yang penuh fitur kuis/grid.
+export const eventQuestionTypeEnum = pgEnum("event_question_type", [
+  "text",
+  "textarea",
+  "select",
+  "radio",
+  "multiselect",
+]);
+
+export const eventQuestions = pgTable("event_questions", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  eventId: uuid("event_id").notNull().references(() => events.id, { onDelete: "cascade" }),
+  label: text("label").notNull(),
+  type: eventQuestionTypeEnum("type").notNull().default("text"),
+  // Pilihan untuk select/radio/multiselect, satu opsi per baris.
+  options: text("options"),
+  required: boolean("required").notNull().default(false),
+  orderIndex: integer("order_index").notNull().default(0),
+});
 
 // ---------- 4. Content ----------
 

@@ -18,6 +18,7 @@ erDiagram
     DEPARTMENT ||--o{ EVENT : organizes
     USER ||--o{ EVENT : "created by"
     EVENT ||--o{ EVENT_REGISTRATION : has
+    EVENT ||--o{ EVENT_QUESTION : asks
     USER ||--o{ EVENT_REGISTRATION : registers
     EVENT ||--o{ EVENT_DIVISION : structures
     EVENT_DIVISION ||--o{ EVENT_DIVISION : "parent of"
@@ -134,6 +135,14 @@ erDiagram
         uuid parent_division_id FK
         string name
         int quota
+    }
+    EVENT_QUESTION {
+        uuid id PK
+        uuid event_id FK
+        string label
+        enum type
+        text options
+        bool required
     }
     EVENT_COMMITTEE {
         uuid id PK
@@ -306,7 +315,7 @@ erDiagram
 |---|---|---|
 | **Identitas & Akses** | USER, ROLE, PERMISSION, ROLE_PERMISSION, SENSUS_PROFILE | [Login & Account](./Homepage%20&%20Login.md), [Sensus Profile Flow](./Sensus%20Profile%20Flow.md), [User & Role Management](./User%20&%20Role%20Management.md) |
 | **Organisasi** | DEPARTMENT, DEPARTMENT_MEMBER, AUDIT_LOG, ORGANIZATION_DOCUMENT, REGIONAL_BRANCH | [Organization Management](./Organization%20Management.md), [Organization & Regional Branches](./Organization%20&%20Regional%20Branches.md) |
-| **Events** | EVENT, EVENT_REGISTRATION, EVENT_DIVISION, EVENT_COMMITTEE, CERTIFICATE | [Event Flow](./Event%20Flow.md), [Event Management](./Event%20Management.md) |
+| **Events** | EVENT, EVENT_REGISTRATION, EVENT_QUESTION, EVENT_DIVISION, EVENT_COMMITTEE, CERTIFICATE | [Event Flow](./Event%20Flow.md), [Event Management](./Event%20Management.md) |
 | **Konten** | NEWS_ARTICLE, GALLERY_ALBUM, GALLERY_PHOTO | [Content Pages](./Content%20Pages.md) |
 | **Karir** | JOB_POSTING, JOB_APPLICATION, CAREER_GUIDE_ARTICLE, MENTORSHIP_APPLICATION | [Career Flow](./Career%20Flow.md) |
 | **Keanggotaan** | RECRUITMENT_PERIOD, MEMBERSHIP_APPLICATION | [Join Us Flow](./Join%20Us%20Flow.md) |

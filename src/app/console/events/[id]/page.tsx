@@ -1,9 +1,9 @@
 import { eq, desc } from "drizzle-orm";
 import { notFound } from "next/navigation";
 import { db } from "@/db";
-import { certificates, events, eventRegistrations, sensusProfiles, users } from "@/db/schema";
+import { certificates, events, eventQuestions, eventRegistrations, sensusProfiles, users } from "@/db/schema";
 import { MEMBERSHIP_LABEL, effectiveBranch, membershipStatus } from "@/lib/membership-status";
-import { updateEvent } from "@/app/actions/admin-events";
+import { updateEvent, saveEventQuestion, deleteEventQuestion } from "@/app/actions/admin-events";
 import { publishDueEvents } from "@/lib/publish-events";
 import { DeleteEventButton } from "@/components/console/delete-event-button";
 import { RegistrationList } from "@/components/console/registration-list";
@@ -16,6 +16,14 @@ import { AIReviewButton } from "@/components/ai/ai-review-popup";
 import { CollapsibleSection } from "@/components/console/collapsible-section";
 import { HtmFields } from "@/components/console/htm-fields";
 import { PAYMENT_STATUS_LABEL } from "@/lib/payment-status-labels";
+
+const QUESTION_TYPE_LABELS: Record<string, string> = {
+  text: "Teks Pendek",
+  textarea: "Teks Panjang",
+  select: "Dropdown",
+  radio: "Pilihan (radio)",
+  multiselect: "Pilih Banyak (centang)",
+};
 
 export default async function ConsoleEventDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const session = await requireModuleAccess("events");
@@ -44,6 +52,11 @@ export default async function ConsoleEventDetailPage({ params }: { params: Promi
   // bisa ditugaskan. Kandidatnya SEMUA akun, bukan cuma anggota departemen:
   // kepanitiaan acara memang tidak terikat jabatan struktural.
   const { divisions, members: committee } = await listEventDivisions(id);
+  const questions = await db
+    .select()
+    .from(eventQuestions)
+    .where(eq(eventQuestions.eventId, id))
+    .orderBy(eventQuestions.orderIndex, eventQuestions.id);
   const candidates = await db
     .select({ id: users.id, name: users.name, email: users.email })
     .from(users)
@@ -214,6 +227,108 @@ export default async function ConsoleEventDetailPage({ params }: { params: Promi
       </details>
 
       <CollapsibleSection
+        title="Pertanyaan Pendaftaran"
+        description={questions.length > 0 ? `${questions.length} pertanyaan` : "tidak ada — form standar"}
+      >
+        <p className="text-body-md text-on-surface-variant mb-4 max-w-2xl">
+          Kosong = pendaftar cuma isi form standar. Tambahkan pertanyaan di bawah bila acara ini butuh
+          (mis. preferensi makanan, ukuran kaos); pertanyaannya muncul di form pendaftaran publik dan
+          jawabannya tampil di Daftar Pendaftar.
+        </p>
+        <div className="flex flex-col gap-3">
+          {questions.map((q, i) => (
+            <form
+              key={q.id}
+              action={saveEventQuestion}
+              className="bg-surface-container-lowest border border-outline-variant rounded-lg p-4 flex flex-col gap-3"
+            >
+              <input type="hidden" name="id" value={q.id} />
+              <input type="hidden" name="eventId" value={id} />
+              <div className="grid grid-cols-1 sm:grid-cols-[1fr_auto] gap-3">
+                <label className="flex flex-col gap-1">
+                  <span className="text-label-caps uppercase tracking-wide text-on-surface-variant">
+                    Pertanyaan {i + 1}
+                  </span>
+                  <input name="label" defaultValue={q.label} required className="bg-soft-gray rounded-md p-2.5 text-body-md" />
+                </label>
+                <label className="flex flex-col gap-1">
+                  <span className="text-label-caps uppercase tracking-wide text-on-surface-variant">Tipe</span>
+                  <select name="type" defaultValue={q.type} className="bg-soft-gray rounded-md p-2.5 text-body-md">
+                    {Object.entries(QUESTION_TYPE_LABELS).map(([value, lbl]) => (
+                      <option key={value} value={value}>{lbl}</option>
+                    ))}
+                  </select>
+                </label>
+              </div>
+              <label className="flex flex-col gap-1">
+                <span className="text-label-caps uppercase tracking-wide text-on-surface-variant">
+                  Opsi (satu per baris — untuk Dropdown / Pilihan / Pilih Banyak)
+                </span>
+                <textarea
+                  name="options"
+                  defaultValue={q.options ?? ""}
+                  rows={2}
+                  placeholder={"Vegetarian\nHalal saja\nBiasa"}
+                  className="bg-soft-gray rounded-md p-2.5 text-body-md resize-none"
+                />
+              </label>
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <label className="flex items-center gap-2 text-body-md cursor-pointer">
+                  <input type="checkbox" name="required" defaultChecked={q.required} className="h-4 w-4 accent-[var(--color-primary-container)]" />
+                  Wajib diisi
+                </label>
+                <div className="flex items-center gap-2">
+                  <button
+                    type="submit"
+                    className="text-label-caps uppercase tracking-wide border border-outline-variant px-3 py-1.5 rounded-md hover:bg-surface-container-low transition-colors"
+                  >
+                    Simpan
+                  </button>
+                  <button
+                    type="submit"
+                    formAction={deleteEventQuestion}
+                    className="text-label-caps uppercase tracking-wide text-error hover:bg-error-container/30 px-3 py-1.5 rounded-md"
+                  >
+                    Hapus
+                  </button>
+                </div>
+              </div>
+            </form>
+          ))}
+        </div>
+        <form action={saveEventQuestion} className="mt-4 bg-surface-container-low border border-outline-variant rounded-lg p-4 flex flex-col gap-3">
+          <input type="hidden" name="eventId" value={id} />
+          <p className="text-label-caps uppercase tracking-wide text-primary-container">+ Tambah Pertanyaan</p>
+          <div className="grid grid-cols-1 sm:grid-cols-[1fr_auto] gap-3">
+            <input name="label" required placeholder="Pertanyaan (mis. Preferensi makanan)" className="bg-soft-gray rounded-md p-2.5 text-body-md" />
+            <select name="type" defaultValue="text" className="bg-soft-gray rounded-md p-2.5 text-body-md">
+              {Object.entries(QUESTION_TYPE_LABELS).map(([value, lbl]) => (
+                <option key={value} value={value}>{lbl}</option>
+              ))}
+            </select>
+          </div>
+          <textarea
+            name="options"
+            rows={2}
+            placeholder={"Opsi (satu per baris, hanya untuk Dropdown / Pilihan / Pilih Banyak):\nVegetarian\nHalal saja\nBiasa"}
+            className="bg-soft-gray rounded-md p-2.5 text-body-md resize-none"
+          />
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <label className="flex items-center gap-2 text-body-md cursor-pointer">
+              <input type="checkbox" name="required" className="h-4 w-4 accent-[var(--color-primary-container)]" />
+              Wajib diisi
+            </label>
+            <button
+              type="submit"
+              className="bg-primary-container text-on-primary text-label-caps uppercase tracking-wide px-4 py-2 rounded-md hover:bg-primary transition-colors"
+            >
+              Tambah
+            </button>
+          </div>
+        </form>
+      </CollapsibleSection>
+
+      <CollapsibleSection
         title="Struktur Kepanitiaan"
         description={`${divisions.length} divisi · ${committee.length} panitia`}
       >
@@ -343,12 +458,14 @@ export default async function ConsoleEventDetailPage({ params }: { params: Promi
         </div>
         <RegistrationList
           eventId={id}
+          questions={questions.map((q) => ({ id: q.id, label: q.label }))}
           registrations={registrations.map((r) => ({
             id: r.reg.id,
             userName: r.userName,
             userEmail: r.userEmail,
             status: r.reg.status,
             registeredAt: r.reg.registeredAt.toISOString(),
+            answers: r.reg.answersJson ?? {},
             membership: MEMBERSHIP_LABEL[
               membershipStatus(
                 r.sensusCompletion ? { branch: r.sensusBranch, completionStatus: r.sensusCompletion } : null

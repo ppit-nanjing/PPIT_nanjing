@@ -43,18 +43,22 @@ Jika event ditandai berbayar, registrasi berlanjut ke pembayaran manual — tanp
 
 Pembayaran dihitung **perorangan**: satu pendaftaran satu tanggungan bayar, tidak ada pembayaran berkelompok. Detail sisi admin ada di [Event Management](./Event%20Management.md) § HTM.
 
+## Pertanyaan kustom saat mendaftar
+
+Admin bisa menambah pertanyaan per acara (teks pendek/panjang, dropdown, pilihan, pilih banyak; opsi satu per baris; bisa wajib). Tanpa pertanyaan, form tetap standar. Jawaban disimpan bersama pendaftaran (`EVENT_REGISTRATION.answers_json`) dan tampil ke admin di Daftar Pendaftar.
+
 ## Setelah acara: e-certificate & riwayat
 
 - **Semua peserta dapat e-certificate** secara bawaan — panitia menekan satu tombol "Terbitkan Sertifikat Peserta" di konsol untuk menerbitkan sekaligus (checkbox di acara bisa mematikannya untuk acara tanpa sertifikat). Sertifikat tambahan (juara, panitia, pemateri) diterbitkan manual lewat Work Ledger, lihat [Event Management](./Event%20Management.md) § Sertifikat.
 - Sertifikat yang sudah terbit tampil di **profil user**. Profil menyediakan dua akses riwayat:
   - **E-Sertifikat** — semua sertifikat yang pernah diterima user;
-  - **Riwayat Acara** — acara yang pernah diikuti; saat ini tergabung dalam Riwayat Pengajuan lintas-domain di `/profile/submissions` (lihat catatan implementasi di bawah).
+  - **Riwayat Acara** — acara yang pernah diikuti (semua pendaftaran, terbaru dulu, dengan chip status); riwayat lintas-domain lain (pinjam barang, lamaran kerja) tetap di `/profile/submissions`.
 
 ## Catatan implementasi
 
 - QR code **wajib di-generate di server** (Edge Function), bukan di client, supaya token tidak bisa dipalsukan — lihat [Tech Stack](./Tech%20Stack.md).
 - "Submission History" kemungkinan adalah halaman gabungan lintas-domain (event + borrow + job) — pertimbangkan sebagai satu view yang query beberapa tabel (`EVENT_REGISTRATION`, `BORROW_REQUEST`, `JOB_APPLICATION`) filtered by `user_id`, bukan tabel tersendiri. **Status implementasi:** sudah jadi `/profile/submissions` dengan pola persis itu.
-- **Status:** E-Sertifikat sudah tampil di `/profile` (bagian E-Sertifikat, via `getMyCertificates`). Riwayat acara tercakup di `/profile/submissions`; kalau mau tab terpisah khusus acara, tinggal filter `kind=event` dari view yang sama.
+- **Status:** E-Sertifikat dan Riwayat Acara sudah tampil di `/profile` (via `getMyCertificates` + query `EVENT_REGISTRATION`). `/profile/submissions` tetap ada sebagai riwayat lintas-domain (event + borrow + job).
 
 ## Terkait admin
 

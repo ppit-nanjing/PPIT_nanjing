@@ -2,7 +2,7 @@ import { eq, and, ne, count, desc } from "drizzle-orm";
 import { notFound } from "next/navigation";
 import { auth } from "@/auth";
 import { db } from "@/db";
-import { events, eventRegistrations, galleryAlbums, galleryPhotos, regionalBranches } from "@/db/schema";
+import { events, eventRegistrations, eventQuestions, galleryAlbums, galleryPhotos, regionalBranches } from "@/db/schema";
 import { NON_STUDENT_BRANCH } from "@/lib/membership-status";
 import { hasCompletedSensus } from "@/lib/sensus-gate";
 import { SiteNav } from "@/components/site-nav";
@@ -69,6 +69,16 @@ export default async function EventDetailPage({ params }: { params: Promise<{ sl
   const deadlinePassed = event.registrationDeadline ? new Date(event.registrationDeadline) < now : false;
   const isFull = event.capacity != null && registeredCount >= event.capacity;
   const canRegister = event.status === "published" && !isFull && !deadlinePassed;
+
+  // Pertanyaan kustom hanya relevan bagi yang benar-benar akan melihat form.
+  const questions =
+    session?.user?.id && !alreadyRegistered && canRegister && !event.requiresSensus
+      ? await db
+          .select()
+          .from(eventQuestions)
+          .where(eq(eventQuestions.eventId, event.id))
+          .orderBy(eventQuestions.orderIndex, eventQuestions.id)
+      : [];
 
   const [album] = await db.select().from(galleryAlbums).where(eq(galleryAlbums.eventId, event.id));
   const photos = album
@@ -317,6 +327,46 @@ export default async function EventDetailPage({ params }: { params: Promise<{ sl
                             <span className="text-xs text-on-surface-variant">{t("events.branchHint")}</span>
                           </label>
                         )}
+                        {questions.map((q) => {
+                          const options = (q.options ?? "").split("\n").map((l) => l.trim()).filter(Boolean);
+                          const fieldClass =
+                            "bg-soft-gray rounded-md p-3 text-body-md focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-container";
+                          return (
+                            <fieldset key={q.id} className="flex flex-col gap-2 text-left border-0 p-0 m-0">
+                              <legend className="text-label-caps uppercase tracking-wide text-on-surface-variant p-0">
+                                {q.label}
+                                {q.required && <span className="text-error" aria-hidden="true"> *</span>}
+                              </legend>
+                              {q.type === "text" && (
+                                <input name={q.id} required={q.required} className={fieldClass} />
+                              )}
+                              {q.type === "textarea" && (
+                                <textarea name={q.id} required={q.required} rows={3} className={`${fieldClass} resize-none`} />
+                              )}
+                              {q.type === "select" && (
+                                <select name={q.id} required={q.required} defaultValue="" className={fieldClass}>
+                                  <option value="" disabled>—</option>
+                                  {options.map((o) => (
+                                    <option key={o} value={o}>{o}</option>
+                                  ))}
+                                </select>
+                              )}
+                              {(q.type === "radio" || q.type === "multiselect") &&
+                                options.map((o) => (
+                                  <label key={o} className="flex items-center gap-2 bg-soft-gray rounded-md p-2.5 text-body-md cursor-pointer">
+                                    <input
+                                      type={q.type === "radio" ? "radio" : "checkbox"}
+                                      name={q.id}
+                                      value={o}
+                                      required={q.required && q.type === "radio"}
+                                      className="h-4 w-4 accent-[var(--color-primary-container)]"
+                                    />
+                                    {o}
+                                  </label>
+                                ))}
+                            </fieldset>
+                          );
+                        })}
                         <button
                           type="submit"
                           className="w-full inline-flex items-center justify-center gap-2 bg-primary-container text-on-primary text-label-caps uppercase tracking-wide px-6 py-4 rounded-md hover:bg-primary transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-container focus-visible:ring-offset-2 focus-visible:ring-offset-surface-container-low"

@@ -15,6 +15,13 @@ interface Registration {
   // peserta saat mendaftar; null untuk pendaftaran lama sebelum ditanyakan.
   membership: string;
   branch: string | null;
+  // Jawaban pertanyaan kustom acara, { [questionId]: string }.
+  answers?: Record<string, string> | null;
+}
+
+interface QuestionRef {
+  id: string;
+  label: string;
 }
 
 const STATUS_LABEL: Record<Registration["status"], string> = {
@@ -24,12 +31,41 @@ const STATUS_LABEL: Record<Registration["status"], string> = {
   cancelled: "Dibatalkan",
 };
 
-export function RegistrationList({ eventId, registrations }: { eventId: string; registrations: Registration[] }) {
+export function RegistrationList({
+  eventId,
+  registrations,
+  questions = [],
+}: {
+  eventId: string;
+  registrations: Registration[];
+  questions?: QuestionRef[];
+}) {
   const [, startTransition] = useTransition();
 
   if (registrations.length === 0) {
     return <p className="text-body-md text-on-surface-variant">Belum ada yang mendaftar.</p>;
   }
+
+  // Jawaban dirakit sekali per baris; pertanyaan yang sudah dihapus dari acara
+  // menyisakan kunci mati di answersJson - dilewati, bukan ditampilkan kosong.
+  const answersOf = (r: Registration) =>
+    questions
+      .map((q) => ({ label: q.label, value: r.answers?.[q.id] ?? "" }))
+      .filter((a) => a.value);
+
+  const AnswerList = ({ r }: { r: Registration }) => {
+    const answers = answersOf(r);
+    if (answers.length === 0) return null;
+    return (
+      <ul className="mt-2 flex flex-col gap-0.5">
+        {answers.map((a) => (
+          <li key={a.label} className="text-label-caps text-on-surface-variant">
+            {a.label}: <span className="text-on-background normal-case">{a.value}</span>
+          </li>
+        ))}
+      </ul>
+    );
+  };
 
   return (
     <>
@@ -49,6 +85,7 @@ export function RegistrationList({ eventId, registrations }: { eventId: string; 
                 <td className="px-5 py-3">
                   <p className="font-medium text-on-background">{r.userName ?? "(tanpa nama)"}</p>
                   <p className="text-label-caps text-on-surface-variant">{r.userEmail}</p>
+                  <AnswerList r={r} />
                 </td>
                 <td className="px-5 py-3">
                   <p className="text-on-background">{r.branch ?? "—"}</p>
@@ -84,6 +121,7 @@ export function RegistrationList({ eventId, registrations }: { eventId: string; 
               <p className="text-label-caps text-on-surface-variant">
                 {r.branch ?? "—"} &middot; {r.membership}
               </p>
+              <AnswerList r={r} />
             </div>
             <div className="flex items-center justify-between gap-2">
               <span className="text-label-caps uppercase tracking-wide bg-surface-container-low px-2 py-1 rounded">
