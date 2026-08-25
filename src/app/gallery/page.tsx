@@ -1,4 +1,4 @@
-import { desc } from "drizzle-orm";
+import { desc, eq } from "drizzle-orm";
 import { db } from "@/db";
 import { galleryAlbums, galleryPhotos } from "@/db/schema";
 import { SiteNav } from "@/components/site-nav";
@@ -14,8 +14,11 @@ import { getT } from "@/lib/i18n/server";
 export default async function GalleryPage() {
   const { t } = await getT();
   const albums = await db.select().from(galleryAlbums).orderBy(desc(galleryAlbums.createdAt));
-  const allPhotos = await db.select().from(galleryPhotos);
-  const coverFor = (albumId: string) => allPhotos.find((p) => p.albumId === albumId)?.imageUrl;
+  const allPhotos = await db.select().from(galleryPhotos).where(eq(galleryPhotos.isHighlight, true));
+  // Covers and counts reflect highlights only - that's what visitors will see
+  // inside the album; the full set lives behind each album's Drive link.
+  const coverFor = (albumId: string) =>
+    allPhotos.find((p) => p.albumId === albumId)?.imageUrl;
   const countFor = (albumId: string) => allPhotos.filter((p) => p.albumId === albumId).length;
 
   return (

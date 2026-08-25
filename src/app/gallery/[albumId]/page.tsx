@@ -1,4 +1,4 @@
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import { notFound } from "next/navigation";
 import { db } from "@/db";
 import { galleryAlbums, galleryPhotos } from "@/db/schema";
@@ -7,7 +7,7 @@ import { SiteFooter } from "@/components/site-footer";
 import { AnimatedHeroHeading } from "@/components/animated-hero-heading";
 import { Reveal } from "@/components/reveal";
 import { GalleryLightbox } from "@/components/gallery-lightbox";
-import { ArrowLeft, Images } from "lucide-react";
+import { ArrowLeft, Images, Download } from "lucide-react";
 import Link from "next/link";
 import { getT } from "@/lib/i18n/server";
 
@@ -20,7 +20,12 @@ export default async function GalleryAlbumPage({
   const { t } = await getT();
   const [album] = await db.select().from(galleryAlbums).where(eq(galleryAlbums.id, albumId));
   if (!album) notFound();
-  const photos = await db.select().from(galleryPhotos).where(eq(galleryPhotos.albumId, albumId));
+  // Public pages show curated highlights only - the full event set is
+  // reachable through the album's Drive link.
+  const photos = await db
+    .select()
+    .from(galleryPhotos)
+    .where(and(eq(galleryPhotos.albumId, albumId), eq(galleryPhotos.isHighlight, true)));
 
   return (
     <div className="min-h-screen bg-background text-on-background">
@@ -56,12 +61,22 @@ export default async function GalleryAlbumPage({
           className="text-display-hero-mobile md:text-display-hero text-on-background mb-2 leading-tight"
         />
         <Reveal>
-          <p className="text-body-md text-on-surface-variant mb-10">
+          <p className="text-body-md text-on-surface-variant mb-4">
             {t("gallery.photoCount", {
               n: photos.length,
               extra: photos.length > 1 ? t("gallery.photoZoomHint") : "",
             })}
           </p>
+          {album.driveUrl && (
+            <a
+              href={album.driveUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-2 bg-primary-container text-on-primary text-label-caps uppercase tracking-wide px-5 py-3 rounded-md hover:bg-primary transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-container focus-visible:ring-offset-2 focus-visible:ring-offset-background mb-10"
+            >
+              <Download size={16} /> {t("gallery.driveAll")}
+            </a>
+          )}
         </Reveal>
 
         {photos.length === 0 ? (
