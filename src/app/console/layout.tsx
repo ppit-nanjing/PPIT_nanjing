@@ -12,8 +12,10 @@ export default async function ConsoleLayout({ children }: { children: React.Reac
   return (
     <div className="min-h-screen bg-background flex flex-col md:flex-row">
       <ConsoleSidebar userName={session.user.name ?? "Admin"} scope={session.user.adminScope} />
-      <main className="flex-1 min-w-0 flex justify-center">
-        <div className="w-full max-w-[1600px]">{children}</div>
+      {/* Fluid, bukan max-width terpusat: begitu sidebar dilipat, konten ikut
+          memakai ruangnya - bukan menyisakan kosong kiri-kanan. */}
+      <main className="flex-1 min-w-0">
+        <div className="w-full px-4 sm:px-6 lg:px-10 py-6 lg:py-8">{children}</div>
       </main>
     </div>
   );

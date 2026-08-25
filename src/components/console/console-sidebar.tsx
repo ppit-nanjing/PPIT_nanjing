@@ -152,14 +152,12 @@ export function ConsoleSidebar({ userName, scope }: { userName: string; scope: "
     <>
       {/* Desktop rail */}
       <aside
-        className={`hidden md:flex shrink-0 bg-surface-container-lowest border-r border-outline-variant min-h-screen flex-col transition-[width] duration-200 motion-reduce:transition-none ${
+        className={`hidden md:flex shrink-0 bg-surface-container-lowest border-r border-outline-variant min-h-screen flex-col ${
           collapsed ? "w-[72px]" : "w-64"
         }`}
       >
-        <div className={`flex items-center gap-2 px-4 py-5 border-b border-outline-variant ${collapsed ? "justify-center" : "justify-between"}`}>
-          {collapsed ? (
-            <span className="text-headline-md font-bold text-primary">C</span>
-          ) : (
+        <div className={`flex items-center px-4 py-5 border-b border-outline-variant ${collapsed ? "justify-center" : "justify-between"}`}>
+          {!collapsed && (
             <div className="min-w-0">
               <p className="text-headline-md font-bold text-primary uppercase tracking-tight">Console</p>
               <p className="text-label-caps text-on-surface-variant mt-1 truncate">{userName}</p>

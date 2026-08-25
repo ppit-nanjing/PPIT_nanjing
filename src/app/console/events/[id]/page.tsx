@@ -110,14 +110,20 @@ export default async function ConsoleEventDetailPage({ params }: { params: Promi
   ).length;
 
   return (
-    <div className="px-4 py-6 sm:px-6 lg:px-8 lg:py-10 max-w-3xl">
-      <h1 className="text-headline-md sm:text-headline-lg text-on-background mb-2">{event.title}</h1>
-      <p className="text-body-md text-on-surface-variant mb-8">
-        {registrations.length} terdaftar &middot; {attended} hadir
-        {event.capacity ? ` &middot; kapasitas ${event.capacity}` : ""}
-      </p>
+    <div className="py-2">
+      <header className="mb-8">
+        <h1 className="text-headline-md sm:text-headline-lg text-on-background mb-2">{event.title}</h1>
+        <p className="text-body-md text-on-surface-variant">
+          {registrations.length} terdaftar &middot; {attended} hadir
+          {event.capacity ? ` &middot; kapasitas ${event.capacity}` : ""}
+        </p>
+      </header>
 
-      <details className="mb-10 bg-surface-container-lowest border border-outline-variant rounded-xl">
+      {/* Layar lebar: kerja utama di kiri; ringkasan + antrean tindakan
+          (volunteer, verifikasi bayar) menempel di kolom kanan. */}
+      <div className="grid grid-cols-1 xl:grid-cols-[minmax(0,1fr)_400px] gap-6 items-start">
+        <div className="flex flex-col gap-6 min-w-0">
+      <details className="bg-surface-container-lowest border border-outline-variant rounded-xl">
         <summary className="px-6 py-4 cursor-pointer text-label-caps text-primary-container uppercase tracking-wide">
           Edit Detail Kegiatan
         </summary>
@@ -374,85 +380,6 @@ export default async function ConsoleEventDetailPage({ params }: { params: Promi
       </CollapsibleSection>
 
       <CollapsibleSection
-        title="Pendaftar Volunteer"
-        description={
-          event.volunteerSignupOpen
-            ? `${pendingVolunteers.length} menunggu keputusan`
-            : volunteerApps.length > 0
-              ? `${volunteerApps.length} lamaran (pendaftaran ditutup)`
-              : "pendaftaran publik tutup"
-        }
-      >
-        {!event.volunteerSignupOpen && (
-          <p className="text-body-md text-on-surface-variant mb-4 max-w-2xl">
-            Pendaftaran volunteer publik sedang <strong className="text-on-background">tutup</strong>. Centang
-            &quot;Buka pendaftaran volunteer&quot; di form Edit di atas bila butuh orang tambahan.
-          </p>
-        )}
-        {volunteerApps.length === 0 ? (
-          <p className="text-body-md text-on-surface-variant">Belum ada yang melamar.</p>
-        ) : (
-          <ul className="bg-surface-container-lowest border border-outline-variant rounded-xl px-4">
-            {volunteerApps.map((v) => {
-              const STATUS: Record<string, string> = {
-                pending: "Menunggu",
-                approved: "Diterima",
-                rejected: "Ditolak",
-              };
-              const CHIP: Record<string, string> = {
-                pending: "bg-surface-container-low text-on-surface-variant",
-                approved: "bg-primary-container/10 text-primary-container",
-                rejected: "bg-error-container text-on-error-container",
-              };
-              return (
-                <li key={v.app.id} className="flex flex-wrap items-start justify-between gap-3 border-b border-outline-variant/60 py-4 last:border-0">
-                  <div className="min-w-0">
-                    <p className="text-body-md font-medium text-on-background">{v.app.fullName}</p>
-                    <p className="text-label-caps text-on-surface-variant">
-                      {v.app.email}
-                      {v.app.whatsapp ? ` · ${v.app.whatsapp}` : ""} · minat:{" "}
-                      {v.divisionName ?? "bebas"}
-                      {v.app.status === "approved" && v.accountName ? ` · akun: ${v.accountName}` : ""}
-                    </p>
-                    {v.app.note && <p className="text-body-sm text-on-surface-variant mt-1">{v.app.note}</p>}
-                  </div>
-                  <div className="flex flex-wrap items-center gap-2 shrink-0">
-                    <span className={`text-label-caps uppercase tracking-wide px-2.5 py-1 rounded ${CHIP[v.app.status]}`}>
-                      {STATUS[v.app.status]}
-                    </span>
-                    {v.app.status === "pending" && (
-                      <>
-                        <form action={setVolunteerStatus}>
-                          <input type="hidden" name="id" value={v.app.id} />
-                          <input type="hidden" name="decision" value="approved" />
-                          <button
-                            type="submit"
-                            className="bg-primary-container text-on-primary text-label-caps uppercase tracking-wide px-3 py-1.5 rounded-md hover:bg-primary transition-colors"
-                          >
-                            Terima
-                          </button>
-                        </form>
-                        <form action={setVolunteerStatus}>
-                          <input type="hidden" name="id" value={v.app.id} />
-                          <input type="hidden" name="decision" value="rejected" />
-                          <button
-                            type="submit"
-                            className="text-label-caps uppercase tracking-wide text-error hover:bg-error-container/30 px-3 py-1.5 rounded-md"
-                          >
-                            Tolak
-                          </button>
-                        </form>
-                      </>
-                    )}
-                  </div>
-                </li>
-              );
-            })}
-          </ul>
-        )}
-      </CollapsibleSection>
-
-      <CollapsibleSection
         title="Struktur Kepanitiaan"
         description={`${divisions.length} divisi · ${committee.length} panitia`}
       >
@@ -494,92 +421,7 @@ export default async function ConsoleEventDetailPage({ params }: { params: Promi
         )}
       </CollapsibleSection>
 
-      {canVerifyPayments && event.isPaid && (
-        <CollapsibleSection
-          title="Verifikasi Pembayaran"
-          description={`${pendingPayments.filter((p) => p.status === "submitted").length} menunggu verifikasi`}
-        >
-          <p className="text-body-md text-on-surface-variant mb-1 max-w-2xl">
-            Bukti ini diunggah sendiri oleh peserta lewat halaman tiketnya, jadi belum tentu benar — cocokkan
-            ketiganya dengan mutasi Alipay/rekening sebelum menekan Terverifikasi:
-          </p>
-          <ul className="text-body-sm text-on-surface-variant mb-4 max-w-2xl list-disc pl-5">
-            <li>
-              <strong className="text-on-background">Nominal</strong> harus {event.feeCny != null ? `persis ¥${event.feeCny}` : "sesuai yang disepakati (biaya belum diisi di form Edit)"}
-            </li>
-            <li>
-              <strong className="text-on-background">Nama pengirim</strong> di riwayat Alipay/rekening harus cocok dengan nama peserta di bawah — beda nama pengirim = tanya dulu sebelum verifikasi, bisa jadi titip bayar orang lain
-            </li>
-            <li>
-              <strong className="text-on-background">Waktu transfer</strong> wajar terjadi setelah tanggal daftar yang tertera
-            </li>
-          </ul>
-          <ul className="bg-surface-container-lowest border border-outline-variant rounded-xl px-4">
-            {pendingPayments.length === 0 ? (
-              <li className="py-4 text-body-md text-on-surface-variant">Belum ada laporan pembayaran.</li>
-            ) : (
-              pendingPayments.map((p) => (
-                <li key={p.id} className="border-b border-outline-variant/60 py-4 last:border-0">
-                  <div className="flex flex-wrap items-start justify-between gap-3">
-                    <div className="min-w-0">
-                      <p className="text-body-md text-on-background">{p.name ?? "(tanpa nama)"}</p>
-                      <p className="text-label-caps text-on-surface-variant">
-                        {p.email} · {PAYMENT_STATUS_LABEL[p.status] ?? p.status} · daftar{" "}
-                        {new Date(p.registeredAt).toLocaleString("id-ID", { dateStyle: "medium", timeStyle: "short" })}
-                      </p>
-                      {p.note && <p className="text-body-md text-on-surface-variant mt-1">{p.note}</p>}
-                      {p.proofUrl && (
-                        <a
-                          href={p.proofUrl}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="text-label-caps uppercase tracking-wide text-primary-container hover:underline"
-                        >
-                          Lihat bukti
-                        </a>
-                      )}
-                    </div>
-                    <form action={updatePaymentStatus} className="flex flex-wrap items-center gap-2">
-                      <input type="hidden" name="id" value={p.id} />
-                      <input
-                        name="note"
-                        defaultValue={p.note ?? ""}
-                        placeholder="Catatan (opsional)"
-                        className="bg-soft-gray rounded-md p-2 text-body-md w-36"
-                      />
-                      <select name="paymentStatus" defaultValue={p.status} className="bg-soft-gray rounded-md p-2 text-body-md">
-                        <option value="unpaid">Belum Bayar</option>
-                        <option value="submitted">Menunggu Verifikasi</option>
-                        <option value="verified">Terverifikasi</option>
-                        <option value="rejected">Ditolak</option>
-                      </select>
-                      <button
-                        type="submit"
-                        className="bg-primary-container text-on-primary text-label-caps uppercase tracking-wide px-4 py-2 rounded-md hover:bg-primary transition-colors"
-                      >
-                        Simpan
-                      </button>
-                    </form>
-                  </div>
-                </li>
-              ))
-            )}
-          </ul>
-        </CollapsibleSection>
-      )}
-
       <CollapsibleSection title="Daftar Pendaftar" description={`${registrations.length} terdaftar · ${attended} hadir`}>
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between mb-4">
-          <div className="flex items-center gap-3">
-            <a
-              href={`/console/events/${id}/scan`}
-              className="inline-flex items-center gap-2 border border-outline-variant text-on-background text-label-caps uppercase tracking-wide px-4 py-2 rounded-md hover:bg-surface-container-low transition-colors"
-            >
-              Buka Scanner Check-in
-            </a>
-            <DeleteEventButton eventId={id} label="Hapus Kegiatan" />
-          </div>
-        </div>
         <RegistrationList
           eventId={id}
           questions={questions.map((q) => ({ id: q.id, label: q.label }))}
@@ -601,6 +443,187 @@ export default async function ConsoleEventDetailPage({ params }: { params: Promi
           }))}
         />
       </CollapsibleSection>
+        </div>
+
+        {/* Kolom samping: ringkasan + antrean tindakan */}
+        <aside className="flex flex-col gap-6 min-w-0 xl:sticky xl:top-6">
+          <section className="bg-surface-container-lowest border border-outline-variant rounded-xl p-5 flex flex-col gap-3">
+            <p className="text-label-caps uppercase tracking-wide text-on-surface-variant">Ringkasan</p>
+            <div className="grid grid-cols-3 gap-2 text-center">
+              <div className="bg-surface-container-low rounded-lg py-3">
+                <p className="text-headline-sm text-on-background font-semibold">{registrations.length}</p>
+                <p className="text-label-caps text-on-surface-variant">Terdaftar</p>
+              </div>
+              <div className="bg-surface-container-low rounded-lg py-3">
+                <p className="text-headline-sm text-on-background font-semibold">{attended}</p>
+                <p className="text-label-caps text-on-surface-variant">Hadir</p>
+              </div>
+              <div className="bg-surface-container-low rounded-lg py-3">
+                <p className="text-headline-sm text-on-background font-semibold">{event.capacity ?? "—"}</p>
+                <p className="text-label-caps text-on-surface-variant">Kuota</p>
+              </div>
+            </div>
+            <a
+              href={`/console/events/${id}/scan`}
+              className="inline-flex items-center justify-center gap-2 border border-outline-variant text-on-background text-label-caps uppercase tracking-wide px-4 py-2 rounded-md hover:bg-surface-container-low transition-colors"
+            >
+              Buka Scanner Check-in
+            </a>
+            <DeleteEventButton eventId={id} label="Hapus Kegiatan" />
+          </section>
+
+          {canVerifyPayments && event.isPaid && (
+            <CollapsibleSection
+              title="Verifikasi Pembayaran"
+              description={`${pendingPayments.filter((p) => p.status === "submitted").length} menunggu verifikasi`}
+              defaultOpen={pendingPayments.some((p) => p.status === "submitted")}
+            >
+              <p className="text-body-md text-on-surface-variant mb-1">
+                Bukti diunggah sendiri oleh peserta — cocokkan ketiganya dengan mutasi Alipay/rekening:
+              </p>
+              <ul className="text-body-sm text-on-surface-variant mb-4 list-disc pl-5">
+                <li><strong className="text-on-background">Nominal</strong> {event.feeCny != null ? `persis ¥${event.feeCny}` : "sesuai kesepakatan (belum diisi)"}</li>
+                <li><strong className="text-on-background">Nama pengirim</strong> cocok dengan peserta</li>
+                <li><strong className="text-on-background">Waktu transfer</strong> setelah tanggal daftar</li>
+              </ul>
+              <ul className="bg-surface-container-lowest border border-outline-variant rounded-xl px-4">
+                {pendingPayments.length === 0 ? (
+                  <li className="py-4 text-body-md text-on-surface-variant">Belum ada laporan pembayaran.</li>
+                ) : (
+                  pendingPayments.map((p) => (
+                    <li key={p.id} className="border-b border-outline-variant/60 py-4 last:border-0">
+                      <div className="flex flex-col gap-2">
+                        <div className="min-w-0">
+                          <p className="text-body-md text-on-background">{p.name ?? "(tanpa nama)"}</p>
+                          <p className="text-label-caps text-on-surface-variant">
+                            {p.email} · {PAYMENT_STATUS_LABEL[p.status] ?? p.status}
+                          </p>
+                          {p.note && <p className="text-body-sm text-on-surface-variant mt-1">{p.note}</p>}
+                          {p.proofUrl && (
+                            <a
+                              href={p.proofUrl}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="inline-block text-label-caps uppercase tracking-wide text-primary-container hover:underline mt-1"
+                            >
+                              Lihat bukti
+                            </a>
+                          )}
+                        </div>
+                        <form action={updatePaymentStatus} className="flex flex-col gap-2">
+                          <input type="hidden" name="id" value={p.id} />
+                          <input
+                            name="note"
+                            defaultValue={p.note ?? ""}
+                            placeholder="Catatan (opsional)"
+                            className="bg-soft-gray rounded-md p-2 text-body-md w-full"
+                          />
+                          <div className="flex items-center gap-2">
+                            <select name="paymentStatus" defaultValue={p.status} className="bg-soft-gray rounded-md p-2 text-body-md flex-1">
+                              <option value="unpaid">Belum Bayar</option>
+                              <option value="submitted">Menunggu Verifikasi</option>
+                              <option value="verified">Terverifikasi</option>
+                              <option value="rejected">Ditolak</option>
+                            </select>
+                            <button
+                              type="submit"
+                              className="bg-primary-container text-on-primary text-label-caps uppercase tracking-wide px-4 py-2 rounded-md hover:bg-primary transition-colors"
+                            >
+                              Simpan
+                            </button>
+                          </div>
+                        </form>
+                      </div>
+                    </li>
+                  ))
+                )}
+              </ul>
+            </CollapsibleSection>
+          )}
+
+          <CollapsibleSection
+            title="Pendaftar Volunteer"
+            description={
+              event.volunteerSignupOpen
+                ? `${pendingVolunteers.length} menunggu keputusan`
+                : volunteerApps.length > 0
+                  ? `${volunteerApps.length} lamaran (ditutup)`
+                  : "pendaftaran tutup"
+            }
+            defaultOpen={pendingVolunteers.length > 0}
+          >
+            {!event.volunteerSignupOpen && (
+              <p className="text-body-md text-on-surface-variant mb-4">
+                Pendaftaran publik sedang <strong className="text-on-background">tutup</strong>. Centang
+                &quot;Buka pendaftaran volunteer&quot; di form Edit.
+              </p>
+            )}
+            {volunteerApps.length === 0 ? (
+              <p className="text-body-md text-on-surface-variant">Belum ada yang melamar.</p>
+            ) : (
+              <ul className="flex flex-col gap-3">
+                {volunteerApps.map((v) => {
+                  const STATUS: Record<string, string> = {
+                    pending: "Menunggu",
+                    approved: "Diterima",
+                    rejected: "Ditolak",
+                  };
+                  const CHIP: Record<string, string> = {
+                    pending: "bg-surface-container-low text-on-surface-variant",
+                    approved: "bg-primary-container/10 text-primary-container",
+                    rejected: "bg-error-container text-on-error-container",
+                  };
+                  return (
+                    <li key={v.app.id} className="bg-surface-container-lowest border border-outline-variant rounded-lg p-3">
+                      <div className="flex flex-wrap items-start justify-between gap-2">
+                        <div className="min-w-0">
+                          <p className="text-body-md font-medium text-on-background">{v.app.fullName}</p>
+                          <p className="text-label-caps text-on-surface-variant break-all">
+                            {v.app.email}
+                            {v.app.whatsapp ? ` · ${v.app.whatsapp}` : ""}
+                          </p>
+                          <p className="text-label-caps text-on-surface-variant">
+                            minat: {v.divisionName ?? "bebas"}
+                            {v.app.status === "approved" && v.accountName ? ` · akun: ${v.accountName}` : ""}
+                          </p>
+                          {v.app.note && <p className="text-body-sm text-on-surface-variant mt-1">{v.app.note}</p>}
+                        </div>
+                        <span className={`text-label-caps uppercase tracking-wide px-2.5 py-1 rounded shrink-0 ${CHIP[v.app.status]}`}>
+                          {STATUS[v.app.status]}
+                        </span>
+                      </div>
+                      {v.app.status === "pending" && (
+                        <div className="flex gap-2 mt-3">
+                          <form action={setVolunteerStatus} className="flex-1">
+                            <input type="hidden" name="id" value={v.app.id} />
+                            <input type="hidden" name="decision" value="approved" />
+                            <button
+                              type="submit"
+                              className="w-full bg-primary-container text-on-primary text-label-caps uppercase tracking-wide px-3 py-1.5 rounded-md hover:bg-primary transition-colors"
+                            >
+                              Terima
+                            </button>
+                          </form>
+                          <form action={setVolunteerStatus} className="flex-1">
+                            <input type="hidden" name="id" value={v.app.id} />
+                            <input type="hidden" name="decision" value="rejected" />
+                            <button
+                              type="submit"
+                              className="w-full text-label-caps uppercase tracking-wide text-error border border-error/40 px-3 py-1.5 rounded-md hover:bg-error-container/30 transition-colors"
+                            >
+                              Tolak
+                            </button>
+                          </form>
+                        </div>
+                      )}
+                    </li>
+                  );
+                })}
+              </ul>
+            )}
+          </CollapsibleSection>
+        </aside>
+      </div>
     </div>
   );
 }
