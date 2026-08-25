@@ -102,6 +102,31 @@ export async function getWorkLedger() {
     .sort((a, b) => b.assignments.length - a.assignments.length);
 }
 
+/**
+ * Menugaskan BANYAK orang sekaligus ke satu divisi sebagai anggota - bentuk
+ * yang diminta panitia: centang nama-namanya, satu klik beres. Konflik
+ * (orang sudah kepanitia di acara ini) berarti PINDAH divisi + jadi anggota,
+ * karena satu orang satu baris per acara.
+ */
+export async function assignMembersToDivision(formData: FormData): Promise<void> {
+  await requireModuleAccess("events");
+  const eventId = String(formData.get("eventId") ?? "");
+  const divisionId = String(formData.get("divisionId") ?? "").trim() || null;
+  const userIds = formData.getAll("userId").map((v) => String(v)).filter(Boolean);
+  if (!eventId || userIds.length === 0) return;
+
+  await db
+    .insert(eventCommittee)
+    .values(userIds.map((userId) => ({ eventId, userId, divisionId, role: "anggota" as const })))
+    .onConflictDoUpdate({
+      target: [eventCommittee.eventId, eventCommittee.userId],
+      set: { divisionId, role: "anggota" },
+    });
+
+  revalidatePath(`/console/events/${eventId}`);
+  revalidatePath("/console/work-ledger");
+}
+
 // ---------- sertifikat ----------
 
 export async function issueCertificate(formData: FormData) {
@@ -451,16 +476,15 @@ export async function issueEventCertificates(formData: FormData): Promise<void> 
  * Hanya jalan kalau acara menyalakan flag `certificateForParticipants` -
  * checkbox itu memang saklar ketersediaannya, bukan formalitas.
  */
-export async function issueParticipantCertificates(formData: FormData): Promise<void> {
-  const session = await requireModuleAccess("events");
-  const eventId = String(formData.get("eventId") ?? "");
-  if (!eventId) throw new Error("Acara wajib dipilih");
-
+/**
+ * Inti penerbitan sertifikat peserta, dipanggil dari dua tempat: tombol manual
+ * di halaman acara DAN otomatis saat acara ditandai "Selesai" (admin-events).
+ * Mengembalikan jumlah yang benar-benar diterbitkan supaya pemanggilnya tahu
+ * apakah ada yang berubah.
+ */
+export async function issueParticipantCertificatesCore(eventId: string, actorId: string): Promise<number> {
   const [event] = await db.select().from(events).where(eq(events.id, eventId));
-  if (!event) throw new Error("Acara tidak ditemukan");
-  if (!event.certificateForParticipants) {
-    throw new Error("Acara ini tidak memberi e-sertifikat kehadiran - aktifkan dulu di form Edit");
-  }
+  if (!event || !event.certificateForParticipants) return 0;
 
   const participants = await db
     .select({ userId: eventRegistrations.userId })
@@ -468,7 +492,7 @@ export async function issueParticipantCertificates(formData: FormData): Promise<
     .where(
       and(eq(eventRegistrations.eventId, eventId), inArray(eventRegistrations.status, ["confirmed", "attended"]))
     );
-  if (participants.length === 0) return;
+  if (participants.length === 0) return 0;
 
   const existing = await db
     .select({ userId: certificates.userId })
@@ -483,10 +507,20 @@ export async function issueParticipantCertificates(formData: FormData): Promise<
       eventId,
       kind: "peserta" as const,
       title: `Peserta — ${event.title}`,
-      issuedBy: session.user.id,
+      issuedBy: actorId,
     }));
 
   if (toInsert.length > 0) await db.insert(certificates).values(toInsert);
+  return toInsert.length;
+}
+
+/** Pembungkus form untuk tombol "Terbitkan Sertifikat Peserta" yang manual. */
+export async function issueParticipantCertificates(formData: FormData): Promise<void> {
+  const session = await requireModuleAccess("events");
+  const eventId = String(formData.get("eventId") ?? "");
+  if (!eventId) throw new Error("Acara wajib dipilih");
+
+  await issueParticipantCertificatesCore(eventId, session.user.id);
 
   revalidatePath(`/console/events/${eventId}`);
   revalidatePath("/console/work-ledger");

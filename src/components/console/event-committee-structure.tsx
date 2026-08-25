@@ -5,8 +5,10 @@ import {
   issueDivisionCertificates,
   issueEventCertificates,
   assignCommittee,
+  assignMembersToDivision,
   removeCommittee,
 } from "@/app/actions/committee";
+import { DivisionMemberPicker } from "@/components/console/division-member-picker";
 
 // Peran penugasan baru. humas/acara/logistik/dokumentasi sengaja tidak ada:
 // itu nama DIVISI, bukan peran - di skema nilainya tinggal demi baris lama.
@@ -65,6 +67,8 @@ export function EventCommitteeStructure({
   const childrenOf = (id: string) => divisions.filter((d) => d.parentDivisionId === id);
   const membersOf = (id: string) => members.filter((m) => m.divisionId === id);
   const unassigned = members.filter((m) => !m.divisionId);
+  // Ketua saat ini per divisi - ditampilkan di header kartu + form "ganti ketua".
+  const ketuaOf = (id: string) => membersOf(id).find((m) => m.role === "ketua");
 
   // Kuota dihitung termasuk sub-tim: "Perlengkapan (2+3+2)" harus terbaca utuh
   // di kartu induknya, bukan cuma orang yang menempel langsung di sana.
@@ -172,6 +176,37 @@ export function EventCommitteeStructure({
             {dept.jobDescription && <JobDesc text={dept.jobDescription} />}
             <MemberList rows={membersOf(dept.id)} certified={certified} />
 
+            {/* Ketua departemen: satu dropdown, sekali klik - tanpa lewat form
+                umum. Orang yang sudah jadi ketua tidak muncul lagi di pilihan. */}
+            <div className="mt-3 flex flex-wrap items-center gap-2 bg-surface-container-low rounded-lg p-3">
+              <span className="text-label-caps uppercase tracking-wide text-on-surface-variant">
+                Ketua Dept.: <strong className="text-on-background normal-case">{ketuaOf(dept.id)?.name ?? "belum ada"}</strong>
+              </span>
+              <form action={assignCommittee} className="flex flex-wrap items-center gap-2">
+                <input type="hidden" name="eventId" value={eventId} />
+                <input type="hidden" name="divisionId" value={dept.id} />
+                <input type="hidden" name="role" value="ketua" />
+                <select name="userId" required defaultValue="" className={`${input} w-auto`} aria-label={`Pilih ketua ${dept.name}`}>
+                  <option value="" disabled>Ganti / tetapkan ketua…</option>
+                  {candidates
+                    .filter((c) => c.id !== ketuaOf(dept.id)?.userId)
+                    .map((c) => (
+                      <option key={c.id} value={c.id}>{c.name ?? c.email}</option>
+                    ))}
+                </select>
+                <button type="submit" className="text-label-caps uppercase tracking-wide border border-outline-variant px-3 py-1.5 rounded-md hover:bg-surface-container-low transition-colors">
+                  Tetapkan Ketua
+                </button>
+              </form>
+            </div>
+
+            {/* Anggota: centang banyak orang sekaligus dari daftar yang bisa
+                dicari - inilah yang diminta untuk divisi berisi banyak orang. */}
+            <details className="mt-2">
+              <summary className="text-label-caps uppercase tracking-wide text-primary-container hover:text-primary cursor-pointer w-fit">+ Tambah anggota (centang banyak)</summary>
+              <DivisionMemberPicker eventId={eventId} divisionId={dept.id} candidates={candidates} action={assignMembersToDivision} />
+            </details>
+
             {subs.length > 0 && (
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">
                 {subs.map((sub) => {
@@ -197,6 +232,10 @@ export function EventCommitteeStructure({
                       </div>
                       {sub.jobDescription && <JobDesc text={sub.jobDescription} />}
                       <MemberList rows={membersOf(sub.id)} certified={certified} />
+                      <details className="mt-2">
+                        <summary className="text-label-caps uppercase tracking-wide text-primary-container hover:text-primary cursor-pointer w-fit">+ Tambah anggota (centang banyak)</summary>
+                        <DivisionMemberPicker eventId={eventId} divisionId={sub.id} candidates={candidates} action={assignMembersToDivision} />
+                      </details>
                       <details className="mt-2">
                         <summary className="text-label-caps uppercase tracking-wide text-on-surface-variant hover:text-on-background cursor-pointer w-fit">Ubah sub-tim</summary>
                         <form action={saveEventDivision} className="mt-2 flex flex-col gap-2">

@@ -8,6 +8,7 @@ import { db } from "@/db";
 import { events, eventRegistrations, eventQuestions, galleryAlbums } from "@/db/schema";
 import { hasModuleAccess } from "@/lib/admin-scope";
 import { createTemplatedNotification } from "@/lib/notifications";
+import { issueParticipantCertificatesCore } from "@/app/actions/committee";
 
 async function requireAdmin() {
   const session = await auth();
@@ -83,7 +84,7 @@ export async function createEvent(formData: FormData) {
 }
 
 export async function updateEvent(id: string, formData: FormData) {
-  await requireAdmin();
+  const actorId = await requireAdmin();
   const title = String(formData.get("title") ?? "").trim();
   if (!title) throw new Error("Judul wajib diisi");
 
@@ -96,6 +97,8 @@ export async function updateEvent(id: string, formData: FormData) {
   // If a publish schedule is set but the admin left it as a draft, move it to
   // the 'scheduled' state so it auto-publishes when the time arrives.
   if (scheduledPublishAt && status === "draft") status = "scheduled";
+
+  const [before] = await db.select({ status: events.status }).from(events).where(eq(events.id, id));
 
   const isPaid = formData.get("isPaid") === "on";
 
@@ -136,6 +139,15 @@ export async function updateEvent(id: string, formData: FormData) {
       .where(and(eq(eventRegistrations.eventId, id), eq(eventRegistrations.paymentStatus, "not_required")));
   }
 
+  // E-sertifikat peserta otomatis: begitu acara PERTAMA kali ditandai
+  // "Selesai", semua pendaftar yang diterima langsung kebagian sertifikat
+  // (bila checkbox-nya menyala). Idempoten - menjalankan ulang tidak
+  // menggandakan; tombol manual tetap ada untuk pendaftar belakangan.
+  if (status === "completed" && before?.status !== "completed") {
+    await issueParticipantCertificatesCore(id, actorId);
+    revalidatePath("/console/work-ledger");
+  }
+
   revalidatePath(`/console/events/${id}`);
 }
 
@@ -145,11 +157,17 @@ export async function setEventStatus(formData: FormData) {
   const id = String(formData.get("eventId") ?? "");
   const status = String(formData.get("status") ?? "");
   if (!id || !status) throw new Error("eventId dan status wajib diisi");
-  await requireAdmin();
+  const actorId = await requireAdmin();
+  const [before] = await db.select({ status: events.status }).from(events).where(eq(events.id, id));
   await db
     .update(events)
     .set({ status: status as (typeof events.status.enumValues)[number] })
     .where(eq(events.id, id));
+  // Sama seperti updateEvent: selesai = sertifikat peserta keluar otomatis.
+  if (status === "completed" && before?.status !== "completed") {
+    await issueParticipantCertificatesCore(id, actorId);
+    revalidatePath("/console/work-ledger");
+  }
   revalidatePath("/console/events");
 }
 

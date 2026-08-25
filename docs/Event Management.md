@@ -30,7 +30,7 @@
 Susunan panitia **dibentuk ulang untuk setiap acara** — jabatan dan divisi tidak mewarisi struktur kabinet, karena bendahara sebuah acara belum tentu bendahara kabinet, dan seseorang bisa memegang jabatan besar di satu acara tanpa jabatan struktural apa pun di kepengurusan.
 
 - **Divisi per acara** bernama teks bebas (bukan enum — tiap acara boleh punya susunan sendiri), boleh bertingkat (mis. *Perlengkapan* menaungi *Konsumsi*, *Sound System*), lengkap dengan target jumlah orang dan jobdesk-nya — jobdesk yang biasanya mati di slide PowerPoint ikut hidup di portal.
-- Anggota ditugaskan per orang dengan **peran di dalam divisinya**; gabungan peran + nama divisi membentuk sebutan lengkapnya ("ketua" + divisi "Perlengkapan" = Ketua Departemen Perlengkapan).
+- Anggota ditugaskan per orang dengan **peran di dalam divisinya**; gabungan peran + nama divisi membentuk sebutan lengkapnya ("ketua" + divisi "Perlengkapan" = Ketua Departemen Perlengkapan). Untuk mempercepat: anggota bisa **dicentang banyak sekaligus** lewat daftar yang bisa dicari (+ Tambah Anggota), dan ketua departemen ditetapkan satu klik dari kartu divisinya.
 - Sumber anggota fleksibel: pengurus PPIT sesuai divisinya, atau **volunteer dari dalam maupun luar PPIT** bila kekurangan orang. Volunteer eksternal cukup di-invite menjadi akun lewat undangan massal di [User & Role Management](./User%20&%20Role%20Management.md) sebelum bisa ditugaskan.
 - **Beban kepanitiaan lintas-acara** dipantau di Work Ledger: orang yang sudah kepanitia di ≥3 acara ditandai (pengingat, bukan larangan).
 
@@ -50,7 +50,7 @@ Sponsor dikelola sebagai direktori bertingkat (Platinum / Gold / Silver / Mitra)
 
 Aturan bawaannya **semua peserta dapat e-certificate**: tiap acara punya checkbox "Peserta mendapat e-sertifikat kehadiran" (nyala secara default) — cukup dimatikan untuk acara tanpa sertifikat partisipasi.
 
-- **Terbitkan Sertifikat Peserta** (halaman acara di konsol) menerbitkan sekaligus untuk semua pendaftar yang diterima (`confirmed`/`attended`) — hanya untuk yang belum punya, jadi aman ditekan ulang setelah ada pendaftar baru.
+- **Otomatis saat acara selesai**: begitu acara pertama kali ditandai `completed` (lewat form Edit atau tombol status di daftar), semua pendaftar yang diterima (`confirmed`/`attended`) langsung kebagian sertifikat — bila checkbox-nya menyala. Idempoten; tombol **Terbitkan Sertifikat Peserta** tetap ada untuk pendaftar yang masuk belakangan.
 - Di luar sertifikat kehadiran itu, keputusan tambahan tetap milik panitia per acara lewat Work Ledger: sertifikat juara/pemenang, panitia per divisi, atau pemateri.
 - Jenis: `peserta`, `panitia`, `pemateri`, `lainnya`; sertifikat juara dicatat lewat judul bebas (mis. "Juara 1 Lomba …").
 - File dibuat/diunggah di luar aplikasi (boleh tautan Google Drive); aplikasi mencatat pemilik, jenis, acara, dan penerbitnya. Tautan berkas bisa diisi/diganti belakangan langsung dari daftar sertifikat di Work Ledger.
