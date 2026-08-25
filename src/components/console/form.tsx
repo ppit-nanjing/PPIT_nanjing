@@ -38,12 +38,15 @@ interface TextFieldProps {
   defaultValue?: string | number | null;
   min?: number;
   className?: string;
+  /** Untuk kontrol yang dirujuk tool lain berdasarkan id (mis. AIImproveButton). */
+  id?: string;
 }
 
-export function TextField({ name, label, hint, required, type = "text", placeholder, defaultValue, min, className }: TextFieldProps) {
+export function TextField({ name, label, hint, required, type = "text", placeholder, defaultValue, min, className, id }: TextFieldProps) {
   return (
     <Field label={label} hint={hint} required={required} className={className}>
       <input
+        id={id}
         name={name}
         type={type}
         required={required}
@@ -65,12 +68,14 @@ interface TextAreaFieldProps {
   defaultValue?: string | null;
   rows?: number;
   className?: string;
+  id?: string;
 }
 
-export function TextAreaField({ name, label, hint, required, placeholder, defaultValue, rows = 3, className }: TextAreaFieldProps) {
+export function TextAreaField({ name, label, hint, required, placeholder, defaultValue, rows = 3, className, id }: TextAreaFieldProps) {
   return (
     <Field label={label} hint={hint} required={required} className={className}>
       <textarea
+        id={id}
         name={name}
         required={required}
         placeholder={placeholder}
