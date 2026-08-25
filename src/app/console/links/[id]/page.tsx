@@ -10,11 +10,7 @@ import { ShortLinkForm } from "@/components/console/short-link-form";
 import { CopyLinkButton } from "@/components/console/copy-link-button";
 import { ShortLinkDeleteButton } from "@/components/console/short-link-delete-button";
 import { deleteShortLink, toggleShortLink, updateShortLink } from "@/app/actions/short-links";
-
-function toLocalInput(date: Date): string {
-  const off = date.getTimezoneOffset() * 60000;
-  return new Date(date.getTime() - off).toISOString().slice(0, 16);
-}
+import { toDateLocalInput } from "@/lib/datetime";
 
 export default async function EditShortLinkPage({
   params,
@@ -76,7 +72,7 @@ export default async function EditShortLinkPage({
           description: link.description,
           category: link.category,
           managementPeriodId: link.managementPeriodId,
-          expiresAt: link.expiresAt ? toLocalInput(link.expiresAt) : null,
+          expiresAt: link.expiresAt ? toDateLocalInput(link.expiresAt) : null,
           isActive: link.isActive,
         }}
       />
