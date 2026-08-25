@@ -684,7 +684,11 @@ export const externalLoans = pgTable("external_loans", {
   loanedAt: timestamp("loaned_at").notNull().defaultNow(),
   expectedReturnAt: date("expected_return_at"),
   returnedAt: timestamp("returned_at"),
-  recordedBy: uuid("recorded_by").notNull().references(() => users.id),
+  // Nullable (unlike a normal owning-row userId) because this is a "who did
+  // this" audit reference like authorId/approvedBy/reviewedBy elsewhere in
+  // this file, not the row's owner - deleteUser() (admin-users.ts) nulls it
+  // out before deleting a user, same as those.
+  recordedBy: uuid("recorded_by").references(() => users.id),
   status: externalLoanStatusEnum("status").notNull().default("active"),
   notes: text("notes"),
 });

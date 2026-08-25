@@ -1,0 +1,13 @@
+-- external_loans.recorded_by adalah kolom audit ("siapa yang mencatat
+-- transaksi ini"), sama seperti authorId/approvedBy/reviewedBy di tabel lain -
+-- tapi ditulis NOT NULL sejak awal, tidak seperti semua kolom sejenis lainnya
+-- yang nullable. Akibatnya menghapus admin yang pernah mencatat peminjaman
+-- eksternal selalu gagal dengan foreign key violation
+-- (external_loans_recorded_by_users_id_fk), karena deleteUser() (admin-users.ts)
+-- tidak bisa meng-null-kan kolom NOT NULL sebelum menghapus baris user-nya.
+--
+-- Dibuat nullable supaya konsisten dengan pola kolom audit lainnya, dan
+-- deleteUser() sekarang menge-null-kan external_loans.recorded_by sebelum
+-- menghapus user, sama seperti sudah dilakukan untuk
+-- membership_applications.userId, feedback.userId, dan departments.headUserId.
+ALTER TABLE "external_loans" ALTER COLUMN "recorded_by" DROP NOT NULL;
