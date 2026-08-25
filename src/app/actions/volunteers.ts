@@ -3,6 +3,7 @@
 import { and, eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
+import { auth } from "@/auth";
 import { db } from "@/db";
 import { eventCommittee, eventDivisions, eventVolunteers, events, users } from "@/db/schema";
 import { requireModuleAccess } from "@/lib/admin-scope";
@@ -39,6 +40,30 @@ export async function applyAsVolunteer(formData: FormData): Promise<void> {
   ) {
     redirect(`/events/${slug}`);
   }
+
+  // Yang sudah pegang peran panitia di acara ini tidak boleh melamar volunteer
+  // lagi - lamarannya pasti duplikat dirinya sendiri dan cuma bikin antrean
+  // approve admin kotor. Dicek dua jalur: sesi login yang sedang aktif, dan
+  // email yang diketik (menangkap kasus orang mendaftar pakai email akunnya
+  // yang sudah ditugaskan lewat Work Ledger). Dua-duanya dialihkan balik dengan
+  // penanda ?volunteer=committee tanpa mengungkap detail apa pun ke pengunjung
+  // lain - pesan lengkapnya hanya tampil bagi yang bersangkutan.
+  const session = await auth();
+  if (session?.user?.id) {
+    const [mine] = await db
+      .select({ id: eventCommittee.id })
+      .from(eventCommittee)
+      .where(and(eq(eventCommittee.eventId, eventId), eq(eventCommittee.userId, session.user.id)))
+      .limit(1);
+    if (mine) redirect(`/events/${slug}?volunteer=committee`);
+  }
+  const [byEmail] = await db
+    .select({ id: eventCommittee.id })
+    .from(eventCommittee)
+    .innerJoin(users, eq(eventCommittee.userId, users.id))
+    .where(and(eq(eventCommittee.eventId, eventId), eq(users.email, email)))
+    .limit(1);
+  if (byEmail) redirect(`/events/${slug}?volunteer=committee`);
 
   // Divisi pilihan harus memang milik acara ini; selain itu dibuang.
   let safeDivisionId: string | null = null;

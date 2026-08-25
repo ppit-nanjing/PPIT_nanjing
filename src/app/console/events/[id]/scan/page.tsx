@@ -1,7 +1,7 @@
 import { eq, and } from "drizzle-orm";
 import { notFound } from "next/navigation";
 import { db } from "@/db";
-import { events, eventRegistrations, users } from "@/db/schema";
+import { events, eventRegistrations, eventCommittee, eventDivisions, users } from "@/db/schema";
 import { requireModuleAccess } from "@/lib/admin-scope";
 import { ScanCheckIn } from "@/components/console/scan-checkin";
 import { QrScanner } from "@/components/console/qr-scanner";
@@ -23,7 +23,13 @@ export default async function EventScanPage({
 
   // Read-only lookup only - the actual check-in mutation happens in the
   // ScanCheckIn client component (server action), never during this render.
-  let lookup: { name: string | null; email: string | null; alreadyAttended: boolean } | null = null;
+  // Satu token bisa berasal dari tiket PESERTA (event_registrations) atau tiket
+  // KEPANITIAAN (event_committee.attendance_token) - peserta dicoba lebih dulu,
+  // karena jauh lebih sering discan.
+  let lookup:
+    | { kind: "participant"; name: string | null; email: string | null; alreadyAttended: boolean; label: null }
+    | { kind: "committee"; name: string | null; email: string | null; alreadyAttended: boolean; label: string | null }
+    | null = null;
 
   if (t) {
     const [row] = await db
@@ -33,7 +39,30 @@ export default async function EventScanPage({
       .where(and(eq(eventRegistrations.eventId, id), eq(eventRegistrations.qrCodeToken, t)));
 
     if (row) {
-      lookup = { name: row.name, email: row.email, alreadyAttended: row.status === "attended" };
+      lookup = { kind: "participant", name: row.name, email: row.email, alreadyAttended: row.status === "attended", label: null };
+    } else {
+      const [committee] = await db
+        .select({
+          name: users.name,
+          email: users.email,
+          checkedInAt: eventCommittee.checkedInAt,
+          role: eventCommittee.role,
+          divisionName: eventDivisions.name,
+        })
+        .from(eventCommittee)
+        .leftJoin(users, eq(eventCommittee.userId, users.id))
+        .leftJoin(eventDivisions, eq(eventCommittee.divisionId, eventDivisions.id))
+        .where(and(eq(eventCommittee.eventId, id), eq(eventCommittee.attendanceToken, t)))
+        .limit(1);
+      if (committee) {
+        lookup = {
+          kind: "committee",
+          name: committee.name,
+          email: committee.email,
+          alreadyAttended: !!committee.checkedInAt,
+          label: `${committee.divisionName ? `${committee.divisionName} · ` : ""}${committee.role}`,
+        };
+      }
     }
   }
 
@@ -43,6 +72,13 @@ export default async function EventScanPage({
     .where(eq(eventRegistrations.eventId, id));
   const registeredCount = registeredRows.length;
   const attendedCount = registeredRows.filter((r) => r.status === "attended").length;
+
+  const committeeRows = await db
+    .select({ checkedInAt: eventCommittee.checkedInAt })
+    .from(eventCommittee)
+    .where(eq(eventCommittee.eventId, id));
+  const committeeTotal = committeeRows.length;
+  const committeeAttended = committeeRows.filter((c) => c.checkedInAt).length;
 
   return (
     <div className="px-4 py-6 sm:px-6 lg:px-8 lg:py-10 max-w-xl">
@@ -55,11 +91,18 @@ export default async function EventScanPage({
 
       <h1 className="text-headline-md sm:text-headline-lg text-on-background mb-1">{event.title}</h1>
       <p className="text-body-md text-on-surface-variant mb-8">
-        Scan QR tiket peserta untuk mencatat kehadiran.
+        Scan QR tiket peserta atau tiket kepanitiaan untuk mencatat kehadiran.
       </p>
 
       {t && lookup && (
-        <ScanCheckIn token={t} eventId={id} name={lookup.name} email={lookup.email} />
+        <ScanCheckIn
+          token={t}
+          eventId={id}
+          kind={lookup.kind}
+          name={lookup.name}
+          email={lookup.email}
+          label={lookup.label}
+        />
       )}
 
       {t && !lookup && (
@@ -87,6 +130,11 @@ export default async function EventScanPage({
 
       <p className="text-label-caps text-on-surface-variant mt-8">
         {registeredCount} terdaftar &middot; {attendedCount} hadir
+        {committeeTotal > 0 && (
+          <>
+            {" "}· {committeeTotal} panitia &middot; {committeeAttended} panitia hadir
+          </>
+        )}
       </p>
     </div>
   );

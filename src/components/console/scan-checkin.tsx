@@ -1,28 +1,33 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { CheckCircle2, XCircle, UserRound, ScanLine } from "lucide-react";
-import { checkInByToken } from "@/app/actions/admin-events";
+import { CheckCircle2, XCircle, UserRound, ScanLine, BadgeCheck } from "lucide-react";
+import { checkInByToken, checkInCommitteeByToken } from "@/app/actions/admin-events";
 
 type Status = "pending" | "done" | "invalid";
 
 export function ScanCheckIn({
   token,
   eventId,
+  kind,
   name,
   email,
+  label,
 }: {
   token: string;
   eventId: string;
+  kind: "participant" | "committee";
   name: string | null;
   email: string | null;
+  label: string | null;
 }) {
   const [status, setStatus] = useState<Status>("pending");
   const [already, setAlready] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
-    checkInByToken(token, eventId)
+    const action = kind === "committee" ? checkInCommitteeByToken(token, eventId) : checkInByToken(token, eventId);
+    action
       .then((res) => {
         if (cancelled) return;
         if (!res.ok) {
@@ -38,7 +43,7 @@ export function ScanCheckIn({
     return () => {
       cancelled = true;
     };
-  }, [token, eventId]);
+  }, [token, eventId, kind]);
 
   if (status === "invalid") {
     return (
@@ -60,10 +65,16 @@ export function ScanCheckIn({
 
   return (
     <div className="mb-8 rounded-xl border border-outline-variant bg-surface-container-lowest p-6 flex flex-col items-center text-center">
-      <CheckCircle2 className="text-primary-container mb-3" size={40} />
+      {kind === "committee" ? (
+        <BadgeCheck className="text-primary-container mb-3" size={40} />
+      ) : (
+        <CheckCircle2 className="text-primary-container mb-3" size={40} />
+      )}
       <p className="text-body-lg text-on-background font-semibold mb-1">
-        {already ? "Sudah check-in sebelumnya" : "Check-in berhasil"}
+        {kind === "committee" ? "Kepanitiaan" : ""}{" "}
+        {already ? "sudah check-in sebelumnya" : "check-in berhasil"}
       </p>
+      {label && <p className="text-label-caps uppercase tracking-wide text-primary-container">{label}</p>}
       <div className="flex items-center gap-2 text-on-surface-variant mt-2">
         <UserRound size={16} />
         <span className="text-body-md">{name ?? "(tanpa nama)"}</span>

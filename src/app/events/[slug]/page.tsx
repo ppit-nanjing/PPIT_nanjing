@@ -2,7 +2,7 @@ import { eq, and, ne, count, desc } from "drizzle-orm";
 import { notFound } from "next/navigation";
 import { auth } from "@/auth";
 import { db } from "@/db";
-import { events, eventRegistrations, eventQuestions, eventDivisions, galleryAlbums, galleryPhotos, regionalBranches } from "@/db/schema";
+import { events, eventRegistrations, eventQuestions, eventDivisions, eventCommittee, galleryAlbums, galleryPhotos, regionalBranches } from "@/db/schema";
 import { NON_STUDENT_BRANCH } from "@/lib/membership-status";
 import { hasCompletedSensus } from "@/lib/sensus-gate";
 import { SiteNav } from "@/components/site-nav";
@@ -11,13 +11,26 @@ import { AnimatedHeroHeading } from "@/components/animated-hero-heading";
 import { Reveal } from "@/components/reveal";
 import { EventCard } from "@/components/event-card";
 import { GalleryLightbox } from "@/components/gallery-lightbox";
-import { CalendarDays, MapPin, Users, Ticket, ArrowLeft, ListChecks, Images, ArrowRight, CalendarX, PartyPopper } from "lucide-react";
+import { CalendarDays, MapPin, Users, Ticket, ArrowLeft, ListChecks, Images, ArrowRight, CalendarX, PartyPopper, BadgeCheck } from "lucide-react";
 import Image from "next/image";
 import { registerForEvent } from "@/app/actions/events";
 import Link from "next/link";
 import { applyAsVolunteer } from "@/app/actions/volunteers";
 import { getT } from "@/lib/i18n/server";
 import { INTL_LOCALE } from "@/lib/i18n/config";
+
+const COMMITTEE_ROLE_LABEL: Record<string, string> = {
+  ketua: "Ketua",
+  wakil: "Wakil",
+  sekretaris: "Sekretaris",
+  bendahara: "Bendahara",
+  supervisor: "Supervisor",
+  humas: "Humas",
+  acara: "Acara",
+  logistik: "Logistik",
+  dokumentasi: "Dokumentasi",
+  anggota: "Anggota",
+};
 
 export default async function EventDetailPage({ params, searchParams }: { params: Promise<{ slug: string }>; searchParams: Promise<{ volunteer?: string }> }) {
   const { slug } = await params;
@@ -52,6 +65,9 @@ export default async function EventDetailPage({ params, searchParams }: { params
   // mengalihkannya ke /sensus), jadi menanyakan cabang di situ hanya memasang
   // dropdown wajib di depan tombol yang ujungnya mengalihkan juga.
   let askBranch = false;
+  // Penugasan panitia pengunjung ini pada acara yang sama - kalau ada, form
+  // volunteer diganti pemberitahuan + tautan tiket kepanitiaan (QR absensi).
+  let myCommitteeRole: { divisionName: string | null; role: string } | null = null;
   if (session?.user?.id) {
     const [existing] = await db
       .select()
@@ -60,6 +76,13 @@ export default async function EventDetailPage({ params, searchParams }: { params
     alreadyRegistered = !!existing;
     askBranch =
       !alreadyRegistered && !event.requiresSensus && !(await hasCompletedSensus(session.user.id));
+    const [committee] = await db
+      .select({ divisionName: eventDivisions.name, role: eventCommittee.role })
+      .from(eventCommittee)
+      .leftJoin(eventDivisions, eq(eventCommittee.divisionId, eventDivisions.id))
+      .where(and(eq(eventCommittee.eventId, event.id), eq(eventCommittee.userId, session.user.id)))
+      .limit(1);
+    if (committee) myCommitteeRole = { divisionName: committee.divisionName, role: committee.role };
   }
   const branchOptions = askBranch
     ? (await db.select({ cityName: regionalBranches.cityName }).from(regionalBranches))
@@ -414,7 +437,29 @@ export default async function EventDetailPage({ params, searchParams }: { params
                 </div>
                 {event.volunteerSignupOpen && event.status === "published" && (
                   <div className="border-t border-outline-variant pt-5">
-                    {volunteerFlag === "sent" ? (
+                    {myCommitteeRole ? (
+                      <div className="flex flex-col gap-3">
+                        <p className="flex items-start gap-2 text-body-md text-on-background bg-surface-container-low rounded-md px-4 py-3">
+                          <BadgeCheck size={18} className="text-primary-container shrink-0 mt-0.5" aria-hidden />
+                          <span>
+                            Kamu sudah tercatat sebagai panitia acara ini
+                            {myCommitteeRole.divisionName ? ` — ${COMMITTEE_ROLE_LABEL[myCommitteeRole.role] ?? myCommitteeRole.role} ${myCommitteeRole.divisionName}` : ""}.
+                            {" "}Tidak perlu mendaftar volunteer lagi.
+                          </span>
+                        </p>
+                        <Link
+                          href={`/events/${slug}/committee`}
+                          className="self-start inline-flex items-center justify-center gap-2 bg-secondary-container text-on-secondary-container text-label-caps uppercase tracking-wide px-6 py-3 rounded-md hover:bg-secondary transition-colors"
+                        >
+                          <Ticket size={16} aria-hidden /> Tiket Kepanitiaan (QR Absensi)
+                        </Link>
+                      </div>
+                    ) : volunteerFlag === "committee" ? (
+                      <p className="flex items-start gap-2 text-body-md text-on-background bg-surface-container-low rounded-md px-4 py-3">
+                        <BadgeCheck size={18} className="text-primary-container shrink-0 mt-0.5" aria-hidden />
+                        <span>Lamaran tidak terkirim — email ini sudah tercatat sebagai panitia acara ini. Hubungi admin bila ada kekeliruan.</span>
+                      </p>
+                    ) : volunteerFlag === "sent" ? (
                       <p className="flex items-center gap-2 text-body-md text-on-background bg-surface-container-low rounded-md px-4 py-3">
                         <PartyPopper size={18} className="text-primary-container shrink-0" aria-hidden />
                         <span>Lamaran volunteer terkirim! Panitia akan menghubungimu lewat email.</span>
