@@ -17,6 +17,8 @@ import { AIReviewButton } from "@/components/ai/ai-review-popup";
 import { CollapsibleSection } from "@/components/console/collapsible-section";
 import { HtmFields } from "@/components/console/htm-fields";
 import { PAYMENT_STATUS_LABEL } from "@/lib/payment-status-labels";
+import { toDateLocalInput } from "@/lib/datetime";
+import { ConfirmButton } from "@/components/console/confirm-button";
 
 const QUESTION_TYPE_LABELS: Record<string, string> = {
   text: "Teks Pendek",
@@ -144,7 +146,7 @@ export default async function ConsoleEventDetailPage({ params }: { params: Promi
                   <input
                     name="startAt"
                     type="datetime-local"
-                    defaultValue={event.startAt ? new Date(event.startAt).toISOString().slice(0, 16) : ""}
+                    defaultValue={event.startAt ? toDateLocalInput(new Date(event.startAt)) : ""}
                     className="bg-soft-gray rounded-md p-3 text-body-md"
                   />
                   <p className="text-xs text-on-surface-variant">Kapan acara berlangsung (tanggal & jam mulai).</p>
@@ -193,7 +195,7 @@ export default async function ConsoleEventDetailPage({ params }: { params: Promi
                 <input
                   name="registrationDeadline"
                   type="datetime-local"
-                  defaultValue={event.registrationDeadline ? new Date(event.registrationDeadline).toISOString().slice(0, 16) : ""}
+                  defaultValue={event.registrationDeadline ? toDateLocalInput(new Date(event.registrationDeadline)) : ""}
                   placeholder="Batas Pendaftaran"
                   className="bg-soft-gray rounded-md p-3 text-body-md"
                 />
@@ -224,7 +226,7 @@ export default async function ConsoleEventDetailPage({ params }: { params: Promi
                 <input
                   name="scheduledPublishAt"
                   type="datetime-local"
-                  defaultValue={event.scheduledPublishAt ? new Date(event.scheduledPublishAt).toISOString().slice(0, 16) : ""}
+                  defaultValue={event.scheduledPublishAt ? toDateLocalInput(new Date(event.scheduledPublishAt)) : ""}
                   placeholder="Jadwal Rilis Publikasi (opsional)"
                   className="bg-soft-gray rounded-md p-3 text-body-md"
                 />
@@ -336,13 +338,18 @@ export default async function ConsoleEventDetailPage({ params }: { params: Promi
                   >
                     Simpan
                   </button>
-                  <button
-                    type="submit"
-                    formAction={deleteEventQuestion}
+                  <ConfirmButton
+                    title="Hapus pertanyaan?"
+                    message={`"${q.label}" dihapus dari form pendaftaran. Jawaban yang sudah terkumpul tidak ikut terhapus.`}
+                    onConfirm={async () => {
+                      const fd = new FormData();
+                      fd.set("id", q.id);
+                      await deleteEventQuestion(fd);
+                    }}
                     className="text-label-caps uppercase tracking-wide text-error hover:bg-error-container/30 px-3 py-1.5 rounded-md"
                   >
                     Hapus
-                  </button>
+                  </ConfirmButton>
                 </div>
               </div>
             </form>
@@ -605,16 +612,20 @@ export default async function ConsoleEventDetailPage({ params }: { params: Promi
                               Terima
                             </button>
                           </form>
-                          <form action={setVolunteerStatus} className="flex-1">
-                            <input type="hidden" name="id" value={v.app.id} />
-                            <input type="hidden" name="decision" value="rejected" />
-                            <button
-                              type="submit"
-                              className="w-full text-label-caps uppercase tracking-wide text-error border border-error/40 px-3 py-1.5 rounded-md hover:bg-error-container/30 transition-colors"
-                            >
-                              Tolak
-                            </button>
-                          </form>
+                          <ConfirmButton
+                            title="Tolak lamaran?"
+                            message={`Lamaran volunteer ${v.app.fullName} akan ditandai ditolak.`}
+                            confirmLabel="Ya, tolak"
+                            onConfirm={async () => {
+                              const fd = new FormData();
+                              fd.set("id", v.app.id);
+                              fd.set("decision", "rejected");
+                              await setVolunteerStatus(fd);
+                            }}
+                            className="w-full flex-1 text-label-caps uppercase tracking-wide text-error border border-error/40 px-3 py-1.5 rounded-md hover:bg-error-container/30 transition-colors"
+                          >
+                            Tolak
+                          </ConfirmButton>
                         </div>
                       )}
                     </li>
