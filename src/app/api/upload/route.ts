@@ -36,6 +36,8 @@ const FOLDER_MODULE: Record<string, AdminModule | null> = {
   inventory: "inventory",
   events: "events",
   membership: null,
+  catalog: "content",
+  donation: "organization",
 };
 
 export async function POST(req: NextRequest) {

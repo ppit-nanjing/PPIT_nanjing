@@ -1,6 +1,7 @@
 import { requireModuleAccess, hasModuleAccess } from "@/lib/admin-scope";
 import { CollapsibleSection } from "@/components/console/collapsible-section";
 import { GuideButton } from "@/components/console/guide-button";
+import { ImageUploadCropper } from "@/components/upload/image-upload-cropper";
 import { getGuide } from "@/lib/guides";
 import {
   listCityContent,
@@ -109,14 +110,11 @@ export default async function ConsoleKatalogPage() {
               <input name="addressZh" className={input} />
             </label>
             <label className="flex flex-col gap-2">
-              <span className={label}>URL Gambar</span>
-              <input name="imageUrl" placeholder="https://…" className={input} />
-            </label>
-            <label className="flex flex-col gap-2">
               <span className={label}>Tautan Peta</span>
               <input name="mapUrl" placeholder="https://…" className={input} />
             </label>
           </div>
+          <ImageUploadCropper name="imageUrl" folder="catalog" label="Gambar" placeholder="Tempel URL atau unggah gambar" />
           <button type="submit" className={primaryBtn}>
             Tambah Tempat
           </button>
@@ -278,10 +276,6 @@ export default async function ConsoleKatalogPage() {
               <input name="websiteUrl" placeholder="https://…" className={input} />
             </label>
             <label className="flex flex-col gap-2">
-              <span className={label}>URL Logo</span>
-              <input name="logoUrl" placeholder="https://…" className={input} />
-            </label>
-            <label className="flex flex-col gap-2">
               <span className={label}>Perkiraan mahasiswa Indonesia</span>
               <input name="studentCount" type="number" min={0} className={input} />
             </label>
@@ -294,6 +288,7 @@ export default async function ConsoleKatalogPage() {
             <span className={label}>Deskripsi</span>
             <textarea name="description" rows={2} className={`${input} resize-none`} />
           </label>
+          <ImageUploadCropper name="logoUrl" folder="catalog" label="Logo" placeholder="Tempel URL atau unggah gambar" />
           <label className="flex items-center gap-2 text-body-md text-on-background">
             <input type="checkbox" name="isPartner" />
             Kampus mitra
@@ -348,11 +343,8 @@ export default async function ConsoleKatalogPage() {
                 <option value="available">Tersedia</option>
               </select>
             </label>
-            <label className="flex flex-col gap-2">
-              <span className={label}>URL Gambar</span>
-              <input name="imageUrl" placeholder="https://…" className={input} />
-            </label>
           </div>
+          <ImageUploadCropper name="imageUrl" folder="catalog" label="Gambar" placeholder="Tempel URL atau unggah gambar" />
           <label className="flex flex-col gap-2">
             <span className={label}>Deskripsi</span>
             <textarea name="description" rows={2} className={`${input} resize-none`} />
@@ -406,14 +398,11 @@ export default async function ConsoleKatalogPage() {
               </select>
             </label>
             <label className="flex flex-col gap-2">
-              <span className={label}>URL Logo</span>
-              <input name="logoUrl" placeholder="https://…" className={input} />
-            </label>
-            <label className="flex flex-col gap-2">
               <span className={label}>Situs</span>
               <input name="websiteUrl" placeholder="https://…" className={input} />
             </label>
           </div>
+          <ImageUploadCropper name="logoUrl" folder="catalog" label="Logo" placeholder="Tempel URL atau unggah gambar" />
           <label className="flex flex-col gap-2">
             <span className={label}>Deskripsi</span>
             <textarea name="description" rows={2} className={`${input} resize-none`} />
@@ -465,11 +454,8 @@ export default async function ConsoleKatalogPage() {
                   <span className={label}>Nomor / detail</span>
                   <input name="accountDetail" className={input} />
                 </label>
-                <label className="flex flex-col gap-2">
-                  <span className={label}>URL gambar QR</span>
-                  <input name="qrImageUrl" placeholder="https://…" className={input} />
-                </label>
               </div>
+              <ImageUploadCropper name="qrImageUrl" folder="donation" label="Gambar QR" placeholder="Tempel URL atau unggah gambar" />
               <label className="flex flex-col gap-2">
                 <span className={label}>Petunjuk</span>
                 <input name="instructions" className={input} />
