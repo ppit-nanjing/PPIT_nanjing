@@ -1,19 +1,25 @@
 "use client";
 
 import { useRef, useState, useTransition } from "react";
-import { Loader2, Images, X, AlertCircle, Check } from "lucide-react";
+import { Loader2, Images, X, AlertCircle, Star } from "lucide-react";
 import { compressImage } from "@/lib/image-compress";
 import { addGalleryPhotos } from "@/app/actions/admin-content";
 import { ConfirmButton } from "@/components/console/confirm-button";
 
 // Batch photo uploader for a gallery album: pick many files at once (or drag
 // them in), each is downscaled/re-encoded client-side before hitting
-// /api/upload one by one with visible progress, then all URLs are persisted
-// in a single bulk insert. A failed file doesn't abort the batch - it's
-// reported and the rest continue.
-type Item = { key: string; name: string; url?: string; error?: string };
+// /api/upload one by one with visible progress. Every uploaded photo can be
+// starred as a highlight right in the batch, so only the good shots hit the
+// public gallery - the full set stays on the album's Drive link.
+//
+// Two modes:
+// - albumId given: renders its own save button and persists via
+//   addGalleryPhotos (existing album detail page).
+// - albumId omitted ("standalone"): lives inside the create-album form and
+//   exposes a hidden `photos` input consumed by createGalleryAlbum.
+type Item = { key: string; name: string; url?: string; error?: string; highlight: boolean };
 
-export function MultiPhotoUpload({ albumId }: { albumId: string }) {
+export function MultiPhotoUpload({ albumId }: { albumId?: string }) {
   const [items, setItems] = useState<Item[]>([]);
   const [working, setWorking] = useState(false);
   const [saving, startTransition] = useTransition();
@@ -25,7 +31,7 @@ export function MultiPhotoUpload({ albumId }: { albumId: string }) {
     if (images.length === 0) return;
     setDone(false);
     setWorking(true);
-    const batch: Item[] = images.map((f, i) => ({ key: `${Date.now()}-${i}-${f.name}`, name: f.name }));
+    const batch: Item[] = images.map((f, i) => ({ key: `${Date.now()}-${i}-${f.name}`, name: f.name, highlight: false }));
     setItems(batch);
 
     for (let i = 0; i < images.length; i++) {
@@ -47,12 +53,22 @@ export function MultiPhotoUpload({ albumId }: { albumId: string }) {
     setWorking(false);
   }
 
-  const urls = items.filter((it) => it.url).map((it) => it.url!);
+  const saved = items.filter((it) => it.url);
+  const urls = saved.map((it) => it.url!);
+  const highlightCount = saved.filter((it) => it.highlight).length;
+  const payload = JSON.stringify(saved.map((it) => ({ url: it.url, highlight: it.highlight })));
+
+  function toggleHighlight(key: string) {
+    setItems((prev) => prev.map((it) => (it.key === key ? { ...it, highlight: !it.highlight } : it)));
+  }
+  function setAllHighlight(value: boolean) {
+    setItems((prev) => prev.map((it) => (it.url && !it.error ? { ...it, highlight: value } : it)));
+  }
 
   function save() {
-    if (urls.length === 0) return;
+    if (!albumId || urls.length === 0) return;
     const fd = new FormData();
-    fd.append("urls", JSON.stringify(urls));
+    fd.append("photos", payload);
     startTransition(async () => {
       await addGalleryPhotos(albumId, fd);
       setItems([]);
@@ -88,6 +104,7 @@ export function MultiPhotoUpload({ albumId }: { albumId: string }) {
             </p>
             <p className="text-body-sm text-on-surface-variant/70 text-center max-w-xs">
               Foto di-resize ke sisi terpanjang 1920 px & dikompres WebP otomatis.
+              {!albumId && " Setelah unggah, tandai foto terbaik sebagai highlight."}
             </p>
           </>
         )}
@@ -104,31 +121,69 @@ export function MultiPhotoUpload({ albumId }: { albumId: string }) {
         />
       </div>
 
+      {/* Standalone mode feeds the enclosing create-album form via this hidden
+          input instead of saving on its own. */}
+      {!albumId && <input type="hidden" name="photos" value={payload} />}
+
       {done && items.length === 0 && (
         <p className="text-body-sm text-primary-container">Semua foto tersimpan ke album.</p>
       )}
 
       {items.length > 0 && (
         <div className="flex flex-col gap-2">
-          <ul className="flex flex-col gap-1">
+          {!working && saved.length > 0 && (
+            <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
+              <p className="text-label-caps text-on-surface-variant">
+                {highlightCount} dari {saved.length} foto jadi highlight
+              </p>
+              <button
+                type="button"
+                onClick={() => setAllHighlight(true)}
+                className="flex items-center gap-1 text-label-caps text-primary-container hover:text-primary transition-colors"
+              >
+                <Star size={13} /> Pilih semua
+              </button>
+              <button
+                type="button"
+                onClick={() => setAllHighlight(false)}
+                className="text-label-caps text-on-surface-variant hover:text-on-background transition-colors"
+              >
+                Kosongkan
+              </button>
+            </div>
+          )}
+          <ul className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
             {items.map((it) => (
-              <li key={it.key} className="flex items-center gap-2 text-body-sm">
+              <li key={it.key} className="relative rounded-lg overflow-hidden bg-surface-container-low aspect-square group">
                 {it.error ? (
+                  <div className="w-full h-full flex flex-col items-center justify-center gap-1 p-2 text-center">
+                    <AlertCircle size={18} className="text-error" />
+                    <span className="text-label-caps text-error break-all line-clamp-2">{it.name}</span>
+                    <span className="text-label-caps text-on-surface-variant">gagal diunggah</span>
+                  </div>
+                ) : it.url ? (
                   <>
-                    <AlertCircle size={14} className="text-error shrink-0" />
-                    <span className="truncate text-error">{it.name}</span>
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src={it.url} alt={it.name} className="absolute inset-0 w-full h-full object-cover" />
+                    <button
+                      type="button"
+                      onClick={() => toggleHighlight(it.key)}
+                      aria-label={it.highlight ? "Hapus dari highlight" : "Jadikan highlight"}
+                      aria-pressed={it.highlight}
+                      className={`absolute top-2 left-2 p-1.5 rounded-md transition-opacity ${
+                        it.highlight
+                          ? "bg-primary-container text-on-primary opacity-100"
+                          : "bg-inverse-surface/80 text-inverse-on-surface group-hover:opacity-100 sm:opacity-0"
+                      }`}
+                    >
+                      <Star size={14} fill={it.highlight ? "currentColor" : "none"} />
+                    </button>
                   </>
                 ) : (
-                  <>
-                    {it.url ? (
-                      <span className="w-4 h-4 rounded-full bg-primary-container text-on-primary flex items-center justify-center shrink-0">
-                        <Check size={10} aria-hidden />
-                      </span>
-                    ) : (
-                      <Loader2 size={14} className="animate-spin text-on-surface-variant shrink-0" />
-                    )}
-                    <span className="truncate">{it.name}</span>
-                  </>
+                  <div className="w-full h-full flex flex-col items-center justify-center gap-1 p-2 text-center">
+                    <Loader2 size={16} className="animate-spin text-on-surface-variant" />
+                    <span className="text-label-caps text-on-surface-variant break-all line-clamp-2">{it.name}</span>
+                  </div>
                 )}
                 {!working && !saving && (
                   <ConfirmButton
@@ -136,7 +191,7 @@ export function MultiPhotoUpload({ albumId }: { albumId: string }) {
                     title="Batalkan foto ini?"
                     message={`"${it.name}" akan dikeluarkan dari batch. Foto yang sudah terunggah ke storage tidak ikut terhapus.`}
                     confirmLabel="Ya, batalkan"
-                    className="ml-auto text-on-surface-variant hover:text-error shrink-0"
+                    className="absolute top-2 right-2 bg-inverse-surface/80 text-inverse-on-surface p-1.5 rounded-md group-hover:opacity-100 sm:opacity-0 transition-opacity hover:bg-error hover:text-on-error"
                     onConfirm={() => setItems((prev) => prev.filter((x) => x.key !== it.key))}
                   >
                     <X size={14} />
@@ -145,7 +200,7 @@ export function MultiPhotoUpload({ albumId }: { albumId: string }) {
               </li>
             ))}
           </ul>
-          {!working && (
+          {!working && albumId && (
             <button
               type="button"
               onClick={save}
@@ -153,7 +208,7 @@ export function MultiPhotoUpload({ albumId }: { albumId: string }) {
               className="self-start flex items-center gap-2 bg-primary-container text-on-primary text-label-caps uppercase tracking-wide px-5 py-3 rounded-md hover:bg-primary transition-colors disabled:opacity-60"
             >
               {saving && <Loader2 size={14} className="animate-spin" />}
-              Simpan {urls.length} Foto
+              Simpan {urls.length} Foto{highlightCount > 0 ? ` (${highlightCount} highlight)` : ""}
             </button>
           )}
         </div>

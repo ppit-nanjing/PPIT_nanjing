@@ -114,7 +114,7 @@ async function notifyNewsSubscribers(article: typeof newsArticles.$inferSelect) 
 }
 
 export async function createGalleryAlbum(formData: FormData) {
-  await requireContentAccess();
+  const actorId = await requireContentAccess();
   const title = String(formData.get("title") ?? "").trim();
   const coverImageUrl = String(formData.get("coverImageUrl") ?? "").trim();
   const driveUrl = String(formData.get("driveUrl") ?? "").trim();
@@ -126,6 +126,24 @@ export async function createGalleryAlbum(formData: FormData) {
     .values({ title, coverImageUrl: coverImageUrl || null, driveUrl: driveUrl || null })
     .returning();
 
+  // Optional batch of photos picked at creation time (MultiPhotoUpload in
+  // standalone mode). Only the starred ones become highlights; the rest live
+  // on the album's Drive link.
+  const entries = parsePhotoEntries(formData.get("photos"));
+  if (entries.length > 0) {
+    await db.insert(galleryPhotos).values(
+      entries.map((e) => ({
+        albumId: album.id,
+        imageUrl: e.imageUrl,
+        caption: null,
+        uploadedBy: actorId,
+        isHighlight: e.isHighlight,
+      })),
+    );
+  }
+
+  revalidatePath("/console/content");
+  revalidatePath("/gallery");
   redirect(`/console/content/gallery/${album.id}`);
 }
 
@@ -172,40 +190,64 @@ export async function addGalleryPhoto(albumId: string, formData: FormData) {
 }
 
 // Bulk variant used by MultiPhotoUpload - the client uploads each file to
-// /api/upload first, then hands over the resulting blob URLs as a JSON array.
-// URLs are still validated server-side: only our own blob host is accepted,
-// so the action can't be abused to point album rows at arbitrary origins.
+// /api/upload first, then hands over the resulting blob URLs. URLs are still
+// validated server-side: only our own blob host is accepted, so the action
+// can't be abused to point album rows at arbitrary origins.
 const BLOB_HOST_SUFFIXES = ["blob.vercel-storage.com"];
+
+// Accepts two payload shapes: [{url, highlight}] (new - carries per-photo
+// highlight flags from the batch picker) or ["url", ...] (legacy plain list,
+// all non-highlight). Invalid entries are dropped silently so one bad URL
+// can't sink a whole batch; an empty result is surfaced by the caller.
+function parsePhotoEntries(raw: FormDataEntryValue | null): { imageUrl: string; isHighlight: boolean }[] {
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(String(raw ?? "[]"));
+  } catch {
+    return [];
+  }
+
+  const isValidUrl = (u: string) => {
+    try {
+      return BLOB_HOST_SUFFIXES.some((suffix) => new URL(u).host.endsWith(suffix));
+    } catch {
+      return false;
+    }
+  };
+
+  if (!Array.isArray(parsed)) return [];
+  const entries: { imageUrl: string; isHighlight: boolean }[] = [];
+  for (const item of parsed.slice(0, 100)) {
+    if (typeof item === "string") {
+      if (isValidUrl(item)) entries.push({ imageUrl: item.trim(), isHighlight: false });
+    } else if (item && typeof item === "object" && typeof (item as { url?: unknown }).url === "string") {
+      const url = (item as { url: string }).url.trim();
+      const highlight = Boolean((item as { highlight?: unknown }).highlight);
+      if (isValidUrl(url)) entries.push({ imageUrl: url, isHighlight: highlight });
+    }
+    if (entries.length >= 100) break;
+  }
+  return entries;
+}
 
 export async function addGalleryPhotos(albumId: string, formData: FormData) {
   const actorId = await requireContentAccess();
 
-  let urls: unknown;
-  try {
-    urls = JSON.parse(String(formData.get("urls") ?? "[]"));
-  } catch {
-    throw new Error("Payload foto tidak valid");
-  }
-  if (!Array.isArray(urls) || urls.length === 0) throw new Error("Tidak ada foto untuk disimpan");
-  if (urls.length > 100) throw new Error("Maksimal 100 foto per batch");
-
   const [album] = await db.select({ id: galleryAlbums.id }).from(galleryAlbums).where(eq(galleryAlbums.id, albumId));
   if (!album) notFound();
 
-  const rows = urls
-    .filter((u): u is string => typeof u === "string")
-    .map((u) => u.trim())
-    .filter((u) => {
-      try {
-        return BLOB_HOST_SUFFIXES.some((suffix) => new URL(u).host.endsWith(suffix));
-      } catch {
-        return false;
-      }
-    })
-    .map((imageUrl) => ({ albumId, imageUrl, caption: null, uploadedBy: actorId }));
-  if (rows.length === 0) throw new Error("Tidak ada URL foto yang valid");
+  const entries = parsePhotoEntries(formData.get("photos") ?? formData.get("urls"));
+  if (entries.length === 0) throw new Error("Tidak ada URL foto yang valid");
 
-  await db.insert(galleryPhotos).values(rows);
+  await db.insert(galleryPhotos).values(
+    entries.map((e) => ({
+      albumId,
+      imageUrl: e.imageUrl,
+      caption: null,
+      uploadedBy: actorId,
+      isHighlight: e.isHighlight,
+    })),
+  );
   revalidatePath(`/console/content/gallery/${albumId}`);
 }
 

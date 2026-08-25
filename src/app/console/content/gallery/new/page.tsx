@@ -1,6 +1,7 @@
 import { requireModuleAccess } from "@/lib/admin-scope";
 import { createGalleryAlbum } from "@/app/actions/admin-content";
 import { ImageUploadCropper } from "@/components/upload/image-upload-cropper";
+import { MultiPhotoUpload } from "@/components/console/multi-photo-upload";
 import { CollapsibleSection } from "@/components/console/collapsible-section";
 import { ArrowLeft } from "lucide-react";
 import Link from "next/link";
@@ -9,7 +10,7 @@ export default async function NewGalleryAlbumPage() {
   await requireModuleAccess("content");
 
   return (
-    <div className="px-4 py-6 sm:px-6 lg:px-8 lg:py-10 max-w-2xl">
+    <div className="px-4 py-6 sm:px-6 lg:px-8 lg:py-10 max-w-3xl">
       <Link
         href="/console/content"
         className="inline-flex items-center gap-2 text-label-caps uppercase tracking-wide text-on-surface-variant hover:text-on-background mb-4"
@@ -42,6 +43,17 @@ export default async function NewGalleryAlbumPage() {
               Halaman publik hanya menampilkan foto highlight — pengunjung mengambil foto lengkap lewat link ini.
             </span>
           </label>
+
+          <label className="flex flex-col gap-2">
+            <span className="text-label-caps uppercase tracking-wide text-on-surface-variant">
+              Foto Highlight (opsional)
+            </span>
+            <MultiPhotoUpload />
+            <span className="text-body-sm text-on-surface-variant -mt-2">
+              Unggah beberapa foto, lalu tandai bintang pada yang bagus — hanya foto bertanda yang tampil di galeri publik.
+            </span>
+          </label>
+
           <button
             type="submit"
             className="self-start bg-primary-container text-on-primary text-label-caps uppercase tracking-wide px-6 py-3 rounded-md hover:bg-primary transition-colors"

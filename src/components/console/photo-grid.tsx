@@ -30,7 +30,7 @@ export function PhotoGrid({ albumId, photos }: { albumId: string; photos: Photo[
       <p className="text-body-sm text-on-surface-variant mb-3">
         Tandai bintang untuk foto <strong>highlight</strong> — hanya foto bertanda yang tampil di galeri publik.
       </p>
-      <div className="grid grid-cols-1 sm:grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
         {photos.map((p) => (
           <div key={p.id} className="relative aspect-square group rounded-lg overflow-hidden bg-surface-container-low">
             <NextImage
