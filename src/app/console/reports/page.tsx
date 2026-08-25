@@ -27,22 +27,22 @@ function tally(values: (string | null)[]): { label: string; count: number }[] {
 
 export default async function ConsoleReportsPage() {
   await requireModuleAccess("reports");
-  // Kicked off now, awaited later - no dependency on the queries below, so it
-  // runs concurrently instead of adding another link to an already-serial
-  // chain of independent round-trips.
-  const guidePromise = getGuide("laporan");
-  const allUsers = await db.select().from(users);
-  const allSensus = await db.select().from(sensusProfiles);
-  const allDepartments = await db.select().from(departments);
-  const allBranches = (await db.select({ cityName: regionalBranches.cityName }).from(regionalBranches))
-    .map((b) => b.cityName)
-    .sort((a, b) => a.localeCompare(b));
-  const recentReports = await db
-    .select({ report: reports, generatedByName: users.name })
-    .from(reports)
-    .leftJoin(users, eq(reports.generatedBy, users.id))
-    .orderBy(desc(reports.generatedAt))
-    .limit(20);
+  // Perf: all five reads are independent - run them concurrently instead of
+  // adding up five serial round trips to the Neon proxy.
+  const [allUsers, allSensus, allDepartments, branchRows, recentReports, guide] = await Promise.all([
+    db.select().from(users),
+    db.select().from(sensusProfiles),
+    db.select().from(departments),
+    db.select({ cityName: regionalBranches.cityName }).from(regionalBranches),
+    db
+      .select({ report: reports, generatedByName: users.name })
+      .from(reports)
+      .leftJoin(users, eq(reports.generatedBy, users.id))
+      .orderBy(desc(reports.generatedAt))
+      .limit(20),
+    getGuide("laporan"),
+  ]);
+  const allBranches = branchRows.map((b) => b.cityName).sort((a, b) => a.localeCompare(b));
 
   const completedCount = allSensus.filter((s) => s.completionStatus === "complete").length;
   const byUniversity = tally(allSensus.map((s) => s.university));
@@ -53,8 +53,6 @@ export default async function ConsoleReportsPage() {
   // "Tamu" — kalau dihitung dari allSensus, ember itu selalu terlihat kosong.
   const sensusByUser = new Map(allSensus.map((s) => [s.userId, s]));
   const byMembership = tally(allUsers.map((u) => MEMBERSHIP_LABEL[membershipStatus(sensusByUser.get(u.id))]));
-
-  const guide = await guidePromise;
 
   return (
     <div className="px-4 py-6 sm:px-6 lg:px-8 lg:py-10">

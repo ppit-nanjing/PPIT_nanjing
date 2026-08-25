@@ -10,10 +10,15 @@ import { UserPlus } from "lucide-react";
 
 export default async function ConsoleUsersPage() {
   await requireModuleAccess("users");
-  const allUsers = await db.select().from(users);
-  const allRoles = await db.select().from(roles);
-  const allDepartments = await db.select().from(departments);
-  const memberships = await db.select().from(departmentMembers);
+  // Perf: these four reads used to be awaited one-by-one (4 sequential round
+  // trips to Neon); they are independent, so run them concurrently.
+  const [allUsers, allRoles, allDepartments, memberships, guide] = await Promise.all([
+    db.select().from(users),
+    db.select().from(roles),
+    db.select().from(departments),
+    db.select().from(departmentMembers),
+    getGuide("pengguna"),
+  ]);
 
   const rows = allUsers.map((u) => {
     const membership = memberships.find((m) => m.userId === u.id);
@@ -28,8 +33,6 @@ export default async function ConsoleUsersPage() {
       position: membership?.position ?? "",
     };
   });
-
-  const guide = await getGuide("pengguna");
 
   return (
     <div className="px-4 py-6 sm:px-6 lg:px-8 lg:py-10">

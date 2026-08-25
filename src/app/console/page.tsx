@@ -1,22 +1,11 @@
-import { desc, eq, sql, and, gte, type SQL, type Table } from "drizzle-orm";
+import { desc, eq, sql } from "drizzle-orm";
 import { db } from "@/db";
 import {
-  users,
-  sensusProfiles,
-  events,
   eventRegistrations,
-  newsArticles,
-  galleryAlbums,
-  galleryPhotos,
-  jobPostings,
-  jobApplications,
-  membershipApplications,
-  recruitmentPeriods,
-  inventoryItems,
-  borrowRequests,
-  itemContributions,
-  procurementRequests,
+  events,
   feedback,
+  membershipApplications,
+  users,
 } from "@/db/schema";
 import { CollapsibleSection } from "@/components/console/collapsible-section";
 import { GuideButton } from "@/components/console/guide-button";
@@ -36,10 +25,70 @@ import {
   MessageSquare,
 } from "lucide-react";
 
-async function countOf(table: Table, where?: SQL) {
-  const q = db.select({ v: sql<number>`count(*)::int` }).from(table);
-  const rows = where ? await q.where(where) : await q;
-  return rows[0].v;
+// Perf: this used to fire 26 separate COUNT(*) queries through Promise.all -
+// one HTTPS round trip each to the Neon ap-southeast-1 proxy. All of them are
+// fused into ONE select of scalar subqueries (single round trip), and the whole
+// batch below runs concurrently with the recent-activity and guide reads.
+type DashboardCounts = {
+  totalUsers: number;
+  activeUsers: number;
+  newUsers: number;
+  sensusComplete: number;
+  publishedEvents: number;
+  draftEvents: number;
+  upcomingEvents: number;
+  totalRegs: number;
+  pendingRegs: number;
+  attendedRegs: number;
+  publishedNews: number;
+  draftNews: number;
+  totalAlbums: number;
+  totalPhotos: number;
+  openJobs: number;
+  totalApps: number;
+  pendingMembers: number;
+  totalMembers: number;
+  isRecruitOpen: boolean;
+  totalItems: number;
+  pendingBorrow: number;
+  overdueBorrow: number;
+  pendingContrib: number;
+  pendingProcure: number;
+  totalFeedback: number;
+  newFeedback: number;
+};
+
+async function fetchDashboardCounts(startOfMonth: Date): Promise<DashboardCounts> {
+  const result = await db.execute<DashboardCounts>(sql`
+    select
+      (select count(*) from users)::int as "totalUsers",
+      (select count(*) from users where status = 'active')::int as "activeUsers",
+      (select count(*) from users where created_at >= ${startOfMonth})::int as "newUsers",
+      (select count(*) from sensus_profiles where completion_status = 'complete')::int as "sensusComplete",
+      (select count(*) from events where status = 'published')::int as "publishedEvents",
+      (select count(*) from events where status = 'draft')::int as "draftEvents",
+      (select count(*) from events where status = 'published' and start_at >= now())::int as "upcomingEvents",
+      (select count(*) from event_registrations)::int as "totalRegs",
+      (select count(*) from event_registrations where status = 'pending')::int as "pendingRegs",
+      (select count(*) from event_registrations where status = 'attended')::int as "attendedRegs",
+      (select count(*) from news_articles where status = 'published')::int as "publishedNews",
+      (select count(*) from news_articles where status = 'draft')::int as "draftNews",
+      (select count(*) from gallery_albums)::int as "totalAlbums",
+      (select count(*) from gallery_photos)::int as "totalPhotos",
+      (select count(*) from job_postings where status = 'open')::int as "openJobs",
+      (select count(*) from job_applications)::int as "totalApps",
+      (select count(*) from membership_applications where status = 'pending')::int as "pendingMembers",
+      (select count(*) from membership_applications)::int as "totalMembers",
+      (select exists(select 1 from recruitment_periods where is_open)) as "isRecruitOpen",
+      (select count(*) from inventory_items)::int as "totalItems",
+      (select count(*) from borrow_requests where status = 'pending')::int as "pendingBorrow",
+      (select count(*) from borrow_requests where status = 'overdue')::int as "overdueBorrow",
+      (select count(*) from item_contributions where status = 'pending')::int as "pendingContrib",
+      (select count(*) from procurement_requests where status = 'pending')::int as "pendingProcure",
+      (select count(*) from feedback)::int as "totalFeedback",
+      (select count(*) from feedback where status = 'new')::int as "newFeedback"
+  `);
+  return result.rows[0];
 }
 
 function timeAgo(d: Date) {
@@ -58,37 +107,37 @@ export default async function ConsoleDashboardPage() {
   const now = new Date();
   const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
 
-  const nums = await Promise.all([
-    countOf(users),
-    countOf(users, eq(users.status, "active")),
-    countOf(users, gte(users.createdAt, startOfMonth)),
-    countOf(sensusProfiles, eq(sensusProfiles.completionStatus, "complete")),
-    countOf(events),
-    countOf(events, eq(events.status, "published")),
-    countOf(events, eq(events.status, "draft")),
-    countOf(events, and(eq(events.status, "published"), gte(events.startAt, now))),
-    countOf(eventRegistrations),
-    countOf(eventRegistrations, eq(eventRegistrations.status, "pending")),
-    countOf(eventRegistrations, eq(eventRegistrations.status, "attended")),
-    countOf(newsArticles, eq(newsArticles.status, "published")),
-    countOf(newsArticles, eq(newsArticles.status, "draft")),
-    countOf(galleryAlbums),
-    countOf(galleryPhotos),
-    countOf(jobPostings, eq(jobPostings.status, "open")),
-    countOf(jobApplications),
-    countOf(membershipApplications, eq(membershipApplications.status, "pending")),
-    countOf(membershipApplications),
-    countOf(recruitmentPeriods, eq(recruitmentPeriods.isOpen, true)),
-    countOf(inventoryItems),
-    countOf(borrowRequests, eq(borrowRequests.status, "pending")),
-    countOf(borrowRequests, eq(borrowRequests.status, "overdue")),
-    countOf(itemContributions, eq(itemContributions.status, "pending")),
-    countOf(procurementRequests, eq(procurementRequests.status, "pending")),
-    countOf(feedback),
-    countOf(feedback, eq(feedback.status, "new")),
+  // All independent reads in one parallel batch: the fused count query, three
+  // recent-activity lists, and the guide. Wall-clock cost ≈ one round trip.
+  const [counts, recentFeedback, recentRegs, recentMembers, guide] = await Promise.all([
+    fetchDashboardCounts(startOfMonth),
+    db
+      .select({ id: feedback.id, category: feedback.category, message: feedback.message, status: feedback.status, createdAt: feedback.createdAt })
+      .from(feedback)
+      .orderBy(desc(feedback.createdAt))
+      .limit(6),
+    db
+      .select({
+        id: eventRegistrations.id,
+        eventTitle: events.title,
+        userName: users.name,
+        status: eventRegistrations.status,
+        createdAt: eventRegistrations.registeredAt,
+      })
+      .from(eventRegistrations)
+      .leftJoin(events, eq(eventRegistrations.eventId, events.id))
+      .leftJoin(users, eq(eventRegistrations.userId, users.id))
+      .orderBy(desc(eventRegistrations.registeredAt))
+      .limit(6),
+    db
+      .select({ id: membershipApplications.id, fullName: membershipApplications.fullName, status: membershipApplications.status, createdAt: membershipApplications.submittedAt })
+      .from(membershipApplications)
+      .orderBy(desc(membershipApplications.submittedAt))
+      .limit(6),
+    getGuide("dashboard"),
   ]);
 
-  const [
+  const {
     totalUsers,
     activeUsers,
     newUsers,
@@ -115,33 +164,7 @@ export default async function ConsoleDashboardPage() {
     pendingProcure,
     totalFeedback,
     newFeedback,
-  ] = nums;
-
-  const [recentFeedback, recentRegs, recentMembers] = await Promise.all([
-    db
-      .select({ id: feedback.id, category: feedback.category, message: feedback.message, status: feedback.status, createdAt: feedback.createdAt })
-      .from(feedback)
-      .orderBy(desc(feedback.createdAt))
-      .limit(6),
-    db
-      .select({
-        id: eventRegistrations.id,
-        eventTitle: events.title,
-        userName: users.name,
-        status: eventRegistrations.status,
-        createdAt: eventRegistrations.registeredAt,
-      })
-      .from(eventRegistrations)
-      .leftJoin(events, eq(eventRegistrations.eventId, events.id))
-      .leftJoin(users, eq(eventRegistrations.userId, users.id))
-      .orderBy(desc(eventRegistrations.registeredAt))
-      .limit(6),
-    db
-      .select({ id: membershipApplications.id, fullName: membershipApplications.fullName, status: membershipApplications.status, createdAt: membershipApplications.submittedAt })
-      .from(membershipApplications)
-      .orderBy(desc(membershipApplications.submittedAt))
-      .limit(6),
-  ]);
+  } = counts;
 
   const feed = [
     ...recentFeedback.map((f) => ({
@@ -206,7 +229,6 @@ export default async function ConsoleDashboardPage() {
   ];
 
   const today = new Date().toLocaleDateString("id-ID", { weekday: "long", day: "numeric", month: "long", year: "numeric" });
-  const guide = await getGuide("dashboard");
 
   return (
     <div className="px-4 py-6 sm:px-6 lg:px-8 lg:py-10">
