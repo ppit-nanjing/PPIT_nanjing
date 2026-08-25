@@ -3,9 +3,9 @@ import { notFound } from "next/navigation";
 import { db } from "@/db";
 import { galleryAlbums, galleryPhotos } from "@/db/schema";
 import { requireModuleAccess } from "@/lib/admin-scope";
-import { addGalleryPhoto } from "@/app/actions/admin-content";
+import { setAlbumDriveUrl } from "@/app/actions/admin-content";
+import { MultiPhotoUpload } from "@/components/console/multi-photo-upload";
 import { PhotoGrid } from "@/components/console/photo-grid";
-import { FileUpload } from "@/components/upload/file-upload";
 import { CollapsibleSection } from "@/components/console/collapsible-section";
 import { ArrowLeft } from "lucide-react";
 import Link from "next/link";
@@ -27,21 +27,33 @@ export default async function ConsoleAlbumDetailPage({ params }: { params: Promi
       </Link>
       <h1 className="text-headline-md sm:text-headline-lg text-on-background mb-8">{album.title}</h1>
 
-      <CollapsibleSection title="Galeri Album">
-        <form action={addGalleryPhoto.bind(null, albumId)} className="flex flex-col gap-3 sm:flex-row sm:items-end mb-10">
-          <div className="flex-1">
-            <FileUpload name="imageUrl" folder="gallery" label="URL Foto *" placeholder="URL atau unggah gambar" required />
-          </div>
-          <input name="caption" placeholder="Keterangan (opsional)" className="flex-1 bg-soft-gray rounded-md p-3 text-body-md" />
+      <CollapsibleSection title="Link Google Drive Semua Foto" defaultOpen>
+        <form action={setAlbumDriveUrl.bind(null, albumId)} className="flex flex-col gap-3 sm:flex-row sm:items-end mb-10">
+          <label className="flex-1 flex flex-col gap-1">
+            <span className="text-label-caps uppercase tracking-wide text-on-surface-variant">
+              Pengunjung mengambil foto lengkap lewat link ini
+            </span>
+            <input
+              name="driveUrl"
+              type="url"
+              defaultValue={album.driveUrl ?? ""}
+              placeholder="https://drive.google.com/..."
+              className="bg-soft-gray rounded-md p-3 text-body-md"
+            />
+          </label>
           <button
             type="submit"
             className="bg-primary-container text-on-primary text-label-caps uppercase tracking-wide px-5 py-3 rounded-md hover:bg-primary transition-colors shrink-0"
           >
-            Tambah Foto
+            Simpan Link
           </button>
         </form>
+      </CollapsibleSection>
 
-        <PhotoGrid albumId={albumId} photos={photos.map((p) => ({ id: p.id, imageUrl: p.imageUrl, caption: p.caption }))} />
+      <CollapsibleSection title="Galeri Album">
+        <MultiPhotoUpload albumId={albumId} />
+
+        <PhotoGrid albumId={albumId} photos={photos.map((p) => ({ id: p.id, imageUrl: p.imageUrl, caption: p.caption, isHighlight: p.isHighlight }))} />
       </CollapsibleSection>
     </div>
   );

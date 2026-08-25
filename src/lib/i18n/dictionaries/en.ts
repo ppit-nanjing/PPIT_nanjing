@@ -251,6 +251,7 @@ export const en = {
   "gallery.listLabel": "Gallery album list",
   "gallery.back": "Back to Gallery",
   "gallery.photoCount": "{{n}} photos{{extra}}",
+  "gallery.driveAll": "Download All Photos",
   "gallery.photoZoomHint": " • click to enlarge",
   "gallery.emptyTitle2": "Empty album",
   "gallery.emptyDesc2": "No photos in this album yet.",

@@ -2,7 +2,7 @@
 
 import { and, eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
-import { redirect } from "next/navigation";
+import { redirect, notFound } from "next/navigation";
 import { auth } from "@/auth";
 import { db } from "@/db";
 import { newsArticles, galleryAlbums, galleryPhotos, users } from "@/db/schema";
@@ -117,14 +117,48 @@ export async function createGalleryAlbum(formData: FormData) {
   await requireContentAccess();
   const title = String(formData.get("title") ?? "").trim();
   const coverImageUrl = String(formData.get("coverImageUrl") ?? "").trim();
+  const driveUrl = String(formData.get("driveUrl") ?? "").trim();
   if (!title) throw new Error("Judul album wajib diisi");
+  if (driveUrl && !isValidHttpUrl(driveUrl)) throw new Error("Link Drive tidak valid");
 
   const [album] = await db
     .insert(galleryAlbums)
-    .values({ title, coverImageUrl: coverImageUrl || null })
+    .values({ title, coverImageUrl: coverImageUrl || null, driveUrl: driveUrl || null })
     .returning();
 
   redirect(`/console/content/gallery/${album.id}`);
+}
+
+function isValidHttpUrl(value: string): boolean {
+  try {
+    const url = new URL(value);
+    return url.protocol === "https:" || url.protocol === "http:";
+  } catch {
+    return false;
+  }
+}
+
+// Public gallery pages render only highlighted photos; everything else is
+// reached through the album's Drive link. Toggle is per-photo and instant.
+export async function setPhotoHighlight(photoId: string, albumId: string, highlight: boolean) {
+  await requireContentAccess();
+  await db.update(galleryPhotos).set({ isHighlight: highlight }).where(eq(galleryPhotos.id, photoId));
+  revalidatePath(`/console/content/gallery/${albumId}`);
+  revalidatePath("/gallery");
+  revalidatePath(`/gallery/${albumId}`);
+}
+
+export async function setAlbumDriveUrl(albumId: string, formData: FormData) {
+  await requireContentAccess();
+  const driveUrl = String(formData.get("driveUrl") ?? "").trim();
+  if (driveUrl && !isValidHttpUrl(driveUrl)) throw new Error("Link Drive tidak valid");
+
+  const [album] = await db.select({ id: galleryAlbums.id }).from(galleryAlbums).where(eq(galleryAlbums.id, albumId));
+  if (!album) notFound();
+
+  await db.update(galleryAlbums).set({ driveUrl: driveUrl || null }).where(eq(galleryAlbums.id, albumId));
+  revalidatePath(`/console/content/gallery/${albumId}`);
+  revalidatePath(`/gallery/${albumId}`);
 }
 
 export async function addGalleryPhoto(albumId: string, formData: FormData) {
@@ -134,6 +168,44 @@ export async function addGalleryPhoto(albumId: string, formData: FormData) {
   if (!imageUrl) throw new Error("URL foto wajib diisi");
 
   await db.insert(galleryPhotos).values({ albumId, imageUrl, caption: caption || null, uploadedBy: actorId });
+  revalidatePath(`/console/content/gallery/${albumId}`);
+}
+
+// Bulk variant used by MultiPhotoUpload - the client uploads each file to
+// /api/upload first, then hands over the resulting blob URLs as a JSON array.
+// URLs are still validated server-side: only our own blob host is accepted,
+// so the action can't be abused to point album rows at arbitrary origins.
+const BLOB_HOST_SUFFIXES = ["blob.vercel-storage.com"];
+
+export async function addGalleryPhotos(albumId: string, formData: FormData) {
+  const actorId = await requireContentAccess();
+
+  let urls: unknown;
+  try {
+    urls = JSON.parse(String(formData.get("urls") ?? "[]"));
+  } catch {
+    throw new Error("Payload foto tidak valid");
+  }
+  if (!Array.isArray(urls) || urls.length === 0) throw new Error("Tidak ada foto untuk disimpan");
+  if (urls.length > 100) throw new Error("Maksimal 100 foto per batch");
+
+  const [album] = await db.select({ id: galleryAlbums.id }).from(galleryAlbums).where(eq(galleryAlbums.id, albumId));
+  if (!album) notFound();
+
+  const rows = urls
+    .filter((u): u is string => typeof u === "string")
+    .map((u) => u.trim())
+    .filter((u) => {
+      try {
+        return BLOB_HOST_SUFFIXES.some((suffix) => new URL(u).host.endsWith(suffix));
+      } catch {
+        return false;
+      }
+    })
+    .map((imageUrl) => ({ albumId, imageUrl, caption: null, uploadedBy: actorId }));
+  if (rows.length === 0) throw new Error("Tidak ada URL foto yang valid");
+
+  await db.insert(galleryPhotos).values(rows);
   revalidatePath(`/console/content/gallery/${albumId}`);
 }
 

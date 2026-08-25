@@ -254,6 +254,7 @@ export const id = {
   "gallery.listLabel": "Daftar album galeri",
   "gallery.back": "Kembali ke Galeri",
   "gallery.photoCount": "{{n}} foto{{extra}}",
+  "gallery.driveAll": "Unduh Semua Foto",
   "gallery.photoZoomHint": " • klik untuk memperbesar",
   "gallery.emptyTitle2": "Album kosong",
   "gallery.emptyDesc2": "Belum ada foto di album ini.",

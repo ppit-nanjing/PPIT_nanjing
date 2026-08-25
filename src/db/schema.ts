@@ -509,6 +509,9 @@ export const galleryAlbums = pgTable("gallery_albums", {
   title: text("title").notNull(),
   eventId: uuid("event_id").references(() => events.id),
   coverImageUrl: text("cover_image_url"),
+  // Public pages only render highlight photos; this link (usually a Google
+  // Drive folder) is where visitors get the full set for an event.
+  driveUrl: text("drive_url"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
 
@@ -517,6 +520,9 @@ export const galleryPhotos = pgTable("gallery_photos", {
   albumId: uuid("album_id").notNull().references(() => galleryAlbums.id, { onDelete: "cascade" }),
   imageUrl: text("image_url").notNull(),
   caption: text("caption"),
+  // Only highlighted photos appear on public gallery pages; the rest are
+  // reachable through the album's driveUrl instead.
+  isHighlight: boolean("is_highlight").notNull().default(false),
   uploadedBy: uuid("uploaded_by").references(() => users.id),
   uploadedAt: timestamp("uploaded_at").notNull().defaultNow(),
 });
