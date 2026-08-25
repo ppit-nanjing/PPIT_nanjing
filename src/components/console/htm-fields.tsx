@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { Field, fieldInput } from "@/components/console/form";
+import { ImageUploadCropper } from "@/components/upload/image-upload-cropper";
 
 // "HTM" (Harga Tiket Masuk) toggle: fee amount is often unknown at creation
 // time (depends on whether a sponsor comes through), so it's fine to check
@@ -10,11 +11,13 @@ export function HtmFields({
   defaultIsPaid,
   defaultFeeCny,
   defaultInstructions,
+  defaultQrUrl,
   defaultAlipayUid,
 }: {
   defaultIsPaid?: boolean;
   defaultFeeCny?: number | null;
   defaultInstructions?: string | null;
+  defaultQrUrl?: string | null;
   defaultAlipayUid?: string | null;
 }) {
   const [paid, setPaid] = useState(defaultIsPaid ?? false);
@@ -59,9 +62,19 @@ export function HtmFields({
             />
           </Field>
 
+          {/* QR Alipay bendahara: cara bayar utama bagi peserta - scan, transfer,
+              lalu unggah bukti. Diunggah sebagai gambar, bukan teks tautan. */}
+          <ImageUploadCropper
+            name="paymentQrUrl"
+            folder="events"
+            label="QR Alipay Bendahara"
+            defaultValue={defaultQrUrl ?? ""}
+            hint="Screenshot/unduhan QR pribadi bendahara dari app Alipay. Tampil di tiket peserta untuk discan."
+          />
+
           <Field
             label="Alipay UID Bendahara (opsional)"
-            hint='Kalau diisi, tiket peserta menampilkan QR yang mengisi nominal & catatan otomatis di app Alipay. Cek UID: Alipay → Saya → foto profil → "支付宝会员号". Bukan API resmi — verifikasi bukti tetap manual.'
+            hint='Alternatif QR deeplink yang mengisi nominal & catatan otomatis. Cek UID: Alipay → Saya → foto profil → "支付宝会员号". Bukan API resmi — verifikasi bukti tetap manual.'
           >
             <input
               name="alipayUid"
@@ -75,6 +88,7 @@ export function HtmFields({
         <>
           <input type="hidden" name="feeCny" value="" />
           <input type="hidden" name="paymentInstructions" value="" />
+          <input type="hidden" name="paymentQrUrl" value="" />
           <input type="hidden" name="alipayUid" value="" />
         </>
       )}

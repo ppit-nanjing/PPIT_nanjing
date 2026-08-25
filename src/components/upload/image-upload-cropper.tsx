@@ -16,11 +16,12 @@ type Props = {
   name?: string;
   folder: "resume" | "news" | "gallery" | "album" | "inventory" | "avatar" | "sensus" | "events" | "membership" | "catalog" | "donation";
   label?: string;
+  /** @deprecated tidak dipakai lagi - komponen ini murni unggah berkas. */
   placeholder?: string;
   required?: boolean;
   defaultValue?: string;
   accept?: string;
-  // Show a plain text input too so a URL can be pasted instead of uploaded.
+  /** @deprecated dulu membuka input tempel-tautan; sekarang SELALU unggah berkas (drag-drop / pilih / kamera). */
   allowPaste?: boolean;
   // Aspect ratio for the crop step (e.g. 1 for square headshots, 16/9 for
   // covers). When omitted the image is uploaded as-is with no crop step.
@@ -71,11 +72,8 @@ export function ImageUploadCropper({
   name,
   folder,
   label,
-  placeholder,
-  required,
   defaultValue,
   accept = "image/*",
-  allowPaste = true,
   aspect,
   hint,
   value,
@@ -174,23 +172,11 @@ export function ImageUploadCropper({
       {label && (
         <span className="text-label-caps uppercase tracking-wide text-on-surface-variant">
           {label}
-          {required && <span className="text-error"> *</span>}
         </span>
       )}
       {hint && <span className="text-body-sm text-on-surface-variant -mt-1">{hint}</span>}
 
       {name && <input type="hidden" name={name} value={currentValue} />}
-
-      {allowPaste && (
-        <input
-          type="text"
-          value={currentValue}
-          required={required && !isControlled}
-          onChange={(e) => commit(e.target.value)}
-          placeholder={placeholder ?? t("upload.pasteOrImage")}
-          className="bg-soft-gray rounded-md p-3 text-body-md focus:outline-none focus:ring-2 focus:ring-primary-container"
-        />
-      )}
 
       <div
         onDragOver={(e) => {

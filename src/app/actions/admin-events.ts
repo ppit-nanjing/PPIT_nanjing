@@ -5,7 +5,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { auth } from "@/auth";
 import { db } from "@/db";
-import { events, eventRegistrations, eventQuestions, galleryAlbums } from "@/db/schema";
+import { events, eventRegistrations, eventQuestions, eventCommittee, galleryAlbums } from "@/db/schema";
 import { hasModuleAccess } from "@/lib/admin-scope";
 import { createTemplatedNotification } from "@/lib/notifications";
 import { issueParticipantCertificatesCore } from "@/app/actions/committee";
@@ -75,6 +75,7 @@ export async function createEvent(formData: FormData) {
       isPaid: formData.get("isPaid") === "on",
       feeCny: parseFeeCny(formData),
       paymentInstructions: String(formData.get("paymentInstructions") ?? "").trim() || null,
+      paymentQrUrl: String(formData.get("paymentQrUrl") ?? "").trim() || null,
       alipayUid: String(formData.get("alipayUid") ?? "").trim() || null,
       certificateForParticipants: formData.get("certificateForParticipants") === "on",
       volunteerSignupOpen: formData.get("volunteerSignupOpen") === "on",
@@ -123,6 +124,7 @@ export async function updateEvent(id: string, formData: FormData) {
       isPaid,
       feeCny: parseFeeCny(formData),
       paymentInstructions: String(formData.get("paymentInstructions") ?? "").trim() || null,
+      paymentQrUrl: String(formData.get("paymentQrUrl") ?? "").trim() || null,
       alipayUid: String(formData.get("alipayUid") ?? "").trim() || null,
       certificateForParticipants: formData.get("certificateForParticipants") === "on",
       volunteerSignupOpen: formData.get("volunteerSignupOpen") === "on",
@@ -293,6 +295,37 @@ export async function checkInByToken(token: string, eventId: string) {
     });
   }
 
+  return { ok: true as const, already: false as const };
+}
+
+// Check-in PANITIA lewat QR tiket kepanitiaan (token di event_committee.
+// attendance_token, dibuat lazily oleh halaman /events/[slug]/committee).
+// Pola persis checkInByToken - hanya tabel dan kolom waktunya yang beda.
+export async function checkInCommitteeByToken(token: string, eventId: string) {
+  await requireAdmin();
+
+  const [assignment] = await db
+    .select({ id: eventCommittee.id, userId: eventCommittee.userId, checkedInAt: eventCommittee.checkedInAt })
+    .from(eventCommittee)
+    .where(and(eq(eventCommittee.attendanceToken, token), eq(eventCommittee.eventId, eventId)));
+
+  if (!assignment) return { ok: false as const };
+  if (assignment.checkedInAt) return { ok: true as const, already: true as const };
+
+  await db.update(eventCommittee).set({ checkedInAt: new Date() }).where(eq(eventCommittee.id, assignment.id));
+
+  const [event] = await db.select({ title: events.title }).from(events).where(eq(events.id, eventId));
+  if (assignment.userId) {
+    await createTemplatedNotification({
+      userId: assignment.userId,
+      templateKey: "event_checkin",
+      variables: { eventTitle: event?.title ?? "acara" },
+      relatedEntityType: "event_committee",
+      relatedEntityId: assignment.id,
+    });
+  }
+
+  revalidatePath(`/console/events/${eventId}`);
   return { ok: true as const, already: false as const };
 }
 

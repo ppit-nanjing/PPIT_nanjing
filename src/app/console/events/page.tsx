@@ -13,6 +13,7 @@ import { HtmFields } from "@/components/console/htm-fields";
 import { GuideButton } from "@/components/console/guide-button";
 import { getGuide } from "@/lib/guides";
 import { Plus } from "lucide-react";
+import { TextField, TextAreaField, CheckField } from "@/components/console/form";
 
 const STATUS_LABEL: Record<string, string> = {
   draft: "Draf",
@@ -52,25 +53,25 @@ export default async function ConsoleEventsPage() {
               1 · Info Acara
             </summary>
             <div className="px-4 pb-4 flex flex-col gap-3">
-              <input id="event-title" name="title" placeholder="Judul Kegiatan *" required className="bg-soft-gray rounded-md p-2.5 sm:p-3 text-body-md" />
+              <TextField name="title" label="Judul Kegiatan" required id="event-title" />
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <input id="event-category" name="category" placeholder="Kategori" className="bg-soft-gray rounded-md p-2.5 sm:p-3 text-body-md" />
-                <input id="event-location" name="location" placeholder="Lokasi" className="bg-soft-gray rounded-md p-2.5 sm:p-3 text-body-md" />
+                <TextField name="category" label="Kategori" placeholder="mis. Cultural" id="event-category" />
+                <TextField name="location" label="Lokasi" placeholder="mis. Novotel" id="event-location" />
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <div className="flex flex-col gap-1">
-                  <input name="startAt" type="datetime-local" className="bg-soft-gray rounded-md p-2.5 sm:p-3 text-body-md" />
-                  <p className="text-xs text-on-surface-variant">Kapan acara berlangsung (tanggal & jam mulai).</p>
-                </div>
-                <input name="capacity" type="number" min={1} placeholder="Kapasitas" className="bg-soft-gray rounded-md p-2.5 sm:p-3 text-body-md" />
+                <TextField
+                  name="startAt"
+                  label="Tanggal & jam mulai"
+                  type="datetime-local"
+                  hint="Kapan acara berlangsung."
+                />
+                <TextField name="capacity" label="Kapasitas" type="number" min={1} />
               </div>
               <ImageUploadCropper
                 name="coverImageUrl"
                 folder="events"
                 label="Gambar Sampul"
-                placeholder="Tempel URL atau unggah gambar"
                 aspect={16 / 9}
-                allowPaste
                 hint="Ideal 1920 × 1080 px (16:9) — gambar di-crop & dikompres otomatis."
               />
             </div>
@@ -82,22 +83,19 @@ export default async function ConsoleEventsPage() {
               2 · Pendaftaran &amp; Biaya
             </summary>
             <div className="px-4 pb-4 flex flex-col gap-3">
-              <div className="flex flex-col gap-1">
-                <input name="registrationDeadline" type="datetime-local" placeholder="Batas Pendaftaran" className="bg-soft-gray rounded-md p-2.5 sm:p-3 text-body-md" />
-                <p className="text-xs text-on-surface-variant">Batas waktu peserta boleh mendaftar. Lewat dari ini tombol daftar tertutup otomatis. Kosongkan bila tak ada batas.</p>
-              </div>
-              <label className="flex items-center gap-2 bg-soft-gray rounded-md p-2.5 sm:p-3 text-body-md cursor-pointer">
-                <input type="checkbox" name="requiresSensus" className="h-4 w-4 accent-[var(--color-primary-container)]" />
-                Hanya untuk peserta yang sudah lengkap mengisi sensus (mahasiswa Indo di China)
-              </label>
-              <label className="flex items-center gap-2 bg-soft-gray rounded-md p-2.5 sm:p-3 text-body-md cursor-pointer">
-                <input type="checkbox" name="certificateForParticipants" defaultChecked className="h-4 w-4 accent-[var(--color-primary-container)]" />
-                Peserta mendapat e-sertifikat kehadiran
-              </label>
-              <label className="flex items-center gap-2 bg-soft-gray rounded-md p-2.5 sm:p-3 text-body-md cursor-pointer">
-                <input type="checkbox" name="volunteerSignupOpen" className="h-4 w-4 accent-[var(--color-primary-container)]" />
-                Buka pendaftaran volunteer publik (orang luar bisa melamar di halaman acara)
-              </label>
+              <TextField
+                name="registrationDeadline"
+                label="Batas Pendaftaran"
+                type="datetime-local"
+                hint="Lewat dari ini tombol daftar tertutup otomatis. Kosongkan bila tak ada batas."
+              />
+              <CheckField name="requiresSensus" label="Hanya untuk peserta yang sudah lengkap mengisi sensus (mahasiswa Indo di China)" />
+              <CheckField name="certificateForParticipants" label="Peserta mendapat e-sertifikat kehadiran" defaultChecked />
+              <CheckField
+                name="volunteerSignupOpen"
+                label="Buka pendaftaran volunteer publik"
+                hint="Orang luar bisa melamar jadi volunteer di halaman acara."
+              />
               <HtmFields />
             </div>
           </details>
@@ -108,21 +106,22 @@ export default async function ConsoleEventsPage() {
               3 · Deskripsi, Agenda &amp; Jadwal Rilis (opsional)
             </summary>
             <div className="px-4 pb-4 flex flex-col gap-3">
-              <div>
-                <textarea id="event-description" name="description" placeholder="Deskripsi" rows={3} className="bg-soft-gray rounded-md p-2.5 sm:p-3 text-body-md resize-none w-full" />
-                <AIImproveButton context="event" targetId="event-description" className="mt-1" />
-              </div>
-              <textarea
-                id="event-agenda"
+              <TextAreaField name="description" label="Deskripsi" rows={3} id="event-description" />
+              <AIImproveButton context="event" targetId="event-description" className="mt-1" />
+              <TextAreaField
                 name="agenda"
-                placeholder={"Agenda/Jadwal (satu baris per item, contoh:\n18:00 - Registrasi\n19:00 - Pembukaan)"}
+                label="Agenda / Jadwal"
                 rows={3}
-                className="bg-soft-gray rounded-md p-2.5 sm:p-3 text-body-md resize-none"
+                id="event-agenda"
+                placeholder={"18:00 - Registrasi\n19:00 - Pembukaan"}
+                hint="Satu baris per item."
               />
-              <div className="flex flex-col gap-1">
-                <input name="scheduledPublishAt" type="datetime-local" placeholder="Jadwal Rilis Publikasi (opsional)" className="bg-soft-gray rounded-md p-2.5 sm:p-3 text-body-md" />
-                <p className="text-xs text-on-surface-variant">Isi bila acara mau tampil ke publik hanya SETELAH tanggal/waktu ini (status &quot;Terjadwal&quot; dulu, rilis sendiri nanti). Kosongkan = langsung Draf, rilis saat kamu klik Publish manual.</p>
-              </div>
+              <TextField
+                name="scheduledPublishAt"
+                label="Jadwal Rilis Publikasi (opsional)"
+                type="datetime-local"
+                hint='Isi bila acara tampil ke publik hanya SETELAH waktu ini (status "Terjadwal", rilis sendiri). Kosongkan = langsung Draf.'
+              />
             </div>
           </details>
 

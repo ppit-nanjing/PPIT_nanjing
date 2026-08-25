@@ -384,6 +384,10 @@ export const events = pgTable("events", {
   isPaid: boolean("is_paid").notNull().default(false),
   feeCny: integer("fee_cny"),
   paymentInstructions: text("payment_instructions"),
+  // Gambar QR Alipay milik bendahara acara, diunggah admin lewat form HTM.
+  // Peserta scan ini di halaman tiket; alipayUid di bawah adalah ALTERNATIF
+  // deeplink yang mengisi nominal otomatis - keduanya boleh dipasang bersamaan.
+  paymentQrUrl: text("payment_qr_url"),
   // Alipay numeric member ID (2088...) of this event's bendahara, used to build
   // an alipays:// deep link that pre-fills the fee + a memo on the ticket page
   // (see src/lib/alipay-deeplink.ts). Unofficial/reverse-engineered scheme, not
@@ -1118,6 +1122,13 @@ export const eventCommittee = pgTable(
     // menambah enum tiap kali ada peran baru.
     note: text("note"),
     assignedAt: timestamp("assigned_at").notNull().defaultNow(),
+    // Absensi kehadiran panitia lewat scan QR (pola yang sama dengan tiket
+    // peserta). Token dibuat lazily saat panitia membuka halaman tiket
+    // kepanitiannya - bukan saat penugasan - supaya baris lama tidak perlu
+    // backfill dan semua jalur penugasan (Work Ledger maupun approve volunteer)
+    // otomatis tercakup.
+    attendanceToken: text("attendance_token").unique(),
+    checkedInAt: timestamp("checked_in_at"),
   },
   // Satu orang satu peran per acara; ganti peran = update, bukan baris baru.
   (t) => [uniqueIndex("event_committee_unique").on(t.eventId, t.userId)],

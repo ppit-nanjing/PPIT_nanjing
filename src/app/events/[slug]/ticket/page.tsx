@@ -151,6 +151,21 @@ export default async function EventTicketPage({ params }: { params: Promise<{ sl
             {event.paymentInstructions && (
               <p className="text-body-sm text-on-surface-variant whitespace-pre-line mb-4">{event.paymentInstructions}</p>
             )}
+            {event.paymentQrUrl && registration.paymentStatus !== "verified" && (
+              <div className="flex flex-col items-center gap-2 mb-4 py-4 border-y border-outline-variant">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={event.paymentQrUrl}
+                  alt="QR Alipay bendahara acara"
+                  width={200}
+                  height={200}
+                  className="rounded-lg border border-outline-variant bg-white p-1"
+                />
+                <p className="text-xs text-on-surface-variant text-center max-w-xs">
+                  Scan QR Alipay di atas dengan app Alipay, transfer sejumlah biaya, lalu unggah buktinya di bawah.
+                </p>
+              </div>
+            )}
             {alipayQrDataUrl && alipayLink && (
               <div className="flex flex-col items-center gap-2 mb-4 py-4 border-y border-outline-variant">
                 <Image
