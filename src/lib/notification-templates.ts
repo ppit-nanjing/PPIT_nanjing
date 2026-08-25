@@ -16,6 +16,8 @@ export type NotificationTemplateKey =
   | "event_checkin"
   | "event_registration"
   | "borrow_approved"
+  | "borrow_handed_over"
+  | "borrow_return_requested_confirmed"
   | "borrow_rejected"
   | "contribution_approved"
   | "contribution_rejected"
@@ -66,6 +68,26 @@ export const NOTIFICATION_TEMPLATES: NotificationTemplateDef[] = [
     defaultSubject: "Permintaan peminjaman disetujui",
     defaultBody:
       "Permintaan peminjaman barang kamu telah disetujui oleh admin. Cek detail di riwayat pengajuan.",
+  },
+  {
+    key: "borrow_handed_over",
+    group: "Peminjaman",
+    label: "Barang diserahkan ke peminjam",
+    trigger: 'Dikirim saat admin menandai barang sebagai "Dipinjam" (diserahkan) di antrean console.',
+    variables: ["itemName", "returnDate"],
+    defaultSubject: "Barang pinjaman sudah kamu terima",
+    defaultBody:
+      'Barang "{{itemName}}" telah diserahkan kepadamu dan statusnya kini Dipinjam. Jadwal pengembalian: {{returnDate}}. Ajukan pengembalian dari halaman Profilmu setelah barang dikembalikan ke Divisi Logistik.',
+  },
+  {
+    key: "borrow_return_requested_confirmed",
+    group: "Peminjaman",
+    label: "Pengembalian dikonfirmasi",
+    trigger: "Dikirim saat admin mengonfirmasi barang pinjaman telah dikembalikan.",
+    variables: ["itemName"],
+    defaultSubject: "Pengembalian barang dikonfirmasi",
+    defaultBody:
+      'Pengembalian "{{itemName}}" telah dikonfirmasi oleh admin. Terima kasih sudah menjaga barang organisasi!',
   },
   {
     key: "borrow_rejected",

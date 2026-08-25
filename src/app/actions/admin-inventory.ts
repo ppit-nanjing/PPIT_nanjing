@@ -14,6 +14,13 @@ async function requireAdmin() {
   return session!.user.id;
 }
 
+// date columns come back as "YYYY-MM-DD" strings - render them as plain
+// Indonesian dates for notification bodies.
+function formatDate(date: string | null): string | undefined {
+  if (!date) return undefined;
+  return new Date(`${date}T00:00:00`).toLocaleDateString("id-ID", { dateStyle: "long" });
+}
+
 export async function createInventoryItem(formData: FormData) {
   const actorId = await requireAdmin();
   const name = String(formData.get("name") ?? "").trim();
@@ -70,6 +77,36 @@ export async function approveBorrowRequest(requestId: string) {
   revalidatePath("/console/inventory");
 }
 
+// Handover step between "approved" and "returned": the admin physically hands
+// the item to the borrower and flips the status to "borrowed", which is how
+// everyone (borrower included, via their profile) can see the item is out of
+// storage right now. Stock was already deducted at approval time.
+export async function markHandedOver(requestId: string) {
+  await requireAdmin();
+  const [request] = await db.select().from(borrowRequests).where(eq(borrowRequests.id, requestId));
+  if (!request || request.status !== "approved") return;
+
+  const [item] = await db.select().from(inventoryItems).where(eq(inventoryItems.id, request.itemId));
+
+  await db
+    .update(borrowRequests)
+    .set({ status: "borrowed" })
+    .where(eq(borrowRequests.id, requestId));
+
+  await createTemplatedNotification({
+    userId: request.userId,
+    templateKey: "borrow_handed_over",
+    variables: {
+      itemName: item?.name ?? "barang",
+      returnDate: formatDate(request.requestedTo) ?? "(sesuai kesepakatan)",
+    },
+    relatedEntityType: "borrow_request",
+    relatedEntityId: requestId,
+  });
+
+  revalidatePath("/console/inventory");
+}
+
 export async function rejectBorrowRequest(requestId: string) {
   const actorId = await requireAdmin();
   const [request] = await db.select().from(borrowRequests).where(eq(borrowRequests.id, requestId));
@@ -94,6 +131,8 @@ export async function markReturned(requestId: string) {
   const [request] = await db.select().from(borrowRequests).where(eq(borrowRequests.id, requestId));
   if (!request || !["approved", "borrowed", "overdue"].includes(request.status)) return;
 
+  const [item] = await db.select().from(inventoryItems).where(eq(inventoryItems.id, request.itemId));
+
   await db
     .update(inventoryItems)
     .set({ availableQuantity: sql`${inventoryItems.availableQuantity} + ${request.quantity}` })
@@ -101,8 +140,19 @@ export async function markReturned(requestId: string) {
 
   await db
     .update(borrowRequests)
-    .set({ status: "returned", returnedAt: new Date() })
+    .set({ status: "returned", returnedAt: new Date(), returnRequestedAt: null })
     .where(eq(borrowRequests.id, requestId));
+
+  // Close the loop with the borrower - they may have filed the return request
+  // from their profile, or the admin handled it in person; either way they
+  // should see the loan is settled.
+  await createTemplatedNotification({
+    userId: request.userId,
+    templateKey: "borrow_return_requested_confirmed",
+    variables: { itemName: item?.name ?? "barang" },
+    relatedEntityType: "borrow_request",
+    relatedEntityId: requestId,
+  });
 
   revalidatePath("/console/inventory");
 }

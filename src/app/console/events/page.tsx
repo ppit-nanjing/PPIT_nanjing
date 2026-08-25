@@ -25,9 +25,14 @@ const STATUS_LABEL: Record<string, string> = {
 
 export default async function ConsoleEventsPage() {
   await requireModuleAccess("events");
+  // Kept sequential on purpose: the list below must reflect events this
+  // publish just flipped to 'published'. The independent reads then run
+  // concurrently in one batch.
   await publishDueEvents();
-  const list = await db.select().from(events).orderBy(desc(events.startAt));
-  const guide = await getGuide("kegiatan");
+  const [list, guide] = await Promise.all([
+    db.select().from(events).orderBy(desc(events.startAt)),
+    getGuide("kegiatan"),
+  ]);
 
   return (
     <div className="px-3 py-4 sm:px-6 lg:px-8 lg:py-10">

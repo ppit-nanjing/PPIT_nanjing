@@ -18,39 +18,36 @@ import { conditionLabel } from "@/lib/inventory-labels";
 
 export default async function ConsoleInventoryPage() {
   await requireModuleAccess("inventory");
-  // Kicked off now, awaited later - has no dependency on the queries below, so
-  // it runs concurrently with them instead of adding another link to an
-  // already-serial chain of independent round-trips.
-  const guidePromise = getGuide("inventaris");
-  const items = await db.select().from(inventoryItems);
-  const requests = await db
-    .select({ req: borrowRequests, itemName: inventoryItems.name, userName: users.name, userEmail: users.email })
-    .from(borrowRequests)
-    .leftJoin(inventoryItems, eq(borrowRequests.itemId, inventoryItems.id))
-    .leftJoin(users, eq(borrowRequests.userId, users.id))
-    .orderBy(desc(borrowRequests.requestedAt));
-
-  const contributions = await db
-    .select({ c: itemContributions, userName: users.name, userEmail: users.email })
-    .from(itemContributions)
-    .leftJoin(users, eq(itemContributions.userId, users.id))
-    .where(eq(itemContributions.status, "pending"));
-
-  const procurements = await db
-    .select({ r: procurementRequests, userName: users.name })
-    .from(procurementRequests)
-    .leftJoin(users, eq(procurementRequests.userId, users.id))
-    .orderBy(desc(procurementRequests.createdAt));
-
-  const loans = await db
-    .select({ l: externalLoans, itemName: inventoryItems.name })
-    .from(externalLoans)
-    .leftJoin(inventoryItems, eq(externalLoans.itemId, inventoryItems.id))
-    .where(eq(externalLoans.status, "active"))
-    .orderBy(desc(externalLoans.loanedAt));
+  // Perf: all five reads are independent - run them concurrently instead of
+  // stacking five serial round trips to the Neon proxy.
+  const [items, requests, contributions, procurements, loans, guide] = await Promise.all([
+    db.select().from(inventoryItems),
+    db
+      .select({ req: borrowRequests, itemName: inventoryItems.name, userName: users.name, userEmail: users.email })
+      .from(borrowRequests)
+      .leftJoin(inventoryItems, eq(borrowRequests.itemId, inventoryItems.id))
+      .leftJoin(users, eq(borrowRequests.userId, users.id))
+      .orderBy(desc(borrowRequests.requestedAt)),
+    db
+      .select({ c: itemContributions, userName: users.name, userEmail: users.email })
+      .from(itemContributions)
+      .leftJoin(users, eq(itemContributions.userId, users.id))
+      .where(eq(itemContributions.status, "pending")),
+    db
+      .select({ r: procurementRequests, userName: users.name })
+      .from(procurementRequests)
+      .leftJoin(users, eq(procurementRequests.userId, users.id))
+      .orderBy(desc(procurementRequests.createdAt)),
+    db
+      .select({ l: externalLoans, itemName: inventoryItems.name })
+      .from(externalLoans)
+      .leftJoin(inventoryItems, eq(externalLoans.itemId, inventoryItems.id))
+      .where(eq(externalLoans.status, "active"))
+      .orderBy(desc(externalLoans.loanedAt)),
+    getGuide("inventaris"),
+  ]);
 
   const itemOptions = items.map((i) => ({ id: i.id, name: i.name, availableQuantity: i.availableQuantity }));
-  const guide = await guidePromise;
 
   return (
     <div className="px-4 py-6 sm:px-6 lg:px-8 lg:py-10">
@@ -77,6 +74,7 @@ export default async function ConsoleInventoryPage() {
               status: r.req.status,
               requestedFrom: r.req.requestedFrom,
               requestedTo: r.req.requestedTo,
+              returnRequestedAt: r.req.returnRequestedAt ? r.req.returnRequestedAt.toISOString() : null,
             }))}
           />
         </CollapsibleSection>

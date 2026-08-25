@@ -49,17 +49,18 @@ function Row({ children, onDelete, id }: { children: React.ReactNode; onDelete: 
 
 export default async function ConsoleKatalogPage() {
   const session = await requireModuleAccess("content");
-  const data = await listCityContent();
-  const coverage = await listCoverageCities();
-
-  // Donations are gated harder than the rest of this page, so the section is
-  // only rendered for scopes that may actually act on it.
+  // Perf: everything below is independent of each other - one parallel batch
+  // instead of listCityContent -> coverage -> guide stacked serially.
   const canSeeDonations = hasModuleAccess(session.user.adminScope, "organization");
-  const [donationRows, channelRows] = canSeeDonations
-    ? await Promise.all([listDonationsForAdmin(), listChannelsForAdmin()])
-    : [[], []];
-
-  const guide = await getGuide("katalog");
+  const [data, coverage, donationRows, channelRows, guide] = await Promise.all([
+    listCityContent(),
+    listCoverageCities(),
+    // Donations are gated harder than the rest of this page, so the section is
+    // only rendered for scopes that may actually act on it.
+    canSeeDonations ? listDonationsForAdmin() : Promise.resolve([]),
+    canSeeDonations ? listChannelsForAdmin() : Promise.resolve([]),
+    getGuide("katalog"),
+  ]);
 
   return (
     <div className="px-4 py-6 sm:px-6 lg:px-8 lg:py-10">

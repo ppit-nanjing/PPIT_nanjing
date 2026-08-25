@@ -1,7 +1,9 @@
 "use server";
 
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
+import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
+import { auth } from "@/auth";
 import { db } from "@/db";
 import { inventoryItems, borrowRequests } from "@/db/schema";
 import { requireCompletedSensus } from "@/lib/sensus-gate";
@@ -31,4 +33,30 @@ export async function submitBorrowRequest(itemId: string, formData: FormData) {
   });
 
   redirect("/inventory/borrow/success");
+}
+
+// Borrower-initiated return ("Kembalikan" on /profile): flags the request so
+// the Logistics Division sees "Konfirmasi Pengembalian" in the console queue.
+// Actual stock restoration stays with markReturned() - only an admin who has
+// physically received the item may confirm it.
+export async function requestReturn(requestId: string) {
+  const session = await auth();
+  if (!session?.user?.id) throw new Error("Unauthorized");
+
+  const [request] = await db
+    .select()
+    .from(borrowRequests)
+    .where(and(eq(borrowRequests.id, requestId), eq(borrowRequests.userId, session.user.id)));
+  if (!request) throw new Error("Pengajuan tidak ditemukan");
+  if (!["borrowed", "overdue"].includes(request.status)) {
+    throw new Error("Barang ini belum dalam status dipinjam");
+  }
+  if (request.returnRequestedAt) return;
+
+  await db
+    .update(borrowRequests)
+    .set({ returnRequestedAt: new Date() })
+    .where(eq(borrowRequests.id, requestId));
+
+  revalidatePath("/profile");
 }

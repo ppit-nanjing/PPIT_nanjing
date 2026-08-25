@@ -702,6 +702,10 @@ export const borrowRequests = pgTable("borrow_requests", {
   approvedBy: uuid("approved_by").references(() => users.id),
   requestedAt: timestamp("requested_at").notNull().defaultNow(),
   returnedAt: timestamp("returned_at"),
+  // Set when the borrower clicks "Kembalikan" on their profile - flags the row
+  // for the console queue ("Konfirmasi Pengembalian") without adding a new
+  // enum value. Cleared by markReturned().
+  returnRequestedAt: timestamp("return_requested_at"),
 });
 
 export const inventoryAuditLogs = pgTable("inventory_audit_logs", {
