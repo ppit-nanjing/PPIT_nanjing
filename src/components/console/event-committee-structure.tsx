@@ -415,7 +415,10 @@ function MemberList({ rows, certified }: { rows: MemberRow[]; certified?: Set<st
             <span className="text-on-surface-variant"> · {m.role}</span>
             {m.note && <span className="text-on-surface-variant"> · {m.note}</span>}
             {m.userId && certified?.has(m.userId) && (
-              <span className="text-primary-container" title="Sertifikat panitia sudah terbit"> · ✓ sertifikat</span>
+              <span className="text-primary-container" title="Sertifikat panitia sudah terbit">
+                {" · "}
+                <Award size={12} className="inline align-[-1px]" aria-hidden /> sertifikat
+              </span>
             )}
           </span>
           <form action={removeCommittee}>

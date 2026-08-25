@@ -1,7 +1,7 @@
 "use client";
 
 import { useRef, useState, useTransition } from "react";
-import { Loader2, Images, X, AlertCircle } from "lucide-react";
+import { Loader2, Images, X, AlertCircle, Check } from "lucide-react";
 import { compressImage } from "@/lib/image-compress";
 import { addGalleryPhotos } from "@/app/actions/admin-content";
 import { ConfirmButton } from "@/components/console/confirm-button";
@@ -121,7 +121,9 @@ export function MultiPhotoUpload({ albumId }: { albumId: string }) {
                 ) : (
                   <>
                     {it.url ? (
-                      <span className="w-4 h-4 rounded-full bg-primary-container text-on-primary flex items-center justify-center text-[10px] shrink-0">✓</span>
+                      <span className="w-4 h-4 rounded-full bg-primary-container text-on-primary flex items-center justify-center shrink-0">
+                        <Check size={10} aria-hidden />
+                      </span>
                     ) : (
                       <Loader2 size={14} className="animate-spin text-on-surface-variant shrink-0" />
                     )}

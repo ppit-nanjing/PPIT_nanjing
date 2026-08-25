@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Sun, Moon, Monitor } from "lucide-react";
+import { Sun, Moon, Monitor, Check } from "lucide-react";
 import { useT } from "@/lib/i18n/client";
 import type { TKey } from "@/lib/i18n/dictionaries/id";
 
@@ -106,7 +106,7 @@ export function ThemeSwitcher() {
               />
               <span className="text-body-sm">{ct.hanzi}</span>
               {/* Selection is conveyed by more than colour alone. */}
-              {selected && <span className="text-label-caps opacity-70">✓</span>}
+              {selected && <Check size={14} className="opacity-70 shrink-0" aria-hidden />}
             </button>
           );
         })}
@@ -129,7 +129,7 @@ export function ThemeSwitcher() {
             >
               <Icon size={14} aria-hidden />
               <span className="text-body-sm">{t(labelKey)}</span>
-              {selected && <span className="text-label-caps opacity-70">✓</span>}
+              {selected && <Check size={14} className="opacity-70 shrink-0" aria-hidden />}
             </button>
           );
         })}

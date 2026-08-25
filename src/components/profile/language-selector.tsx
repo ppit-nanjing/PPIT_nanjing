@@ -1,5 +1,6 @@
 "use client";
 
+import { Check } from "lucide-react";
 import { useT, useLocale, useLocaleSwitch } from "@/lib/i18n/client";
 import { LOCALES, LOCALE_LABEL } from "@/lib/i18n/config";
 
@@ -41,7 +42,7 @@ export function LanguageSelector() {
             >
               <span className="text-body-sm">{LOCALE_LABEL[l]}</span>
               {/* Selection conveyed by more than colour alone. */}
-              {selected && <span className="text-label-caps opacity-70">✓</span>}
+              {selected && <Check size={14} className="opacity-70 shrink-0" aria-hidden />}
             </button>
           );
         })}

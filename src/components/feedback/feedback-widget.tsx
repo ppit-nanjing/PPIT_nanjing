@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { usePathname } from "next/navigation";
-import { X, MousePointerClick, RotateCcw, Bug, Palette, Lightbulb, MessageCircle } from "lucide-react";
+import { X, MousePointerClick, RotateCcw, Bug, Palette, Lightbulb, MessageCircle, MapPin } from "lucide-react";
 import { submitFeedback } from "@/app/actions/feedback";
 import { AIImproveButton } from "@/components/ai/ai-improve-button";
 import { pickElementAt, type PickedElement } from "./element-picker";
@@ -173,7 +173,9 @@ export function FeedbackPanel() {
 
             {picked ? (
               <div className="flex items-center justify-between gap-2 bg-surface-container-low border border-outline-variant rounded-md px-3 py-2 mb-3 text-label-caps">
-                <span className="truncate text-on-surface-variant">📍 {picked.description}</span>
+                <span className="flex items-center gap-1.5 truncate text-on-surface-variant">
+                  <MapPin size={13} aria-hidden /> {picked.description}
+                </span>
                 <button onClick={() => setPicked(null)} className="text-secondary hover:text-error shrink-0">
                   <X size={14} />
                 </button>

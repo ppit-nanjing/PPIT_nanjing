@@ -11,7 +11,7 @@ import { AnimatedHeroHeading } from "@/components/animated-hero-heading";
 import { Reveal } from "@/components/reveal";
 import { EventCard } from "@/components/event-card";
 import { GalleryLightbox } from "@/components/gallery-lightbox";
-import { CalendarDays, MapPin, Users, Ticket, ArrowLeft, ListChecks, Images, ArrowRight, CalendarX } from "lucide-react";
+import { CalendarDays, MapPin, Users, Ticket, ArrowLeft, ListChecks, Images, ArrowRight, CalendarX, PartyPopper } from "lucide-react";
 import Image from "next/image";
 import { registerForEvent } from "@/app/actions/events";
 import Link from "next/link";
@@ -415,8 +415,9 @@ export default async function EventDetailPage({ params, searchParams }: { params
                 {event.volunteerSignupOpen && event.status === "published" && (
                   <div className="border-t border-outline-variant pt-5">
                     {volunteerFlag === "sent" ? (
-                      <p className="text-body-md text-on-background bg-surface-container-low rounded-md px-4 py-3">
-                        🎉 Lamaran volunteer terkirim! Panitia akan menghubungimu lewat email.
+                      <p className="flex items-center gap-2 text-body-md text-on-background bg-surface-container-low rounded-md px-4 py-3">
+                        <PartyPopper size={18} className="text-primary-container shrink-0" aria-hidden />
+                        <span>Lamaran volunteer terkirim! Panitia akan menghubungimu lewat email.</span>
                       </p>
                     ) : (
                       <>
