@@ -73,6 +73,32 @@ export async function deletePlace(formData: FormData) {
   refresh();
 }
 
+// Field set mirrors createPlace exactly - fixing one coordinator email or a
+// typo must not require delete + recreate (which also loses the image upload).
+export async function updatePlace(formData: FormData) {
+  await requireModuleAccess(CONTENT);
+  const id = String(formData.get("id") ?? "");
+  const name = str(formData, "name");
+  if (!id || !name) throw new Error("Nama tempat wajib diisi");
+  await db
+    .update(places)
+    .set({
+      name,
+      nameZh: str(formData, "nameZh"),
+      category: (str(formData, "category") ?? "tourism") as "tourism",
+      district: str(formData, "district"),
+      description: str(formData, "description"),
+      address: str(formData, "address"),
+      addressZh: str(formData, "addressZh"),
+      imageUrl: str(formData, "imageUrl"),
+      mapUrl: str(formData, "mapUrl"),
+      orderIndex: num(formData, "orderIndex") ?? 0,
+      published: bool(formData, "published"),
+    })
+    .where(eq(places.id, id));
+  refresh();
+}
+
 export async function togglePlacePublished(formData: FormData) {
   await requireModuleAccess(CONTENT);
   const id = String(formData.get("id") ?? "");
@@ -107,6 +133,32 @@ export async function createUniversity(formData: FormData) {
 export async function deleteUniversity(formData: FormData) {
   await requireModuleAccess(CONTENT);
   await db.delete(universities).where(eq(universities.id, String(formData.get("id") ?? "")));
+  refresh();
+}
+
+export async function updateUniversity(formData: FormData) {
+  await requireModuleAccess(CONTENT);
+  const id = String(formData.get("id") ?? "");
+  const name = str(formData, "name");
+  if (!id || !name) throw new Error("Nama universitas wajib diisi");
+  await db
+    .update(universities)
+    .set({
+      name,
+      nameZh: str(formData, "nameZh"),
+      abbreviation: str(formData, "abbreviation"),
+      city: str(formData, "city"),
+      district: str(formData, "district"),
+      coordinatorName: str(formData, "coordinatorName"),
+      coordinatorEmail: str(formData, "coordinatorEmail"),
+      description: str(formData, "description"),
+      websiteUrl: str(formData, "websiteUrl"),
+      logoUrl: str(formData, "logoUrl"),
+      studentCount: num(formData, "studentCount"),
+      isPartner: bool(formData, "isPartner"),
+      orderIndex: num(formData, "orderIndex") ?? 0,
+    })
+    .where(eq(universities.id, id));
   refresh();
 }
 
@@ -155,6 +207,26 @@ export async function deleteMerchandise(formData: FormData) {
   refresh();
 }
 
+export async function updateMerchandise(formData: FormData) {
+  await requireModuleAccess(CONTENT);
+  const id = String(formData.get("id") ?? "");
+  const name = str(formData, "name");
+  if (!id || !name) throw new Error("Nama item wajib diisi");
+  await db
+    .update(merchandise)
+    .set({
+      name,
+      description: str(formData, "description"),
+      priceCny: num(formData, "priceCny"),
+      imageUrl: str(formData, "imageUrl"),
+      status: (str(formData, "status") ?? "unavailable") as "unavailable",
+      contactNote: str(formData, "contactNote"),
+      orderIndex: num(formData, "orderIndex") ?? 0,
+    })
+    .where(eq(merchandise.id, id));
+  refresh();
+}
+
 // ---------- sponsors ----------
 
 export async function createSponsor(formData: FormData) {
@@ -175,6 +247,25 @@ export async function createSponsor(formData: FormData) {
 export async function deleteSponsor(formData: FormData) {
   await requireModuleAccess(CONTENT);
   await db.delete(sponsors).where(eq(sponsors.id, String(formData.get("id") ?? "")));
+  refresh();
+}
+
+export async function updateSponsor(formData: FormData) {
+  await requireModuleAccess(CONTENT);
+  const id = String(formData.get("id") ?? "");
+  const name = str(formData, "name");
+  if (!id || !name) throw new Error("Nama sponsor wajib diisi");
+  await db
+    .update(sponsors)
+    .set({
+      name,
+      tier: (str(formData, "tier") ?? "partner") as "partner",
+      logoUrl: str(formData, "logoUrl"),
+      websiteUrl: str(formData, "websiteUrl"),
+      description: str(formData, "description"),
+      orderIndex: num(formData, "orderIndex") ?? 0,
+    })
+    .where(eq(sponsors.id, id));
   refresh();
 }
 

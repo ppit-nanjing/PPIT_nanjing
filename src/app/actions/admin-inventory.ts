@@ -52,6 +52,49 @@ export async function createInventoryItem(formData: FormData) {
   revalidatePath("/console/inventory");
 }
 
+// Edit an existing item's details. Quantities are admin-asserted physical
+// truth (borrow flows adjust them programmatically), so both are editable but
+// validated: available can never exceed total or go negative.
+export async function updateInventoryItem(formData: FormData) {
+  const actorId = await requireAdmin();
+  const id = String(formData.get("id") ?? "");
+  const name = String(formData.get("name") ?? "").trim();
+  if (!id || !name) throw new Error("Nama barang wajib diisi.");
+
+  const totalQuantity = Number(formData.get("totalQuantity") ?? 0);
+  const availableQuantity = Number(formData.get("availableQuantity") ?? 0);
+  if (!Number.isInteger(totalQuantity) || totalQuantity < 0) throw new Error("Jumlah total harus berupa angka >= 0");
+  if (!Number.isInteger(availableQuantity) || availableQuantity < 0 || availableQuantity > totalQuantity) {
+    throw new Error("Jumlah tersedia harus antara 0 dan jumlah total");
+  }
+  const condition = String(formData.get("condition") ?? "good");
+
+  await db
+    .update(inventoryItems)
+    .set({
+      name,
+      category: String(formData.get("category") ?? "").trim() || null,
+      description: String(formData.get("description") ?? "").trim() || null,
+      location: String(formData.get("location") ?? "").trim() || null,
+      custodian: String(formData.get("custodian") ?? "").trim() || null,
+      imageUrl: String(formData.get("imageUrl") ?? "").trim() || null,
+      totalQuantity,
+      availableQuantity,
+      condition: condition as typeof inventoryItems.$inferInsert.condition,
+    })
+    .where(eq(inventoryItems.id, id));
+
+  await db.insert(inventoryAuditLogs).values({
+    itemId: id,
+    performedBy: actorId,
+    action: "adjusted",
+    quantityDelta: availableQuantity - totalQuantity,
+    note: "Detail barang diperbarui lewat konsol",
+  });
+
+  revalidatePath("/console/inventory");
+}
+
 export async function approveBorrowRequest(requestId: string) {
   const actorId = await requireAdmin();
   const [request] = await db.select().from(borrowRequests).where(eq(borrowRequests.id, requestId));

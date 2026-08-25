@@ -7,14 +7,18 @@ import {
   listCityContent,
   createPlace,
   deletePlace,
+  updatePlace,
   createUniversity,
   deleteUniversity,
+  updateUniversity,
   upsertDistrict,
   deleteDistrict,
   createMerchandise,
   deleteMerchandise,
+  updateMerchandise,
   createSponsor,
   deleteSponsor,
+  updateSponsor,
   listCoverageCities,
   updateCoverageCity,
 } from "@/app/actions/city-content";
@@ -29,6 +33,7 @@ import {
 // terasa identik; label & rowBtn tetap lokal karena spesifik halaman ini.
 import { fieldInput as input, primaryBtn } from "@/components/console/form";
 import { ConfirmButton } from "@/components/console/confirm-button";
+import { Pencil } from "lucide-react";
 
 const label = "text-label-caps uppercase tracking-wide text-on-surface-variant";
 const rowBtn =
@@ -39,15 +44,28 @@ function Row({
   onDelete,
   id,
   itemLabel,
+  edit,
 }: {
   children: React.ReactNode;
   onDelete: (fd: FormData) => void;
   id: string;
   itemLabel: string;
+  /** Optional inline <form> rendered under a pure-HTML details toggle. */
+  edit?: React.ReactNode;
 }) {
   return (
     <li className="flex items-start justify-between gap-3 border-b border-outline-variant/60 py-3 last:border-0">
-      <div className="min-w-0">{children}</div>
+      <div className="min-w-0 flex-1">
+        {children}
+        {edit && (
+          <details className="mt-2">
+            <summary className="inline-flex items-center gap-1.5 text-label-caps uppercase tracking-wide text-primary-container cursor-pointer hover:text-primary transition-colors">
+              <Pencil size={12} /> Edit
+            </summary>
+            <div className="mt-3 pr-2">{edit}</div>
+          </details>
+        )}
+      </div>
       <ConfirmButton
         title="Hapus entri ini?"
         message={`"${itemLabel}" akan dihapus permanen dari katalog.`}
@@ -147,7 +165,46 @@ export default async function ConsoleKatalogPage() {
             <li className="py-4 text-body-md text-on-surface-variant">Belum ada tempat.</li>
           ) : (
             data.places.map((p) => (
-              <Row key={p.id} id={p.id} onDelete={deletePlace} itemLabel={p.name}>
+              <Row
+                key={p.id}
+                id={p.id}
+                onDelete={deletePlace}
+                itemLabel={p.name}
+                edit={
+                  <form action={updatePlace} className="flex flex-col gap-3 max-w-xl">
+                    <input type="hidden" name="id" value={p.id} />
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      <input name="name" required defaultValue={p.name} placeholder="Nama *" className={input} />
+                      <input name="nameZh" defaultValue={p.nameZh ?? ""} placeholder="Nama Mandarin" className={input} />
+                      <select name="category" defaultValue={p.category ?? "tourism"} className={input} aria-label="Kategori">
+                        <option value="tourism">Wisata</option>
+                        <option value="culture">Sejarah & Budaya</option>
+                        <option value="nature">Alam & Rekreasi</option>
+                        <option value="food">Kuliner</option>
+                        <option value="shopping">Belanja</option>
+                        <option value="spiritual">Ibadah</option>
+                        <option value="practical">Kebutuhan Sehari-hari</option>
+                      </select>
+                      <input name="district" defaultValue={p.district ?? ""} placeholder="Distrik" className={input} />
+                    </div>
+                    <textarea name="description" rows={2} defaultValue={p.description ?? ""} placeholder="Deskripsi" className={`${input} resize-none`} />
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      <input name="address" defaultValue={p.address ?? ""} placeholder="Alamat" className={input} />
+                      <input name="addressZh" defaultValue={p.addressZh ?? ""} placeholder="Alamat Mandarin" className={input} />
+                      <input name="mapUrl" defaultValue={p.mapUrl ?? ""} placeholder="Tautan Peta" className={input} />
+                      <input name="orderIndex" type="number" defaultValue={p.orderIndex} placeholder="Urutan" className={input} />
+                    </div>
+                    <ImageUploadCropper name="imageUrl" folder="catalog" label="Gambar" placeholder="Tempel URL atau unggah gambar" defaultValue={p.imageUrl ?? ""} />
+                    <label className="flex items-center gap-2 text-body-md text-on-background">
+                      <input type="checkbox" name="published" defaultChecked={p.published} />
+                      Tampil di situs publik
+                    </label>
+                    <button type="submit" className={primaryBtn}>
+                      Simpan Perubahan
+                    </button>
+                  </form>
+                }
+              >
                 <p className="text-body-md text-on-background">
                   {p.name} {p.nameZh && <span className="text-on-surface-variant">{p.nameZh}</span>}
                 </p>
@@ -325,7 +382,38 @@ export default async function ConsoleKatalogPage() {
             <li className="py-4 text-body-md text-on-surface-variant">Belum ada universitas.</li>
           ) : (
             data.universities.map((u) => (
-              <Row key={u.id} id={u.id} onDelete={deleteUniversity} itemLabel={u.name}>
+              <Row
+                key={u.id}
+                id={u.id}
+                onDelete={deleteUniversity}
+                itemLabel={u.name}
+                edit={
+                  <form action={updateUniversity} className="flex flex-col gap-3 max-w-xl">
+                    <input type="hidden" name="id" value={u.id} />
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      <input name="name" required defaultValue={u.name} placeholder="Nama *" className={input} />
+                      <input name="nameZh" defaultValue={u.nameZh ?? ""} placeholder="Nama Mandarin" className={input} />
+                      <input name="abbreviation" defaultValue={u.abbreviation ?? ""} placeholder="Singkatan" className={input} />
+                      <input name="city" defaultValue={u.city ?? ""} placeholder="Kota *" className={input} />
+                      <input name="district" defaultValue={u.district ?? ""} placeholder="Distrik (khusus Nanjing)" className={input} />
+                      <input name="coordinatorName" defaultValue={u.coordinatorName ?? ""} placeholder="Koordinator" className={input} />
+                      <input name="coordinatorEmail" type="email" defaultValue={u.coordinatorEmail ?? ""} placeholder="Email koordinator" className={input} />
+                      <input name="websiteUrl" defaultValue={u.websiteUrl ?? ""} placeholder="Situs" className={input} />
+                      <input name="studentCount" type="number" min={0} defaultValue={u.studentCount ?? ""} placeholder="Perkiraan mahasiswa Indo" className={input} />
+                      <input name="orderIndex" type="number" defaultValue={u.orderIndex} placeholder="Urutan" className={input} />
+                    </div>
+                    <textarea name="description" rows={2} defaultValue={u.description ?? ""} placeholder="Deskripsi" className={`${input} resize-none`} />
+                    <ImageUploadCropper name="logoUrl" folder="catalog" label="Logo" placeholder="Tempel URL atau unggah gambar" defaultValue={u.logoUrl ?? ""} />
+                    <label className="flex items-center gap-2 text-body-md text-on-background">
+                      <input type="checkbox" name="isPartner" defaultChecked={u.isPartner} />
+                      Kampus mitra
+                    </label>
+                    <button type="submit" className={primaryBtn}>
+                      Simpan Perubahan
+                    </button>
+                  </form>
+                }
+              >
                 <p className="text-body-md text-on-background">
                   {u.name} {u.abbreviation && <span className="text-on-surface-variant">({u.abbreviation})</span>}
                 </p>
@@ -385,7 +473,33 @@ export default async function ConsoleKatalogPage() {
             <li className="py-4 text-body-md text-on-surface-variant">Belum ada item.</li>
           ) : (
             data.merchandise.map((m) => (
-              <Row key={m.id} id={m.id} onDelete={deleteMerchandise} itemLabel={m.name}>
+              <Row
+                key={m.id}
+                id={m.id}
+                onDelete={deleteMerchandise}
+                itemLabel={m.name}
+                edit={
+                  <form action={updateMerchandise} className="flex flex-col gap-3 max-w-xl">
+                    <input type="hidden" name="id" value={m.id} />
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      <input name="name" required defaultValue={m.name} placeholder="Nama *" className={input} />
+                      <input name="priceCny" type="number" min={0} defaultValue={m.priceCny ?? ""} placeholder="Harga (¥)" className={input} />
+                      <select name="status" defaultValue={m.status ?? "unavailable"} className={input} aria-label="Status">
+                        <option value="unavailable">Belum tersedia</option>
+                        <option value="preorder">Pre-order</option>
+                        <option value="available">Tersedia</option>
+                      </select>
+                      <input name="orderIndex" type="number" defaultValue={m.orderIndex} placeholder="Urutan" className={input} />
+                    </div>
+                    <ImageUploadCropper name="imageUrl" folder="catalog" label="Gambar" placeholder="Tempel URL atau unggah gambar" defaultValue={m.imageUrl ?? ""} />
+                    <textarea name="description" rows={2} defaultValue={m.description ?? ""} placeholder="Deskripsi" className={`${input} resize-none`} />
+                    <input name="contactNote" defaultValue={m.contactNote ?? ""} placeholder="Catatan pemesanan" className={input} />
+                    <button type="submit" className={primaryBtn}>
+                      Simpan Perubahan
+                    </button>
+                  </form>
+                }
+              >
                 <p className="text-body-md text-on-background">{m.name}</p>
                 <p className="text-label-caps text-on-surface-variant">
                   {m.status}
@@ -439,7 +553,33 @@ export default async function ConsoleKatalogPage() {
             <li className="py-4 text-body-md text-on-surface-variant">Belum ada sponsor.</li>
           ) : (
             data.sponsors.map((s) => (
-              <Row key={s.id} id={s.id} onDelete={deleteSponsor} itemLabel={s.name}>
+              <Row
+                key={s.id}
+                id={s.id}
+                onDelete={deleteSponsor}
+                itemLabel={s.name}
+                edit={
+                  <form action={updateSponsor} className="flex flex-col gap-3 max-w-xl">
+                    <input type="hidden" name="id" value={s.id} />
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      <input name="name" required defaultValue={s.name} placeholder="Nama *" className={input} />
+                      <select name="tier" defaultValue={s.tier ?? "partner"} className={input} aria-label="Tingkat">
+                        <option value="partner">Mitra</option>
+                        <option value="silver">Silver</option>
+                        <option value="gold">Gold</option>
+                        <option value="platinum">Platinum</option>
+                      </select>
+                      <input name="websiteUrl" defaultValue={s.websiteUrl ?? ""} placeholder="Situs" className={input} />
+                      <input name="orderIndex" type="number" defaultValue={s.orderIndex} placeholder="Urutan" className={input} />
+                    </div>
+                    <ImageUploadCropper name="logoUrl" folder="catalog" label="Logo" placeholder="Tempel URL atau unggah gambar" defaultValue={s.logoUrl ?? ""} />
+                    <textarea name="description" rows={2} defaultValue={s.description ?? ""} placeholder="Deskripsi" className={`${input} resize-none`} />
+                    <button type="submit" className={primaryBtn}>
+                      Simpan Perubahan
+                    </button>
+                  </form>
+                }
+              >
                 <p className="text-body-md text-on-background">{s.name}</p>
                 <p className="text-label-caps text-on-surface-variant">{s.tier}</p>
               </Row>

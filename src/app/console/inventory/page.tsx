@@ -1,7 +1,7 @@
 import { eq, desc } from "drizzle-orm";
 import { db } from "@/db";
 import { inventoryItems, borrowRequests, users, itemContributions, procurementRequests, externalLoans } from "@/db/schema";
-import { createInventoryItem } from "@/app/actions/admin-inventory";
+import { createInventoryItem, updateInventoryItem } from "@/app/actions/admin-inventory";
 import { FileUpload } from "@/components/upload/file-upload";
 import { BorrowRequestQueue } from "@/components/console/borrow-request-queue";
 import { ContributionReview } from "@/components/console/contribution-review";
@@ -11,9 +11,10 @@ import { CollapsibleSection } from "@/components/console/collapsible-section";
 import { GuideButton } from "@/components/console/guide-button";
 import { getGuide } from "@/lib/guides";
 import { requireModuleAccess } from "@/lib/admin-scope";
-import { Plus, Package } from "lucide-react";
+import { Plus, Package, Pencil } from "lucide-react";
 import Link from "next/link";
-import { conditionLabel } from "@/lib/inventory-labels";
+import { conditionLabel, INVENTORY_CONDITIONS, CONDITION_LABEL } from "@/lib/inventory-labels";
+import { fieldInput as input, primaryBtn } from "@/components/console/form";
 
 
 export default async function ConsoleInventoryPage() {
@@ -170,6 +171,44 @@ export default async function ConsoleInventoryPage() {
                       .join(" · ")}
                   </p>
                 )}
+                {/* Pure-HTML edit form: no client JS needed, matches the
+                    create form above so both stay visually identical. */}
+                <details className="mt-3">
+                  <summary className="inline-flex items-center gap-1.5 text-label-caps uppercase tracking-wide text-primary-container cursor-pointer hover:text-primary transition-colors">
+                    <Pencil size={12} /> Edit
+                  </summary>
+                  <form action={updateInventoryItem} className="mt-3 flex flex-col gap-3">
+                    <input type="hidden" name="id" value={item.id} />
+                    <input name="name" required defaultValue={item.name} placeholder="Nama Barang *" className={input} />
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      <input name="category" defaultValue={item.category ?? ""} placeholder="Kategori" className={input} />
+                      <input name="location" defaultValue={item.location ?? ""} placeholder="Lokasi Penyimpanan" className={input} />
+                      <input name="custodian" defaultValue={item.custodian ?? ""} placeholder="Pemegang" className={input} />
+                      <select name="condition" defaultValue={item.condition} className={input} aria-label="Kondisi">
+                        {INVENTORY_CONDITIONS.map((c) => (
+                          <option key={c} value={c}>
+                            Kondisi: {CONDITION_LABEL[c]}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                    <div className="grid grid-cols-2 gap-3">
+                      <label className="flex flex-col gap-1">
+                        <span className="text-label-caps text-on-surface-variant">Jumlah total</span>
+                        <input name="totalQuantity" type="number" min={0} required defaultValue={item.totalQuantity} className={input} />
+                      </label>
+                      <label className="flex flex-col gap-1">
+                        <span className="text-label-caps text-on-surface-variant">Tersedia</span>
+                        <input name="availableQuantity" type="number" min={0} required defaultValue={item.availableQuantity} className={input} />
+                      </label>
+                    </div>
+                    <textarea name="description" rows={2} defaultValue={item.description ?? ""} placeholder="Deskripsi" className={`${input} resize-none`} />
+                    <FileUpload name="imageUrl" folder="inventory" label="Foto Barang (opsional)" placeholder="URL atau unggah gambar" defaultValue={item.imageUrl ?? ""} />
+                    <button type="submit" className={primaryBtn}>
+                      Simpan Perubahan
+                    </button>
+                  </form>
+                </details>
               </div>
             ))}
           </div>
