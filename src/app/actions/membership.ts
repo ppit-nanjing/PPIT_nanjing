@@ -1,16 +1,25 @@
 "use server";
 
-import { asc, eq } from "drizzle-orm";
+import { asc, eq, sql } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { auth } from "@/auth";
 import { db } from "@/db";
-import { membershipApplications, membershipFormFields, membershipFormMeta, recruitmentPeriods } from "@/db/schema";
+import {
+  auditLogs,
+  departments,
+  departmentMembers,
+  membershipApplications,
+  membershipFormFields,
+  membershipFormMeta,
+  recruitmentPeriods,
+  users,
+} from "@/db/schema";
 import { requireModuleAccess } from "@/lib/admin-scope";
 import { notificationTemplates } from "@/db/schema";
 import { getTemplateDef, renderTemplate } from "@/lib/notification-templates";
 import { createTemplatedNotification } from "@/lib/notifications";
-import { sendEmail } from "@/lib/email";
+import { sendEmail, type SendResult } from "@/lib/email";
 import { renderMembershipEmail, renderMembershipEmailText } from "@/lib/membership-email";
 import { CORE_KEYS, DEFAULT_FIELDS, QUESTION_BY_KEY, GRID_TYPES, canDeleteField, type MembershipFieldDef } from "@/lib/membership-form";
 
@@ -141,10 +150,14 @@ async function resolveTemplate(key: string, variables: Record<string, string>) {
 }
 
 export async function updateMembershipStatus(formData: FormData) {
-  await requireModuleAccess("membership");
+  const session = await requireModuleAccess("membership");
   const id = String(formData.get("id") ?? "");
   const status = String(formData.get("status") ?? "");
   if (!STATUS_VALUES.includes(status as (typeof STATUS_VALUES)[number])) throw new Error("Status tidak valid");
+  // The decision email is irreversible and hits the applicant's inbox - the
+  // checkbox (default on) lets a reviewer record an internal-only status
+  // without notifying anyone.
+  const notifyApplicant = formData.get("notifyApplicant") !== null;
 
   const [before] = await db
     .select({ status: membershipApplications.status })
@@ -156,18 +169,87 @@ export async function updateMembershipStatus(formData: FormData) {
   // Announce the decision once, only when the status actually changes into a
   // final one - re-saving "Diterima" must not email the applicant again.
   const isDecision = status === "accepted" || status === "rejected";
-  if (isDecision && before?.status !== status) {
-    await notifyMembershipDecision(id, status);
+  const changed = before?.status !== status;
+  let decisionEmail: string | null = null;
+  if (isDecision && changed) {
+    if (status === "accepted") await provisionAcceptedApplicant(id);
+    if (!notifyApplicant) {
+      decisionEmail = "skipped";
+    } else {
+      const result = await notifyMembershipDecision(id, status);
+      decisionEmail = result.ok ? "sent" : `failed: ${result.reason ?? "unknown"}`;
+    }
   }
+
+  // Review accountability: who decided what, when, and whether the applicant
+  // was actually notified. Rendered on the application detail page.
+  await db.insert(auditLogs).values({
+    actorUserId: session.user.id,
+    entityType: "membership_application",
+    entityId: id,
+    action: isDecision && changed ? `decision_${status}` : "status_changed",
+    beforeJson: { status: before?.status ?? null },
+    afterJson: { status, decisionEmail },
+  });
 
   revalidatePath("/console/membership");
   revalidatePath(`/console/membership/${id}`);
 }
 
+// Accepting used to be a dead end: it flipped two columns and sent an email,
+// but nobody became a member of anything. This makes an accepted applicant
+// reachable in-app and files them under the division they asked for:
+// - no account yet -> create one ("invited"; their first Google sign-in is
+//   auto-linked by auth.ts's signIn callback, which then activates it)
+// - existing invited account (admin pre-provisioned) -> activated directly
+// - divisionInterest matching a department name (case-insensitive) -> added
+//   to that department as "Anggota"; no match = left unassigned, not guessed.
+async function provisionAcceptedApplicant(applicationId: string) {
+  const [app] = await db
+    .select({
+      userId: membershipApplications.userId,
+      fullName: membershipApplications.fullName,
+      email: membershipApplications.email,
+      divisionInterest: membershipApplications.divisionInterest,
+    })
+    .from(membershipApplications)
+    .where(eq(membershipApplications.id, applicationId));
+  if (!app) return;
+
+  let userId = app.userId;
+  if (!userId) {
+    const [existing] = await db.select({ id: users.id, status: users.status }).from(users).where(eq(users.email, app.email)).limit(1);
+    if (existing) {
+      userId = existing.id;
+      if (existing.status === "invited") {
+        await db.update(users).set({ status: "active" }).where(eq(users.id, existing.id));
+      }
+    } else {
+      const [created] = await db
+        .insert(users)
+        .values({ name: app.fullName, email: app.email, status: "invited" })
+        .returning();
+      userId = created.id;
+    }
+    await db.update(membershipApplications).set({ userId }).where(eq(membershipApplications.id, applicationId));
+  }
+  if (!userId || !app.divisionInterest) return;
+
+  const [dept] = await db
+    .select({ id: departments.id })
+    .from(departments)
+    .where(sql`lower(${departments.name}) = lower(${app.divisionInterest})`)
+    .limit(1);
+  if (!dept) return;
+  await db.insert(departmentMembers).values({ userId, departmentId: dept.id, position: "Anggota" }).onConflictDoNothing();
+}
+
 // Sends the decision to the applicant: in-app when they have an account, and
 // always by email (email is NOT NULL on every application). A failure here must
-// never roll back or throw past the status update the admin just made.
-async function notifyMembershipDecision(applicationId: string, status: "accepted" | "rejected") {
+// never roll back or throw past the status update the admin just made - the
+// SendResult is returned so updateMembershipStatus can record the outcome in
+// the audit log instead of the failure vanishing into console.error.
+async function notifyMembershipDecision(applicationId: string, status: "accepted" | "rejected"): Promise<SendResult> {
   try {
     const [app] = await db
       .select({
@@ -179,12 +261,12 @@ async function notifyMembershipDecision(applicationId: string, status: "accepted
       .from(membershipApplications)
       .leftJoin(recruitmentPeriods, eq(membershipApplications.recruitmentPeriodId, recruitmentPeriods.id))
       .where(eq(membershipApplications.id, applicationId));
-    if (!app) return;
+    if (!app) return { ok: false, skipped: true, reason: "aplikasi tidak ditemukan" };
 
     const key = status === "accepted" ? "membership_accepted" : "membership_rejected";
     const variables = { fullName: app.fullName, batchLabel: app.batchLabel ?? "" };
     const resolved = await resolveTemplate(key, variables);
-    if (!resolved) return;
+    if (!resolved) return { ok: false, skipped: true, reason: "template tidak ditemukan" };
 
     if (app.userId) {
       await createTemplatedNotification({
@@ -196,7 +278,7 @@ async function notifyMembershipDecision(applicationId: string, status: "accepted
       });
     }
 
-    await sendEmail({
+    return await sendEmail({
       to: app.email,
       subject: resolved.subject,
       html: renderMembershipEmail({ heading: resolved.subject, body: resolved.body }),
@@ -204,6 +286,7 @@ async function notifyMembershipDecision(applicationId: string, status: "accepted
     });
   } catch (err) {
     console.error("[membership] failed to announce decision:", err);
+    return { ok: false, skipped: false, reason: err instanceof Error ? err.message : "unknown error" };
   }
 }
 
@@ -449,5 +532,35 @@ export async function updateFormMeta(formData: FormData) {
       });
   }
   revalidatePath("/console/membership/form");
+  revalidatePath("/join-us");
+}
+
+// ---- Recruitment periods (admin) ----
+
+// /join-us reads the latest period's `isOpen`; until now flipping it required
+// running a seed script against the prod DB - these two actions are the
+// missing admin surface for that.
+
+export async function setRecruitmentPeriodOpen(id: string, open: boolean) {
+  await requireModuleAccess("membership");
+  await db.update(recruitmentPeriods).set({ isOpen: open }).where(eq(recruitmentPeriods.id, id));
+  revalidatePath("/console/membership");
+  revalidatePath("/join-us");
+}
+
+export async function createRecruitmentPeriod(formData: FormData) {
+  await requireModuleAccess("membership");
+  const batchLabel = String(formData.get("batchLabel") ?? "").trim();
+  if (!batchLabel) throw new Error("Nama batch wajib diisi.");
+  const opensAtRaw = String(formData.get("opensAt") ?? "").trim();
+  const closesAtRaw = String(formData.get("closesAt") ?? "").trim();
+  await db.insert(recruitmentPeriods).values({
+    batchLabel,
+    // New periods start closed - opening is an explicit, separate decision.
+    isOpen: false,
+    opensAt: opensAtRaw ? new Date(opensAtRaw) : null,
+    closesAt: closesAtRaw ? new Date(closesAtRaw) : null,
+  });
+  revalidatePath("/console/membership");
   revalidatePath("/join-us");
 }

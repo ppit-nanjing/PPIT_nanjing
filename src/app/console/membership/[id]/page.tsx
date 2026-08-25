@@ -1,7 +1,7 @@
-import { eq } from "drizzle-orm";
+import { and, eq, desc } from "drizzle-orm";
 import { notFound } from "next/navigation";
 import { db } from "@/db";
-import { membershipApplications, recruitmentPeriods } from "@/db/schema";
+import { auditLogs, membershipApplications, recruitmentPeriods, users } from "@/db/schema";
 import { requireModuleAccess } from "@/lib/admin-scope";
 import {
   updateMembershipStatus,
@@ -67,6 +67,21 @@ export default async function MembershipDetailPage({ params }: { params: Promise
 
   if (!app) notFound();
   const row = app as unknown as Record<string, string | null>;
+
+  // Decision history: who changed the status, when, and whether the applicant
+  // was actually notified (written by updateMembershipStatus).
+  const decisionLog = await db
+    .select({
+      action: auditLogs.action,
+      afterJson: auditLogs.afterJson,
+      createdAt: auditLogs.createdAt,
+      actorName: users.name,
+    })
+    .from(auditLogs)
+    .leftJoin(users, eq(auditLogs.actorUserId, users.id))
+    .where(and(eq(auditLogs.entityType, "membership_application"), eq(auditLogs.entityId, id)))
+    .orderBy(desc(auditLogs.createdAt))
+    .limit(10);
 
   const fields = await getFormFields();
   const meta = await getFormMeta();
@@ -215,6 +230,11 @@ export default async function MembershipDetailPage({ params }: { params: Promise
               ke pendaftar.
             </p>
           )}
+          {/* Decision emails are irreversible - keep them opt-out per save, not automatic. */}
+          <label className="flex items-center gap-2 mt-3 text-body-md text-on-background cursor-pointer">
+            <input type="checkbox" name="notifyApplicant" defaultChecked className="w-4 h-4 accent-[var(--color-primary-container)]" />
+            Kirim email pengumuman ke pendaftar saat status berubah jadi Diterima/Ditolak
+          </label>
           <button
             type="submit"
             className="mt-4 bg-primary-container text-on-primary text-label-caps uppercase tracking-wide px-6 py-3 rounded-md hover:bg-primary transition-colors"
@@ -245,6 +265,35 @@ export default async function MembershipDetailPage({ params }: { params: Promise
         </form>
         </div>
       </CollapsibleSection>
+
+      {decisionLog.length > 0 && (
+        <CollapsibleSection title="Riwayat Keputusan" className="mt-8">
+          <ul className="flex flex-col gap-2">
+            {decisionLog.map((log) => {
+              const after = (log.afterJson as { status?: string; decisionEmail?: string | null } | null) ?? {};
+              return (
+                <li key={log.createdAt.toISOString()} className="text-body-md text-on-surface-variant">
+                  <span className="text-on-background">{log.actorName ?? "Admin"}</span>{" "}
+                  mengubah status menjadi{" "}
+                  <span className="text-on-background">{STATUS_LABEL[after.status ?? ""] ?? after.status ?? "-"}</span>
+                  {" · "}
+                  {new Date(log.createdAt).toLocaleString("id-ID", { dateStyle: "medium", timeStyle: "short" })}
+                  {after.decisionEmail && (
+                    <span className="text-label-caps">
+                      {" "}· email{" "}
+                      {after.decisionEmail === "sent"
+                        ? "terkirim"
+                        : after.decisionEmail === "skipped"
+                          ? "tidak dikirim (dimatikan)"
+                          : `gagal: ${after.decisionEmail.replace("failed: ", "")}`}
+                    </span>
+                  )}
+                </li>
+              );
+            })}
+          </ul>
+        </CollapsibleSection>
+      )}
 
       <div className="mt-8">
         <MembershipDeleteButton id={app.id} />

@@ -1,10 +1,14 @@
-import { desc, eq } from "drizzle-orm";
+import { desc, eq, sql } from "drizzle-orm";
 import { db } from "@/db";
 import { membershipApplications, recruitmentPeriods } from "@/db/schema";
 import { requireModuleAccess } from "@/lib/admin-scope";
 import { MembershipTabs } from "@/components/console/membership-tabs";
 import { GuideButton } from "@/components/console/guide-button";
 import { getGuide } from "@/lib/guides";
+import { CollapsibleSection } from "@/components/console/collapsible-section";
+import { ConfirmButton } from "@/components/console/confirm-button";
+import { fieldInput as input, primaryBtn } from "@/components/console/form";
+import { createRecruitmentPeriod, setRecruitmentPeriodOpen } from "@/app/actions/membership";
 
 const STATUS_LABEL: Record<string, string> = {
   pending: "Menunggu",
@@ -36,7 +40,13 @@ export default async function ConsoleMembershipPage() {
     .from(membershipApplications)
     .leftJoin(recruitmentPeriods, eq(membershipApplications.recruitmentPeriodId, recruitmentPeriods.id))
     .orderBy(desc(membershipApplications.submittedAt));
+  // Latest period first; NULLS LAST keeps never-scheduled batches at the end.
+  const periods = await db
+    .select()
+    .from(recruitmentPeriods)
+    .orderBy(sql`${recruitmentPeriods.opensAt} desc nulls last`);
   const guide = await getGuide("pendaftaran");
+  const pendingCount = apps.filter((a) => a.status === "pending").length;
 
   return (
     <div className="px-4 py-6 sm:px-6 lg:px-8 lg:py-10">
@@ -44,8 +54,91 @@ export default async function ConsoleMembershipPage() {
         <h1 className="text-headline-md sm:text-headline-lg text-on-background">Pendaftaran Anggota</h1>
         {guide && <GuideButton title={guide.title} content={guide.content} docSlug="pendaftaran" />}
       </div>
-      <p className="text-body-md text-on-surface-variant mb-4">{apps.length} pendaftar.</p>
+      <p className="text-body-md text-on-surface-variant mb-4">
+        {apps.length} pendaftar
+        {pendingCount > 0 && (
+          <>
+            {" "}· <span className="text-on-background font-medium">{pendingCount} menunggu keputusan</span>
+          </>
+        )}
+        .
+      </p>
       <MembershipTabs active="list" />
+
+      {/* Periode rekrutmen: /join-us membaca isOpen periode terbaru - dulu satu-satunya
+          cara membuka/menutup pendaftaran adalah seed script ke database produksi. */}
+      <CollapsibleSection
+        title="Periode Pendaftaran"
+        description={`${periods.filter((p) => p.isOpen).length} periode terbuka`}
+        className="mb-6"
+        defaultOpen={false}
+      >
+        <form action={createRecruitmentPeriod} className="flex flex-col gap-4 max-w-2xl mb-6">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <label className="flex flex-col gap-2">
+              <span className="text-label-caps uppercase tracking-wide text-on-surface-variant">Nama batch *</span>
+              <input name="batchLabel" required placeholder="mis. Kepengurusan 2026/2027" className={input} />
+            </label>
+            <label className="flex flex-col gap-2">
+              <span className="text-label-caps uppercase tracking-wide text-on-surface-variant">Buka</span>
+              <input name="opensAt" type="datetime-local" className={input} />
+            </label>
+            <label className="flex flex-col gap-2">
+              <span className="text-label-caps uppercase tracking-wide text-on-surface-variant">Tutup</span>
+              <input name="closesAt" type="datetime-local" className={input} />
+            </label>
+          </div>
+          <button type="submit" className={primaryBtn}>
+            Tambah Periode (mulai dalam status tutup)
+          </button>
+        </form>
+
+        <ul className="bg-surface-container-lowest border border-outline-variant rounded-xl px-4">
+          {periods.length === 0 ? (
+            <li className="py-4 text-body-md text-on-surface-variant">Belum ada periode.</li>
+          ) : (
+            periods.map((p) => (
+              <li key={p.id} className="flex flex-wrap items-center justify-between gap-3 border-b border-outline-variant/60 py-3 last:border-0">
+                <div className="min-w-0">
+                  <p className="text-body-md text-on-background">
+                    {p.batchLabel ?? "(tanpa nama)"}{" "}
+                    <span
+                      className={`ml-1 px-2 py-0.5 rounded-full text-label-caps ${
+                        p.isOpen ? "bg-primary-container/40 text-on-primary-container" : "bg-outline-variant/40 text-on-surface-variant"
+                      }`}
+                    >
+                      {p.isOpen ? "Terbuka" : "Tutup"}
+                    </span>
+                  </p>
+                  <p className="text-label-caps text-on-surface-variant">
+                    {p.opensAt ? new Date(p.opensAt).toLocaleString("id-ID", { dateStyle: "medium", timeStyle: "short" }) : "—"}
+                    {" → "}
+                    {p.closesAt ? new Date(p.closesAt).toLocaleString("id-ID", { dateStyle: "medium", timeStyle: "short" }) : "—"}
+                  </p>
+                </div>
+                <ConfirmButton
+                  title={p.isOpen ? "Tutup pendaftaran?" : "Buka pendaftaran?"}
+                  message={
+                    p.isOpen
+                      ? `Formulir /join-us untuk "${p.batchLabel ?? "periode ini"}" langsung tidak bisa diisi publik.`
+                      : `Formulir /join-us untuk "${p.batchLabel ?? "periode ini"}" langsung bisa diisi publik.`
+                  }
+                  confirmLabel={p.isOpen ? "Ya, tutup" : "Ya, buka"}
+                  danger={p.isOpen}
+                  onConfirm={() => setRecruitmentPeriodOpen(p.id, !p.isOpen)}
+                  className={`text-label-caps uppercase tracking-wide px-4 py-2 rounded-md border transition-colors ${
+                    p.isOpen
+                      ? "border-outline-variant text-on-surface-variant hover:bg-surface-container-low"
+                      : "border-primary-container/60 text-primary-container hover:bg-primary-container/10"
+                  }`}
+                >
+                  {p.isOpen ? "Tutup" : "Buka"}
+                </ConfirmButton>
+              </li>
+            ))
+          )}
+        </ul>
+      </CollapsibleSection>
 
       <div className="hidden sm:block bg-surface-container-lowest border border-outline-variant rounded-xl overflow-x-auto">
         <table className="w-full text-body-md min-w-[720px]">
