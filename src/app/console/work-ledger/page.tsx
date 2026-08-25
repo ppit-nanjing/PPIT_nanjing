@@ -15,11 +15,7 @@ import {
   listPendingPayments,
 } from "@/app/actions/committee";
 import { PAYMENT_STATUS_LABEL } from "@/lib/payment-status-labels";
-
-const input = "bg-soft-gray rounded-md p-3 text-body-md";
-const lbl = "text-label-caps uppercase tracking-wide text-on-surface-variant";
-const btn =
-  "self-start bg-primary-container text-on-primary text-label-caps uppercase tracking-wide px-6 py-3 rounded-md hover:bg-primary transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-container focus-visible:ring-offset-2 focus-visible:ring-offset-surface-container-lowest";
+import { Field, TextField, SelectField, FormActions, primaryBtn, fieldInput } from "@/components/console/form";
 
 // Peran penugasan baru. humas/acara/logistik/dokumentasi sengaja tidak ada:
 // itu nama DIVISI, bukan peran - di skema nilainya tinggal demi baris lama.
@@ -92,51 +88,37 @@ export default async function WorkLedgerPage() {
 
       {/* ---------- Tugaskan panitia ---------- */}
       <CollapsibleSection title="Tugaskan Panitia" className="mb-6" defaultOpen={false}>
-        <form action={assignCommittee} className="flex flex-col gap-4 max-w-2xl">
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <label className="flex flex-col gap-2">
-              <span className={lbl}>Acara *</span>
-              <select name="eventId" required className={input}>
-                <option value="">Pilih acara&hellip;</option>
+        <form action={assignCommittee} className="flex flex-col gap-3 max-w-2xl">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <Field label="Acara" required>
+              <select name="eventId" required defaultValue="" className={fieldInput}>
+                <option value="" disabled>Pilih acara…</option>
                 {eventList.map((e) => (
-                  <option key={e.id} value={e.id}>
-                    {e.title}
-                  </option>
+                  <option key={e.id} value={e.id}>{e.title}</option>
                 ))}
               </select>
-            </label>
-            <label className="flex flex-col gap-2">
-              <span className={lbl}>Pengurus *</span>
-              <select name="userId" required className={input}>
-                <option value="">Pilih orang&hellip;</option>
+            </Field>
+            <Field label="Orang" required>
+              <select name="userId" required defaultValue="" className={fieldInput}>
+                <option value="" disabled>Pilih orang…</option>
                 {userList.map((u) => (
-                  <option key={u.id} value={u.id}>
-                    {u.name ?? u.email}
-                  </option>
+                  <option key={u.id} value={u.id}>{u.name ?? u.email}</option>
                 ))}
               </select>
-            </label>
-            <label className="flex flex-col gap-2">
-              <span className={lbl}>Peran di acara ini</span>
-              <select name="role" className={input}>
-                {ROLES.map((r) => (
-                  <option key={r} value={r}>
-                    {r}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <label className="flex flex-col gap-2">
-              <span className={lbl}>Catatan tugas</span>
-              <input name="note" placeholder="mis. PJ konsumsi" className={input} />
-            </label>
+            </Field>
+            <SelectField
+              name="role"
+              label="Peran di acara ini"
+              options={ROLES.map((r) => ({ value: r, label: r }))}
+            />
+            <TextField name="note" label="Catatan tugas" placeholder="mis. PJ konsumsi" />
           </div>
-          <p className="text-label-caps text-on-surface-variant">
+          <p className="text-xs text-on-surface-variant">
             Menugaskan orang yang sama dua kali di satu acara akan mengubah perannya, bukan menambah baris.
           </p>
-          <button type="submit" className={btn}>
-            Tugaskan
-          </button>
+          <FormActions>
+            <button type="submit" className={primaryBtn}>Tugaskan</button>
+          </FormActions>
         </form>
       </CollapsibleSection>
 
@@ -225,54 +207,45 @@ export default async function WorkLedgerPage() {
 
       {/* ---------- Sertifikat ---------- */}
       <CollapsibleSection title="Sertifikat" description={`${certRows.length} diterbitkan`} className="mb-6" defaultOpen={false}>
-        <form action={issueCertificate} className="flex flex-col gap-4 max-w-2xl mb-6">
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <label className="flex flex-col gap-2">
-              <span className={lbl}>Penerima *</span>
-              <select name="userId" required className={input}>
-                <option value="">Pilih orang&hellip;</option>
+        <form action={issueCertificate} className="flex flex-col gap-3 max-w-2xl mb-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <Field label="Penerima" required>
+              <select name="userId" required defaultValue="" className={fieldInput}>
+                <option value="" disabled>Pilih orang…</option>
                 {userList.map((u) => (
-                  <option key={u.id} value={u.id}>
-                    {u.name ?? u.email}
-                  </option>
+                  <option key={u.id} value={u.id}>{u.name ?? u.email}</option>
                 ))}
               </select>
-            </label>
-            <label className="flex flex-col gap-2">
-              <span className={lbl}>Acara (opsional)</span>
-              <select name="eventId" className={input}>
-                <option value="">&mdash;</option>
+            </Field>
+            <Field label="Acara (opsional)">
+              <select name="eventId" defaultValue="" className={fieldInput}>
+                <option value="">—</option>
                 {eventList.map((e) => (
-                  <option key={e.id} value={e.id}>
-                    {e.title}
-                  </option>
+                  <option key={e.id} value={e.id}>{e.title}</option>
                 ))}
               </select>
-            </label>
-            <label className="flex flex-col gap-2">
-              <span className={lbl}>Jenis</span>
-              <select name="kind" className={input}>
-                <option value="peserta">Peserta</option>
-                <option value="panitia">Panitia</option>
-                <option value="pemateri">Pemateri</option>
-                <option value="lainnya">Lainnya</option>
-              </select>
-            </label>
-            <label className="flex flex-col gap-2">
-              <span className={lbl}>Judul *</span>
-              <input name="title" required placeholder="Sertifikat Panitia Welcoming Party" className={input} />
-            </label>
+            </Field>
+            <SelectField
+              name="kind"
+              label="Jenis"
+              options={[
+                { value: "peserta", label: "Peserta" },
+                { value: "panitia", label: "Panitia" },
+                { value: "pemateri", label: "Pemateri" },
+                { value: "lainnya", label: "Lainnya" },
+              ]}
+            />
+            <TextField name="title" label="Judul" required placeholder="Sertifikat Panitia Welcoming Party" />
           </div>
-          <label className="flex flex-col gap-2">
-            <span className={lbl}>Tautan berkas</span>
-            <input name="fileUrl" placeholder="https://drive.google.com/…" className={input} />
-            <span className="text-label-caps text-on-surface-variant">
-              Boleh tautan Google Drive &mdash; unggahan langsung belum aktif (Vercel Blob belum disetel).
-            </span>
-          </label>
-          <button type="submit" className={btn}>
-            Terbitkan Sertifikat
-          </button>
+          <TextField
+            name="fileUrl"
+            label="Tautan berkas"
+            hint="Boleh tautan Google Drive — bisa juga diisi belakangan dari daftar di bawah."
+            placeholder="https://drive.google.com/…"
+          />
+          <FormActions>
+            <button type="submit" className={primaryBtn}>Terbitkan Sertifikat</button>
+          </FormActions>
         </form>
 
         <ul className="bg-surface-container-lowest border border-outline-variant rounded-xl px-4">

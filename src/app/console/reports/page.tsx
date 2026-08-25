@@ -7,6 +7,7 @@ import { CollapsibleSection } from "@/components/console/collapsible-section";
 import { GuideButton } from "@/components/console/guide-button";
 import { getGuide } from "@/lib/guides";
 import { Download, Users as UsersIcon, GraduationCap, MapPin } from "lucide-react";
+import { TextField, SelectField, FormActions, primaryBtn } from "@/components/console/form";
 
 const REPORT_TYPE_LABEL: Record<string, string> = {
   event_attendance: "Kehadiran Acara",
@@ -71,82 +72,55 @@ export default async function ConsoleReportsPage() {
             method="get"
             className="bg-surface-container-lowest border border-outline-variant rounded-xl p-6 flex flex-col gap-4 max-w-3xl"
           >
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <label className="flex flex-col gap-2">
-                <span className="text-label-caps uppercase tracking-wide text-on-surface-variant">Jenis Laporan *</span>
-                <select name="type" required defaultValue="student_export" className="bg-soft-gray rounded-md p-3 text-body-md">
-                  {Object.entries(REPORT_TYPE_LABEL).map(([value, label]) => (
-                    <option key={value} value={value}>
-                      {label}
-                    </option>
-                  ))}
-                </select>
-              </label>
-              <label className="flex flex-col gap-2">
-                <span className="text-label-caps uppercase tracking-wide text-on-surface-variant">Departemen</span>
-                <select name="departmentId" defaultValue="" className="bg-soft-gray rounded-md p-3 text-body-md">
-                  <option value="">Semua Departemen</option>
-                  {allDepartments.map((d) => (
-                    <option key={d.id} value={d.id}>
-                      {d.name}
-                    </option>
-                  ))}
-                </select>
-              </label>
-              <label className="flex flex-col gap-2">
-                <span className="text-label-caps uppercase tracking-wide text-on-surface-variant">Dari Tanggal</span>
-                <input type="date" name="dateFrom" className="bg-soft-gray rounded-md p-3 text-body-md" />
-              </label>
-              <label className="flex flex-col gap-2">
-                <span className="text-label-caps uppercase tracking-wide text-on-surface-variant">Sampai Tanggal</span>
-                <input type="date" name="dateTo" className="bg-soft-gray rounded-md p-3 text-body-md" />
-              </label>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              <SelectField
+                name="type"
+                label="Jenis Laporan"
+                required
+                defaultValue="student_export"
+                options={Object.entries(REPORT_TYPE_LABEL).map(([value, label]) => ({ value, label }))}
+              />
+              <SelectField
+                name="departmentId"
+                label="Departemen"
+                defaultValue=""
+                placeholder="Semua Departemen"
+                options={allDepartments.map((d) => ({ value: d.id, label: d.name }))}
+              />
+              <TextField name="dateFrom" label="Dari Tanggal" type="date" />
+              <TextField name="dateTo" label="Sampai Tanggal" type="date" />
             </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <label className="flex flex-col gap-2">
-                <span className="text-label-caps uppercase tracking-wide text-on-surface-variant">
-                  Cabang (Ringkasan Sensus)
-                </span>
-                <select name="sensusBranch" defaultValue={HOME_BRANCH} className="bg-soft-gray rounded-md p-3 text-body-md">
-                  <option value={HOME_BRANCH}>{HOME_BRANCH} (cabang kita)</option>
-                  <option value="">Semua cabang</option>
-                  {allBranches
-                    .filter((b) => b !== HOME_BRANCH)
-                    .map((b) => (
-                      <option key={b} value={b}>
-                        {b}
-                      </option>
-                    ))}
-                </select>
-              </label>
-              <label className="flex flex-col gap-2">
-                <span className="text-label-caps uppercase tracking-wide text-on-surface-variant">
-                  Kelengkapan (Ringkasan Sensus)
-                </span>
-                <select name="sensusCompletion" defaultValue="complete" className="bg-soft-gray rounded-md p-3 text-body-md">
-                  <option value="complete">Hanya yang lengkap (siap setor ke pusat)</option>
-                  <option value="">Semua, termasuk yang belum lengkap</option>
-                </select>
-              </label>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              <SelectField
+                name="sensusBranch"
+                label="Cabang (Ringkasan Sensus)"
+                defaultValue={HOME_BRANCH}
+                hint={`Default ${HOME_BRANCH} + hanya lengkap = baris siap setor ke pusat.`}
+                options={[
+                  { value: HOME_BRANCH, label: `${HOME_BRANCH} (cabang kita)` },
+                  { value: "", label: "Semua cabang" },
+                  ...allBranches.filter((b) => b !== HOME_BRANCH).map((b) => ({ value: b, label: b })),
+                ]}
+              />
+              <SelectField
+                name="sensusCompletion"
+                label="Kelengkapan (Ringkasan Sensus)"
+                defaultValue="complete"
+                options={[
+                  { value: "complete", label: "Hanya yang lengkap (siap setor ke pusat)" },
+                  { value: "", label: "Semua, termasuk yang belum lengkap" },
+                ]}
+              />
             </div>
-            <label className="flex flex-col gap-2">
-              <span className="text-label-caps uppercase tracking-wide text-on-surface-variant">Catatan (untuk laporan Kustom)</span>
-              <input name="note" placeholder="mis. Ringkasan kegiatan Q3" className="bg-soft-gray rounded-md p-3 text-body-md" />
-            </label>
-            <p className="text-label-caps text-on-surface-variant">
+            <TextField name="note" label="Catatan (untuk laporan Kustom)" placeholder="mis. Ringkasan kegiatan Q3" />
+            <p className="text-xs text-on-surface-variant">
               Departemen dan tanggal hanya berlaku untuk jenis laporan yang relevan — abaikan yang tidak dipakai.
             </p>
-            <p className="text-label-caps text-on-surface-variant">
-              Ringkasan Sensus defaultnya cabang {HOME_BRANCH} + hanya yang lengkap — persis baris yang siap disetor ke
-              PPI Tiongkok pusat. Baris yang belum lengkap ditolak di sana karena field wajibnya bolong, dan baris
-              cabang lain masuk hitungan rekap cabang mereka, bukan kita.
-            </p>
-            <button
-              type="submit"
-              className="self-start flex items-center gap-2 bg-primary-container text-on-primary text-label-caps uppercase tracking-wide px-6 py-3 rounded-md hover:bg-primary transition-colors"
-            >
-              <Download size={16} /> Buat & Unduh Laporan (CSV)
-            </button>
+            <FormActions>
+              <button type="submit" className={`${primaryBtn} flex items-center gap-2`}>
+                <Download size={16} /> Buat & Unduh Laporan (CSV)
+              </button>
+            </FormActions>
           </form>
         </CollapsibleSection>
 

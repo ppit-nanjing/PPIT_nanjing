@@ -25,11 +25,11 @@ import {
   deleteDonationChannel,
   updateDonationStatus,
 } from "@/app/actions/donations";
+// Token isian memakai primitif bersama konsol supaya semua form terlihat dan
+// terasa identik; label & rowBtn tetap lokal karena spesifik halaman ini.
+import { fieldInput as input, primaryBtn } from "@/components/console/form";
 
-const input = "bg-soft-gray rounded-md p-3 text-body-md";
 const label = "text-label-caps uppercase tracking-wide text-on-surface-variant";
-const primaryBtn =
-  "self-start bg-primary-container text-on-primary text-label-caps uppercase tracking-wide px-6 py-3 rounded-md hover:bg-primary transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-container focus-visible:ring-offset-2 focus-visible:ring-offset-surface-container-lowest";
 const rowBtn =
   "text-label-caps uppercase tracking-wide text-error hover:bg-error-container/30 px-3 py-1.5 rounded-md";
 
