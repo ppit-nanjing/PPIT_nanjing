@@ -8,6 +8,7 @@ import {
   upsertNotificationTemplate,
 } from "@/app/actions/admin-notifications";
 import { renderTemplate, type NotificationTemplateDef } from "@/lib/notification-templates";
+import { ConfirmButton } from "@/components/console/confirm-button";
 
 // Neutral stand-ins so the preview shows shape, not invented org facts (no fake
 // event names or item brands - same rule the rest of this project follows).
@@ -137,14 +138,17 @@ export function NotificationTemplateEditor({
             <Save size={16} aria-hidden /> Simpan
           </button>
           {customized ? (
-            <button
-              type="submit"
-              formAction={resetNotificationTemplate.bind(null, def.key)}
-              formNoValidate
+            // Confirm first: reset permanently deletes the saved override.
+            <ConfirmButton
+              title="Kembalikan ke bawaan?"
+              message="Perubahan tersimpan pada template ini dihapus permanen dan diganti teks bawaan."
+              confirmLabel="Ya, kembalikan"
+              danger={false}
+              onConfirm={() => resetNotificationTemplate(def.key)}
               className="flex items-center gap-2 border border-outline-variant text-on-background text-label-caps uppercase tracking-wide px-5 py-3 rounded-md hover:bg-surface-container-low transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-container focus-visible:ring-offset-2 focus-visible:ring-offset-background motion-reduce:transition-none"
             >
               <RotateCcw size={16} aria-hidden /> Kembalikan ke bawaan
-            </button>
+            </ConfirmButton>
           ) : null}
         </div>
       </form>

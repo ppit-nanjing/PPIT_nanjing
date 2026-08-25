@@ -28,21 +28,38 @@ import {
 // Token isian memakai primitif bersama konsol supaya semua form terlihat dan
 // terasa identik; label & rowBtn tetap lokal karena spesifik halaman ini.
 import { fieldInput as input, primaryBtn } from "@/components/console/form";
+import { ConfirmButton } from "@/components/console/confirm-button";
 
 const label = "text-label-caps uppercase tracking-wide text-on-surface-variant";
 const rowBtn =
   "text-label-caps uppercase tracking-wide text-error hover:bg-error-container/30 px-3 py-1.5 rounded-md";
 
-function Row({ children, onDelete, id }: { children: React.ReactNode; onDelete: (fd: FormData) => void; id: string }) {
+function Row({
+  children,
+  onDelete,
+  id,
+  itemLabel,
+}: {
+  children: React.ReactNode;
+  onDelete: (fd: FormData) => void;
+  id: string;
+  itemLabel: string;
+}) {
   return (
     <li className="flex items-start justify-between gap-3 border-b border-outline-variant/60 py-3 last:border-0">
       <div className="min-w-0">{children}</div>
-      <form action={onDelete}>
-        <input type="hidden" name="id" value={id} />
-        <button type="submit" className={rowBtn}>
-          Hapus
-        </button>
-      </form>
+      <ConfirmButton
+        title="Hapus entri ini?"
+        message={`"${itemLabel}" akan dihapus permanen dari katalog.`}
+        onConfirm={async () => {
+          const fd = new FormData();
+          fd.set("id", id);
+          await onDelete(fd);
+        }}
+        className={rowBtn}
+      >
+        Hapus
+      </ConfirmButton>
     </li>
   );
 }
@@ -130,7 +147,7 @@ export default async function ConsoleKatalogPage() {
             <li className="py-4 text-body-md text-on-surface-variant">Belum ada tempat.</li>
           ) : (
             data.places.map((p) => (
-              <Row key={p.id} id={p.id} onDelete={deletePlace}>
+              <Row key={p.id} id={p.id} onDelete={deletePlace} itemLabel={p.name}>
                 <p className="text-body-md text-on-background">
                   {p.name} {p.nameZh && <span className="text-on-surface-variant">{p.nameZh}</span>}
                 </p>
@@ -228,7 +245,7 @@ export default async function ConsoleKatalogPage() {
             <li className="py-4 text-body-md text-on-surface-variant">Belum ada distrik.</li>
           ) : (
             data.districts.map((d) => (
-              <Row key={d.id} id={d.id} onDelete={deleteDistrict}>
+              <Row key={d.id} id={d.id} onDelete={deleteDistrict} itemLabel={d.name}>
                 <p className="text-body-md text-on-background">
                   {d.name} {d.nameZh && <span className="text-on-surface-variant">{d.nameZh}</span>}
                 </p>
@@ -308,7 +325,7 @@ export default async function ConsoleKatalogPage() {
             <li className="py-4 text-body-md text-on-surface-variant">Belum ada universitas.</li>
           ) : (
             data.universities.map((u) => (
-              <Row key={u.id} id={u.id} onDelete={deleteUniversity}>
+              <Row key={u.id} id={u.id} onDelete={deleteUniversity} itemLabel={u.name}>
                 <p className="text-body-md text-on-background">
                   {u.name} {u.abbreviation && <span className="text-on-surface-variant">({u.abbreviation})</span>}
                 </p>
@@ -368,7 +385,7 @@ export default async function ConsoleKatalogPage() {
             <li className="py-4 text-body-md text-on-surface-variant">Belum ada item.</li>
           ) : (
             data.merchandise.map((m) => (
-              <Row key={m.id} id={m.id} onDelete={deleteMerchandise}>
+              <Row key={m.id} id={m.id} onDelete={deleteMerchandise} itemLabel={m.name}>
                 <p className="text-body-md text-on-background">{m.name}</p>
                 <p className="text-label-caps text-on-surface-variant">
                   {m.status}
@@ -422,7 +439,7 @@ export default async function ConsoleKatalogPage() {
             <li className="py-4 text-body-md text-on-surface-variant">Belum ada sponsor.</li>
           ) : (
             data.sponsors.map((s) => (
-              <Row key={s.id} id={s.id} onDelete={deleteSponsor}>
+              <Row key={s.id} id={s.id} onDelete={deleteSponsor} itemLabel={s.name}>
                 <p className="text-body-md text-on-background">{s.name}</p>
                 <p className="text-label-caps text-on-surface-variant">{s.tier}</p>
               </Row>
@@ -475,7 +492,7 @@ export default async function ConsoleKatalogPage() {
                 <li className="py-4 text-body-md text-on-surface-variant">Belum ada kanal.</li>
               ) : (
                 channelRows.map((c) => (
-                  <Row key={c.id} id={c.id} onDelete={deleteDonationChannel}>
+                  <Row key={c.id} id={c.id} onDelete={deleteDonationChannel} itemLabel={c.label}>
                     <p className="text-body-md text-on-background">{c.label}</p>
                     <p className="text-label-caps text-on-surface-variant">
                       {c.accountName ?? ""} {c.accountDetail ?? ""}

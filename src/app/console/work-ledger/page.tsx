@@ -1,4 +1,4 @@
-import { asc, desc, eq } from "drizzle-orm";
+import { asc, desc, eq, sql } from "drizzle-orm";
 import { db } from "@/db";
 import { events, users, certificates } from "@/db/schema";
 import { requireModuleAccess, hasModuleAccess } from "@/lib/admin-scope";
@@ -16,6 +16,7 @@ import {
 } from "@/app/actions/committee";
 import { PAYMENT_STATUS_LABEL } from "@/lib/payment-status-labels";
 import { Field, TextField, SelectField, FormActions, primaryBtn, fieldInput } from "@/components/console/form";
+import { ConfirmButton } from "@/components/console/confirm-button";
 
 // Peran penugasan baru. humas/acara/logistik/dokumentasi sengaja tidak ada:
 // itu nama DIVISI, bukan peran - di skema nilainya tinggal demi baris lama.
@@ -29,7 +30,11 @@ export default async function WorkLedgerPage() {
 
   const [ledger, eventList, userList, payments, certRows] = await Promise.all([
     getWorkLedger(),
-    db.select({ id: events.id, title: events.title, startAt: events.startAt }).from(events).orderBy(desc(events.startAt)),
+    db
+      .select({ id: events.id, title: events.title, startAt: events.startAt })
+      .from(events)
+      // NULLS LAST keeps unscheduled events from crowding the dropdown top.
+      .orderBy(sql`${events.startAt} desc nulls last`),
     db.select({ id: users.id, name: users.name, email: users.email }).from(users).orderBy(asc(users.name)),
     canVerifyPayments ? listPendingPayments() : Promise.resolve([]),
     db
@@ -145,15 +150,19 @@ export default async function WorkLedgerPage() {
                         {a.role}
                         {a.note ? ` · ${a.note}` : ""}
                       </span>
-                      <form action={removeCommittee}>
-                        <input type="hidden" name="id" value={a.assignmentId} />
-                        <button
-                          type="submit"
-                          className="text-label-caps uppercase tracking-wide text-error hover:bg-error-container/30 px-2 py-1 rounded shrink-0"
-                        >
-                          Lepas
-                        </button>
-                      </form>
+                      <ConfirmButton
+                        title="Lepas penugasan?"
+                        message={`${p.name} dilepas dari "${a.eventTitle ?? "(acara dihapus)"}" sebagai ${a.role}.`}
+                        confirmLabel="Ya, lepas"
+                        onConfirm={async () => {
+                          const fd = new FormData();
+                          fd.set("id", a.assignmentId);
+                          await removeCommittee(fd);
+                        }}
+                        className="text-label-caps uppercase tracking-wide text-error hover:bg-error-container/30 px-2 py-1 rounded shrink-0"
+                      >
+                        Lepas
+                      </ConfirmButton>
                     </li>
                   ))}
                 </ul>
@@ -281,15 +290,18 @@ export default async function WorkLedgerPage() {
                       Simpan
                     </button>
                   </form>
-                  <form action={deleteCertificate}>
-                    <input type="hidden" name="id" value={c.id} />
-                    <button
-                      type="submit"
-                      className="text-label-caps uppercase tracking-wide text-error hover:bg-error-container/30 px-3 py-1.5 rounded-md"
-                    >
-                      Hapus
-                    </button>
-                  </form>
+                  <ConfirmButton
+                    title="Hapus sertifikat?"
+                    message={`Sertifikat "${c.title}" (${c.holder ?? "?"}) dihapus permanen dari ledger.`}
+                    onConfirm={async () => {
+                      const fd = new FormData();
+                      fd.set("id", c.id);
+                      await deleteCertificate(fd);
+                    }}
+                    className="text-label-caps uppercase tracking-wide text-error hover:bg-error-container/30 px-3 py-1.5 rounded-md"
+                  >
+                    Hapus
+                  </ConfirmButton>
                 </div>
               </li>
             ))
