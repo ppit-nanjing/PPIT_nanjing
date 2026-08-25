@@ -151,6 +151,24 @@ export function EventCommitteeStructure({
               </div>
             </div>
 
+            {/* Kuota itu TARGET, bukan batas - penugasan lewat kuota tetap
+                lolos, angkanya cuma buat indikator "kurang N". Form ini ada
+                supaya targetnya sendiri bisa digeser kapan pun tanpa hapus-ulang
+                (hapus divisi memindahkan orang-orangnya ke "Tanpa divisi"). */}
+            <details className="mb-1">
+              <summary className="text-label-caps uppercase tracking-wide text-on-surface-variant hover:text-on-background cursor-pointer w-fit">Ubah departemen</summary>
+              <form action={saveEventDivision} className="mt-2 bg-surface-container-low border border-outline-variant rounded-lg p-3 flex flex-col gap-2 max-w-xl">
+                <input type="hidden" name="id" value={dept.id} />
+                <input type="hidden" name="eventId" value={eventId} />
+                <input name="name" defaultValue={dept.name} required aria-label="Nama departemen" className={input} />
+                <input name="quota" type="number" min="1" defaultValue={dept.quota ?? ""} placeholder="Kuota ketua dept. (orang)" aria-label="Kuota" className={input} />
+                <textarea name="jobDescription" defaultValue={dept.jobDescription ?? ""} rows={2} placeholder="Job description (satu poin per baris)" aria-label="Job description" className={`${input} resize-none`} />
+                <button type="submit" className="self-start bg-primary-container text-on-primary text-label-caps uppercase tracking-wide px-4 py-2 rounded-md hover:bg-primary transition-colors">
+                  Simpan Perubahan
+                </button>
+              </form>
+            </details>
+
             {dept.jobDescription && <JobDesc text={dept.jobDescription} />}
             <MemberList rows={membersOf(dept.id)} certified={certified} />
 
@@ -172,13 +190,26 @@ export function EventCommitteeStructure({
                         </div>
                         <form action={deleteEventDivision}>
                           <input type="hidden" name="id" value={sub.id} />
-                          <button type="submit" className="text-error hover:opacity-70" aria-label={`Hapus ${sub.name}`}>
+                          <button type="submit" className="text-error hover:opacity-70 p-1" aria-label={`Hapus ${sub.name}`}>
                             <Trash2 size={14} />
                           </button>
                         </form>
                       </div>
                       {sub.jobDescription && <JobDesc text={sub.jobDescription} />}
                       <MemberList rows={membersOf(sub.id)} certified={certified} />
+                      <details className="mt-2">
+                        <summary className="text-label-caps uppercase tracking-wide text-on-surface-variant hover:text-on-background cursor-pointer w-fit">Ubah sub-tim</summary>
+                        <form action={saveEventDivision} className="mt-2 flex flex-col gap-2">
+                          <input type="hidden" name="id" value={sub.id} />
+                          <input type="hidden" name="eventId" value={eventId} />
+                          <input name="name" defaultValue={sub.name} required aria-label={`Nama ${sub.name}`} className={input} />
+                          <input name="quota" type="number" min="1" defaultValue={sub.quota ?? ""} placeholder="Kuota (orang)" aria-label="Kuota" className={input} />
+                          <textarea name="jobDescription" defaultValue={sub.jobDescription ?? ""} rows={2} placeholder="Job description (satu poin per baris)" aria-label="Job description" className={`${input} resize-none`} />
+                          <button type="submit" className="self-start text-label-caps uppercase tracking-wide border border-outline-variant px-3 py-1.5 rounded-md hover:bg-surface-container-low transition-colors">
+                            Simpan
+                          </button>
+                        </form>
+                      </details>
                     </div>
                   );
                 })}
