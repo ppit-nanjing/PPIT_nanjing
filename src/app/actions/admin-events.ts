@@ -77,6 +77,7 @@ export async function createEvent(formData: FormData) {
       paymentInstructions: String(formData.get("paymentInstructions") ?? "").trim() || null,
       alipayUid: String(formData.get("alipayUid") ?? "").trim() || null,
       certificateForParticipants: formData.get("certificateForParticipants") === "on",
+      volunteerSignupOpen: formData.get("volunteerSignupOpen") === "on",
     })
     .returning();
 
@@ -124,6 +125,7 @@ export async function updateEvent(id: string, formData: FormData) {
       paymentInstructions: String(formData.get("paymentInstructions") ?? "").trim() || null,
       alipayUid: String(formData.get("alipayUid") ?? "").trim() || null,
       certificateForParticipants: formData.get("certificateForParticipants") === "on",
+      volunteerSignupOpen: formData.get("volunteerSignupOpen") === "on",
     })
     .where(eq(events.id, id));
 

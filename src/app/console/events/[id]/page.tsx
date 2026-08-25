@@ -1,9 +1,10 @@
 import { eq, desc } from "drizzle-orm";
 import { notFound } from "next/navigation";
 import { db } from "@/db";
-import { certificates, events, eventQuestions, eventRegistrations, sensusProfiles, users } from "@/db/schema";
+import { certificates, events, eventDivisions, eventQuestions, eventRegistrations, eventVolunteers, sensusProfiles, users } from "@/db/schema";
 import { MEMBERSHIP_LABEL, effectiveBranch, membershipStatus } from "@/lib/membership-status";
 import { updateEvent, saveEventQuestion, deleteEventQuestion } from "@/app/actions/admin-events";
+import { setVolunteerStatus } from "@/app/actions/volunteers";
 import { publishDueEvents } from "@/lib/publish-events";
 import { DeleteEventButton } from "@/components/console/delete-event-button";
 import { RegistrationList } from "@/components/console/registration-list";
@@ -57,6 +58,18 @@ export default async function ConsoleEventDetailPage({ params }: { params: Promi
     .from(eventQuestions)
     .where(eq(eventQuestions.eventId, id))
     .orderBy(eventQuestions.orderIndex, eventQuestions.id);
+  const volunteerApps = await db
+    .select({
+      app: eventVolunteers,
+      divisionName: eventDivisions.name,
+      accountName: users.name,
+    })
+    .from(eventVolunteers)
+    .leftJoin(eventDivisions, eq(eventVolunteers.divisionId, eventDivisions.id))
+    .leftJoin(users, eq(eventVolunteers.assignedUserId, users.id))
+    .where(eq(eventVolunteers.eventId, id))
+    .orderBy(desc(eventVolunteers.createdAt));
+  const pendingVolunteers = volunteerApps.filter((v) => v.app.status === "pending");
   const candidates = await db
     .select({ id: users.id, name: users.name, email: users.email })
     .from(users)
@@ -133,6 +146,10 @@ export default async function ConsoleEventDetailPage({ params }: { params: Promi
             <label className="flex items-center gap-2 bg-soft-gray rounded-md p-3 text-body-md cursor-pointer">
               <input type="checkbox" name="certificateForParticipants" defaultChecked={event.certificateForParticipants} className="h-4 w-4 accent-[var(--color-primary-container)]" />
               Peserta mendapat e-sertifikat kehadiran
+            </label>
+            <label className="flex items-center gap-2 bg-soft-gray rounded-md p-3 text-body-md cursor-pointer">
+              <input type="checkbox" name="volunteerSignupOpen" defaultChecked={event.volunteerSignupOpen} className="h-4 w-4 accent-[var(--color-primary-container)]" />
+              Buka pendaftaran volunteer publik (orang luar bisa melamar di halaman acara)
             </label>
           <HtmFields
             defaultIsPaid={event.isPaid}
@@ -326,6 +343,85 @@ export default async function ConsoleEventDetailPage({ params }: { params: Promi
             </button>
           </div>
         </form>
+      </CollapsibleSection>
+
+      <CollapsibleSection
+        title="Pendaftar Volunteer"
+        description={
+          event.volunteerSignupOpen
+            ? `${pendingVolunteers.length} menunggu keputusan`
+            : volunteerApps.length > 0
+              ? `${volunteerApps.length} lamaran (pendaftaran ditutup)`
+              : "pendaftaran publik tutup"
+        }
+      >
+        {!event.volunteerSignupOpen && (
+          <p className="text-body-md text-on-surface-variant mb-4 max-w-2xl">
+            Pendaftaran volunteer publik sedang <strong className="text-on-background">tutup</strong>. Centang
+            &quot;Buka pendaftaran volunteer&quot; di form Edit di atas bila butuh orang tambahan.
+          </p>
+        )}
+        {volunteerApps.length === 0 ? (
+          <p className="text-body-md text-on-surface-variant">Belum ada yang melamar.</p>
+        ) : (
+          <ul className="bg-surface-container-lowest border border-outline-variant rounded-xl px-4">
+            {volunteerApps.map((v) => {
+              const STATUS: Record<string, string> = {
+                pending: "Menunggu",
+                approved: "Diterima",
+                rejected: "Ditolak",
+              };
+              const CHIP: Record<string, string> = {
+                pending: "bg-surface-container-low text-on-surface-variant",
+                approved: "bg-primary-container/10 text-primary-container",
+                rejected: "bg-error-container text-on-error-container",
+              };
+              return (
+                <li key={v.app.id} className="flex flex-wrap items-start justify-between gap-3 border-b border-outline-variant/60 py-4 last:border-0">
+                  <div className="min-w-0">
+                    <p className="text-body-md font-medium text-on-background">{v.app.fullName}</p>
+                    <p className="text-label-caps text-on-surface-variant">
+                      {v.app.email}
+                      {v.app.whatsapp ? ` · ${v.app.whatsapp}` : ""} · minat:{" "}
+                      {v.divisionName ?? "bebas"}
+                      {v.app.status === "approved" && v.accountName ? ` · akun: ${v.accountName}` : ""}
+                    </p>
+                    {v.app.note && <p className="text-body-sm text-on-surface-variant mt-1">{v.app.note}</p>}
+                  </div>
+                  <div className="flex flex-wrap items-center gap-2 shrink-0">
+                    <span className={`text-label-caps uppercase tracking-wide px-2.5 py-1 rounded ${CHIP[v.app.status]}`}>
+                      {STATUS[v.app.status]}
+                    </span>
+                    {v.app.status === "pending" && (
+                      <>
+                        <form action={setVolunteerStatus}>
+                          <input type="hidden" name="id" value={v.app.id} />
+                          <input type="hidden" name="decision" value="approved" />
+                          <button
+                            type="submit"
+                            className="bg-primary-container text-on-primary text-label-caps uppercase tracking-wide px-3 py-1.5 rounded-md hover:bg-primary transition-colors"
+                          >
+                            Terima
+                          </button>
+                        </form>
+                        <form action={setVolunteerStatus}>
+                          <input type="hidden" name="id" value={v.app.id} />
+                          <input type="hidden" name="decision" value="rejected" />
+                          <button
+                            type="submit"
+                            className="text-label-caps uppercase tracking-wide text-error hover:bg-error-container/30 px-3 py-1.5 rounded-md"
+                          >
+                            Tolak
+                          </button>
+                        </form>
+                      </>
+                    )}
+                  </div>
+                </li>
+              );
+            })}
+          </ul>
+        )}
       </CollapsibleSection>
 
       <CollapsibleSection

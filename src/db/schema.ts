@@ -396,6 +396,10 @@ export const events = pgTable("events", {
   // saklar ketersediaannya - penerbitan tetap manual lewat tombol "Terbitkan
   // sertifikat peserta", bukan otomatis saat acara selesai.
   certificateForParticipants: boolean("certificate_for_participants").notNull().default(true),
+  // Buka pendaftaran VOLUNTEER publik: orang luar PPIT bisa melamar sendiri di
+  // halaman acara tanpa akun; admin yang menerima, barulah dibuatkan akun
+  // undangan + ditugaskan ke divisinya.
+  volunteerSignupOpen: boolean("volunteer_signup_open").notNull().default(false),
 });
 
 // `feeCny` null = acara gratis; > 0 = peserta perlu membayar dan mengunggah bukti.
@@ -455,6 +459,34 @@ export const eventQuestions = pgTable("event_questions", {
   required: boolean("required").notNull().default(false),
   orderIndex: integer("order_index").notNull().default(0),
 });
+
+// Lamaran volunteer untuk SATU acara, dari orang yang BELUM tentu punya akun
+// (justru itu intinya - kekurangan orang biasanya dikejar ke luar PPIT).
+// Email wajib karena itulah kunci pembuatan akun undangan saat diterima.
+export const volunteerStatusEnum = pgEnum("volunteer_status", ["pending", "approved", "rejected"]);
+
+export const eventVolunteers = pgTable(
+  "event_volunteers",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    eventId: uuid("event_id").notNull().references(() => events.id, { onDelete: "cascade" }),
+    fullName: text("full_name").notNull(),
+    email: text("email").notNull(),
+    whatsapp: text("whatsapp"),
+    // Divisi yang diminati saat melamar; nullable = "bebas". Set null saat
+    // divisinya dihapus - lamarannya tetap ada, tinggal dipindah manual.
+    divisionId: uuid("division_id").references((): AnyPgColumn => eventDivisions.id, { onDelete: "set null" }),
+    note: text("note"),
+    status: volunteerStatusEnum("status").notNull().default("pending"),
+    // Terisi saat lamaran disetujui: akun (baru invited / sudah ada) yang
+    // menerima penugasan kepanitiaannya.
+    assignedUserId: uuid("assigned_user_id").references((): AnyPgColumn => users.id, { onDelete: "set null" }),
+    createdAt: timestamp("created_at").notNull().defaultNow(),
+  },
+  // Satu email satu lamaran per acara - menekan kirim dua kali tidak
+  // menggandakan baris.
+  (t) => [uniqueIndex("event_volunteer_unique").on(t.eventId, t.email)]
+);
 
 // ---------- 4. Content ----------
 

@@ -102,6 +102,10 @@ Data sensus/pendataan detail mahasiswa — terpisah dari `USER` dasar karena for
 | payment_instructions | text nullable | instruksi transfer untuk peserta |
 | alipay_uid | text nullable | UID Alipay bendahara acara untuk deep-link prefill |
 | certificate_for_participants | boolean, default `true` | saklar "semua peserta dapat e-certificate"; penerbitannya tetap manual lewat tombol Terbitkan Sertifikat Peserta |
+| volunteer_signup_open | boolean, default `false` | buka form lamaran volunteer publik di halaman acara |
+
+### EVENT_VOLUNTEER
+Lamaran volunteer satu acara dari orang yang belum tentu punya akun. `id`, `event_id` FK (cascade), `full_name`, `email` (unik per acara — kunci pembuatan akun), `whatsapp` nullable, `division_id` FK → EVENT_DIVISION nullable (*set null* saat divisi dihapus; null = bebas), `note`, `status` enum (`pending`/`approved`/`rejected`), `assigned_user_id` FK → USER nullable (terisi saat diterima: akun invited dibuatkan bila belum ada + penugasan kepanitiaan ditulis), `created_at`.
 
 ### EVENT_REGISTRATION
 `id`, `event_id` FK, `user_id` FK (unik per pasangan event+user), `status` (enum: `pending`, `confirmed`, `attended`, `cancelled`), `qr_code_token` (unik, untuk check-in — sumber: layar *Event Registration Success (QR Ticket)*), `registered_at`, `checked_in_at` nullable, `branch` (jawaban cabang sekali-pakai khusus acara ini, tidak disalin ke profil), `answers_json` (jawaban pertanyaan kustom `{ [questionId]: string }`; kunci pertanyaan yang dihapus dibiarkan mati). Pembayaran manual per-orangan: `payment_status` (`not_required`, `unpaid`, `submitted`, `verified`, `rejected`), `payment_proof_url` (bukti transfer yang dikirim peserta), `payment_note`, `payment_verified_at`, `payment_verified_by` FK → USER.
