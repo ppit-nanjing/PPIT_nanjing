@@ -294,7 +294,10 @@ export async function GET(request: Request) {
   await db.insert(reports).values({
     type: type as ReportType,
     generatedBy: session.user.id,
-    parametersJson: { departmentId, dateFrom, dateTo, note },
+    // Sensus filters are stored too so "jalankan ulang" in the history list
+    // reproduces the exact same dataset instead of silently falling back to
+    // the narrow defaults.
+    parametersJson: { departmentId, dateFrom, dateTo, note, sensusBranch, sensusCompletion },
   });
 
   const ext = format === "xlsx" ? "xlsx" : "csv";

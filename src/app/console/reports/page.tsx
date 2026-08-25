@@ -6,7 +6,7 @@ import { HOME_BRANCH, MEMBERSHIP_LABEL, membershipStatus } from "@/lib/membershi
 import { CollapsibleSection } from "@/components/console/collapsible-section";
 import { GuideButton } from "@/components/console/guide-button";
 import { getGuide } from "@/lib/guides";
-import { Download, Users as UsersIcon, GraduationCap, MapPin } from "lucide-react";
+import { Download, Users as UsersIcon, GraduationCap, MapPin, RotateCcw } from "lucide-react";
 import { TextField, SelectField, FormActions, primaryBtn } from "@/components/console/form";
 
 const REPORT_TYPE_LABEL: Record<string, string> = {
@@ -113,34 +113,65 @@ export default async function ConsoleReportsPage() {
               />
             </div>
             <TextField name="note" label="Catatan (untuk laporan Kustom)" placeholder="mis. Ringkasan kegiatan Q3" />
+            <SelectField
+              name="format"
+              label="Format Berkas"
+              defaultValue="csv"
+              options={[
+                { value: "csv", label: "CSV (Excel/Google Sheets)" },
+                { value: "xlsx", label: "XLSX (Excel asli)" },
+              ]}
+            />
             <p className="text-xs text-on-surface-variant">
               Departemen dan tanggal hanya berlaku untuk jenis laporan yang relevan — abaikan yang tidak dipakai.
             </p>
             <FormActions>
               <button type="submit" className={`${primaryBtn} flex items-center gap-2`}>
-                <Download size={16} /> Buat & Unduh Laporan (CSV)
+                <Download size={16} /> Buat &amp; Unduh Laporan
               </button>
             </FormActions>
           </form>
         </CollapsibleSection>
 
-        {recentReports.length > 0 && (
-          <CollapsibleSection title={`Riwayat Laporan (${recentReports.length})`}>
+        <CollapsibleSection title={`Riwayat Laporan (${recentReports.length})`}>
+          {recentReports.length === 0 ? (
+            <p className="text-body-md text-on-surface-variant">Belum ada laporan yang dibuat.</p>
+          ) : (
             <div className="flex flex-col gap-2">
-              {recentReports.map(({ report, generatedByName }) => (
-                <div
-                  key={report.id}
-                  className="flex items-center justify-between bg-surface-container-low border border-outline-variant rounded-lg px-4 py-3 text-body-md"
-                >
-                  <span className="text-on-background">{REPORT_TYPE_LABEL[report.type] ?? report.type}</span>
-                  <span className="text-on-surface-variant text-label-caps">
-                    {generatedByName ?? "—"} &middot; {report.generatedAt.toLocaleString("id-ID")}
-                  </span>
-                </div>
-              ))}
+              {recentReports.map(({ report, generatedByName }) => {
+                const params = (report.parametersJson ?? {}) as Record<string, string | null>;
+                const qs = new URLSearchParams();
+                qs.set("type", report.type);
+                for (const key of ["departmentId", "dateFrom", "dateTo", "note", "sensusBranch", "sensusCompletion"]) {
+                  if (params[key]) qs.set(key, String(params[key]));
+                }
+                return (
+                  <div
+                    key={report.id}
+                    className="flex flex-wrap items-center justify-between gap-2 bg-surface-container-low border border-outline-variant rounded-lg px-4 py-3 text-body-md"
+                  >
+                    <div className="min-w-0">
+                      <p className="text-on-background">{REPORT_TYPE_LABEL[report.type] ?? report.type}</p>
+                      {params.note && <p className="text-label-caps text-on-surface-variant truncate">&ldquo;{params.note}&rdquo;</p>}
+                    </div>
+                    <div className="flex items-center gap-4 shrink-0">
+                      <span className="text-on-surface-variant text-label-caps">
+                        {generatedByName ?? "—"} &middot; {report.generatedAt.toLocaleString("id-ID")}
+                      </span>
+                      {/* Re-run regenerates the file server-side - the route never stored one. */}
+                      <a
+                        href={`/api/console/generate-report?${qs.toString()}`}
+                        className="inline-flex items-center gap-1.5 text-label-caps uppercase tracking-wide text-primary-container hover:text-primary transition-colors"
+                      >
+                        <RotateCcw size={13} aria-hidden /> Jalankan ulang
+                      </a>
+                    </div>
+                  </div>
+                );
+              })}
             </div>
-          </CollapsibleSection>
-        )}
+          )}
+        </CollapsibleSection>
 
         <CollapsibleSection title="Statistik Sensus">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4 max-w-2xl">
@@ -187,12 +218,27 @@ export default async function ConsoleReportsPage() {
 
 function SummaryList({ items }: { items: { label: string; count: number }[] }) {
   if (items.length === 0) return <p className="text-body-md text-on-surface-variant">Belum ada data.</p>;
+  const max = Math.max(...items.map((i) => i.count), 1);
   return (
+    // Dependency-free bar chart: a proportional fill behind each row reads
+    // instantly without pulling in Recharts (docs recommend it, but the
+    // tallies here are simple enough that CSS does the job).
     <div className="flex flex-col gap-2">
       {items.map((item) => (
-        <div key={item.label} className="flex items-center justify-between text-body-md">
-          <span className="text-on-background">{item.label}</span>
-          <span className="text-on-surface-variant">{item.count}</span>
+        <div key={item.label}>
+          <div className="flex items-center justify-between text-body-md">
+            <span className="text-on-background">{item.label}</span>
+            <span className="text-on-surface-variant">{item.count}</span>
+          </div>
+          <div
+            className="h-1.5 mt-1 rounded-full bg-primary-container/25"
+            role="presentation"
+          >
+            <div
+              className="h-full rounded-full bg-primary-container"
+              style={{ width: `${Math.max(4, Math.round((item.count / max) * 100))}%` }}
+            />
+          </div>
         </div>
       ))}
     </div>
