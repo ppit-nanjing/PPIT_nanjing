@@ -57,7 +57,7 @@ type SessionContext = {
 
 async function loadSessionContext(userId: string): Promise<SessionContext | null> {
   const result = await db.execute<SessionContext>(sql`
-    select u.access_tier as "accessTier",
+    select r.access_tier as "accessTier",
            u.email_subscribed as "emailSubscribed",
            u.locale as "locale",
            coalesce(
@@ -66,10 +66,11 @@ async function loadSessionContext(userId: string): Promise<SessionContext | null
              '[]'::json
            ) as "memberships"
     from users u
+    left join roles r on r.id = u.role_id
     left join department_members dm on dm.user_id = u.id
     left join departments d on d.id = dm.department_id
     where u.id = ${userId}
-    group by u.id
+    group by u.id, r.id
     limit 1
   `);
   return result.rows[0] ?? null;
