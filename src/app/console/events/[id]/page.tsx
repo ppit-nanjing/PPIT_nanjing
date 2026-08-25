@@ -186,6 +186,7 @@ export default async function ConsoleEventDetailPage({ params }: { params: Promi
                 defaultIsPaid={event.isPaid}
                 defaultFeeCny={event.feeCny}
                 defaultInstructions={event.paymentInstructions}
+                defaultQrUrl={event.paymentQrUrl}
                 defaultAlipayUid={event.alipayUid}
               />
               <div className="flex flex-col gap-1">
