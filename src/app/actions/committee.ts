@@ -131,6 +131,28 @@ export async function deleteCertificate(formData: FormData) {
   revalidatePath("/profile/submissions");
 }
 
+/**
+ * Menautkan/mengganti berkas sertifikat SETELAH terbit. PDF-nya memang dibuat
+ * di luar aplikasi dan sering baru siap belakangan - tanpa ini, mengisi link
+ * berarti menghapus baris lama lalu menerbitkan ulang, yang membuang metadata
+ * penerbitan (siapa/kapan) cuma demi mengisi satu URL.
+ */
+export async function updateCertificateFileUrl(formData: FormData) {
+  await requireModuleAccess("events");
+  const id = String(formData.get("id") ?? "");
+  if (!id) throw new Error("ID sertifikat wajib diisi");
+
+  const [row] = await db
+    .update(certificates)
+    .set({ fileUrl: String(formData.get("fileUrl") ?? "").trim() || null })
+    .where(eq(certificates.id, id))
+    .returning({ eventId: certificates.eventId });
+
+  revalidatePath("/console/work-ledger");
+  if (row?.eventId) revalidatePath(`/console/events/${row.eventId}`);
+  revalidatePath("/profile/submissions");
+}
+
 /** Certificates belong to the signed-in user; no admin scope needed. */
 export async function getMyCertificates() {
   const session = await auth();
@@ -153,8 +175,11 @@ export async function getMyCertificates() {
 
 // ---------- verifikasi pembayaran ----------
 
+// Payment verification is gated on "organization" - not the ordinary,
+// delegable "events" scope - because it's a financial record, same treatment
+// as donation verification (see src/app/actions/donations.ts).
 export async function listPendingPayments(eventId?: string) {
-  await requireModuleAccess("events");
+  await requireModuleAccess("organization");
   const where = eventId
     ? and(eq(eventRegistrations.eventId, eventId), raw`${eventRegistrations.paymentStatus} <> 'not_required'`)
     : raw`${eventRegistrations.paymentStatus} <> 'not_required'`;
@@ -167,6 +192,7 @@ export async function listPendingPayments(eventId?: string) {
       registeredAt: eventRegistrations.registeredAt,
       name: users.name,
       email: users.email,
+      eventId: events.id,
       eventTitle: events.title,
     })
     .from(eventRegistrations)
@@ -177,13 +203,13 @@ export async function listPendingPayments(eventId?: string) {
 }
 
 export async function updatePaymentStatus(formData: FormData) {
-  const session = await requireModuleAccess("events");
+  const session = await requireModuleAccess("organization");
   const id = String(formData.get("id") ?? "");
   const status = String(formData.get("paymentStatus") ?? "");
   const allowed = ["not_required", "unpaid", "submitted", "verified", "rejected"];
   if (!allowed.includes(status)) throw new Error("Status pembayaran tidak valid");
 
-  await db
+  const [row] = await db
     .update(eventRegistrations)
     .set({
       paymentStatus: status as "verified",
@@ -191,9 +217,11 @@ export async function updatePaymentStatus(formData: FormData) {
       paymentVerifiedAt: status === "verified" ? new Date() : null,
       paymentVerifiedBy: status === "verified" ? session.user.id : null,
     })
-    .where(eq(eventRegistrations.id, id));
+    .where(eq(eventRegistrations.id, id))
+    .returning({ eventId: eventRegistrations.eventId });
 
   revalidatePath("/console/work-ledger");
+  if (row) revalidatePath(`/console/events/${row.eventId}`);
 }
 
 /** Peserta melaporkan bukti bayar; verifikasi tetap di tangan bendahara acara. */
@@ -202,6 +230,7 @@ export async function submitPaymentProof(formData: FormData) {
   if (!session?.user?.id) throw new Error("Silakan masuk terlebih dahulu");
   const id = String(formData.get("id") ?? "");
   const proofUrl = String(formData.get("proofUrl") ?? "").trim();
+  const slug = String(formData.get("slug") ?? "").trim();
   if (!proofUrl) throw new Error("Tautan bukti pembayaran wajib diisi");
 
   await db
@@ -211,6 +240,9 @@ export async function submitPaymentProof(formData: FormData) {
     .where(and(eq(eventRegistrations.id, id), eq(eventRegistrations.userId, session.user.id)));
 
   revalidatePath("/profile/submissions");
+  // Caller (the ticket page) already knows its own slug - passed through as a
+  // hidden field instead of re-querying it here.
+  if (slug) revalidatePath(`/events/${slug}/ticket`);
 }
 
 // ---------------------------------------------------------------------------
@@ -397,6 +429,60 @@ export async function issueEventCertificates(formData: FormData): Promise<void> 
       eventId,
       kind: "panitia" as const,
       title: buildCertificateTitle(m.role, divisionNames.get(m.divisionId ?? "") ?? null, event?.title ?? null),
+      issuedBy: session.user.id,
+    }));
+
+  if (toInsert.length > 0) await db.insert(certificates).values(toInsert);
+
+  revalidatePath(`/console/events/${eventId}`);
+  revalidatePath("/console/work-ledger");
+  revalidatePath("/profile/submissions");
+}
+
+/**
+ * Menerbitkan sertifikat PESERTA untuk semua pendaftar satu acara sekaligus.
+ *
+ * Kebalikan dari pola panitia: di sini yang jadi patokan adalah "semua peserta
+ * dapat" - pendaftar yang sudah diterima (confirmed maupun attended; pending
+ * belum diterima dan cancelled batal) berhak atas sertifikat kehadiran tanpa
+ * diketik satu per satu. Yang sudah punya sertifikat peserta untuk acara ini
+ * dilewati, jadi tombol aman ditekan ulang setelah ada pendaftar baru.
+ *
+ * Hanya jalan kalau acara menyalakan flag `certificateForParticipants` -
+ * checkbox itu memang saklar ketersediaannya, bukan formalitas.
+ */
+export async function issueParticipantCertificates(formData: FormData): Promise<void> {
+  const session = await requireModuleAccess("events");
+  const eventId = String(formData.get("eventId") ?? "");
+  if (!eventId) throw new Error("Acara wajib dipilih");
+
+  const [event] = await db.select().from(events).where(eq(events.id, eventId));
+  if (!event) throw new Error("Acara tidak ditemukan");
+  if (!event.certificateForParticipants) {
+    throw new Error("Acara ini tidak memberi e-sertifikat kehadiran - aktifkan dulu di form Edit");
+  }
+
+  const participants = await db
+    .select({ userId: eventRegistrations.userId })
+    .from(eventRegistrations)
+    .where(
+      and(eq(eventRegistrations.eventId, eventId), inArray(eventRegistrations.status, ["confirmed", "attended"]))
+    );
+  if (participants.length === 0) return;
+
+  const existing = await db
+    .select({ userId: certificates.userId })
+    .from(certificates)
+    .where(and(eq(certificates.eventId, eventId), eq(certificates.kind, "peserta")));
+  const already = new Set(existing.map((e) => e.userId));
+
+  const toInsert = participants
+    .filter((p) => !already.has(p.userId))
+    .map((p) => ({
+      userId: p.userId,
+      eventId,
+      kind: "peserta" as const,
+      title: `Peserta — ${event.title}`,
       issuedBy: session.user.id,
     }));
 

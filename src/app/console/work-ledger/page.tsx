@@ -1,7 +1,7 @@
 import { asc, desc, eq } from "drizzle-orm";
 import { db } from "@/db";
 import { events, users, certificates } from "@/db/schema";
-import { requireModuleAccess } from "@/lib/admin-scope";
+import { requireModuleAccess, hasModuleAccess } from "@/lib/admin-scope";
 import { CollapsibleSection } from "@/components/console/collapsible-section";
 import { GuideButton } from "@/components/console/guide-button";
 import { getGuide } from "@/lib/guides";
@@ -11,32 +11,31 @@ import {
   removeCommittee,
   issueCertificate,
   deleteCertificate,
+  updateCertificateFileUrl,
   listPendingPayments,
-  updatePaymentStatus,
 } from "@/app/actions/committee";
+import { PAYMENT_STATUS_LABEL } from "@/lib/payment-status-labels";
 
 const input = "bg-soft-gray rounded-md p-3 text-body-md";
 const lbl = "text-label-caps uppercase tracking-wide text-on-surface-variant";
 const btn =
   "self-start bg-primary-container text-on-primary text-label-caps uppercase tracking-wide px-6 py-3 rounded-md hover:bg-primary transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-container focus-visible:ring-offset-2 focus-visible:ring-offset-surface-container-lowest";
 
-const ROLES = ["ketua", "wakil", "sekretaris", "bendahara", "humas", "acara", "logistik", "dokumentasi", "anggota"];
-const PAYMENT_LABEL: Record<string, string> = {
-  not_required: "Tidak perlu bayar",
-  unpaid: "Belum bayar",
-  submitted: "Bukti dikirim",
-  verified: "Terverifikasi",
-  rejected: "Ditolak",
-};
+// Peran penugasan baru. humas/acara/logistik/dokumentasi sengaja tidak ada:
+// itu nama DIVISI, bukan peran - di skema nilainya tinggal demi baris lama.
+const ROLES = ["ketua", "wakil", "sekretaris", "bendahara", "supervisor", "anggota"];
 
 export default async function WorkLedgerPage() {
-  await requireModuleAccess("events");
+  const session = await requireModuleAccess("events");
+  // Payment verification is financial data, gated on "organization" - not
+  // everyone with ordinary "events" access should see proof/status here.
+  const canVerifyPayments = hasModuleAccess(session.user.adminScope, "organization");
 
   const [ledger, eventList, userList, payments, certRows] = await Promise.all([
     getWorkLedger(),
     db.select({ id: events.id, title: events.title, startAt: events.startAt }).from(events).orderBy(desc(events.startAt)),
     db.select({ id: users.id, name: users.name, email: users.email }).from(users).orderBy(asc(users.name)),
-    listPendingPayments(),
+    canVerifyPayments ? listPendingPayments() : Promise.resolve([]),
     db
       .select({
         id: certificates.id,
@@ -55,6 +54,18 @@ export default async function WorkLedgerPage() {
 
   const overloaded = ledger.filter((p) => p.assignments.length >= 3);
   const guide = await getGuide("work-ledger");
+
+  // Verification itself happens on each event's own page (has the note field,
+  // fee/instructions context) - this is just a cross-event "where's my
+  // attention needed" pointer, not a second copy of that form.
+  const paymentsByEvent = new Map<string, { eventTitle: string; submitted: number; total: number }>();
+  for (const p of payments) {
+    if (!p.eventId) continue;
+    const cur = paymentsByEvent.get(p.eventId) ?? { eventTitle: p.eventTitle ?? "(acara tanpa judul)", submitted: 0, total: 0 };
+    cur.total += 1;
+    if (p.status === "submitted") cur.submitted += 1;
+    paymentsByEvent.set(p.eventId, cur);
+  }
 
   return (
     <div className="px-4 py-6 sm:px-6 lg:px-8 lg:py-10">
@@ -171,62 +182,46 @@ export default async function WorkLedgerPage() {
       </CollapsibleSection>
 
       {/* ---------- Pembayaran ---------- */}
+      {canVerifyPayments && (
       <CollapsibleSection
-        title="Verifikasi Pembayaran"
+        title="Pembayaran Acara"
         description={`${payments.filter((p) => p.status === "submitted").length} menunggu diperiksa`}
         className="mb-6"
       >
         <p className="text-body-md text-on-surface-variant mb-4 max-w-2xl">
-          Peserta mengirim bukti transfer, bendahara acara memverifikasi. Situs tidak memproses pembayaran
-          &mdash; Alipay/WeChat Pay butuh merchant account berbadan hukum Tiongkok.
+          Peserta mengirim bukti transfer, bendahara acara memverifikasi &mdash; dari halaman acara masing-masing
+          (ada kolom catatan di sana). Daftar ini cuma penunjuk lintas-acara supaya tidak ada yang kelewat.
         </p>
-        {payments.length === 0 ? (
+        {paymentsByEvent.size === 0 ? (
           <p className="text-body-md text-on-surface-variant py-4">
-            Belum ada acara berbayar. Isi &ldquo;Biaya&rdquo; pada sebuah acara untuk mengaktifkan alur ini.
+            Belum ada acara berbayar. Aktifkan &ldquo;Kegiatan berbayar (HTM)&rdquo; pada sebuah acara untuk
+            mengaktifkan alur ini.
           </p>
         ) : (
           <ul className="bg-surface-container-lowest border border-outline-variant rounded-xl px-4">
-            {payments.map((p) => (
-              <li key={p.id} className="border-b border-outline-variant/60 py-4 last:border-0">
-                <div className="flex flex-wrap items-start justify-between gap-3">
+            {[...paymentsByEvent.entries()].map(([eventId, e]) => (
+              <li key={eventId} className="border-b border-outline-variant/60 py-4 last:border-0">
+                <a
+                  href={`/console/events/${eventId}`}
+                  className="flex items-center justify-between gap-3 hover:text-primary-container transition-colors"
+                >
                   <div className="min-w-0">
-                    <p className="text-body-md text-on-background">{p.name ?? p.email}</p>
+                    <p className="text-body-md text-on-background truncate">{e.eventTitle}</p>
                     <p className="text-label-caps text-on-surface-variant">
-                      {p.eventTitle} · {PAYMENT_LABEL[p.status] ?? p.status}
+                      {e.total} laporan pembayaran
+                      {e.submitted > 0 ? ` · ${e.submitted} ${PAYMENT_STATUS_LABEL.submitted.toLowerCase()}` : ""}
                     </p>
-                    {p.proofUrl && (
-                      <a
-                        href={p.proofUrl}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-label-caps uppercase tracking-wide text-primary-container hover:underline"
-                      >
-                        Lihat bukti
-                      </a>
-                    )}
                   </div>
-                  <form action={updatePaymentStatus} className="flex items-center gap-2">
-                    <input type="hidden" name="id" value={p.id} />
-                    <select name="paymentStatus" defaultValue={p.status} className="bg-soft-gray rounded-md p-2 text-body-md">
-                      {Object.entries(PAYMENT_LABEL).map(([v, l]) => (
-                        <option key={v} value={v}>
-                          {l}
-                        </option>
-                      ))}
-                    </select>
-                    <button
-                      type="submit"
-                      className="bg-primary-container text-on-primary text-label-caps uppercase tracking-wide px-4 py-2 rounded-md hover:bg-primary transition-colors"
-                    >
-                      Simpan
-                    </button>
-                  </form>
-                </div>
+                  <span className="text-label-caps uppercase tracking-wide text-primary-container shrink-0">
+                    Lihat &amp; verifikasi &rarr;
+                  </span>
+                </a>
               </li>
             ))}
           </ul>
         )}
       </CollapsibleSection>
+      )}
 
       {/* ---------- Sertifikat ---------- */}
       <CollapsibleSection title="Sertifikat" description={`${certRows.length} diterbitkan`} className="mb-6" defaultOpen={false}>
@@ -287,24 +282,42 @@ export default async function WorkLedgerPage() {
             certRows.map((c) => (
               <li
                 key={c.id}
-                className="flex items-start justify-between gap-3 border-b border-outline-variant/60 py-3 last:border-0"
+                className="flex flex-wrap items-start justify-between gap-3 border-b border-outline-variant/60 py-3 last:border-0"
               >
                 <div className="min-w-0">
                   <p className="text-body-md text-on-background">{c.title}</p>
                   <p className="text-label-caps text-on-surface-variant">
                     {c.holder ?? "?"} · {c.kind}
                     {c.eventTitle ? ` · ${c.eventTitle}` : ""}
+                    {c.fileUrl ? " · berkas tertaut" : " · tanpa berkas"}
                   </p>
                 </div>
-                <form action={deleteCertificate}>
-                  <input type="hidden" name="id" value={c.id} />
-                  <button
-                    type="submit"
-                    className="text-label-caps uppercase tracking-wide text-error hover:bg-error-container/30 px-3 py-1.5 rounded-md"
-                  >
-                    Hapus
-                  </button>
-                </form>
+                <div className="flex flex-wrap items-center gap-2 shrink-0">
+                  <form action={updateCertificateFileUrl} className="flex items-center gap-2">
+                    <input type="hidden" name="id" value={c.id} />
+                    <input
+                      name="fileUrl"
+                      defaultValue={c.fileUrl ?? ""}
+                      placeholder="tautan berkas (Drive)…"
+                      className="bg-soft-gray rounded-md p-2 text-body-md w-44"
+                    />
+                    <button
+                      type="submit"
+                      className="text-label-caps uppercase tracking-wide border border-outline-variant px-3 py-1.5 rounded-md hover:bg-surface-container-low transition-colors"
+                    >
+                      Simpan
+                    </button>
+                  </form>
+                  <form action={deleteCertificate}>
+                    <input type="hidden" name="id" value={c.id} />
+                    <button
+                      type="submit"
+                      className="text-label-caps uppercase tracking-wide text-error hover:bg-error-container/30 px-3 py-1.5 rounded-md"
+                    >
+                      Hapus
+                    </button>
+                  </form>
+                </div>
               </li>
             ))
           )}

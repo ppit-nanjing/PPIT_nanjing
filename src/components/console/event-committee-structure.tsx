@@ -8,7 +8,9 @@ import {
   removeCommittee,
 } from "@/app/actions/committee";
 
-const ROLES = ["ketua", "wakil", "sekretaris", "bendahara", "humas", "acara", "logistik", "dokumentasi", "anggota"];
+// Peran penugasan baru. humas/acara/logistik/dokumentasi sengaja tidak ada:
+// itu nama DIVISI, bukan peran - di skema nilainya tinggal demi baris lama.
+const ROLES = ["ketua", "wakil", "sekretaris", "bendahara", "supervisor", "anggota"];
 
 const input = "bg-soft-gray rounded-md p-2 text-body-md w-full";
 const label = "text-label-caps uppercase tracking-wide text-on-surface-variant";

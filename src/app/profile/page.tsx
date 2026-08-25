@@ -10,8 +10,9 @@ import { BackButton } from "@/components/profile/back-button";
 import { LanguageSelector } from "@/components/profile/language-selector";
 import { ImageUploadCropper } from "@/components/upload/image-upload-cropper";
 import { updateProfile } from "@/app/actions/user";
+import { getMyCertificates } from "@/app/actions/committee";
 import { getT } from "@/lib/i18n/server";
-import { ClipboardCheck, ClipboardList, UserRound, CheckCircle2 } from "lucide-react";
+import { ClipboardCheck, ClipboardList, UserRound, CheckCircle2, Award } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 
@@ -26,6 +27,7 @@ export default async function ProfilePage({
 
   const [user] = await db.select().from(users).where(eq(users.id, session.user.id));
   const [sensus] = await db.select().from(sensusProfiles).where(eq(sensusProfiles.userId, session.user.id));
+  const certificates = await getMyCertificates();
   const { t } = await getT();
 
   return (
@@ -159,6 +161,42 @@ export default async function ProfilePage({
             {sensus ? t("profile.sensusEdit") : t("profile.sensusFill")}
           </span>
         </Link>
+
+        <h2 className="text-label-caps uppercase tracking-widest text-secondary mb-4">{t("profile.certificatesHeading")}</h2>
+        {certificates.length === 0 ? (
+          <p className="text-body-md text-on-surface-variant mb-10">{t("profile.certificatesEmpty")}</p>
+        ) : (
+          <ul className="bg-surface-container-lowest border border-outline-variant rounded-xl px-4 mb-10">
+            {certificates.map((c) => (
+              <li key={c.id} className="flex flex-wrap items-start justify-between gap-3 border-b border-outline-variant/60 py-4 last:border-0">
+                <div className="flex items-start gap-3 min-w-0">
+                  <Award className="text-primary-container shrink-0 mt-0.5" size={20} aria-hidden />
+                  <div className="min-w-0">
+                    <p className="text-body-md font-medium text-on-background">{c.title}</p>
+                    <p className="text-label-caps text-on-surface-variant">
+                      {[
+                        c.eventTitle,
+                        new Date(c.issuedAt).toLocaleDateString("id-ID", { dateStyle: "long" }),
+                      ]
+                        .filter(Boolean)
+                        .join(" · ")}
+                    </p>
+                  </div>
+                </div>
+                {c.fileUrl && (
+                  <a
+                    href={c.fileUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-label-caps uppercase tracking-wide text-primary-container hover:underline shrink-0"
+                  >
+                    {t("profile.certificatesViewFile")}
+                  </a>
+                )}
+              </li>
+            ))}
+          </ul>
+        )}
 
         <h2 className="text-label-caps uppercase tracking-widest text-secondary mb-4">{t("settings.language.label")}</h2>
         <div className="mb-10">

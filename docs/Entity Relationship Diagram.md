@@ -19,6 +19,13 @@ erDiagram
     USER ||--o{ EVENT : "created by"
     EVENT ||--o{ EVENT_REGISTRATION : has
     USER ||--o{ EVENT_REGISTRATION : registers
+    EVENT ||--o{ EVENT_DIVISION : structures
+    EVENT_DIVISION ||--o{ EVENT_DIVISION : "parent of"
+    EVENT ||--o{ EVENT_COMMITTEE : staffed
+    EVENT_DIVISION |o--o{ EVENT_COMMITTEE : groups
+    USER ||--o{ EVENT_COMMITTEE : serves
+    USER ||--o{ CERTIFICATE : holds
+    EVENT |o--o{ CERTIFICATE : issues
     EVENT ||--o{ GALLERY_ALBUM : "documented by"
     GALLERY_ALBUM ||--o{ GALLERY_PHOTO : contains
     USER ||--o{ GALLERY_PHOTO : uploads
@@ -107,6 +114,9 @@ erDiagram
         uuid created_by FK
         timestamp start_at
         enum status
+        bool is_paid
+        int fee_cny
+        bool certificate_for_participants
     }
     EVENT_REGISTRATION {
         uuid id PK
@@ -115,6 +125,33 @@ erDiagram
         enum status
         string qr_code_token
         timestamp checked_in_at
+        enum payment_status
+        string payment_proof_url
+    }
+    EVENT_DIVISION {
+        uuid id PK
+        uuid event_id FK
+        uuid parent_division_id FK
+        string name
+        int quota
+    }
+    EVENT_COMMITTEE {
+        uuid id PK
+        uuid event_id FK
+        uuid user_id FK
+        uuid division_id FK
+        enum role
+        string note
+    }
+    CERTIFICATE {
+        uuid id PK
+        uuid user_id FK
+        uuid event_id FK
+        enum kind
+        string title
+        string file_url
+        timestamp issued_at
+        uuid issued_by FK
     }
     NEWS_ARTICLE {
         uuid id PK
@@ -269,7 +306,7 @@ erDiagram
 |---|---|---|
 | **Identitas & Akses** | USER, ROLE, PERMISSION, ROLE_PERMISSION, SENSUS_PROFILE | [Login & Account](./Homepage%20&%20Login.md), [Sensus Profile Flow](./Sensus%20Profile%20Flow.md), [User & Role Management](./User%20&%20Role%20Management.md) |
 | **Organisasi** | DEPARTMENT, DEPARTMENT_MEMBER, AUDIT_LOG, ORGANIZATION_DOCUMENT, REGIONAL_BRANCH | [Organization Management](./Organization%20Management.md), [Organization & Regional Branches](./Organization%20&%20Regional%20Branches.md) |
-| **Events** | EVENT, EVENT_REGISTRATION | [Event Flow](./Event%20Flow.md), [Event Management](./Event%20Management.md) |
+| **Events** | EVENT, EVENT_REGISTRATION, EVENT_DIVISION, EVENT_COMMITTEE, CERTIFICATE | [Event Flow](./Event%20Flow.md), [Event Management](./Event%20Management.md) |
 | **Konten** | NEWS_ARTICLE, GALLERY_ALBUM, GALLERY_PHOTO | [Content Pages](./Content%20Pages.md) |
 | **Karir** | JOB_POSTING, JOB_APPLICATION, CAREER_GUIDE_ARTICLE, MENTORSHIP_APPLICATION | [Career Flow](./Career%20Flow.md) |
 | **Keanggotaan** | RECRUITMENT_PERIOD, MEMBERSHIP_APPLICATION | [Join Us Flow](./Join%20Us%20Flow.md) |
@@ -282,6 +319,8 @@ erDiagram
 - **Tidak ada tabel `MEDIA` polymorphic terpisah** — URL gambar/file disimpan langsung sebagai kolom string (`image_url`, `cover_image_url`, `file_url`) di tabel pemilik, menunjuk ke URL Vercel Blob. Ini pilihan sadar untuk kesederhanaan; pertimbangkan ulang hanya jika nanti dibutuhkan CMS media penuh dengan reuse antar entitas.
 - **`REPORT` generik** menaungi 4 jenis laporan yang punya layar sendiri di admin console (`event_attendance`, `inventory_audit`, `sensus_summary`, `student_export`) — dibedakan lewat kolom `type` + `parameters_json`, bukan 4 tabel terpisah, karena strukturnya (siapa generate, kapan, filter apa, file hasil) identik.
 - **`AUDIT_LOG` vs `RELEASE_NOTE`**: dua konsep berbeda yang keduanya muncul sebagai "changelog" di prototipe. `AUDIT_LOG` = jejak perubahan data organisasi (siapa mengubah apa) dari layar *Organizational Change Log*. `RELEASE_NOTE` = catatan rilis fitur produk dari layar *Full Changelog* (System Changelog) — ditulis manual oleh admin/dev, bukan otomatis dari aksi user.
+- **`EVENT_COMMITTEE` terpisah dari `DEPARTMENT_MEMBER`** karena kepanitiaan berlaku **per acara**, bukan per kabinet — bendahara sebuah acara belum tentu bendahara kabinet, dan divisi acara (`EVENT_DIVISION`) bernama teks bebas karena tiap acara boleh punya susunan sendiri. Volunteer dari luar PPIT masuk sebagai USER biasa lewat undangan akun, lalu ditugaskan ke sini.
+- **`CERTIFICATE` dicatat, bukan digenerate**: file sertifikat dibuat di luar aplikasi (boleh tautan Drive); penerbitan manual oleh panitia per acara — tidak semua peserta otomatis dapat (semua peserta / hanya pemenang adalah keputusan per acara). Pembayaran HTM pun serupa: `payment_*` di `EVENT_REGISTRATION` memodelkan verifikasi bukti transfer oleh bendahara, tanpa payment gateway.
 
 ## Terkait
 

@@ -27,6 +27,17 @@ function slugify(title: string) {
   );
 }
 
+// Shared by createEvent/updateEvent so the two forms can't drift on what
+// counts as a valid fee. Blank = amount not decided yet (fine, isPaid can
+// still be true); anything present must be a non-negative whole number.
+function parseFeeCny(formData: FormData): number | null {
+  const raw = String(formData.get("feeCny") ?? "").trim();
+  if (!raw) return null;
+  const parsed = Number(raw);
+  if (!Number.isFinite(parsed) || parsed < 0) throw new Error("Biaya harus berupa angka >= 0");
+  return Math.round(parsed);
+}
+
 export async function createEvent(formData: FormData) {
   const actorId = await requireAdmin();
   const title = String(formData.get("title") ?? "").trim();
@@ -60,6 +71,11 @@ export async function createEvent(formData: FormData) {
       status,
       scheduledPublishAt,
       createdBy: actorId,
+      isPaid: formData.get("isPaid") === "on",
+      feeCny: parseFeeCny(formData),
+      paymentInstructions: String(formData.get("paymentInstructions") ?? "").trim() || null,
+      alipayUid: String(formData.get("alipayUid") ?? "").trim() || null,
+      certificateForParticipants: formData.get("certificateForParticipants") === "on",
     })
     .returning();
 
@@ -81,6 +97,8 @@ export async function updateEvent(id: string, formData: FormData) {
   // the 'scheduled' state so it auto-publishes when the time arrives.
   if (scheduledPublishAt && status === "draft") status = "scheduled";
 
+  const isPaid = formData.get("isPaid") === "on";
+
   await db
     .update(events)
     .set({
@@ -98,8 +116,25 @@ export async function updateEvent(id: string, formData: FormData) {
       agenda: String(formData.get("agenda") ?? "").trim() || null,
       status,
       scheduledPublishAt,
+      isPaid,
+      feeCny: parseFeeCny(formData),
+      paymentInstructions: String(formData.get("paymentInstructions") ?? "").trim() || null,
+      alipayUid: String(formData.get("alipayUid") ?? "").trim() || null,
+      certificateForParticipants: formData.get("certificateForParticipants") === "on",
     })
     .where(eq(events.id, id));
+
+  // An event can go free -> paid after people already registered (fee often
+  // isn't known until a sponsor is confirmed). Anyone still "not_required"
+  // now owes money and needs to show up in the verification queue - without
+  // this they'd stay invisible forever. Only widens tracking, never narrows
+  // it: turning HTM back off does NOT revert anyone already "unpaid"/etc.
+  if (isPaid) {
+    await db
+      .update(eventRegistrations)
+      .set({ paymentStatus: "unpaid" })
+      .where(and(eq(eventRegistrations.eventId, id), eq(eventRegistrations.paymentStatus, "not_required")));
+  }
 
   revalidatePath(`/console/events/${id}`);
 }

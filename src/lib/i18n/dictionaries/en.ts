@@ -75,6 +75,9 @@ export const en = {
   "profile.sensusDesc": "University, program, emergency contact, and other academic data",
   "profile.sensusEdit": "Edit",
   "profile.sensusFill": "Fill Now",
+  "profile.certificatesHeading": "E-Certificates",
+  "profile.certificatesEmpty": "No certificates issued for you yet.",
+  "profile.certificatesViewFile": "View file",
   "profile.notificationHeading": "Notification Preferences",
 
   "emailSub.title": "News & Event Emails",

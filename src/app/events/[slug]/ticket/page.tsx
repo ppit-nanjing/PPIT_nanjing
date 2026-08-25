@@ -13,6 +13,9 @@ import Link from "next/link";
 import { CheckCircle2, CalendarDays, MapPin, ArrowLeft, CalendarPlus } from "lucide-react";
 import { getT } from "@/lib/i18n/server";
 import { INTL_LOCALE } from "@/lib/i18n/config";
+import { submitPaymentProof } from "@/app/actions/committee";
+import { PAYMENT_STATUS_LABEL } from "@/lib/payment-status-labels";
+import { buildAlipayTransferLink } from "@/lib/alipay-deeplink";
 
 export default async function EventTicketPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
@@ -40,6 +43,14 @@ export default async function EventTicketPage({ params }: { params: Promise<{ sl
   const checkInUrl = `${origin}/console/events/${event.id}/scan?t=${encodeURIComponent(token)}`;
 
   const qrDataUrl = await QRCode.toDataURL(checkInUrl, { margin: 1, width: 240 });
+
+  const hasFee = event.isPaid;
+  const feeAmount = event.feeCny != null && event.feeCny > 0 ? event.feeCny : null;
+  const alipayLink =
+    feeAmount != null && event.alipayUid
+      ? buildAlipayTransferLink(event.alipayUid, feeAmount, `${session.user.name ?? "Peserta"} - ${event.title}`)
+      : null;
+  const alipayQrDataUrl = alipayLink ? await QRCode.toDataURL(alipayLink, { margin: 1, width: 200 }) : null;
 
   const fmtCal = (d: Date) => d.toISOString().replace(/[-:]/g, "").replace(/\.\d{3}/, "");
   const calUrl = event.startAt
@@ -107,6 +118,66 @@ export default async function EventTicketPage({ params }: { params: Promise<{ sl
             )}
           </div>
         </div>
+
+        {hasFee && (
+          <div className="bg-surface-container-lowest border border-outline-variant rounded-xl p-6 mt-6 text-left">
+            <h2 className="text-headline-sm text-on-background mb-2">Pembayaran</h2>
+            <p className="text-body-md text-on-background mb-1">
+              {feeAmount != null ? `Biaya: ¥${feeAmount}` : "Nominal biaya belum ditentukan, tunggu info dari panitia."}
+            </p>
+            {event.paymentInstructions && (
+              <p className="text-body-sm text-on-surface-variant whitespace-pre-line mb-4">{event.paymentInstructions}</p>
+            )}
+            {alipayQrDataUrl && alipayLink && (
+              <div className="flex flex-col items-center gap-2 mb-4 py-4 border-y border-outline-variant">
+                <Image
+                  src={alipayQrDataUrl}
+                  alt="QR pembayaran Alipay dengan nominal terisi otomatis"
+                  width={160}
+                  height={160}
+                  unoptimized
+                  className="rounded-lg"
+                />
+                <p className="text-xs text-on-surface-variant text-center max-w-xs">
+                  Scan pakai app Alipay dari HP lain, atau kalau lagi buka halaman ini di HP sendiri, langsung
+                  ketuk tombol di bawah.
+                </p>
+                <a
+                  href={alipayLink}
+                  className="inline-flex items-center justify-center border border-outline-variant text-on-background text-label-caps uppercase tracking-wide px-4 py-2 rounded-md hover:bg-surface-container-low transition-colors"
+                >
+                  Buka Alipay (nominal &amp; catatan sudah terisi)
+                </a>
+                <p className="text-xs text-on-surface-variant text-center max-w-xs">
+                  Kalau tombolnya tidak terbuka (mis. dari browser dalam app WeChat), bayar manual sesuai instruksi
+                  di atas — tetap unggah buktinya di bawah.
+                </p>
+              </div>
+            )}
+            <p className="text-label-caps uppercase tracking-wide text-on-surface-variant mb-3">
+              Status: {PAYMENT_STATUS_LABEL[registration.paymentStatus] ?? registration.paymentStatus}
+            </p>
+            {registration.paymentStatus !== "verified" && (
+              <form action={submitPaymentProof} className="flex flex-col gap-3">
+                <input type="hidden" name="id" value={registration.id} />
+                <input type="hidden" name="slug" value={slug} />
+                <input
+                  name="proofUrl"
+                  defaultValue={registration.paymentProofUrl ?? ""}
+                  placeholder="Tautan bukti pembayaran (screenshot Alipay, dsb.)"
+                  required
+                  className="bg-soft-gray rounded-md p-3 text-body-md"
+                />
+                <button
+                  type="submit"
+                  className="self-start bg-primary-container text-on-primary text-label-caps uppercase tracking-wide px-6 py-3 rounded-md hover:bg-primary transition-colors"
+                >
+                  Kirim Bukti
+                </button>
+              </form>
+            )}
+          </div>
+        )}
 
         <div className="flex flex-col sm:flex-row gap-3 mt-8 justify-center">
           <Link

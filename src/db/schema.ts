@@ -376,9 +376,26 @@ export const events = pgTable("events", {
   scheduledPublishAt: timestamp("scheduled_publish_at"),
   departmentId: uuid("department_id").references(() => departments.id),
   createdBy: uuid("created_by").references(() => users.id),
-  // null / 0 = acara gratis. Kalau diisi, formulir pendaftaran meminta bukti bayar.
+  // The HTM ("berbayar") toggle itself - kept separate from feeCny because the
+  // fee is often unknown at creation (depends on whether a sponsor comes
+  // through): an admin can mark an event paid and fill the amount in later.
+  // Every "is this a paid event" check in the codebase reads this flag, never
+  // feeCny directly - feeCny being null just means "amount not decided yet".
+  isPaid: boolean("is_paid").notNull().default(false),
   feeCny: integer("fee_cny"),
   paymentInstructions: text("payment_instructions"),
+  // Alipay numeric member ID (2088...) of this event's bendahara, used to build
+  // an alipays:// deep link that pre-fills the fee + a memo on the ticket page
+  // (see src/lib/alipay-deeplink.ts). Unofficial/reverse-engineered scheme, not
+  // a real payment API - still 100% manual verification, just less typing for
+  // the participant. Null = no auto-fill, only the free-text instructions show.
+  alipayUid: text("alipay_uid"),
+  // Sertifikat kehadiran (peserta): hampir semua acara memberikannya ke SEMUA
+  // peserta, jadi default NYALA dan checkbox di form acara yang bisa
+  // mematikannya (mis. lomba tanpa sertifikat partisipasi). Flag ini cuma
+  // saklar ketersediaannya - penerbitan tetap manual lewat tombol "Terbitkan
+  // sertifikat peserta", bukan otomatis saat acara selesai.
+  certificateForParticipants: boolean("certificate_for_participants").notNull().default(true),
 });
 
 // `feeCny` null = acara gratis; > 0 = peserta perlu membayar dan mengunggah bukti.

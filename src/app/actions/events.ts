@@ -59,6 +59,7 @@ export async function registerForEvent(eventId: string, slug: string, formData?:
       status: "confirmed",
       qrCodeToken: randomUUID(),
       branch,
+      paymentStatus: event.isPaid ? "unpaid" : "not_required",
     });
     // In-app confirmation for the member who just registered.
     await createTemplatedNotification({

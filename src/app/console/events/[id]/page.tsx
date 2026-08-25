@@ -1,4 +1,4 @@
-import { and, eq, desc } from "drizzle-orm";
+import { eq, desc } from "drizzle-orm";
 import { notFound } from "next/navigation";
 import { db } from "@/db";
 import { certificates, events, eventRegistrations, sensusProfiles, users } from "@/db/schema";
@@ -8,15 +8,17 @@ import { publishDueEvents } from "@/lib/publish-events";
 import { DeleteEventButton } from "@/components/console/delete-event-button";
 import { RegistrationList } from "@/components/console/registration-list";
 import { EventCommitteeStructure } from "@/components/console/event-committee-structure";
-import { listEventDivisions } from "@/app/actions/committee";
-import { requireModuleAccess } from "@/lib/admin-scope";
+import { listEventDivisions, updatePaymentStatus, issueParticipantCertificates } from "@/app/actions/committee";
+import { requireModuleAccess, hasModuleAccess } from "@/lib/admin-scope";
 import { ImageUploadCropper } from "@/components/upload/image-upload-cropper";
 import { AIImproveButton } from "@/components/ai/ai-improve-button";
 import { AIReviewButton } from "@/components/ai/ai-review-popup";
 import { CollapsibleSection } from "@/components/console/collapsible-section";
+import { HtmFields } from "@/components/console/htm-fields";
+import { PAYMENT_STATUS_LABEL } from "@/lib/payment-status-labels";
 
 export default async function ConsoleEventDetailPage({ params }: { params: Promise<{ id: string }> }) {
-  await requireModuleAccess("events");
+  const session = await requireModuleAccess("events");
   const { id } = await params;
   await publishDueEvents();
   const [event] = await db.select().from(events).where(eq(events.id, id));
@@ -47,11 +49,39 @@ export default async function ConsoleEventDetailPage({ params }: { params: Promi
     .from(users)
     .orderBy(users.name);
   const issuedCerts = await db
-    .select({ userId: certificates.userId })
+    .select({ userId: certificates.userId, kind: certificates.kind })
     .from(certificates)
-    .where(and(eq(certificates.eventId, id), eq(certificates.kind, "panitia")));
+    .where(eq(certificates.eventId, id));
+  const committeeCertUserIds = issuedCerts.filter((c) => c.kind === "panitia").map((c) => c.userId);
+  const participantCertCount = issuedCerts.filter((c) => c.kind === "peserta").length;
+
+  // Payment verification is financial data - gated on "organization", not the
+  // ordinary "events" scope everyone with events access already has. Derived
+  // from `registrations` (already fetched above) instead of a second query;
+  // only rendering is gated, so nothing sensitive reaches an unauthorized
+  // viewer's page even though it briefly exists in server memory here.
+  const canVerifyPayments = hasModuleAccess(session.user.adminScope, "organization");
+  const pendingPayments = canVerifyPayments
+    ? registrations
+        .filter((r) => r.reg.paymentStatus !== "not_required")
+        .map((r) => ({
+          id: r.reg.id,
+          status: r.reg.paymentStatus,
+          proofUrl: r.reg.paymentProofUrl,
+          note: r.reg.paymentNote,
+          registeredAt: r.reg.registeredAt,
+          name: r.userName,
+          email: r.userEmail,
+        }))
+    : [];
 
   const attended = registrations.filter((r) => r.reg.status === "attended").length;
+  // Berhak sertifikat kehadiran = pendaftar yang diterima: confirmed maupun
+  // attended (pending belum diterima, cancelled batal). Harus sinkron dengan
+  // aturan di issueParticipantCertificates supaya angkanya tidak menipu.
+  const eligible = registrations.filter(
+    (r) => r.reg.status === "confirmed" || r.reg.status === "attended"
+  ).length;
 
   return (
     <div className="px-4 py-6 sm:px-6 lg:px-8 lg:py-10 max-w-3xl">
@@ -87,6 +117,16 @@ export default async function ConsoleEventDetailPage({ params }: { params: Promi
               <input type="checkbox" name="requiresSensus" defaultChecked={event.requiresSensus} className="h-4 w-4 accent-[var(--color-primary-container)]" />
               Hanya untuk peserta yang sudah lengkap mengisi sensus (mahasiswa Indo di China)
             </label>
+            <label className="flex items-center gap-2 bg-soft-gray rounded-md p-3 text-body-md cursor-pointer">
+              <input type="checkbox" name="certificateForParticipants" defaultChecked={event.certificateForParticipants} className="h-4 w-4 accent-[var(--color-primary-container)]" />
+              Peserta mendapat e-sertifikat kehadiran
+            </label>
+          <HtmFields
+            defaultIsPaid={event.isPaid}
+            defaultFeeCny={event.feeCny}
+            defaultInstructions={event.paymentInstructions}
+            defaultAlipayUid={event.alipayUid}
+          />
           <ImageUploadCropper
             name="coverImageUrl"
             folder="events"
@@ -182,9 +222,112 @@ export default async function ConsoleEventDetailPage({ params }: { params: Promi
           divisions={divisions}
           members={committee}
           candidates={candidates}
-          certifiedUserIds={issuedCerts.map((c) => c.userId)}
+          certifiedUserIds={committeeCertUserIds}
         />
       </CollapsibleSection>
+
+      <CollapsibleSection
+        title="Sertifikat Peserta"
+        description={`${eligible} berhak · ${participantCertCount} terbit`}
+      >
+        {event.certificateForParticipants ? (
+          <>
+            <p className="text-body-md text-on-surface-variant mb-4 max-w-2xl">
+              Semua pendaftar yang diterima (konfirmasi &amp; hadir) berhak atas e-sertifikat kehadiran.
+              Tombol ini menerbitkan untuk <strong className="text-on-background">yang belum punya saja</strong>,
+              jadi aman ditekan ulang setelah ada pendaftar baru. Berkas PDF-nya ditautkan manual belakangan lewat Work Ledger.
+            </p>
+            <form action={issueParticipantCertificates}>
+              <input type="hidden" name="eventId" value={id} />
+              <button
+                type="submit"
+                className="bg-primary-container text-on-primary text-label-caps uppercase tracking-wide px-6 py-3 rounded-md hover:bg-primary transition-colors"
+              >
+                Terbitkan Sertifikat Peserta
+              </button>
+            </form>
+          </>
+        ) : (
+          <p className="text-body-md text-on-surface-variant max-w-2xl">
+            Acara ini tidak memberi e-sertifikat kehadiran. Centang &quot;Peserta mendapat e-sertifikat
+            kehadiran&quot; di form Edit di atas bila berubah pikiran.
+          </p>
+        )}
+      </CollapsibleSection>
+
+      {canVerifyPayments && event.isPaid && (
+        <CollapsibleSection
+          title="Verifikasi Pembayaran"
+          description={`${pendingPayments.filter((p) => p.status === "submitted").length} menunggu verifikasi`}
+        >
+          <p className="text-body-md text-on-surface-variant mb-1 max-w-2xl">
+            Bukti ini diunggah sendiri oleh peserta lewat halaman tiketnya, jadi belum tentu benar — cocokkan
+            ketiganya dengan mutasi Alipay/rekening sebelum menekan Terverifikasi:
+          </p>
+          <ul className="text-body-sm text-on-surface-variant mb-4 max-w-2xl list-disc pl-5">
+            <li>
+              <strong className="text-on-background">Nominal</strong> harus {event.feeCny != null ? `persis ¥${event.feeCny}` : "sesuai yang disepakati (biaya belum diisi di form Edit)"}
+            </li>
+            <li>
+              <strong className="text-on-background">Nama pengirim</strong> di riwayat Alipay/rekening harus cocok dengan nama peserta di bawah — beda nama pengirim = tanya dulu sebelum verifikasi, bisa jadi titip bayar orang lain
+            </li>
+            <li>
+              <strong className="text-on-background">Waktu transfer</strong> wajar terjadi setelah tanggal daftar yang tertera
+            </li>
+          </ul>
+          <ul className="bg-surface-container-lowest border border-outline-variant rounded-xl px-4">
+            {pendingPayments.length === 0 ? (
+              <li className="py-4 text-body-md text-on-surface-variant">Belum ada laporan pembayaran.</li>
+            ) : (
+              pendingPayments.map((p) => (
+                <li key={p.id} className="border-b border-outline-variant/60 py-4 last:border-0">
+                  <div className="flex flex-wrap items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <p className="text-body-md text-on-background">{p.name ?? "(tanpa nama)"}</p>
+                      <p className="text-label-caps text-on-surface-variant">
+                        {p.email} · {PAYMENT_STATUS_LABEL[p.status] ?? p.status} · daftar{" "}
+                        {new Date(p.registeredAt).toLocaleString("id-ID", { dateStyle: "medium", timeStyle: "short" })}
+                      </p>
+                      {p.note && <p className="text-body-md text-on-surface-variant mt-1">{p.note}</p>}
+                      {p.proofUrl && (
+                        <a
+                          href={p.proofUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-label-caps uppercase tracking-wide text-primary-container hover:underline"
+                        >
+                          Lihat bukti
+                        </a>
+                      )}
+                    </div>
+                    <form action={updatePaymentStatus} className="flex flex-wrap items-center gap-2">
+                      <input type="hidden" name="id" value={p.id} />
+                      <input
+                        name="note"
+                        defaultValue={p.note ?? ""}
+                        placeholder="Catatan (opsional)"
+                        className="bg-soft-gray rounded-md p-2 text-body-md w-36"
+                      />
+                      <select name="paymentStatus" defaultValue={p.status} className="bg-soft-gray rounded-md p-2 text-body-md">
+                        <option value="unpaid">Belum Bayar</option>
+                        <option value="submitted">Menunggu Verifikasi</option>
+                        <option value="verified">Terverifikasi</option>
+                        <option value="rejected">Ditolak</option>
+                      </select>
+                      <button
+                        type="submit"
+                        className="bg-primary-container text-on-primary text-label-caps uppercase tracking-wide px-4 py-2 rounded-md hover:bg-primary transition-colors"
+                      >
+                        Simpan
+                      </button>
+                    </form>
+                  </div>
+                </li>
+              ))
+            )}
+          </ul>
+        </CollapsibleSection>
+      )}
 
       <CollapsibleSection title="Daftar Pendaftar" description={`${registrations.length} terdaftar · ${attended} hadir`}>
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between mb-4">

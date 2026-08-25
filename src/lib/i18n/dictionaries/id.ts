@@ -78,6 +78,9 @@ export const id = {
   "profile.sensusDesc": "Universitas, program studi, kontak darurat, dan data akademik lainnya",
   "profile.sensusEdit": "Ubah",
   "profile.sensusFill": "Isi Sekarang",
+  "profile.certificatesHeading": "E-Sertifikat",
+  "profile.certificatesEmpty": "Belum ada sertifikat yang diterbitkan untukmu.",
+  "profile.certificatesViewFile": "Lihat berkas",
   "profile.notificationHeading": "Preferensi Notifikasi",
 
   "emailSub.title": "Email Berita & Kegiatan",

@@ -9,6 +9,7 @@ import { ImageUploadCropper } from "@/components/upload/image-upload-cropper";
 import { AIImproveButton } from "@/components/ai/ai-improve-button";
 import { AIReviewButton } from "@/components/ai/ai-review-popup";
 import { CollapsibleSection } from "@/components/console/collapsible-section";
+import { HtmFields } from "@/components/console/htm-fields";
 import { GuideButton } from "@/components/console/guide-button";
 import { getGuide } from "@/lib/guides";
 import { Plus } from "lucide-react";
@@ -56,6 +57,11 @@ export default async function ConsoleEventsPage() {
             <input type="checkbox" name="requiresSensus" className="h-4 w-4 accent-[var(--color-primary-container)]" />
             Hanya untuk peserta yang sudah lengkap mengisi sensus (mahasiswa Indo di China)
           </label>
+          <label className="flex items-center gap-2 bg-soft-gray rounded-md p-2.5 sm:p-3 text-body-md cursor-pointer">
+            <input type="checkbox" name="certificateForParticipants" defaultChecked className="h-4 w-4 accent-[var(--color-primary-container)]" />
+            Peserta mendapat e-sertifikat kehadiran
+          </label>
+          <HtmFields />
           <ImageUploadCropper
             name="coverImageUrl"
             folder="events"
