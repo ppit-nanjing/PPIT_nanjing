@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { Field, fieldInput } from "@/components/console/form";
 
 // "HTM" (Harga Tiket Masuk) toggle: fee amount is often unknown at creation
 // time (depends on whether a sponsor comes through), so it's fine to check
@@ -20,7 +21,7 @@ export function HtmFields({
 
   return (
     <div className="flex flex-col gap-3">
-      <label className="flex items-center gap-2 bg-soft-gray rounded-md p-2.5 sm:p-3 text-body-md cursor-pointer">
+      <label className="flex items-center gap-2 bg-soft-gray rounded-md p-3 text-body-md cursor-pointer">
         <input
           type="checkbox"
           name="isPaid"
@@ -33,41 +34,42 @@ export function HtmFields({
 
       {paid ? (
         <div className="flex flex-col gap-3 pl-4 border-l-2 border-outline-variant ml-1">
-          <div className="flex flex-col gap-1">
+          <Field
+            label="Biaya (CNY)"
+            hint="Belum tahu pasti karena masih menunggu sponsor? Kosongkan dulu, isi belakangan lewat Edit."
+          >
             <input
               name="feeCny"
               type="number"
               min={0}
               step={1}
               defaultValue={defaultFeeCny ?? ""}
-              placeholder="Biaya (CNY) — misal 20"
-              className="bg-soft-gray rounded-md p-2.5 sm:p-3 text-body-md"
+              placeholder="misal 20"
+              className={fieldInput}
             />
-            <p className="text-xs text-on-surface-variant">
-              Belum tahu pasti karena masih menunggu sponsor? Kosongkan dulu, isi belakangan lewat Edit.
-            </p>
-          </div>
-          <textarea
-            name="paymentInstructions"
-            defaultValue={defaultInstructions ?? ""}
-            rows={3}
-            placeholder={"Cara bayar (contoh: transfer ke Alipay xxx a.n. Bendahara, lalu unggah bukti di halaman tiket)"}
-            className="bg-soft-gray rounded-md p-2.5 sm:p-3 text-body-md resize-none"
-          />
-          <div className="flex flex-col gap-1">
+          </Field>
+
+          <Field label="Instruksi pembayaran">
+            <textarea
+              name="paymentInstructions"
+              defaultValue={defaultInstructions ?? ""}
+              rows={3}
+              placeholder={"Contoh: transfer ke Alipay xxx a.n. Bendahara, lalu unggah bukti di halaman tiket"}
+              className={`${fieldInput} resize-none`}
+            />
+          </Field>
+
+          <Field
+            label="Alipay UID Bendahara (opsional)"
+            hint='Kalau diisi, tiket peserta menampilkan QR yang mengisi nominal & catatan otomatis di app Alipay. Cek UID: Alipay → Saya → foto profil → "支付宝会员号". Bukan API resmi — verifikasi bukti tetap manual.'
+          >
             <input
               name="alipayUid"
               defaultValue={defaultAlipayUid ?? ""}
-              placeholder="Alipay UID Bendahara (opsional, contoh: 2088xxxxxxxxxxxx)"
-              className="bg-soft-gray rounded-md p-2.5 sm:p-3 text-body-md"
+              placeholder="contoh: 2088xxxxxxxxxxxx"
+              className={fieldInput}
             />
-            <p className="text-xs text-on-surface-variant">
-              Kalau diisi, halaman tiket peserta menampilkan QR yang otomatis mengisi nominal &amp; catatan saat
-              dibuka di app Alipay — cara cek UID: buka Alipay → Saya → ketuk foto profil → &quot;支付宝会员号&quot;.
-              Ini bukan API pembayaran resmi, cuma bikin peserta gak perlu ketik nominal sendiri; verifikasi bukti
-              tetap manual seperti biasa.
-            </p>
-          </div>
+          </Field>
         </div>
       ) : (
         <>

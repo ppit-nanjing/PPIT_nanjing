@@ -9,12 +9,15 @@ import {
   removeCommittee,
 } from "@/app/actions/committee";
 import { DivisionMemberPicker } from "@/components/console/division-member-picker";
+import { Field, fieldInput } from "@/components/console/form";
 
 // Peran penugasan baru. humas/acara/logistik/dokumentasi sengaja tidak ada:
 // itu nama DIVISI, bukan peran - di skema nilainya tinggal demi baris lama.
 const ROLES = ["ketua", "wakil", "sekretaris", "bendahara", "supervisor", "anggota"];
 
-const input = "bg-soft-gray rounded-md p-2 text-body-md w-full";
+// Alias primitif bersama - struktur form di komponen ini padat & spesifik
+// (kartu per divisi), jadi cukup tuker kelasnya, bukan seluruh markahe.
+const input = fieldInput;
 const label = "text-label-caps uppercase tracking-wide text-on-surface-variant";
 
 export interface DivisionRow {
