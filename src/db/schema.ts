@@ -813,7 +813,15 @@ export const jobPostingsRelations = relations(jobPostings, ({ many }) => ({
 // Mirrors what the Chongqing chapter site offers under "Discover", adapted to
 // Nanjing. See docs/Perbandingan dengan PPIT Chongqing.md.
 
-export const placeCategoryEnum = pgEnum("place_category", ["tourism", "spiritual", "practical"]);
+export const placeCategoryEnum = pgEnum("place_category", [
+  "tourism",
+  "spiritual",
+  "practical",
+  "culture",
+  "nature",
+  "food",
+  "shopping",
+]);
 
 // Tempat wisata / ibadah / fasilitas penting, dikelompokkan per distrik Nanjing.
 export const places = pgTable("places", {

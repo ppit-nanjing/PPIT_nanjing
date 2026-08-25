@@ -86,6 +86,10 @@ export default async function ConsoleKatalogPage() {
               <span className={label}>Kategori</span>
               <select name="category" className={input}>
                 <option value="tourism">Wisata</option>
+                <option value="culture">Sejarah &amp; Budaya</option>
+                <option value="nature">Alam &amp; Rekreasi</option>
+                <option value="food">Kuliner</option>
+                <option value="shopping">Belanja</option>
                 <option value="spiritual">Ibadah</option>
                 <option value="practical">Kebutuhan Sehari-hari</option>
               </select>
