@@ -9,16 +9,17 @@ import { useMemo } from "react";
 import {
   ReactFlow,
   Background,
-  Controls,
   Handle,
+  Panel,
   Position,
+  useReactFlow,
   type Edge,
   type Node,
   type NodeProps,
   type NodeTypes,
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
-import { Crown, Building2, Users } from "lucide-react";
+import { Crown, Building2, Users, Plus, Minus, Maximize2 } from "lucide-react";
 import { useT } from "@/lib/i18n/client";
 import type { OrgNodeData } from "@/components/org-explorer";
 import { MemberRow } from "@/components/org-explorer";
@@ -125,6 +126,41 @@ function UnitFlowNode({ data }: NodeProps) {
   );
 }
 
+// Zoom controls styled with the site's design tokens instead of React Flow's
+// default white box, which clashes in both light and dark palettes.
+function FlowControls() {
+  const { zoomIn, zoomOut, fitView } = useReactFlow();
+  const btn =
+    "w-9 h-9 flex items-center justify-center bg-surface-container-lowest/95 text-on-surface-variant hover:text-on-background hover:bg-surface-container-low transition-colors motion-reduce:transition-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-container";
+  return (
+    <Panel position="bottom-right">
+      <div className="flex flex-col rounded-lg overflow-hidden border border-outline-variant shadow-sm">
+        <button type="button" aria-label="Perbesar" title="Perbesar" className={btn} onClick={() => zoomIn({ duration: 200 })}>
+          <Plus size={16} />
+        </button>
+        <button
+          type="button"
+          aria-label="Perkecil"
+          title="Perkecil"
+          className={`${btn} border-t border-outline-variant`}
+          onClick={() => zoomOut({ duration: 200 })}
+        >
+          <Minus size={16} />
+        </button>
+        <button
+          type="button"
+          aria-label="Muat seluruh diagram"
+          title="Muat seluruh diagram"
+          className={`${btn} border-t border-outline-variant`}
+          onClick={() => fitView({ duration: 300, padding: 0.15 })}
+        >
+          <Maximize2 size={14} />
+        </button>
+      </div>
+    </Panel>
+  );
+}
+
 export function OrgFlow({ units, onSelect }: { units: OrgNodeData[]; onSelect: (n: OrgNodeData) => void }) {
   const { nodes, edges } = useMemo(() => {
     const { laid, totalW } = layoutTree(units);
@@ -191,7 +227,7 @@ export function OrgFlow({ units, onSelect }: { units: OrgNodeData[]; onSelect: (
         }}
       >
         <Background gap={24} color="var(--color-outline-variant)" className="opacity-40" />
-        <Controls showInteractive={false} position="bottom-right" />
+        <FlowControls />
       </ReactFlow>
     </div>
   );
