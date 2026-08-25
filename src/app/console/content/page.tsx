@@ -1,4 +1,4 @@
-import { desc } from "drizzle-orm";
+import { desc, sql } from "drizzle-orm";
 import { db } from "@/db";
 import { newsArticles, galleryAlbums } from "@/db/schema";
 import { requireModuleAccess } from "@/lib/admin-scope";
@@ -12,7 +12,11 @@ const STATUS_LABEL: Record<string, string> = { draft: "Draf", published: "Dipubl
 
 export default async function ConsoleContentPage() {
   await requireModuleAccess("content");
-  const articles = await db.select().from(newsArticles).orderBy(desc(newsArticles.publishedAt));
+  // NULLS LAST: draft (publishedAt null) must not float above published news.
+  const articles = await db
+    .select()
+    .from(newsArticles)
+    .orderBy(sql`${newsArticles.publishedAt} desc nulls last`);
   const albums = await db.select().from(galleryAlbums).orderBy(desc(galleryAlbums.createdAt));
   const guide = await getGuide("konten");
 

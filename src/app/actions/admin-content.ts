@@ -29,14 +29,23 @@ function slugify(title: string) {
   );
 }
 
-export async function upsertNewsArticle(existingId: string | null, formData: FormData) {
+// Inline-validation shape for console news forms - mirrors ShortLinkFormState.
+export type ContentFormState = { error?: string };
+
+export async function upsertNewsArticle(
+  existingId: string | null,
+  _prev: ContentFormState,
+  formData: FormData,
+): Promise<ContentFormState> {
   const actorId = await requireContentAccess();
   const title = String(formData.get("title") ?? "").trim();
   const content = String(formData.get("content") ?? "").trim();
   const coverImageUrl = String(formData.get("coverImageUrl") ?? "").trim();
   const category = String(formData.get("category") ?? "").trim();
   const publish = formData.get("publish") === "on";
-  if (!title) throw new Error("Judul wajib diisi");
+  // Inline instead of thrown - a thrown Error here would dump the admin into
+  // the route error boundary with the whole article lost.
+  if (!title) return { error: "Judul wajib diisi." };
 
   let article: typeof newsArticles.$inferSelect;
   // Only a fresh transition into "published" should email subscribers -
@@ -44,10 +53,15 @@ export async function upsertNewsArticle(existingId: string | null, formData: For
   // must not spam everyone again. Same guard shape as
   // notifyMembershipDecision's `before?.status !== status` below.
   let wasPublished = false;
+  // Preserve the ORIGINAL publish date across unpublish/republish cycles
+  // instead of stamping a new one (and treat "has a publish date" as "was
+  // ever announced", so republishing a once-emailed article stays silent).
+  let previousPublishedAt: Date | null = null;
 
   if (existingId) {
-    const [before] = await db.select({ status: newsArticles.status }).from(newsArticles).where(eq(newsArticles.id, existingId));
-    wasPublished = before?.status === "published";
+    const [before] = await db.select({ status: newsArticles.status, publishedAt: newsArticles.publishedAt }).from(newsArticles).where(eq(newsArticles.id, existingId));
+    wasPublished = before?.status === "published" || before?.publishedAt != null;
+    previousPublishedAt = before?.publishedAt ?? null;
     [article] = await db
       .update(newsArticles)
       .set({
@@ -56,7 +70,7 @@ export async function upsertNewsArticle(existingId: string | null, formData: For
         coverImageUrl: coverImageUrl || null,
         category: category || null,
         status: publish ? "published" : "draft",
-        publishedAt: publish ? new Date() : null,
+        publishedAt: publish ? (previousPublishedAt ?? new Date()) : previousPublishedAt,
       })
       .where(eq(newsArticles.id, existingId))
       .returning();

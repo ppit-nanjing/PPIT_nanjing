@@ -1,6 +1,6 @@
 ﻿"use server";
 
-import { eq, sql } from "drizzle-orm";
+import { eq, ne, and, sql } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { auth } from "@/auth";
@@ -115,6 +115,7 @@ export async function updateShortLink(
 
   const title = String(formData.get("title") ?? "").trim();
   const targetUrl = String(formData.get("targetUrl") ?? "").trim();
+  const rawSlug = String(formData.get("slug") ?? "").trim();
   const description = String(formData.get("description") ?? "").trim() || null;
   const category = String(formData.get("category") ?? "other").trim() as
     | "documentation"
@@ -128,12 +129,29 @@ export async function updateShortLink(
   if (!targetUrl) return { error: "URL tujuan wajib diisi." };
   if (!isValidHttpUrl(targetUrl)) return { error: "URL tujuan harus diawali http:// atau https://" };
 
+  // The form exposes slug on edit, so honor it - previously edits to the field
+  // were silently dropped while the UI implied success. Renaming breaks old
+  // /l/<slug> links, hence the same validation + collision check as create.
+  let slug: string | null = null;
+  if (rawSlug) {
+    slug = slugify(rawSlug);
+    if (!slug) return { error: "Slug tidak valid (huruf/angka saja)." };
+    if (!isValidSlug(slug)) return { error: "Slug hanya boleh huruf, angka, dan tanda hubung." };
+    const [collision] = await db
+      .select({ id: shortLinks.id })
+      .from(shortLinks)
+      .where(and(eq(shortLinks.slug, slug), ne(shortLinks.id, id)))
+      .limit(1);
+    if (collision) return { error: `Slug "${slug}" sudah dipakai tautan lain.` };
+  }
+
   const managementPeriodId = await resolvePeriodId(formData, actorId);
   const expiresAt = expiresAtRaw ? new Date(expiresAtRaw) : null;
 
   await db
     .update(shortLinks)
     .set({
+      ...(slug ? { slug } : {}),
       title,
       targetUrl,
       description,

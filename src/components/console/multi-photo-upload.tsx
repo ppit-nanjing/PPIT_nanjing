@@ -32,7 +32,9 @@ export function MultiPhotoUpload({ albumId }: { albumId?: string }) {
     setDone(false);
     setWorking(true);
     const batch: Item[] = images.map((f, i) => ({ key: `${Date.now()}-${i}-${f.name}`, name: f.name, highlight: false }));
-    setItems(batch);
+    // Merge, not replace: picking more files must keep the already-uploaded
+    // batch (replacing would orphan their blobs in storage).
+    setItems((prev) => [...prev, ...batch]);
 
     for (let i = 0; i < images.length; i++) {
       try {

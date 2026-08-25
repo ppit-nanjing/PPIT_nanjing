@@ -96,6 +96,7 @@ export function ShortLinkForm({
         />
         <span className="text-label-caps text-on-surface-variant/80">
           Tautan publik: <code className="text-on-background">nanjing.ppitiongkok.com/l/{previewSlug || "…"}</code>
+          {initial?.slug && " — mengganti slug memutus tautan lama yang sudah dibagikan."}
         </span>
       </label>
 
