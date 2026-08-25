@@ -152,7 +152,7 @@ export function ConsoleSidebar({ userName, scope }: { userName: string; scope: "
     <>
       {/* Desktop rail */}
       <aside
-        className={`hidden md:flex shrink-0 bg-surface-container-lowest border-r border-outline-variant min-h-screen flex-col ${
+        className={`hidden md:flex shrink-0 bg-surface-container-lowest border-r border-outline-variant md:sticky md:top-0 md:h-screen flex-col ${
           collapsed ? "w-[72px]" : "w-64"
         }`}
       >
