@@ -122,82 +122,109 @@ export default async function ConsoleEventDetailPage({ params }: { params: Promi
           Edit Detail Kegiatan
         </summary>
         <form action={updateEvent.bind(null, id)} className="px-6 pb-6 flex flex-col gap-4">
-          <input id="event-title" name="title" defaultValue={event.title} required className="bg-soft-gray rounded-md p-3 text-body-md" />
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <input id="event-category" name="category" defaultValue={event.category ?? ""} placeholder="Kategori" className="bg-soft-gray rounded-md p-3 text-body-md" />
-            <input id="event-location" name="location" defaultValue={event.location ?? ""} placeholder="Lokasi" className="bg-soft-gray rounded-md p-3 text-body-md" />
-          </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div className="flex flex-col gap-1">
-              <input
-                name="startAt"
-                type="datetime-local"
-                defaultValue={event.startAt ? new Date(event.startAt).toISOString().slice(0, 16) : ""}
-                className="bg-soft-gray rounded-md p-3 text-body-md"
+          {/* Bagian 1 - identitas acara */}
+          <details open className="border border-outline-variant rounded-lg">
+            <summary className="px-4 py-3 cursor-pointer text-label-caps uppercase tracking-wide text-primary-container">
+              1 · Info Acara
+            </summary>
+            <div className="px-4 pb-4 flex flex-col gap-4">
+              <input id="event-title" name="title" defaultValue={event.title} required className="bg-soft-gray rounded-md p-3 text-body-md" />
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <input id="event-category" name="category" defaultValue={event.category ?? ""} placeholder="Kategori" className="bg-soft-gray rounded-md p-3 text-body-md" />
+                <input id="event-location" name="location" defaultValue={event.location ?? ""} placeholder="Lokasi" className="bg-soft-gray rounded-md p-3 text-body-md" />
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="flex flex-col gap-1">
+                  <input
+                    name="startAt"
+                    type="datetime-local"
+                    defaultValue={event.startAt ? new Date(event.startAt).toISOString().slice(0, 16) : ""}
+                    className="bg-soft-gray rounded-md p-3 text-body-md"
+                  />
+                  <p className="text-xs text-on-surface-variant">Kapan acara berlangsung (tanggal & jam mulai).</p>
+                </div>
+                  <input name="capacity" type="number" min={1} defaultValue={event.capacity ?? ""} placeholder="Kapasitas" className="bg-soft-gray rounded-md p-3 text-body-md" />
+                </div>
+              <ImageUploadCropper
+                name="coverImageUrl"
+                folder="events"
+                label="Gambar Sampul"
+                placeholder="Tempel URL atau unggah gambar"
+                defaultValue={event.coverImageUrl ?? ""}
+                aspect={16 / 9}
+                allowPaste
               />
-              <p className="text-xs text-on-surface-variant">Kapan acara berlangsung (tanggal & jam mulai).</p>
             </div>
-              <input name="capacity" type="number" min={1} defaultValue={event.capacity ?? ""} placeholder="Kapasitas" className="bg-soft-gray rounded-md p-3 text-body-md" />
+          </details>
+
+          {/* Bagian 2 - aturan pendaftaran & HTM */}
+          <details open className="border border-outline-variant rounded-lg">
+            <summary className="px-4 py-3 cursor-pointer text-label-caps uppercase tracking-wide text-primary-container">
+              2 · Pendaftaran &amp; Biaya
+            </summary>
+            <div className="px-4 pb-4 flex flex-col gap-4">
+              <label className="flex items-center gap-2 bg-soft-gray rounded-md p-3 text-body-md cursor-pointer">
+                <input type="checkbox" name="requiresSensus" defaultChecked={event.requiresSensus} className="h-4 w-4 accent-[var(--color-primary-container)]" />
+                Hanya untuk peserta yang sudah lengkap mengisi sensus (mahasiswa Indo di China)
+              </label>
+              <label className="flex items-center gap-2 bg-soft-gray rounded-md p-3 text-body-md cursor-pointer">
+                <input type="checkbox" name="certificateForParticipants" defaultChecked={event.certificateForParticipants} className="h-4 w-4 accent-[var(--color-primary-container)]" />
+                Peserta mendapat e-sertifikat kehadiran
+              </label>
+              <label className="flex items-center gap-2 bg-soft-gray rounded-md p-3 text-body-md cursor-pointer">
+                <input type="checkbox" name="volunteerSignupOpen" defaultChecked={event.volunteerSignupOpen} className="h-4 w-4 accent-[var(--color-primary-container)]" />
+                Buka pendaftaran volunteer publik (orang luar bisa melamar di halaman acara)
+              </label>
+              <HtmFields
+                defaultIsPaid={event.isPaid}
+                defaultFeeCny={event.feeCny}
+                defaultInstructions={event.paymentInstructions}
+                defaultAlipayUid={event.alipayUid}
+              />
+              <div className="flex flex-col gap-1">
+                <input
+                  name="registrationDeadline"
+                  type="datetime-local"
+                  defaultValue={event.registrationDeadline ? new Date(event.registrationDeadline).toISOString().slice(0, 16) : ""}
+                  placeholder="Batas Pendaftaran"
+                  className="bg-soft-gray rounded-md p-3 text-body-md"
+                />
+                <p className="text-xs text-on-surface-variant">Batas waktu peserta boleh mendaftar. Lewat dari ini tombol daftar tertutup otomatis. Kosongkan bila tak ada batas.</p>
+              </div>
             </div>
-            <label className="flex items-center gap-2 bg-soft-gray rounded-md p-3 text-body-md cursor-pointer">
-              <input type="checkbox" name="requiresSensus" defaultChecked={event.requiresSensus} className="h-4 w-4 accent-[var(--color-primary-container)]" />
-              Hanya untuk peserta yang sudah lengkap mengisi sensus (mahasiswa Indo di China)
-            </label>
-            <label className="flex items-center gap-2 bg-soft-gray rounded-md p-3 text-body-md cursor-pointer">
-              <input type="checkbox" name="certificateForParticipants" defaultChecked={event.certificateForParticipants} className="h-4 w-4 accent-[var(--color-primary-container)]" />
-              Peserta mendapat e-sertifikat kehadiran
-            </label>
-            <label className="flex items-center gap-2 bg-soft-gray rounded-md p-3 text-body-md cursor-pointer">
-              <input type="checkbox" name="volunteerSignupOpen" defaultChecked={event.volunteerSignupOpen} className="h-4 w-4 accent-[var(--color-primary-container)]" />
-              Buka pendaftaran volunteer publik (orang luar bisa melamar di halaman acara)
-            </label>
-          <HtmFields
-            defaultIsPaid={event.isPaid}
-            defaultFeeCny={event.feeCny}
-            defaultInstructions={event.paymentInstructions}
-            defaultAlipayUid={event.alipayUid}
-          />
-          <ImageUploadCropper
-            name="coverImageUrl"
-            folder="events"
-            label="Gambar Sampul"
-            placeholder="Tempel URL atau unggah gambar"
-            defaultValue={event.coverImageUrl ?? ""}
-            aspect={16 / 9}
-            allowPaste
-          />
-          <div className="flex flex-col gap-1">
-            <input
-              name="registrationDeadline"
-              type="datetime-local"
-              defaultValue={event.registrationDeadline ? new Date(event.registrationDeadline).toISOString().slice(0, 16) : ""}
-              placeholder="Batas Pendaftaran"
-              className="bg-soft-gray rounded-md p-3 text-body-md"
-            />
-            <p className="text-xs text-on-surface-variant">Batas waktu peserta boleh mendaftar. Lewat dari ini tombol daftar tertutup otomatis. Kosongkan bila tak ada batas.</p>
-          </div>
-          <div className="flex flex-col gap-1">
-            <input
-              name="scheduledPublishAt"
-              type="datetime-local"
-              defaultValue={event.scheduledPublishAt ? new Date(event.scheduledPublishAt).toISOString().slice(0, 16) : ""}
-              placeholder="Jadwal Rilis Publikasi (opsional)"
-              className="bg-soft-gray rounded-md p-3 text-body-md"
-            />
-            <p className="text-xs text-on-surface-variant">Isi bila acara mau tampil ke publik hanya SETELAH tanggal/waktu ini (status &quot;Terjadwal&quot; dulu, rilis sendiri nanti). Kosongkan = langsung Draf, rilis saat kamu klik Publish manual.</p>
-          </div>
-          <div>
-            <textarea id="event-description" name="description" defaultValue={event.description ?? ""} rows={3} className="bg-soft-gray rounded-md p-3 text-body-md resize-none w-full" />
-            <AIImproveButton context="event" targetId="event-description" className="mt-1" />
-          </div>
-          <textarea
-            id="event-agenda"
-            name="agenda"
-            defaultValue={event.agenda ?? ""}
-            placeholder={"Agenda/Jadwal (satu baris per item, contoh:\n18:00 - Registrasi\n19:00 - Pembukaan)"}
-            rows={3}
-            className="bg-soft-gray rounded-md p-3 text-body-md resize-none"
-          />
+          </details>
+
+          {/* Bagian 3 - konten & jadwal rilis */}
+          <details open className="border border-outline-variant rounded-lg">
+            <summary className="px-4 py-3 cursor-pointer text-label-caps uppercase tracking-wide text-on-surface-variant">
+              3 · Deskripsi, Agenda &amp; Jadwal Rilis
+            </summary>
+            <div className="px-4 pb-4 flex flex-col gap-4">
+              <div>
+                <textarea id="event-description" name="description" defaultValue={event.description ?? ""} rows={3} className="bg-soft-gray rounded-md p-3 text-body-md resize-none w-full" />
+                <AIImproveButton context="event" targetId="event-description" className="mt-1" />
+              </div>
+              <textarea
+                id="event-agenda"
+                name="agenda"
+                defaultValue={event.agenda ?? ""}
+                placeholder={"Agenda/Jadwal (satu baris per item, contoh:\n18:00 - Registrasi\n19:00 - Pembukaan)"}
+                rows={3}
+                className="bg-soft-gray rounded-md p-3 text-body-md resize-none"
+              />
+              <div className="flex flex-col gap-1">
+                <input
+                  name="scheduledPublishAt"
+                  type="datetime-local"
+                  defaultValue={event.scheduledPublishAt ? new Date(event.scheduledPublishAt).toISOString().slice(0, 16) : ""}
+                  placeholder="Jadwal Rilis Publikasi (opsional)"
+                  className="bg-soft-gray rounded-md p-3 text-body-md"
+                />
+                <p className="text-xs text-on-surface-variant">Isi bila acara mau tampil ke publik hanya SETELAH tanggal/waktu ini (status &quot;Terjadwal&quot; dulu, rilis sendiri nanti). Kosongkan = langsung Draf, rilis saat kamu klik Publish manual.</p>
+              </div>
+            </div>
+          </details>
+
           <AIReviewButton
             context="event"
             fields={[

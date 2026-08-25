@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { usePathname } from "next/navigation";
 import {
   Menu,
@@ -21,6 +21,8 @@ import {
   BellRing,
   Link2,
   Folder,
+  PanelLeftClose,
+  PanelLeftOpen,
 } from "lucide-react";
 import { hasModuleAccess, type AdminModule } from "@/lib/admin-scope-constants";
 import Link from "next/link";
@@ -62,28 +64,35 @@ const GROUPS: { title: string; items: NavItem[] }[] = [
   },
 ];
 
+const COLLAPSE_KEY = "console.sidebar.collapsed";
+
 function NavContent({
   scope,
   pathname,
   onNavigate,
+  collapsed = false,
 }: {
   scope: "full" | string[] | null;
   pathname: string;
   onNavigate: () => void;
+  collapsed?: boolean;
 }) {
   const isActive = (href: string) =>
     href === "/console" ? pathname === "/console" : pathname.startsWith(href);
 
   return (
-    <nav className="flex-1 py-2 overflow-y-auto">
+    <nav className={`flex-1 py-2 overflow-y-auto ${collapsed ? "px-2" : ""}`}>
       {GROUPS.map((group) => {
         const items = group.items.filter((i) => i.module === null || hasModuleAccess(scope, i.module));
         if (items.length === 0) return null;
         return (
           <div key={group.title} className="mb-2">
-            <p className="px-6 pt-4 pb-1 text-label-caps uppercase tracking-wide text-on-surface-variant/70 text-xs">
-              {group.title}
-            </p>
+            {!collapsed && (
+              <p className="px-6 pt-4 pb-1 text-label-caps uppercase tracking-wide text-on-surface-variant/70 text-xs">
+                {group.title}
+              </p>
+            )}
+            {collapsed && <div className="mx-auto my-2 h-px w-8 bg-outline-variant" />}
             {items.map((item) => {
               const active = isActive(item.href);
               return (
@@ -92,7 +101,10 @@ function NavContent({
                   href={item.href}
                   onClick={onNavigate}
                   aria-current={active ? "page" : undefined}
-                  className={`relative flex items-center gap-3 px-6 py-3 text-body-md transition-colors ${
+                  title={collapsed ? item.label : undefined}
+                  className={`relative flex items-center text-body-md transition-colors ${
+                    collapsed ? "justify-center px-0 py-3" : "gap-3 px-6 py-3"
+                  } ${
                     active
                       ? "bg-primary-container/10 text-primary-container font-medium"
                       : "text-on-surface-variant hover:bg-surface-container-low hover:text-on-background"
@@ -102,7 +114,7 @@ function NavContent({
                     <span className="absolute left-0 top-1/2 -translate-y-1/2 h-6 w-1 rounded-r bg-primary-container" />
                   )}
                   <item.icon size={18} className={active ? "text-primary-container" : "text-secondary"} />
-                  {item.label}
+                  {!collapsed && item.label}
                 </a>
               );
             })}
@@ -115,22 +127,63 @@ function NavContent({
 
 export function ConsoleSidebar({ userName, scope }: { userName: string; scope: "full" | string[] | null }) {
   const [open, setOpen] = useState(false);
+  // Lipat = rail ikon saja di desktop. Pilihan diingat per browser supaya
+  // admin tidak mengulang setiap pindah halaman.
+  const [collapsed, setCollapsed] = useState(false);
   const pathname = usePathname();
+
+  useEffect(() => {
+    // Bukan setState sinkron: disalurkan lewat rAF supaya tidak memicu
+    // cascading render sebelum frame pertama selesai (aturan react-hooks).
+    const raf = requestAnimationFrame(() => {
+      if (localStorage.getItem(COLLAPSE_KEY) === "1") setCollapsed(true);
+    });
+    return () => cancelAnimationFrame(raf);
+  }, []);
+
+  function toggleCollapse() {
+    setCollapsed((c) => {
+      localStorage.setItem(COLLAPSE_KEY, c ? "0" : "1");
+      return !c;
+    });
+  }
 
   return (
     <>
       {/* Desktop rail */}
-      <aside className="hidden md:flex w-64 shrink-0 bg-surface-container-lowest border-r border-outline-variant min-h-screen flex-col">
-        <div className="px-6 py-6 border-b border-outline-variant">
-          <p className="text-headline-md font-bold text-primary uppercase tracking-tight">Console</p>
-          <p className="text-label-caps text-on-surface-variant mt-1">{userName}</p>
+      <aside
+        className={`hidden md:flex shrink-0 bg-surface-container-lowest border-r border-outline-variant min-h-screen flex-col transition-[width] duration-200 motion-reduce:transition-none ${
+          collapsed ? "w-[72px]" : "w-64"
+        }`}
+      >
+        <div className={`flex items-center gap-2 px-4 py-5 border-b border-outline-variant ${collapsed ? "justify-center" : "justify-between"}`}>
+          {collapsed ? (
+            <span className="text-headline-md font-bold text-primary">C</span>
+          ) : (
+            <div className="min-w-0">
+              <p className="text-headline-md font-bold text-primary uppercase tracking-tight">Console</p>
+              <p className="text-label-caps text-on-surface-variant mt-1 truncate">{userName}</p>
+            </div>
+          )}
+          <button
+            onClick={toggleCollapse}
+            aria-label={collapsed ? "Buka sidebar" : "Lipat sidebar"}
+            aria-expanded={!collapsed}
+            className="p-1.5 rounded-md text-on-surface-variant hover:bg-surface-container-low hover:text-on-background transition-colors"
+          >
+            {collapsed ? <PanelLeftOpen size={18} /> : <PanelLeftClose size={18} />}
+          </button>
         </div>
-        <NavContent scope={scope} pathname={pathname} onNavigate={() => {}} />
+        <NavContent scope={scope} pathname={pathname} onNavigate={() => {}} collapsed={collapsed} />
         <Link
           href="/"
-          className="flex items-center gap-2 px-6 py-4 text-label-caps text-secondary hover:text-on-background border-t border-outline-variant transition-colors"
+          title={collapsed ? "Kembali ke Situs" : undefined}
+          className={`flex items-center gap-2 py-4 text-label-caps text-secondary hover:text-on-background border-t border-outline-variant transition-colors ${
+            collapsed ? "justify-center px-0" : "px-6"
+          }`}
         >
-          <ArrowLeft size={14} /> Kembali ke Situs
+          <ArrowLeft size={14} />
+          {!collapsed && "Kembali ke Situs"}
         </Link>
       </aside>
 
