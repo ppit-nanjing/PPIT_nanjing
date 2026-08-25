@@ -7,6 +7,7 @@ import { NOTIFICATION_TEMPLATES } from "@/lib/notification-templates";
 import { NotificationTemplateEditor } from "@/components/console/notification-template-editor";
 import { GuideButton } from "@/components/console/guide-button";
 import { getGuide } from "@/lib/guides";
+import { emailSenderStatus } from "@/lib/email";
 
 export default async function ConsoleNotificationsPage() {
   await requireModuleAccess("notifications");
@@ -35,10 +36,14 @@ export default async function ConsoleNotificationsPage() {
   );
 
   const guide = await getGuide("notifikasi");
+  // The banner used to claim email delivery "belum tersedia" - factually wrong
+  // since lib/email.ts landed and membership decisions started emailing. Read
+  // the real transport status instead.
+  const emailStatus = emailSenderStatus();
 
   return (
     <div className="px-4 py-6 sm:px-6 lg:px-8 lg:py-10">
-      <div className="flex flex-wrap items-start justify-between gap-3 mb-6 l:mb-8">
+      <div className="flex flex-wrap items-start justify-between gap-3 mb-6 lg:mb-8">
         <div>
           <h1 className="text-headline-md sm:text-headline-lg text-on-background mb-2">
             Template Notifikasi
@@ -56,8 +61,20 @@ export default async function ConsoleNotificationsPage() {
         <BellRing size={18} className="text-on-surface-variant shrink-0 mt-0.5" aria-hidden />
         <p className="text-body-sm text-on-surface-variant">
           Semua notifikasi ini dikirim <strong className="text-on-background">di dalam aplikasi</strong>{" "}
-          (lonceng di navigasi dan halaman Notifikasi). Pengiriman lewat email atau push belum
-          tersedia karena belum ada penyedia pengiriman yang terpasang.
+          (lonceng di navigasi dan halaman Notifikasi).{" "}
+          {emailStatus === "ready" ? (
+            <>
+              Keputusan membership juga dikirim <strong className="text-on-background">lewat email</strong> —
+              teksnya diatur lewat template &ldquo;Membership&rdquo; di bawah.
+            </>
+          ) : (
+            <>
+              Pengiriman email keputusan membership{" "}
+              {emailStatus === "testing"
+                ? "masih memakai pengirim uji coba Resend (hanya sampai ke pemilik akun) — lengkapi Gmail PPIT atau verifikasi domain."
+                : "belum aktif — isi GMAIL_USER + GMAIL_APP_PASSWORD di Vercel untuk mengaktifkannya."}
+            </>
+          )}
         </p>
       </div>
 

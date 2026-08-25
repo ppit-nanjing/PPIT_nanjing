@@ -265,6 +265,17 @@ export async function addGalleryPhotos(albumId: string, formData: FormData) {
   revalidatePath(`/console/content/gallery/${albumId}`);
 }
 
+// Captions double as alt text on the public gallery - editable per tile so
+// screen readers aren't left with silence.
+export async function updatePhotoCaption(photoId: string, albumId: string, caption: string) {
+  await requireContentAccess();
+  await db
+    .update(galleryPhotos)
+    .set({ caption: caption.trim() || null })
+    .where(eq(galleryPhotos.id, photoId));
+  revalidatePath(`/console/content/gallery/${albumId}`);
+}
+
 export async function deleteGalleryPhoto(photoId: string, albumId: string) {
   await requireContentAccess();
   await db.delete(galleryPhotos).where(eq(galleryPhotos.id, photoId));
