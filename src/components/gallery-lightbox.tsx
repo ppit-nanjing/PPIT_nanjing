@@ -83,34 +83,50 @@ export function GalleryLightbox({ photos }: { photos: Photo[] }) {
     };
   }, [open, close, prev, next, setIndex, photos.length]);
 
+  // Highlight layout: from 5 photos up, the first shot becomes a 2x2 hero
+  // inside fixed-height rows so the wall reads like a curated mosaic;
+  // smaller collections fall back to simple balanced grids.
+  const n = photos.length;
+  const mosaic = n >= 5;
+  const gridClass = mosaic
+    ? "grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 auto-rows-[150px] sm:auto-rows-[190px] lg:auto-rows-[230px] gap-3 sm:gap-4"
+    : n === 1
+      ? "grid grid-cols-1 max-w-3xl mx-auto"
+      : "grid grid-cols-2 sm:grid-cols-3 gap-3 sm:gap-4";
+
   return (
     <>
-      <ul className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4" aria-label={t("lightbox.albumAria")}>
-        {photos.map((p, i) => (
-          <li key={p.id} className="list-none">
-            <button
-              type="button"
-              onClick={() => setIndex(i)}
-              className="group relative block w-full aspect-square rounded-lg overflow-hidden bg-surface-container-low focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-container focus-visible:ring-offset-2 focus-visible:ring-offset-background"
-              aria-label={p.caption ? t("lightbox.openPhotoNamed", { caption: p.caption }) : t("lightbox.openPhoto")}
-            >
-              <Image
-                src={p.imageUrl}
-                alt={p.caption ?? t("lightbox.photoAlt", { index: i + 1 })}
-                fill
-                loading="lazy"
-                decoding="async"
-                sizes="(max-width: 768px) 50vw, 20vw"
-                className="object-cover transition-transform duration-500 group-hover:scale-105 group-focus-visible:scale-105 motion-reduce:transition-none motion-reduce:group-hover:scale-100 motion-reduce:group-focus-visible:scale-100"
-              />
-              <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/0 to-transparent opacity-0 group-hover:opacity-100 group-focus-visible:opacity-100 transition-opacity duration-300 motion-reduce:transition-none flex items-end p-3">
-                {p.caption && (
-                  <span className="text-white text-label-caps line-clamp-2">{p.caption}</span>
-                )}
-              </div>
-            </button>
-          </li>
-        ))}
+      <ul className={gridClass} aria-label={t("lightbox.albumAria")}>
+        {photos.map((p, i) => {
+          const isHero = mosaic && i === 0;
+          return (
+            <li key={p.id} className={`list-none ${isHero ? "col-span-2 row-span-2" : ""}`}>
+              <button
+                type="button"
+                onClick={() => setIndex(i)}
+                className={`group relative block w-full ${
+                  mosaic ? "h-full" : n === 1 ? "aspect-[3/2]" : "aspect-square"
+                } rounded-lg overflow-hidden bg-surface-container-low focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-container focus-visible:ring-offset-2 focus-visible:ring-offset-background`}
+                aria-label={p.caption ? t("lightbox.openPhotoNamed", { caption: p.caption }) : t("lightbox.openPhoto")}
+              >
+                <Image
+                  src={p.imageUrl}
+                  alt={p.caption ?? t("lightbox.photoAlt", { index: i + 1 })}
+                  fill
+                  loading="lazy"
+                  decoding="async"
+                  sizes={isHero ? "(max-width: 768px) 100vw, 45vw" : "(max-width: 768px) 50vw, 25vw"}
+                  className="object-cover transition-transform duration-500 group-hover:scale-105 group-focus-visible:scale-105 motion-reduce:transition-none motion-reduce:group-hover:scale-100 motion-reduce:group-focus-visible:scale-100"
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/0 to-transparent opacity-0 group-hover:opacity-100 group-focus-visible:opacity-100 transition-opacity duration-300 motion-reduce:transition-none flex items-end p-3">
+                  {p.caption && (
+                    <span className="text-white text-label-caps line-clamp-2">{p.caption}</span>
+                  )}
+                </div>
+              </button>
+            </li>
+          );
+        })}
       </ul>
 
       <AnimatePresence>
