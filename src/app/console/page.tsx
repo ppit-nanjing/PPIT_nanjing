@@ -40,6 +40,8 @@ type DashboardCounts = {
   totalRegs: number;
   pendingRegs: number;
   attendedRegs: number;
+  regsThisWeek: number;
+  regsLastWeek: number;
   publishedNews: number;
   draftNews: number;
   totalAlbums: number;
@@ -48,6 +50,8 @@ type DashboardCounts = {
   totalApps: number;
   pendingMembers: number;
   totalMembers: number;
+  membersThisWeek: number;
+  membersLastWeek: number;
   isRecruitOpen: boolean;
   totalItems: number;
   pendingBorrow: number;
@@ -71,6 +75,10 @@ async function fetchDashboardCounts(startOfMonth: Date): Promise<DashboardCounts
       (select count(*) from event_registrations)::int as "totalRegs",
       (select count(*) from event_registrations where status = 'pending')::int as "pendingRegs",
       (select count(*) from event_registrations where status = 'attended')::int as "attendedRegs",
+      -- Week-over-week trend (Mon-based weeks): this week vs the one before,
+      -- so the headline numbers read as movement, not wallpaper.
+      (select count(*) from event_registrations where registered_at >= date_trunc('week', now()))::int as "regsThisWeek",
+      (select count(*) from event_registrations where registered_at >= date_trunc('week', now()) - interval '7 days' and registered_at < date_trunc('week', now()))::int as "regsLastWeek",
       (select count(*) from news_articles where status = 'published')::int as "publishedNews",
       (select count(*) from news_articles where status = 'draft')::int as "draftNews",
       (select count(*) from gallery_albums)::int as "totalAlbums",
@@ -79,6 +87,8 @@ async function fetchDashboardCounts(startOfMonth: Date): Promise<DashboardCounts
       (select count(*) from job_applications)::int as "totalApps",
       (select count(*) from membership_applications where status = 'pending')::int as "pendingMembers",
       (select count(*) from membership_applications)::int as "totalMembers",
+      (select count(*) from membership_applications where submitted_at >= date_trunc('week', now()))::int as "membersThisWeek",
+      (select count(*) from membership_applications where submitted_at >= date_trunc('week', now()) - interval '7 days' and submitted_at < date_trunc('week', now()))::int as "membersLastWeek",
       (select exists(select 1 from recruitment_periods where is_open)) as "isRecruitOpen",
       (select count(*) from inventory_items)::int as "totalItems",
       (select count(*) from borrow_requests where status = 'pending')::int as "pendingBorrow",
@@ -148,6 +158,8 @@ export default async function ConsoleDashboardPage() {
     totalRegs,
     pendingRegs,
     attendedRegs,
+    regsThisWeek,
+    regsLastWeek,
     publishedNews,
     draftNews,
     totalAlbums,
@@ -156,6 +168,8 @@ export default async function ConsoleDashboardPage() {
     totalApps,
     pendingMembers,
     totalMembers,
+    membersThisWeek,
+    membersLastWeek,
     isRecruitOpen,
     totalItems,
     pendingBorrow,
@@ -189,11 +203,21 @@ export default async function ConsoleDashboardPage() {
     .sort((a, b) => b.time.getTime() - a.time.getTime())
     .slice(0, 8);
 
+  // "▲ 12 minggu ini (vs 8)" - movement at a glance; null when both weeks are
+  // empty so dormant modules don't show a meaningless dash.
+  const weeklyTrend = (thisWeek: number, lastWeek: number): string | null => {
+    if (thisWeek === 0 && lastWeek === 0) return null;
+    const arrow = thisWeek > lastWeek ? "▲" : thisWeek < lastWeek ? "▼" : "–";
+    return `${arrow} ${thisWeek} minggu ini (vs ${lastWeek})`;
+  };
+  const regsTrend = weeklyTrend(regsThisWeek, regsLastWeek);
+  const membersTrend = weeklyTrend(membersThisWeek, membersLastWeek);
+
   const stats: { icon: LucideIcon; label: string; value: number | string; sub?: string; attention?: boolean }[] = [
     { icon: Users, label: "Anggota", value: totalUsers, sub: `${activeUsers} aktif · ${newUsers} baru bulan ini` },
     { icon: ClipboardCheck, label: "Sensus Lengkap", value: sensusComplete, sub: `dari ${totalUsers} anggota` },
     { icon: CalendarDays, label: "Kegiatan", value: publishedEvents, sub: `${draftEvents} draf · ${upcomingEvents} akan datang`, attention: draftEvents > 0 },
-    { icon: UserPlus, label: "Pendaftar", value: totalRegs, sub: `${pendingRegs} menunggu · ${attendedRegs} hadir`, attention: pendingRegs > 0 },
+    { icon: UserPlus, label: "Pendaftar", value: totalRegs, sub: [regsTrend, `${pendingRegs} menunggu · ${attendedRegs} hadir`].filter(Boolean).join(" · "), attention: pendingRegs > 0 },
     { icon: Newspaper, label: "Berita", value: publishedNews, sub: `${draftNews} draf`, attention: draftNews > 0 },
     { icon: Images, label: "Galeri", value: totalAlbums, sub: `${totalPhotos} foto` },
     { icon: Briefcase, label: "Lowongan", value: openJobs, sub: `${totalApps} lamaran` },
@@ -201,7 +225,7 @@ export default async function ConsoleDashboardPage() {
       icon: UserCheck,
       label: "Membership",
       value: totalMembers,
-      sub: `${pendingMembers} menunggu · rekrutmen ${isRecruitOpen ? "dibuka" : "ditutup"}`,
+      sub: [membersTrend, `${pendingMembers} menunggu · rekrutmen ${isRecruitOpen ? "dibuka" : "ditutup"}`].filter(Boolean).join(" · "),
       attention: pendingMembers > 0,
     },
     { icon: Package, label: "Inventaris", value: totalItems, sub: `${pendingBorrow + overdueBorrow} dipinjam/terlambat`, attention: pendingBorrow + overdueBorrow > 0 },

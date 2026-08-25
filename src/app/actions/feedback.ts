@@ -38,7 +38,9 @@ async function assertAdmin() {
 
 export async function listFeedback() {
   await assertAdmin();
-  return db.select().from(feedback).orderBy(desc(feedback.createdAt));
+  // Unbounded table scan - cap at the newest entries so a long-lived deployment
+  // can't make this page (and its client-side filters) crawl.
+  return db.select().from(feedback).orderBy(desc(feedback.createdAt)).limit(200);
 }
 
 export async function updateFeedbackStatus(id: string, status: (typeof feedbackStatusEnum.enumValues)[number]) {

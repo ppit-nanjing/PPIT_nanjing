@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState, useTransition } from "react";
-import { Bug, Palette, Lightbulb, MessageCircle, Copy, Check, MapPin } from "lucide-react";
+import { Bug, Palette, Lightbulb, MessageCircle, Copy, Check, MapPin, Mail } from "lucide-react";
 import { updateFeedbackStatus } from "@/app/actions/feedback";
 
 type Category = "bug" | "design" | "feature" | "general";
@@ -133,9 +133,20 @@ export function FeedbackInbox({ initialRows }: { initialRows: FeedbackRow[] }) {
                     {new Date(f.createdAt).toLocaleString("id-ID")}
                   </span>
                 </div>
-                <button onClick={() => copyOne(f)} className="text-secondary hover:text-on-background shrink-0">
+                <button onClick={() => copyOne(f)} className="text-secondary hover:text-on-background shrink-0" title="Salin detail masukan">
                   {copiedId === f.id ? <Check size={16} /> : <Copy size={16} />}
                 </button>
+                {f.userEmail && (
+                  // mailto keeps this dependency-free; the snapshot email exists
+                  // precisely so contact survives account deletion.
+                  <a
+                    href={`mailto:${encodeURIComponent(f.userEmail)}?subject=${encodeURIComponent(`Re: masukan ${CATEGORY_META[f.category].label} di ${f.pagePath}`)}`}
+                    className="text-secondary hover:text-on-background shrink-0"
+                    title={`Balas via email ke ${f.userEmail}`}
+                  >
+                    <Mail size={16} />
+                  </a>
+                )}
               </div>
 
               <p className="text-body-md text-on-background mb-3 whitespace-pre-wrap">{f.message}</p>
