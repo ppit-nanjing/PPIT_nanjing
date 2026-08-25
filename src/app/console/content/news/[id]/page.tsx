@@ -1,8 +1,9 @@
-import { eq } from "drizzle-orm";
+import { and, count, eq } from "drizzle-orm";
 import { notFound } from "next/navigation";
 import { db } from "@/db";
-import { newsArticles } from "@/db/schema";
+import { newsArticles, users } from "@/db/schema";
 import { requireModuleAccess } from "@/lib/admin-scope";
+import { emailSenderStatus } from "@/lib/email";
 import { upsertNewsArticle } from "@/app/actions/admin-content";
 import { FileUpload } from "@/components/upload/file-upload";
 import { AIImproveButton } from "@/components/ai/ai-improve-button";
@@ -13,6 +14,11 @@ export default async function EditNewsArticlePage({ params }: { params: Promise<
   const { id } = await params;
   const [article] = await db.select().from(newsArticles).where(eq(newsArticles.id, id));
   if (!article) notFound();
+  const [{ value: subscriberCount }] = await db
+    .select({ value: count() })
+    .from(users)
+    .where(and(eq(users.emailSubscribed, true), eq(users.status, "active")));
+  const emailStatus = emailSenderStatus();
 
   return (
     <div className="px-4 py-6 sm:px-6 lg:px-8 lg:py-10 max-w-2xl">
@@ -51,6 +57,23 @@ export default async function EditNewsArticlePage({ params }: { params: Promise<
           <input type="checkbox" name="publish" defaultChecked={article.status === "published"} className="w-4 h-4" />
           Dipublikasikan
         </label>
+        {article.status === "published" ? (
+          <p className="text-label-caps text-on-surface-variant -mt-3">
+            Sudah dipublikasikan — email pengumuman sudah terkirim ke pelanggan saat pertama kali dipublikasikan, dan
+            tidak dikirim ulang lewat perubahan ini.
+          </p>
+        ) : emailStatus === "ready" ? (
+          <p className="text-label-caps text-on-surface-variant -mt-3">
+            Mempublikasikan otomatis mengirim email ke <span className="text-on-background">{subscriberCount}</span>{" "}
+            anggota yang berlangganan pengumuman.
+          </p>
+        ) : (
+          <p className="text-label-caps text-on-surface-variant -mt-3 bg-error-container/30 border border-error/40 rounded-md p-3">
+            <span className="text-on-background font-medium">Email pengumuman belum aktif</span> &mdash; {subscriberCount}{" "}
+            anggota berlangganan tapi tidak akan menerima email sampai <code>GMAIL_USER</code> +{" "}
+            <code>GMAIL_APP_PASSWORD</code> diisi di Vercel.
+          </p>
+        )}
         <button
           type="submit"
           className="self-start bg-primary-container text-on-primary text-label-caps uppercase tracking-wide px-6 py-3 rounded-md hover:bg-primary transition-colors"

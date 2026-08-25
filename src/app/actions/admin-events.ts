@@ -1,13 +1,14 @@
 "use server";
 
-import { eq, and } from "drizzle-orm";
+import { eq, and, sql } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { auth } from "@/auth";
 import { db } from "@/db";
-import { events, eventRegistrations, galleryAlbums } from "@/db/schema";
+import { events, eventRegistrations, eventQuestions, galleryAlbums } from "@/db/schema";
 import { hasModuleAccess } from "@/lib/admin-scope";
 import { createTemplatedNotification } from "@/lib/notifications";
+import { issueParticipantCertificatesCore } from "@/app/actions/committee";
 
 async function requireAdmin() {
   const session = await auth();
@@ -25,6 +26,17 @@ function slugify(title: string) {
     "-" +
     Math.random().toString(36).slice(2, 6)
   );
+}
+
+// Shared by createEvent/updateEvent so the two forms can't drift on what
+// counts as a valid fee. Blank = amount not decided yet (fine, isPaid can
+// still be true); anything present must be a non-negative whole number.
+function parseFeeCny(formData: FormData): number | null {
+  const raw = String(formData.get("feeCny") ?? "").trim();
+  if (!raw) return null;
+  const parsed = Number(raw);
+  if (!Number.isFinite(parsed) || parsed < 0) throw new Error("Biaya harus berupa angka >= 0");
+  return Math.round(parsed);
 }
 
 export async function createEvent(formData: FormData) {
@@ -60,6 +72,12 @@ export async function createEvent(formData: FormData) {
       status,
       scheduledPublishAt,
       createdBy: actorId,
+      isPaid: formData.get("isPaid") === "on",
+      feeCny: parseFeeCny(formData),
+      paymentInstructions: String(formData.get("paymentInstructions") ?? "").trim() || null,
+      alipayUid: String(formData.get("alipayUid") ?? "").trim() || null,
+      certificateForParticipants: formData.get("certificateForParticipants") === "on",
+      volunteerSignupOpen: formData.get("volunteerSignupOpen") === "on",
     })
     .returning();
 
@@ -67,7 +85,7 @@ export async function createEvent(formData: FormData) {
 }
 
 export async function updateEvent(id: string, formData: FormData) {
-  await requireAdmin();
+  const actorId = await requireAdmin();
   const title = String(formData.get("title") ?? "").trim();
   if (!title) throw new Error("Judul wajib diisi");
 
@@ -80,6 +98,10 @@ export async function updateEvent(id: string, formData: FormData) {
   // If a publish schedule is set but the admin left it as a draft, move it to
   // the 'scheduled' state so it auto-publishes when the time arrives.
   if (scheduledPublishAt && status === "draft") status = "scheduled";
+
+  const [before] = await db.select({ status: events.status }).from(events).where(eq(events.id, id));
+
+  const isPaid = formData.get("isPaid") === "on";
 
   await db
     .update(events)
@@ -98,8 +120,35 @@ export async function updateEvent(id: string, formData: FormData) {
       agenda: String(formData.get("agenda") ?? "").trim() || null,
       status,
       scheduledPublishAt,
+      isPaid,
+      feeCny: parseFeeCny(formData),
+      paymentInstructions: String(formData.get("paymentInstructions") ?? "").trim() || null,
+      alipayUid: String(formData.get("alipayUid") ?? "").trim() || null,
+      certificateForParticipants: formData.get("certificateForParticipants") === "on",
+      volunteerSignupOpen: formData.get("volunteerSignupOpen") === "on",
     })
     .where(eq(events.id, id));
+
+  // An event can go free -> paid after people already registered (fee often
+  // isn't known until a sponsor is confirmed). Anyone still "not_required"
+  // now owes money and needs to show up in the verification queue - without
+  // this they'd stay invisible forever. Only widens tracking, never narrows
+  // it: turning HTM back off does NOT revert anyone already "unpaid"/etc.
+  if (isPaid) {
+    await db
+      .update(eventRegistrations)
+      .set({ paymentStatus: "unpaid" })
+      .where(and(eq(eventRegistrations.eventId, id), eq(eventRegistrations.paymentStatus, "not_required")));
+  }
+
+  // E-sertifikat peserta otomatis: begitu acara PERTAMA kali ditandai
+  // "Selesai", semua pendaftar yang diterima langsung kebagian sertifikat
+  // (bila checkbox-nya menyala). Idempoten - menjalankan ulang tidak
+  // menggandakan; tombol manual tetap ada untuk pendaftar belakangan.
+  if (status === "completed" && before?.status !== "completed") {
+    await issueParticipantCertificatesCore(id, actorId);
+    revalidatePath("/console/work-ledger");
+  }
 
   revalidatePath(`/console/events/${id}`);
 }
@@ -110,12 +159,78 @@ export async function setEventStatus(formData: FormData) {
   const id = String(formData.get("eventId") ?? "");
   const status = String(formData.get("status") ?? "");
   if (!id || !status) throw new Error("eventId dan status wajib diisi");
-  await requireAdmin();
+  const actorId = await requireAdmin();
+  const [before] = await db.select({ status: events.status }).from(events).where(eq(events.id, id));
   await db
     .update(events)
     .set({ status: status as (typeof events.status.enumValues)[number] })
     .where(eq(events.id, id));
+  // Sama seperti updateEvent: selesai = sertifikat peserta keluar otomatis.
+  if (status === "completed" && before?.status !== "completed") {
+    await issueParticipantCertificatesCore(id, actorId);
+    revalidatePath("/console/work-ledger");
+  }
   revalidatePath("/console/events");
+}
+
+// ---------- Pertanyaan pendaftaran kustom per-acara ----------
+
+const QUESTION_TYPES = ["text", "textarea", "select", "radio", "multiselect"] as const;
+
+function parseQuestionOptions(formData: FormData, type: string): string | null {
+  const raw = String(formData.get("options") ?? "")
+    .split("\n")
+    .map((l) => l.trim())
+    .filter(Boolean)
+    .join("\n");
+  // Pilihan tanpa opsi = pertanyaan yang tidak bisa dijawab - tolak di sini,
+  // bukan saat peserta kebingungan menghadapi dropdown kosong.
+  if ((type === "select" || type === "radio" || type === "multiselect") && !raw) {
+    throw new Error("Tipe pilihan butuh minimal satu opsi (satu per baris)");
+  }
+  return raw || null;
+}
+
+/** Tambah / ubah satu pertanyaan. Ada `id` = ubah; tanpa `id` = tambah di urutan terakhir. */
+export async function saveEventQuestion(formData: FormData) {
+  await requireAdmin();
+  const eventId = String(formData.get("eventId") ?? "");
+  const label = String(formData.get("label") ?? "").trim();
+  const type = String(formData.get("type") ?? "text");
+  if (!eventId || !label) throw new Error("Acara dan label pertanyaan wajib diisi");
+  if (!QUESTION_TYPES.includes(type as (typeof QUESTION_TYPES)[number])) {
+    throw new Error("Tipe pertanyaan tidak valid");
+  }
+  const values = {
+    eventId,
+    label,
+    type: type as (typeof QUESTION_TYPES)[number],
+    options: parseQuestionOptions(formData, type),
+    required: formData.get("required") === "on",
+  };
+
+  const id = String(formData.get("id") ?? "").trim();
+  if (id) {
+    await db.update(eventQuestions).set(values).where(eq(eventQuestions.id, id));
+  } else {
+    const [{ maxOrder }] = await db
+      .select({ maxOrder: sql`coalesce(max(${eventQuestions.orderIndex}), 0)` })
+      .from(eventQuestions)
+      .where(eq(eventQuestions.eventId, eventId));
+    await db.insert(eventQuestions).values({ ...values, orderIndex: Number(maxOrder) + 1 });
+  }
+  revalidatePath(`/console/events/${eventId}`);
+}
+
+export async function deleteEventQuestion(formData: FormData) {
+  await requireAdmin();
+  const id = String(formData.get("id") ?? "");
+  const [row] = await db
+    .select({ eventId: eventQuestions.eventId })
+    .from(eventQuestions)
+    .where(eq(eventQuestions.id, id));
+  await db.delete(eventQuestions).where(eq(eventQuestions.id, id));
+  if (row) revalidatePath(`/console/events/${row.eventId}`);
 }
 
 export async function checkInRegistration(registrationId: string, eventId: string) {

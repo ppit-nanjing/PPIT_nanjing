@@ -83,6 +83,9 @@ Soal status (draft/terjadwal/terbit/dst)
 Struktur Kepanitiaan
 Bikin divisi acara (nama wajib, bisa punya sub-divisi), lalu tugaskan siapa saja (tidak harus anggota departemen tertentu) + peran + divisi. Menugaskan ulang orang yang sama di acara yang sama cuma mengganti perannya, bukan bikin baris dobel.
 
+Pertanyaan Pendaftaran
+Di halaman detail acara. Kosong = form pendaftaran standar. Tambahkan pertanyaan (Teks Pendek/Panjang, Dropdown, Pilihan, Pilih Banyak) bila acaranya butuh — mis. preferensi makanan atau ukuran kaos; centang "Wajib diisi" supaya tidak bisa dilewati. Jawabannya muncul di kolom Peserta pada Daftar Pendaftar. Menghapus pertanyaan tidak menghapus jawaban yang sudah tersimpan, cuma berhenti ditampilkan.
+
 Hapus kegiatan: album galeri terkait acara ini ikut terhapus, pendaftaran ikut terhapus otomatis.`,
   },
   {
@@ -93,7 +96,7 @@ Hapus kegiatan: album galeri terkait acara ini ikut terhapus, pendaftaran ikut t
 
 Tugaskan Panitia
 - Acara, Pengurus (siapa saja): wajib pilih.
-- Peran: pilih dari daftar tetap (ketua, wakil, sekretaris, bendahara, humas, acara, logistik, dokumentasi, anggota).
+- Peran: ketua, wakil, sekretaris, bendahara, supervisor, anggota. Nama seperti humas/acara/logistik itu DIVISI — buat divisinya lewat halaman Kegiatan, jangan dipilih sebagai peran.
 - Catatan tugas: opsional.
 Menugaskan orang yang sama di acara yang sama cuma mengganti perannya, tidak bikin baris dobel.
 
@@ -101,14 +104,14 @@ Beban Kepanitiaan
 Daftar baca-saja. Yang sudah jadi panitia di 3 acara atau lebih ditandai peringatan (bukan larangan, cuma pengingat beban). Tombol "Lepas" hanya melepas satu penugasan itu.
 
 Verifikasi Pembayaran
-Cuma muncul untuk acara yang punya field "Biaya" terisi. Pilih status: Belum Perlu / Belum Bayar / Sudah Kirim Bukti / Terverifikasi / Ditolak. Set ke "Terverifikasi" untuk mencatat siapa & kapan yang memverifikasi.
+Bagian ini hanya terlihat oleh akun ber-scope ORGANISASI — catatan finansial sengaja tidak dibuka ke semua admin acara, jadi bendahara acara harus punya scope itu dulu. Daftar di sini cuma penunjuk lintas-acara; verifikasi sesungguhnya ada di halaman detail Kegiatannya (konteks biaya + kolom catatan ada di sana). Sebelum menekan Terverifikasi, cocokkan nominal, nama pengirim, dan waktu transfer dengan mutasi Alipay/rekening — bukti diunggah sendiri oleh peserta, belum tentu benar.
 
 Sertifikat
 - Penerima: wajib.
 - Acara: opsional.
 - Jenis: peserta/panitia/pemateri/lainnya.
 - Judul: wajib, teks bebas (mis. "Sertifikat Panitia Divisi Acara").
-- Tautan berkas: opsional, harus link Google Drive — upload langsung belum didukung di sini.
+- Tautan berkas: opsional, boleh link Google Drive — upload langsung belum didukung di sini. Link bisa diisi/diganti belakangan langsung dari daftar di bawah (kolom tautan → Simpan), tanpa perlu hapus-ulang.
 Hapus sertifikat langsung permanen, tidak ada konfirmasi.
 
 Terbit sertifikat massal per-divisi/per-acara dilakukan dari halaman detail Kegiatan, bukan dari sini — dan aman diklik ulang karena yang sudah punya sertifikat dilewati.`,

@@ -2,7 +2,7 @@ import { eq, and, ne, count, desc } from "drizzle-orm";
 import { notFound } from "next/navigation";
 import { auth } from "@/auth";
 import { db } from "@/db";
-import { events, eventRegistrations, galleryAlbums, galleryPhotos, regionalBranches } from "@/db/schema";
+import { events, eventRegistrations, eventQuestions, eventDivisions, galleryAlbums, galleryPhotos, regionalBranches } from "@/db/schema";
 import { NON_STUDENT_BRANCH } from "@/lib/membership-status";
 import { hasCompletedSensus } from "@/lib/sensus-gate";
 import { SiteNav } from "@/components/site-nav";
@@ -15,11 +15,13 @@ import { CalendarDays, MapPin, Users, Ticket, ArrowLeft, ListChecks, Images, Arr
 import Image from "next/image";
 import { registerForEvent } from "@/app/actions/events";
 import Link from "next/link";
+import { applyAsVolunteer } from "@/app/actions/volunteers";
 import { getT } from "@/lib/i18n/server";
 import { INTL_LOCALE } from "@/lib/i18n/config";
 
-export default async function EventDetailPage({ params }: { params: Promise<{ slug: string }> }) {
+export default async function EventDetailPage({ params, searchParams }: { params: Promise<{ slug: string }>; searchParams: Promise<{ volunteer?: string }> }) {
   const { slug } = await params;
+  const { volunteer: volunteerFlag } = await searchParams;
   const { t, locale } = await getT();
   const [event] = await db.select().from(events).where(eq(events.slug, slug));
   if (!event) notFound();
@@ -69,6 +71,28 @@ export default async function EventDetailPage({ params }: { params: Promise<{ sl
   const deadlinePassed = event.registrationDeadline ? new Date(event.registrationDeadline) < now : false;
   const isFull = event.capacity != null && registeredCount >= event.capacity;
   const canRegister = event.status === "published" && !isFull && !deadlinePassed;
+
+  // Pertanyaan kustom hanya relevan bagi yang benar-benar akan melihat form.
+  const questions =
+    session?.user?.id && !alreadyRegistered && canRegister && !event.requiresSensus
+      ? await db
+          .select()
+          .from(eventQuestions)
+          .where(eq(eventQuestions.eventId, event.id))
+          .orderBy(eventQuestions.orderIndex, eventQuestions.id)
+      : [];
+
+  // Pendaftaran volunteer terbuka: tampilkan formnya beserta pilihan divisinya.
+  const volunteerDivisions = event.volunteerSignupOpen
+    ? await db
+        .select({ id: eventDivisions.id, name: eventDivisions.name, parent: eventDivisions.parentDivisionId })
+        .from(eventDivisions)
+        .where(eq(eventDivisions.eventId, event.id))
+        .orderBy(eventDivisions.orderIndex)
+    : [];
+  const volunteerOptions = volunteerDivisions.map((d) =>
+    d.parent ? `— ${volunteerDivisions.find((p) => p.id === d.parent)?.name ?? ""} › ${d.name}` : d.name
+  );
 
   const [album] = await db.select().from(galleryAlbums).where(eq(galleryAlbums.eventId, event.id));
   const photos = album
@@ -317,6 +341,46 @@ export default async function EventDetailPage({ params }: { params: Promise<{ sl
                             <span className="text-xs text-on-surface-variant">{t("events.branchHint")}</span>
                           </label>
                         )}
+                        {questions.map((q) => {
+                          const options = (q.options ?? "").split("\n").map((l) => l.trim()).filter(Boolean);
+                          const fieldClass =
+                            "bg-soft-gray rounded-md p-3 text-body-md focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-container";
+                          return (
+                            <fieldset key={q.id} className="flex flex-col gap-2 text-left border-0 p-0 m-0">
+                              <legend className="text-label-caps uppercase tracking-wide text-on-surface-variant p-0">
+                                {q.label}
+                                {q.required && <span className="text-error" aria-hidden="true"> *</span>}
+                              </legend>
+                              {q.type === "text" && (
+                                <input name={q.id} required={q.required} className={fieldClass} />
+                              )}
+                              {q.type === "textarea" && (
+                                <textarea name={q.id} required={q.required} rows={3} className={`${fieldClass} resize-none`} />
+                              )}
+                              {q.type === "select" && (
+                                <select name={q.id} required={q.required} defaultValue="" className={fieldClass}>
+                                  <option value="" disabled>—</option>
+                                  {options.map((o) => (
+                                    <option key={o} value={o}>{o}</option>
+                                  ))}
+                                </select>
+                              )}
+                              {(q.type === "radio" || q.type === "multiselect") &&
+                                options.map((o) => (
+                                  <label key={o} className="flex items-center gap-2 bg-soft-gray rounded-md p-2.5 text-body-md cursor-pointer">
+                                    <input
+                                      type={q.type === "radio" ? "radio" : "checkbox"}
+                                      name={q.id}
+                                      value={o}
+                                      required={q.required && q.type === "radio"}
+                                      className="h-4 w-4 accent-[var(--color-primary-container)]"
+                                    />
+                                    {o}
+                                  </label>
+                                ))}
+                            </fieldset>
+                          );
+                        })}
                         <button
                           type="submit"
                           className="w-full inline-flex items-center justify-center gap-2 bg-primary-container text-on-primary text-label-caps uppercase tracking-wide px-6 py-4 rounded-md hover:bg-primary transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-container focus-visible:ring-offset-2 focus-visible:ring-offset-surface-container-low"
@@ -348,6 +412,41 @@ export default async function EventDetailPage({ params }: { params: Promise<{ sl
                     </p>
                   )}
                 </div>
+                {event.volunteerSignupOpen && event.status === "published" && (
+                  <div className="border-t border-outline-variant pt-5">
+                    {volunteerFlag === "sent" ? (
+                      <p className="text-body-md text-on-background bg-surface-container-low rounded-md px-4 py-3">
+                        🎉 Lamaran volunteer terkirim! Panitia akan menghubungimu lewat email.
+                      </p>
+                    ) : (
+                      <>
+                        <p className="text-label-caps uppercase tracking-wide text-primary-container mb-1">Jadi Volunteer</p>
+                        <p className="text-body-sm text-on-surface-variant mb-3">
+                          Butuh orang? Daftarkan dirimu membantu acara ini — tidak harus anggota PPIT.
+                        </p>
+                        <form action={applyAsVolunteer} className="flex flex-col gap-2">
+                          <input type="hidden" name="eventId" value={event.id} />
+                          <input type="hidden" name="slug" value={slug} />
+                          <input name="fullName" required placeholder="Nama lengkap *" aria-label="Nama lengkap" className="bg-soft-gray rounded-md p-2.5 text-body-md" />
+                          <input name="email" type="email" required placeholder="Email * (untuk akun portal)" aria-label="Email" className="bg-soft-gray rounded-md p-2.5 text-body-md" />
+                          <input name="whatsapp" placeholder="WhatsApp / WeChat (opsional)" aria-label="WhatsApp atau WeChat" className="bg-soft-gray rounded-md p-2.5 text-body-md" />
+                          <select name="divisionId" defaultValue="" aria-label="Divisi yang diminati" className="bg-soft-gray rounded-md p-2.5 text-body-md">
+                            <option value="">Divisi yang diminati — bebas</option>
+                            {volunteerOptions.map((label, i) => (
+                              <option key={volunteerDivisions[i].id} value={volunteerDivisions[i].id}>{label}</option>
+                            ))}
+                          </select>
+                          <button
+                            type="submit"
+                            className="w-full inline-flex items-center justify-center gap-2 bg-secondary-container text-on-secondary-container text-label-caps uppercase tracking-wide px-6 py-3 rounded-md hover:bg-secondary transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-container"
+                          >
+                            Kirim Lamaran Volunteer
+                          </button>
+                        </form>
+                      </>
+                    )}
+                  </div>
+                )}
               </div>
             </Reveal>
           </div>

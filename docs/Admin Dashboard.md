@@ -16,7 +16,7 @@ Dari analisis seluruh 29 layar admin, sidebar terbagi ke modul-modul berikut:
 
 - [User & Role Management](./User%20&%20Role%20Management.md)
 - [Organization Management](./Organization%20Management.md)
-- [Event Management](./Event%20Management.md)
+- [Event Management](./Event%20Management.md) — termasuk Work Ledger (`/console/work-ledger`) untuk kepanitiaan per-acara, verifikasi pembayaran, dan sertifikat
 - [Inventory Management](./Inventory%20Management.md)
 - [Reports & Analytics](./Reports%20&%20Analytics.md)
 - [Documentation & Help Center](./Documentation%20&%20Help%20Center.md)

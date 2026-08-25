@@ -376,9 +376,30 @@ export const events = pgTable("events", {
   scheduledPublishAt: timestamp("scheduled_publish_at"),
   departmentId: uuid("department_id").references(() => departments.id),
   createdBy: uuid("created_by").references(() => users.id),
-  // null / 0 = acara gratis. Kalau diisi, formulir pendaftaran meminta bukti bayar.
+  // The HTM ("berbayar") toggle itself - kept separate from feeCny because the
+  // fee is often unknown at creation (depends on whether a sponsor comes
+  // through): an admin can mark an event paid and fill the amount in later.
+  // Every "is this a paid event" check in the codebase reads this flag, never
+  // feeCny directly - feeCny being null just means "amount not decided yet".
+  isPaid: boolean("is_paid").notNull().default(false),
   feeCny: integer("fee_cny"),
   paymentInstructions: text("payment_instructions"),
+  // Alipay numeric member ID (2088...) of this event's bendahara, used to build
+  // an alipays:// deep link that pre-fills the fee + a memo on the ticket page
+  // (see src/lib/alipay-deeplink.ts). Unofficial/reverse-engineered scheme, not
+  // a real payment API - still 100% manual verification, just less typing for
+  // the participant. Null = no auto-fill, only the free-text instructions show.
+  alipayUid: text("alipay_uid"),
+  // Sertifikat kehadiran (peserta): hampir semua acara memberikannya ke SEMUA
+  // peserta, jadi default NYALA dan checkbox di form acara yang bisa
+  // mematikannya (mis. lomba tanpa sertifikat partisipasi). Flag ini cuma
+  // saklar ketersediaannya - penerbitan tetap manual lewat tombol "Terbitkan
+  // sertifikat peserta", bukan otomatis saat acara selesai.
+  certificateForParticipants: boolean("certificate_for_participants").notNull().default(true),
+  // Buka pendaftaran VOLUNTEER publik: orang luar PPIT bisa melamar sendiri di
+  // halaman acara tanpa akun; admin yang menerima, barulah dibuatkan akun
+  // undangan + ditugaskan ke divisinya.
+  volunteerSignupOpen: boolean("volunteer_signup_open").notNull().default(false),
 });
 
 // `feeCny` null = acara gratis; > 0 = peserta perlu membayar dan mengunggah bukti.
@@ -407,8 +428,64 @@ export const eventRegistrations = pgTable(
     paymentNote: text("payment_note"),
     paymentVerifiedAt: timestamp("payment_verified_at"),
     paymentVerifiedBy: uuid("payment_verified_by").references((): AnyPgColumn => users.id),
+    // Jawaban pertanyaan kustom acara (event_questions): { [questionId]: string }.
+    // Multiselect digabung koma. JSON, bukan tabel anak, karena bentuknya bebas
+    // per acara dan selalu dibaca bersama registrasinya; pertanyaan yang sudah
+    // dihapus menyisakan kunci mati di sini - tidak masalah, diabaikan saat render.
+    answersJson: jsonb("answers_json").$type<Record<string, string>>().default({}),
   },
   (t) => [uniqueIndex("event_user_unique").on(t.eventId, t.userId)]
+);
+
+// Pertanyaan tambahan pada form pendaftaran SATU acara. Tidak semua acara
+// butuh - kosong berarti form publik persis seperti dulu (cuma cabang bila
+// perlu). Tipe dibatasi lima yang benar-benar terpakai untuk acara, bukan
+// seluruh 18 tipe form keanggotaan yang penuh fitur kuis/grid.
+export const eventQuestionTypeEnum = pgEnum("event_question_type", [
+  "text",
+  "textarea",
+  "select",
+  "radio",
+  "multiselect",
+]);
+
+export const eventQuestions = pgTable("event_questions", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  eventId: uuid("event_id").notNull().references(() => events.id, { onDelete: "cascade" }),
+  label: text("label").notNull(),
+  type: eventQuestionTypeEnum("type").notNull().default("text"),
+  // Pilihan untuk select/radio/multiselect, satu opsi per baris.
+  options: text("options"),
+  required: boolean("required").notNull().default(false),
+  orderIndex: integer("order_index").notNull().default(0),
+});
+
+// Lamaran volunteer untuk SATU acara, dari orang yang BELUM tentu punya akun
+// (justru itu intinya - kekurangan orang biasanya dikejar ke luar PPIT).
+// Email wajib karena itulah kunci pembuatan akun undangan saat diterima.
+export const volunteerStatusEnum = pgEnum("volunteer_status", ["pending", "approved", "rejected"]);
+
+export const eventVolunteers = pgTable(
+  "event_volunteers",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    eventId: uuid("event_id").notNull().references(() => events.id, { onDelete: "cascade" }),
+    fullName: text("full_name").notNull(),
+    email: text("email").notNull(),
+    whatsapp: text("whatsapp"),
+    // Divisi yang diminati saat melamar; nullable = "bebas". Set null saat
+    // divisinya dihapus - lamarannya tetap ada, tinggal dipindah manual.
+    divisionId: uuid("division_id").references((): AnyPgColumn => eventDivisions.id, { onDelete: "set null" }),
+    note: text("note"),
+    status: volunteerStatusEnum("status").notNull().default("pending"),
+    // Terisi saat lamaran disetujui: akun (baru invited / sudah ada) yang
+    // menerima penugasan kepanitiaannya.
+    assignedUserId: uuid("assigned_user_id").references((): AnyPgColumn => users.id, { onDelete: "set null" }),
+    createdAt: timestamp("created_at").notNull().defaultNow(),
+  },
+  // Satu email satu lamaran per acara - menekan kirim dua kali tidak
+  // menggandakan baris.
+  (t) => [uniqueIndex("event_volunteer_unique").on(t.eventId, t.email)]
 );
 
 // ---------- 4. Content ----------
@@ -684,7 +761,11 @@ export const externalLoans = pgTable("external_loans", {
   loanedAt: timestamp("loaned_at").notNull().defaultNow(),
   expectedReturnAt: date("expected_return_at"),
   returnedAt: timestamp("returned_at"),
-  recordedBy: uuid("recorded_by").notNull().references(() => users.id),
+  // Nullable (unlike a normal owning-row userId) because this is a "who did
+  // this" audit reference like authorId/approvedBy/reviewedBy elsewhere in
+  // this file, not the row's owner - deleteUser() (admin-users.ts) nulls it
+  // out before deleting a user, same as those.
+  recordedBy: uuid("recorded_by").references(() => users.id),
   status: externalLoanStatusEnum("status").notNull().default("active"),
   notes: text("notes"),
 });

@@ -90,14 +90,37 @@ Data sensus/pendataan detail mahasiswa — terpisah dari `USER` dasar karena for
 | cover_image_url | text | |
 | category | text | mis. "Cultural", "Academic" |
 | location | text | |
+| agenda | text nullable | rundown bebas, satu poin per baris |
 | start_at, end_at, registration_deadline | timestamp | |
 | capacity | int nullable | |
 | status | enum | `draft`, `published`, `registration_closed`, `completed`, `cancelled` |
+| scheduled_publish_at | timestamp nullable | publish otomatis begitu waktu ini terlewati |
 | department_id | uuid FK → DEPARTMENT nullable | Panitia penyelenggara |
 | created_by | uuid FK → USER | |
+| is_paid | boolean | penanda acara berbayar (HTM), dipisah dari nominalnya karena nominal sering baru pasti belakangan (menunggu sponsor) |
+| fee_cny | int nullable | null = gratis / belum ditetapkan |
+| payment_instructions | text nullable | instruksi transfer untuk peserta |
+| alipay_uid | text nullable | UID Alipay bendahara acara untuk deep-link prefill |
+| certificate_for_participants | boolean, default `true` | saklar "semua peserta dapat e-certificate"; penerbitannya tetap manual lewat tombol Terbitkan Sertifikat Peserta |
+| volunteer_signup_open | boolean, default `false` | buka form lamaran volunteer publik di halaman acara |
+
+### EVENT_VOLUNTEER
+Lamaran volunteer satu acara dari orang yang belum tentu punya akun. `id`, `event_id` FK (cascade), `full_name`, `email` (unik per acara — kunci pembuatan akun), `whatsapp` nullable, `division_id` FK → EVENT_DIVISION nullable (*set null* saat divisi dihapus; null = bebas), `note`, `status` enum (`pending`/`approved`/`rejected`), `assigned_user_id` FK → USER nullable (terisi saat diterima: akun invited dibuatkan bila belum ada + penugasan kepanitiaan ditulis), `created_at`.
 
 ### EVENT_REGISTRATION
-`id`, `event_id` FK, `user_id` FK, `status` (enum: `pending`, `confirmed`, `attended`, `cancelled`), `qr_code_token` (unik, untuk check-in — sumber: layar *Event Registration Success (QR Ticket)*), `registered_at`, `checked_in_at` nullable.
+`id`, `event_id` FK, `user_id` FK (unik per pasangan event+user), `status` (enum: `pending`, `confirmed`, `attended`, `cancelled`), `qr_code_token` (unik, untuk check-in — sumber: layar *Event Registration Success (QR Ticket)*), `registered_at`, `checked_in_at` nullable, `branch` (jawaban cabang sekali-pakai khusus acara ini, tidak disalin ke profil), `answers_json` (jawaban pertanyaan kustom `{ [questionId]: string }`; kunci pertanyaan yang dihapus dibiarkan mati). Pembayaran manual per-orangan: `payment_status` (`not_required`, `unpaid`, `submitted`, `verified`, `rejected`), `payment_proof_url` (bukti transfer yang dikirim peserta), `payment_note`, `payment_verified_at`, `payment_verified_by` FK → USER.
+
+### EVENT_QUESTION
+Pertanyaan tambahan form pendaftaran satu acara — kosong berarti form standar. `id`, `event_id` FK (cascade), `label`, `type` enum (`text`, `textarea`, `select`, `radio`, `multiselect`), `options` (satu opsi per baris, wajib untuk tipe pilihan), `required`, `order_index`.
+
+### EVENT_DIVISION
+Struktur divisi kepanitiaan satu acara. `id`, `event_id` FK, `parent_division_id` FK → dirinya sendiri (bertingkat bebas), `name` (**teks bebas** — tiap acara boleh punya susunan sendiri, bukan enum), `quota` (target jumlah orang, nullable), `job_description` (satu poin per baris), `order_index`.
+
+### EVENT_COMMITTEE
+Penugasan panitia **per acara** — sengaja terpisah dari DEPARTMENT_MEMBER karena jabatan panitia tidak mewarisi struktur kabinet (bendahara acara ≠ bendahara kabinet). `id`, `event_id` FK, `user_id` FK (unik per pasangan event+user; volunteer eksternal masuk lewat undangan akun dulu), `division_id` FK nullable (null = panitia inti tanpa divisi), `role` enum (`ketua`, `wakil`, `sekretaris`, `bendahara`, `supervisor`, `anggota`; nilai lama `humas`/`acara`/`logistik`/`dokumentasi` tinggal kompatibilitas — nama divisi kini teks bebas di EVENT_DIVISION), `note` (catatan tugas spesifik, mis. "PJ konsumsi"), `assigned_at`.
+
+### CERTIFICATE
+`id`, `user_id` FK (pemilik), `event_id` FK nullable (`set null` saat event dihapus), `kind` enum (`peserta`/`panitia`/`pemateri`/`lainnya` — sertifikat juara dicatat lewat judul bebas), `title`, `file_url` (file dibuat/diunggah di luar aplikasi, boleh tautan Drive), `issued_at`, `issued_by` FK → USER. Penerbitan **manual oleh admin**, bukan otomatis untuk semua peserta.
 
 ---
 

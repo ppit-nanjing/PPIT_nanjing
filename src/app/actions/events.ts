@@ -5,7 +5,7 @@ import { eq, and } from "drizzle-orm";
 import { redirect } from "next/navigation";
 import { auth } from "@/auth";
 import { db } from "@/db";
-import { events, eventRegistrations, regionalBranches } from "@/db/schema";
+import { events, eventRegistrations, eventQuestions, regionalBranches } from "@/db/schema";
 import { hasCompletedSensus } from "@/lib/sensus-gate";
 import { NON_STUDENT_BRANCH } from "@/lib/membership-status";
 import { createTemplatedNotification } from "@/lib/notifications";
@@ -53,12 +53,39 @@ export async function registerForEvent(eventId: string, slug: string, formData?:
     // berwenang - menyalinnya ke sini cuma bikin dua nilai yang bisa berselisih.
     const branch = sensusComplete ? null : await normalizeRegistrationBranch(formData?.get("branch") ?? null);
 
+    // Pertanyaan kustom acara: kumpulkan jawaban dari form, wajibkan yang
+    // ditandai required. Pilihan tanpa opsi / tipe aneh diabaikan - admin yang
+    // salah konfigurasi tidak boleh membekukan pendaftaran orang lain.
+    const questions = await db
+      .select()
+      .from(eventQuestions)
+      .where(eq(eventQuestions.eventId, eventId))
+      .orderBy(eventQuestions.orderIndex, eventQuestions.id);
+    const answers: Record<string, string> = {};
+    for (const q of questions) {
+      if (q.type === "multiselect") {
+        const picked = formData
+          ?.getAll(q.id)
+          .map((v) => String(v).trim())
+          .filter(Boolean) ?? [];
+        if (picked.length > 0) answers[q.id] = picked.join(", ");
+        continue;
+      }
+      const value = String(formData?.get(q.id) ?? "").trim();
+      if (value) answers[q.id] = value;
+    }
+    for (const q of questions) {
+      if (q.required && !answers[q.id]) redirect(`/events/${slug}`);
+    }
+
     await db.insert(eventRegistrations).values({
       eventId,
       userId: session.user.id,
       status: "confirmed",
       qrCodeToken: randomUUID(),
       branch,
+      paymentStatus: event.isPaid ? "unpaid" : "not_required",
+      answersJson: answers,
     });
     // In-app confirmation for the member who just registered.
     await createTemplatedNotification({

@@ -1,4 +1,8 @@
+import { and, count, eq } from "drizzle-orm";
+import { db } from "@/db";
+import { users } from "@/db/schema";
 import { requireModuleAccess } from "@/lib/admin-scope";
+import { emailSenderStatus } from "@/lib/email";
 import { upsertNewsArticle } from "@/app/actions/admin-content";
 import { FileUpload } from "@/components/upload/file-upload";
 import { AIImproveButton } from "@/components/ai/ai-improve-button";
@@ -9,6 +13,11 @@ import Link from "next/link";
 
 export default async function NewNewsArticlePage() {
   await requireModuleAccess("content");
+  const [{ value: subscriberCount }] = await db
+    .select({ value: count() })
+    .from(users)
+    .where(and(eq(users.emailSubscribed, true), eq(users.status, "active")));
+  const emailStatus = emailSenderStatus();
 
   return (
     <div className="px-4 py-6 sm:px-6 lg:px-8 lg:py-10 max-w-2xl">
@@ -37,6 +46,18 @@ export default async function NewNewsArticlePage() {
           <input type="checkbox" name="publish" className="w-4 h-4" />
           Publikasikan sekarang (jika tidak dicentang, tersimpan sebagai draf)
         </label>
+        {emailStatus === "ready" ? (
+          <p className="text-label-caps text-on-surface-variant -mt-3">
+            Mempublikasikan otomatis mengirim email ke <span className="text-on-background">{subscriberCount}</span>{" "}
+            anggota yang berlangganan pengumuman.
+          </p>
+        ) : (
+          <p className="text-label-caps text-on-surface-variant -mt-3 bg-error-container/30 border border-error/40 rounded-md p-3">
+            <span className="text-on-background font-medium">Email pengumuman belum aktif</span> &mdash; {subscriberCount}{" "}
+            anggota berlangganan tapi tidak akan menerima email sampai <code>GMAIL_USER</code> +{" "}
+            <code>GMAIL_APP_PASSWORD</code> diisi di Vercel.
+          </p>
+        )}
         <button
           type="submit"
           className="self-start bg-primary-container text-on-primary text-label-caps uppercase tracking-wide px-6 py-3 rounded-md hover:bg-primary transition-colors"

@@ -1,22 +1,33 @@
-import { and, eq, desc } from "drizzle-orm";
+import { eq, desc } from "drizzle-orm";
 import { notFound } from "next/navigation";
 import { db } from "@/db";
-import { certificates, events, eventRegistrations, sensusProfiles, users } from "@/db/schema";
+import { certificates, events, eventDivisions, eventQuestions, eventRegistrations, eventVolunteers, sensusProfiles, users } from "@/db/schema";
 import { MEMBERSHIP_LABEL, effectiveBranch, membershipStatus } from "@/lib/membership-status";
-import { updateEvent } from "@/app/actions/admin-events";
+import { updateEvent, saveEventQuestion, deleteEventQuestion } from "@/app/actions/admin-events";
+import { setVolunteerStatus } from "@/app/actions/volunteers";
 import { publishDueEvents } from "@/lib/publish-events";
 import { DeleteEventButton } from "@/components/console/delete-event-button";
 import { RegistrationList } from "@/components/console/registration-list";
 import { EventCommitteeStructure } from "@/components/console/event-committee-structure";
-import { listEventDivisions } from "@/app/actions/committee";
-import { requireModuleAccess } from "@/lib/admin-scope";
+import { listEventDivisions, updatePaymentStatus, issueParticipantCertificates } from "@/app/actions/committee";
+import { requireModuleAccess, hasModuleAccess } from "@/lib/admin-scope";
 import { ImageUploadCropper } from "@/components/upload/image-upload-cropper";
 import { AIImproveButton } from "@/components/ai/ai-improve-button";
 import { AIReviewButton } from "@/components/ai/ai-review-popup";
 import { CollapsibleSection } from "@/components/console/collapsible-section";
+import { HtmFields } from "@/components/console/htm-fields";
+import { PAYMENT_STATUS_LABEL } from "@/lib/payment-status-labels";
+
+const QUESTION_TYPE_LABELS: Record<string, string> = {
+  text: "Teks Pendek",
+  textarea: "Teks Panjang",
+  select: "Dropdown",
+  radio: "Pilihan (radio)",
+  multiselect: "Pilih Banyak (centang)",
+};
 
 export default async function ConsoleEventDetailPage({ params }: { params: Promise<{ id: string }> }) {
-  await requireModuleAccess("events");
+  const session = await requireModuleAccess("events");
   const { id } = await params;
   await publishDueEvents();
   const [event] = await db.select().from(events).where(eq(events.id, id));
@@ -42,16 +53,61 @@ export default async function ConsoleEventDetailPage({ params }: { params: Promi
   // bisa ditugaskan. Kandidatnya SEMUA akun, bukan cuma anggota departemen:
   // kepanitiaan acara memang tidak terikat jabatan struktural.
   const { divisions, members: committee } = await listEventDivisions(id);
+  const questions = await db
+    .select()
+    .from(eventQuestions)
+    .where(eq(eventQuestions.eventId, id))
+    .orderBy(eventQuestions.orderIndex, eventQuestions.id);
+  const volunteerApps = await db
+    .select({
+      app: eventVolunteers,
+      divisionName: eventDivisions.name,
+      accountName: users.name,
+    })
+    .from(eventVolunteers)
+    .leftJoin(eventDivisions, eq(eventVolunteers.divisionId, eventDivisions.id))
+    .leftJoin(users, eq(eventVolunteers.assignedUserId, users.id))
+    .where(eq(eventVolunteers.eventId, id))
+    .orderBy(desc(eventVolunteers.createdAt));
+  const pendingVolunteers = volunteerApps.filter((v) => v.app.status === "pending");
   const candidates = await db
     .select({ id: users.id, name: users.name, email: users.email })
     .from(users)
     .orderBy(users.name);
   const issuedCerts = await db
-    .select({ userId: certificates.userId })
+    .select({ userId: certificates.userId, kind: certificates.kind })
     .from(certificates)
-    .where(and(eq(certificates.eventId, id), eq(certificates.kind, "panitia")));
+    .where(eq(certificates.eventId, id));
+  const committeeCertUserIds = issuedCerts.filter((c) => c.kind === "panitia").map((c) => c.userId);
+  const participantCertCount = issuedCerts.filter((c) => c.kind === "peserta").length;
+
+  // Payment verification is financial data - gated on "organization", not the
+  // ordinary "events" scope everyone with events access already has. Derived
+  // from `registrations` (already fetched above) instead of a second query;
+  // only rendering is gated, so nothing sensitive reaches an unauthorized
+  // viewer's page even though it briefly exists in server memory here.
+  const canVerifyPayments = hasModuleAccess(session.user.adminScope, "organization");
+  const pendingPayments = canVerifyPayments
+    ? registrations
+        .filter((r) => r.reg.paymentStatus !== "not_required")
+        .map((r) => ({
+          id: r.reg.id,
+          status: r.reg.paymentStatus,
+          proofUrl: r.reg.paymentProofUrl,
+          note: r.reg.paymentNote,
+          registeredAt: r.reg.registeredAt,
+          name: r.userName,
+          email: r.userEmail,
+        }))
+    : [];
 
   const attended = registrations.filter((r) => r.reg.status === "attended").length;
+  // Berhak sertifikat kehadiran = pendaftar yang diterima: confirmed maupun
+  // attended (pending belum diterima, cancelled batal). Harus sinkron dengan
+  // aturan di issueParticipantCertificates supaya angkanya tidak menipu.
+  const eligible = registrations.filter(
+    (r) => r.reg.status === "confirmed" || r.reg.status === "attended"
+  ).length;
 
   return (
     <div className="px-4 py-6 sm:px-6 lg:px-8 lg:py-10 max-w-3xl">
@@ -87,6 +143,20 @@ export default async function ConsoleEventDetailPage({ params }: { params: Promi
               <input type="checkbox" name="requiresSensus" defaultChecked={event.requiresSensus} className="h-4 w-4 accent-[var(--color-primary-container)]" />
               Hanya untuk peserta yang sudah lengkap mengisi sensus (mahasiswa Indo di China)
             </label>
+            <label className="flex items-center gap-2 bg-soft-gray rounded-md p-3 text-body-md cursor-pointer">
+              <input type="checkbox" name="certificateForParticipants" defaultChecked={event.certificateForParticipants} className="h-4 w-4 accent-[var(--color-primary-container)]" />
+              Peserta mendapat e-sertifikat kehadiran
+            </label>
+            <label className="flex items-center gap-2 bg-soft-gray rounded-md p-3 text-body-md cursor-pointer">
+              <input type="checkbox" name="volunteerSignupOpen" defaultChecked={event.volunteerSignupOpen} className="h-4 w-4 accent-[var(--color-primary-container)]" />
+              Buka pendaftaran volunteer publik (orang luar bisa melamar di halaman acara)
+            </label>
+          <HtmFields
+            defaultIsPaid={event.isPaid}
+            defaultFeeCny={event.feeCny}
+            defaultInstructions={event.paymentInstructions}
+            defaultAlipayUid={event.alipayUid}
+          />
           <ImageUploadCropper
             name="coverImageUrl"
             folder="events"
@@ -174,6 +244,187 @@ export default async function ConsoleEventDetailPage({ params }: { params: Promi
       </details>
 
       <CollapsibleSection
+        title="Pertanyaan Pendaftaran"
+        description={questions.length > 0 ? `${questions.length} pertanyaan` : "tidak ada — form standar"}
+      >
+        <p className="text-body-md text-on-surface-variant mb-4 max-w-2xl">
+          Kosong = pendaftar cuma isi form standar. Tambahkan pertanyaan di bawah bila acara ini butuh
+          (mis. preferensi makanan, ukuran kaos); pertanyaannya muncul di form pendaftaran publik dan
+          jawabannya tampil di Daftar Pendaftar.
+        </p>
+        <div className="flex flex-col gap-3">
+          {questions.map((q, i) => (
+            <form
+              key={q.id}
+              action={saveEventQuestion}
+              className="bg-surface-container-lowest border border-outline-variant rounded-lg p-4 flex flex-col gap-3"
+            >
+              <input type="hidden" name="id" value={q.id} />
+              <input type="hidden" name="eventId" value={id} />
+              <div className="grid grid-cols-1 sm:grid-cols-[1fr_auto] gap-3">
+                <label className="flex flex-col gap-1">
+                  <span className="text-label-caps uppercase tracking-wide text-on-surface-variant">
+                    Pertanyaan {i + 1}
+                  </span>
+                  <input name="label" defaultValue={q.label} required className="bg-soft-gray rounded-md p-2.5 text-body-md" />
+                </label>
+                <label className="flex flex-col gap-1">
+                  <span className="text-label-caps uppercase tracking-wide text-on-surface-variant">Tipe</span>
+                  <select name="type" defaultValue={q.type} className="bg-soft-gray rounded-md p-2.5 text-body-md">
+                    {Object.entries(QUESTION_TYPE_LABELS).map(([value, lbl]) => (
+                      <option key={value} value={value}>{lbl}</option>
+                    ))}
+                  </select>
+                </label>
+              </div>
+              <label className="flex flex-col gap-1">
+                <span className="text-label-caps uppercase tracking-wide text-on-surface-variant">
+                  Opsi (satu per baris — untuk Dropdown / Pilihan / Pilih Banyak)
+                </span>
+                <textarea
+                  name="options"
+                  defaultValue={q.options ?? ""}
+                  rows={2}
+                  placeholder={"Vegetarian\nHalal saja\nBiasa"}
+                  className="bg-soft-gray rounded-md p-2.5 text-body-md resize-none"
+                />
+              </label>
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <label className="flex items-center gap-2 text-body-md cursor-pointer">
+                  <input type="checkbox" name="required" defaultChecked={q.required} className="h-4 w-4 accent-[var(--color-primary-container)]" />
+                  Wajib diisi
+                </label>
+                <div className="flex items-center gap-2">
+                  <button
+                    type="submit"
+                    className="text-label-caps uppercase tracking-wide border border-outline-variant px-3 py-1.5 rounded-md hover:bg-surface-container-low transition-colors"
+                  >
+                    Simpan
+                  </button>
+                  <button
+                    type="submit"
+                    formAction={deleteEventQuestion}
+                    className="text-label-caps uppercase tracking-wide text-error hover:bg-error-container/30 px-3 py-1.5 rounded-md"
+                  >
+                    Hapus
+                  </button>
+                </div>
+              </div>
+            </form>
+          ))}
+        </div>
+        <form action={saveEventQuestion} className="mt-4 bg-surface-container-low border border-outline-variant rounded-lg p-4 flex flex-col gap-3">
+          <input type="hidden" name="eventId" value={id} />
+          <p className="text-label-caps uppercase tracking-wide text-primary-container">+ Tambah Pertanyaan</p>
+          <div className="grid grid-cols-1 sm:grid-cols-[1fr_auto] gap-3">
+            <input name="label" required placeholder="Pertanyaan (mis. Preferensi makanan)" className="bg-soft-gray rounded-md p-2.5 text-body-md" />
+            <select name="type" defaultValue="text" className="bg-soft-gray rounded-md p-2.5 text-body-md">
+              {Object.entries(QUESTION_TYPE_LABELS).map(([value, lbl]) => (
+                <option key={value} value={value}>{lbl}</option>
+              ))}
+            </select>
+          </div>
+          <textarea
+            name="options"
+            rows={2}
+            placeholder={"Opsi (satu per baris, hanya untuk Dropdown / Pilihan / Pilih Banyak):\nVegetarian\nHalal saja\nBiasa"}
+            className="bg-soft-gray rounded-md p-2.5 text-body-md resize-none"
+          />
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <label className="flex items-center gap-2 text-body-md cursor-pointer">
+              <input type="checkbox" name="required" className="h-4 w-4 accent-[var(--color-primary-container)]" />
+              Wajib diisi
+            </label>
+            <button
+              type="submit"
+              className="bg-primary-container text-on-primary text-label-caps uppercase tracking-wide px-4 py-2 rounded-md hover:bg-primary transition-colors"
+            >
+              Tambah
+            </button>
+          </div>
+        </form>
+      </CollapsibleSection>
+
+      <CollapsibleSection
+        title="Pendaftar Volunteer"
+        description={
+          event.volunteerSignupOpen
+            ? `${pendingVolunteers.length} menunggu keputusan`
+            : volunteerApps.length > 0
+              ? `${volunteerApps.length} lamaran (pendaftaran ditutup)`
+              : "pendaftaran publik tutup"
+        }
+      >
+        {!event.volunteerSignupOpen && (
+          <p className="text-body-md text-on-surface-variant mb-4 max-w-2xl">
+            Pendaftaran volunteer publik sedang <strong className="text-on-background">tutup</strong>. Centang
+            &quot;Buka pendaftaran volunteer&quot; di form Edit di atas bila butuh orang tambahan.
+          </p>
+        )}
+        {volunteerApps.length === 0 ? (
+          <p className="text-body-md text-on-surface-variant">Belum ada yang melamar.</p>
+        ) : (
+          <ul className="bg-surface-container-lowest border border-outline-variant rounded-xl px-4">
+            {volunteerApps.map((v) => {
+              const STATUS: Record<string, string> = {
+                pending: "Menunggu",
+                approved: "Diterima",
+                rejected: "Ditolak",
+              };
+              const CHIP: Record<string, string> = {
+                pending: "bg-surface-container-low text-on-surface-variant",
+                approved: "bg-primary-container/10 text-primary-container",
+                rejected: "bg-error-container text-on-error-container",
+              };
+              return (
+                <li key={v.app.id} className="flex flex-wrap items-start justify-between gap-3 border-b border-outline-variant/60 py-4 last:border-0">
+                  <div className="min-w-0">
+                    <p className="text-body-md font-medium text-on-background">{v.app.fullName}</p>
+                    <p className="text-label-caps text-on-surface-variant">
+                      {v.app.email}
+                      {v.app.whatsapp ? ` · ${v.app.whatsapp}` : ""} · minat:{" "}
+                      {v.divisionName ?? "bebas"}
+                      {v.app.status === "approved" && v.accountName ? ` · akun: ${v.accountName}` : ""}
+                    </p>
+                    {v.app.note && <p className="text-body-sm text-on-surface-variant mt-1">{v.app.note}</p>}
+                  </div>
+                  <div className="flex flex-wrap items-center gap-2 shrink-0">
+                    <span className={`text-label-caps uppercase tracking-wide px-2.5 py-1 rounded ${CHIP[v.app.status]}`}>
+                      {STATUS[v.app.status]}
+                    </span>
+                    {v.app.status === "pending" && (
+                      <>
+                        <form action={setVolunteerStatus}>
+                          <input type="hidden" name="id" value={v.app.id} />
+                          <input type="hidden" name="decision" value="approved" />
+                          <button
+                            type="submit"
+                            className="bg-primary-container text-on-primary text-label-caps uppercase tracking-wide px-3 py-1.5 rounded-md hover:bg-primary transition-colors"
+                          >
+                            Terima
+                          </button>
+                        </form>
+                        <form action={setVolunteerStatus}>
+                          <input type="hidden" name="id" value={v.app.id} />
+                          <input type="hidden" name="decision" value="rejected" />
+                          <button
+                            type="submit"
+                            className="text-label-caps uppercase tracking-wide text-error hover:bg-error-container/30 px-3 py-1.5 rounded-md"
+                          >
+                            Tolak
+                          </button>
+                        </form>
+                      </>
+                    )}
+                  </div>
+                </li>
+              );
+            })}
+          </ul>
+        )}
+      </CollapsibleSection>
+
+      <CollapsibleSection
         title="Struktur Kepanitiaan"
         description={`${divisions.length} divisi · ${committee.length} panitia`}
       >
@@ -182,9 +433,112 @@ export default async function ConsoleEventDetailPage({ params }: { params: Promi
           divisions={divisions}
           members={committee}
           candidates={candidates}
-          certifiedUserIds={issuedCerts.map((c) => c.userId)}
+          certifiedUserIds={committeeCertUserIds}
         />
       </CollapsibleSection>
+
+      <CollapsibleSection
+        title="Sertifikat Peserta"
+        description={`${eligible} berhak · ${participantCertCount} terbit`}
+      >
+        {event.certificateForParticipants ? (
+          <>
+            <p className="text-body-md text-on-surface-variant mb-4 max-w-2xl">
+              Semua pendaftar yang diterima (konfirmasi &amp; hadir) berhak atas e-sertifikat kehadiran.
+              Tombol ini menerbitkan untuk <strong className="text-on-background">yang belum punya saja</strong>,
+              jadi aman ditekan ulang setelah ada pendaftar baru. Berkas PDF-nya ditautkan manual belakangan lewat Work Ledger.
+            </p>
+            <form action={issueParticipantCertificates}>
+              <input type="hidden" name="eventId" value={id} />
+              <button
+                type="submit"
+                className="bg-primary-container text-on-primary text-label-caps uppercase tracking-wide px-6 py-3 rounded-md hover:bg-primary transition-colors"
+              >
+                Terbitkan Sertifikat Peserta
+              </button>
+            </form>
+          </>
+        ) : (
+          <p className="text-body-md text-on-surface-variant max-w-2xl">
+            Acara ini tidak memberi e-sertifikat kehadiran. Centang &quot;Peserta mendapat e-sertifikat
+            kehadiran&quot; di form Edit di atas bila berubah pikiran.
+          </p>
+        )}
+      </CollapsibleSection>
+
+      {canVerifyPayments && event.isPaid && (
+        <CollapsibleSection
+          title="Verifikasi Pembayaran"
+          description={`${pendingPayments.filter((p) => p.status === "submitted").length} menunggu verifikasi`}
+        >
+          <p className="text-body-md text-on-surface-variant mb-1 max-w-2xl">
+            Bukti ini diunggah sendiri oleh peserta lewat halaman tiketnya, jadi belum tentu benar — cocokkan
+            ketiganya dengan mutasi Alipay/rekening sebelum menekan Terverifikasi:
+          </p>
+          <ul className="text-body-sm text-on-surface-variant mb-4 max-w-2xl list-disc pl-5">
+            <li>
+              <strong className="text-on-background">Nominal</strong> harus {event.feeCny != null ? `persis ¥${event.feeCny}` : "sesuai yang disepakati (biaya belum diisi di form Edit)"}
+            </li>
+            <li>
+              <strong className="text-on-background">Nama pengirim</strong> di riwayat Alipay/rekening harus cocok dengan nama peserta di bawah — beda nama pengirim = tanya dulu sebelum verifikasi, bisa jadi titip bayar orang lain
+            </li>
+            <li>
+              <strong className="text-on-background">Waktu transfer</strong> wajar terjadi setelah tanggal daftar yang tertera
+            </li>
+          </ul>
+          <ul className="bg-surface-container-lowest border border-outline-variant rounded-xl px-4">
+            {pendingPayments.length === 0 ? (
+              <li className="py-4 text-body-md text-on-surface-variant">Belum ada laporan pembayaran.</li>
+            ) : (
+              pendingPayments.map((p) => (
+                <li key={p.id} className="border-b border-outline-variant/60 py-4 last:border-0">
+                  <div className="flex flex-wrap items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <p className="text-body-md text-on-background">{p.name ?? "(tanpa nama)"}</p>
+                      <p className="text-label-caps text-on-surface-variant">
+                        {p.email} · {PAYMENT_STATUS_LABEL[p.status] ?? p.status} · daftar{" "}
+                        {new Date(p.registeredAt).toLocaleString("id-ID", { dateStyle: "medium", timeStyle: "short" })}
+                      </p>
+                      {p.note && <p className="text-body-md text-on-surface-variant mt-1">{p.note}</p>}
+                      {p.proofUrl && (
+                        <a
+                          href={p.proofUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-label-caps uppercase tracking-wide text-primary-container hover:underline"
+                        >
+                          Lihat bukti
+                        </a>
+                      )}
+                    </div>
+                    <form action={updatePaymentStatus} className="flex flex-wrap items-center gap-2">
+                      <input type="hidden" name="id" value={p.id} />
+                      <input
+                        name="note"
+                        defaultValue={p.note ?? ""}
+                        placeholder="Catatan (opsional)"
+                        className="bg-soft-gray rounded-md p-2 text-body-md w-36"
+                      />
+                      <select name="paymentStatus" defaultValue={p.status} className="bg-soft-gray rounded-md p-2 text-body-md">
+                        <option value="unpaid">Belum Bayar</option>
+                        <option value="submitted">Menunggu Verifikasi</option>
+                        <option value="verified">Terverifikasi</option>
+                        <option value="rejected">Ditolak</option>
+                      </select>
+                      <button
+                        type="submit"
+                        className="bg-primary-container text-on-primary text-label-caps uppercase tracking-wide px-4 py-2 rounded-md hover:bg-primary transition-colors"
+                      >
+                        Simpan
+                      </button>
+                    </form>
+                  </div>
+                </li>
+              ))
+            )}
+          </ul>
+        </CollapsibleSection>
+      )}
 
       <CollapsibleSection title="Daftar Pendaftar" description={`${registrations.length} terdaftar · ${attended} hadir`}>
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between mb-4">
@@ -200,12 +554,14 @@ export default async function ConsoleEventDetailPage({ params }: { params: Promi
         </div>
         <RegistrationList
           eventId={id}
+          questions={questions.map((q) => ({ id: q.id, label: q.label }))}
           registrations={registrations.map((r) => ({
             id: r.reg.id,
             userName: r.userName,
             userEmail: r.userEmail,
             status: r.reg.status,
             registeredAt: r.reg.registeredAt.toISOString(),
+            answers: r.reg.answersJson ?? {},
             membership: MEMBERSHIP_LABEL[
               membershipStatus(
                 r.sensusCompletion ? { branch: r.sensusBranch, completionStatus: r.sensusCompletion } : null
