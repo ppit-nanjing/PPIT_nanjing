@@ -171,8 +171,19 @@ export async function updateMembershipStatus(formData: FormData) {
   const isDecision = status === "accepted" || status === "rejected";
   const changed = before?.status !== status;
   let decisionEmail: string | null = null;
+  // Provisioning races (applicant signs up while being approved, two
+  // reviewers clicking at once) must not sink the whole status save - record
+  // the failure in the audit trail instead and keep going.
+  let provisioning: string | null = null;
   if (isDecision && changed) {
-    if (status === "accepted") await provisionAcceptedApplicant(id);
+    if (status === "accepted") {
+      try {
+        await provisionAcceptedApplicant(id);
+      } catch (err) {
+        provisioning = `failed: ${err instanceof Error ? err.message : "unknown"}`;
+        console.error("[membership] failed to provision accepted applicant:", err);
+      }
+    }
     if (!notifyApplicant) {
       decisionEmail = "skipped";
     } else {
@@ -189,7 +200,7 @@ export async function updateMembershipStatus(formData: FormData) {
     entityId: id,
     action: isDecision && changed ? `decision_${status}` : "status_changed",
     beforeJson: { status: before?.status ?? null },
-    afterJson: { status, decisionEmail },
+    afterJson: { status, decisionEmail, provisioning },
   });
 
   revalidatePath("/console/membership");
