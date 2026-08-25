@@ -1,19 +1,17 @@
-import { desc } from "drizzle-orm";
+import { sql } from "drizzle-orm";
 import { db } from "@/db";
 import { events } from "@/db/schema";
-import { createEvent, setEventStatus } from "@/app/actions/admin-events";
+import { setEventStatus } from "@/app/actions/admin-events";
 import { publishDueEvents } from "@/lib/publish-events";
 import { DeleteEventButton } from "@/components/console/delete-event-button";
 import { requireModuleAccess } from "@/lib/admin-scope";
-import { ImageUploadCropper } from "@/components/upload/image-upload-cropper";
-import { AIImproveButton } from "@/components/ai/ai-improve-button";
-import { AIReviewButton } from "@/components/ai/ai-review-popup";
 import { CollapsibleSection } from "@/components/console/collapsible-section";
-import { HtmFields } from "@/components/console/htm-fields";
 import { GuideButton } from "@/components/console/guide-button";
 import { getGuide } from "@/lib/guides";
 import { Plus } from "lucide-react";
-import { TextField, TextAreaField, CheckField } from "@/components/console/form";
+import Link from "next/link";
+import { EventCreateForm } from "@/components/console/event-create-form";
+import { ConfirmButton } from "@/components/console/confirm-button";
 
 const STATUS_LABEL: Record<string, string> = {
   draft: "Draf",
@@ -31,7 +29,9 @@ export default async function ConsoleEventsPage() {
   // concurrently in one batch.
   await publishDueEvents();
   const [list, guide] = await Promise.all([
-    db.select().from(events).orderBy(desc(events.startAt)),
+    // Postgres DESC default = NULLS FIRST, which would float unscheduled
+    // ("Belum dijadwalkan") events above everything - pin them to the bottom.
+    db.select().from(events).orderBy(sql`${events.startAt} desc nulls last`),
     getGuide("kegiatan"),
   ]);
 
@@ -46,114 +46,7 @@ export default async function ConsoleEventsPage() {
         <summary className="flex items-center gap-2 px-4 py-3 sm:px-6 sm:py-4 cursor-pointer text-label-caps text-primary-container uppercase tracking-wide">
           <Plus size={16} /> Buat Kegiatan Baru
         </summary>
-        <form action={createEvent} className="px-4 pb-5 sm:px-6 sm:pb-6 flex flex-col gap-4">
-          {/* Bagian 1 - identitas acara */}
-          <details open className="border border-outline-variant rounded-lg">
-            <summary className="px-4 py-3 cursor-pointer text-label-caps uppercase tracking-wide text-primary-container">
-              1 · Info Acara
-            </summary>
-            <div className="px-4 pb-4 flex flex-col gap-3">
-              <TextField name="title" label="Judul Kegiatan" required id="event-title" />
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <TextField name="category" label="Kategori" placeholder="mis. Cultural" id="event-category" />
-                <TextField name="location" label="Lokasi" placeholder="mis. Novotel" id="event-location" />
-              </div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <TextField
-                  name="startAt"
-                  label="Tanggal & jam mulai"
-                  type="datetime-local"
-                  hint="Kapan acara berlangsung."
-                />
-                <TextField name="capacity" label="Kapasitas" type="number" min={1} />
-              </div>
-              <ImageUploadCropper
-                name="coverImageUrl"
-                folder="events"
-                label="Gambar Sampul"
-                aspect={16 / 9}
-                hint="Ideal 1920 × 1080 px (16:9) — gambar di-crop & dikompres otomatis."
-              />
-            </div>
-          </details>
-
-          {/* Bagian 2 - aturan pendaftaran & HTM */}
-          <details open className="border border-outline-variant rounded-lg">
-            <summary className="px-4 py-3 cursor-pointer text-label-caps uppercase tracking-wide text-primary-container">
-              2 · Pendaftaran &amp; Biaya
-            </summary>
-            <div className="px-4 pb-4 flex flex-col gap-3">
-              <TextField
-                name="registrationDeadline"
-                label="Batas Pendaftaran"
-                type="datetime-local"
-                hint="Lewat dari ini tombol daftar tertutup otomatis. Kosongkan bila tak ada batas."
-              />
-              <CheckField name="requiresSensus" label="Hanya untuk peserta yang sudah lengkap mengisi sensus (mahasiswa Indo di China)" />
-              <CheckField name="certificateForParticipants" label="Peserta mendapat e-sertifikat kehadiran" defaultChecked />
-              <CheckField
-                name="volunteerSignupOpen"
-                label="Buka pendaftaran volunteer publik"
-                hint="Orang luar bisa melamar jadi volunteer di halaman acara."
-              />
-              <HtmFields />
-            </div>
-          </details>
-
-          {/* Bagian 3 - konten & jadwal rilis; jarang diisi saat awal, makanya dilipat */}
-          <details className="border border-outline-variant rounded-lg">
-            <summary className="px-4 py-3 cursor-pointer text-label-caps uppercase tracking-wide text-on-surface-variant">
-              3 · Deskripsi, Agenda &amp; Jadwal Rilis (opsional)
-            </summary>
-            <div className="px-4 pb-4 flex flex-col gap-3">
-              <TextAreaField name="description" label="Deskripsi" rows={3} id="event-description" />
-              <AIImproveButton context="event" targetId="event-description" className="mt-1" />
-              <TextAreaField
-                name="agenda"
-                label="Agenda / Jadwal"
-                rows={3}
-                id="event-agenda"
-                placeholder={"18:00 - Registrasi\n19:00 - Pembukaan"}
-                hint="Satu baris per item."
-              />
-              <TextField
-                name="scheduledPublishAt"
-                label="Jadwal Rilis Publikasi (opsional)"
-                type="datetime-local"
-                hint='Isi bila acara tampil ke publik hanya SETELAH waktu ini (status "Terjadwal", rilis sendiri). Kosongkan = langsung Draf.'
-              />
-            </div>
-          </details>
-
-          <AIReviewButton
-            context="event"
-            fields={[
-              { id: "event-title", label: "Judul" },
-              { id: "event-category", label: "Kategori" },
-              { id: "event-location", label: "Lokasi" },
-              { id: "event-description", label: "Deskripsi" },
-              { id: "event-agenda", label: "Agenda" },
-            ]}
-          />
-          <div className="flex flex-wrap gap-3">
-            <button
-              type="submit"
-              name="intent"
-              value="schedule"
-              className="self-start bg-primary-container text-on-primary text-label-caps uppercase tracking-wide px-4 py-2.5 sm:px-6 sm:py-3 rounded-md hover:bg-primary transition-colors"
-            >
-              Buat &amp; Lanjut Edit
-            </button>
-            <button
-              type="submit"
-              name="intent"
-              value="draft"
-              className="self-start bg-surface-container-low text-on-background text-label-caps uppercase tracking-wide px-4 py-2.5 sm:px-6 sm:py-3 rounded-md border border-outline-variant hover:bg-surface-container transition-colors"
-            >
-              Simpan sebagai Draft
-            </button>
-          </div>
-        </form>
+        <EventCreateForm />
       </details>
 
       <CollapsibleSection title="Daftar Kegiatan" description="Semua kegiatan yang dibuat.">
@@ -164,7 +57,7 @@ export default async function ConsoleEventsPage() {
               key={e.id}
               className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between bg-surface-container-lowest border border-outline-variant rounded-lg pl-4 pr-2 py-2 hover:bg-surface-container-low transition-colors"
             >
-              <a
+              <Link
                 href={`/console/events/${e.id}`}
                 className="w-full sm:flex-1 sm:min-w-0 flex items-center justify-between gap-3 py-2"
               >
@@ -177,19 +70,25 @@ export default async function ConsoleEventsPage() {
                 <span className="text-label-caps uppercase tracking-wide bg-surface-container-low px-2.5 py-1 rounded shrink-0">
                   {STATUS_LABEL[e.status]}
                 </span>
-              </a>
+              </Link>
               <div className="self-end sm:self-auto flex items-center gap-2 sm:shrink-0">
                  {e.status !== "draft" && (
-                   <form action={setEventStatus}>
-                     <input type="hidden" name="eventId" value={e.id} />
-                     <input type="hidden" name="status" value="draft" />
-                     <button
-                       type="submit"
-                       className="text-label-caps uppercase tracking-wide px-2.5 py-1 sm:px-3 sm:py-1.5 rounded-md border border-outline-variant text-on-surface-variant hover:bg-surface-container-low transition-colors"
-                     >
-                       Jadikan Draft
-                     </button>
-                   </form>
+                   // Unpublishing a live event is user-visible - confirm first.
+                   <ConfirmButton
+                     title="Jadikan draft?"
+                     message={`"${e.title}" akan langsung disembunyikan dari publik.`}
+                     confirmLabel="Ya, jadikan draft"
+                     onConfirm={async () => {
+                       const fd = new FormData();
+                       fd.set("eventId", e.id);
+                       fd.set("status", "draft");
+                       await setEventStatus(fd);
+                     }}
+                     danger={false}
+                     className="text-label-caps uppercase tracking-wide px-2.5 py-1 sm:px-3 sm:py-1.5 rounded-md border border-outline-variant text-on-surface-variant hover:bg-surface-container-low transition-colors"
+                   >
+                     Jadikan Draft
+                   </ConfirmButton>
                  )}
                 <DeleteEventButton eventId={e.id} />
               </div>

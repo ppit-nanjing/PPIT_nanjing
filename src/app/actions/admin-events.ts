@@ -39,10 +39,20 @@ function parseFeeCny(formData: FormData): number | null {
   return Math.round(parsed);
 }
 
-export async function createEvent(formData: FormData) {
+// Inline-validation shape shared by console event forms - mirrors
+// ShortLinkFormState in short-links.ts.
+export type EventFormState = { error?: string };
+
+export async function createEvent(_prev: EventFormState, formData: FormData): Promise<EventFormState> {
   const actorId = await requireAdmin();
   const title = String(formData.get("title") ?? "").trim();
-  if (!title) throw new Error("Judul wajib diisi");
+  if (!title) return { error: "Judul wajib diisi." };
+  // Same fee rule as updateEvent's parseFeeCny, but returned inline instead of
+  // thrown - a thrown Error here would wipe everything the admin just typed.
+  const rawFee = String(formData.get("feeCny") ?? "").trim();
+  if (rawFee && (!Number.isFinite(Number(rawFee)) || Number(rawFee) < 0)) {
+    return { error: "Biaya harus berupa angka >= 0" };
+  }
 
   const scheduledPublishAt = formData.get("scheduledPublishAt")
     ? new Date(String(formData.get("scheduledPublishAt")))
