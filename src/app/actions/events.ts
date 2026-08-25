@@ -78,13 +78,19 @@ export async function registerForEvent(eventId: string, slug: string, formData?:
       if (q.required && !answers[q.id]) redirect(`/events/${slug}`);
     }
 
+    // Acara berbayar: pendaftaran menunggu verifikasi pembayaran dulu -
+    // TANPA QR. Bendahara yang mengunci verifikasi akan mengangkatnya jadi
+    // "confirmed" + menerbitkan QR (lihat updatePaymentStatus). Gratis:
+    // langsung terkonfirmasi seperti biasa.
+    const needsPayment = event.isPaid;
+
     await db.insert(eventRegistrations).values({
       eventId,
       userId: session.user.id,
-      status: "confirmed",
-      qrCodeToken: randomUUID(),
+      status: needsPayment ? "pending" : "confirmed",
+      qrCodeToken: needsPayment ? null : randomUUID(),
       branch,
-      paymentStatus: event.isPaid ? "unpaid" : "not_required",
+      paymentStatus: needsPayment ? "unpaid" : "not_required",
       answersJson: answers,
     });
     // In-app confirmation for the member who just registered.

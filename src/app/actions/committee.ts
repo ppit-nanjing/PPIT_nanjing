@@ -1,5 +1,6 @@
 "use server";
 
+import { randomUUID } from "crypto";
 import { and, desc, eq, inArray, sql as raw } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { auth } from "@/auth";
@@ -243,7 +244,18 @@ export async function updatePaymentStatus(formData: FormData) {
       paymentVerifiedBy: status === "verified" ? session.user.id : null,
     })
     .where(eq(eventRegistrations.id, id))
-    .returning({ eventId: eventRegistrations.eventId });
+    .returning({ eventId: eventRegistrations.eventId, userId: eventRegistrations.userId, regStatus: eventRegistrations.status, qrCodeToken: eventRegistrations.qrCodeToken });
+
+  // PENDAFTARAN BERBAYAR dimulai dari status "pending" TANPA QR (lihat
+  // registerForEvent). Verifikasi inilah yang mengangkatnya: jadi "confirmed"
+  // dan QR-nya diterbitkan di sini - satu-satunya pintu QR untuk acara
+  // berbayar, jadi tidak ada yang check-in sebelum dibuktikan bayar.
+  if (status === "verified" && row?.regStatus === "pending") {
+    await db
+      .update(eventRegistrations)
+      .set({ status: "confirmed", qrCodeToken: row.qrCodeToken ?? randomUUID() })
+      .where(eq(eventRegistrations.id, id));
+  }
 
   revalidatePath("/console/work-ledger");
   if (row) revalidatePath(`/console/events/${row.eventId}`);

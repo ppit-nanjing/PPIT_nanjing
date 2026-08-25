@@ -35,11 +35,11 @@ flowchart LR
 
 ## Acara berbayar (HTM)
 
-Jika event ditandai berbayar, registrasi berlanjut ke pembayaran manual — tanpa payment gateway:
+Jika event ditandai berbayar, registrasi masuk sebagai **`pending` TANPA QR** — tiket menampilkan panduan bayar, bukan QR:
 
 1. Peserta transfer sesuai instruksi bayar di detail/tiket event (opsional: deep-link Alipay yang sudah terisi nominal + memo).
-2. Dari halaman tiket (`/events/[slug]/ticket`) ia mengirim tautan bukti transfer.
-3. Bendahara acara memverifikasi dari konsol (`/console/events/[id]`); status (`belum bayar` → `sudah kirim bukti` → `terverifikasi`/`ditolak`) bisa dilihat lagi dari Submission Detail.
+2. Dari halaman tiket (`/events/[slug]/ticket`) ia **mengunggah screenshot bukti transfer** (drag & drop / pilih file / kamera).
+3. Bendahara acara memverifikasi dari konsol (`/console/events/[id]`); begitu diset `verified`, pendaftaran otomatis naik ke `confirmed` dan **QR check-in diterbitkan seketika** — satu-satunya pintu QR untuk acara berbayar.
 
 Pembayaran dihitung **perorangan**: satu pendaftaran satu tanggungan bayar, tidak ada pembayaran berkelompok. Detail sisi admin ada di [Event Management](./Event%20Management.md) § HTM.
 

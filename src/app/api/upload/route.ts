@@ -30,6 +30,9 @@ const FOLDER_MODULE: Record<string, AdminModule | null> = {
   resume: null,
   sensus: null,
   avatar: null,
+  // Bukti transfer peserta - pengirimnya user biasa yang sedang login,
+  // bukan admin; verifikasinya tetap di tangan bendahara.
+  "payment-proof": null,
   news: "content",
   gallery: "content",
   album: "content",

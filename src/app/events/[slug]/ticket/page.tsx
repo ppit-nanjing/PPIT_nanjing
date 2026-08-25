@@ -16,6 +16,7 @@ import { INTL_LOCALE } from "@/lib/i18n/config";
 import { submitPaymentProof } from "@/app/actions/committee";
 import { PAYMENT_STATUS_LABEL } from "@/lib/payment-status-labels";
 import { buildAlipayTransferLink } from "@/lib/alipay-deeplink";
+import { FileUpload } from "@/components/upload/file-upload";
 
 export default async function EventTicketPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
@@ -44,7 +45,12 @@ export default async function EventTicketPage({ params }: { params: Promise<{ sl
 
   const qrDataUrl = await QRCode.toDataURL(checkInUrl, { margin: 1, width: 240 });
 
+  // GERBANG PEMBAYARAN: acara berbayar baru menampilkan QR check-in setelah
+  // bendahara memverifikasi bukti transfer. Sebelum itu yang tampil panduan
+  // bayarnya - pendaftarannya sendiri berstatus "pending" tanpa QR.
   const hasFee = event.isPaid;
+  const awaitingPayment = hasFee && registration.paymentStatus !== "verified";
+  const gated = registration.status === "pending" || awaitingPayment;
   const feeAmount = event.feeCny != null && event.feeCny > 0 ? event.feeCny : null;
   const alipayLink =
     feeAmount != null && event.alipayUid
@@ -66,28 +72,51 @@ export default async function EventTicketPage({ params }: { params: Promise<{ sl
       <SiteNav />
 
       <main className="max-w-md mx-auto px-[var(--spacing-container-padding)] py-16 text-center">
-        <div className="w-16 h-16 rounded-full bg-primary-container/10 flex items-center justify-center mx-auto mb-6">
-          <CheckCircle2 className="text-primary-container" size={28} aria-hidden="true" />
+        <div className={`w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-6 ${gated ? "bg-surface-container-low" : "bg-primary-container/10"}`}>
+          {gated ? (
+            <CalendarDays className="text-on-surface-variant" size={28} aria-hidden="true" />
+          ) : (
+            <CheckCircle2 className="text-primary-container" size={28} aria-hidden="true" />
+          )}
         </div>
         <div role="status" aria-live="polite">
-          <h1 className="text-headline-lg text-on-background mb-2">{t("ticket.success")}</h1>
+          <h1 className="text-headline-lg text-on-background mb-2">
+            {gated ? t("ticket.pendingTitle") : t("ticket.success")}
+          </h1>
           <p className="text-body-md text-on-surface-variant mb-10">
-            {t("ticket.successDesc", { name: session.user.name?.split(" ")[0] ?? "" })}
+            {gated
+              ? t("ticket.pendingDesc")
+              : t("ticket.successDesc", { name: session.user.name?.split(" ")[0] ?? "" })}
           </p>
         </div>
 
         <div className="bg-surface-container-lowest border border-outline-variant rounded-xl p-8">
-          <Image
-            src={qrDataUrl}
-            alt={t("ticket.qrAlt", { title: event.title })}
-            width={240}
-            height={240}
-            unoptimized
-            className="mx-auto mb-6 rounded-lg"
-          />
+          {gated ? (
+            <div className="mb-6 text-left text-body-sm text-on-surface-variant flex flex-col gap-1.5">
+              <p>1. Bayar sesuai instruksi di bawah.</p>
+              <p>2. Unggah bukti transfer.</p>
+              <p>3. Bendahara memverifikasi — QR check-in muncul otomatis di halaman ini.</p>
+            </div>
+          ) : (
+            <>
+              <Image
+                src={qrDataUrl}
+                alt={t("ticket.qrAlt", { title: event.title })}
+                width={240}
+                height={240}
+                unoptimized
+                className="mx-auto mb-6 rounded-lg"
+              />
+              <div className="flex flex-col items-center gap-2 mb-4">
+                <p className="text-label-caps text-on-surface-variant">{t("ticket.checkinToken")}</p>
+                <code className="bg-surface-container-low px-3 py-1.5 rounded-md text-body-sm break-all select-all">{token}</code>
+                <CopyButton value={token} label={t("ticket.copyToken")} />
+              </div>
+            </>
+          )}
           <h2 className="text-headline-md text-on-background mb-3">{event.title}</h2>
 
-          {calUrl && (
+          {calUrl && !gated && (
             <a
               href={calUrl}
               target="_blank"
@@ -97,12 +126,6 @@ export default async function EventTicketPage({ params }: { params: Promise<{ sl
               <CalendarPlus size={16} aria-hidden="true" /> {t("ticket.addCalendar")}
             </a>
           )}
-
-          <div className="flex flex-col items-center gap-2 mb-4">
-            <p className="text-label-caps text-on-surface-variant">{t("ticket.checkinToken")}</p>
-            <code className="bg-surface-container-low px-3 py-1.5 rounded-md text-body-sm break-all select-all">{token}</code>
-            <CopyButton value={token} label={t("ticket.copyToken")} />
-          </div>
 
           <div className="flex flex-col gap-1.5 text-label-caps text-on-surface-variant items-center">
             {event.startAt && (
@@ -161,12 +184,14 @@ export default async function EventTicketPage({ params }: { params: Promise<{ sl
               <form action={submitPaymentProof} className="flex flex-col gap-3">
                 <input type="hidden" name="id" value={registration.id} />
                 <input type="hidden" name="slug" value={slug} />
-                <input
+                <FileUpload
                   name="proofUrl"
-                  defaultValue={registration.paymentProofUrl ?? ""}
-                  placeholder="Tautan bukti pembayaran (screenshot Alipay, dsb.)"
+                  folder="payment-proof"
                   required
-                  className="bg-soft-gray rounded-md p-3 text-body-md"
+                  autoUpload
+                  defaultValue={registration.paymentProofUrl ?? ""}
+                  accept="image/*"
+                  label={gated ? "Bukti transfer (screenshot)" : "Perbarui bukti transfer (screenshot)"}
                 />
                 <button
                   type="submit"

@@ -7,7 +7,7 @@ import { uploadErrorMessage } from "./upload-error";
 
 type Props = {
   name: string;
-  folder: "resume" | "news" | "gallery" | "album" | "inventory";
+  folder: "resume" | "news" | "gallery" | "album" | "inventory" | "payment-proof";
   label?: string;
   placeholder?: string;
   required?: boolean;
@@ -15,6 +15,9 @@ type Props = {
   accept?: string;
   // Show a plain text input too so a URL can be pasted instead of uploaded.
   allowPaste?: boolean;
+  // Langsung unggah begitu file dipilih/drop - untuk alur peserta (bukti bayar)
+  // yang tidak seharusnya diminta menekan dua tombol berurutan.
+  autoUpload?: boolean;
 };
 
 export function FileUpload({
@@ -26,6 +29,7 @@ export function FileUpload({
   defaultValue,
   accept = "image/*",
   allowPaste = true,
+  autoUpload = false,
 }: Props) {
   const t = useT();
   const [value, setValue] = useState(defaultValue ?? "");
@@ -47,6 +51,7 @@ export function FileUpload({
     } else {
       setPreview(null);
     }
+    if (autoUpload) void upload(f);
   }
 
   function onDrop(e: DragEvent<HTMLDivElement>) {
@@ -55,13 +60,14 @@ export function FileUpload({
     pickFile(e.dataTransfer.files?.[0] ?? null);
   }
 
-  async function upload() {
-    if (!file) return;
+  async function upload(target?: File | null) {
+    const chosen = target ?? file;
+    if (!chosen) return;
     setUploading(true);
     setError(null);
     try {
       const fd = new FormData();
-      fd.append("file", file);
+      fd.append("file", chosen);
       fd.append("folder", folder);
       const res = await fetch("/api/upload", { method: "POST", body: fd });
       const data = await res.json();
@@ -82,13 +88,14 @@ export function FileUpload({
           type="text"
           name={name}
           value={value}
-          required={required && !file}
+          required={required && (autoUpload ? !value : !file)}
           onChange={(e) => setValue(e.target.value)}
           placeholder={placeholder ?? t("upload.pasteOrFile")}
           className="bg-soft-gray rounded-md p-3 text-body-md focus:outline-none focus:ring-2 focus:ring-primary-container"
         />
       )}
       {!allowPaste && value && <input type="hidden" name={name} value={value} />}
+      {allowPaste && autoUpload && <input type="hidden" name={name} value={value} />}
 
       <div
         onDragOver={(e) => {
@@ -122,11 +129,11 @@ export function FileUpload({
         />
       </div>
 
-      {file && (
+      {file && !autoUpload && (
         <div className="flex items-center gap-3">
           <button
             type="button"
-            onClick={upload}
+            onClick={() => void upload()}
             disabled={uploading}
             className="flex items-center gap-2 bg-surface-container-low text-on-background text-body-sm font-medium px-4 py-2.5 rounded-md border border-outline-variant hover:bg-surface-container-lowest transition-colors disabled:opacity-60"
           >

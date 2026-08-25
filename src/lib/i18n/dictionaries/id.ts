@@ -83,6 +83,11 @@ export const id = {
   "profile.certificatesViewFile": "Lihat berkas",
   "profile.eventsHeading": "Riwayat Acara",
   "profile.eventsEmpty": "Belum pernah mengikuti acara.",
+  "profile.borrowHeading": "Barang yang Dipinjam",
+  "profile.borrowEmpty": "Tidak ada barang yang sedang kamu pinjam.",
+  "profile.borrowBrowseInventory": "Lihat Inventaris",
+  "profile.borrowReturnButton": "Kembalikan Barang",
+  "profile.borrowReturnPending": "Pengembalian diajukan - menunggu konfirmasi admin",
   "profile.notificationHeading": "Preferensi Notifikasi",
 
   "emailSub.title": "Email Berita & Kegiatan",
@@ -218,6 +223,8 @@ export const id = {
 
   // Event ticket
   "ticket.success": "Pendaftaran Berhasil",
+  "ticket.pendingTitle": "Menunggu Verifikasi Pembayaran",
+  "ticket.pendingDesc": "Pendaftaranmu sudah tercatat. QR check-in muncul otomatis di sini setelah bendahara memverifikasi bukti transfermu.",
   "ticket.successDesc": "Halo {{name}}, simpan halaman ini dan tunjukkan QR code saat check-in di lokasi acara.",
   "ticket.addCalendar": "Tambah ke Kalender",
   "ticket.checkinToken": "Token check-in (cadangan jika QR tak terbaca)",

@@ -80,6 +80,11 @@ export const en = {
   "profile.certificatesViewFile": "View file",
   "profile.eventsHeading": "Event History",
   "profile.eventsEmpty": "You have not joined any events yet.",
+  "profile.borrowHeading": "Borrowed Items",
+  "profile.borrowEmpty": "You are not borrowing any items right now.",
+  "profile.borrowBrowseInventory": "Browse Inventory",
+  "profile.borrowReturnButton": "Return Item",
+  "profile.borrowReturnPending": "Return requested - awaiting admin confirmation",
   "profile.notificationHeading": "Notification Preferences",
 
   "emailSub.title": "News & Event Emails",
@@ -215,6 +220,8 @@ export const en = {
 
   // Event ticket
   "ticket.success": "Registration Successful",
+  "ticket.pendingTitle": "Awaiting Payment Verification",
+  "ticket.pendingDesc": "Your registration is recorded. The check-in QR appears automatically here once the treasurer verifies your transfer receipt.",
   "ticket.successDesc": "Hi {{name}}, keep this page and show the QR code when you check in at the venue.",
   "ticket.addCalendar": "Add to Calendar",
   "ticket.checkinToken": "Check-in token (backup if QR is unreadable)",
