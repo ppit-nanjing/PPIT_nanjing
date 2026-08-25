@@ -1,8 +1,8 @@
-import { eq } from "drizzle-orm";
+import { eq, desc } from "drizzle-orm";
 import { redirect } from "next/navigation";
 import { auth } from "@/auth";
 import { db } from "@/db";
-import { users, sensusProfiles } from "@/db/schema";
+import { users, sensusProfiles, events, eventRegistrations } from "@/db/schema";
 import { SiteNav } from "@/components/site-nav";
 import { SiteFooter } from "@/components/site-footer";
 import { EmailSubscriptionToggle } from "@/components/profile/email-subscription-toggle";
@@ -12,9 +12,25 @@ import { ImageUploadCropper } from "@/components/upload/image-upload-cropper";
 import { updateProfile } from "@/app/actions/user";
 import { getMyCertificates } from "@/app/actions/committee";
 import { getT } from "@/lib/i18n/server";
-import { ClipboardCheck, ClipboardList, UserRound, CheckCircle2, Award } from "lucide-react";
+import { ClipboardCheck, ClipboardList, UserRound, CheckCircle2, Award, CalendarDays } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
+import type { TKey } from "@/lib/i18n/dictionaries/id";
+
+// Status pendaftaran acara - label & warna selaras dengan /profile/submissions
+// supaya dua tampilan riwayat yang sama tidak berbeda bahasa.
+const REG_STATUS_KEY: Record<string, TKey> = {
+  pending: "submissions.status.pending",
+  confirmed: "submissions.status.confirmed",
+  attended: "submissions.status.attended",
+  cancelled: "submissions.status.cancelled",
+};
+const REG_STATUS_STYLE: Record<string, string> = {
+  pending: "bg-surface-container-low text-on-surface-variant",
+  confirmed: "bg-primary-container/10 text-primary-container",
+  attended: "bg-primary-container/10 text-primary-container",
+  cancelled: "bg-error-container text-on-error-container",
+};
 
 export default async function ProfilePage({
   searchParams,
@@ -28,6 +44,19 @@ export default async function ProfilePage({
   const [user] = await db.select().from(users).where(eq(users.id, session.user.id));
   const [sensus] = await db.select().from(sensusProfiles).where(eq(sensusProfiles.userId, session.user.id));
   const certificates = await getMyCertificates();
+  const myEvents = await db
+    .select({
+      id: eventRegistrations.id,
+      status: eventRegistrations.status,
+      title: events.title,
+      slug: events.slug,
+      startAt: events.startAt,
+      registeredAt: eventRegistrations.registeredAt,
+    })
+    .from(eventRegistrations)
+    .innerJoin(events, eq(eventRegistrations.eventId, events.id))
+    .where(eq(eventRegistrations.userId, session.user.id))
+    .orderBy(desc(events.startAt));
   const { t } = await getT();
 
   return (
@@ -195,6 +224,43 @@ export default async function ProfilePage({
                 )}
               </li>
             ))}
+          </ul>
+        )}
+
+        <h2 className="text-label-caps uppercase tracking-widest text-secondary mb-4">{t("profile.eventsHeading")}</h2>
+        {myEvents.length === 0 ? (
+          <p className="text-body-md text-on-surface-variant mb-10">{t("profile.eventsEmpty")}</p>
+        ) : (
+          <ul className="bg-surface-container-lowest border border-outline-variant rounded-xl px-4 mb-10">
+            {myEvents.map((e) => {
+              const when = e.startAt ?? e.registeredAt;
+              return (
+                <li key={e.id} className="border-b border-outline-variant/60 last:border-0">
+                  <Link
+                    href={`/events/${e.slug}`}
+                    className="flex items-center gap-3 py-4 group focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-container rounded-md"
+                  >
+                    <CalendarDays className="text-secondary shrink-0" size={20} aria-hidden />
+                    <div className="min-w-0 flex-1">
+                      <p className="text-body-md font-medium text-on-background truncate group-hover:text-primary-container transition-colors">
+                        {e.title}
+                      </p>
+                      <time
+                        dateTime={when.toISOString()}
+                        className="text-label-caps text-on-surface-variant"
+                      >
+                        {when.toLocaleDateString("id-ID", { dateStyle: "long" })}
+                      </time>
+                    </div>
+                    <span
+                      className={`text-label-caps uppercase tracking-wide px-2.5 py-1 rounded shrink-0 ${REG_STATUS_STYLE[e.status] ?? "bg-surface-container-low text-on-surface-variant"}`}
+                    >
+                      {e.status in REG_STATUS_KEY ? t(REG_STATUS_KEY[e.status]) : e.status}
+                    </span>
+                  </Link>
+                </li>
+              );
+            })}
           </ul>
         )}
 

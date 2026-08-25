@@ -81,6 +81,8 @@ export const id = {
   "profile.certificatesHeading": "E-Sertifikat",
   "profile.certificatesEmpty": "Belum ada sertifikat yang diterbitkan untukmu.",
   "profile.certificatesViewFile": "Lihat berkas",
+  "profile.eventsHeading": "Riwayat Acara",
+  "profile.eventsEmpty": "Belum pernah mengikuti acara.",
   "profile.notificationHeading": "Preferensi Notifikasi",
 
   "emailSub.title": "Email Berita & Kegiatan",

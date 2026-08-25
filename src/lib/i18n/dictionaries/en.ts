@@ -78,6 +78,8 @@ export const en = {
   "profile.certificatesHeading": "E-Certificates",
   "profile.certificatesEmpty": "No certificates issued for you yet.",
   "profile.certificatesViewFile": "View file",
+  "profile.eventsHeading": "Event History",
+  "profile.eventsEmpty": "You have not joined any events yet.",
   "profile.notificationHeading": "Notification Preferences",
 
   "emailSub.title": "News & Event Emails",
