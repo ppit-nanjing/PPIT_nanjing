@@ -3,7 +3,6 @@
 import { useState, useEffect } from "react";
 import Image from "next/image";
 import {
-  Building2,
   UserRound,
   Briefcase,
   Camera,
@@ -11,11 +10,11 @@ import {
   Music2,
   Video,
   Crown,
-  Users,
   ChevronRight,
   X,
 } from "lucide-react";
 import { useT } from "@/lib/i18n/client";
+import { OrgFlow } from "@/components/org/org-flow";
 
 export type OrgMember = {
   name: string | null;
@@ -74,7 +73,7 @@ function SocialIcons({ member }: { member: OrgMember }) {
   );
 }
 
-function MemberRow({
+export function MemberRow({
   member,
   compact,
   showSocials = true,
@@ -114,69 +113,6 @@ function MemberRow({
   );
 }
 
-function ApexNode() {
-  return (
-    <div className="ppit-node ppit-node-apex" style={{ borderTopColor: "var(--color-primary)" }}>
-      <div className="flex items-center gap-2">
-        <span className="ppit-node-ico" style={{ color: "var(--color-primary)" }}>
-          <Crown size={16} style={{ color: "var(--color-primary)" }} />
-        </span>
-        <div>
-          <h2 className="text-headline-md text-on-background leading-tight">PPIT Nanjing</h2>
-          <p className="text-label-caps text-on-surface-variant">Kabinet Maju</p>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function NodeCard({
-  node,
-  compact,
-  onClick,
-}: {
-  node: OrgNodeData;
-  compact?: boolean;
-  onClick?: (n: OrgNodeData) => void;
-}) {
-  const t = useT();
-  const members = node.members;
-  const cap = compact ? 3 : 5;
-  const Wrapper = onClick ? "button" : "div";
-  return (
-    <Wrapper
-      type={onClick ? "button" : undefined}
-      onClick={onClick ? () => onClick(node) : undefined}
-      className={`ppit-node text-left ${onClick ? "cursor-pointer hover:border-primary-container transition-colors" : ""}`}
-      style={{ borderTopColor: node.color }}
-    >
-      <div className="flex items-center gap-2 mb-1.5">
-        <span className="ppit-node-ico shrink-0" style={{ color: node.color }}>
-          {node.name.startsWith("Badan Pengurus") ? (
-            <Users style={{ color: node.color }} />
-          ) : (
-            <Building2 style={{ color: node.color }} />
-          )}
-        </span>
-        <h3 className="text-body-md font-semibold text-on-background leading-tight">{node.name}</h3>
-      </div>
-      {node.description && (
-        <p className="text-label-caps text-on-surface-variant leading-snug mb-2">{node.description}</p>
-      )}
-      {members.length > 0 && (
-        <div className="flex flex-col gap-2 mt-1 pt-2 border-t border-outline-variant">
-          {members.slice(0, cap).map((m, i) => (
-            <MemberRow key={i} member={m} compact={compact} showSocials={!onClick} />
-          ))}
-          {members.length > cap && (
-            <p className="text-label-caps text-on-surface-variant">{t("org.explorer.more", { n: members.length - cap })}</p>
-          )}
-        </div>
-      )}
-    </Wrapper>
-  );
-}
-
 function ChartView({
   units,
   onSelect,
@@ -184,31 +120,9 @@ function ChartView({
   units: OrgNodeData[];
   onSelect?: (n: OrgNodeData) => void;
 }) {
-  return (
-    <div className="ppit-org-tree is-compact">
-      <ul>
-        <li>
-          <ApexNode />
-          <ul>
-            {units.map((u) => (
-              <li key={u.id}>
-                <NodeCard node={u} compact onClick={onSelect} />
-                {u.children.length > 0 && (
-                  <ul>
-                    {u.children.map((c) => (
-                      <li key={c.id}>
-                        <NodeCard node={c} compact onClick={onSelect} />
-                      </li>
-                    ))}
-                  </ul>
-                )}
-              </li>
-            ))}
-          </ul>
-        </li>
-      </ul>
-    </div>
-  );
+  // Pan/zoom canvas via @xyflow/react; clicking a unit still opens the same
+  // profile modal as before.
+  return <OrgFlow units={units} onSelect={(n) => onSelect?.(n)} />;
 }
 
 function CardsView({ units }: { units: OrgNodeData[] }) {
