@@ -54,19 +54,25 @@ function buildCsp() {
   ].join("; ");
 }
 
-const baseSecurityHeaders = [
-  { key: "Strict-Transport-Security", value: "max-age=63072000; includeSubDomains; preload" },
-  { key: "X-Frame-Options", value: "DENY" },
-  { key: "X-Content-Type-Options", value: "nosniff" },
-  {
-    key: "Referrer-Policy",
-    value: "strict-origin-when-cross-origin",
-  },
-  {
-    key: "Permissions-Policy",
-    value: "camera=(), microphone=(), geolocation=(), browsing-topics=()",
-  },
-];
+// cameraPolicy is "(self)" only on the check-in scanner route and "()" everywhere
+// else - the QR attendance scanner (/console/events/[id]/scan) is the single
+// feature that opens a camera, and a blanket camera=() makes getUserMedia fail
+// there with "[Violation] Permissions policy violation: camera is not allowed".
+function securityHeaders(cameraPolicy: string) {
+  return [
+    { key: "Strict-Transport-Security", value: "max-age=63072000; includeSubDomains; preload" },
+    { key: "X-Frame-Options", value: "DENY" },
+    { key: "X-Content-Type-Options", value: "nosniff" },
+    {
+      key: "Referrer-Policy",
+      value: "strict-origin-when-cross-origin",
+    },
+    {
+      key: "Permissions-Policy",
+      value: `camera=${cameraPolicy}, microphone=(), geolocation=(), browsing-topics=()`,
+    },
+  ];
+}
 
 const nextConfig: NextConfig = {
   // Default Server Action body limit is 1MB, which silently rejects most
@@ -95,11 +101,18 @@ const nextConfig: NextConfig = {
   async headers() {
     return [
       {
-        source: "/(.*)",
-        headers: [
-          { key: "Content-Security-Policy", value: buildCsp() },
-          ...baseSecurityHeaders,
-        ],
+        // Only route where the camera is allowed. Must stay disjoint from the
+        // rule below - overlapping rules would emit two conflicting
+        // Permissions-Policy headers and browsers intersect them, which would
+        // re-block the camera.
+        source: "/console/events/:id/scan",
+        headers: [{ key: "Content-Security-Policy", value: buildCsp() }, ...securityHeaders("(self)")],
+      },
+      {
+        // Everything else: camera fully blocked (negative lookahead keeps the
+        // scanner route out of this rule).
+        source: "/((?!console/events/[^/]+/scan).*)",
+        headers: [{ key: "Content-Security-Policy", value: buildCsp() }, ...securityHeaders("()")],
       },
     ];
   },

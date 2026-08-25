@@ -153,6 +153,7 @@ export default async function ConsoleEventDetailPage({ params }: { params: Promi
                 defaultValue={event.coverImageUrl ?? ""}
                 aspect={16 / 9}
                 allowPaste
+                hint="Ideal 1920 × 1080 px (16:9) — gambar di-crop & dikompres otomatis."
               />
             </div>
           </details>

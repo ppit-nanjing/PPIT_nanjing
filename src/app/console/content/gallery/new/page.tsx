@@ -1,6 +1,6 @@
 import { requireModuleAccess } from "@/lib/admin-scope";
 import { createGalleryAlbum } from "@/app/actions/admin-content";
-import { FileUpload } from "@/components/upload/file-upload";
+import { ImageUploadCropper } from "@/components/upload/image-upload-cropper";
 import { CollapsibleSection } from "@/components/console/collapsible-section";
 import { ArrowLeft } from "lucide-react";
 import Link from "next/link";
@@ -20,7 +20,14 @@ export default async function NewGalleryAlbumPage() {
       <CollapsibleSection title="Formulir Album">
         <form action={createGalleryAlbum} className="flex flex-col gap-6">
           <input name="title" placeholder="Judul Album *" required className="bg-soft-gray rounded-md p-3 text-body-md" />
-          <FileUpload name="coverImageUrl" folder="album" label="Foto Sampul (opsional)" placeholder="URL atau unggah gambar" />
+          <ImageUploadCropper
+            name="coverImageUrl"
+            folder="album"
+            label="Foto Sampul (opsional)"
+            placeholder="URL atau unggah gambar"
+            aspect={16 / 9}
+            hint="Ideal 1920 × 1080 px (16:9) — gambar di-crop & dikompres otomatis."
+          />
           <label className="flex flex-col gap-2">
             <span className="text-label-caps uppercase tracking-wide text-on-surface-variant">
               Link Google Drive Semua Foto (opsional)

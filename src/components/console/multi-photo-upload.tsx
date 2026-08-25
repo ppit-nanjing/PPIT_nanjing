@@ -32,8 +32,9 @@ export function MultiPhotoUpload({ albumId }: { albumId: string }) {
       try {
         // Sequential on purpose - keeps memory flat and gives honest progress.
         const blob = await compressImage(images[i]);
+        const ext = blob.type === "image/webp" ? "webp" : "jpg";
         const fd = new FormData();
-        fd.append("file", new File([blob], `photo-${Date.now()}-${i}.jpg`, { type: "image/jpeg" }));
+        fd.append("file", new File([blob], `photo-${Date.now()}-${i}.${ext}`, { type: blob.type }));
         fd.append("folder", "gallery");
         const res = await fetch("/api/upload", { method: "POST", body: fd });
         const data = await res.json();
@@ -83,7 +84,10 @@ export function MultiPhotoUpload({ albumId }: { albumId: string }) {
           <>
             <Images size={28} className="text-secondary" />
             <p className="text-label-caps text-on-surface-variant text-center">
-              Klik atau seret beberapa foto sekaligus — dikompres otomatis sebelum unggah
+              Klik atau seret beberapa foto sekaligus
+            </p>
+            <p className="text-body-sm text-on-surface-variant/70 text-center max-w-xs">
+              Foto di-resize ke sisi terpanjang 1920 px & dikompres WebP otomatis.
             </p>
           </>
         )}

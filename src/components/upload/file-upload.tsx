@@ -4,6 +4,7 @@ import { useState, useRef, type DragEvent } from "react";
 import { Upload, Loader2, ImageIcon, X } from "lucide-react";
 import { useT } from "@/lib/i18n/client";
 import { uploadErrorMessage } from "./upload-error";
+import { compressImage } from "@/lib/image-compress";
 
 type Props = {
   name: string;
@@ -18,6 +19,8 @@ type Props = {
   // Langsung unggah begitu file dipilih/drop - untuk alur peserta (bukti bayar)
   // yang tidak seharusnya diminta menekan dua tombol berurutan.
   autoUpload?: boolean;
+  // Helper text shown under the label - recommended resolution/ratio guidance.
+  hint?: string;
 };
 
 export function FileUpload({
@@ -30,6 +33,7 @@ export function FileUpload({
   accept = "image/*",
   allowPaste = true,
   autoUpload = false,
+  hint,
 }: Props) {
   const t = useT();
   const [value, setValue] = useState(defaultValue ?? "");
@@ -66,8 +70,20 @@ export function FileUpload({
     setUploading(true);
     setError(null);
     try {
+      // Site-wide image policy: images (except avatars and animated GIFs,
+      // which would lose their animation through a canvas re-encode) are
+      // re-encoded to WebP client-side. Non-images - resumes, PDFs - pass
+      // through byte-for-byte.
+      let payload = chosen as Blob;
+      let name = chosen.name;
+      if (chosen.type.startsWith("image/") && chosen.type !== "image/gif") {
+        payload = await compressImage(chosen);
+        const ext = payload.type === "image/webp" ? "webp" : "jpg";
+        const base = name.replace(/\.[^.]+$/, "") || "image";
+        name = `${base}.${ext}`;
+      }
       const fd = new FormData();
-      fd.append("file", chosen);
+      fd.append("file", new File([payload], name, { type: payload.type }));
       fd.append("folder", folder);
       const res = await fetch("/api/upload", { method: "POST", body: fd });
       const data = await res.json();
@@ -83,6 +99,7 @@ export function FileUpload({
   return (
     <div className="flex flex-col gap-2">
       {label && <span className="text-label-caps uppercase tracking-wide text-on-surface-variant">{label}</span>}
+      {hint && <span className="text-body-sm text-on-surface-variant -mt-1">{hint}</span>}
       {allowPaste && (
         <input
           type="text"

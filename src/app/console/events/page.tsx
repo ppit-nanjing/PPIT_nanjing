@@ -66,6 +66,7 @@ export default async function ConsoleEventsPage() {
                 placeholder="Tempel URL atau unggah gambar"
                 aspect={16 / 9}
                 allowPaste
+                hint="Ideal 1920 × 1080 px (16:9) — gambar di-crop & dikompres otomatis."
               />
             </div>
           </details>

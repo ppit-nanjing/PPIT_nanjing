@@ -5,7 +5,7 @@ import { newsArticles, users } from "@/db/schema";
 import { requireModuleAccess } from "@/lib/admin-scope";
 import { emailSenderStatus } from "@/lib/email";
 import { upsertNewsArticle } from "@/app/actions/admin-content";
-import { FileUpload } from "@/components/upload/file-upload";
+import { ImageUploadCropper } from "@/components/upload/image-upload-cropper";
 import { AIImproveButton } from "@/components/ai/ai-improve-button";
 import { AIReviewButton } from "@/components/ai/ai-review-popup";
 
@@ -26,12 +26,14 @@ export default async function EditNewsArticlePage({ params }: { params: Promise<
       <form action={upsertNewsArticle.bind(null, article.id)} className="flex flex-col gap-6">
         <input id="news-title" name="title" defaultValue={article.title} required className="bg-soft-gray rounded-md p-3 text-body-md" />
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <FileUpload
+            <ImageUploadCropper
               name="coverImageUrl"
               folder="news"
               label="Foto Sampul"
               placeholder="URL atau unggah gambar"
               defaultValue={article.coverImageUrl ?? ""}
+              aspect={16 / 9}
+              hint="Ideal 1920 × 1080 px (16:9) — gambar di-crop & dikompres otomatis."
             />
             <input
               name="category"

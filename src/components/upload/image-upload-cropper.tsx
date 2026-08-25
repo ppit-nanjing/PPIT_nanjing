@@ -6,6 +6,7 @@ import { Upload, Loader2, ImageIcon, X, Crop } from "lucide-react";
 import { useT } from "@/lib/i18n/client";
 import type { T } from "@/lib/i18n/translate";
 import { uploadErrorMessage } from "./upload-error";
+import { compressImage } from "@/lib/image-compress";
 
 type Props = {
   // Uncontrolled (form-submit) mode: a hidden input named `name` carries the
@@ -24,6 +25,9 @@ type Props = {
   // Aspect ratio for the crop step (e.g. 1 for square headshots, 16/9 for
   // covers). When omitted the image is uploaded as-is with no crop step.
   aspect?: number;
+  // Helper text shown under the label - recommended resolution/ratio guidance
+  // so admins know what size to prepare before uploading.
+  hint?: string;
   // Controlled mode.
   value?: string;
   onValueChange?: (url: string) => void;
@@ -73,6 +77,7 @@ export function ImageUploadCropper({
   accept = "image/*",
   allowPaste = true,
   aspect,
+  hint,
   value,
   onValueChange,
 }: Props) {
@@ -100,12 +105,18 @@ export function ImageUploadCropper({
     onValueChange?.(url);
   }
 
-  async function uploadBlob(blob: Blob, filename: string) {
+  async function uploadBlob(rawBlob: Blob, filename: string) {
     setUploading(true);
     setError(null);
     try {
+      // Site-wide image policy: everything except profile pictures is
+      // re-encoded to WebP client-side; avatars keep their (JPEG) crop output
+      // for maximum compatibility with in-app browsers.
+      const blob = folder === "avatar" ? rawBlob : await compressImage(rawBlob);
+      const ext = blob.type === "image/webp" ? "webp" : blob.type === "image/png" ? "png" : "jpg";
+      const base = filename.replace(/\.[^.]+$/, "") || "image";
       const fd = new FormData();
-      fd.append("file", new File([blob], filename, { type: blob.type }));
+      fd.append("file", new File([blob], `${base}-${Date.now()}.${ext}`, { type: blob.type }));
       fd.append("folder", folder);
       const res = await fetch("/api/upload", { method: "POST", body: fd });
       const data = await res.json();
@@ -166,6 +177,7 @@ export function ImageUploadCropper({
           {required && <span className="text-error"> *</span>}
         </span>
       )}
+      {hint && <span className="text-body-sm text-on-surface-variant -mt-1">{hint}</span>}
 
       {name && <input type="hidden" name={name} value={currentValue} />}
 
