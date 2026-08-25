@@ -2,9 +2,10 @@ import NextAuth from "next-auth";
 import Google from "next-auth/providers/google";
 import Credentials from "next-auth/providers/credentials";
 import { DrizzleAdapter } from "@auth/drizzle-adapter";
-import { and, eq } from "drizzle-orm";
+import { cache } from "react";
+import { and, eq, sql } from "drizzle-orm";
 import { db } from "@/db";
-import { users, accounts, sessions, verificationTokens, roles, departmentMembers, departments } from "@/db/schema";
+import { users, accounts, sessions, verificationTokens } from "@/db/schema";
 import { verifyPassword } from "@/lib/password";
 
 // Best-effort brute-force throttle for the email/password path. NOTE: this is an
@@ -42,41 +43,46 @@ function registerSuccess(key: string) {
 // - accessTier 'scoped' (Anggota Divisi) -> only the module keys listed in the union of
 //   their department(s)' adminModuleScope arrays.
 // - accessTier 'advisory' (Dewan Pembina) or no role/department -> no admin access.
-async function resolveAdminScope(userId: string): Promise<"full" | string[] | null> {
-  const [user] = await db
-    .select({ accessTier: roles.accessTier })
-    .from(users)
-    .leftJoin(roles, eq(users.roleId, roles.id))
-    .where(eq(users.id, userId));
+//
+// Perf: this used to be three sequential awaited helpers (resolveAdminScope's two
+// queries + emailSubscribed + locale = 4 round trips) and it runs inside the session
+// callback on EVERY auth() call. With Neon over HTTP each query is a full round trip
+// to ap-southeast-1, so all four reads are fused into one joined SELECT here.
+type SessionContext = {
+  accessTier: string | null;
+  emailSubscribed: boolean | null;
+  locale: string | null;
+  memberships: { grants: boolean; scope: string[] }[];
+};
 
-  const memberships = await db
-    .select({ grantsFullAdminAccess: departments.grantsFullAdminAccess, adminModuleScope: departments.adminModuleScope })
-    .from(departmentMembers)
-    .innerJoin(departments, eq(departmentMembers.departmentId, departments.id))
-    .where(eq(departmentMembers.userId, userId));
+async function loadSessionContext(userId: string): Promise<SessionContext | null> {
+  const result = await db.execute<SessionContext>(sql`
+    select u.access_tier as "accessTier",
+           u.email_subscribed as "emailSubscribed",
+           u.locale as "locale",
+           coalesce(
+             json_agg(json_build_object('grants', d.grants_full_admin_access, 'scope', d.admin_module_scope))
+               filter (where d.id is not null),
+             '[]'::json
+           ) as "memberships"
+    from users u
+    left join department_members dm on dm.user_id = u.id
+    left join departments d on d.id = dm.department_id
+    where u.id = ${userId}
+    group by u.id
+    limit 1
+  `);
+  return result.rows[0] ?? null;
+}
 
-  if (user?.accessTier === "full" || memberships.some((m) => m.grantsFullAdminAccess)) return "full";
-  if (user?.accessTier !== "scoped") return null;
-
-  const scope = [...new Set(memberships.flatMap((m) => m.adminModuleScope))];
+function resolveAdminScope(ctx: SessionContext): "full" | string[] | null {
+  if (ctx.accessTier === "full" || ctx.memberships.some((m) => m.grants)) return "full";
+  if (ctx.accessTier !== "scoped") return null;
+  const scope = [...new Set(ctx.memberships.flatMap((m) => m.scope))];
   return scope;
 }
 
-async function resolveEmailSubscribed(userId: string): Promise<boolean | null> {
-  const [user] = await db.select({ emailSubscribed: users.emailSubscribed }).from(users).where(eq(users.id, userId));
-  return user?.emailSubscribed ?? null;
-}
-
-// Same shape as resolveEmailSubscribed - resolved fresh per session() call
-// rather than baked into the JWT at sign-in, so it stays simple. This value
-// is only a fallback for a device with no NEXT_LOCALE cookie yet; see the
-// cookie-wins-over-session note in src/lib/i18n/server.ts.
-async function resolveLocale(userId: string): Promise<string | null> {
-  const [user] = await db.select({ locale: users.locale }).from(users).where(eq(users.id, userId));
-  return user?.locale ?? null;
-}
-
-export const { handlers, auth, signIn, signOut } = NextAuth({
+const { handlers, auth: uncachedAuth, signIn, signOut } = NextAuth({
   // DrizzleAdapter's second arg is required whenever the table names/columns
   // don't match its own defaults (singular "user"/"account"/"session" and
   // camelCase "verificationToken") - without it, it silently queries tables
@@ -187,11 +193,15 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     async session({ session, token }) {
       const userId = (token.id as string) ?? (token.sub as string);
       session.user.id = userId;
-      const scope = await resolveAdminScope(userId);
+      // Single round trip for everything the session needs about the user.
+      const ctx = await loadSessionContext(userId);
+      const scope = ctx ? resolveAdminScope(ctx) : null;
       session.user.adminScope = scope;
       session.user.isAdmin = scope === "full" || (Array.isArray(scope) && scope.length > 0);
-      session.user.emailSubscribed = await resolveEmailSubscribed(userId);
-      session.user.locale = await resolveLocale(userId);
+      session.user.emailSubscribed = ctx?.emailSubscribed ?? null;
+      // Locale fallback only - see the cookie-wins-over-session note in
+      // src/lib/i18n/server.ts.
+      session.user.locale = ctx?.locale ?? null;
       return session;
     },
   },
@@ -199,3 +209,11 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     signIn: "/login",
   },
 });
+
+// React cache() dedupes auth() within one server render: the root layout,
+// console layout, requireModuleAccess(), i18n helpers etc. each call it, and
+// without dedupe every one of those ran the session callback's DB query again.
+// Outside a render pass (route handlers, server actions) this simply calls
+// through, so behavior there is unchanged.
+export const auth = cache(uncachedAuth);
+export { handlers, signIn, signOut };
