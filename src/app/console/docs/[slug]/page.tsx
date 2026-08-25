@@ -4,6 +4,7 @@ import { db } from "@/db";
 import { helpArticles, users } from "@/db/schema";
 import { upsertHelpArticle } from "@/app/actions/admin-docs";
 import { CollapsibleSection } from "@/components/console/collapsible-section";
+import { TextField, SelectField, TextAreaField, FormActions, primaryBtn } from "@/components/console/form";
 
 export default async function HelpArticlePage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
@@ -32,15 +33,18 @@ export default async function HelpArticlePage({ params }: { params: Promise<{ sl
 
       <CollapsibleSection title="Edit Panduan Ini">
         <form action={upsertHelpArticle.bind(null, article.id)} className="flex flex-col gap-4">
-          <input name="title" defaultValue={article.title} required className="bg-soft-gray rounded-md p-3 text-body-md" />
-          <input name="section" defaultValue={article.section} required className="bg-soft-gray rounded-md p-3 text-body-md" />
-          <textarea name="content" defaultValue={article.content ?? ""} rows={8} className="bg-soft-gray rounded-md p-3 text-body-md resize-none" />
-          <button
-            type="submit"
-            className="self-start bg-primary-container text-on-primary text-label-caps uppercase tracking-wide px-6 py-3 rounded-md hover:bg-primary transition-colors"
-          >
-            Simpan Perubahan
-          </button>
+          <TextField name="title" label="Judul" required defaultValue={article.title} />
+          <SelectField
+            name="section"
+            label="Bagian"
+            required
+            defaultValue={article.section}
+            options={["Sering Dipakai", "Sering Membingungkan"].map((s) => ({ value: s, label: s }))}
+          />
+          <TextAreaField name="content" label="Isi Panduan" rows={8} defaultValue={article.content} />
+          <FormActions>
+            <button type="submit" className={primaryBtn}>Simpan Perubahan</button>
+          </FormActions>
         </form>
       </CollapsibleSection>
     </div>

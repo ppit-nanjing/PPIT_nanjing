@@ -6,7 +6,7 @@ import { inviteUsers } from "@/app/actions/admin-users";
 import { CollapsibleSection } from "@/components/console/collapsible-section";
 import { GuideButton } from "@/components/console/guide-button";
 import { getGuide } from "@/lib/guides";
-import { UserPlus } from "lucide-react";
+import { Field, fieldInput, FormActions, primaryBtn } from "@/components/console/form";
 
 export default async function ConsoleUsersPage() {
   await requireModuleAccess("users");
@@ -49,10 +49,11 @@ export default async function ConsoleUsersPage() {
           description="Buat akun untuk orang yang belum pernah masuk — supaya bisa langsung ditugaskan ke kepanitiaan"
         >
           <form action={inviteUsers} className="flex flex-col gap-3 max-w-2xl">
-            <label className="flex flex-col gap-1">
-              <span className="text-label-caps uppercase tracking-wide text-on-surface-variant">
-                Daftar undangan — satu orang per baris
-              </span>
+            <Field
+              label="Daftar undangan — satu orang per baris"
+              hint="Format: “Nama Lengkap, email@contoh.com” atau email saja."
+              required
+            >
               <textarea
                 name="bulk"
                 rows={8}
@@ -60,25 +61,23 @@ export default async function ConsoleUsersPage() {
                 placeholder={`Nama Lengkap, email@contoh.com
 Nama Lain, lain@contoh.com
 atau email saja: seseorang@contoh.com`}
-                className="bg-soft-gray rounded-md p-3 text-body-md font-mono"
+                className={`${fieldInput} font-mono`}
               />
-            </label>
-            <p className="text-xs text-on-surface-variant">
-              Akunnya dibuat berstatus <strong>Diundang</strong> tanpa kata sandi. Orangnya jadi pemilik akun itu saat
-              pertama masuk — lewat Google dengan alamat email yang sama, atau dengan membuat kata sandi di{" "}
-              <code>/signup</code> memakai alamat itu. Email yang sudah punya akun <strong>dilewati</strong>, bukan
-              ditimpa, jadi menempel daftar yang sama dua kali aman.
+            </Field>
+            <p className="text-xs text-on-surface-variant bg-surface-container-low border border-outline-variant rounded-md p-3">
+              Akun dibuat berstatus <strong>Diundang</strong> tanpa sandi. Orangnya jadi pemilik akun saat pertama
+              masuk — Google dengan email yang sama, atau buat sandi di <code>/signup</code>. Email yang sudah punya
+              akun <strong>dilewati</strong>, bukan ditimpa, jadi menempel daftar yang sama dua kali aman.
             </p>
             <p className="text-xs text-on-surface-variant">
-              Belum ada email undangan yang terkirim otomatis — beri tahu mereka lewat WeChat/WhatsApp seperti biasa.
-              Penyedia email belum disiapkan (lihat <code>GMAIL_USER</code> di <code>.env.example</code>).
+              Belum ada email undangan otomatis — beri tahu mereka lewat WeChat/WhatsApp. Penyedia email belum
+              disiapkan (lihat <code>GMAIL_USER</code> di <code>.env.example</code>).
             </p>
-            <button
-              type="submit"
-              className="self-start flex items-center gap-2 bg-primary-container text-on-primary text-label-caps uppercase tracking-wide px-5 py-3 rounded-md hover:bg-primary transition-colors"
-            >
-              <UserPlus size={16} /> Buat Akun Undangan
-            </button>
+            <FormActions>
+              <button type="submit" className={primaryBtn}>
+                Buat Akun Undangan
+              </button>
+            </FormActions>
           </form>
         </CollapsibleSection>
       </div>
