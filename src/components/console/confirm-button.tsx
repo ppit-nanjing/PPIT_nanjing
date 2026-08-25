@@ -4,7 +4,15 @@ import { useEffect, useRef, useState, useTransition, type ReactNode } from "reac
 import { TriangleAlert } from "lucide-react";
 
 type Props = {
-  onConfirm: () => void | Promise<void>;
+  /** Client-side callback - use this from other CLIENT components. */
+  onConfirm?: () => void | Promise<void>;
+  /**
+   * Server action invoked with a FormData built from `payload` - the form to
+   * use from SERVER components: plain closures can't cross the RSC boundary
+   * (React #375/#441), but a "use server" action reference is serializable.
+   */
+  action?: (formData: FormData) => void | Promise<void>;
+  payload?: Record<string, string>;
   message: string;
   title?: string;
   confirmLabel?: string;
@@ -39,6 +47,8 @@ function isNextControlFlowSignal(err: unknown): boolean {
 // button in the console should go through this instead.
 export function ConfirmButton({
   onConfirm,
+  action,
+  payload,
   message,
   title = "Konfirmasi",
   confirmLabel = "Ya, hapus",
@@ -54,6 +64,25 @@ export function ConfirmButton({
   const triggerRef = useRef<HTMLButtonElement>(null);
   const cancelRef = useRef<HTMLButtonElement>(null);
   const confirmRef = useRef<HTMLButtonElement>(null);
+
+  function run() {
+    startTransition(async () => {
+      setError(null);
+      try {
+        if (action) {
+          const fd = new FormData();
+          for (const [key, value] of Object.entries(payload ?? {})) fd.set(key, value);
+          await action(fd);
+        } else if (onConfirm) {
+          await onConfirm();
+        }
+        close();
+      } catch (err) {
+        if (isNextControlFlowSignal(err)) throw err;
+        setError(err instanceof Error ? err.message : "Gagal melakukan tindakan ini.");
+      }
+    });
+  }
 
   // Default focus lands on Cancel (the safe action), matching native
   // confirm()'s convention of not defaulting to the destructive choice.
@@ -122,18 +151,7 @@ export function ConfirmButton({
                 ref={confirmRef}
                 type="button"
                 disabled={pending}
-                onClick={() =>
-                  startTransition(async () => {
-                    setError(null);
-                    try {
-                      await onConfirm();
-                      close();
-                    } catch (err) {
-                      if (isNextControlFlowSignal(err)) throw err;
-                      setError(err instanceof Error ? err.message : "Gagal melakukan tindakan ini.");
-                    }
-                  })
-                }
+                onClick={run}
                 className={`text-label-caps uppercase tracking-wide px-4 py-2 rounded-md transition-colors disabled:opacity-50 ${
                   danger
                     ? "bg-error-container text-on-error-container hover:opacity-90"

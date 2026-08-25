@@ -342,11 +342,8 @@ export default async function ConsoleEventDetailPage({ params }: { params: Promi
                   <ConfirmButton
                     title="Hapus pertanyaan?"
                     message={`"${q.label}" dihapus dari form pendaftaran. Jawaban yang sudah terkumpul tidak ikut terhapus.`}
-                    onConfirm={async () => {
-                      const fd = new FormData();
-                      fd.set("id", q.id);
-                      await deleteEventQuestion(fd);
-                    }}
+                    action={deleteEventQuestion}
+                    payload={{ id: q.id }}
                     className="text-label-caps uppercase tracking-wide text-error hover:bg-error-container/30 px-3 py-1.5 rounded-md"
                   >
                     Hapus
@@ -626,12 +623,8 @@ export default async function ConsoleEventDetailPage({ params }: { params: Promi
                             title="Tolak lamaran?"
                             message={`Lamaran volunteer ${v.app.fullName} akan ditandai ditolak.`}
                             confirmLabel="Ya, tolak"
-                            onConfirm={async () => {
-                              const fd = new FormData();
-                              fd.set("id", v.app.id);
-                              fd.set("decision", "rejected");
-                              await setVolunteerStatus(fd);
-                            }}
+                            action={setVolunteerStatus}
+                            payload={{ id: v.app.id, decision: "rejected" }}
                             className="w-full flex-1 text-label-caps uppercase tracking-wide text-error border border-error/40 px-3 py-1.5 rounded-md hover:bg-error-container/30 transition-colors"
                           >
                             Tolak

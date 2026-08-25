@@ -125,7 +125,8 @@ export default async function ConsoleMembershipPage() {
                   }
                   confirmLabel={p.isOpen ? "Ya, tutup" : "Ya, buka"}
                   danger={p.isOpen}
-                  onConfirm={() => setRecruitmentPeriodOpen(p.id, !p.isOpen)}
+                  action={setRecruitmentPeriodOpen}
+                  payload={{ id: p.id, open: String(!p.isOpen) }}
                   className={`text-label-caps uppercase tracking-wide px-4 py-2 rounded-md border transition-colors ${
                     p.isOpen
                       ? "border-outline-variant text-on-surface-variant hover:bg-surface-container-low"

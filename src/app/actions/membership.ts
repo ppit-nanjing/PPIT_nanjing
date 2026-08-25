@@ -552,8 +552,13 @@ export async function updateFormMeta(formData: FormData) {
 // running a seed script against the prod DB - these two actions are the
 // missing admin surface for that.
 
-export async function setRecruitmentPeriodOpen(id: string, open: boolean) {
+export async function setRecruitmentPeriodOpen(formData: FormData) {
   await requireModuleAccess("membership");
+  const id = String(formData.get("id") ?? "");
+  // FormData only carries strings - "true"/"false" keeps this invocable both
+  // from plain <form> posts and as a ConfirmButton action reference.
+  const open = String(formData.get("open") ?? "") === "true";
+  if (!id) throw new Error("Periode tidak dikenal.");
   await db.update(recruitmentPeriods).set({ isOpen: open }).where(eq(recruitmentPeriods.id, id));
   revalidatePath("/console/membership");
   revalidatePath("/join-us");

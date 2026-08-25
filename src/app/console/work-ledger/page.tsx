@@ -154,11 +154,8 @@ export default async function WorkLedgerPage() {
                         title="Lepas penugasan?"
                         message={`${p.name} dilepas dari "${a.eventTitle ?? "(acara dihapus)"}" sebagai ${a.role}.`}
                         confirmLabel="Ya, lepas"
-                        onConfirm={async () => {
-                          const fd = new FormData();
-                          fd.set("id", a.assignmentId);
-                          await removeCommittee(fd);
-                        }}
+                        action={removeCommittee}
+                        payload={{ id: a.assignmentId }}
                         className="text-label-caps uppercase tracking-wide text-error hover:bg-error-container/30 px-2 py-1 rounded shrink-0"
                       >
                         Lepas
@@ -293,11 +290,8 @@ export default async function WorkLedgerPage() {
                   <ConfirmButton
                     title="Hapus sertifikat?"
                     message={`Sertifikat "${c.title}" (${c.holder ?? "?"}) dihapus permanen dari ledger.`}
-                    onConfirm={async () => {
-                      const fd = new FormData();
-                      fd.set("id", c.id);
-                      await deleteCertificate(fd);
-                    }}
+                    action={deleteCertificate}
+                    payload={{ id: c.id }}
                     className="text-label-caps uppercase tracking-wide text-error hover:bg-error-container/30 px-3 py-1.5 rounded-md"
                   >
                     Hapus

@@ -78,12 +78,8 @@ export default async function ConsoleEventsPage() {
                      title="Jadikan draft?"
                      message={`"${e.title}" akan langsung disembunyikan dari publik.`}
                      confirmLabel="Ya, jadikan draft"
-                     onConfirm={async () => {
-                       const fd = new FormData();
-                       fd.set("eventId", e.id);
-                       fd.set("status", "draft");
-                       await setEventStatus(fd);
-                     }}
+                     action={setEventStatus}
+                     payload={{ eventId: e.id, status: "draft" }}
                      danger={false}
                      className="text-label-caps uppercase tracking-wide px-2.5 py-1 sm:px-3 sm:py-1.5 rounded-md border border-outline-variant text-on-surface-variant hover:bg-surface-container-low transition-colors"
                    >

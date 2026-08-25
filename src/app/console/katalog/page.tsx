@@ -69,11 +69,8 @@ function Row({
       <ConfirmButton
         title="Hapus entri ini?"
         message={`"${itemLabel}" akan dihapus permanen dari katalog.`}
-        onConfirm={async () => {
-          const fd = new FormData();
-          fd.set("id", id);
-          await onDelete(fd);
-        }}
+        action={onDelete}
+        payload={{ id }}
         className={rowBtn}
       >
         Hapus
