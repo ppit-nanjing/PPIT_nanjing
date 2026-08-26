@@ -1,4 +1,14 @@
+import { Readable } from "node:stream";
 import { google } from "googleapis";
+
+// Typed so callers (console/documents) can distinguish "env vars missing"
+// from any other Drive failure without string-matching Indonesian messages.
+export class DriveNotConfiguredError extends Error {
+  constructor() {
+    super("Google Drive belum dikonfigurasi (GOOGLE_DRIVE_SA_JSON / GOOGLE_DRIVE_ROOT_FOLDER_ID)");
+    this.name = "DriveNotConfiguredError";
+  }
+}
 
 // Service-account Drive client. Semua operasi file PPIT dilakukan server-side
 // lewat credential ini; akses per-divisi/periode di-enforce di level aplikasi
@@ -9,7 +19,7 @@ function buildClient() {
   const saJson = process.env.GOOGLE_DRIVE_SA_JSON;
   const root = process.env.GOOGLE_DRIVE_ROOT_FOLDER_ID;
   if (!saJson || !root) {
-    throw new Error("Google Drive belum dikonfigurasi (GOOGLE_DRIVE_SA_JSON / GOOGLE_DRIVE_ROOT_FOLDER_ID)");
+    throw new DriveNotConfiguredError();
   }
   const credentials = JSON.parse(saJson) as Record<string, unknown>;
   const auth = new google.auth.GoogleAuth({
@@ -31,13 +41,17 @@ export type DriveFile = {
   mimeType: string;
   webViewLink?: string | null;
   parents?: string[] | null;
+  // Drive returns size as a decimal string (and omits it entirely for
+  // Google-Docs-type files that have no fixed byte size).
+  size?: string | null;
+  modifiedTime?: string | null;
 };
 
 export async function listFolder(folderId: string): Promise<DriveFile[]> {
   const { drive } = getDrive();
   const res = await drive.files.list({
     q: `'${folderId}' in parents and trashed = false`,
-    fields: "files(id, name, mimeType, webViewLink, parents)",
+    fields: "files(id, name, mimeType, webViewLink, parents, size, modifiedTime)",
     orderBy: "folder, name",
   });
   return (res.data.files ?? []) as DriveFile[];
@@ -65,7 +79,10 @@ export async function uploadFile(
   const { drive } = getDrive();
   const res = await drive.files.create({
     requestBody: { name, parents: [parentId] },
-    media: { mimeType, body: Buffer.from(data) },
+    // googleapis' media uploader pipes the body - in bundled serverless
+    // environments a plain Buffer has no .pipe(), so hand it a Node stream
+    // (this was the production "body.pipe is not a function" crash).
+    media: { mimeType, body: Readable.from(Buffer.from(data)) },
     fields: "id, name, mimeType, webViewLink",
   });
   return res.data as DriveFile;
@@ -82,12 +99,19 @@ export async function trashFile(fileId: string): Promise<void> {
 }
 
 // Used by rename/trash actions to verify a client-supplied fileId actually
-// lives inside the folder the caller was authorized to write to, and to look
-// up the webViewLink so a trashed file's short link can be deactivated.
-export async function getFileMeta(fileId: string): Promise<{ parents: string[]; webViewLink: string | null }> {
+// lives inside the folder the caller was authorized to write to, by the
+// console breadcrumb for the real folder name, and to look up the webViewLink
+// so a trashed file's short link can be deactivated.
+export async function getFileMeta(
+  fileId: string,
+): Promise<{ name?: string; parents: string[]; webViewLink: string | null }> {
   const { drive } = getDrive();
-  const res = await drive.files.get({ fileId, fields: "parents, webViewLink" });
-  return { parents: res.data.parents ?? [], webViewLink: res.data.webViewLink ?? null };
+  const res = await drive.files.get({ fileId, fields: "name, parents, webViewLink" });
+  return {
+    name: res.data.name ?? undefined,
+    parents: res.data.parents ?? [],
+    webViewLink: res.data.webViewLink ?? null,
+  };
 }
 
 // Make the file openable by anyone with the link (read-only) so the short link

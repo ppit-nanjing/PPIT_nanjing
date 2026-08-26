@@ -125,6 +125,11 @@ export async function createDriveFolderAction(formData: FormData): Promise<void>
   await createFolder(name, trustedParentId);
 }
 
+// Vercel caps serverless request bodies at ~4.5MB (platform, non-configurable)
+// and next.config sets the server-action limit to exactly 4mb - reject larger
+// files early with a clear message instead of an opaque platform failure.
+const MAX_UPLOAD_BYTES = 4 * 1024 * 1024;
+
 export async function uploadDriveFileAction(formData: FormData): Promise<void> {
   const periodId = (formData.get("periodId") as string) || null;
   const departmentIdRaw = (formData.get("departmentId") as string) || "";
@@ -132,12 +137,23 @@ export async function uploadDriveFileAction(formData: FormData): Promise<void> {
   const parentDriveFolderId = formData.get("parentDriveFolderId") as string;
   const file = formData.get("file") as File | null;
   if (!file || file.size === 0) throw new Error("Pilih berkas terlebih dahulu.");
+  if (file.size > MAX_UPLOAD_BYTES) {
+    throw new Error("Unggah maksimal 4 MB. Untuk berkas lebih besar, unggah manual lewat Google Drive lalu bagikan tautannya.");
+  }
 
   const ctx = await assertWrite(periodId, departmentId);
   const trustedParentId = await resolveWriteTarget(ctx, departmentId, parentDriveFolderId);
 
   const buffer = Buffer.from(await file.arrayBuffer());
-  const uploaded = await uploadFile(file.name, trustedParentId, buffer, file.type || "application/octet-stream");
+  let uploaded;
+  try {
+    uploaded = await uploadFile(file.name, trustedParentId, buffer, file.type || "application/octet-stream");
+  } catch (err) {
+    // Surface a human-readable message; the raw googleapis TypeError is
+    // meaningless to members ("body.pipe is not a function").
+    console.error("[drive] upload failed:", err);
+    throw new Error(`Unggah ke Google Drive gagal: ${err instanceof Error ? err.message : "kesalahan tak diketahui"}`);
+  }
   try {
     const webViewLink = await setLinkViewer(uploaded.id);
     await createAutoShortLink(webViewLink, file.name, periodId, ctx.session.user.id);
@@ -147,7 +163,9 @@ export async function uploadDriveFileAction(formData: FormData): Promise<void> {
     // file sitting in the folder for the user to (probably) re-upload as a
     // duplicate - undo the upload and surface the original error.
     await trashFile(uploaded.id).catch(() => {});
-    throw err;
+    throw new Error(
+      `Berkas terunggah tetapi gagal dibagikan/dicatat, unggahan dibatalkan: ${err instanceof Error ? err.message : "kesalahan tak diketahui"}`,
+    );
   }
 }
 
