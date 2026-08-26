@@ -33,6 +33,9 @@ export type DriveItem = {
   mimeType: string;
   webViewLink?: string | null;
   shortSlug?: string | null;
+  // Files only; absent for folders and Google-Docs-type files.
+  size?: string | null;
+  modifiedTime?: string | null;
 };
 
 export type FolderContents = {
@@ -105,6 +108,8 @@ export async function getFolderContents(args: {
     isFolder: isFolder(f.mimeType),
     mimeType: f.mimeType,
     webViewLink: f.webViewLink ?? null,
+    size: f.size ?? null,
+    modifiedTime: f.modifiedTime ?? null,
   }));
 
   const links = items.filter((i) => i.webViewLink).map((i) => i.webViewLink as string);

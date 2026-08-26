@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { Folder as FolderIcon, File as FileIcon, Trash2, Pencil, FolderPlus } from "lucide-react";
+import { Folder as FolderIcon, File as FileIcon, Trash2, Pencil, FolderPlus, Search } from "lucide-react";
 import { CopyLinkButton } from "@/components/console/copy-link-button";
 import { ConfirmButton } from "@/components/console/confirm-button";
 import type { DriveItem } from "@/app/actions/drive";
@@ -22,6 +22,13 @@ type Props = {
   items: DriveItem[];
   folderNavigable?: boolean;
 };
+
+function formatBytes(n: number): string {
+  if (!Number.isFinite(n) || n < 0) return "";
+  if (n < 1024) return `${n} B`;
+  if (n < 1024 * 1024) return `${(n / 1024).toFixed(0)} KB`;
+  return `${(n / (1024 * 1024)).toFixed(1)} MB`;
+}
 
 function HiddenContext({ periodId, departmentId, parent }: {
   periodId: string | null;
@@ -50,8 +57,13 @@ export function DriveExplorer({
   const [pending, startTransition] = useTransition();
   const [newFolder, setNewFolder] = useState("");
   const [error, setError] = useState<string | null>(null);
+  const [query, setQuery] = useState("");
 
   const canWrite = access === "write";
+  // Client-side name filter - Drive lists are small (per-folder), so this
+  // beats a round trip for finding one berkas.
+  const needle = query.trim().toLowerCase();
+  const visible = needle ? items.filter((i) => i.name.toLowerCase().includes(needle)) : items;
 
   function refresh() {
     startTransition(() => router.refresh());
@@ -153,8 +165,9 @@ export function DriveExplorer({
               disabled={pending}
               className="bg-primary-container text-on-primary text-label-caps uppercase tracking-wide px-4 py-2.5 rounded-lg hover:opacity-90 disabled:opacity-60"
             >
-              Unggah
+              {pending ? "Mengunggah…" : "Unggah"}
             </button>
+            <span className="text-label-caps text-on-surface-variant">maks 4 MB</span>
           </form>
           <form onSubmit={onCreateFolder} className="flex items-center gap-2">
             <input
@@ -174,11 +187,26 @@ export function DriveExplorer({
         </div>
       )}
 
+      {items.length > 0 && (
+        <div className="relative mb-3 max-w-xs">
+          <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant" aria-hidden />
+          <input
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder="Cari nama berkas…"
+            aria-label="Cari nama berkas"
+            className="w-full bg-surface-container-low border border-outline-variant rounded-lg pl-9 pr-3 py-2 text-body-sm outline-none focus:border-primary"
+          />
+        </div>
+      )}
+
       {items.length === 0 ? (
         <p className="text-body-md text-on-surface-variant py-6 text-center">Folder kosong.</p>
+      ) : visible.length === 0 ? (
+        <p className="text-body-md text-on-surface-variant py-6 text-center">Tidak ada berkas yang cocok dengan pencarian.</p>
       ) : (
         <ul className="divide-y divide-outline-variant">
-          {items.map((item) => {
+          {visible.map((item) => {
             const folderHref =
               item.isFolder && folderNavigable
                 ? `/console/documents?folder=${encodeURIComponent(item.id)}${periodId ? `&period=${periodId}` : ""}`
@@ -203,6 +231,14 @@ export function DriveExplorer({
                     <span className="font-medium text-on-background truncate block">{item.name}</span>
                   )}
                 </div>
+                {!item.isFolder && (item.size != null || item.modifiedTime) && (
+                  <div className="hidden sm:flex flex-col items-end text-label-caps text-on-surface-variant shrink-0 leading-snug">
+                    {item.size != null && <span>{formatBytes(Number(item.size))}</span>}
+                    {item.modifiedTime && (
+                      <span>{new Date(item.modifiedTime).toLocaleDateString("id-ID", { dateStyle: "medium" })}</span>
+                    )}
+                  </div>
+                )}
                 {item.shortSlug && <CopyLinkButton slug={item.shortSlug} />}
                 {canWrite && (
                   <div className="flex items-center gap-1 shrink-0">

@@ -4,6 +4,7 @@ import { managementPeriods } from "@/db/schema";
 import { requireModuleAccess } from "@/lib/admin-scope";
 import { getCurrentPeriodId } from "@/lib/drive-access";
 import { getFolderContents } from "@/lib/drive-queries";
+import { DriveNotConfiguredError, getFileMeta } from "@/lib/drive";
 import { DriveExplorer } from "@/components/documents/drive-explorer";
 import { PeriodPicker } from "@/components/documents/period-picker";
 import { GuideButton } from "@/components/console/guide-button";
@@ -27,12 +28,17 @@ export default async function ConsoleDocumentsPage({
   let contents = null;
   let notConfigured = false;
   let noPeriod = false;
+  // Real folder name for the breadcrumb when browsing a subfolder (?folder=);
+  // the placeholder used to be the literal string "Folder".
+  let folderName: string | null = null;
 
   if (folder) {
     try {
-      contents = await getFolderContents({ driveFolderId: folder, title: "Folder" });
+      contents = await getFolderContents({ driveFolderId: folder });
+      const meta = await getFileMeta(folder);
+      folderName = meta.name ?? null;
     } catch (e) {
-      if (e instanceof Error && /dikonfigurasi/i.test(e.message)) notConfigured = true;
+      if (e instanceof DriveNotConfiguredError) notConfigured = true;
       else throw e;
     }
   } else if (!activePeriodId) {
@@ -41,7 +47,7 @@ export default async function ConsoleDocumentsPage({
     try {
       contents = await getFolderContents({ periodId: activePeriodId, departmentId: null });
     } catch (e) {
-      if (e instanceof Error && /dikonfigurasi/i.test(e.message)) notConfigured = true;
+      if (e instanceof DriveNotConfiguredError) notConfigured = true;
       else throw e;
     }
   }
@@ -73,22 +79,28 @@ export default async function ConsoleDocumentsPage({
 
       {contents && (
         <>
-          <div className="flex flex-wrap items-center gap-3 mb-4">
+          <div className="flex flex-wrap items-center gap-3 mb-2">
             <PeriodPicker periods={periods} activePeriodId={activePeriodId} />
-            {folder && (
+          </div>
+          {folder ? (
+            <nav aria-label="Breadcrumb" className="flex items-center gap-1.5 text-body-sm text-on-surface-variant mb-4 min-w-0">
               <Link
                 href={`/console/documents${activePeriodId ? `?period=${activePeriodId}` : ""}`}
-                className="text-label-caps uppercase tracking-wide text-primary-container hover:text-primary self-end pb-2.5"
+                className="text-primary-container hover:text-primary shrink-0"
               >
-                ← Semua divisi
+                Semua divisi
               </Link>
-            )}
-          </div>
+              <span aria-hidden>/</span>
+              <span className="truncate">{folderName ?? "Folder"}</span>
+            </nav>
+          ) : (
+            <div className="mb-4" />
+          )}
 
           <DriveExplorer
             driveFolderId={contents.driveFolderId}
             access={contents.access}
-            title={folder ? "Folder" : contents.title}
+            title={folder ? (folderName ?? contents.title) : contents.title}
             periodId={contents.periodId}
             departmentId={contents.departmentId}
             items={contents.items}
