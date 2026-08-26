@@ -7,6 +7,7 @@ import { auth } from "@/auth";
 import { db } from "@/db";
 import { eventCommittee, eventDivisions, certificates, events, users, eventRegistrations } from "@/db/schema";
 import { requireModuleAccess } from "@/lib/admin-scope";
+import { getStructureTemplate } from "@/lib/event-structure-templates";
 
 // Committee membership is per-event on purpose: the treasurer of one event is
 // not necessarily the cabinet treasurer, which is the exact complaint in the
@@ -353,6 +354,58 @@ export async function deleteEventDivision(formData: FormData) {
   await db.delete(eventDivisions).where(eq(eventDivisions.id, id));
   if (row) revalidatePath(`/console/events/${row.eventId}`);
   revalidatePath("/console/work-ledger");
+}
+
+// Menerapkan template struktur kepanitiaan (src/lib/event-structure-templates.ts)
+// ke satu acara yang BELUM punya divisi. Sengaja menolak acara yang sudah
+// berisi: template menyalin bentuk, bukan menimpa pekerjaan setengah jadi -
+// kalau mau ganti, hapus dulu divisinya (picker muncul lagi otomatis).
+export async function applyStructureTemplate(formData: FormData) {
+  await requireModuleAccess("events");
+  const eventId = String(formData.get("eventId") ?? "").trim();
+  const template = getStructureTemplate(String(formData.get("templateId") ?? "").trim());
+  if (!eventId || !template) throw new Error("Acara dan template wajib dipilih");
+
+  const [event] = await db.select({ id: events.id }).from(events).where(eq(events.id, eventId));
+  if (!event) throw new Error("Acara tidak ditemukan");
+  const existing = await db
+    .select({ id: eventDivisions.id })
+    .from(eventDivisions)
+    .where(eq(eventDivisions.eventId, eventId))
+    .limit(1);
+  if (existing.length > 0) {
+    throw new Error("Acara ini sudah punya struktur divisi - hapus dulu bila ingin memulai dari template");
+  }
+
+  // Departemen dulu supaya sub-timnya punya induk; orderIndex mengikuti urutan
+  // dokumen template. Kuota/jobdesc disalin apa adanya - mengosongkan yang
+  // tidak diketahui itu disengaja, lihat komentar di registry.
+  for (const [i, dept] of template.departments.entries()) {
+    const [created] = await db
+      .insert(eventDivisions)
+      .values({
+        eventId,
+        parentDivisionId: null,
+        name: dept.name,
+        quota: dept.quota ?? null,
+        jobDescription: dept.jobDescription ?? null,
+        orderIndex: i,
+      })
+      .returning({ id: eventDivisions.id });
+    if (dept.children.length === 0) continue;
+    await db.insert(eventDivisions).values(
+      dept.children.map((child, j) => ({
+        eventId,
+        parentDivisionId: created.id,
+        name: child.name,
+        quota: child.quota ?? null,
+        jobDescription: child.jobDescription ?? null,
+        orderIndex: j,
+      })),
+    );
+  }
+
+  revalidatePath(`/console/events/${eventId}`);
 }
 
 /**

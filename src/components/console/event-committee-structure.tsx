@@ -1,13 +1,15 @@
-import { Users, Plus, Trash2, Award, AlertTriangle } from "lucide-react";
+import { Users, Plus, Trash2, Award, AlertTriangle, LayoutTemplate } from "lucide-react";
 import {
   saveEventDivision,
   deleteEventDivision,
+  applyStructureTemplate,
   issueDivisionCertificates,
   issueEventCertificates,
   assignCommittee,
   assignMembersToDivision,
   removeCommittee,
 } from "@/app/actions/committee";
+import { EVENT_STRUCTURE_TEMPLATES, STRUCTURE_TEMPLATE_GROUPS } from "@/lib/event-structure-templates";
 import { DivisionMemberPicker } from "@/components/console/division-member-picker";
 import { fieldInput } from "@/components/console/form";
 
@@ -111,9 +113,47 @@ export function EventCommitteeStructure({
       </p>
 
       {divisions.length === 0 && (
-        <p className="text-body-md text-on-surface-variant bg-surface-container-low border border-outline-variant rounded-lg p-4">
-          Belum ada divisi. Tambahkan departemen dulu di bawah, lalu sub-timnya.
-        </p>
+        <div className="bg-primary-container/5 border border-outline-variant rounded-xl p-5 flex flex-col gap-3">
+          <h3 className="text-body-lg font-semibold text-on-background flex items-center gap-2">
+            <LayoutTemplate size={18} /> Mulai dari template
+          </h3>
+          <p className="text-body-md text-on-surface-variant max-w-2xl">
+            Salin struktur kepanitiaan yang sudah dipakai PPIT, lalu sunting sesuai acara — kuota,
+            jobdesc, dan divisinya bebas diubah-hapus setelah diterapkan. Atau bangun manual dari form
+            di bawah.
+          </p>
+          <form action={applyStructureTemplate} className="flex flex-wrap items-center gap-2">
+            <input type="hidden" name="eventId" value={eventId} />
+            <select
+              name="templateId"
+              defaultValue="wif"
+              aria-label="Pilih template struktur kepanitiaan"
+              className={`${input} w-auto min-w-[16rem]`}
+            >
+              {STRUCTURE_TEMPLATE_GROUPS.map((group) => (
+                <optgroup key={group.id} label={group.label}>
+                  {EVENT_STRUCTURE_TEMPLATES.filter((t) => t.group === group.id).map((t) => (
+                    <option key={t.id} value={t.id}>
+                      {t.label}
+                    </option>
+                  ))}
+                </optgroup>
+              ))}
+            </select>
+            <button
+              type="submit"
+              className="flex items-center gap-1.5 bg-primary-container text-on-primary text-label-caps uppercase tracking-wide px-4 py-2.5 rounded-md hover:bg-primary transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-container focus-visible:ring-offset-2 focus-visible:ring-offset-background motion-reduce:transition-none"
+            >
+              <LayoutTemplate size={14} /> Terapkan Template
+            </button>
+          </form>
+          <p className="text-xs text-on-surface-variant max-w-2xl">
+            Peran inti tidak ikut template — mereka ditugaskan tanpa divisi lewat form panitia inti:
+            Acara Besar → Ketua Pelaksana, Wakil, Sekretaris, Bendahara, SC · Formal/Sidang →
+            PJ/Dewan Pengarah, Ketua KPU/Presidium, Notulis Utama, Bendahara · Proker Divisi →
+            Project Officer, Sekretaris &amp; Administrasi, Bendahara.
+          </p>
+        </div>
       )}
 
       {roots.map((dept) => {
@@ -266,6 +306,12 @@ export function EventCommitteeStructure({
           <h3 className="text-headline-sm text-on-background mb-1">Tanpa divisi</h3>
           <p className="text-label-caps text-on-surface-variant mb-3">
             Panitia inti, atau ditugaskan sebelum struktur divisi dibuat.
+            {divisions.length > 0 && (
+              <>
+                {" "}Jangan lupa kursi intinya: Ketua Pelaksana/Project Officer, Wakil, Sekretaris,
+                Bendahara, dan SC/Pengarah — semuanya di sini, bukan di dalam departemen.
+              </>
+            )}
           </p>
           <MemberList rows={unassigned} certified={certified} />
         </section>
