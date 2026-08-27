@@ -82,9 +82,14 @@ export async function POST(req: NextRequest) {
   // Strip path separators / control chars so a malicious filename can't
   // traverse out of its folder in the blob key (addRandomSuffix also helps).
   const safeName = (file.name || "file").replace(/[^\w.\-]+/g, "_").slice(0, 100);
-  const blob = await put(`${folder}/${Date.now()}-${safeName}`, file, {
-    access: "public",
+  const isPrivate = folder === "sensus";
+  const ownerPath = isPrivate ? `${session.user.id}/` : "";
+  const blob = await put(`${folder}/${ownerPath}${Date.now()}-${safeName}`, file, {
+    access: isPrivate ? "private" : "public",
     addRandomSuffix: true,
   });
-  return NextResponse.json({ url: blob.url });
+  const url = isPrivate
+    ? `/api/sensus/student-card/${blob.pathname.split("/").map(encodeURIComponent).join("/")}`
+    : blob.url;
+  return NextResponse.json({ url });
 }
