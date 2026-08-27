@@ -115,6 +115,41 @@ function normalizeLetters(value: string) {
   return { value: normalized, corrected };
 }
 
+function cleanNamePart(value: string) {
+  const tokens = value.split(/<+/).filter(Boolean);
+  let corrected = false;
+  while (tokens.length > 0 && /^[CKL]{4,}$/.test(tokens.at(-1) ?? "")) {
+    tokens.pop();
+    corrected = true;
+  }
+  const name = tokens
+    .join(" ")
+    .toLowerCase()
+    .replace(/(^| )[a-z]/g, (letter) => letter.toUpperCase());
+  return { value: name, corrected };
+}
+
+function parseName(value: string) {
+  const delimiterStart = value.indexOf("<");
+  if (delimiterStart < 1) return null;
+
+  let delimiterEnd = delimiterStart + 1;
+  while (delimiterEnd < value.length && "CKL".includes(value[delimiterEnd])) delimiterEnd++;
+  if (value[delimiterEnd] !== "<") return null;
+
+  const corruptedDelimiter = delimiterEnd > delimiterStart + 1;
+  let givenNamesStart = delimiterEnd + 1;
+  if (corruptedDelimiter && "CKL".includes(value[givenNamesStart])) givenNamesStart++;
+
+  const surname = cleanNamePart(value.slice(0, delimiterStart));
+  const givenNames = cleanNamePart(value.slice(givenNamesStart));
+  return {
+    surname: surname.value,
+    givenNames: givenNames.value,
+    corrected: corruptedDelimiter || surname.corrected || givenNames.corrected,
+  };
+}
+
 function mrzDate(value: string, kind: "birth" | "expiry"): string | null {
   const year = Number(value.slice(0, 2));
   const month = Number(value.slice(2, 4));
@@ -195,19 +230,17 @@ function parseLines(line1: string, line2: string): PassportMrzResult | null {
   const composite = correctedLine2.slice(0, 10) + correctedLine2.slice(13, 20) + correctedLine2.slice(21, 43);
   if (checkDigit(composite) !== compositeCheck) return null;
 
-  const name = normalizeLetters(line1.slice(5));
-  const [rawSurname, ...rawGivenNames] = name.value.split("<<");
-  const surname = rawSurname.replace(/<+/g, " ").trim();
-  const givenNames = rawGivenNames.join(" ").replace(/<+/g, " ").trim();
+  const normalizedName = normalizeLetters(line1.slice(5));
+  const name = parseName(normalizedName.value);
   const birthDate = mrzDate(birth.value, "birth");
   const passportExpiry = mrzDate(expiry.value, "expiry");
-  if (!surname || !birthDate || !passportExpiry) return null;
+  if (!name?.surname || !birthDate || !passportExpiry) return null;
 
   const correctedFields = [
     passportNumber.corrected ? "passportNumber" : null,
     birth.corrected || line2.slice(13, 19) !== birth.value ? "birthDate" : null,
     expiry.corrected || line2.slice(21, 27) !== expiry.value ? "passportExpiry" : null,
-    name.corrected ? "fullName" : null,
+    normalizedName.corrected || name.corrected ? "fullName" : null,
   ].filter((field): field is string => Boolean(field));
   let gender: PassportMrzResult["gender"] = "";
   if (line2[20] === "M") gender = "Laki-Laki";
@@ -216,9 +249,9 @@ function parseLines(line1: string, line2: string): PassportMrzResult | null {
   const trimmedPassportNumber = passportNumber.value.split("<", 1)[0];
 
   return {
-    fullName: [givenNames, surname].filter(Boolean).join(" "),
-    surname,
-    givenNames,
+    fullName: [name.givenNames, name.surname].filter(Boolean).join(" "),
+    surname: name.surname,
+    givenNames: name.givenNames,
     passportNumber: trimmedPassportNumber,
     nationality: normalizeLetters(line2.slice(10, 13)).value.replaceAll("<", ""),
     issuingCountry: normalizeLetters(line1.slice(2, 5)).value.replaceAll("<", ""),
