@@ -187,7 +187,7 @@ export async function setEventStatus(formData: FormData) {
 
 // ---------- Pertanyaan pendaftaran kustom per-acara ----------
 
-const QUESTION_TYPES = ["text", "textarea", "select", "radio", "multiselect"] as const;
+const QUESTION_TYPES = ["text", "textarea", "select", "radio", "multiselect", "file"] as const;
 
 function parseQuestionOptions(formData: FormData, type: string): string | null {
   const raw = String(formData.get("options") ?? "")

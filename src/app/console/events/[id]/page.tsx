@@ -28,6 +28,7 @@ const QUESTION_TYPE_LABELS: Record<string, string> = {
   select: "Dropdown",
   radio: "Pilihan (radio)",
   multiselect: "Pilih Banyak (centang)",
+  file: "Unggah Berkas (PDF/dokumen/gambar)",
 };
 
 export default async function ConsoleEventDetailPage({ params }: { params: Promise<{ id: string }> }) {

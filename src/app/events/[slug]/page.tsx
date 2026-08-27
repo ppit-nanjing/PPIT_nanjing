@@ -15,6 +15,7 @@ import { CalendarDays, MapPin, Users, Ticket, ArrowLeft, ListChecks, Images, Arr
 import Image from "next/image";
 import { registerForEvent } from "@/app/actions/events";
 import { Select } from "@/components/console/form";
+import { FileUpload } from "@/components/upload/file-upload";
 import Link from "next/link";
 import { applyAsVolunteer } from "@/app/actions/volunteers";
 import { getT } from "@/lib/i18n/server";
@@ -385,6 +386,16 @@ export default async function EventDetailPage({ params, searchParams }: { params
                                     <option key={o} value={o}>{o}</option>
                                   ))}
                                 </Select>
+                              )}
+                              {q.type === "file" && (
+                                <FileUpload
+                                  name={q.id}
+                                  folder="event-doc"
+                                  required={q.required}
+                                  autoUpload
+                                  accept="application/pdf,.doc,.docx,image/*"
+                                  hint={t("events.fileHint")}
+                                />
                               )}
                               {(q.type === "radio" || q.type === "multiselect") &&
                                 options.map((o) => (

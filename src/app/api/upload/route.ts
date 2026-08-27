@@ -33,6 +33,10 @@ const FOLDER_MODULE: Record<string, AdminModule | null> = {
   // Bukti transfer peserta - pengirimnya user biasa yang sedang login,
   // bukan admin; verifikasinya tetap di tangan bendahara.
   "payment-proof": null,
+  // Berkas yang diunggah peserta di form pendaftaran acara (pertanyaan tipe
+  // `file`, mis. LOA / bukti mahasiswa aktif untuk WIF). Sama seperti
+  // payment-proof: pengunggahnya user biasa, panitia yang memeriksa.
+  "event-doc": null,
   news: "content",
   gallery: "content",
   album: "content",
