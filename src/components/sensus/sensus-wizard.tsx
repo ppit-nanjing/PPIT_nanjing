@@ -250,6 +250,7 @@ export function SensusWizard({
       "passportNumber",
       "gender",
       "passportExpiry",
+      "province",
       "birthDate",
     ];
     setForm((current) => ({
@@ -258,6 +259,7 @@ export function SensusWizard({
       passportNumber: result.passportNumber,
       gender: result.gender || current.gender,
       passportExpiry: result.passportExpiry,
+      province: result.province || current.province,
       birthDate: result.birthDate,
     }));
     setIssues((current) => current.filter((issue) => !scannedFields.includes(issue.field)));

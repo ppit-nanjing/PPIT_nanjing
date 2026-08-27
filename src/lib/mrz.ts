@@ -1,3 +1,5 @@
+import { provinceFromPersonalNumber, type IndonesiaProvince } from "@/lib/indonesia-provinces";
+
 export interface PassportMrzResult {
   fullName: string;
   surname: string;
@@ -8,6 +10,7 @@ export interface PassportMrzResult {
   birthDate: string;
   gender: "Laki-Laki" | "Perempuan" | "";
   passportExpiry: string;
+  province: IndonesiaProvince | "";
   correctedFields: string[];
 }
 
@@ -247,6 +250,7 @@ function parseLines(line1: string, line2: string): PassportMrzResult | null {
   if (line2[20] === "F") gender = "Perempuan";
 
   const trimmedPassportNumber = passportNumber.value.split("<", 1)[0];
+  const personalNumberPrefix = normalizeDigits(optional.value.slice(0, 2))?.value ?? "";
 
   return {
     fullName: [name.givenNames, name.surname].filter(Boolean).join(" "),
@@ -258,6 +262,7 @@ function parseLines(line1: string, line2: string): PassportMrzResult | null {
     birthDate,
     gender,
     passportExpiry,
+    province: provinceFromPersonalNumber(personalNumberPrefix),
     correctedFields,
   };
 }

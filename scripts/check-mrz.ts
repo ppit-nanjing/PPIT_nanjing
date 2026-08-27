@@ -10,6 +10,7 @@ assert.equal(parsed?.fullName, "Anna Maria Eriksson");
 assert.equal(parsed?.birthDate, "1974-08-12");
 assert.equal(parsed?.passportExpiry, "2012-04-15");
 assert.equal(parsed?.gender, "Perempuan");
+assert.equal(parsed?.province, "");
 assert.equal(parsePassportMrz(firstLine + secondLine)?.passportNumber, "L898902C3");
 
 const repaired = parsePassportMrz(`${firstLine}\n${secondLine.replace("02C3", "O2C3")}`);
@@ -23,4 +24,8 @@ const noisyName = parsePassportMrz(`${noisyNameLine}\n${secondLine}`);
 assert.equal(noisyName?.fullName, "Muchammad Abdurohim");
 assert.ok(noisyName?.correctedFields.includes("fullName"));
 
-console.log("passport MRZ parser: 5 checks passed");
+const jakartaPersonalNumberLine = "L898902C36UTO7408122F12041593173012345678934";
+const jakartaPersonalNumber = parsePassportMrz(`${firstLine}\n${jakartaPersonalNumberLine}`);
+assert.equal(jakartaPersonalNumber?.province, "DKI Jakarta");
+
+console.log("passport MRZ parser: 6 checks passed");
