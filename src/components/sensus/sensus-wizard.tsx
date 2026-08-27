@@ -357,7 +357,7 @@ export function SensusWizard({
             aria-required={opts.required || undefined}
             aria-invalid={error ? true : undefined}
             aria-describedby={describedBy || undefined}
-            className="bg-soft-gray rounded-md p-3 text-body-md focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-container disabled:opacity-60 disabled:cursor-not-allowed"
+              className="bg-soft-gray rounded-md p-3 text-body-md focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-container disabled:opacity-60 disabled:cursor-not-allowed input-icon-align"
           >
             <option value="">{opts.emptyLabel ?? t("sensus.selectPlaceholder", { label })}</option>
             {opts.options.map((o) => (
@@ -377,7 +377,7 @@ export function SensusWizard({
             aria-required={opts?.required || undefined}
             aria-invalid={error ? true : undefined}
             aria-describedby={describedBy || undefined}
-            className="bg-soft-gray rounded-md p-3 text-body-md focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-container disabled:opacity-60"
+            className={`bg-soft-gray rounded-md p-3 text-body-md focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-container disabled:opacity-60 ${opts?.type === "date" ? "input-icon-align" : ""}`}
           />
         )}
         {opts?.hint && (
