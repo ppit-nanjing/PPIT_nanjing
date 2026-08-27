@@ -404,6 +404,12 @@ export const events = pgTable("events", {
   // halaman acara tanpa akun; admin yang menerima, barulah dibuatkan akun
   // undangan + ditugaskan ke divisinya.
   volunteerSignupOpen: boolean("volunteer_signup_open").notNull().default(false),
+  // Kumpulkan biodata lengkap peserta saat mendaftar (nama, paspor, WeChat, no.
+  // HP Tiongkok, kota/ranting, universitas, angkatan, bukti mahasiswa aktif) -
+  // dipakai acara seperti WIF yang perlu menyetor daftar peserta lengkap.
+  // Peserta yang sensusnya sudah lengkap tidak mengetik ulang: nilainya
+  // di-snapshot dari sensus. Lihat event_registrations.biodataJson.
+  requiresBiodata: boolean("requires_biodata").notNull().default(false),
 });
 
 // `feeCny` null = acara gratis; > 0 = peserta perlu membayar dan mengunggah bukti.
@@ -437,20 +443,62 @@ export const eventRegistrations = pgTable(
     // per acara dan selalu dibaca bersama registrasinya; pertanyaan yang sudah
     // dihapus menyisakan kunci mati di sini - tidak masalah, diabaikan saat render.
     answersJson: jsonb("answers_json").$type<Record<string, string>>().default({}),
+    // Kategori tarif yang dipilih peserta (event_fee_options). NULL = acara
+    // gratis, tarif tunggal (events.feeCny), atau pendaftaran lama. Nominal yang
+    // wajib dibayar dibaca dari opsinya, bukan disalin ke sini - harga bisa
+    // dikoreksi panitia sebelum ada yang bayar.
+    feeOptionId: uuid("fee_option_id").references((): AnyPgColumn => eventFeeOptions.id, { onDelete: "set null" }),
+    // Snapshot biodata peserta saat mendaftar, HANYA untuk acara requiresBiodata.
+    // Diambil dari sensus bila lengkap, dari form bila tidak - dibekukan di sini
+    // supaya ekspor daftar peserta selalu utuh tanpa peduli jalur mana dan tanpa
+    // ikut berubah kalau sensus orangnya di-update belakangan.
+    biodataJson: jsonb("biodata_json").$type<EventBiodata>(),
   },
   (t) => [uniqueIndex("event_user_unique").on(t.eventId, t.userId)]
 );
 
+// Bentuk tetap biodata peserta acara (event_registrations.biodataJson). Cermin
+// field data-diri form PPI Tiongkok pusat / sensus, plus tahun angkatan.
+// `source` menandai apakah barisnya berasal dari sensus lengkap atau diketik
+// sendiri di form pendaftaran.
+export type EventBiodata = {
+  fullName: string;
+  passportNumber: string;
+  wechatId: string;
+  chinaPhone: string;
+  branch: string;
+  university: string;
+  major: string;
+  entryYear: string;
+  studentProofUrl: string;
+  source: "sensus" | "form";
+};
+
+// Kategori tarif per-acara. Nol baris = tarif tunggal events.feeCny (atau
+// gratis). >= 1 baris = peserta memilih salah satu saat mendaftar dan nominal
+// itulah yang harus dibayar. Contoh: WIF -> "Freshmen" ¥15 / "Non-freshmen"
+// ¥25; booth Wonders -> satu baris flat; olahraga Champions -> satu baris per
+// nomor (tunggal/ganda/campuran).
+export const eventFeeOptions = pgTable("event_fee_options", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  eventId: uuid("event_id").notNull().references(() => events.id, { onDelete: "cascade" }),
+  label: text("label").notNull(),
+  amountCny: integer("amount_cny").notNull(),
+  orderIndex: integer("order_index").notNull().default(0),
+});
+
 // Pertanyaan tambahan pada form pendaftaran SATU acara. Tidak semua acara
 // butuh - kosong berarti form publik persis seperti dulu (cuma cabang bila
-// perlu). Tipe dibatasi lima yang benar-benar terpakai untuk acara, bukan
-// seluruh 18 tipe form keanggotaan yang penuh fitur kuis/grid.
+// perlu). Tipe dibatasi yang benar-benar terpakai untuk acara, bukan seluruh
+// 18 tipe form keanggotaan yang penuh fitur kuis/grid. `file` = unggah satu
+// berkas (PDF/dokumen/gambar) lewat /api/upload; jawabannya URL blob-nya.
 export const eventQuestionTypeEnum = pgEnum("event_question_type", [
   "text",
   "textarea",
   "select",
   "radio",
   "multiselect",
+  "file",
 ]);
 
 export const eventQuestions = pgTable("event_questions", {
@@ -893,6 +941,11 @@ export const eventsRelations = relations(events, ({ one, many }) => ({
   department: one(departments, { fields: [events.departmentId], references: [departments.id] }),
   registrations: many(eventRegistrations),
   galleryAlbums: many(galleryAlbums),
+  feeOptions: many(eventFeeOptions),
+}));
+
+export const eventFeeOptionsRelations = relations(eventFeeOptions, ({ one }) => ({
+  event: one(events, { fields: [eventFeeOptions.eventId], references: [events.id] }),
 }));
 
 export const inventoryItemsRelations = relations(inventoryItems, ({ many }) => ({
