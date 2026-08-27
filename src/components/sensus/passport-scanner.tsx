@@ -1,125 +1,21 @@
 "use client";
 
-import { useRef, useState, useEffect } from "react";
-import { AlertTriangle, ArrowLeft, ArrowRight, Camera, CheckCircle2, Loader2, Maximize2, ScanLine, ShieldCheck, SunMedium, Upload, UserRound, X } from "lucide-react";
+import { useRef, useState } from "react";
+import { AlertTriangle, CheckCircle2, Loader2, ScanLine, ShieldCheck, Upload, X } from "lucide-react";
 import { motion } from "motion/react";
 import { useT } from "@/lib/i18n/client";
 import type { PassportMrzResult } from "@/lib/mrz";
 
 type Props = Readonly<{ onResult: (result: PassportMrzResult) => void }>;
 
-function PassportCaptureFrame() {
-  return (
-    <div
-      className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2"
-      style={{ width: "92%", aspectRatio: "1.42 / 1" }}
-    >
-      <div className="absolute inset-0 rounded-sm border-2 border-white/95">
-        <div
-          className="absolute rounded-xs border-2 border-white/90 bg-black/10"
-          style={{ left: "7%", top: "12%", width: "24%", aspectRatio: "3 / 4" }}
-        />
-        <div className="absolute inset-x-0 bottom-0 border-t border-dashed border-white/90 bg-black/20" style={{ height: "28%" }}>
-          <span className="absolute h-px bg-white/80" style={{ left: "12%", right: "12%", top: "34%" }} />
-          <span className="absolute h-px bg-white/80" style={{ left: "12%", right: "12%", top: "62%" }} />
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function PassportPortraitCaptureFrame({ compact = false, scanLabel }: Readonly<{ compact?: boolean; scanLabel?: string }>) {
-  return (
-    <>
-      <div
-        className={`absolute left-1/2 -translate-x-1/2 -translate-y-1/2 ${compact ? "top-1/2" : "top-[46%]"}`}
-        style={{ height: compact ? "82%" : "min(65dvh, 116vw)", aspectRatio: "0.704 / 1" }}
-      >
-        <div className="absolute inset-0 rounded-[2rem] border-[3px] border-white/95">
-          <div
-            className="absolute rounded-sm border-2 border-white/90 bg-black/15"
-            style={{ right: "10%", top: "11%", width: "54%", aspectRatio: "4 / 3" }}
-          >
-            <UserRound className="absolute left-1/2 top-1/2 h-1/2 w-1/2 -translate-x-1/2 -translate-y-1/2 text-white/70" />
-            <span className="absolute bottom-[14%] left-[14%] h-px w-[72%] bg-white/60" />
-          </div>
-          <div className="absolute bottom-[8%] left-[9%] top-[8%] w-[20%] border-r-[3px] border-dashed border-white/85">
-            <span className="absolute inset-y-0 border-l border-white/70" style={{ left: "35%" }} />
-            <span className="absolute inset-y-0 border-l border-white/70" style={{ left: "68%" }} />
-          </div>
-        </div>
-      </div>
-      {scanLabel && (
-        <span
-          className="absolute right-[4%] top-1/2 -translate-y-1/2 whitespace-nowrap text-sm font-semibold text-white/90"
-          style={{ writingMode: "vertical-rl" }}
-        >
-          {scanLabel}
-        </span>
-      )}
-    </>
-  );
-}
-
-function PassportCameraOverlay({ scanLabel }: Readonly<{ scanLabel: string }>) {
-  return (
-    <div aria-hidden="true" className="pointer-events-none absolute inset-0 z-10">
-      <div className="absolute inset-0 bg-linear-to-b from-black/25 via-transparent to-black/35" />
-      <div className="hidden md:block">
-        <PassportCaptureFrame />
-      </div>
-      <div className="absolute inset-0 md:hidden">
-        <PassportPortraitCaptureFrame scanLabel={scanLabel} />
-      </div>
-    </div>
-  );
-}
-
-function PassportGuideArtwork() {
-  return (
-    <div aria-hidden="true" className="relative aspect-4/3 overflow-hidden rounded-lg bg-black">
-      <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,_rgba(255,255,255,0.18),_transparent_58%)]" />
-      <div className="hidden md:block">
-        <div className="absolute inset-x-[16%] top-[17%] h-px bg-white/20" />
-        <div className="absolute inset-x-[16%] bottom-[17%] h-px bg-white/20" />
-        <PassportCaptureFrame />
-      </div>
-      <div className="absolute inset-0 md:hidden">
-        <PassportPortraitCaptureFrame compact />
-      </div>
-    </div>
-  );
-}
-
 export function PassportScanner({ onResult }: Props) {
   const t = useT();
   const inputRef = useRef<HTMLInputElement>(null);
-  const cameraInputRef = useRef<HTMLInputElement>(null);
-  const videoRef = useRef<HTMLVideoElement>(null);
-  const streamRef = useRef<MediaStream | null>(null);
   const [open, setOpen] = useState(false);
   const [dragging, setDragging] = useState(false);
-  const [cameraMode, setCameraMode] = useState(false);
-  const [cameraGuide, setCameraGuide] = useState(false);
-  const [cameraError, setCameraError] = useState<string | null>(null);
   const [scanning, setScanning] = useState(false);
   const [progress, setProgress] = useState(0);
   const [status, setStatus] = useState<"idle" | "success" | "corrected" | "error">("idle");
-
-  useEffect(() => {
-    return () => {
-      stopCamera();
-    };
-  }, []);
-
-  useEffect(() => {
-    const video = videoRef.current;
-    const stream = streamRef.current;
-    if (!cameraMode || !video || !stream) return;
-
-    video.srcObject = stream;
-    void video.play().catch(() => undefined);
-  }, [cameraMode]);
 
   async function scan(file: File) {
     setScanning(true);
@@ -135,13 +31,11 @@ export function PassportScanner({ onResult }: Props) {
       onResult(result);
       setStatus(result.correctedFields.length > 0 ? "corrected" : "success");
       setOpen(false);
-      stopCamera();
     } catch {
       setStatus("error");
     } finally {
       setScanning(false);
       if (inputRef.current) inputRef.current.value = "";
-      if (cameraInputRef.current) cameraInputRef.current.value = "";
     }
   }
 
@@ -152,61 +46,8 @@ export function PassportScanner({ onResult }: Props) {
     if (file) void scan(file);
   }
 
-  async function startCamera() {
-    setCameraError(null);
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: { ideal: "environment" } },
-        audio: false,
-      });
-      streamRef.current = stream;
-      setCameraMode(true);
-      setCameraGuide(false);
-    } catch (error) {
-      if (error instanceof DOMException && (error.name === "NotAllowedError" || error.name === "PermissionDeniedError")) {
-        setCameraError(t("sensus.passportScanCameraDenied"));
-      } else {
-        setCameraError(t("sensus.passportScanCameraError"));
-      }
-    }
-  }
-
-  function openCamera() {
-    if (window.matchMedia("(max-width: 767px)").matches) {
-      cameraInputRef.current?.click();
-      return;
-    }
-    void startCamera();
-  }
-
-  function stopCamera() {
-    streamRef.current?.getTracks().forEach((track) => track.stop());
-    streamRef.current = null;
-    setCameraMode(false);
-    setCameraGuide(false);
-  }
-
-  async function capturePhoto() {
-    const video = videoRef.current;
-    if (!video) return;
-    const canvas = document.createElement("canvas");
-    canvas.width = video.videoWidth;
-    canvas.height = video.videoHeight;
-    const context = canvas.getContext("2d");
-    if (!context) return;
-    context.drawImage(video, 0, 0);
-    const blob = await new Promise<Blob | null>((resolve) =>
-      canvas.toBlob((b) => resolve(b), "image/png")
-    );
-    if (blob) {
-      await scan(new File([blob], "passport-capture.png", { type: "image/png" }));
-    }
-  }
-
   function closeModal() {
     setOpen(false);
-    stopCamera();
-    setCameraError(null);
     setStatus("idle");
   }
 
@@ -259,19 +100,6 @@ export function PassportScanner({ onResult }: Props) {
            100% { transform: translateX(100%); }
          }
        `}</style>
-      <input
-        ref={cameraInputRef}
-        type="file"
-        accept="image/jpeg,image/png,image/webp"
-        capture="environment"
-        className="hidden"
-        onChange={(event) => {
-          const file = event.target.files?.[0];
-          if (!file) return;
-          setCameraGuide(false);
-          void scan(file);
-        }}
-      />
       <div className="border border-outline-variant rounded-lg p-4 bg-surface-container-low flex flex-col gap-3">
         <div className="flex items-start gap-3">
           <ShieldCheck className="text-primary-container shrink-0 mt-0.5" size={18} />
@@ -302,7 +130,7 @@ export function PassportScanner({ onResult }: Props) {
 
       {open && (
         <div
-          className={`fixed inset-0 flex items-center justify-center ${cameraMode ? "p-0 md:p-4" : "p-4"}`}
+          className="fixed inset-0 flex items-center justify-center p-4"
           style={{ zIndex: 100 }}
           onClick={() => !scanning && closeModal()}
           onKeyDown={(event) => {
@@ -313,16 +141,12 @@ export function PassportScanner({ onResult }: Props) {
           aria-modal="true"
           aria-label={t("sensus.passportScanModalTitle")}
         >
-          <div className={`absolute inset-0 ${cameraMode ? "bg-black md:bg-black/30 md:backdrop-blur-sm" : "bg-black/30 backdrop-blur-sm"}`} />
+          <div className="absolute inset-0 bg-black/30 backdrop-blur-sm" />
           <div
-            className={`relative w-full overflow-hidden flex flex-col ${
-              cameraMode
-                ? "fixed inset-0 h-dvh max-w-none rounded-none border-0 bg-black md:relative md:inset-auto md:h-auto md:max-w-2xl md:rounded-2xl md:border md:border-outline-variant md:bg-surface-container-lowest md:shadow-2xl"
-                : `${cameraGuide ? "max-w-2xl" : "max-w-md"} bg-surface-container-lowest border border-outline-variant rounded-2xl shadow-2xl`
-            }`}
+            className="relative flex w-full max-w-md flex-col overflow-hidden rounded-2xl border border-outline-variant bg-surface-container-lowest shadow-2xl"
             onClick={(event) => event.stopPropagation()}
           >
-            <div className={`${cameraMode ? "hidden md:flex" : "flex"} items-center justify-between px-5 py-4 border-b border-outline-variant`}>
+            <div className="flex items-center justify-between border-b border-outline-variant px-5 py-4">
               <h2 className="text-headline-sm font-bold text-on-background">{t("sensus.passportScanModalTitle")}</h2>
               <button
                 type="button"
@@ -335,126 +159,15 @@ export function PassportScanner({ onResult }: Props) {
               </button>
             </div>
 
-            <div className={cameraMode ? "p-0 md:p-5" : "p-5"}>
-              {scanning && !cameraMode && progressBar}
-              {status === "error" && !scanning && !cameraMode && (
+            <div className="p-5">
+              {scanning && progressBar}
+              {status === "error" && !scanning && (
                 <output className="mb-4 flex items-start gap-2 rounded-md border border-error/40 bg-error-container/20 p-3 text-body-sm text-error" aria-live="assertive">
                   <AlertTriangle size={16} className="mt-0.5 shrink-0" />
                   {statusMessage}
                 </output>
               )}
-              {cameraMode ? (
-                 <div className={`flex flex-col gap-3 ${scanning ? "opacity-60 pointer-events-none" : ""}`}>
-                  <div className="relative h-dvh w-full overflow-hidden bg-black md:h-auto md:w-auto md:aspect-4/3 md:rounded-lg">
-                    <video ref={videoRef} className="absolute inset-0 w-full h-full object-cover" playsInline muted />
-                    <PassportCameraOverlay scanLabel={t("sensus.passportScanCameraFrameLabel")} />
-                    {scanning && (
-                      <div className="absolute inset-x-5 top-5 z-30">
-                        {progressBar}
-                      </div>
-                    )}
-                    {status === "error" && !scanning && (
-                      <output className="absolute left-5 right-20 top-5 z-30 flex items-start gap-2 rounded-md border border-error/40 bg-error-container/90 p-3 text-body-sm text-error" aria-live="assertive">
-                        <AlertTriangle size={16} className="mt-0.5 shrink-0" />
-                        {statusMessage}
-                      </output>
-                    )}
-                    <button
-                      type="button"
-                      disabled={scanning}
-                      onClick={stopCamera}
-                      className="absolute right-5 top-5 z-20 inline-flex size-11 items-center justify-center rounded-full bg-black/45 text-white backdrop-blur-sm disabled:opacity-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-white md:hidden"
-                      aria-label={t("sensus.passportScanModalClose")}
-                    >
-                      <X size={22} />
-                    </button>
-                    <div className="absolute inset-x-0 bottom-5 z-20 flex flex-col items-center gap-2 md:hidden">
-                      <button
-                        type="button"
-                        disabled={scanning}
-                        onClick={capturePhoto}
-                        className="inline-flex size-16 items-center justify-center rounded-full border-4 border-white bg-white/95 text-black shadow-lg disabled:opacity-60 focus:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-black"
-                        aria-label={t("sensus.passportScanModalCapture")}
-                      >
-                        {scanning ? <Loader2 className="animate-spin" size={24} /> : <Camera size={26} />}
-                      </button>
-                      <span className="text-xs font-semibold text-white">{t("sensus.passportScanModalCapture")}</span>
-                    </div>
-                  </div>
-                  <div className="hidden justify-center gap-2 md:flex">
-                    <button
-                      type="button"
-                      disabled={scanning}
-                      onClick={capturePhoto}
-                      className="inline-flex items-center gap-2 rounded-md bg-primary-container text-on-primary px-4 py-2 text-label-caps font-semibold disabled:opacity-60 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-container focus-visible:ring-offset-2"
-                    >
-                      {scanning ? <Loader2 className="animate-spin" size={16} /> : <Camera size={16} />}
-                      {scanning ? t("sensus.passportScanning") : t("sensus.passportScanModalCapture")}
-                    </button>
-                    <button
-                      type="button"
-                      disabled={scanning}
-                      onClick={stopCamera}
-                      className="inline-flex items-center gap-2 rounded-md border border-outline-variant text-on-background px-4 py-2 text-label-caps font-semibold disabled:opacity-60 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-container focus-visible:ring-offset-2"
-                    >
-                      {t("sensus.passportScanModalClose")}
-                    </button>
-                  </div>
-                </div>
-              ) : cameraGuide ? (
-                <div className="flex flex-col gap-5">
-                  <div className="grid gap-6 md:grid-cols-2 md:items-center">
-                    <div>
-                      <h3 className="text-title-lg font-bold text-on-background">{t("sensus.passportScanGuideTitle")}</h3>
-                      <p className="mt-2 text-body-sm text-on-surface-variant">{t("sensus.passportScanGuideDescription")}</p>
-                      <ul className="mt-5 space-y-3 text-body-sm text-on-surface-variant">
-                        <li className="flex items-start gap-3">
-                          <Maximize2 size={17} className="mt-0.5 shrink-0 text-primary-container" />
-                          {t("sensus.passportScanGuideFrame")}
-                        </li>
-                        <li className="flex items-start gap-3">
-                          <ScanLine size={17} className="mt-0.5 shrink-0 text-primary-container" />
-                          {t("sensus.passportScanGuideMrz")}
-                        </li>
-                        <li className="flex items-start gap-3">
-                          <SunMedium size={17} className="mt-0.5 shrink-0 text-primary-container" />
-                          {t("sensus.passportScanGuideLight")}
-                        </li>
-                      </ul>
-                    </div>
-                    <PassportGuideArtwork />
-                  </div>
-                  {cameraError && (
-                    <p className="text-body-sm text-error flex items-start gap-2">
-                      <AlertTriangle size={16} className="shrink-0 mt-0.5" />
-                      {cameraError}
-                    </p>
-                  )}
-                  <div className="flex items-center justify-between gap-3 border-t border-outline-variant pt-4">
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setCameraGuide(false);
-                        setCameraError(null);
-                      }}
-                      className="inline-flex items-center gap-2 rounded-md px-3 py-2 text-label-caps font-semibold text-on-surface-variant hover:bg-surface-container-low focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-container"
-                    >
-                      <ArrowLeft size={16} />
-                      {t("sensus.passportScanGuideBack")}
-                    </button>
-                    <button
-                      type="button"
-                      onClick={openCamera}
-                      className="inline-flex items-center gap-2 rounded-md bg-primary text-on-primary px-4 py-2 text-label-caps font-semibold focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
-                    >
-                      <Camera size={16} />
-                      {t("sensus.passportScanGuideContinue")}
-                      <ArrowRight size={16} />
-                    </button>
-                  </div>
-                </div>
-              ) : (
-                 <div className={`flex flex-col gap-3 ${scanning ? "opacity-60 pointer-events-none" : ""}`}>
+              <div className={`flex flex-col gap-3 ${scanning ? "pointer-events-none opacity-60" : ""}`}>
                   <input
                     ref={inputRef}
                     type="file"
@@ -489,29 +202,7 @@ export function PassportScanner({ onResult }: Props) {
                       <p className="text-xs text-on-surface-variant mt-1">JPG / PNG / WebP</p>
                     </div>
                   </button>
-                  <div className="flex items-center justify-center gap-3">
-                    <span className="text-xs text-on-surface-variant">{t("sensus.passportScanModalOr")}</span>
-                    <button
-                      type="button"
-                       disabled={scanning}
-                      onClick={() => {
-                        setCameraError(null);
-                        setCameraGuide(true);
-                      }}
-                       className="inline-flex items-center gap-2 rounded-md bg-primary text-on-primary px-4 py-2 text-label-caps font-semibold focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 disabled:opacity-60"
-                    >
-                      <Camera size={16} />
-                      {t("sensus.passportScanModalCamera")}
-                    </button>
-                  </div>
-                  {cameraError && (
-                    <p className="text-body-sm text-error flex items-start gap-2">
-                      <AlertTriangle size={16} className="shrink-0 mt-0.5" />
-                      {cameraError}
-                    </p>
-                  )}
-                </div>
-              )}
+              </div>
             </div>
           </div>
         </div>
