@@ -154,6 +154,7 @@ export function PassportScanner({ onResult }: Props) {
     setOpen(false);
     stopCamera();
     setCameraError(null);
+    setStatus("idle");
   }
 
   let statusMessage = "";
@@ -222,16 +223,12 @@ export function PassportScanner({ onResult }: Props) {
            <ScanLine size={16} />
            {t("sensus.passportScanAction")}
         </button>
-        {status !== "idle" && !scanning && (
+        {status !== "idle" && status !== "error" && !scanning && (
           <output
-            className={`flex items-start gap-2 text-xs ${status === "error" ? "text-error" : "text-on-surface-variant"}`}
-            aria-live={status === "error" ? "assertive" : "polite"}
+            className="flex items-start gap-2 text-xs text-on-surface-variant"
+            aria-live="polite"
           >
-            {status === "error" ? (
-              <AlertTriangle size={15} className="shrink-0" />
-            ) : (
-              <CheckCircle2 size={15} className="text-primary-container shrink-0" />
-            )}
+            <CheckCircle2 size={15} className="text-primary-container shrink-0" />
             {statusMessage}
           </output>
         )}
@@ -255,7 +252,7 @@ export function PassportScanner({ onResult }: Props) {
             onClick={(event) => event.stopPropagation()}
           >
             <div className="flex items-center justify-between px-5 py-4 border-b border-outline-variant">
-              <h2 className="text-headline-sm text-on-background">{t("sensus.passportScanModalTitle")}</h2>
+              <h2 className="text-headline-sm font-bold text-on-background">{t("sensus.passportScanModalTitle")}</h2>
               <button
                 type="button"
                 disabled={scanning}
@@ -269,6 +266,12 @@ export function PassportScanner({ onResult }: Props) {
 
             <div className="p-5">
                {scanning && progressBar}
+              {status === "error" && !scanning && (
+                <output className="mb-4 flex items-start gap-2 rounded-md border border-error/40 bg-error-container/20 p-3 text-body-sm text-error" aria-live="assertive">
+                  <AlertTriangle size={16} className="mt-0.5 shrink-0" />
+                  {statusMessage}
+                </output>
+              )}
               {cameraMode ? (
                  <div className={`flex flex-col gap-3 ${scanning ? "opacity-60 pointer-events-none" : ""}`}>
                   <div className="relative aspect-4/3 bg-black rounded-lg overflow-hidden">
@@ -299,7 +302,7 @@ export function PassportScanner({ onResult }: Props) {
                 <div className="flex flex-col gap-5">
                   <div className="grid gap-6 md:grid-cols-2 md:items-center">
                     <div>
-                      <h3 className="text-title-lg text-on-background">{t("sensus.passportScanGuideTitle")}</h3>
+                      <h3 className="text-title-lg font-bold text-on-background">{t("sensus.passportScanGuideTitle")}</h3>
                       <p className="mt-2 text-body-sm text-on-surface-variant">{t("sensus.passportScanGuideDescription")}</p>
                       <ul className="mt-5 space-y-3 text-body-sm text-on-surface-variant">
                         <li className="flex items-start gap-3">
