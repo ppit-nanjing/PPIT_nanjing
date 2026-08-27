@@ -16,6 +16,7 @@ import { AIImproveButton } from "@/components/ai/ai-improve-button";
 import { AIReviewButton } from "@/components/ai/ai-review-popup";
 import { CollapsibleSection } from "@/components/console/collapsible-section";
 import { HtmFields } from "@/components/console/htm-fields";
+import { Select, CheckboxField, CheckField } from "@/components/console/form";
 import { PAYMENT_STATUS_LABEL } from "@/lib/payment-status-labels";
 import { toDateLocalInput } from "@/lib/datetime";
 import { ConfirmButton } from "@/components/console/confirm-button";
@@ -173,18 +174,14 @@ export default async function ConsoleEventDetailPage({ params }: { params: Promi
               2 · Pendaftaran &amp; Biaya
             </summary>
             <div className="px-4 pb-4 flex flex-col gap-4">
-              <label className="flex items-center gap-2 bg-soft-gray rounded-md p-3 text-body-md cursor-pointer">
-                <input type="checkbox" name="requiresSensus" defaultChecked={event.requiresSensus} className="h-4 w-4 accent-[var(--color-primary-container)]" />
-                Hanya untuk peserta yang sudah lengkap mengisi sensus (mahasiswa Indo di China)
-              </label>
-              <label className="flex items-center gap-2 bg-soft-gray rounded-md p-3 text-body-md cursor-pointer">
-                <input type="checkbox" name="certificateForParticipants" defaultChecked={event.certificateForParticipants} className="h-4 w-4 accent-[var(--color-primary-container)]" />
-                Peserta mendapat e-sertifikat kehadiran
-              </label>
-              <label className="flex items-center gap-2 bg-soft-gray rounded-md p-3 text-body-md cursor-pointer">
-                <input type="checkbox" name="volunteerSignupOpen" defaultChecked={event.volunteerSignupOpen} className="h-4 w-4 accent-[var(--color-primary-container)]" />
-                Buka pendaftaran volunteer publik (orang luar bisa melamar di halaman acara)
-              </label>
+              <CheckField name="requiresSensus" defaultChecked={event.requiresSensus} label="Hanya untuk peserta yang sudah lengkap mengisi sensus (mahasiswa Indo di China)" />
+              <CheckField name="certificateForParticipants" defaultChecked={event.certificateForParticipants} label="Peserta mendapat e-sertifikat kehadiran" />
+              <CheckField
+                name="volunteerSignupOpen"
+                defaultChecked={event.volunteerSignupOpen}
+                label="Buka pendaftaran volunteer publik"
+                hint="Orang luar bisa melamar jadi volunteer di halaman acara"
+              />
               <HtmFields
                 defaultIsPaid={event.isPaid}
                 defaultFeeCny={event.feeCny}
@@ -246,14 +243,20 @@ export default async function ConsoleEventDetailPage({ params }: { params: Promi
               { id: "event-agenda", label: "Agenda" },
             ]}
           />
-          <select name="statusSelect" defaultValue={event.status} className="bg-soft-gray rounded-md p-3 text-body-md">
-            <option value="draft">Draf</option>
-            <option value="scheduled">Terjadwal (belum rilis)</option>
-            <option value="published">Dipublikasikan</option>
-            <option value="registration_closed">Pendaftaran Ditutup</option>
-            <option value="completed">Selesai</option>
-            <option value="cancelled">Dibatalkan</option>
-          </select>
+          <Select
+            name="statusSelect"
+            defaultValue={event.status}
+            aria-label="Status acara"
+            className="w-full"
+            options={[
+              { value: "draft", label: "Draf" },
+              { value: "scheduled", label: "Terjadwal (belum rilis)" },
+              { value: "published", label: "Dipublikasikan" },
+              { value: "registration_closed", label: "Pendaftaran Ditutup" },
+              { value: "completed", label: "Selesai" },
+              { value: "cancelled", label: "Dibatalkan" },
+            ]}
+          />
           <div className="flex flex-wrap gap-3">
             <button
               type="submit"
@@ -308,11 +311,11 @@ export default async function ConsoleEventDetailPage({ params }: { params: Promi
                 </label>
                 <label className="flex flex-col gap-1">
                   <span className="text-label-caps uppercase tracking-wide text-on-surface-variant">Tipe</span>
-                  <select name="type" defaultValue={q.type} className="bg-soft-gray rounded-md p-2.5 text-body-md">
+                  <Select name="type" defaultValue={q.type} className="w-full">
                     {Object.entries(QUESTION_TYPE_LABELS).map(([value, lbl]) => (
                       <option key={value} value={value}>{lbl}</option>
                     ))}
-                  </select>
+                  </Select>
                 </label>
               </div>
               <label className="flex flex-col gap-1">
@@ -328,10 +331,7 @@ export default async function ConsoleEventDetailPage({ params }: { params: Promi
                 />
               </label>
               <div className="flex flex-wrap items-center justify-between gap-3">
-                <label className="flex items-center gap-2 text-body-md cursor-pointer">
-                  <input type="checkbox" name="required" defaultChecked={q.required} className="h-4 w-4 accent-[var(--color-primary-container)]" />
-                  Wajib diisi
-                </label>
+                <CheckboxField name="required" defaultChecked={q.required} label="Wajib diisi" />
                 <div className="flex items-center gap-2">
                   <button
                     type="submit"
@@ -358,11 +358,11 @@ export default async function ConsoleEventDetailPage({ params }: { params: Promi
           <p className="text-label-caps uppercase tracking-wide text-primary-container">+ Tambah Pertanyaan</p>
           <div className="grid grid-cols-1 sm:grid-cols-[1fr_auto] gap-3">
             <input name="label" required placeholder="Pertanyaan (mis. Preferensi makanan)" className="bg-soft-gray rounded-md p-2.5 text-body-md" />
-            <select name="type" defaultValue="text" className="bg-soft-gray rounded-md p-2.5 text-body-md">
+            <Select name="type" defaultValue="text" className="w-full" aria-label="Tipe pertanyaan">
               {Object.entries(QUESTION_TYPE_LABELS).map(([value, lbl]) => (
                 <option key={value} value={value}>{lbl}</option>
               ))}
-            </select>
+            </Select>
           </div>
           <textarea
             name="options"
@@ -371,10 +371,7 @@ export default async function ConsoleEventDetailPage({ params }: { params: Promi
             className="bg-soft-gray rounded-md p-2.5 text-body-md resize-none"
           />
           <div className="flex flex-wrap items-center justify-between gap-3">
-            <label className="flex items-center gap-2 text-body-md cursor-pointer">
-              <input type="checkbox" name="required" className="h-4 w-4 accent-[var(--color-primary-container)]" />
-              Wajib diisi
-            </label>
+            <CheckboxField name="required" label="Wajib diisi" />
             <button
               type="submit"
               className="bg-primary-container text-on-primary text-label-caps uppercase tracking-wide px-4 py-2 rounded-md hover:bg-primary transition-colors"
@@ -534,12 +531,18 @@ export default async function ConsoleEventDetailPage({ params }: { params: Promi
                             className="bg-soft-gray rounded-md p-2 text-body-md w-full"
                           />
                           <div className="flex items-center gap-2">
-                            <select name="paymentStatus" defaultValue={p.status} className="bg-soft-gray rounded-md p-2 text-body-md flex-1">
-                              <option value="unpaid">Belum Bayar</option>
-                              <option value="submitted">Menunggu Verifikasi</option>
-                              <option value="verified">Terverifikasi</option>
-                              <option value="rejected">Ditolak</option>
-                            </select>
+                            <Select
+                              name="paymentStatus"
+                              defaultValue={p.status}
+                              className="flex-1"
+                              aria-label="Status pembayaran"
+                              options={[
+                                { value: "unpaid", label: "Belum Bayar" },
+                                { value: "submitted", label: "Menunggu Verifikasi" },
+                                { value: "verified", label: "Terverifikasi" },
+                                { value: "rejected", label: "Ditolak" },
+                              ]}
+                            />
                             <button
                               type="submit"
                               className="bg-primary-container text-on-primary text-label-caps uppercase tracking-wide px-4 py-2 rounded-md hover:bg-primary transition-colors"

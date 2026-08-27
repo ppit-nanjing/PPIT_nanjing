@@ -14,6 +14,7 @@ import { GalleryLightbox } from "@/components/gallery-lightbox";
 import { CalendarDays, MapPin, Users, Ticket, ArrowLeft, ListChecks, Images, ArrowRight, CalendarX, PartyPopper, BadgeCheck } from "lucide-react";
 import Image from "next/image";
 import { registerForEvent } from "@/app/actions/events";
+import { Select } from "@/components/console/form";
 import Link from "next/link";
 import { applyAsVolunteer } from "@/app/actions/volunteers";
 import { getT } from "@/lib/i18n/server";
@@ -345,22 +346,20 @@ export default async function EventDetailPage({ params, searchParams }: { params
                               {t("events.branchQuestion")}
                               <span className="text-error" aria-hidden="true"> *</span>
                             </span>
-                            <select
+                            <Select
                               name="branch"
                               required
                               defaultValue=""
-                              className="bg-soft-gray rounded-md p-3 text-body-md focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-container"
+                              placeholder={t("events.branchPlaceholder")}
+                              className="w-full"
                             >
-                              <option value="" disabled>
-                                {t("events.branchPlaceholder")}
-                              </option>
                               {branchOptions.map((b) => (
                                 <option key={b} value={b}>
                                   {b}
                                 </option>
                               ))}
                               <option value={NON_STUDENT_BRANCH}>{t("events.branchNonStudent")}</option>
-                            </select>
+                            </Select>
                             <span className="text-xs text-on-surface-variant">{t("events.branchHint")}</span>
                           </label>
                         )}
@@ -381,12 +380,11 @@ export default async function EventDetailPage({ params, searchParams }: { params
                                 <textarea name={q.id} required={q.required} rows={3} className={`${fieldClass} resize-none`} />
                               )}
                               {q.type === "select" && (
-                                <select name={q.id} required={q.required} defaultValue="" className={fieldClass}>
-                                  <option value="" disabled>—</option>
+                                <Select name={q.id} required={q.required} defaultValue="" placeholder="—" className="w-full">
                                   {options.map((o) => (
                                     <option key={o} value={o}>{o}</option>
                                   ))}
-                                </select>
+                                </Select>
                               )}
                               {(q.type === "radio" || q.type === "multiselect") &&
                                 options.map((o) => (
@@ -476,12 +474,12 @@ export default async function EventDetailPage({ params, searchParams }: { params
                           <input name="fullName" required placeholder="Nama lengkap *" aria-label="Nama lengkap" className="bg-soft-gray rounded-md p-2.5 text-body-md" />
                           <input name="email" type="email" required placeholder="Email * (untuk akun portal)" aria-label="Email" className="bg-soft-gray rounded-md p-2.5 text-body-md" />
                           <input name="whatsapp" placeholder="WhatsApp / WeChat (opsional)" aria-label="WhatsApp atau WeChat" className="bg-soft-gray rounded-md p-2.5 text-body-md" />
-                          <select name="divisionId" defaultValue="" aria-label="Divisi yang diminati" className="bg-soft-gray rounded-md p-2.5 text-body-md">
+                          <Select name="divisionId" defaultValue="" aria-label="Divisi yang diminati" className="w-full">
                             <option value="">Divisi yang diminati — bebas</option>
                             {volunteerOptions.map((label, i) => (
                               <option key={volunteerDivisions[i].id} value={volunteerDivisions[i].id}>{label}</option>
                             ))}
-                          </select>
+                          </Select>
                           <button
                             type="submit"
                             className="w-full inline-flex items-center justify-center gap-2 bg-secondary-container text-on-secondary-container text-label-caps uppercase tracking-wide px-6 py-3 rounded-md hover:bg-secondary transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-container"

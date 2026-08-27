@@ -377,33 +377,42 @@ export async function applyStructureTemplate(formData: FormData) {
     throw new Error("Acara ini sudah punya struktur divisi - hapus dulu bila ingin memulai dari template");
   }
 
-  // Departemen dulu supaya sub-timnya punya induk; orderIndex mengikuti urutan
-  // dokumen template. Kuota/jobdesc disalin apa adanya - mengosongkan yang
-  // tidak diketahui itu disengaja, lihat komentar di registry.
-  for (const [i, dept] of template.departments.entries()) {
-    const [created] = await db
-      .insert(eventDivisions)
-      .values({
-        eventId,
-        parentDivisionId: null,
-        name: dept.name,
-        quota: dept.quota ?? null,
-        jobDescription: dept.jobDescription ?? null,
-        orderIndex: i,
-      })
-      .returning({ id: eventDivisions.id });
-    if (dept.children.length === 0) continue;
-    await db.insert(eventDivisions).values(
-      dept.children.map((child, j) => ({
-        eventId,
-        parentDivisionId: created.id,
-        name: child.name,
-        quota: child.quota ?? null,
-        jobDescription: child.jobDescription ?? null,
-        orderIndex: j,
-      })),
-    );
-  }
+  // Satu db.batch() = satu transaksi HTTP Neon (`client.transaction`): seluruh
+  // pohon masuk atau tidak sama sekali. Ini bukan cuma soal jaringan - kalau
+  // insert boleh gagal di tengah, sisa struktur setengah jadi justru memblokir
+  // retry lewat guard "sudah punya divisi" di atas.
+  //
+  // Sub-tim merujuk induknya lewat subquery nama, bukan hasil .returning(),
+  // supaya semua statement bisa disusun di depan dalam satu batch - driver
+  // neon-http tidak mendukung transaction interaktif. Aman karena nama
+  // departemen unik per template dan guard kekosongan menjamin tabel acara ini
+  // masih kosong. Sisa celah kecil: dua apply yang benar-benar bersamaan bisa
+  // lolos cek awal sama-sama; menutupnya butuh unique index
+  // (event_id, parent_division_id, name) - ditunda sampai ada kasus nyata.
+  const rootInsert = db.insert(eventDivisions).values(
+    template.departments.map((dept, i) => ({
+      eventId,
+      parentDivisionId: null,
+      name: dept.name,
+      quota: dept.quota ?? null,
+      jobDescription: dept.jobDescription ?? null,
+      orderIndex: i,
+    })),
+  );
+  // orderIndex anak mengikuti urutan dokumen template per induknya. Kuota/
+  // jobdesc disalin apa adanya - mengosongkan yang tidak diketahui itu
+  // disengaja, lihat komentar di registry.
+  const childRows = template.departments.flatMap((dept) =>
+    dept.children.map((child, j) => ({
+      eventId,
+      parentDivisionId: raw<string>`(select id from "event_divisions" where "event_id" = ${eventId} and "name" = ${dept.name} and "parent_division_id" is null)`,
+      name: child.name,
+      quota: child.quota ?? null,
+      jobDescription: child.jobDescription ?? null,
+      orderIndex: j,
+    })),
+  );
+  await db.batch(childRows.length > 0 ? [rootInsert, db.insert(eventDivisions).values(childRows)] : [rootInsert]);
 
   revalidatePath(`/console/events/${eventId}`);
 }

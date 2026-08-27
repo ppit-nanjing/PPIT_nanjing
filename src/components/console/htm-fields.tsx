@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Field, fieldInput } from "@/components/console/form";
+import { Field, fieldInput, ToggleSwitch } from "@/components/console/form";
 import { ImageUploadCropper } from "@/components/upload/image-upload-cropper";
 
 // "HTM" (Harga Tiket Masuk) toggle: fee amount is often unknown at creation
@@ -24,16 +24,12 @@ export function HtmFields({
 
   return (
     <div className="flex flex-col gap-3">
-      <label className="flex items-center gap-2 bg-soft-gray rounded-md p-3 text-body-md cursor-pointer">
-        <input
-          type="checkbox"
-          name="isPaid"
-          checked={paid}
-          onChange={(e) => setPaid(e.target.checked)}
-          className="h-4 w-4 accent-[var(--color-primary-container)]"
-        />
-        Kegiatan berbayar (HTM)
-      </label>
+      <ToggleSwitch
+        name="isPaid"
+        checked={paid}
+        onChange={(e) => setPaid(e.target.checked)}
+        label="Kegiatan berbayar (HTM)"
+      />
 
       {paid ? (
         <div className="flex flex-col gap-3 pl-4 border-l-2 border-outline-variant ml-1">
@@ -86,10 +82,16 @@ export function HtmFields({
         </div>
       ) : (
         <>
-          <input type="hidden" name="feeCny" value="" />
-          <input type="hidden" name="paymentInstructions" value="" />
-          <input type="hidden" name="paymentQrUrl" value="" />
-          <input type="hidden" name="alipayUid" value="" />
+          {/* Saat HTM dimatikan, kirim kembali NILAI LAMA - bukan string kosong.
+              Kosong berarti admin yang tak sengaja uncheck lalu menyimpan akan
+              menghapus QR bendahara + nominal yang sudah diisi secara permanen.
+              Nilai basi tidak bocor ke mana pun: tampilan tiket di-gate
+              event.isPaid, dan mencentang kotak lagi memunculkan form dengan
+              nilai tersimpan ini untuk diedit/dibersihkan sadar. */}
+          <input type="hidden" name="feeCny" value={defaultFeeCny ?? ""} />
+          <input type="hidden" name="paymentInstructions" value={defaultInstructions ?? ""} />
+          <input type="hidden" name="paymentQrUrl" value={defaultQrUrl ?? ""} />
+          <input type="hidden" name="alipayUid" value={defaultAlipayUid ?? ""} />
         </>
       )}
     </div>

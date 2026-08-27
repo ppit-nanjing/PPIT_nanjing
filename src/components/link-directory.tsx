@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { Select } from "@/components/console/form";
 
 type LinkItem = {
   slug: string;
@@ -48,10 +49,11 @@ export function LinkDirectory({
         </label>
         <label className="flex flex-col gap-1.5">
           <span className="text-label-caps uppercase tracking-wide text-on-surface-variant">Kategori</span>
-          <select
+          <Select
             value={category}
             onChange={(e) => setCategory(e.target.value)}
-            className="bg-surface-container-lowest border border-outline-variant rounded-lg px-3 py-2.5 text-body-md"
+            className="w-full sm:w-auto"
+            aria-label="Filter kategori"
           >
             <option value="all">Semua</option>
             {Object.entries(categoryLabels).map(([value, label]) => (
@@ -59,14 +61,15 @@ export function LinkDirectory({
                 {label}
               </option>
             ))}
-          </select>
+          </Select>
         </label>
         <label className="flex flex-col gap-1.5">
           <span className="text-label-caps uppercase tracking-wide text-on-surface-variant">Periode</span>
-          <select
+          <Select
             value={period}
             onChange={(e) => setPeriod(e.target.value)}
-            className="bg-surface-container-lowest border border-outline-variant rounded-lg px-3 py-2.5 text-body-md"
+            className="w-full sm:w-auto"
+            aria-label="Filter periode"
           >
             <option value="all">Semua</option>
             {periods.map((p) => (
@@ -74,7 +77,7 @@ export function LinkDirectory({
                 {p.label}
               </option>
             ))}
-          </select>
+          </Select>
         </label>
       </div>
 

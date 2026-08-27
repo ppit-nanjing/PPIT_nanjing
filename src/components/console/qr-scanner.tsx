@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import jsQR from "jsqr";
 import { Camera, Loader2, X, AlertTriangle } from "lucide-react";
+import { Select } from "@/components/console/form";
 
 function extractToken(raw: string): string | null {
   const text = raw.trim();
@@ -207,17 +208,18 @@ export function QrScanner() {
       {status === "scanning" && devices.length > 1 && (
         <label className="flex flex-col gap-1.5 max-w-sm mx-auto w-full">
           <span className="text-label-caps uppercase tracking-wide text-on-surface-variant">Kamera</span>
-          <select
+          <Select
             value={activeDeviceId ?? ""}
             onChange={(e) => switchCamera(e.target.value)}
-            className="bg-soft-gray rounded-md p-3 text-body-md focus:outline-none focus:ring-2 focus:ring-primary-container"
+            className="w-full"
+            aria-label="Kamera"
           >
             {devices.map((d, i) => (
               <option key={d.deviceId} value={d.deviceId}>
                 {d.label || `Kamera ${i + 1}`}
               </option>
             ))}
-          </select>
+          </Select>
         </label>
       )}
 

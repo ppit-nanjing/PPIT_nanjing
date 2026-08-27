@@ -15,7 +15,7 @@ import {
   listPendingPayments,
 } from "@/app/actions/committee";
 import { PAYMENT_STATUS_LABEL } from "@/lib/payment-status-labels";
-import { Field, TextField, SelectField, FormActions, primaryBtn, fieldInput } from "@/components/console/form";
+import { Field, TextField, SelectField, Select, FormActions, primaryBtn } from "@/components/console/form";
 import { ConfirmButton } from "@/components/console/confirm-button";
 
 // Peran penugasan baru. humas/acara/logistik/dokumentasi sengaja tidak ada:
@@ -96,20 +96,18 @@ export default async function WorkLedgerPage() {
         <form action={assignCommittee} className="flex flex-col gap-3 max-w-2xl">
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <Field label="Acara" required>
-              <select name="eventId" required defaultValue="" className={fieldInput}>
-                <option value="" disabled>Pilih acara…</option>
+              <Select name="eventId" required defaultValue="" placeholder="Pilih acara…" className="w-full">
                 {eventList.map((e) => (
                   <option key={e.id} value={e.id}>{e.title}</option>
                 ))}
-              </select>
+              </Select>
             </Field>
             <Field label="Orang" required>
-              <select name="userId" required defaultValue="" className={fieldInput}>
-                <option value="" disabled>Pilih orang…</option>
+              <Select name="userId" required defaultValue="" placeholder="Pilih orang…" className="w-full">
                 {userList.map((u) => (
                   <option key={u.id} value={u.id}>{u.name ?? u.email}</option>
                 ))}
-              </select>
+              </Select>
             </Field>
             <SelectField
               name="role"
@@ -216,20 +214,19 @@ export default async function WorkLedgerPage() {
         <form action={issueCertificate} className="flex flex-col gap-3 max-w-2xl mb-6">
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <Field label="Penerima" required>
-              <select name="userId" required defaultValue="" className={fieldInput}>
-                <option value="" disabled>Pilih orang…</option>
+              <Select name="userId" required defaultValue="" placeholder="Pilih orang…" className="w-full">
                 {userList.map((u) => (
                   <option key={u.id} value={u.id}>{u.name ?? u.email}</option>
                 ))}
-              </select>
+              </Select>
             </Field>
             <Field label="Acara (opsional)">
-              <select name="eventId" defaultValue="" className={fieldInput}>
+              <Select name="eventId" defaultValue="" className="w-full">
                 <option value="">—</option>
                 {eventList.map((e) => (
                   <option key={e.id} value={e.id}>{e.title}</option>
                 ))}
-              </select>
+              </Select>
             </Field>
             <SelectField
               name="kind"

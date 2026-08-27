@@ -1,5 +1,7 @@
 "use client";
 
+import { Select } from "@/components/console/form";
+
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { createProcurementRequest } from "@/app/actions/procurement";
@@ -84,13 +86,12 @@ export function ProcurementForm({ categories }: { categories: string[] }) {
 
       <label className="flex flex-col gap-2">
         <span className="text-label-caps uppercase tracking-wide text-on-surface-variant">{t("inventory.form.urgency")}</span>
-        <select name="urgency" defaultValue="medium" className="bg-soft-gray rounded-md p-3 text-body-md">
-          {URGENCY_VALUES.map((v) => (
-            <option key={v} value={v}>
-              {t(URGENCY_KEYS[v])}
-            </option>
-          ))}
-        </select>
+        <Select
+          name="urgency"
+          defaultValue="medium"
+          className="w-full"
+          options={URGENCY_VALUES.map((v) => ({ value: v, label: t(URGENCY_KEYS[v]) }))}
+        />
       </label>
 
       {error && <p className="text-body-sm text-error">{error}</p>}

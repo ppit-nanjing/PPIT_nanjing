@@ -3,6 +3,7 @@
 import { useMemo, useState, useTransition } from "react";
 import { Bug, Palette, Lightbulb, MessageCircle, Copy, Check, MapPin, Mail } from "lucide-react";
 import { updateFeedbackStatus } from "@/app/actions/feedback";
+import { Select } from "@/components/console/form";
 
 type Category = "bug" | "design" | "feature" | "general";
 type Status = "new" | "in_review" | "resolved";
@@ -78,10 +79,11 @@ export function FeedbackInbox({ initialRows }: { initialRows: FeedbackRow[] }) {
     <div>
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between mb-6">
         <div className="flex flex-wrap gap-2">
-          <select
+          <Select
             value={categoryFilter}
             onChange={(e) => setCategoryFilter(e.target.value as Category | "all")}
-            className="bg-surface-container-low border border-outline-variant rounded-md px-3 py-2 text-body-md"
+            className="w-full sm:w-auto"
+            aria-label="Filter kategori"
           >
             <option value="all">Semua Kategori</option>
             {Object.entries(CATEGORY_META).map(([key, m]) => (
@@ -89,11 +91,12 @@ export function FeedbackInbox({ initialRows }: { initialRows: FeedbackRow[] }) {
                 {m.label}
               </option>
             ))}
-          </select>
-          <select
+          </Select>
+          <Select
             value={statusFilter}
             onChange={(e) => setStatusFilter(e.target.value as Status | "all")}
-            className="bg-surface-container-low border border-outline-variant rounded-md px-3 py-2 text-body-md"
+            className="w-full sm:w-auto"
+            aria-label="Filter status"
           >
             <option value="all">Semua Status</option>
             {Object.entries(STATUS_LABEL).map(([key, label]) => (
@@ -101,7 +104,7 @@ export function FeedbackInbox({ initialRows }: { initialRows: FeedbackRow[] }) {
                 {label}
               </option>
             ))}
-          </select>
+          </Select>
         </div>
         <button
           onClick={copyAll}

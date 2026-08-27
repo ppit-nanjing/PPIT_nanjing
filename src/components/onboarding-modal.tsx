@@ -5,6 +5,7 @@ import { useState, useTransition } from "react";
 import { Mail } from "lucide-react";
 import { setEmailSubscription } from "@/app/actions/user";
 import { useT } from "@/lib/i18n/client";
+import { CheckboxField } from "@/components/console/form";
 
 /**
  * Shown once, right after a user's first Google sign-in - session.user.emailSubscribed
@@ -45,17 +46,12 @@ export function OnboardingModal() {
         <p className="text-body-md text-on-surface-variant mb-6">
           {t("onboarding.desc")}
         </p>
-        <label className="flex items-start gap-3 mb-8 cursor-pointer">
-          <input
-            type="checkbox"
-            checked={checked}
-            onChange={(e) => setChecked(e.target.checked)}
-            className="mt-1 w-4 h-4 accent-primary-container"
-          />
-          <span className="text-body-md text-on-background">
-            {t("onboarding.optIn", { email: session.user.email ?? "" })}
-          </span>
-        </label>
+        <CheckboxField
+          checked={checked}
+          onChange={(e) => setChecked(e.target.checked)}
+          label={t("onboarding.optIn", { email: session.user.email ?? "" })}
+          className="mb-8 text-on-background"
+        />
         <button
           onClick={handleContinue}
           disabled={pending}

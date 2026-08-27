@@ -4,6 +4,7 @@ import { Heart, Info, Lock } from "lucide-react";
 import { auth } from "@/auth";
 import { getDonationChannels, getVerifiedDonations, submitDonation } from "@/app/actions/donations";
 import { getT } from "@/lib/i18n/server";
+import { Select, CheckboxField } from "@/components/console/form";
 
 export default async function DonasiPage() {
   const { t } = await getT();
@@ -105,14 +106,13 @@ export default async function DonasiPage() {
               </label>
               <label className="flex flex-col gap-2">
                 <span className="text-label-caps uppercase tracking-wide text-on-surface-variant">{t("donation.viaChannel")}</span>
-                <select name="method" className="bg-soft-gray rounded-md p-3 text-body-md">
-                  <option value="">{t("donation.selectPlaceholder")}</option>
+                <Select name="method" className="w-full" placeholder={t("donation.selectPlaceholder")}>
                   {channels.map((c) => (
                     <option key={c.id} value={c.label}>
                       {c.label}
                     </option>
                   ))}
-                </select>
+                </Select>
               </label>
             </div>
             <label className="flex flex-col gap-2">
@@ -125,10 +125,7 @@ export default async function DonasiPage() {
               </span>
               <input name="proofUrl" placeholder="https://…" className="bg-soft-gray rounded-md p-3 text-body-md" />
             </label>
-            <label className="flex items-center gap-2 text-body-md text-on-background">
-              <input type="checkbox" name="anonymous" />
-              {t("donation.anonymous")}
-            </label>
+            <CheckboxField name="anonymous" label={t("donation.anonymous")} className="text-on-background" />
             <button
               type="submit"
               className="self-start bg-primary-container text-on-primary text-label-caps uppercase tracking-wide px-6 py-3 rounded-md hover:bg-primary transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-container focus-visible:ring-offset-2 focus-visible:ring-offset-surface-container-lowest"

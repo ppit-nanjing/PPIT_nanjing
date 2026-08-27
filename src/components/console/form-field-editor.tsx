@@ -7,6 +7,7 @@ import { ChevronDown, ChevronRight, GripVertical, MoreVertical, Copy } from "luc
 import type { MembershipFieldDef } from "@/lib/membership-form";
 import { OPTION_TYPES, SCALE_TYPES, CHOICE_TYPES, GRID_TYPES, FIELD_TYPE_LABELS, isSectionType, canDeleteField } from "@/lib/membership-form";
 import { updateFormField, deleteFormField, moveFormField, duplicateFormField } from "@/app/actions/membership";
+import { Select, CheckboxField } from "@/components/console/form";
 
 const ALL_TYPES: MembershipFieldDef["type"][] = [
   "text", "textarea", "email", "tel", "number", "select", "radio", "multiselect", "date", "checkbox", "rating", "image", "url", "section", "time", "linear_scale",   "grid_radio", "grid_checkbox", "file",
@@ -216,23 +217,15 @@ export function FormFieldEditor({ field, index, sectionLabel, isQuiz }: { field:
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div className="flex flex-col gap-2">
                     <span className="text-label-caps uppercase tracking-wide text-on-surface-variant">Jenis Jawaban</span>
-                    <select
+                    <Select
                       name="type"
                       value={type}
                       onChange={(e) => setType(e.target.value as MembershipFieldDef["type"])}
-                      className="bg-soft-gray rounded-md p-3 text-body-md"
-                    >
-                      {ALL_TYPES.map((t) => (
-                        <option key={t} value={t}>
-                          {FIELD_TYPE_LABELS[t]}
-                        </option>
-                      ))}
-                    </select>
+                      className="w-full"
+                      options={ALL_TYPES.map((t) => ({ value: t, label: FIELD_TYPE_LABELS[t] }))}
+                    />
                   </div>
-                  <label className="flex items-center gap-2 text-body-md text-on-background self-end pb-3">
-                    <input type="checkbox" name="required" defaultChecked={field.required} />
-                    Wajib diisi
-                  </label>
+                  <CheckboxField name="required" defaultChecked={field.required} label="Wajib diisi" className="text-body-md text-on-background self-end pb-3" />
                 </div>
 
                 {showOptions && (
@@ -485,22 +478,22 @@ function AnswerKeyEditor({
   if (CHOICE_TYPES.includes(type)) {
     if (options.length === 0) return <p className="text-label-caps text-on-surface-variant">Isi daftar pilihan dulu.</p>;
     return (
-      <select value={value} onChange={(e) => onChange(e.target.value)} className={cell}>
+      <Select value={value} onChange={(e) => onChange(e.target.value)} className={cell} aria-label="Jawaban benar">
         <option value="">—</option>
         {options.map((o) => (
           <option key={o} value={o}>{o}</option>
         ))}
-      </select>
+      </Select>
     );
   }
 
   if (type === "checkbox") {
     return (
-      <select value={value} onChange={(e) => onChange(e.target.value)} className={cell}>
+      <Select value={value} onChange={(e) => onChange(e.target.value)} className={cell} aria-label="Jawaban benar">
         <option value="">—</option>
         <option value="true">Harus dicentang</option>
         <option value="false">Harus dikosongkan</option>
-      </select>
+      </Select>
     );
   }
 

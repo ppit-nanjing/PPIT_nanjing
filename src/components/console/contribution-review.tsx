@@ -2,6 +2,7 @@
 
 import { useTransition } from "react";
 import { reviewContribution } from "@/app/actions/contributions";
+import { Select } from "@/components/console/form";
 
 type Contribution = {
   id: string;
@@ -54,14 +55,14 @@ export function ContributionReview({
             <span className="text-label-caps uppercase tracking-wide text-on-surface-variant">
               Gabung ke barang existing (kosongkan = buat barang baru)
             </span>
-            <select name="existingItemId" defaultValue="" className="bg-soft-gray rounded-md p-2.5 text-body-md">
+            <Select name="existingItemId" defaultValue="" className="w-full">
               <option value="">— Barang baru —</option>
               {items.map((i) => (
                 <option key={i.id} value={i.id}>
                   {i.name}
                 </option>
               ))}
-            </select>
+            </Select>
           </label>
 
           <div className="flex flex-wrap gap-3">

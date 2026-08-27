@@ -1,5 +1,7 @@
 "use client";
 
+import { Select, RadioGroupField } from "@/components/console/form";
+
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { ImageUploadCropper } from "@/components/upload/image-upload-cropper";
@@ -79,26 +81,25 @@ export function ContributeForm({ categories }: { categories: string[] }) {
 
       <label className="flex flex-col gap-2">
         <span className="text-label-caps uppercase tracking-wide text-on-surface-variant">{t("inventory.conditionLabel")}</span>
-        <select name="condition" defaultValue="good" className="bg-soft-gray rounded-md p-3 text-body-md">
-          {CONDITION_VALUES.map((v) => (
-            <option key={v} value={v}>
-              {t(CONDITION_KEYS[v])}
-            </option>
-          ))}
-        </select>
+        <Select
+          name="condition"
+          defaultValue="good"
+          className="w-full"
+          options={CONDITION_VALUES.map((v) => ({ value: v, label: t(CONDITION_KEYS[v]) }))}
+        />
       </label>
 
-      <fieldset className="flex flex-col gap-2">
-        <span className="text-label-caps uppercase tracking-wide text-on-surface-variant">{t("inventory.form.type")} *</span>
-        <label className="flex items-center gap-2 text-body-md">
-          <input type="radio" name="contributionType" value="donate" checked={!lend} onChange={() => setLend(false)} />
-          {t("inventory.form.donate")}
-        </label>
-        <label className="flex items-center gap-2 text-body-md">
-          <input type="radio" name="contributionType" value="lend_to_org" checked={lend} onChange={() => setLend(true)} />
-          {t("inventory.form.lend")}
-        </label>
-      </fieldset>
+      <RadioGroupField
+        name="contributionType"
+        label={t("inventory.form.type")}
+        required
+        value={lend ? "lend_to_org" : "donate"}
+        onChange={(v) => setLend(v === "lend_to_org")}
+        options={[
+          { value: "donate", label: t("inventory.form.donate") },
+          { value: "lend_to_org", label: t("inventory.form.lend") },
+        ]}
+      />
 
       {lend && (
         <label className="flex flex-col gap-2">
