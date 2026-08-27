@@ -2,6 +2,7 @@
 
 import { useRef, useState, useEffect } from "react";
 import { AlertTriangle, Camera, CheckCircle2, Loader2, ScanLine, ShieldCheck, Upload, X } from "lucide-react";
+import { motion } from "motion/react";
 import { useT } from "@/lib/i18n/client";
 import type { PassportMrzResult } from "@/lib/mrz";
 
@@ -112,8 +113,50 @@ export function PassportScanner({ onResult }: Props) {
   if (status === "corrected") statusMessage = t("sensus.passportScanCorrected");
   if (status === "success") statusMessage = t("sensus.passportScanSuccess");
 
+    const progressBar = (
+      <div className="w-full" aria-live="polite">
+        <div className="flex items-center justify-between text-label-caps text-on-surface-variant mb-2">
+          <span className="inline-flex items-center gap-2">
+            <Loader2 className="animate-spin" size={14} />
+            {t("sensus.passportScanning")}
+          </span>
+          <span className="tabular-nums">{Math.round(progress * 100)}%</span>
+        </div>
+        <div
+          role="progressbar"
+          aria-label={t("sensus.passportScanning")}
+          aria-valuemin={0}
+          aria-valuemax={100}
+          aria-valuenow={Math.round(progress * 100)}
+          className="h-3 w-full rounded-full bg-surface-container-high overflow-hidden"
+        >
+          <motion.div
+            className="h-full rounded-full bg-linear-to-r from-primary-container via-primary to-primary-container relative"
+            initial={{ width: "0%" }}
+            animate={{ width: `${Math.max(5, progress * 100)}%` }}
+            transition={{ type: "spring", stiffness: 90, damping: 20 }}
+          >
+            <span
+              className="absolute inset-0 rounded-full opacity-40"
+              style={{
+                background:
+                  "linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.5) 50%, transparent 100%)",
+                animation: "passport-scan-shimmer 1.4s infinite linear",
+              }}
+            />
+          </motion.div>
+        </div>
+      </div>
+    );
+
   return (
     <>
+       <style>{`
+         @keyframes passport-scan-shimmer {
+           0% { transform: translateX(-100%); }
+           100% { transform: translateX(100%); }
+         }
+       `}</style>
       <div className="border border-outline-variant rounded-lg p-4 bg-surface-container-low flex flex-col gap-3">
         <div className="flex items-start gap-3">
           <ShieldCheck className="text-primary-container shrink-0 mt-0.5" size={18} />
@@ -128,15 +171,9 @@ export function PassportScanner({ onResult }: Props) {
           onClick={() => setOpen(true)}
           className="self-start inline-flex items-center gap-2 rounded-md bg-primary-container text-on-primary px-4 py-2 text-label-caps font-semibold disabled:opacity-60 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-container focus-visible:ring-offset-2"
         >
-          {scanning ? <Loader2 className="animate-spin" size={16} /> : <ScanLine size={16} />}
-          {scanning ? t("sensus.passportScanning") : t("sensus.passportScanAction")}
+           <ScanLine size={16} />
+           {t("sensus.passportScanAction")}
         </button>
-        {scanning && (
-          <div className="flex items-center gap-3" aria-live="polite">
-            <progress className="w-full accent-primary-container" max={1} value={progress} />
-            <span className="text-xs tabular-nums text-on-surface-variant">{Math.round(progress * 100)}%</span>
-          </div>
-        )}
         {status !== "idle" && !scanning && (
           <output
             className={`flex items-start gap-2 text-xs ${status === "error" ? "text-error" : "text-on-surface-variant"}`}
@@ -183,8 +220,9 @@ export function PassportScanner({ onResult }: Props) {
             </div>
 
             <div className="p-5">
+               {scanning && progressBar}
               {cameraMode ? (
-                <div className="flex flex-col gap-3">
+                 <div className={`flex flex-col gap-3 ${scanning ? "opacity-60 pointer-events-none" : ""}`}>
                   <div className="relative aspect-4/3 bg-black rounded-lg overflow-hidden">
                     <video ref={videoRef} className="absolute inset-0 w-full h-full object-cover" playsInline muted />
                   </div>
@@ -209,7 +247,7 @@ export function PassportScanner({ onResult }: Props) {
                   </div>
                 </div>
               ) : (
-                <div className="flex flex-col gap-3">
+                 <div className={`flex flex-col gap-3 ${scanning ? "opacity-60 pointer-events-none" : ""}`}>
                   <input
                     ref={inputRef}
                     type="file"
@@ -222,6 +260,7 @@ export function PassportScanner({ onResult }: Props) {
                   />
                   <button
                     type="button"
+                     disabled={scanning}
                     onClick={() => inputRef.current?.click()}
                     onDrop={handleDrop}
                     onDragOver={(event) => {
@@ -229,7 +268,7 @@ export function PassportScanner({ onResult }: Props) {
                       setDragging(true);
                     }}
                     onDragLeave={() => setDragging(false)}
-                    className={`w-full flex flex-col items-center justify-center gap-3 rounded-xl border-2 border-dashed p-8 text-center transition-colors ${
+                     className={`w-full flex flex-col items-center justify-center gap-3 rounded-xl border-2 border-dashed p-8 text-center transition-colors disabled:opacity-50 ${
                       dragging
                         ? "border-primary-container bg-primary-container/10"
                         : "border-outline-variant bg-surface-container-low hover:border-primary-container/60"
@@ -247,8 +286,9 @@ export function PassportScanner({ onResult }: Props) {
                     <span className="text-xs text-on-surface-variant">{t("sensus.passportScanModalOr")}</span>
                     <button
                       type="button"
+                       disabled={scanning}
                       onClick={() => void startCamera()}
-                      className="inline-flex items-center gap-2 rounded-md bg-primary text-on-primary px-4 py-2 text-label-caps font-semibold focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
+                       className="inline-flex items-center gap-2 rounded-md bg-primary text-on-primary px-4 py-2 text-label-caps font-semibold focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 disabled:opacity-60"
                     >
                       <Camera size={16} />
                       {t("sensus.passportScanModalCamera")}
