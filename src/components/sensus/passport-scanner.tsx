@@ -10,11 +10,18 @@ type Props = Readonly<{ onResult: (result: PassportMrzResult) => void }>;
 
 function PassportCaptureFrame() {
   return (
-    <div className="absolute left-1/2 top-1/2 w-[64%] aspect-[1.42/1] -translate-x-1/2 -translate-y-1/2 rotate-90 md:rotate-0">
-      <div className="absolute inset-0 rounded-[3px] border-2 border-white/95 shadow-[0_0_0_1px_rgba(0,0,0,0.2)]">
-        <div className="absolute inset-x-0 bottom-0 h-[28%] border-t border-dashed border-white/90 bg-black/20">
-          <span className="absolute inset-x-[12%] top-[34%] h-px bg-white/80" />
-          <span className="absolute inset-x-[12%] top-[62%] h-px bg-white/80" />
+    <div
+      className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 rotate-90 md:rotate-0"
+      style={{ width: "92%", aspectRatio: "1.42 / 1" }}
+    >
+      <div className="absolute inset-0 rounded-sm border-2 border-white/95">
+        <div
+          className="absolute rounded-xs border-2 border-white/90 bg-black/10"
+          style={{ left: "7%", top: "12%", width: "24%", aspectRatio: "3 / 4" }}
+        />
+        <div className="absolute inset-x-0 bottom-0 border-t border-dashed border-white/90 bg-black/20" style={{ height: "28%" }}>
+          <span className="absolute h-px bg-white/80" style={{ left: "12%", right: "12%", top: "34%" }} />
+          <span className="absolute h-px bg-white/80" style={{ left: "12%", right: "12%", top: "62%" }} />
         </div>
       </div>
     </div>
