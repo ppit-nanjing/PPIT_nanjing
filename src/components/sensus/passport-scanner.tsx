@@ -1,12 +1,45 @@
 "use client";
 
 import { useRef, useState, useEffect } from "react";
-import { AlertTriangle, Camera, CheckCircle2, Loader2, ScanLine, ShieldCheck, Upload, X } from "lucide-react";
+import { AlertTriangle, ArrowLeft, ArrowRight, Camera, CheckCircle2, Loader2, Maximize2, ScanLine, ShieldCheck, SunMedium, Upload, X } from "lucide-react";
 import { motion } from "motion/react";
 import { useT } from "@/lib/i18n/client";
 import type { PassportMrzResult } from "@/lib/mrz";
 
 type Props = Readonly<{ onResult: (result: PassportMrzResult) => void }>;
+
+function PassportCaptureFrame() {
+  return (
+    <div className="absolute left-1/2 top-1/2 w-[64%] aspect-[1.42/1] -translate-x-1/2 -translate-y-1/2 rotate-90 md:rotate-0">
+      <div className="absolute inset-0 rounded-[3px] border-2 border-white/95 shadow-[0_0_0_1px_rgba(0,0,0,0.2)]">
+        <div className="absolute inset-x-0 bottom-0 h-[28%] border-t border-dashed border-white/90 bg-black/20">
+          <span className="absolute inset-x-[12%] top-[34%] h-px bg-white/80" />
+          <span className="absolute inset-x-[12%] top-[62%] h-px bg-white/80" />
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function PassportCameraOverlay() {
+  return (
+    <div aria-hidden="true" className="pointer-events-none absolute inset-0 z-10">
+      <div className="absolute inset-0 bg-linear-to-b from-black/25 via-transparent to-black/35" />
+      <PassportCaptureFrame />
+    </div>
+  );
+}
+
+function PassportGuideArtwork() {
+  return (
+    <div aria-hidden="true" className="relative aspect-4/3 overflow-hidden rounded-lg bg-black">
+      <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,_rgba(255,255,255,0.18),_transparent_58%)]" />
+      <div className="absolute inset-x-[16%] top-[17%] h-px bg-white/20" />
+      <div className="absolute inset-x-[16%] bottom-[17%] h-px bg-white/20" />
+      <PassportCaptureFrame />
+    </div>
+  );
+}
 
 export function PassportScanner({ onResult }: Props) {
   const t = useT();
@@ -16,6 +49,7 @@ export function PassportScanner({ onResult }: Props) {
   const [open, setOpen] = useState(false);
   const [dragging, setDragging] = useState(false);
   const [cameraMode, setCameraMode] = useState(false);
+  const [cameraGuide, setCameraGuide] = useState(false);
   const [cameraError, setCameraError] = useState<string | null>(null);
   const [scanning, setScanning] = useState(false);
   const [progress, setProgress] = useState(0);
@@ -26,6 +60,15 @@ export function PassportScanner({ onResult }: Props) {
       stopCamera();
     };
   }, []);
+
+  useEffect(() => {
+    const video = videoRef.current;
+    const stream = streamRef.current;
+    if (!cameraMode || !video || !stream) return;
+
+    video.srcObject = stream;
+    void video.play().catch(() => undefined);
+  }, [cameraMode]);
 
   async function scan(file: File) {
     setScanning(true);
@@ -66,10 +109,7 @@ export function PassportScanner({ onResult }: Props) {
       });
       streamRef.current = stream;
       setCameraMode(true);
-      if (videoRef.current) {
-        videoRef.current.srcObject = stream;
-        await videoRef.current.play();
-      }
+      setCameraGuide(false);
     } catch (error) {
       if (error instanceof DOMException && (error.name === "NotAllowedError" || error.name === "PermissionDeniedError")) {
         setCameraError(t("sensus.passportScanCameraDenied"));
@@ -83,6 +123,7 @@ export function PassportScanner({ onResult }: Props) {
     streamRef.current?.getTracks().forEach((track) => track.stop());
     streamRef.current = null;
     setCameraMode(false);
+    setCameraGuide(false);
   }
 
   async function capturePhoto() {
@@ -203,7 +244,7 @@ export function PassportScanner({ onResult }: Props) {
         >
           <div className="absolute inset-0 bg-black/30 backdrop-blur-sm" />
           <div
-            className="relative w-full max-w-md bg-surface-container-lowest border border-outline-variant rounded-2xl shadow-2xl overflow-hidden flex flex-col"
+            className={`relative w-full ${cameraMode || cameraGuide ? "max-w-2xl" : "max-w-md"} bg-surface-container-lowest border border-outline-variant rounded-2xl shadow-2xl overflow-hidden flex flex-col`}
             onClick={(event) => event.stopPropagation()}
           >
             <div className="flex items-center justify-between px-5 py-4 border-b border-outline-variant">
@@ -225,6 +266,7 @@ export function PassportScanner({ onResult }: Props) {
                  <div className={`flex flex-col gap-3 ${scanning ? "opacity-60 pointer-events-none" : ""}`}>
                   <div className="relative aspect-4/3 bg-black rounded-lg overflow-hidden">
                     <video ref={videoRef} className="absolute inset-0 w-full h-full object-cover" playsInline muted />
+                    <PassportCameraOverlay />
                   </div>
                   <div className="flex justify-center gap-2">
                     <button
@@ -243,6 +285,58 @@ export function PassportScanner({ onResult }: Props) {
                       className="inline-flex items-center gap-2 rounded-md border border-outline-variant text-on-background px-4 py-2 text-label-caps font-semibold disabled:opacity-60 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-container focus-visible:ring-offset-2"
                     >
                       {t("sensus.passportScanModalClose")}
+                    </button>
+                  </div>
+                </div>
+              ) : cameraGuide ? (
+                <div className="flex flex-col gap-5">
+                  <div className="grid gap-6 md:grid-cols-2 md:items-center">
+                    <div>
+                      <h3 className="text-title-lg text-on-background">{t("sensus.passportScanGuideTitle")}</h3>
+                      <p className="mt-2 text-body-sm text-on-surface-variant">{t("sensus.passportScanGuideDescription")}</p>
+                      <ul className="mt-5 space-y-3 text-body-sm text-on-surface-variant">
+                        <li className="flex items-start gap-3">
+                          <Maximize2 size={17} className="mt-0.5 shrink-0 text-primary-container" />
+                          {t("sensus.passportScanGuideFrame")}
+                        </li>
+                        <li className="flex items-start gap-3">
+                          <ScanLine size={17} className="mt-0.5 shrink-0 text-primary-container" />
+                          {t("sensus.passportScanGuideMrz")}
+                        </li>
+                        <li className="flex items-start gap-3">
+                          <SunMedium size={17} className="mt-0.5 shrink-0 text-primary-container" />
+                          {t("sensus.passportScanGuideLight")}
+                        </li>
+                      </ul>
+                    </div>
+                    <PassportGuideArtwork />
+                  </div>
+                  {cameraError && (
+                    <p className="text-body-sm text-error flex items-start gap-2">
+                      <AlertTriangle size={16} className="shrink-0 mt-0.5" />
+                      {cameraError}
+                    </p>
+                  )}
+                  <div className="flex items-center justify-between gap-3 border-t border-outline-variant pt-4">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setCameraGuide(false);
+                        setCameraError(null);
+                      }}
+                      className="inline-flex items-center gap-2 rounded-md px-3 py-2 text-label-caps font-semibold text-on-surface-variant hover:bg-surface-container-low focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-container"
+                    >
+                      <ArrowLeft size={16} />
+                      {t("sensus.passportScanGuideBack")}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => void startCamera()}
+                      className="inline-flex items-center gap-2 rounded-md bg-primary text-on-primary px-4 py-2 text-label-caps font-semibold focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
+                    >
+                      <Camera size={16} />
+                      {t("sensus.passportScanGuideContinue")}
+                      <ArrowRight size={16} />
                     </button>
                   </div>
                 </div>
@@ -287,7 +381,10 @@ export function PassportScanner({ onResult }: Props) {
                     <button
                       type="button"
                        disabled={scanning}
-                      onClick={() => void startCamera()}
+                      onClick={() => {
+                        setCameraError(null);
+                        setCameraGuide(true);
+                      }}
                        className="inline-flex items-center gap-2 rounded-md bg-primary text-on-primary px-4 py-2 text-label-caps font-semibold focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 disabled:opacity-60"
                     >
                       <Camera size={16} />
