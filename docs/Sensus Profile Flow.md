@@ -23,3 +23,7 @@ Data agregat sensus dilaporkan di [Reports & Analytics](./Reports%20&%20Analytic
 ## Catatan implementasi
 
 Karena form ini panjang & bertahap, **simpan progres per-langkah** (bukan hanya submit di akhir) — `completion_status` di [Data Dictionary](./Data%20Dictionary.md) mendukung status `incomplete`, memungkinkan user melanjutkan nanti tanpa kehilangan data yang sudah diisi. React Hook Form + step-based state (lihat [Tech Stack](./Tech%20Stack.md)) cocok untuk pola ini.
+
+### Fitur terencana: OCR kartu mahasiswa
+
+OCR kartu mahasiswa belum diaktifkan. Saat dikerjakan, pemrosesan teks harus berjalan di browser dan tidak boleh memakai layanan OCR pihak ketiga. Hasil OCR dicocokkan dengan daftar universitas cabang yang sudah dipilih melalui `findUniversityMatch()` di `src/lib/university-match.ts`; hasilnya hanya saran yang wajib dikonfirmasi pengguna. Berkas kartu mahasiswa yang diunggah disimpan sebagai Vercel Blob privat dan hanya dibaca melalui route yang memeriksa pemilik atau akses admin laporan.
