@@ -112,11 +112,22 @@ async function requestOrigin(): Promise<string> {
   return host ? `${proto}://${host}` : "";
 }
 
+// Cooldown per alamat email untuk permintaan reset. Best-effort (Map in-memory
+// per instance Lambda, sama caveat-nya seperti throttle sign-in di auth.ts) -
+// cukup untuk mencegah satu orang membombardir inbox korban / menghabiskan
+// kuota harian Gmail lewat form yang responsnya selalu sama.
+const RESET_COOLDOWN_MS = 90 * 1000;
+const lastResetRequest = new Map<string, number>();
+
 // Minta tautan reset password. Responsnya SELALU sama ("cek email") apa pun
 // hasilnya - tidak membocorkan apakah alamat itu terdaftar atau akun Google.
 export async function requestPasswordReset(_prev: AuthFormState, formData: FormData): Promise<AuthFormState> {
   const email = String(formData.get("email") ?? "").trim().toLowerCase();
   if (!EMAIL_RE.test(email)) return { errorKey: "auth.errEmailInvalid" };
+
+  const last = lastResetRequest.get(email) ?? 0;
+  if (Date.now() - last < RESET_COOLDOWN_MS) return { done: true };
+  lastResetRequest.set(email, Date.now());
 
   try {
     await purgeExpiredResetTokens();
@@ -148,7 +159,13 @@ export async function requestPasswordReset(_prev: AuthFormState, formData: FormD
           ctaUrl: link,
           footerNote: "Email ini dikirim otomatis oleh sistem akun PPIT Nanjing. Jangan teruskan tautan di atas ke siapa pun.",
         }),
-        text: renderMembershipEmailText({ heading, body, ctaLabel: "Buat password baru / Set a new password", ctaUrl: link }),
+        text: renderMembershipEmailText({
+          heading,
+          body,
+          ctaLabel: "Buat password baru / Set a new password",
+          ctaUrl: link,
+          footerNote: "Email ini dikirim otomatis oleh sistem akun PPIT Nanjing. Jangan teruskan tautan di atas ke siapa pun.",
+        }),
       });
     }
   } catch (err) {
