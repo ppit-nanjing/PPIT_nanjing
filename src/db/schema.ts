@@ -410,6 +410,11 @@ export const events = pgTable("events", {
   // Peserta yang sensusnya sudah lengkap tidak mengetik ulang: nilainya
   // di-snapshot dari sensus. Lihat event_registrations.biodataJson.
   requiresBiodata: boolean("requires_biodata").notNull().default(false),
+  // Info yang muncul di halaman tiket SETELAH orang mendaftar - mis. "add WeChat
+  // ini untuk masuk grup", tautan rundown, alamat lengkap. Bukan di halaman
+  // acara publik: cuma pendaftar yang perlu lihat. Freeform, whitespace
+  // dipertahankan saat render.
+  confirmationInfo: text("confirmation_info"),
 });
 
 // `feeCny` null = acara gratis; > 0 = peserta perlu membayar dan mengunggah bukti.

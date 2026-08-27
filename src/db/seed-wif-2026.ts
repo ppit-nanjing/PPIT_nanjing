@@ -46,6 +46,12 @@ const PAYMENT_INSTRUCTIONS = [
   "Unggah bukti transfer di halaman ini. Kalau ada kendala upload, hubungi panitia lewat WeChat.",
 ].join("\n");
 
+const CONFIRMATION_INFO = [
+  "Masuk grup WeChat WIF 2026 — add salah satu:",
+  "WeChat ID: rhpxzz (Gwen)",
+  "WeChat ID: athayamzzra (Athaya)",
+].join("\n");
+
 // Kuota departemen = 1 (kursi Ketua Departemen); anggotanya dihitung di
 // sub-timnya masing-masing. Halaman struktur menjumlahkan ke atas, jadi
 // Dept. Perlengkapan terbaca 1 + 2 + 3 + 2 = 8 orang.
@@ -123,6 +129,7 @@ async function main() {
     requiresBiodata: true,
     isPaid: true,
     paymentInstructions: PAYMENT_INSTRUCTIONS,
+    confirmationInfo: CONFIRMATION_INFO,
     // Sengaja draft. Pengurus yang memutuskan kapan tampil ke publik.
     status: "draft" as const,
   };
@@ -143,6 +150,7 @@ async function main() {
         requiresBiodata: true,
         isPaid: true,
         paymentInstructions: PAYMENT_INSTRUCTIONS,
+        confirmationInfo: CONFIRMATION_INFO,
       })
       .where(eq(events.id, existing.id));
     eventId = existing.id;

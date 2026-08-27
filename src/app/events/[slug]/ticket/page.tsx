@@ -233,6 +233,13 @@ export default async function EventTicketPage({ params }: { params: Promise<{ sl
           </div>
         )}
 
+        {event.confirmationInfo && (
+          <div className="bg-surface-container-lowest border border-outline-variant rounded-xl p-6 mt-6 text-left">
+            <h2 className="text-headline-sm text-on-background mb-2">Langkah Berikutnya</h2>
+            <p className="text-body-md text-on-surface-variant whitespace-pre-line">{event.confirmationInfo}</p>
+          </div>
+        )}
+
         <div className="flex flex-col sm:flex-row gap-3 mt-8 justify-center">
           <Link
             href={`/events/${slug}`}

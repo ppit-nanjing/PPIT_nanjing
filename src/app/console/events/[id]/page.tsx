@@ -246,6 +246,17 @@ export default async function ConsoleEventDetailPage({ params }: { params: Promi
                 className="bg-soft-gray rounded-md p-3 text-body-md resize-none"
               />
               <div className="flex flex-col gap-1">
+                <span className="text-label-caps uppercase tracking-wide text-on-surface-variant">Info Setelah Daftar</span>
+                <textarea
+                  name="confirmationInfo"
+                  defaultValue={event.confirmationInfo ?? ""}
+                  placeholder={"Muncul di halaman tiket peserta setelah mereka mendaftar (contoh:\nMasuk grup WeChat WIF 2026 — add salah satu:\nWechat ID: rhpxzz (Gwen)\nWechat ID: athayamzzra (Athaya))"}
+                  rows={3}
+                  className="bg-soft-gray rounded-md p-3 text-body-md resize-none"
+                />
+                <p className="text-xs text-on-surface-variant">Tidak tampil di halaman acara publik — hanya pendaftar yang melihatnya.</p>
+              </div>
+              <div className="flex flex-col gap-1">
                 <input
                   name="scheduledPublishAt"
                   type="datetime-local"
