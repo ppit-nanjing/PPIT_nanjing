@@ -4,7 +4,7 @@ import { redirect, notFound } from "next/navigation";
 import { headers } from "next/headers";
 import { auth } from "@/auth";
 import { db } from "@/db";
-import { events, eventRegistrations } from "@/db/schema";
+import { events, eventRegistrations, eventFeeOptions } from "@/db/schema";
 import { SiteNav } from "@/components/site-nav";
 import { SiteFooter } from "@/components/site-footer";
 import { CopyButton } from "@/components/copy-button";
@@ -51,7 +51,19 @@ export default async function EventTicketPage({ params }: { params: Promise<{ sl
   const hasFee = event.isPaid;
   const awaitingPayment = hasFee && registration.paymentStatus !== "verified";
   const gated = registration.status === "pending" || awaitingPayment;
-  const feeAmount = event.feeCny != null && event.feeCny > 0 ? event.feeCny : null;
+  // Nominal = kategori tarif yang dipilih peserta bila ada, kalau tidak tarif
+  // tunggal acara.
+  const [feeOption] = registration.feeOptionId
+    ? await db
+        .select({ label: eventFeeOptions.label, amountCny: eventFeeOptions.amountCny })
+        .from(eventFeeOptions)
+        .where(eq(eventFeeOptions.id, registration.feeOptionId))
+    : [];
+  const feeAmount = feeOption
+    ? feeOption.amountCny
+    : event.feeCny != null && event.feeCny > 0
+      ? event.feeCny
+      : null;
   const alipayLink =
     feeAmount != null && event.alipayUid
       ? buildAlipayTransferLink(event.alipayUid, feeAmount, `${session.user.name ?? "Peserta"} - ${event.title}`)
@@ -146,7 +158,9 @@ export default async function EventTicketPage({ params }: { params: Promise<{ sl
           <div className="bg-surface-container-lowest border border-outline-variant rounded-xl p-6 mt-6 text-left">
             <h2 className="text-headline-sm text-on-background mb-2">Pembayaran</h2>
             <p className="text-body-md text-on-background mb-1">
-              {feeAmount != null ? `Biaya: ¥${feeAmount}` : "Nominal biaya belum ditentukan, tunggu info dari panitia."}
+              {feeAmount != null
+                ? `Biaya: ¥${feeAmount}${feeOption ? ` · ${feeOption.label}` : ""}`
+                : "Nominal biaya belum ditentukan, tunggu info dari panitia."}
             </p>
             {event.paymentInstructions && (
               <p className="text-body-sm text-on-surface-variant whitespace-pre-line mb-4">{event.paymentInstructions}</p>

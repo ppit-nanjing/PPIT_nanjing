@@ -1,9 +1,9 @@
 import { eq, desc } from "drizzle-orm";
 import { notFound } from "next/navigation";
 import { db } from "@/db";
-import { certificates, events, eventDivisions, eventQuestions, eventRegistrations, eventVolunteers, sensusProfiles, users } from "@/db/schema";
+import { certificates, events, eventDivisions, eventFeeOptions, eventQuestions, eventRegistrations, eventVolunteers, sensusProfiles, users } from "@/db/schema";
 import { MEMBERSHIP_LABEL, effectiveBranch, membershipStatus } from "@/lib/membership-status";
-import { updateEvent, saveEventQuestion, deleteEventQuestion } from "@/app/actions/admin-events";
+import { updateEvent, saveEventQuestion, deleteEventQuestion, saveFeeOption, deleteFeeOption } from "@/app/actions/admin-events";
 import { setVolunteerStatus } from "@/app/actions/volunteers";
 import { publishDueEvents } from "@/lib/publish-events";
 import { DeleteEventButton } from "@/components/console/delete-event-button";
@@ -63,6 +63,12 @@ export default async function ConsoleEventDetailPage({ params }: { params: Promi
     .from(eventQuestions)
     .where(eq(eventQuestions.eventId, id))
     .orderBy(eventQuestions.orderIndex, eventQuestions.id);
+  const feeOptions = await db
+    .select()
+    .from(eventFeeOptions)
+    .where(eq(eventFeeOptions.eventId, id))
+    .orderBy(eventFeeOptions.orderIndex, eventFeeOptions.id);
+  const feeOptionLabel = new Map(feeOptions.map((o) => [o.id, `${o.label} (¥${o.amountCny})`]));
   const volunteerApps = await db
     .select({
       app: eventVolunteers,
@@ -92,6 +98,7 @@ export default async function ConsoleEventDetailPage({ params }: { params: Promi
   // only rendering is gated, so nothing sensitive reaches an unauthorized
   // viewer's page even though it briefly exists in server memory here.
   const canVerifyPayments = hasModuleAccess(session.user.adminScope, "organization");
+  const feeOptionAmount = new Map(feeOptions.map((o) => [o.id, o.amountCny]));
   const pendingPayments = canVerifyPayments
     ? registrations
         .filter((r) => r.reg.paymentStatus !== "not_required")
@@ -103,6 +110,10 @@ export default async function ConsoleEventDetailPage({ params }: { params: Promi
           registeredAt: r.reg.registeredAt,
           name: r.userName,
           email: r.userEmail,
+          // Nominal yang wajib dibayar peserta ini: kategori tarifnya bila ada,
+          // kalau tidak tarif tunggal acara.
+          expected: r.reg.feeOptionId ? feeOptionAmount.get(r.reg.feeOptionId) ?? null : event.feeCny,
+          feeLabel: r.reg.feeOptionId ? feeOptionLabel.get(r.reg.feeOptionId) ?? null : null,
         }))
     : [];
 
@@ -190,6 +201,13 @@ export default async function ConsoleEventDetailPage({ params }: { params: Promi
                 defaultQrUrl={event.paymentQrUrl}
                 defaultAlipayUid={event.alipayUid}
               />
+              {event.isPaid && (
+                <p className="text-xs text-on-surface-variant">
+                  Butuh tarif bertingkat (mis. Freshmen ¥15 / Non-freshmen ¥25)? Atur di bagian
+                  &ldquo;Kategori Tarif&rdquo; di bawah — kalau ada minimal satu kategori, peserta wajib memilih
+                  saat mendaftar dan nominal itu yang dipakai, bukan angka tunggal di atas.
+                </p>
+              )}
               <div className="flex flex-col gap-1">
                 <input
                   name="registrationDeadline"
@@ -384,6 +402,70 @@ export default async function ConsoleEventDetailPage({ params }: { params: Promi
       </CollapsibleSection>
 
       <CollapsibleSection
+        title="Kategori Tarif"
+        description={feeOptions.length > 0 ? `${feeOptions.length} kategori` : "tidak ada — tarif tunggal"}
+      >
+        <p className="text-body-md text-on-surface-variant mb-4 max-w-2xl">
+          Kosong = pakai satu nominal (angka HTM di form Edit). Tambahkan kategori bila tarifnya
+          bertingkat — <strong className="text-on-background">Freshmen ¥15 / Non-freshmen ¥25</strong> untuk WIF,
+          satu baris flat untuk booth, satu baris per nomor untuk olahraga. Peserta wajib memilih satu
+          saat mendaftar, dan nominal kategori itulah yang harus dibayar.
+        </p>
+        <div className="flex flex-col gap-3">
+          {feeOptions.map((o) => (
+            <form
+              key={o.id}
+              action={saveFeeOption}
+              className="bg-surface-container-lowest border border-outline-variant rounded-lg p-4 flex flex-wrap items-end gap-3"
+            >
+              <input type="hidden" name="id" value={o.id} />
+              <input type="hidden" name="eventId" value={id} />
+              <label className="flex flex-col gap-1 flex-1 min-w-[10rem]">
+                <span className="text-label-caps uppercase tracking-wide text-on-surface-variant">Label</span>
+                <input name="label" defaultValue={o.label} required className="bg-soft-gray rounded-md p-2.5 text-body-md" />
+              </label>
+              <label className="flex flex-col gap-1 w-32">
+                <span className="text-label-caps uppercase tracking-wide text-on-surface-variant">Nominal (¥)</span>
+                <input name="amountCny" type="number" min={0} defaultValue={o.amountCny} required className="bg-soft-gray rounded-md p-2.5 text-body-md" />
+              </label>
+              <button
+                type="submit"
+                className="text-label-caps uppercase tracking-wide border border-outline-variant px-3 py-2 rounded-md hover:bg-surface-container-low transition-colors"
+              >
+                Simpan
+              </button>
+              <ConfirmButton
+                title="Hapus kategori tarif?"
+                message={`"${o.label}" dihapus. Pendaftar yang sudah memilihnya kehilangan label kategori (riwayatnya tetap ada).`}
+                action={deleteFeeOption}
+                payload={{ id: o.id }}
+                className="text-label-caps uppercase tracking-wide text-error hover:bg-error-container/30 px-3 py-2 rounded-md"
+              >
+                Hapus
+              </ConfirmButton>
+            </form>
+          ))}
+        </div>
+        <form action={saveFeeOption} className="mt-4 bg-surface-container-low border border-outline-variant rounded-lg p-4 flex flex-wrap items-end gap-3">
+          <input type="hidden" name="eventId" value={id} />
+          <label className="flex flex-col gap-1 flex-1 min-w-[10rem]">
+            <span className="text-label-caps uppercase tracking-wide text-primary-container">+ Label kategori</span>
+            <input name="label" required placeholder="mis. Freshmen" className="bg-soft-gray rounded-md p-2.5 text-body-md" />
+          </label>
+          <label className="flex flex-col gap-1 w-32">
+            <span className="text-label-caps uppercase tracking-wide text-on-surface-variant">Nominal (¥)</span>
+            <input name="amountCny" type="number" min={0} required placeholder="15" className="bg-soft-gray rounded-md p-2.5 text-body-md" />
+          </label>
+          <button
+            type="submit"
+            className="bg-primary-container text-on-primary text-label-caps uppercase tracking-wide px-4 py-2 rounded-md hover:bg-primary transition-colors"
+          >
+            Tambah
+          </button>
+        </form>
+      </CollapsibleSection>
+
+      <CollapsibleSection
         title="Struktur Kepanitiaan"
         description={`${divisions.length} divisi · ${committee.length} panitia`}
       >
@@ -445,6 +527,7 @@ export default async function ConsoleEventDetailPage({ params }: { params: Promi
             status: r.reg.status,
             registeredAt: r.reg.registeredAt.toISOString(),
             answers: r.reg.answersJson ?? {},
+            feeLabel: r.reg.feeOptionId ? feeOptionLabel.get(r.reg.feeOptionId) ?? null : null,
             membership: MEMBERSHIP_LABEL[
               membershipStatus(
                 r.sensusCompletion ? { branch: r.sensusBranch, completionStatus: r.sensusCompletion } : null
@@ -495,7 +578,14 @@ export default async function ConsoleEventDetailPage({ params }: { params: Promi
                 Bukti diunggah sendiri oleh peserta — cocokkan ketiganya dengan mutasi Alipay/rekening:
               </p>
               <ul className="text-body-sm text-on-surface-variant mb-4 list-disc pl-5">
-                <li><strong className="text-on-background">Nominal</strong> {event.feeCny != null ? `persis ¥${event.feeCny}` : "sesuai kesepakatan (belum diisi)"}</li>
+                <li>
+                  <strong className="text-on-background">Nominal</strong>{" "}
+                  {feeOptions.length > 0
+                    ? "sesuai kategori tarif tiap peserta (tertera di bawah)"
+                    : event.feeCny != null
+                      ? `persis ¥${event.feeCny}`
+                      : "sesuai kesepakatan (belum diisi)"}
+                </li>
                 <li><strong className="text-on-background">Nama pengirim</strong> cocok dengan peserta</li>
                 <li><strong className="text-on-background">Waktu transfer</strong> setelah tanggal daftar</li>
               </ul>
@@ -511,6 +601,12 @@ export default async function ConsoleEventDetailPage({ params }: { params: Promi
                           <p className="text-label-caps text-on-surface-variant">
                             {p.email} · {PAYMENT_STATUS_LABEL[p.status] ?? p.status}
                           </p>
+                          {(p.expected != null || p.feeLabel) && (
+                            <p className="text-label-caps text-on-background">
+                              Wajib bayar: {p.expected != null ? `¥${p.expected}` : "—"}
+                              {p.feeLabel ? ` · ${p.feeLabel}` : ""}
+                            </p>
+                          )}
                           {p.note && <p className="text-body-sm text-on-surface-variant mt-1">{p.note}</p>}
                           {p.proofUrl && (
                             <a

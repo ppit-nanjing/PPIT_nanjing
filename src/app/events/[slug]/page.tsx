@@ -2,7 +2,7 @@ import { eq, and, ne, count, desc } from "drizzle-orm";
 import { notFound } from "next/navigation";
 import { auth } from "@/auth";
 import { db } from "@/db";
-import { events, eventRegistrations, eventQuestions, eventDivisions, eventCommittee, galleryAlbums, galleryPhotos, regionalBranches } from "@/db/schema";
+import { events, eventRegistrations, eventQuestions, eventFeeOptions, eventDivisions, eventCommittee, galleryAlbums, galleryPhotos, regionalBranches } from "@/db/schema";
 import { NON_STUDENT_BRANCH } from "@/lib/membership-status";
 import { hasCompletedSensus } from "@/lib/sensus-gate";
 import { SiteNav } from "@/components/site-nav";
@@ -105,6 +105,17 @@ export default async function EventDetailPage({ params, searchParams }: { params
           .from(eventQuestions)
           .where(eq(eventQuestions.eventId, event.id))
           .orderBy(eventQuestions.orderIndex, eventQuestions.id)
+      : [];
+
+  // Kategori tarif: kalau acara berbayar & punya kategori, peserta memilih satu
+  // saat mendaftar dan nominal itulah yang harus dibayar.
+  const feeOptions =
+    event.isPaid && canRegister && !alreadyRegistered
+      ? await db
+          .select({ id: eventFeeOptions.id, label: eventFeeOptions.label, amountCny: eventFeeOptions.amountCny })
+          .from(eventFeeOptions)
+          .where(eq(eventFeeOptions.eventId, event.id))
+          .orderBy(eventFeeOptions.orderIndex, eventFeeOptions.id)
       : [];
 
   // Pendaftaran volunteer terbuka: tampilkan formnya beserta pilihan divisinya.
@@ -363,6 +374,29 @@ export default async function EventDetailPage({ params, searchParams }: { params
                             </Select>
                             <span className="text-xs text-on-surface-variant">{t("events.branchHint")}</span>
                           </label>
+                        )}
+                        {feeOptions.length > 0 && (
+                          <fieldset className="flex flex-col gap-2 text-left border-0 p-0 m-0">
+                            <legend className="text-label-caps uppercase tracking-wide text-on-surface-variant p-0">
+                              {t("events.feeOptionQuestion")}
+                              <span className="text-error" aria-hidden="true"> *</span>
+                            </legend>
+                            {feeOptions.map((o) => (
+                              <label
+                                key={o.id}
+                                className="flex items-center gap-2 bg-soft-gray rounded-md p-2.5 text-body-md cursor-pointer"
+                              >
+                                <input
+                                  type="radio"
+                                  name="feeOptionId"
+                                  value={o.id}
+                                  required
+                                  className="h-4 w-4 accent-[var(--color-primary-container)]"
+                                />
+                                {o.label} <span className="text-on-surface-variant">(¥{o.amountCny})</span>
+                              </label>
+                            ))}
+                          </fieldset>
                         )}
                         {questions.map((q) => {
                           const options = (q.options ?? "").split("\n").map((l) => l.trim()).filter(Boolean);

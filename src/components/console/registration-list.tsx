@@ -17,6 +17,9 @@ interface Registration {
   branch: string | null;
   // Jawaban pertanyaan kustom acara, { [questionId]: string }.
   answers?: Record<string, string> | null;
+  // Kategori tarif yang dipilih peserta, mis. "Freshmen (¥15)". null = acara
+  // gratis / tarif tunggal / pendaftaran lama.
+  feeLabel?: string | null;
 }
 
 interface QuestionRef {
@@ -120,6 +123,9 @@ export function RegistrationList({
                 <td className="px-5 py-3">
                   <p className="font-medium text-on-background">{r.userName ?? "(tanpa nama)"}</p>
                   <p className="text-label-caps text-on-surface-variant">{r.userEmail}</p>
+                  {r.feeLabel && (
+                    <p className="text-label-caps text-on-surface-variant">Tarif: <span className="text-on-background normal-case">{r.feeLabel}</span></p>
+                  )}
                   <AnswerList r={r} />
                 </td>
                 <td className="px-5 py-3">
@@ -149,6 +155,9 @@ export function RegistrationList({
               <p className="text-label-caps text-on-surface-variant">
                 {r.branch ?? "—"} &middot; {r.membership}
               </p>
+              {r.feeLabel && (
+                <p className="text-label-caps text-on-surface-variant">Tarif: <span className="text-on-background normal-case">{r.feeLabel}</span></p>
+              )}
               <AnswerList r={r} />
             </div>
             <div className="flex items-center justify-between gap-2">

@@ -5,7 +5,7 @@ import { eq, and } from "drizzle-orm";
 import { redirect } from "next/navigation";
 import { auth } from "@/auth";
 import { db } from "@/db";
-import { events, eventRegistrations, eventQuestions, regionalBranches } from "@/db/schema";
+import { events, eventRegistrations, eventQuestions, eventFeeOptions, regionalBranches } from "@/db/schema";
 import { hasCompletedSensus } from "@/lib/sensus-gate";
 import { NON_STUDENT_BRANCH } from "@/lib/membership-status";
 import { createTemplatedNotification } from "@/lib/notifications";
@@ -78,6 +78,17 @@ export async function registerForEvent(eventId: string, slug: string, formData?:
       if (q.required && !answers[q.id]) redirect(`/events/${slug}`);
     }
 
+    // Kategori tarif (event_fee_options). Kalau acara berbayar DAN punya
+    // kategori, peserta wajib memilih salah satu - dan pilihannya harus milik
+    // acara ini, bukan id acara lain yang ditempel lewat form.
+    const feeOptions = await db
+      .select({ id: eventFeeOptions.id })
+      .from(eventFeeOptions)
+      .where(eq(eventFeeOptions.eventId, eventId));
+    const pickedFeeOption = String(formData?.get("feeOptionId") ?? "").trim();
+    const feeOptionId = feeOptions.some((o) => o.id === pickedFeeOption) ? pickedFeeOption : null;
+    if (event.isPaid && feeOptions.length > 0 && !feeOptionId) redirect(`/events/${slug}`);
+
     // Acara berbayar: pendaftaran menunggu verifikasi pembayaran dulu -
     // TANPA QR. Bendahara yang mengunci verifikasi akan mengangkatnya jadi
     // "confirmed" + menerbitkan QR (lihat updatePaymentStatus). Gratis:
@@ -92,6 +103,7 @@ export async function registerForEvent(eventId: string, slug: string, formData?:
       branch,
       paymentStatus: needsPayment ? "unpaid" : "not_required",
       answersJson: answers,
+      feeOptionId,
     });
     // In-app confirmation for the member who just registered.
     await createTemplatedNotification({

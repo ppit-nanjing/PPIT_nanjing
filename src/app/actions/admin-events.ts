@@ -5,7 +5,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { auth } from "@/auth";
 import { db } from "@/db";
-import { events, eventRegistrations, eventQuestions, eventCommittee, galleryAlbums } from "@/db/schema";
+import { events, eventRegistrations, eventQuestions, eventCommittee, eventFeeOptions, galleryAlbums } from "@/db/schema";
 import { hasModuleAccess } from "@/lib/admin-scope";
 import { createTemplatedNotification } from "@/lib/notifications";
 import { issueParticipantCertificatesCore } from "@/app/actions/committee";
@@ -242,6 +242,49 @@ export async function deleteEventQuestion(formData: FormData) {
     .from(eventQuestions)
     .where(eq(eventQuestions.id, id));
   await db.delete(eventQuestions).where(eq(eventQuestions.id, id));
+  if (row) revalidatePath(`/console/events/${row.eventId}`);
+}
+
+// ---------- Kategori tarif per-acara (event_fee_options) ----------
+
+function parseAmountCny(formData: FormData): number {
+  const raw = String(formData.get("amountCny") ?? "").trim();
+  const parsed = Number(raw);
+  if (!raw || !Number.isFinite(parsed) || parsed < 0) throw new Error("Nominal harus berupa angka >= 0");
+  return Math.round(parsed);
+}
+
+/** Tambah / ubah satu kategori tarif. Ada `id` = ubah; tanpa = tambah di urutan terakhir. */
+export async function saveFeeOption(formData: FormData) {
+  await requireAdmin();
+  const eventId = String(formData.get("eventId") ?? "");
+  const label = String(formData.get("label") ?? "").trim();
+  if (!eventId || !label) throw new Error("Acara dan label kategori wajib diisi");
+  const amountCny = parseAmountCny(formData);
+
+  const id = String(formData.get("id") ?? "").trim();
+  if (id) {
+    await db.update(eventFeeOptions).set({ label, amountCny }).where(eq(eventFeeOptions.id, id));
+  } else {
+    const [{ maxOrder }] = await db
+      .select({ maxOrder: sql`coalesce(max(${eventFeeOptions.orderIndex}), 0)` })
+      .from(eventFeeOptions)
+      .where(eq(eventFeeOptions.eventId, eventId));
+    await db.insert(eventFeeOptions).values({ eventId, label, amountCny, orderIndex: Number(maxOrder) + 1 });
+  }
+  revalidatePath(`/console/events/${eventId}`);
+}
+
+export async function deleteFeeOption(formData: FormData) {
+  await requireAdmin();
+  const id = String(formData.get("id") ?? "");
+  const [row] = await db
+    .select({ eventId: eventFeeOptions.eventId })
+    .from(eventFeeOptions)
+    .where(eq(eventFeeOptions.id, id));
+  // Baris pendaftaran yang menunjuk opsi ini otomatis jadi NULL (ON DELETE SET
+  // NULL) - riwayat siapa daftar tidak hilang, cuma kategori tarifnya kosong.
+  await db.delete(eventFeeOptions).where(eq(eventFeeOptions.id, id));
   if (row) revalidatePath(`/console/events/${row.eventId}`);
 }
 

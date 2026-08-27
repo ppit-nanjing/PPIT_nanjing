@@ -207,6 +207,7 @@ export const id = {
   "events.branchNonStudent": "Bukan mahasiswa Indonesia di Tiongkok",
   "events.branchHint": "Ditanyakan sekali untuk acara ini saja, supaya panitia tahu siapa yang hadir. Isi sensus untuk tidak ditanya lagi.",
   "events.fileHint": "Unggah 1 berkas: PDF, dokumen, atau gambar. Maks 10 MB.",
+  "events.feeOptionQuestion": "Entrance Fee",
   "events.back": "Kembali ke Kegiatan",
   "events.sensusOnly": "Khusus peserta tersensus",
   "events.agenda": "Agenda Acara",

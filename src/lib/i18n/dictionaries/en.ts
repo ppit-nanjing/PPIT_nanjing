@@ -204,6 +204,7 @@ export const en = {
   "events.branchNonStudent": "Not an Indonesian student in China",
   "events.branchHint": "Asked once for this event only, so the organisers know who is attending. Complete the census to stop being asked.",
   "events.fileHint": "Upload one file: PDF, document, or image. Max 10 MB.",
+  "events.feeOptionQuestion": "Entrance Fee",
   "events.back": "Back to Events",
   "events.sensusOnly": "Sensus participants only",
   "events.agenda": "Event Agenda",
