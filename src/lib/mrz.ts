@@ -118,14 +118,31 @@ function normalizeLetters(value: string) {
   return { value: normalized, corrected };
 }
 
+function trimNoisyNameTail(token: string): string {
+  let end = token.length;
+  while (end > 0 && "SLCIK".includes(token[end - 1])) end--;
+  return token.length - end > 1 ? token.slice(0, end) : token;
+}
+
 function cleanNamePart(value: string) {
   const tokens = value.split(/<+/).filter(Boolean);
   let corrected = false;
-  while (tokens.length > 0 && /^[CKL]{4,}$/.test(tokens.at(-1) ?? "")) {
-    tokens.pop();
-    corrected = true;
-  }
-  const name = tokens
+  const shortNoiseCount = tokens.filter((token) => /^[SLCIK]$/.test(token)).length;
+  const hasLongNoiseFragment = tokens.some((token) => /^[SLCIK]{2,}$/.test(token));
+  const nameTokens = tokens
+    .map((token) => {
+      const cleaned = trimNoisyNameTail(token);
+      corrected ||= cleaned !== token;
+      return cleaned;
+    })
+    .filter(Boolean)
+    .filter((token) => {
+      if (!/^[SLCIK]+$/.test(token)) return true;
+      if (token.length === 1 && shortNoiseCount < 2 && !hasLongNoiseFragment) return true;
+      corrected = true;
+      return false;
+    });
+  const name = nameTokens
     .join(" ")
     .toLowerCase()
     .replace(/(^| )[a-z]/g, (letter) => letter.toUpperCase());

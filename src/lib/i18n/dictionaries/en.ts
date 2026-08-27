@@ -528,6 +528,7 @@ export const en = {
     "sensus.passportScanModalClose": "Close",
     "sensus.passportScanCameraDenied": "Camera permission was denied. Enable it in your browser settings and try again.",
     "sensus.passportScanCameraError": "Could not access the camera. Make sure this device has an available camera.",
+    "sensus.passportScanCameraFrameLabel": "Scan photo page",
     "sensus.passportScanGuideTitle": "How to take a passport photo",
     "sensus.passportScanGuideDescription": "Keep the passport flat and fully visible. Make sure both MRZ lines at the bottom are sharp.",
     "sensus.passportScanGuideFrame": "Keep every corner inside the frame",

@@ -531,6 +531,7 @@ export const id = {
     "sensus.passportScanModalClose": "Tutup",
     "sensus.passportScanCameraDenied": "Izin kamera ditolak. Buka pengaturan browser lalu coba lagi.",
     "sensus.passportScanCameraError": "Tidak bisa mengakses kamera. Pastikan perangkat memiliki kamera yang tersedia.",
+    "sensus.passportScanCameraFrameLabel": "Pindai halaman foto",
     "sensus.passportScanGuideTitle": "Cara memotret paspor",
     "sensus.passportScanGuideDescription": "Letakkan paspor rata dan terlihat penuh. Pastikan dua baris MRZ di bagian bawah terlihat tajam.",
     "sensus.passportScanGuideFrame": "Pastikan semua sudut berada di dalam bingkai",

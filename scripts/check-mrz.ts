@@ -28,4 +28,4 @@ const jakartaPersonalNumberLine = "L898902C36UTO7408122F12041593173012345678934"
 const jakartaPersonalNumber = parsePassportMrz(`${firstLine}\n${jakartaPersonalNumberLine}`);
 assert.equal(jakartaPersonalNumber?.province, "DKI Jakarta");
 
-console.log("passport MRZ parser: 6 checks passed");
+console.log("passport MRZ parser checks passed");
