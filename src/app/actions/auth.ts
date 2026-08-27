@@ -2,17 +2,28 @@
 
 import { AuthError } from "next-auth";
 import { eq } from "drizzle-orm";
+import { redirect } from "next/navigation";
+import { headers } from "next/headers";
 import { db } from "@/db";
 import { users } from "@/db/schema";
 import { signIn } from "@/auth";
 import { hashPassword } from "@/lib/password";
 import { safeRedirect } from "@/lib/safe-redirect";
+import { sendEmail } from "@/lib/email";
+import { renderMembershipEmail, renderMembershipEmailText } from "@/lib/membership-email";
+import { createResetToken, consumeResetToken, purgeExpiredResetTokens } from "@/lib/password-reset";
 import type { TKey } from "@/lib/i18n/dictionaries/id";
 
 // Carries a dictionary KEY, not a finished sentence: this runs on the server
 // where the request locale is known but the dictionary is not the natural
 // place to reach for, and <CredentialForm> already has useT() to render it.
-export type AuthFormState = { errorKey?: TKey; vars?: Record<string, string | number> };
+export type AuthFormState = {
+  errorKey?: TKey;
+  vars?: Record<string, string | number>;
+  // Dipakai alur "lupa password": permintaan diproses (pesannya selalu generik
+  // supaya tidak membocorkan apakah email terdaftar).
+  done?: boolean;
+};
 
 // Minimal, non-pedantic email shape check - enough to reject obvious junk
 // without inventing a strict RFC validator.
@@ -92,4 +103,81 @@ export async function signInWithPassword(_prev: AuthFormState, formData: FormDat
     throw error;
   }
   return {};
+}
+
+async function requestOrigin(): Promise<string> {
+  const h = await headers();
+  const host = h.get("x-forwarded-host") ?? h.get("host") ?? "";
+  const proto = h.get("x-forwarded-proto") ?? "https";
+  return host ? `${proto}://${host}` : "";
+}
+
+// Minta tautan reset password. Responsnya SELALU sama ("cek email") apa pun
+// hasilnya - tidak membocorkan apakah alamat itu terdaftar atau akun Google.
+export async function requestPasswordReset(_prev: AuthFormState, formData: FormData): Promise<AuthFormState> {
+  const email = String(formData.get("email") ?? "").trim().toLowerCase();
+  if (!EMAIL_RE.test(email)) return { errorKey: "auth.errEmailInvalid" };
+
+  try {
+    await purgeExpiredResetTokens();
+    const [user] = await db
+      .select({ id: users.id, name: users.name, passwordHash: users.passwordHash })
+      .from(users)
+      .where(eq(users.email, email));
+
+    // Hanya akun yang PUNYA password yang bisa direset. Akun Google-only tidak
+    // dikirimi apa pun (mereka masuk lewat Google) - pesan generik menutupinya.
+    if (user?.passwordHash) {
+      const token = await createResetToken(user.id);
+      const link = `${await requestOrigin()}/reset-password?token=${encodeURIComponent(token)}`;
+      const heading = "Reset password akun PPIT Nanjing";
+      const body = [
+        `Halo ${user.name ?? "Anggota"},`,
+        "Kami menerima permintaan untuk mengganti password akun kamu. Klik tombol di bawah untuk membuat password baru. Tautan ini berlaku 1 jam.",
+        "Kalau kamu tidak meminta ini, abaikan saja email ini — password kamu tidak berubah.",
+        "---",
+        `Hi ${user.name ?? "there"}, we received a request to reset your PPIT Nanjing account password. Use the button below to set a new one; the link expires in 1 hour. If you didn't request this, ignore this email.`,
+      ].join("\n\n");
+      await sendEmail({
+        to: email,
+        subject: heading,
+        html: renderMembershipEmail({
+          heading,
+          body,
+          ctaLabel: "Buat password baru",
+          ctaUrl: link,
+          footerNote: "Email ini dikirim otomatis oleh sistem akun PPIT Nanjing. Jangan teruskan tautan di atas ke siapa pun.",
+        }),
+        text: renderMembershipEmailText({ heading, body, ctaLabel: "Buat password baru / Set a new password", ctaUrl: link }),
+      });
+    }
+  } catch (err) {
+    // Jangan bocorkan kegagalan internal lewat pesan berbeda - tetap "done".
+    console.error("[auth] password reset request failed:", err);
+  }
+
+  return { done: true };
+}
+
+// Selesaikan reset: token + password baru -> set passwordHash, lalu ke /login.
+export async function completePasswordReset(_prev: AuthFormState, formData: FormData): Promise<AuthFormState> {
+  const token = String(formData.get("token") ?? "").trim();
+  const password = String(formData.get("password") ?? "");
+  const confirm = String(formData.get("confirm") ?? "");
+
+  if (!token) return { errorKey: "auth.errResetInvalid" };
+  if (password.length < MIN_PASSWORD) return { errorKey: "auth.errPasswordShort", vars: { n: MIN_PASSWORD } };
+  if (password !== confirm) return { errorKey: "auth.errConfirmMismatch" };
+
+  const userId = await consumeResetToken(token);
+  if (!userId) return { errorKey: "auth.errResetInvalid" };
+
+  const passwordHash = await hashPassword(password);
+  // status: kalau akun masih "invited" (mustahil di jalur ini, tapi murah), jadi
+  // aktif. Akun aktif tidak berubah statusnya.
+  await db.update(users).set({ passwordHash, status: "active" }).where(eq(users.id, userId));
+
+  // Sesi lama berbasis JWT dan tidak bisa dicabut dari sini - risiko kecil,
+  // token reset sudah dikonsumsi dan hanya berlaku 1 jam. Arahkan ke login.
+  redirect("/login?reset=1");
 }

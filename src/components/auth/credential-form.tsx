@@ -112,6 +112,17 @@ export function CredentialForm({ action, mode, returnTo }: Props) {
         {mode === "signup" ? t("auth.submitSignUp") : t("auth.submitSignIn")}
       </button>
 
+      {mode === "signin" && (
+        <p className="text-body-sm text-center -mt-1">
+          <Link
+            href="/reset-password"
+            className="text-on-surface-variant hover:text-on-background hover:underline rounded-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-container"
+          >
+            {t("auth.forgotPassword")}
+          </Link>
+        </p>
+      )}
+
       {mode === "signin" ? (
         <p className="text-body-sm text-on-surface-variant text-center">
           {t("auth.noAccount")}{" "}

@@ -202,6 +202,19 @@ export const verificationTokens = pgTable(
   (t) => [primaryKey({ columns: [t.identifier, t.token] })]
 );
 
+// "Lupa password" untuk akun email/password. Tabel terpisah dari
+// verification_tokens (dipakai adapter Auth.js) supaya tidak bentrok. Yang
+// disimpan HANYA sha256 dari token - token mentahnya cuma ada di tautan email,
+// tidak pernah di database. Satu permintaan reset baru menghapus yang lama
+// (createResetToken), jadi hanya tautan terakhir yang berlaku.
+export const passwordResetTokens = pgTable("password_reset_tokens", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  userId: uuid("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  tokenHash: text("token_hash").notNull().unique(),
+  expiresAt: timestamp("expires_at").notNull(),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
 export const sensusProfiles = pgTable("sensus_profiles", {
   id: uuid("id").defaultRandom().primaryKey(),
   userId: uuid("user_id").notNull().unique().references(() => users.id, { onDelete: "cascade" }),

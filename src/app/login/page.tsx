@@ -1,5 +1,5 @@
 import { redirect } from "next/navigation";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, CheckCircle2 } from "lucide-react";
 import { auth, signIn } from "@/auth";
 import { CredentialForm } from "@/components/auth/credential-form";
 import { signInWithPassword } from "@/app/actions/auth";
@@ -10,13 +10,14 @@ import Link from "next/link";
 export default async function LoginPage({
   searchParams,
 }: {
-  searchParams: Promise<{ returnTo?: string }>;
+  searchParams: Promise<{ returnTo?: string; reset?: string }>;
 }) {
   const { t } = await getT();
-  const { returnTo: rawReturnTo } = await searchParams;
+  const { returnTo: rawReturnTo, reset } = await searchParams;
   const returnTo = safeRedirect(rawReturnTo);
   const session = await auth();
   if (session) redirect(returnTo);
+  const justReset = reset === "1";
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-background px-[var(--spacing-container-padding)] relative overflow-hidden">
@@ -35,6 +36,13 @@ export default async function LoginPage({
           <p className="text-body-md text-on-surface-variant mb-6">
             {t("auth.loginIntro")}
           </p>
+
+          {justReset && (
+            <div role="status" className="flex items-start gap-3 bg-primary-container/10 border border-primary-container/20 rounded-lg p-4 mb-6 text-left">
+              <CheckCircle2 className="text-primary-container shrink-0 mt-0.5" size={18} aria-hidden="true" />
+              <p className="text-body-sm text-on-surface-variant">{t("auth.resetSuccessFlash")}</p>
+            </div>
+          )}
 
           {returnTo !== "/" && (
             <div className="flex items-start gap-3 bg-primary-container/10 border border-primary-container/20 rounded-lg p-4 mb-6 text-left">
