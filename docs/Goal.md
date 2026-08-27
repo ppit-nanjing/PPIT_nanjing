@@ -2,6 +2,8 @@
 
 > Working checklist. If you're picking this up cold (new session, `/loop`, or after a context reset): read [Progress & Handoff.md](./Progress%20&%20Handoff.md) first for how the app is wired (Neon/Drizzle/Auth.js/adminScope), then come back here. **Check items off in this file as you complete them and commit the updated file** — this doc is the durable memory across context resets, not the chat history.
 
+> **Status 2026-08-27: Tier 0 and Tier 1 are 100% complete.** Every route exists and every listed fidelity gap is closed. Tier 2 items are deliberately "solved differently" (not gaps). Tier 3's one item (`notifications`) is built. Work since 2026-08-21 has been *beyond* prototype parity — see [§ Beyond parity](#beyond-parity--shipped-2026-08-21--08-27) at the bottom and the "Shipped since" section of Progress & Handoff. The remaining backlog is the "Known gaps" list in Progress & Handoff (mostly org/pusat-blocked, not code).
+
 ## Why this doc exists
 
 The app was built for real functionality first (every page reads/writes Neon, no mockups) rather than 1:1 visual fidelity to the 95 Stitch prototype files. That was the right call to get CRUD working everywhere, but it means a lot of pages are noticeably thinner than their prototype source. Evidence: `jobs_opportunities_expanded_ppit_nanjing/code.html` (prototype) is 364 lines with a hero search bar, a filter sidebar, and an inline Career Resources section; the built `/jobs` page is 76 lines with none of that. This doc's job is to close that gap systematically, screen by screen, using the actual prototype HTML as the source of truth for what's missing — not guessing.
@@ -73,6 +75,22 @@ Built per the Advanced Features Build Spec (Obsidian vault). All code committed;
 - [x] **Responsive (Responsive Design Build Spec)** — `--spacing-container-padding` is now `clamp(1rem,4vw,1.5rem)`; `console-sidebar` is a desktop rail + mobile drawer (layout is `flex-col md:flex-row`); the three admin tables are wrapped in `overflow-x-auto` so they scroll on narrow screens instead of overflowing.
 
 Remaining: live test of §6.1 linking; full 8-width browser pass not possible in this environment — applied the spec's two concrete code fixes (gutter clamp + sidebar) plus table-scroll wrappers.
+
+## Beyond parity — shipped 2026-08-21 → 08-27
+
+Prototype parity was reached on 2026-08-15/17. Everything below went past the Stitch prototypes, driven by what the org actually needs. Grouped; commit history has the detail.
+
+- **i18n (id + en)** — the entire public front-end is bilingual: dictionary infra (`src/lib/i18n/`), ~48/51 public pages + every shared component through `t()`, localised metadata / relative time / upload errors, radial language-switch animation. `en.ts satisfies` id's keys → missing translation is a `tsc` error. **Console is Indonesian-only, deliberately** (Phase 4, not started).
+- **Sensus ↔ pusat form alignment** — field-for-field match with the PPI Tiongkok central form (`src/lib/sensus-form.ts`): 38-province dropdown, branch→campus cascading select (349 campuses / 32 branches), `+86` phone lock, WeChat-ID regex, `passport_number UNIQUE` (kills two-Gmail duplicates), server-enforced completeness. `sensus_summary` export = every central field in their order. Membership status **derived** (Anggota / Cabang lain / Tamu), no `account_type` column.
+- **Kepanitiaan (per-event committees)** — `event_divisions` tree (Departemen → sub-tim, quota + jobdesc), console section with gap counts, one-click + bulk staffing, participant e-certificates (auto on completion), committee attendance QR tickets, public volunteer signup + one-click approval, per-event structure templates, work-ledger (who's on how many committees).
+- **Event payments (HTM)** — manual verification only; paid registrations stay QR-less until the treasurer verifies; treasurer Alipay QR upload; `event_fee_options` tiered pricing.
+- **WIF 2026 registration (2026-08-27)** — `requiresBiodata` mode reusing sensus data, tiered entrance fee, `file` registration-question type, `events.confirmationInfo` panel, stepped (Google-Forms-style) registration wizard.
+- **Documents & links** — Google Drive module (per-division RBAC + auto short-link); short-link / custom-redirect module (QR, CSV export, public `/l/` directory).
+- **Membership** — recruitment period activation controls, auto-provisioning on approval, invited-account paste-list on `/console/users`, Google-Forms-parity form builder incl. quiz mode.
+- **Auth** — password reset (`/reset-password`, sha256 tokens, 1h single-use); nav login routed through `/login` (GH issue #1); session-lookup perf (fused query + `cache()` dedup).
+- **Console platform** — shared form primitives, `ConfirmButton` modal, shared error/loading boundaries, React Flow org chart, dashboard weekly trends, xlsx reports, inline editing, CSV exports, sectioned forms + collapsible sidebar.
+- **Inventory** — handover step, borrower return requests, contributions / procurement / external loans.
+- **Uploads** — site-wide WebP pipeline, stream-based Drive upload with 4 MB guard.
 
 ## Process notes for whoever/whatever works through this
 
