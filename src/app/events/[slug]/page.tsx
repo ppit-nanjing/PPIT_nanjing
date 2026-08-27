@@ -2,7 +2,7 @@ import { eq, and, ne, count, desc } from "drizzle-orm";
 import { notFound } from "next/navigation";
 import { auth } from "@/auth";
 import { db } from "@/db";
-import { events, eventRegistrations, eventQuestions, eventFeeOptions, eventDivisions, eventCommittee, galleryAlbums, galleryPhotos, regionalBranches } from "@/db/schema";
+import { events, eventRegistrations, eventQuestions, eventFeeOptions, eventDivisions, eventCommittee, galleryAlbums, galleryPhotos, regionalBranches, sensusProfiles, coverageCities, users } from "@/db/schema";
 import { NON_STUDENT_BRANCH } from "@/lib/membership-status";
 import { hasCompletedSensus } from "@/lib/sensus-gate";
 import { SiteNav } from "@/components/site-nav";
@@ -16,6 +16,7 @@ import Image from "next/image";
 import { registerForEvent } from "@/app/actions/events";
 import { Select } from "@/components/console/form";
 import { FileUpload } from "@/components/upload/file-upload";
+import { EventBiodataFields, type BiodataDefaults } from "@/components/events/event-biodata-fields";
 import Link from "next/link";
 import { applyAsVolunteer } from "@/app/actions/volunteers";
 import { getT } from "@/lib/i18n/server";
@@ -77,7 +78,12 @@ export default async function EventDetailPage({ params, searchParams }: { params
       .where(and(eq(eventRegistrations.eventId, event.id), eq(eventRegistrations.userId, session.user.id)));
     alreadyRegistered = !!existing;
     askBranch =
-      !alreadyRegistered && !event.requiresSensus && !(await hasCompletedSensus(session.user.id));
+      !alreadyRegistered &&
+      !event.requiresSensus &&
+      // Acara requiresBiodata menanyakan Kota/Ranting di blok biodata, jadi
+      // pertanyaan cabang terpisah cuma jadi dobel.
+      !event.requiresBiodata &&
+      !(await hasCompletedSensus(session.user.id));
     const [committee] = await db
       .select({ divisionName: eventDivisions.name, role: eventCommittee.role })
       .from(eventCommittee)
@@ -106,6 +112,43 @@ export default async function EventDetailPage({ params, searchParams }: { params
           .where(eq(eventQuestions.eventId, event.id))
           .orderBy(eventQuestions.orderIndex, eventQuestions.id)
       : [];
+
+  // Biodata lengkap peserta (acara requiresBiodata, mis. WIF). Kalau sensusnya
+  // sudah lengkap, nilainya dipakai read-only + di-snapshot server-side; kalau
+  // belum, form isian yang di-prefill dari sensus parsial / akun.
+  const showBiodata =
+    !!session?.user?.id && event.requiresBiodata && !alreadyRegistered && canRegister;
+  let biodata: {
+    sensusComplete: boolean;
+    defaults: BiodataDefaults;
+    cityOptions: string[];
+  } | null = null;
+  if (showBiodata && session?.user?.id) {
+    const [profile] = await db
+      .select()
+      .from(sensusProfiles)
+      .where(eq(sensusProfiles.userId, session.user.id));
+    const [account] = await db
+      .select({ name: users.name })
+      .from(users)
+      .where(eq(users.id, session.user.id));
+    const cities = await db.select({ label: coverageCities.label }).from(coverageCities);
+    biodata = {
+      sensusComplete: profile?.completionStatus === "complete",
+      cityOptions: cities.map((c) => c.label).sort((a, b) => a.localeCompare(b)),
+      defaults: {
+        fullName: profile?.fullName ?? account?.name ?? "",
+        passportNumber: profile?.passportNumber ?? "",
+        wechatId: profile?.wechatId ?? "",
+        chinaPhone: profile?.phoneActive ?? "",
+        branch: profile?.branch ?? "",
+        university: profile?.university ?? "",
+        major: profile?.major ?? "",
+        entryYear: profile?.entryYear != null ? String(profile.entryYear) : "",
+        studentProofUrl: profile?.studentCardUrl ?? "",
+      },
+    };
+  }
 
   // Kategori tarif: kalau acara berbayar & punya kategori, peserta memilih satu
   // saat mendaftar dan nominal itulah yang harus dibayar.
@@ -352,6 +395,13 @@ export default async function EventDetailPage({ params, searchParams }: { params
                   ) : canRegister ? (
                     session?.user?.id ? (
                       <form action={registerForEvent.bind(null, event.id, slug)} className="flex flex-col gap-3">
+                        {biodata && (
+                          <EventBiodataFields
+                            sensusComplete={biodata.sensusComplete}
+                            defaults={biodata.defaults}
+                            cityOptions={biodata.cityOptions}
+                          />
+                        )}
                         {askBranch && (
                           <label className="flex flex-col gap-2 text-left">
                             <span className="text-label-caps uppercase tracking-wide text-on-surface-variant">

@@ -20,7 +20,21 @@ interface Registration {
   // Kategori tarif yang dipilih peserta, mis. "Freshmen (¥15)". null = acara
   // gratis / tarif tunggal / pendaftaran lama.
   feeLabel?: string | null;
+  // Biodata lengkap yang di-snapshot saat mendaftar (acara requiresBiodata).
+  biodata?: Record<string, string> | null;
 }
+
+const BIODATA_LABEL: Record<string, string> = {
+  fullName: "Nama Lengkap",
+  passportNumber: "Nomor Paspor",
+  wechatId: "WeChat ID",
+  chinaPhone: "No. Telpon China",
+  branch: "Kota / Ranting",
+  university: "Universitas",
+  major: "Jurusan",
+  entryYear: "Tahun Angkatan",
+  studentProofUrl: "Bukti Mahasiswa Aktif",
+};
 
 interface QuestionRef {
   id: string;
@@ -86,11 +100,31 @@ export function RegistrationList({
       .map((q) => ({ label: q.label, value: r.answers?.[q.id] ?? "" }))
       .filter((a) => a.value);
 
+  const biodataOf = (r: Registration) =>
+    r.biodata
+      ? Object.entries(BIODATA_LABEL)
+          .map(([key, label]) => ({ label, key, value: r.biodata?.[key] ?? "" }))
+          .filter((b) => b.value)
+      : [];
+
   const AnswerList = ({ r }: { r: Registration }) => {
     const answers = answersOf(r);
-    if (answers.length === 0) return null;
+    const biodata = biodataOf(r);
+    if (answers.length === 0 && biodata.length === 0) return null;
     return (
       <ul className="mt-2 flex flex-col gap-0.5">
+        {biodata.map((b) => (
+          <li key={b.label} className="text-label-caps text-on-surface-variant">
+            {b.label}:{" "}
+            {b.key === "studentProofUrl" ? (
+              <a href={b.value} target="_blank" rel="noopener noreferrer" className="text-primary-container hover:underline normal-case">
+                lihat berkas
+              </a>
+            ) : (
+              <span className="text-on-background normal-case">{b.value}</span>
+            )}
+          </li>
+        ))}
         {answers.map((a) => (
           <li key={a.label} className="text-label-caps text-on-surface-variant">
             {a.label}: <span className="text-on-background normal-case">{a.value}</span>

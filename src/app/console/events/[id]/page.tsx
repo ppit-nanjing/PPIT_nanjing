@@ -187,6 +187,12 @@ export default async function ConsoleEventDetailPage({ params }: { params: Promi
             </summary>
             <div className="px-4 pb-4 flex flex-col gap-4">
               <CheckField name="requiresSensus" defaultChecked={event.requiresSensus} label="Hanya untuk peserta yang sudah lengkap mengisi sensus (mahasiswa Indo di China)" />
+              <CheckField
+                name="requiresBiodata"
+                defaultChecked={event.requiresBiodata}
+                label="Kumpulkan biodata lengkap peserta saat mendaftar (WIF dsb.)"
+                hint="Nama, paspor, WeChat, no. HP China, kota/ranting, universitas, angkatan, bukti mahasiswa aktif. Peserta yang sensusnya lengkap tidak mengetik ulang — datanya diambil dari sensus."
+              />
               <CheckField name="certificateForParticipants" defaultChecked={event.certificateForParticipants} label="Peserta mendapat e-sertifikat kehadiran" />
               <CheckField
                 name="volunteerSignupOpen"
@@ -528,6 +534,7 @@ export default async function ConsoleEventDetailPage({ params }: { params: Promi
             registeredAt: r.reg.registeredAt.toISOString(),
             answers: r.reg.answersJson ?? {},
             feeLabel: r.reg.feeOptionId ? feeOptionLabel.get(r.reg.feeOptionId) ?? null : null,
+            biodata: r.reg.biodataJson ?? null,
             membership: MEMBERSHIP_LABEL[
               membershipStatus(
                 r.sensusCompletion ? { branch: r.sensusBranch, completionStatus: r.sensusCompletion } : null
