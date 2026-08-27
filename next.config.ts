@@ -36,7 +36,8 @@ function buildCsp() {
   const v = VERCEL_TOOLBAR_HOSTS;
   return [
     "default-src 'self'",
-    `script-src 'self' 'unsafe-inline'${DEV_EVAL}${v}`,
+    `script-src 'self' 'unsafe-inline' 'wasm-unsafe-eval'${DEV_EVAL}${v}`,
+    "worker-src 'self'",
     "style-src 'self' 'unsafe-inline'",
     `img-src 'self' data: blob: https://*.public.blob.vercel-storage.com https://*.googleusercontent.com${v}`,
     "font-src 'self'",

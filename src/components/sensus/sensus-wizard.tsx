@@ -4,6 +4,7 @@ import { useEffect, useRef, useState, useTransition } from "react";
 import { ChevronRight, ChevronLeft, Check, AlertTriangle, Loader2 } from "lucide-react";
 import { submitSensusProfile, saveSensusStep } from "@/app/actions/sensus";
 import { ImageUploadCropper } from "@/components/upload/image-upload-cropper";
+import { PassportScanner } from "@/components/sensus/passport-scanner";
 import { useT, useLocale } from "@/lib/i18n/client";
 import { INTL_LOCALE } from "@/lib/i18n/config";
 import { INDONESIA_PROVINCES } from "@/lib/indonesia-provinces";
@@ -18,6 +19,7 @@ import {
   type SensusIssue,
 } from "@/lib/sensus-form";
 import type { TKey } from "@/lib/i18n/dictionaries/id";
+import type { PassportMrzResult } from "@/lib/mrz";
 import type { T } from "@/lib/i18n/translate";
 
 const STEP_KEYS = ["sensus.stepBiodata", "sensus.stepStudentData", "sensus.stepContact"] as const;
@@ -242,6 +244,25 @@ export function SensusWizard({
     setIssues((prev) => prev.filter((i) => i.field !== key));
   }
 
+  function applyPassportScan(result: PassportMrzResult) {
+    const scannedFields: (keyof SensusInput)[] = [
+      "fullName",
+      "passportNumber",
+      "gender",
+      "passportExpiry",
+      "birthDate",
+    ];
+    setForm((current) => ({
+      ...current,
+      fullName: result.fullName,
+      passportNumber: result.passportNumber,
+      gender: result.gender || current.gender,
+      passportExpiry: result.passportExpiry,
+      birthDate: result.birthDate,
+    }));
+    setIssues((current) => current.filter((issue) => !scannedFields.includes(issue.field)));
+  }
+
   // Ganti cabang = daftar kampusnya ikut ganti, jadi pilihan lama hampir pasti
   // tidak valid lagi di cabang baru dan harus dikosongkan.
   function updateBranch(value: string) {
@@ -406,6 +427,7 @@ export function SensusWizard({
         {step === 0 && (
           <fieldset className="contents">
             <legend className="sr-only">{t(STEP_KEYS[0])}</legend>
+            <PassportScanner onResult={applyPassportScan} />
             {field(t("sensus.fullName"), "fullName", { required: true })}
             {field(t("sensus.passportNumber"), "passportNumber", {
               required: true,
