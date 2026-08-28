@@ -76,6 +76,10 @@ function securityHeaders(cameraPolicy: string) {
 }
 
 const nextConfig: NextConfig = {
+  // ngrok gives development tunnels a rotating *.ngrok-free.dev hostname.
+  // Next.js blocks those origins unless they are explicitly allow-listed for
+  // dev-only assets such as Turbopack chunks and HMR.
+  allowedDevOrigins: ["*.ngrok-free.dev"],
   // Default Server Action body limit is 1MB, which silently rejects most
   // real documents (scanned PDFs, signed contracts) uploaded via
   // uploadDriveFileAction in the Dokumen module. Raised, but capped at 4mb -
