@@ -13,7 +13,9 @@ const STATUS: Record<string, { labelKey: TKey; cls: string }> = {
 };
 
 export default async function MerchandisePage() {
-  const { t } = await getT();
+  const { t, locale } = await getT();
+  // *_en adalah auto-terjemahan (bisa null) - fallback ke teks ID admin.
+  const pick = (id: string | null, en: string | null) => (locale === "en" ? (en ?? id) : id);
   const items = await db
     .select()
     .from(merchandise)
@@ -53,8 +55,10 @@ export default async function MerchandisePage() {
                   <span className={`self-start text-label-caps uppercase tracking-wide px-2 py-0.5 rounded ${s.cls}`}>
                     {t(s.labelKey)}
                   </span>
-                  <h2 className="text-headline-sm text-on-background">{m.name}</h2>
-                  {m.description && <p className="text-body-md text-on-surface-variant flex-1">{m.description}</p>}
+                  <h2 className="text-headline-sm text-on-background">{pick(m.name, m.nameEn)}</h2>
+                  {pick(m.description, m.descriptionEn) && (
+                    <p className="text-body-md text-on-surface-variant flex-1">{pick(m.description, m.descriptionEn)}</p>
+                  )}
                   {m.priceCny != null && (
                     <p className="text-body-lg text-on-background">&yen; {m.priceCny}</p>
                   )}

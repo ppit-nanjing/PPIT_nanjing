@@ -13,7 +13,11 @@ export async function generateMetadata() {
 }
 
 export default async function UniversitiesPage() {
-  const { t } = await getT();
+  const { t, locale } = await getT();
+  // description is admin-typed free text (ID); descriptionEn is an auto-
+  // translation that can be null (AI not run yet / failed) - fallback to ID.
+  const pickDesc = (u: { description: string | null; descriptionEn: string | null }) =>
+    locale === "en" ? (u.descriptionEn ?? u.description) : u.description;
   // Bucket label for rows with no city set - translated, so it has to be
   // resolved inside the component rather than as a module constant.
   const UNASSIGNED = t("uni.unassigned");
@@ -116,7 +120,7 @@ export default async function UniversitiesPage() {
                             )}
                           </h3>
                           {u.nameZh && <p className="text-body-md text-on-surface-variant">{u.nameZh}</p>}
-                          {u.description && <p className="text-body-md text-on-surface-variant">{u.description}</p>}
+                          {pickDesc(u) && <p className="text-body-md text-on-surface-variant">{pickDesc(u)}</p>}
                           <div className="flex flex-wrap items-center gap-3 mt-1">
                             {u.isPartner && (
                               <span className="text-label-caps uppercase tracking-wide bg-tertiary-container text-on-tertiary-container px-2 py-0.5 rounded">

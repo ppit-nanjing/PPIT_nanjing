@@ -5,6 +5,7 @@ import { revalidatePath } from "next/cache";
 import { db } from "@/db";
 import { places, universities, districts, merchandise, sponsors, coverageCities } from "@/db/schema";
 import { requireModuleAccess } from "@/lib/admin-scope";
+import { translateFields } from "@/lib/groq";
 
 // Places, universities, merchandise and sponsors are all editorial content, so
 // they sit behind the existing "content" scope rather than inventing a new
@@ -21,6 +22,29 @@ const num = (fd: FormData, k: string) => {
   return Number.isFinite(n) ? n : null;
 };
 const bool = (fd: FormData, k: string) => fd.get(k) === "on";
+
+// Isi kolom *_en: field yang admin sudah tulis sendiri (lewat form edit) dipakai
+// apa adanya dan TIDAK PERNAH ditimpa AI; hanya field yang kosong di `explicit`
+// yang diterjemahkan dari `source` via Groq. Create selalu memanggil ini dengan
+// explicit={} (form create tidak punya input *_en), jadi semuanya diterjemahkan.
+// Kalau admin mengosongkan lagi field *_en di form edit lalu simpan, itu jadi
+// cara memicu terjemahan ulang. AI gagal/down -> field itu tetap null, halaman
+// publik fallback ke teks sumbernya sendiri.
+async function withEnglish<K extends string>(
+  explicit: Partial<Record<K, string | null>>,
+  source: Partial<Record<K, string | null>>,
+): Promise<Record<K, string | null>> {
+  const toTranslate: Record<string, string> = {};
+  for (const k of Object.keys(source) as K[]) {
+    if (!explicit[k] && source[k]) toTranslate[k] = source[k]!;
+  }
+  const translated = Object.keys(toTranslate).length > 0 ? await translateFields(toTranslate) : {};
+  const result = {} as Record<K, string | null>;
+  for (const k of Object.keys(source) as K[]) {
+    result[k] = explicit[k] ?? translated[k] ?? null;
+  }
+  return result;
+}
 
 function refresh() {
   revalidatePath("/console/katalog");
@@ -51,14 +75,20 @@ export async function createPlace(formData: FormData) {
   await requireModuleAccess(CONTENT);
   const name = str(formData, "name");
   if (!name) throw new Error("Nama tempat wajib diisi");
+  const description = str(formData, "description");
+  const address = str(formData, "address");
+  const en = await withEnglish({}, { name, description, address });
   await db.insert(places).values({
     name,
     nameZh: str(formData, "nameZh"),
+    nameEn: en.name,
     category: (str(formData, "category") ?? "tourism") as "tourism",
     district: str(formData, "district"),
-    description: str(formData, "description"),
-    address: str(formData, "address"),
+    description,
+    descriptionEn: en.description,
+    address,
     addressZh: str(formData, "addressZh"),
+    addressEn: en.address,
     imageUrl: str(formData, "imageUrl"),
     mapUrl: str(formData, "mapUrl"),
     orderIndex: num(formData, "orderIndex") ?? 0,
@@ -80,16 +110,25 @@ export async function updatePlace(formData: FormData) {
   const id = String(formData.get("id") ?? "");
   const name = str(formData, "name");
   if (!id || !name) throw new Error("Nama tempat wajib diisi");
+  const description = str(formData, "description");
+  const address = str(formData, "address");
+  const en = await withEnglish(
+    { name: str(formData, "nameEn"), description: str(formData, "descriptionEn"), address: str(formData, "addressEn") },
+    { name, description, address },
+  );
   await db
     .update(places)
     .set({
       name,
       nameZh: str(formData, "nameZh"),
+      nameEn: en.name,
       category: (str(formData, "category") ?? "tourism") as "tourism",
       district: str(formData, "district"),
-      description: str(formData, "description"),
-      address: str(formData, "address"),
+      description,
+      descriptionEn: en.description,
+      address,
       addressZh: str(formData, "addressZh"),
+      addressEn: en.address,
       imageUrl: str(formData, "imageUrl"),
       mapUrl: str(formData, "mapUrl"),
       orderIndex: num(formData, "orderIndex") ?? 0,
@@ -112,6 +151,8 @@ export async function createUniversity(formData: FormData) {
   await requireModuleAccess(CONTENT);
   const name = str(formData, "name");
   if (!name) throw new Error("Nama universitas wajib diisi");
+  const description = str(formData, "description");
+  const en = await withEnglish({}, { description });
   await db.insert(universities).values({
     name,
     nameZh: str(formData, "nameZh"),
@@ -120,7 +161,8 @@ export async function createUniversity(formData: FormData) {
     district: str(formData, "district"),
     coordinatorName: str(formData, "coordinatorName"),
     coordinatorEmail: str(formData, "coordinatorEmail"),
-    description: str(formData, "description"),
+    description,
+    descriptionEn: en.description,
     websiteUrl: str(formData, "websiteUrl"),
     logoUrl: str(formData, "logoUrl"),
     studentCount: num(formData, "studentCount"),
@@ -141,6 +183,8 @@ export async function updateUniversity(formData: FormData) {
   const id = String(formData.get("id") ?? "");
   const name = str(formData, "name");
   if (!id || !name) throw new Error("Nama universitas wajib diisi");
+  const description = str(formData, "description");
+  const en = await withEnglish({ description: str(formData, "descriptionEn") }, { description });
   await db
     .update(universities)
     .set({
@@ -151,7 +195,8 @@ export async function updateUniversity(formData: FormData) {
       district: str(formData, "district"),
       coordinatorName: str(formData, "coordinatorName"),
       coordinatorEmail: str(formData, "coordinatorEmail"),
-      description: str(formData, "description"),
+      description,
+      descriptionEn: en.description,
       websiteUrl: str(formData, "websiteUrl"),
       logoUrl: str(formData, "logoUrl"),
       studentCount: num(formData, "studentCount"),
@@ -166,10 +211,16 @@ export async function upsertDistrict(formData: FormData) {
   await requireModuleAccess(CONTENT);
   const name = str(formData, "name");
   if (!name) throw new Error("Nama distrik wajib diisi");
+  const description = str(formData, "description");
+  // Satu form dipakai untuk create MAUPUN update (kirim nama yang sama =
+  // update), jadi field descriptionEn di form ini selalu "explicit" - beda
+  // dari tabel lain yang punya form create terpisah tanpa input *_en.
+  const en = await withEnglish({ description: str(formData, "descriptionEn") }, { description });
   const [existing] = await db.select({ id: districts.id }).from(districts).where(eq(districts.name, name));
   const values = {
     nameZh: str(formData, "nameZh"),
-    description: str(formData, "description"),
+    description,
+    descriptionEn: en.description,
     orderIndex: num(formData, "orderIndex") ?? 0,
   };
   if (existing) await db.update(districts).set(values).where(eq(districts.id, existing.id));
@@ -189,9 +240,13 @@ export async function createMerchandise(formData: FormData) {
   await requireModuleAccess(CONTENT);
   const name = str(formData, "name");
   if (!name) throw new Error("Nama item wajib diisi");
+  const description = str(formData, "description");
+  const en = await withEnglish({}, { name, description });
   await db.insert(merchandise).values({
     name,
-    description: str(formData, "description"),
+    nameEn: en.name,
+    description,
+    descriptionEn: en.description,
     priceCny: num(formData, "priceCny"),
     imageUrl: str(formData, "imageUrl"),
     status: (str(formData, "status") ?? "unavailable") as "unavailable",
@@ -212,11 +267,18 @@ export async function updateMerchandise(formData: FormData) {
   const id = String(formData.get("id") ?? "");
   const name = str(formData, "name");
   if (!id || !name) throw new Error("Nama item wajib diisi");
+  const description = str(formData, "description");
+  const en = await withEnglish(
+    { name: str(formData, "nameEn"), description: str(formData, "descriptionEn") },
+    { name, description },
+  );
   await db
     .update(merchandise)
     .set({
       name,
-      description: str(formData, "description"),
+      nameEn: en.name,
+      description,
+      descriptionEn: en.description,
       priceCny: num(formData, "priceCny"),
       imageUrl: str(formData, "imageUrl"),
       status: (str(formData, "status") ?? "unavailable") as "unavailable",
@@ -233,12 +295,15 @@ export async function createSponsor(formData: FormData) {
   await requireModuleAccess(CONTENT);
   const name = str(formData, "name");
   if (!name) throw new Error("Nama sponsor wajib diisi");
+  const description = str(formData, "description");
+  const en = await withEnglish({}, { description });
   await db.insert(sponsors).values({
     name,
     tier: (str(formData, "tier") ?? "partner") as "partner",
     logoUrl: str(formData, "logoUrl"),
     websiteUrl: str(formData, "websiteUrl"),
-    description: str(formData, "description"),
+    description,
+    descriptionEn: en.description,
     orderIndex: num(formData, "orderIndex") ?? 0,
   });
   refresh();
@@ -255,6 +320,8 @@ export async function updateSponsor(formData: FormData) {
   const id = String(formData.get("id") ?? "");
   const name = str(formData, "name");
   if (!id || !name) throw new Error("Nama sponsor wajib diisi");
+  const description = str(formData, "description");
+  const en = await withEnglish({ description: str(formData, "descriptionEn") }, { description });
   await db
     .update(sponsors)
     .set({
@@ -262,7 +329,8 @@ export async function updateSponsor(formData: FormData) {
       tier: (str(formData, "tier") ?? "partner") as "partner",
       logoUrl: str(formData, "logoUrl"),
       websiteUrl: str(formData, "websiteUrl"),
-      description: str(formData, "description"),
+      description,
+      descriptionEn: en.description,
       orderIndex: num(formData, "orderIndex") ?? 0,
     })
     .where(eq(sponsors.id, id));
