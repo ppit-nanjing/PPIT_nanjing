@@ -51,7 +51,10 @@ export default async function PlacesPage({
 }: {
   searchParams: Promise<{ kategori?: string }>;
 }) {
-  const { t } = await getT();
+  const { t, locale } = await getT();
+  // Kolom *_en cuma auto-terjemahan (bisa null kalau AI belum/gagal jalan) -
+  // fallback ke teks sumber (ID) supaya visitor EN tidak pernah lihat kosong.
+  const pick = (id: string | null, en: string | null) => (locale === "en" ? (en ?? id) : id);
   const { kategori } = await searchParams;
   const valid = kategori && kategori in CATEGORY ? kategori : undefined;
 
@@ -150,15 +153,17 @@ export default async function PlacesPage({
                       {p.district ? ` · ${p.district}` : ""}
                     </span>
                     <h2 className="text-headline-sm text-on-background">
-                      {p.name}
+                      {pick(p.name, p.nameEn)}
                       {p.nameZh && <span className="text-body-md text-on-surface-variant"> {p.nameZh}</span>}
                     </h2>
-                    {p.description && <p className="text-body-md text-on-surface-variant flex-1">{p.description}</p>}
+                    {pick(p.description, p.descriptionEn) && (
+                      <p className="text-body-md text-on-surface-variant flex-1">{pick(p.description, p.descriptionEn)}</p>
+                    )}
                     {p.address && (
                       <p className="text-body-sm text-on-surface-variant flex items-start gap-1.5">
                         <MapPin size={14} className="mt-0.5 shrink-0" aria-hidden />
                         <span>
-                          {p.address}
+                          {pick(p.address, p.addressEn)}
                           {p.addressZh && <span className="block">{p.addressZh}</span>}
                         </span>
                       </p>

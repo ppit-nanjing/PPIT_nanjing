@@ -1,4 +1,12 @@
 const GROQ_URL = "https://api.groq.com/openai/v1/chat/completions";
+// Groq retired llama-3.3-70b-versatile (confirmed via GET /openai/v1/models -
+// 404 model_not_found as of 2026-08-28), which silently broke every AI feature
+// on the site (AI Improve, help-center chat, content suggestions, and the new
+// translateFields() below) since whatever day Groq pulled it - groqChat() only
+// throws a generic "Layanan AI sedang tidak tersedia", so nothing surfaced this
+// distinctly from a transient outage. Re-check /openai/v1/models if this 404s
+// again; Groq's active lineup rotates.
+const GROQ_DEFAULT_MODEL = "openai/gpt-oss-120b";
 
 export type GroqRole = "system" | "user" | "assistant";
 export type GroqMessage = { role: GroqRole; content: string };
@@ -26,7 +34,7 @@ export async function groqChat(messages: GroqMessage[], opts: GroqOptions = {}):
       "Content-Type": "application/json",
     },
     body: JSON.stringify({
-      model: opts.model ?? "llama-3.3-70b-versatile",
+      model: opts.model ?? GROQ_DEFAULT_MODEL,
       messages,
       temperature: opts.temperature ?? 0.6,
       max_tokens: opts.maxTokens ?? 800,
@@ -66,6 +74,62 @@ export async function improveIndonesianText(text: string, context: ImproveContex
     ],
     { temperature: 0.4, maxTokens: 700 },
   );
+}
+
+/**
+ * Terjemahkan satu atau lebih field teks Indonesia ke Inggris dalam SATU
+ * panggilan Groq (bukan satu panggilan per field) - dipakai city-content.ts
+ * untuk auto-isi kolom `*_en` (places, universities, districts, merchandise,
+ * sponsors) saat admin submit form dalam Bahasa Indonesia.
+ *
+ * Kontrak: kirim hanya field yang MEMANG perlu diterjemahkan (field kosong
+ * atau yang sudah diisi manual oleh admin harus difilter oleh pemanggil
+ * SEBELUM masuk sini - fungsi ini tidak tahu mana yang "manual override").
+ * Balikannya cuma berisi key yang berhasil diterjemahkan; key yang gagal
+ * di-parse dari respons AI hilang dari objek balikan, bukan diisi string
+ * kosong - pemanggil fallback ke null/teks sumber untuk key yang hilang.
+ */
+export async function translateFields(fields: Record<string, string>): Promise<Record<string, string>> {
+  const entries = Object.entries(fields).filter(([, v]) => v.trim().length > 0);
+  if (entries.length === 0) return {};
+
+  const system =
+    "Kamu penerjemah untuk situs publik PPIT Nanjing, organisasi mahasiswa Indonesia di Nanjing, Tiongkok. " +
+    "Kamu akan menerima satu objek JSON berisi teks Bahasa Indonesia. Terjemahkan NILAI setiap key ke Bahasa " +
+    "Inggris yang natural dan ringkas, JANGAN ubah key apa pun. Nama diri (tempat, merek, institusi) yang " +
+    "memang tidak lazim diterjemahkan boleh dibiarkan sama. JANGAN tambahkan key baru maupun penjelasan. " +
+    "Balas HANYA objek JSON valid satu baris, tanpa markdown code fence.";
+
+  let raw: string;
+  try {
+    raw = await groqChat(
+      [
+        { role: "system", content: system },
+        { role: "user", content: JSON.stringify(Object.fromEntries(entries)) },
+      ],
+      { temperature: 0.3, maxTokens: 800 },
+    );
+  } catch {
+    return {}; // Groq down/rate-limited - pemanggil fallback, jangan sampai gagalkan submit form
+  }
+
+  // Model kadang membungkus balasan dalam ```json ... ``` walau diminta tidak -
+  // lucuti sebelum parse.
+  const cleaned = raw.trim().replace(/^```(?:json)?\s*/i, "").replace(/```\s*$/, "").trim();
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(cleaned);
+  } catch {
+    return {}; // respons bukan JSON valid - fallback, bukan error
+  }
+  if (typeof parsed !== "object" || parsed === null) return {};
+
+  const result: Record<string, string> = {};
+  for (const [key] of entries) {
+    const value = (parsed as Record<string, unknown>)[key];
+    if (typeof value === "string" && value.trim()) result[key] = value.trim();
+  }
+  return result;
 }
 
 export const AI_CHAT_SYSTEM_PROMPT =

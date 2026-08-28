@@ -994,11 +994,19 @@ export const places = pgTable("places", {
   id: uuid("id").defaultRandom().primaryKey(),
   name: text("name").notNull(),
   nameZh: text("name_zh"),
+  // Auto-diisi Groq saat admin submit dalam Bahasa Indonesia (lihat
+  // translateFields() di lib/groq.ts + city-content.ts) - null berarti belum
+  // diterjemahkan atau AI gagal, halaman publik fallback ke kolom ID-nya.
+  // Admin bisa menimpa manual lewat form edit; sekali diisi manual, submit
+  // berikutnya TIDAK menerjemahkan ulang (lihat catatan di createPlace/updatePlace).
+  nameEn: text("name_en"),
   category: placeCategoryEnum("category").notNull().default("tourism"),
   district: text("district"),
   description: text("description"),
+  descriptionEn: text("description_en"),
   address: text("address"),
   addressZh: text("address_zh"),
+  addressEn: text("address_en"),
   imageUrl: text("image_url"),
   mapUrl: text("map_url"),
   orderIndex: integer("order_index").notNull().default(0),
@@ -1022,6 +1030,7 @@ export const universities = pgTable("universities", {
   coordinatorName: text("coordinator_name"),
   coordinatorEmail: text("coordinator_email"),
   description: text("description"),
+  descriptionEn: text("description_en"),
   websiteUrl: text("website_url"),
   logoUrl: text("logo_url"),
   studentCount: integer("student_count"),
@@ -1037,7 +1046,13 @@ export const districts = pgTable("districts", {
   id: uuid("id").defaultRandom().primaryKey(),
   name: text("name").notNull().unique(),
   nameZh: text("name_zh"),
+  // Auto-diisi Groq (lihat translateFields() di lib/groq.ts) - `name` distrik
+  // sengaja tidak punya varian *_en (nama distrik/geografis, tidak diterjemahkan).
+  // Belum ada halaman publik yang membaca districts.description sama sekali
+  // (lihat komentar di atas), jadi ini disiapkan duluan supaya siap begitu
+  // halaman itu dibangun.
   description: text("description"),
+  descriptionEn: text("description_en"),
   orderIndex: integer("order_index").notNull().default(0),
 });
 
@@ -1050,7 +1065,10 @@ export const merchandiseStatusEnum = pgEnum("merchandise_status", ["available", 
 export const merchandise = pgTable("merchandise", {
   id: uuid("id").defaultRandom().primaryKey(),
   name: text("name").notNull(),
+  // Auto-diisi Groq - lihat catatan di places.nameEn.
+  nameEn: text("name_en"),
   description: text("description"),
+  descriptionEn: text("description_en"),
   priceCny: integer("price_cny"),
   imageUrl: text("image_url"),
   status: merchandiseStatusEnum("status").notNull().default("unavailable"),
@@ -1068,6 +1086,10 @@ export const sponsors = pgTable("sponsors", {
   logoUrl: text("logo_url"),
   websiteUrl: text("website_url"),
   description: text("description"),
+  // Auto-diisi Groq - lihat catatan di places.nameEn. `name` sponsor sengaja
+  // TIDAK punya varian *_en: nama organisasi/merek adalah nama diri, tidak
+  // pernah diterjemahkan.
+  descriptionEn: text("description_en"),
   orderIndex: integer("order_index").notNull().default(0),
   published: boolean("published").notNull().default(true),
 });
