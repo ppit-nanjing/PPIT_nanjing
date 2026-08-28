@@ -34,6 +34,7 @@ import {
 import { fieldInput as input, primaryBtn } from "@/components/console/form";
 import { ConfirmButton } from "@/components/console/confirm-button";
 import { Pencil } from "lucide-react";
+import { ModernSelect } from "@/components/console/form";
 
 const label = "text-label-caps uppercase tracking-wide text-on-surface-variant";
 const rowBtn =
@@ -118,15 +119,18 @@ export default async function ConsoleKatalogPage() {
             </label>
             <label className="flex flex-col gap-2">
               <span className={label}>Kategori</span>
-              <select name="category" className={input}>
-                <option value="tourism">Wisata</option>
-                <option value="culture">Sejarah &amp; Budaya</option>
-                <option value="nature">Alam &amp; Rekreasi</option>
-                <option value="food">Kuliner</option>
-                <option value="shopping">Belanja</option>
-                <option value="spiritual">Ibadah</option>
-                <option value="practical">Kebutuhan Sehari-hari</option>
-              </select>
+              <ModernSelect
+                name="category"
+                options={[
+                  { value: "tourism", label: "Wisata" },
+                  { value: "culture", label: "Sejarah & Budaya" },
+                  { value: "nature", label: "Alam & Rekreasi" },
+                  { value: "food", label: "Kuliner" },
+                  { value: "shopping", label: "Belanja" },
+                  { value: "spiritual", label: "Ibadah" },
+                  { value: "practical", label: "Kebutuhan Sehari-hari" },
+                ]}
+              />
             </label>
             <label className="flex flex-col gap-2">
               <span className={label}>Distrik</span>

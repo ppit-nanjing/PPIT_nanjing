@@ -9,6 +9,7 @@ import { ShortLinkDeleteButton } from "@/components/console/short-link-delete-bu
 import { PeriodForm } from "@/components/console/management-period-form";
 import { GuideButton } from "@/components/console/guide-button";
 import { getGuide } from "@/lib/guides";
+import { ModernSelect } from "@/components/console/form";
 
 const CATEGORY_LABEL: Record<string, string> = {
   documentation: "Dokumentasi",
@@ -108,18 +109,15 @@ export default async function ConsoleLinksPage({
         </label>
         <label className="flex flex-col gap-1.5">
           <span className="text-label-caps uppercase tracking-wide text-on-surface-variant">Periode</span>
-          <select
+          <ModernSelect
             name="period"
             defaultValue={period ?? "all"}
             className="bg-surface-container-lowest border border-outline-variant rounded-lg px-3 py-2 text-body-md"
-          >
-            <option value="all">Semua</option>
-            {periods.map((p) => (
-              <option key={p.id} value={p.id}>
-                {p.label}
-              </option>
-            ))}
-          </select>
+            options={[
+              { value: "all", label: "Semua" },
+              ...periods.map((p) => ({ value: p.id, label: p.label })),
+            ]}
+          />
         </label>
         <label className="flex flex-col gap-1.5">
           <span className="text-label-caps uppercase tracking-wide text-on-surface-variant">Kategori</span>
