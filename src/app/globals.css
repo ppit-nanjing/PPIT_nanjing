@@ -321,6 +321,33 @@ body {
   --color-muted-gold: #c98f62;
 }
 
+
+/* ===== shadcn/ui variable bridge =====
+   Maps project design tokens to the variable names shadcn primitives expect.
+   Each theme/dark-mode block above already defines the canonical colors; this
+   section just aliases them so Select/Popover/Calendar/Button render correctly. */
+@layer base {
+  :root {
+    --color-border: var(--color-outline-variant);
+    --color-input: var(--color-outline-variant);
+    --color-ring: var(--color-primary-container);
+    --color-popover: var(--color-surface-container-lowest);
+    --color-popover-foreground: var(--color-on-surface);
+    --color-accent: var(--color-surface-container);
+    --color-accent-foreground: var(--color-on-surface);
+    --color-muted: var(--color-surface-container);
+    --color-muted-foreground: var(--color-on-surface-variant);
+    --color-destructive: var(--color-error);
+    --color-card: var(--color-surface-container-low);
+    --color-card-foreground: var(--color-on-surface);
+  }
+
+  button:not(:disabled):not([aria-disabled="true"]),
+  [role="button"]:not([aria-disabled="true"]) {
+    cursor: pointer;
+  }
+}
+
 /* Judul memakai serif - Nanjing sebagai ibu kota sastra Jiangnan (六朝古都).
    Badan teks tetap Inter demi keterbacaan. */
 h1, h2, h3 {
