@@ -116,7 +116,10 @@ export function RegistrationList({
         {biodata.map((b) => (
           <li key={b.label} className="text-label-caps text-on-surface-variant">
             {b.label}:{" "}
-            {b.key === "studentProofUrl" ? (
+            {/* Link hanya untuk URL http(s) yang aman; nilai lain dirender
+                sebagai teks biasa supaya skema javascript: tidak pernah jadi
+                href (server juga sudah memvalidasinya saat pendaftaran). */}
+            {b.key === "studentProofUrl" && /^https?:\/\//i.test(b.value) ? (
               <a href={b.value} target="_blank" rel="noopener noreferrer" className="text-primary-container hover:underline normal-case">
                 lihat berkas
               </a>

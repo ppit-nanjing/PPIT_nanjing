@@ -10,7 +10,17 @@ export async function GET(
   if (!session?.user?.id) return Response.json({ error: "Unauthorized" }, { status: 401 });
 
   const { pathname: segments } = await params;
-  if (segments.some((segment) => segment === "." || segment === "..")) {
+  // Segmen dibatasi ke karakter yang dihasilkan upload route (uuid, timestamp,
+  // nama file yang sudah disanitasi + suffix acak) - menutup `.`/`..` dan hasil
+  // dekode `%2F`/`%2e` tanpa bergantung pada normalisasi penyimpanan.
+  if (
+    segments.some(
+      (segment) =>
+        segment === "." ||
+        segment === ".." ||
+        !/^[A-Za-z0-9._-]+$/.test(segment)
+    )
+  ) {
     return Response.json({ error: "Not found" }, { status: 404 });
   }
 

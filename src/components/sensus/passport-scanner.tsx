@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { AlertTriangle, CheckCircle2, Loader2, ScanLine, ShieldCheck, Upload, X } from "lucide-react";
 import { motion } from "motion/react";
 import { useT } from "@/lib/i18n/client";
@@ -11,6 +11,8 @@ type Props = Readonly<{ onResult: (result: PassportMrzResult) => void }>;
 export function PassportScanner({ onResult }: Props) {
   const t = useT();
   const inputRef = useRef<HTMLInputElement>(null);
+  const dialogRef = useRef<HTMLDivElement>(null);
+  const closeRef = useRef<HTMLButtonElement>(null);
   const [open, setOpen] = useState(false);
   const [dragging, setDragging] = useState(false);
   const [scanning, setScanning] = useState(false);
@@ -46,60 +48,99 @@ export function PassportScanner({ onResult }: Props) {
     if (file) void scan(file);
   }
 
-  function closeModal() {
+  const closeModal = useCallback(() => {
     setOpen(false);
     setStatus("idle");
-  }
+  }, []);
+
+  // Modal harus memindahkan fokus ke dalam, menahan Tab di dalam (focus trap),
+  // menutup dengan Escape, dan mengunci scroll body selama terbuka.
+  useEffect(() => {
+    if (!open) return;
+    const dialog = dialogRef.current;
+    if (!dialog) return;
+    const previouslyFocused = document.activeElement as HTMLElement | null;
+    closeRef.current?.focus();
+
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        event.preventDefault();
+        closeModal();
+        return;
+      }
+      if (event.key !== "Tab") return;
+      const focusables = Array.from(
+        dialog.querySelectorAll<HTMLElement>(
+          'button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])'
+        )
+      ).filter((element) => element.offsetParent !== null);
+      if (focusables.length === 0) return;
+      const first = focusables[0];
+      const last = focusables.at(-1)!;
+      const active = document.activeElement;
+      if (event.shiftKey && (active === first || active === dialog)) {
+        event.preventDefault();
+        last.focus();
+      } else if (!event.shiftKey && active === last) {
+        event.preventDefault();
+        first.focus();
+      }
+    };
+    document.addEventListener("keydown", onKeyDown);
+
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+
+    return () => {
+      document.removeEventListener("keydown", onKeyDown);
+      document.body.style.overflow = previousOverflow;
+      previouslyFocused?.focus();
+    };
+  }, [open, closeModal]);
 
   let statusMessage = "";
   if (status === "error") statusMessage = t("sensus.passportScanError");
   if (status === "corrected") statusMessage = t("sensus.passportScanCorrected");
   if (status === "success") statusMessage = t("sensus.passportScanSuccess");
 
-    const progressBar = (
-      <div className="w-full" aria-live="polite">
-        <div className="flex items-center justify-between text-label-caps text-on-surface-variant mb-2">
-          <span className="inline-flex items-center gap-2">
-            <Loader2 className="animate-spin" size={14} />
-            {t("sensus.passportScanning")}
-          </span>
-          <span className="tabular-nums">{Math.round(progress * 100)}%</span>
-        </div>
-        <div
-          role="progressbar"
-          aria-label={t("sensus.passportScanning")}
-          aria-valuemin={0}
-          aria-valuemax={100}
-          aria-valuenow={Math.round(progress * 100)}
-          className="h-3 w-full rounded-full bg-surface-container-high overflow-hidden"
-        >
-          <motion.div
-            className="h-full rounded-full bg-linear-to-r from-primary-container via-primary to-primary-container relative"
-            initial={{ width: "0%" }}
-            animate={{ width: `${Math.max(5, progress * 100)}%` }}
-            transition={{ type: "spring", stiffness: 90, damping: 20 }}
-          >
-            <span
-              className="absolute inset-0 rounded-full opacity-40"
-              style={{
-                background:
-                  "linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.5) 50%, transparent 100%)",
-                animation: "passport-scan-shimmer 1.4s infinite linear",
-              }}
-            />
-          </motion.div>
-        </div>
+  const progressBar = (
+    <div className="w-full" aria-live="polite">
+      <div className="flex items-center justify-between text-label-caps text-on-surface-variant mb-2">
+        <span className="inline-flex items-center gap-2">
+          <Loader2 className="animate-spin" size={14} />
+          {t("sensus.passportScanning")}
+        </span>
+        <span className="tabular-nums">{Math.round(progress * 100)}%</span>
       </div>
-    );
+      <div
+        role="progressbar"
+        aria-label={t("sensus.passportScanning")}
+        aria-valuemin={0}
+        aria-valuemax={100}
+        aria-valuenow={Math.round(progress * 100)}
+        className="h-3 w-full rounded-full bg-surface-container-high overflow-hidden"
+      >
+        <motion.div
+          className="h-full rounded-full bg-linear-to-r from-primary-container via-primary to-primary-container relative"
+          initial={{ width: "0%" }}
+          animate={{ width: `${Math.max(5, progress * 100)}%` }}
+          transition={{ type: "spring", stiffness: 90, damping: 20 }}
+        >
+          <span
+            className="absolute inset-0 rounded-full opacity-40"
+            style={{
+              background:
+                "linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.5) 50%, transparent 100%)",
+              animation: "passport-scan-shimmer 1.4s infinite linear",
+            }}
+          />
+        </motion.div>
+      </div>
+    </div>
+  );
 
   return (
     <>
-       <style>{`
-         @keyframes passport-scan-shimmer {
-           0% { transform: translateX(-100%); }
-           100% { transform: translateX(100%); }
-         }
-       `}</style>
       <div className="border border-outline-variant rounded-lg p-4 bg-surface-container-low flex flex-col gap-3">
         <div className="flex items-start gap-3">
           <ShieldCheck className="text-primary-container shrink-0 mt-0.5" size={18} />
@@ -133,22 +174,20 @@ export function PassportScanner({ onResult }: Props) {
           className="fixed inset-0 flex items-center justify-center p-4"
           style={{ zIndex: 100 }}
           onClick={() => !scanning && closeModal()}
-          onKeyDown={(event) => {
-            if (scanning) return;
-            if (event.key === "Escape") closeModal();
-          }}
-          role="dialog"
-          aria-modal="true"
-          aria-label={t("sensus.passportScanModalTitle")}
         >
           <div className="absolute inset-0 bg-black/30 backdrop-blur-sm" />
           <div
+            ref={dialogRef}
+            role="dialog"
+            aria-modal="true"
+            aria-label={t("sensus.passportScanModalTitle")}
             className="relative flex w-full max-w-md flex-col overflow-hidden rounded-2xl border border-outline-variant bg-surface-container-lowest shadow-2xl"
             onClick={(event) => event.stopPropagation()}
           >
             <div className="flex items-center justify-between border-b border-outline-variant px-5 py-4">
               <h2 className="text-headline-sm font-bold text-on-background">{t("sensus.passportScanModalTitle")}</h2>
               <button
+                ref={closeRef}
                 type="button"
                 disabled={scanning}
                 onClick={closeModal}

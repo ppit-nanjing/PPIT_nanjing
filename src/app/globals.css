@@ -469,6 +469,12 @@ select.pp-select {
   background-position: right 0.65rem center;
 }
 
+/* Shimmer pada progress scan paspor (passport-scanner.tsx). */
+@keyframes passport-scan-shimmer {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(100%); }
+}
+
 /* Respect users who prefer reduced motion: disable non-essential animation
    and transitions (spinners, blurs, reveals) without changing layout. */
 @media (prefers-reduced-motion: reduce) {

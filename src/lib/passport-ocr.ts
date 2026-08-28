@@ -58,9 +58,15 @@ async function prepareMrzCrop(file: File, heightFraction: number, binary: boolea
     const context = canvas.getContext("2d", { willReadFrequently: binary });
     if (!context) throw new Error("Canvas is unavailable");
 
+    // Safari diam-diam mengabaikan ctx.filter - deteksi dukungan supaya
+    // preprocessing grayscale+contrast tetap berjalan di iOS, dengan fallback
+    // pixel manual bila tidak didukung.
+    const supportsFilters = typeof context.filter === "string";
+    if (supportsFilters) {
+      context.filter = "grayscale(1) contrast(1.8)";
+    }
     context.fillStyle = "white";
     context.fillRect(0, 0, canvas.width, canvas.height);
-    context.filter = "grayscale(1) contrast(1.8)";
     context.drawImage(
       bitmap,
       0,
@@ -72,6 +78,18 @@ async function prepareMrzCrop(file: File, heightFraction: number, binary: boolea
       canvas.width,
       canvas.height
     );
+
+    if (!supportsFilters) {
+      const image = context.getImageData(0, 0, canvas.width, canvas.height);
+      const data = image.data;
+      for (let index = 0; index < data.length; index += 4) {
+        const luminance =
+          0.299 * data[index] + 0.587 * data[index + 1] + 0.114 * data[index + 2];
+        const value = Math.min(255, Math.max(0, (luminance - 128) * 1.8 + 128));
+        data[index] = data[index + 1] = data[index + 2] = value;
+      }
+      context.putImageData(image, 0, 0);
+    }
 
     if (binary) {
       const image = context.getImageData(0, 0, canvas.width, canvas.height);

@@ -53,44 +53,44 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   // Fetch dynamic routes in parallel
   const [publishedEvents, publishedNews, albums, openJobs] = await Promise.all([
     db
-      .select({ slug: events.slug })
+      .select({ slug: events.slug, startAt: events.startAt })
       .from(events)
       .where(eq(events.status, "published")),
     db
-      .select({ slug: newsArticles.slug })
+      .select({ slug: newsArticles.slug, publishedAt: newsArticles.publishedAt })
       .from(newsArticles)
       .where(eq(newsArticles.status, "published")),
-    db.select({ id: galleryAlbums.id }).from(galleryAlbums),
+    db.select({ id: galleryAlbums.id, createdAt: galleryAlbums.createdAt }).from(galleryAlbums),
     db
-      .select({ id: jobPostings.id })
+      .select({ id: jobPostings.id, createdAt: jobPostings.createdAt })
       .from(jobPostings)
       .where(eq(jobPostings.status, "open")),
   ]);
 
   const eventEntries: MetadataRoute.Sitemap = publishedEvents.map((e) => ({
     url: `${SITE_URL}/events/${e.slug}`,
-    lastModified: new Date(),
+    lastModified: e.startAt ?? new Date(),
     changeFrequency: "weekly",
     priority: 0.6,
   }));
 
   const newsEntries: MetadataRoute.Sitemap = publishedNews.map((n) => ({
     url: `${SITE_URL}/news/${n.slug}`,
-    lastModified: new Date(),
+    lastModified: n.publishedAt ?? new Date(),
     changeFrequency: "monthly",
     priority: 0.6,
   }));
 
   const albumEntries: MetadataRoute.Sitemap = albums.map((a) => ({
     url: `${SITE_URL}/gallery/${a.id}`,
-    lastModified: new Date(),
+    lastModified: a.createdAt,
     changeFrequency: "monthly",
     priority: 0.5,
   }));
 
   const jobEntries: MetadataRoute.Sitemap = openJobs.map((j) => ({
     url: `${SITE_URL}/jobs/${j.id}`,
-    lastModified: new Date(),
+    lastModified: j.createdAt,
     changeFrequency: "daily",
     priority: 0.5,
   }));

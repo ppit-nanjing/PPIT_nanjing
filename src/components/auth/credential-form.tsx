@@ -99,7 +99,6 @@ export function CredentialForm({ action, googleAction, mode, returnTo }: Props) 
             name="remember"
             type="checkbox"
             value="true"
-            defaultChecked
             aria-describedby="remember-description"
             className="mt-0.5 h-4 w-4 shrink-0 cursor-pointer rounded border-outline accent-primary-container focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-container"
           />
