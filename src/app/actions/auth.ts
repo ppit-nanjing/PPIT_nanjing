@@ -1,6 +1,7 @@
 "use server";
 
 import { AuthError } from "next-auth";
+import { unstable_rethrow } from "next/navigation";
 import { eq } from "drizzle-orm";
 import { db } from "@/db";
 import { users } from "@/db/schema";
@@ -69,6 +70,8 @@ export async function signUpWithPassword(_prev: AuthFormState, formData: FormDat
   try {
     await signIn("credentials", { email, password, redirectTo: returnTo });
   } catch (error) {
+    // See signInWithPassword for why this must come before the AuthError check.
+    unstable_rethrow(error);
     if (error instanceof AuthError) {
       return { errorKey: "auth.errAutoSignIn" };
     }
@@ -88,6 +91,15 @@ export async function signInWithPassword(_prev: AuthFormState, formData: FormDat
   try {
     await signIn("credentials", { email, password, redirectTo: returnTo });
   } catch (error) {
+    // signIn() sets the session cookie and then throws redirect() on success.
+    // On Next.js 16 a redirect caught in a try block is no longer recognised as
+    // a control-flow redirect once it is re-thrown, so the Set-Cookie Auth.js
+    // queued just before the throw is dropped from the response. The browser
+    // then navigates to returnTo with no session cookie, and the login appears
+    // to succeed while the navbar still shows "Login". unstable_rethrow hands
+    // redirect/notFound back to the framework untouched; real errors fall
+    // through to the AuthError check below.
+    unstable_rethrow(error);
     if (error instanceof AuthError) return { errorKey: "auth.errCredentialsWrong" };
     throw error;
   }
