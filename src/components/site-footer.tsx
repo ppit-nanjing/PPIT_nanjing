@@ -61,7 +61,10 @@ export function SiteFooter() {
 
         <div className="grid grid-cols-1 md:grid-cols-12 gap-10">
           <div className="md:col-span-5 flex flex-col gap-4">
-            <span className="text-headline-md font-bold uppercase">PPIT Nanjing</span>
+            <div className="flex items-center gap-2">
+              <span aria-hidden="true" className="brand-logo w-7 h-7" />
+              <span className="text-headline-md font-bold uppercase">PPIT Nanjing</span>
+            </div>
             <p className="text-body-sm text-inverse-on-surface/70 max-w-xs">{t("footer.tagline")}</p>
             <a
               href="https://www.instagram.com/ppit_nanjing/"

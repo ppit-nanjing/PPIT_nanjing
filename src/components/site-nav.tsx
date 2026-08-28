@@ -147,9 +147,14 @@ export function SiteNav() {
           <div className="max-w-[var(--container-max)] mx-auto flex justify-between items-center gap-2 sm:gap-4 h-12 md:h-14 px-4 sm:px-6">
             <Link
               href="/"
-              className="text-headline-sm sm:text-headline-md font-bold text-primary uppercase tracking-tight shrink-0 whitespace-nowrap"
+              className="inline-flex items-center gap-1.5 text-headline-sm sm:text-headline-md font-bold text-primary uppercase tracking-tight shrink-0 whitespace-nowrap"
             >
-              PPIT Nanjing
+              <span
+                aria-hidden="true"
+                className="brand-logo w-6 h-6"
+                style={{ backgroundColor: "currentColor" }}
+              />
+              <span>PPIT Nanjing</span>
             </Link>
 
             {/* Inline links: desktop (lg) and up only - narrower viewports use
