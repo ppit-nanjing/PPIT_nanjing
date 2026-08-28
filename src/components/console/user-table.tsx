@@ -11,6 +11,7 @@ import {
   deleteUser,
 } from "@/app/actions/admin-users";
 import { ConfirmButton } from "@/components/console/confirm-button";
+import { Select, selectInput } from "@/components/console/form";
 
 interface Row {
   id: string;
@@ -34,8 +35,8 @@ interface Department {
 
 type Layout = "table" | "card";
 
-const selectCls = "bg-soft-gray rounded-md px-2 py-1.5 text-body-md";
-const selectClsFull = "bg-soft-gray rounded-md px-2 py-1.5 text-body-md w-full";
+const selectCls = selectInput;
+const selectClsFull = `${selectInput} w-full`;
 const labelCls = "text-label-caps text-on-surface-variant";
 
 function isAssignable(dept: Department, all: Department[]): boolean {
@@ -178,14 +179,14 @@ function UserRow({
             placeholder="Email"
             className={`${selectClsFull}`}
           />
-          <select value={roleId} onChange={(e) => setRoleId(e.target.value)} className={`${selectClsFull}`}>
+          <Select value={roleId} onChange={(e) => setRoleId(e.target.value)} className={`${selectClsFull}`} aria-label="Role admin">
             <option value="">— Tanpa akses admin —</option>
             {roles.map((r) => (
               <option key={r.id} value={r.id}>
                 {r.name}
               </option>
             ))}
-          </select>
+          </Select>
           <div className="flex gap-2">
             <button
               type="button"
@@ -230,14 +231,14 @@ function UserRow({
               placeholder="Email"
               className={selectCls}
             />
-            <select value={roleId} onChange={(e) => setRoleId(e.target.value)} className={selectCls}>
+            <Select value={roleId} onChange={(e) => setRoleId(e.target.value)} className={selectCls} aria-label="Role admin">
               <option value="">— Tanpa akses admin —</option>
               {roles.map((r) => (
                 <option key={r.id} value={r.id}>
                   {r.name}
                 </option>
               ))}
-            </select>
+            </Select>
           </div>
         </td>
         <td className="px-5 py-3 text-on-surface-variant">{scopeLabel(byId.get(user.departmentId ?? ""), byId)}</td>
@@ -290,13 +291,14 @@ function UserRow({
 
         <div className="flex flex-col gap-1">
           <span className={labelCls}>Role / Ruang Lingkup</span>
-          <select
+          <Select
             value={departmentId}
             onChange={(e) => {
               setDepartmentId(e.target.value);
               startTransition(() => assignUserDepartment(user.id, e.target.value, user.position));
             }}
             className={selectClsFull}
+            aria-label="Divisi"
           >
             <option value="">— Belum ada —</option>
             {options.map((d) => (
@@ -304,13 +306,13 @@ function UserRow({
                 {scopeLabel(d, byId)}
               </option>
             ))}
-          </select>
+          </Select>
           {roleName && <p className={labelCls}>Akses: {roleName}</p>}
         </div>
 
         <div className="flex flex-col gap-1">
           <span className={labelCls}>Status</span>
-          <select
+          <Select
             value={status}
             onChange={(e) => {
               const next = e.target.value as Row["status"];
@@ -318,11 +320,12 @@ function UserRow({
               startTransition(() => updateUserStatus(user.id, next));
             }}
             className={selectClsFull}
+            aria-label="Status pengguna"
           >
             <option value="active">Aktif</option>
             <option value="inactive">Nonaktif</option>
             <option value="suspended">Ditangguhkan</option>
-          </select>
+          </Select>
         </div>
 
         <div className="flex gap-2">
@@ -361,13 +364,14 @@ function UserRow({
         </div>
       </td>
       <td className="px-5 py-3">
-        <select
+        <Select
           value={departmentId}
           onChange={(e) => {
             setDepartmentId(e.target.value);
             startTransition(() => assignUserDepartment(user.id, e.target.value, user.position));
           }}
           className={selectCls}
+          aria-label="Divisi"
         >
           <option value="">— Belum ada —</option>
           {options.map((d) => (
@@ -375,11 +379,11 @@ function UserRow({
               {scopeLabel(d, byId)}
             </option>
           ))}
-        </select>
+        </Select>
         {roleName && <p className="text-label-caps text-on-surface-variant mt-1">Akses: {roleName}</p>}
       </td>
       <td className="px-5 py-3">
-        <select
+        <Select
           value={status}
           onChange={(e) => {
             const next = e.target.value as Row["status"];
@@ -387,11 +391,12 @@ function UserRow({
             startTransition(() => updateUserStatus(user.id, next));
           }}
           className={selectCls}
+          aria-label="Status pengguna"
         >
           <option value="active">Aktif</option>
           <option value="inactive">Nonaktif</option>
           <option value="suspended">Ditangguhkan</option>
-        </select>
+        </Select>
       </td>
       <td className="px-5 py-3 text-right">
         <div className="flex justify-end gap-2">

@@ -2,6 +2,7 @@
 
 import { useTransition } from "react";
 import { recordExternalLoan, returnExternalLoan } from "@/app/actions/admin-inventory";
+import { Select } from "@/components/console/form";
 
 const CONDITIONS = [
   { value: "new", label: "Baru" },
@@ -35,14 +36,19 @@ export function ExternalLoanManager({ items, loans }: { items: Item[]; loans: Lo
         <h3 className="text-headline-md text-on-background md:col-span-2">Catat Peminjaman Keluar</h3>
         <label className="flex flex-col gap-2">
           <span className="text-label-caps uppercase tracking-wide text-on-surface-variant">Barang *</span>
-          <select name="itemId" required className="bg-soft-gray rounded-md p-3 text-body-md">
-            <option value="">Pilih barang</option>
+          <Select
+            name="itemId"
+            required
+            defaultValue=""
+            placeholder="Pilih barang"
+            className="w-full"
+          >
             {items.map((i) => (
               <option key={i.id} value={i.id} disabled={i.availableQuantity < 1}>
                 {i.name} ({i.availableQuantity} tersedia)
               </option>
             ))}
-          </select>
+          </Select>
         </label>
         <label className="flex flex-col gap-2">
           <span className="text-label-caps uppercase tracking-wide text-on-surface-variant">Nama Peminjam *</span>
@@ -58,13 +64,7 @@ export function ExternalLoanManager({ items, loans }: { items: Item[]; loans: Lo
         </label>
         <label className="flex flex-col gap-2">
           <span className="text-label-caps uppercase tracking-wide text-on-surface-variant">Kondisi Saat Keluar</span>
-          <select name="conditionOut" defaultValue="good" className="bg-soft-gray rounded-md p-3 text-body-md">
-            {CONDITIONS.map((c) => (
-              <option key={c.value} value={c.value}>
-                {c.label}
-              </option>
-            ))}
-          </select>
+          <Select name="conditionOut" defaultValue="good" options={CONDITIONS} className="w-full" />
         </label>
         <label className="flex flex-col gap-2">
           <span className="text-label-caps uppercase tracking-wide text-on-surface-variant">Perkiraan Tanggal Kembali</span>
@@ -109,14 +109,14 @@ export function ExternalLoanManager({ items, loans }: { items: Item[]; loans: Lo
                   )}
                 </div>
                 <div className="flex items-center gap-3">
-                  <select name="conditionIn" defaultValue="" className="bg-soft-gray rounded-md p-2.5 text-body-md">
+                  <Select name="conditionIn" defaultValue="" className="flex-1" aria-label="Kondisi saat kembali">
                     <option value="">Kondisi saat kembali</option>
                     {CONDITIONS.map((c) => (
                       <option key={c.value} value={c.value}>
                         {c.label}
                       </option>
                     ))}
-                  </select>
+                  </Select>
                   <button
                     type="submit"
                     disabled={pending}

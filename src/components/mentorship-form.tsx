@@ -4,6 +4,7 @@ import { useState } from "react";
 import { ChevronLeft, ChevronRight, CheckCircle2 } from "lucide-react";
 import { applyForMentorship } from "@/app/actions/mentorship";
 import { useT } from "@/lib/i18n/client";
+import { Select } from "@/components/console/form";
 
 const INDUSTRIES = [
   { value: "Teknologi & Software", key: "career.mentorship.industry.tech" },
@@ -42,18 +43,18 @@ export function MentorshipForm() {
         <div className="flex flex-col gap-6">
           <label className="flex flex-col gap-2">
             <span className="text-label-caps uppercase tracking-wide text-on-surface-variant">{t("career.mentorship.fieldLabel")}</span>
-            <select
+            <Select
               value={preferredField}
               onChange={(e) => setPreferredField(e.target.value)}
-              className="bg-soft-gray rounded-md p-3 text-body-md focus:outline-none focus:ring-2 focus:ring-primary-container"
+              className="w-full"
+              placeholder={t("career.mentorship.fieldPlaceholder")}
             >
-              <option value="">{t("career.mentorship.fieldPlaceholder")}</option>
               {INDUSTRIES.map((i) => (
                 <option key={i.value} value={i.value}>
                   {t(i.key)}
                 </option>
               ))}
-            </select>
+            </Select>
           </label>
           <label className="flex flex-col gap-2">
             <span className="text-label-caps uppercase tracking-wide text-on-surface-variant">{t("career.mentorship.backgroundLabel")}</span>

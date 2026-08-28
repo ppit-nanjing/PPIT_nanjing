@@ -4,6 +4,7 @@ import { useState } from "react";
 import { ChevronLeft, ChevronRight, Info, Send } from "lucide-react";
 import { submitBorrowRequest } from "@/app/actions/inventory";
 import { useT } from "@/lib/i18n/client";
+import { CheckboxField } from "@/components/console/form";
 
 const STEPS = ["inventory.form.stepDetails", "inventory.form.stepPickup"] as const;
 
@@ -112,17 +113,13 @@ export function BorrowRequestForm({
               </p>
             </div>
           )}
-          <label className="flex items-start gap-3 cursor-pointer">
-            <input
-              type="checkbox"
-              checked={agreed}
-              onChange={(e) => setAgreed(e.target.checked)}
-              className="mt-1 w-4 h-4 accent-[var(--color-primary-container)]"
-            />
-            <span className="text-body-md text-on-surface-variant">
-              {t("inventory.form.responsibility")}
-            </span>
-          </label>
+          <CheckboxField
+            name="agreed"
+            checked={agreed}
+            onChange={(e) => setAgreed(e.target.checked)}
+            label={t("inventory.form.responsibility")}
+            className="text-on-surface-variant"
+          />
           <div className="flex items-center justify-between">
             <button
               type="button"

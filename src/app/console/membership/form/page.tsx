@@ -9,6 +9,7 @@ import { QuestionBank } from "@/components/console/question-bank";
 import { MembershipApplicationForm } from "@/components/membership/membership-application-form";
 import { createFormField, initFormFields, getFormMeta, updateFormMeta } from "@/app/actions/membership";
 import { FIELD_TYPE_LABELS, type MembershipFieldDef } from "@/lib/membership-form";
+import { Select, ToggleSwitch } from "@/components/console/form";
 
 const ADD_TYPES: MembershipFieldDef["type"][] = [
   "text", "textarea", "email", "tel", "number", "select", "radio", "multiselect", "date", "checkbox", "rating", "image", "url",
@@ -66,40 +67,24 @@ export default async function MembershipFormPage() {
             <span className="text-label-caps uppercase tracking-wide text-on-surface-variant">Pesan Konfirmasi (setelah kirim)</span>
             <textarea name="confirmationMessage" rows={2} defaultValue={meta.confirmationMessage} className="bg-soft-gray rounded-md p-3 text-body-md resize-none" />
           </div>
-          <label className="flex items-center gap-2 text-body-md text-on-background">
-            <input type="checkbox" name="bannerEnabled" defaultChecked={meta.bannerEnabled} />
-            Tampilkan banner (header besar) di halaman formulir
-          </label>
+          <ToggleSwitch name="bannerEnabled" defaultChecked={meta.bannerEnabled} label="Tampilkan banner (header besar) di halaman formulir" />
           <hr className="border-outline-variant/60" />
           <p className="text-label-caps uppercase tracking-wide text-on-surface-variant">Jawaban</p>
-          <label className="flex items-center gap-2 text-body-md text-on-background">
-            <input type="checkbox" name="collectEmail" defaultChecked={meta.collectEmail} />
-            Tanyakan alamat email lewat pertanyaan
-          </label>
-          <span className="text-label-caps text-on-surface-variant -mt-1">
-            Kalau dimatikan, email diambil otomatis dari akun yang login. Pengunjung yang belum login tetap diminta mengisi.
-          </span>
+          <ToggleSwitch
+            name="collectEmail"
+            defaultChecked={meta.collectEmail}
+            label="Tanyakan alamat email lewat pertanyaan"
+            hint="Kalau dimatikan, email diambil otomatis dari akun yang login. Pengunjung yang belum login tetap diminta mengisi."
+          />
           <p className="text-label-caps uppercase tracking-wide text-on-surface-variant">Presentasi</p>
-          <label className="flex items-center gap-2 text-body-md text-on-background">
-            <input type="checkbox" name="shuffle" defaultChecked={meta.shuffle} />
-            Acak urutan pertanyaan (kecuali data diri)
-          </label>
-          <label className="flex items-center gap-2 text-body-md text-on-background">
-            <input type="checkbox" name="showProgress" defaultChecked={meta.showProgress} />
-            Tampilkan bilah progres pengisian
-          </label>
+          <ToggleSwitch name="shuffle" defaultChecked={meta.shuffle} label="Acak urutan pertanyaan (kecuali data diri)" />
+          <ToggleSwitch name="showProgress" defaultChecked={meta.showProgress} label="Tampilkan bilah progres pengisian" />
           <hr className="border-outline-variant/60" />
           <p className="text-label-caps uppercase tracking-wide text-on-surface-variant">Kuis</p>
-          <label className="flex items-center gap-2 text-body-md text-on-background">
-            <input type="checkbox" name="isQuiz" defaultChecked={meta.isQuiz} />
-            Jadikan ini sebagai kuis (tiap soal bisa diberi poin &amp; kunci jawaban)
-          </label>
+          <ToggleSwitch name="isQuiz" defaultChecked={meta.isQuiz} label="Jadikan ini sebagai kuis (tiap soal bisa diberi poin & kunci jawaban)" />
           <hr className="border-outline-variant/60" />
           <p className="text-label-caps uppercase tracking-wide text-on-surface-variant">Default Pertanyaan Baru</p>
-          <label className="flex items-center gap-2 text-body-md text-on-background">
-            <input type="checkbox" name="defaultRequired" defaultChecked={meta.defaultRequired} />
-            Pertanyaan baru otomatis ditandai &ldquo;wajib diisi&rdquo;
-          </label>
+          <ToggleSwitch name="defaultRequired" defaultChecked={meta.defaultRequired} label="Pertanyaan baru otomatis ditandai “wajib diisi”" />
           <hr className="border-outline-variant/60" />
           <div className="flex flex-col gap-2">
             <span className="text-label-caps uppercase tracking-wide text-on-surface-variant">Tautan Spreadsheet (opsional)</span>
@@ -155,13 +140,13 @@ export default async function MembershipFormPage() {
           </div>
           <div className="flex flex-col gap-2">
             <span className="text-label-caps uppercase tracking-wide text-on-surface-variant">Tipe</span>
-            <select name="type" className="bg-soft-gray rounded-md p-3 text-body-md">
+            <Select name="type" className="w-full">
               {ADD_TYPES.map((t) => (
                 <option key={t} value={t}>
                   {FIELD_TYPE_LABELS[t]}
                 </option>
               ))}
-            </select>
+            </Select>
           </div>
           <button
             type="submit"

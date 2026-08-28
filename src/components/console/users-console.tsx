@@ -4,6 +4,7 @@ import { useState } from "react";
 import { UsersTabs } from "@/components/console/users-tabs";
 import { UserTable } from "@/components/console/user-table";
 import { StructureTable } from "@/components/console/structure-table";
+import { Select, selectInput } from "@/components/console/form";
 
 interface Row {
   id: string;
@@ -66,7 +67,7 @@ export function UsersConsole({
     return true;
   });
 
-  const selectCls = "bg-soft-gray rounded-md px-2 py-1.5 text-body-md";
+  const selectCls = selectInput;
 
   return (
     <div>
@@ -79,30 +80,35 @@ export function UsersConsole({
               value={q}
               onChange={(e) => setQ(e.target.value)}
               placeholder="Cari nama/email…"
-              className={`${selectCls} sm:col-span-2 lg:col-span-1`}
+              className="bg-soft-gray rounded-md px-3 py-2.5 text-body-md sm:col-span-2 lg:col-span-1 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-container"
             />
-            <select value={deptFilter} onChange={(e) => setDeptFilter(e.target.value)} className={selectCls}>
+            <Select value={deptFilter} onChange={(e) => setDeptFilter(e.target.value)} className={selectCls} aria-label="Filter divisi">
               <option value="">Semua Divisi</option>
               {departments.map((d) => (
                 <option key={d.id} value={d.id}>
                   {d.name}
                 </option>
               ))}
-            </select>
-            <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)} className={selectCls}>
+            </Select>
+            <Select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)} className={selectCls} aria-label="Filter status">
               <option value="">Semua Status</option>
               {STATUSES.map((s) => (
                 <option key={s.value} value={s.value}>
                   {s.label}
                 </option>
               ))}
-            </select>
-            <select value={catFilter} onChange={(e) => setCatFilter(e.target.value)} className={`${selectCls} sm:col-span-2 lg:col-span-4`}>
+            </Select>
+            <Select
+              value={catFilter}
+              onChange={(e) => setCatFilter(e.target.value)}
+              className={`${selectCls} w-full sm:col-span-2 lg:col-span-4`}
+              aria-label="Filter kategori"
+            >
               <option value="all">Semua Kategori</option>
               <option value="member">Anggota PPIT (punya divisi)</option>
               <option value="noDivision">Belum ada divisi</option>
               <option value="noRole">Belum ada akses admin</option>
-            </select>
+            </Select>
           </div>
 
           <UserTable users={filtered} roles={roles} departments={departments} />

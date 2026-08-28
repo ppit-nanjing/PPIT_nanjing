@@ -334,63 +334,11 @@ body {
 }
 
 
-/* ===== shadcn/ui variable bridge =====
-   Maps project design tokens to the variable names shadcn primitives expect.
-   Each theme/dark-mode block above already defines the canonical colors; this
-   section just aliases them so Select/Popover/Calendar/Button render correctly. */
-@layer base {
-  :root {
-    --color-border: var(--color-outline-variant);
-    --color-input: var(--color-outline-variant);
-    --color-ring: var(--color-primary-container);
-    --color-popover: var(--color-surface-container-lowest);
-    --color-popover-foreground: var(--color-on-surface);
-    --color-accent: var(--color-surface-container);
-    --color-accent-foreground: var(--color-on-surface);
-    --color-muted: var(--color-surface-container);
-    --color-muted-foreground: var(--color-on-surface-variant);
-    --color-destructive: var(--color-error);
-    --color-card: var(--color-surface-container-low);
-    --color-card-foreground: var(--color-on-surface);
-  }
-
-  button:not(:disabled):not([aria-disabled="true"]),
-  [role="button"]:not([aria-disabled="true"]) {
-    cursor: pointer;
-  }
-}
-
 /* Judul memakai serif - Nanjing sebagai ibu kota sastra Jiangnan (六朝古都).
    Badan teks tetap Inter demi keterbacaan. */
 h1, h2, h3 {
   font-family: var(--font-serif);
 }
-
-/* ===== Native form control icon alignment ===== */
-.input-icon-align {
-  min-height: 3rem;
-}
-
-select.input-icon-align {
-  appearance: none;
-  background-repeat: no-repeat;
-  background-position: right 0.75rem center;
-  background-size: 1rem;
-  padding-right: 2.5rem;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%236f6b80' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
-}
-
-[data-mode="dark"] select.input-icon-align {
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%23edeaf5' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
-}
-
-input[type="date"].input-icon-align::-webkit-calendar-picker-indicator {
-  width: 1rem;
-  height: 1rem;
-  margin-right: 0.75rem;
-  padding: 0;
-}
-
 
 /* ===== Org chart (Struktur Organisasi) ===== */
 .ppit-org-tree {
@@ -499,6 +447,26 @@ input[type="date"].input-icon-align::-webkit-calendar-picker-indicator {
 .ppit-org-tree.is-compact .ppit-node-ico {
   width: 26px;
   height: 26px;
+}
+
+/* ===== Panah dropdown <select> =====
+   `appearance-none` (kelas pp-select di bawah) menghilangkan panah bawaan
+   browser yang tidak bisa distyle. Penggantinya SVG inline lewat CSS var,
+   karena data URI tidak bisa memakai currentColor/var() - jadi warnanya
+   (mengikuti --color-on-surface-variant) disetel eksplisit per mode:
+   terang #49454F, gelap #b9b3c9. */
+:root {
+  --select-chevron: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%2349454f' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+}
+[data-mode="dark"] {
+  --select-chevron: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%23b9b3c9' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+}
+select.pp-select {
+  appearance: none;
+  -webkit-appearance: none;
+  background-image: var(--select-chevron);
+  background-repeat: no-repeat;
+  background-position: right 0.65rem center;
 }
 
 /* Respect users who prefer reduced motion: disable non-essential animation

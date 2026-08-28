@@ -31,14 +31,34 @@ import {
 } from "@/app/actions/donations";
 // Token isian memakai primitif bersama konsol supaya semua form terlihat dan
 // terasa identik; label & rowBtn tetap lokal karena spesifik halaman ini.
-import { fieldInput as input, primaryBtn } from "@/components/console/form";
+import { fieldInput as input, primaryBtn, Select, CheckboxField, ToggleSwitch } from "@/components/console/form";
 import { ConfirmButton } from "@/components/console/confirm-button";
 import { Pencil } from "lucide-react";
-import { ModernSelect } from "@/components/console/form";
 
 const label = "text-label-caps uppercase tracking-wide text-on-surface-variant";
 const rowBtn =
   "text-label-caps uppercase tracking-wide text-error hover:bg-error-container/30 px-3 py-1.5 rounded-md";
+
+const PLACE_CATEGORIES = [
+  { value: "tourism", label: "Wisata" },
+  { value: "culture", label: "Sejarah & Budaya" },
+  { value: "nature", label: "Alam & Rekreasi" },
+  { value: "food", label: "Kuliner" },
+  { value: "shopping", label: "Belanja" },
+  { value: "spiritual", label: "Ibadah" },
+  { value: "practical", label: "Kebutuhan Sehari-hari" },
+];
+const MERCH_STATUSES = [
+  { value: "unavailable", label: "Belum tersedia" },
+  { value: "preorder", label: "Pre-order" },
+  { value: "available", label: "Tersedia" },
+];
+const SPONSOR_TIERS = [
+  { value: "partner", label: "Mitra" },
+  { value: "silver", label: "Silver" },
+  { value: "gold", label: "Gold" },
+  { value: "platinum", label: "Platinum" },
+];
 
 function Row({
   children,
@@ -119,18 +139,7 @@ export default async function ConsoleKatalogPage() {
             </label>
             <label className="flex flex-col gap-2">
               <span className={label}>Kategori</span>
-              <ModernSelect
-                name="category"
-                options={[
-                  { value: "tourism", label: "Wisata" },
-                  { value: "culture", label: "Sejarah & Budaya" },
-                  { value: "nature", label: "Alam & Rekreasi" },
-                  { value: "food", label: "Kuliner" },
-                  { value: "shopping", label: "Belanja" },
-                  { value: "spiritual", label: "Ibadah" },
-                  { value: "practical", label: "Kebutuhan Sehari-hari" },
-                ]}
-              />
+              <Select name="category" options={PLACE_CATEGORIES} defaultValue="tourism" className="w-full" />
             </label>
             <label className="flex flex-col gap-2">
               <span className={label}>Distrik</span>
@@ -177,29 +186,22 @@ export default async function ConsoleKatalogPage() {
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                       <input name="name" required defaultValue={p.name} placeholder="Nama *" className={input} />
                       <input name="nameZh" defaultValue={p.nameZh ?? ""} placeholder="Nama Mandarin" className={input} />
-                      <select name="category" defaultValue={p.category ?? "tourism"} className={input} aria-label="Kategori">
-                        <option value="tourism">Wisata</option>
-                        <option value="culture">Sejarah & Budaya</option>
-                        <option value="nature">Alam & Rekreasi</option>
-                        <option value="food">Kuliner</option>
-                        <option value="shopping">Belanja</option>
-                        <option value="spiritual">Ibadah</option>
-                        <option value="practical">Kebutuhan Sehari-hari</option>
-                      </select>
+                      {/* Kosongkan untuk minta Groq menerjemahkan ulang dari Nama - lihat withEnglish() di actions/city-content.ts */}
+                      <input name="nameEn" defaultValue={p.nameEn ?? ""} placeholder="Nama (Inggris) — kosongkan = otomatis" className={input} />
+                      <Select name="category" defaultValue={p.category ?? "tourism"} options={PLACE_CATEGORIES} aria-label="Kategori" className="w-full" />
                       <input name="district" defaultValue={p.district ?? ""} placeholder="Distrik" className={input} />
                     </div>
                     <textarea name="description" rows={2} defaultValue={p.description ?? ""} placeholder="Deskripsi" className={`${input} resize-none`} />
+                    <textarea name="descriptionEn" rows={2} defaultValue={p.descriptionEn ?? ""} placeholder="Deskripsi (Inggris) — kosongkan = otomatis" className={`${input} resize-none`} />
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                       <input name="address" defaultValue={p.address ?? ""} placeholder="Alamat" className={input} />
                       <input name="addressZh" defaultValue={p.addressZh ?? ""} placeholder="Alamat Mandarin" className={input} />
+                      <input name="addressEn" defaultValue={p.addressEn ?? ""} placeholder="Alamat (Inggris) — kosongkan = otomatis" className={input} />
                       <input name="mapUrl" defaultValue={p.mapUrl ?? ""} placeholder="Tautan Peta" className={input} />
                       <input name="orderIndex" type="number" defaultValue={p.orderIndex} placeholder="Urutan" className={input} />
                     </div>
                     <ImageUploadCropper name="imageUrl" folder="catalog" label="Gambar" placeholder="Tempel URL atau unggah gambar" defaultValue={p.imageUrl ?? ""} />
-                    <label className="flex items-center gap-2 text-body-md text-on-background">
-                      <input type="checkbox" name="published" defaultChecked={p.published} />
-                      Tampil di situs publik
-                    </label>
+                    <ToggleSwitch name="published" defaultChecked={p.published} label="Tampil di situs publik" />
                     <button type="submit" className={primaryBtn}>
                       Simpan Perubahan
                     </button>
@@ -293,6 +295,10 @@ export default async function ConsoleKatalogPage() {
             <span className={label}>Deskripsi distrik</span>
             <textarea name="description" rows={3} className={`${input} resize-none`} />
           </label>
+          <label className="flex flex-col gap-2">
+            <span className={label}>Deskripsi distrik (Inggris) — kosongkan untuk isi otomatis</span>
+            <textarea name="descriptionEn" rows={3} className={`${input} resize-none`} />
+          </label>
           <button type="submit" className={primaryBtn}>
             Simpan Distrik
           </button>
@@ -369,10 +375,7 @@ export default async function ConsoleKatalogPage() {
             <textarea name="description" rows={2} className={`${input} resize-none`} />
           </label>
           <ImageUploadCropper name="logoUrl" folder="catalog" label="Logo" placeholder="Tempel URL atau unggah gambar" />
-          <label className="flex items-center gap-2 text-body-md text-on-background">
-            <input type="checkbox" name="isPartner" />
-            Kampus mitra
-          </label>
+          <CheckboxField name="isPartner" label="Kampus mitra" className="text-on-background" />
           <button type="submit" className={primaryBtn}>
             Tambah Universitas
           </button>
@@ -404,11 +407,9 @@ export default async function ConsoleKatalogPage() {
                       <input name="orderIndex" type="number" defaultValue={u.orderIndex} placeholder="Urutan" className={input} />
                     </div>
                     <textarea name="description" rows={2} defaultValue={u.description ?? ""} placeholder="Deskripsi" className={`${input} resize-none`} />
+                    <textarea name="descriptionEn" rows={2} defaultValue={u.descriptionEn ?? ""} placeholder="Deskripsi (Inggris) — kosongkan = otomatis" className={`${input} resize-none`} />
                     <ImageUploadCropper name="logoUrl" folder="catalog" label="Logo" placeholder="Tempel URL atau unggah gambar" defaultValue={u.logoUrl ?? ""} />
-                    <label className="flex items-center gap-2 text-body-md text-on-background">
-                      <input type="checkbox" name="isPartner" defaultChecked={u.isPartner} />
-                      Kampus mitra
-                    </label>
+                    <CheckboxField name="isPartner" defaultChecked={u.isPartner} label="Kampus mitra" className="text-on-background" />
                     <button type="submit" className={primaryBtn}>
                       Simpan Perubahan
                     </button>
@@ -448,11 +449,7 @@ export default async function ConsoleKatalogPage() {
             </label>
             <label className="flex flex-col gap-2">
               <span className={label}>Status</span>
-              <select name="status" className={input}>
-                <option value="unavailable">Belum tersedia</option>
-                <option value="preorder">Pre-order</option>
-                <option value="available">Tersedia</option>
-              </select>
+              <Select name="status" options={MERCH_STATUSES} defaultValue="unavailable" className="w-full" />
             </label>
           </div>
           <ImageUploadCropper name="imageUrl" folder="catalog" label="Gambar" placeholder="Tempel URL atau unggah gambar" />
@@ -484,16 +481,14 @@ export default async function ConsoleKatalogPage() {
                     <input type="hidden" name="id" value={m.id} />
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                       <input name="name" required defaultValue={m.name} placeholder="Nama *" className={input} />
+                      <input name="nameEn" defaultValue={m.nameEn ?? ""} placeholder="Nama (Inggris) — kosongkan = otomatis" className={input} />
                       <input name="priceCny" type="number" min={0} defaultValue={m.priceCny ?? ""} placeholder="Harga (¥)" className={input} />
-                      <select name="status" defaultValue={m.status ?? "unavailable"} className={input} aria-label="Status">
-                        <option value="unavailable">Belum tersedia</option>
-                        <option value="preorder">Pre-order</option>
-                        <option value="available">Tersedia</option>
-                      </select>
+                      <Select name="status" defaultValue={m.status ?? "unavailable"} options={MERCH_STATUSES} aria-label="Status" className="w-full" />
                       <input name="orderIndex" type="number" defaultValue={m.orderIndex} placeholder="Urutan" className={input} />
                     </div>
                     <ImageUploadCropper name="imageUrl" folder="catalog" label="Gambar" placeholder="Tempel URL atau unggah gambar" defaultValue={m.imageUrl ?? ""} />
                     <textarea name="description" rows={2} defaultValue={m.description ?? ""} placeholder="Deskripsi" className={`${input} resize-none`} />
+                    <textarea name="descriptionEn" rows={2} defaultValue={m.descriptionEn ?? ""} placeholder="Deskripsi (Inggris) — kosongkan = otomatis" className={`${input} resize-none`} />
                     <input name="contactNote" defaultValue={m.contactNote ?? ""} placeholder="Catatan pemesanan" className={input} />
                     <button type="submit" className={primaryBtn}>
                       Simpan Perubahan
@@ -527,12 +522,7 @@ export default async function ConsoleKatalogPage() {
             </label>
             <label className="flex flex-col gap-2">
               <span className={label}>Tingkat</span>
-              <select name="tier" className={input}>
-                <option value="partner">Mitra</option>
-                <option value="silver">Silver</option>
-                <option value="gold">Gold</option>
-                <option value="platinum">Platinum</option>
-              </select>
+              <Select name="tier" options={SPONSOR_TIERS} defaultValue="partner" className="w-full" />
             </label>
             <label className="flex flex-col gap-2">
               <span className={label}>Situs</span>
@@ -564,17 +554,13 @@ export default async function ConsoleKatalogPage() {
                     <input type="hidden" name="id" value={s.id} />
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                       <input name="name" required defaultValue={s.name} placeholder="Nama *" className={input} />
-                      <select name="tier" defaultValue={s.tier ?? "partner"} className={input} aria-label="Tingkat">
-                        <option value="partner">Mitra</option>
-                        <option value="silver">Silver</option>
-                        <option value="gold">Gold</option>
-                        <option value="platinum">Platinum</option>
-                      </select>
+                      <Select name="tier" defaultValue={s.tier ?? "partner"} options={SPONSOR_TIERS} aria-label="Tingkat" className="w-full" />
                       <input name="websiteUrl" defaultValue={s.websiteUrl ?? ""} placeholder="Situs" className={input} />
                       <input name="orderIndex" type="number" defaultValue={s.orderIndex} placeholder="Urutan" className={input} />
                     </div>
                     <ImageUploadCropper name="logoUrl" folder="catalog" label="Logo" placeholder="Tempel URL atau unggah gambar" defaultValue={s.logoUrl ?? ""} />
                     <textarea name="description" rows={2} defaultValue={s.description ?? ""} placeholder="Deskripsi" className={`${input} resize-none`} />
+                    <textarea name="descriptionEn" rows={2} defaultValue={s.descriptionEn ?? ""} placeholder="Deskripsi (Inggris) — kosongkan = otomatis" className={`${input} resize-none`} />
                     <button type="submit" className={primaryBtn}>
                       Simpan Perubahan
                     </button>
@@ -683,11 +669,17 @@ export default async function ConsoleKatalogPage() {
                       </div>
                       <form action={updateDonationStatus} className="flex items-center gap-2">
                         <input type="hidden" name="id" value={d.id} />
-                        <select name="status" defaultValue={d.status} className="bg-soft-gray rounded-md p-2 text-body-md">
-                          <option value="pending">Menunggu</option>
-                          <option value="verified">Terverifikasi</option>
-                          <option value="rejected">Ditolak</option>
-                        </select>
+                        <Select
+                          name="status"
+                          defaultValue={d.status}
+                          aria-label="Status donasi"
+                          className="w-full sm:w-auto"
+                          options={[
+                            { value: "pending", label: "Menunggu" },
+                            { value: "verified", label: "Terverifikasi" },
+                            { value: "rejected", label: "Ditolak" },
+                          ]}
+                        />
                         <button
                           type="submit"
                           className="bg-primary-container text-on-primary text-label-caps uppercase tracking-wide px-4 py-2 rounded-md hover:bg-primary transition-colors"

@@ -4,6 +4,7 @@ import { useEffect, useRef, useState, useTransition } from "react";
 import { ChevronRight, ChevronLeft, Check, AlertTriangle, Loader2 } from "lucide-react";
 import { submitSensusProfile, saveSensusStep } from "@/app/actions/sensus";
 import { ImageUploadCropper } from "@/components/upload/image-upload-cropper";
+import { Select, CheckField } from "@/components/console/form";
 import { PassportScanner } from "@/components/sensus/passport-scanner";
 import { useT, useLocale } from "@/lib/i18n/client";
 import { INTL_LOCALE } from "@/lib/i18n/config";
@@ -19,8 +20,8 @@ import {
   type SensusIssue,
 } from "@/lib/sensus-form";
 import type { TKey } from "@/lib/i18n/dictionaries/id";
-import type { PassportMrzResult } from "@/lib/mrz";
 import type { T } from "@/lib/i18n/translate";
+import type { PassportMrzResult } from "@/lib/mrz";
 
 const STEP_KEYS = ["sensus.stepBiodata", "sensus.stepStudentData", "sensus.stepContact"] as const;
 
@@ -144,18 +145,18 @@ function PhoneField({
             {prefix}
           </span>
         ) : (
-          <select
+          <Select
             value={prefix}
             onChange={(e) => onChange(normalize(national, e.target.value))}
             aria-label={t("sensus.countryCodeAria")}
-            className="bg-soft-gray rounded-md p-3 text-body-md focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-container shrink-0"
+            className="shrink-0 sm:w-auto w-full"
           >
             {prefixes.map((p) => (
               <option key={p} value={p}>
                 {p}
               </option>
             ))}
-          </select>
+          </Select>
         )}
         <input
           type="tel"
@@ -244,26 +245,26 @@ export function SensusWizard({
     setIssues((prev) => prev.filter((i) => i.field !== key));
   }
 
-  function applyPassportScan(result: PassportMrzResult) {
-    const scannedFields: (keyof SensusInput)[] = [
-      "fullName",
-      "passportNumber",
-      "gender",
-      "passportExpiry",
-      "province",
-      "birthDate",
-    ];
-    setForm((current) => ({
-      ...current,
-      fullName: result.fullName,
-      passportNumber: result.passportNumber,
-      gender: result.gender || current.gender,
-      passportExpiry: result.passportExpiry,
-      province: result.province || current.province,
-      birthDate: result.birthDate,
-    }));
-    setIssues((current) => current.filter((issue) => !scannedFields.includes(issue.field)));
-  }
+    function applyPassportScan(result: PassportMrzResult) {
+      const scannedFields: (keyof SensusInput)[] = [
+        "fullName",
+        "passportNumber",
+        "gender",
+        "passportExpiry",
+        "province",
+        "birthDate",
+      ];
+      setForm((current) => ({
+        ...current,
+        fullName: result.fullName,
+        passportNumber: result.passportNumber,
+        gender: result.gender || current.gender,
+        passportExpiry: result.passportExpiry,
+        province: result.province || current.province,
+        birthDate: result.birthDate,
+      }));
+      setIssues((current) => current.filter((issue) => !scannedFields.includes(issue.field)));
+    }
 
   // Ganti cabang = daftar kampusnya ikut ganti, jadi pilihan lama hampir pasti
   // tidak valid lagi di cabang baru dan harus dikosongkan.
@@ -349,7 +350,7 @@ export function SensusWizard({
           {opts?.required && <span className="text-error" aria-hidden="true"> *</span>}
         </label>
         {opts?.options ? (
-          <select
+          <Select
             id={id}
             value={form[key] as string}
             onChange={(e) => onChange(e.target.value)}
@@ -357,15 +358,15 @@ export function SensusWizard({
             aria-required={opts.required || undefined}
             aria-invalid={error ? true : undefined}
             aria-describedby={describedBy || undefined}
-              className="bg-soft-gray rounded-md p-3 text-body-md focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-container disabled:opacity-60 disabled:cursor-not-allowed input-icon-align"
+            className="w-full"
+            placeholder={opts.emptyLabel ?? t("sensus.selectPlaceholder", { label })}
           >
-            <option value="">{opts.emptyLabel ?? t("sensus.selectPlaceholder", { label })}</option>
             {opts.options.map((o) => (
               <option key={o} value={o}>
                 {optionLabel(t, o)}
               </option>
             ))}
-          </select>
+          </Select>
         ) : (
           <input
             id={id}
@@ -377,7 +378,7 @@ export function SensusWizard({
             aria-required={opts?.required || undefined}
             aria-invalid={error ? true : undefined}
             aria-describedby={describedBy || undefined}
-            className={`bg-soft-gray rounded-md p-3 text-body-md focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-container disabled:opacity-60 ${opts?.type === "date" ? "input-icon-align" : ""}`}
+            className="bg-soft-gray rounded-md p-3 text-body-md focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-container disabled:opacity-60"
           />
         )}
         {opts?.hint && (
@@ -429,7 +430,7 @@ export function SensusWizard({
         {step === 0 && (
           <fieldset className="contents">
             <legend className="sr-only">{t(STEP_KEYS[0])}</legend>
-            <PassportScanner onResult={applyPassportScan} />
+              <PassportScanner onResult={applyPassportScan} />
             {field(t("sensus.fullName"), "fullName", { required: true })}
             {field(t("sensus.passportNumber"), "passportNumber", {
               required: true,
@@ -544,37 +545,33 @@ export function SensusWizard({
               error={errorFor("whatsappNumber")}
             />
             <div className="flex flex-col gap-2">
-              <label className="flex items-start gap-3 bg-soft-gray rounded-md p-3 cursor-pointer">
-                <input
-                  id="sensus-agreeTerms"
-                  type="checkbox"
-                  checked={form.agreeTerms}
-                  onChange={(e) => update("agreeTerms", e.target.checked)}
-                  aria-required="true"
-                  aria-invalid={issueFor("agreeTerms") ? true : undefined}
-                  className="mt-1 accent-[var(--color-primary-container)]"
-                />
-                <span className="text-body-md text-on-background">
-                  {t("sensus.agreeTerms")}
-                  <span className="text-error" aria-hidden="true"> *</span>
-                </span>
-              </label>
+              <CheckField
+                name="agreeTerms"
+                checked={form.agreeTerms}
+                onChange={(e) => update("agreeTerms", e.target.checked)}
+                aria-required="true"
+                aria-invalid={issueFor("agreeTerms") ? true : undefined}
+                label={
+                  <>
+                    {t("sensus.agreeTerms")}
+                    <span className="text-error" aria-hidden="true"> *</span>
+                  </>
+                }
+              />
               {errorFor("agreeTerms") && <span className="text-xs text-error">{errorFor("agreeTerms")}</span>}
             </div>
             {/* Satu-satunya field opsional di form pusat. */}
-            <label className="flex items-start gap-3 bg-soft-gray rounded-md p-3 cursor-pointer">
-              <input
-                id="sensus-subscribeNewsletter"
-                type="checkbox"
-                checked={form.subscribeNewsletter}
-                onChange={(e) => update("subscribeNewsletter", e.target.checked)}
-                className="mt-1 accent-[var(--color-primary-container)]"
-              />
-              <span className="text-body-md text-on-background">
-                {t("sensus.newsletter")}{" "}
-                <span className="text-xs text-on-surface-variant">({t("sensus.optional")})</span>
-              </span>
-            </label>
+            <CheckField
+              name="subscribeNewsletter"
+              checked={form.subscribeNewsletter}
+              onChange={(e) => update("subscribeNewsletter", e.target.checked)}
+              label={
+                <>
+                  {t("sensus.newsletter")}{" "}
+                  <span className="text-xs text-on-surface-variant">({t("sensus.optional")})</span>
+                </>
+              }
+            />
           </fieldset>
         )}
       </div>

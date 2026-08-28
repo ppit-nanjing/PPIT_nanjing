@@ -95,9 +95,10 @@ export function renderMembershipEmailText(input: {
   body: string;
   ctaLabel?: string;
   ctaUrl?: string;
+  footerNote?: string;
 }): string {
   const parts = ["PPIT Nanjing", "", input.heading, "", input.body.trim()];
   if (input.ctaLabel && input.ctaUrl) parts.push("", `${input.ctaLabel}: ${input.ctaUrl}`);
-  parts.push("", "Email ini dikirim otomatis oleh sistem pendaftaran PPIT Nanjing.");
+  parts.push("", input.footerNote ?? "Email ini dikirim otomatis oleh sistem pendaftaran PPIT Nanjing.");
   return parts.join("\n");
 }

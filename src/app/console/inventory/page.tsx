@@ -14,8 +14,7 @@ import { requireModuleAccess } from "@/lib/admin-scope";
 import { Plus, Package, Pencil } from "lucide-react";
 import Link from "next/link";
 import { conditionLabel, INVENTORY_CONDITIONS, CONDITION_LABEL } from "@/lib/inventory-labels";
-import { fieldInput as input, primaryBtn } from "@/components/console/form";
-import { ModernSelect } from "@/components/console/form";
+import { fieldInput as input, primaryBtn, Select } from "@/components/console/form";
 
 
 export default async function ConsoleInventoryPage() {
@@ -185,15 +184,13 @@ export default async function ConsoleInventoryPage() {
                       <input name="category" defaultValue={item.category ?? ""} placeholder="Kategori" className={input} />
                       <input name="location" defaultValue={item.location ?? ""} placeholder="Lokasi Penyimpanan" className={input} />
                       <input name="custodian" defaultValue={item.custodian ?? ""} placeholder="Pemegang" className={input} />
-                      <ModernSelect
-                        name="condition"
-                        defaultValue={item.condition}
-                        aria-label="Kondisi"
-                        options={INVENTORY_CONDITIONS.map((c) => ({
-                          value: c,
-                          label: `Kondisi: ${CONDITION_LABEL[c]}`,
-                        }))}
-                      />
+                      <Select name="condition" defaultValue={item.condition} aria-label="Kondisi" className="w-full">
+                        {INVENTORY_CONDITIONS.map((c) => (
+                          <option key={c} value={c}>
+                            Kondisi: {CONDITION_LABEL[c]}
+                          </option>
+                        ))}
+                      </Select>
                     </div>
                     <div className="grid grid-cols-2 gap-3">
                       <label className="flex flex-col gap-1">

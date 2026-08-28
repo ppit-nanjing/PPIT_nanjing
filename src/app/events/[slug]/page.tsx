@@ -2,7 +2,7 @@ import { eq, and, ne, count, desc } from "drizzle-orm";
 import { notFound } from "next/navigation";
 import { auth } from "@/auth";
 import { db } from "@/db";
-import { events, eventRegistrations, eventQuestions, eventDivisions, eventCommittee, galleryAlbums, galleryPhotos, regionalBranches } from "@/db/schema";
+import { events, eventRegistrations, eventQuestions, eventFeeOptions, eventDivisions, eventCommittee, galleryAlbums, galleryPhotos, regionalBranches, sensusProfiles, coverageCities, users } from "@/db/schema";
 import { NON_STUDENT_BRANCH } from "@/lib/membership-status";
 import { hasCompletedSensus } from "@/lib/sensus-gate";
 import { SiteNav } from "@/components/site-nav";
@@ -14,6 +14,10 @@ import { GalleryLightbox } from "@/components/gallery-lightbox";
 import { CalendarDays, MapPin, Users, Ticket, ArrowLeft, ListChecks, Images, ArrowRight, CalendarX, PartyPopper, BadgeCheck } from "lucide-react";
 import Image from "next/image";
 import { registerForEvent } from "@/app/actions/events";
+import { Select } from "@/components/console/form";
+import { FileUpload } from "@/components/upload/file-upload";
+import { EventBiodataFields, type BiodataDefaults } from "@/components/events/event-biodata-fields";
+import { EventRegisterWizard } from "@/components/events/event-register-wizard";
 import Link from "next/link";
 import { applyAsVolunteer } from "@/app/actions/volunteers";
 import { getT } from "@/lib/i18n/server";
@@ -75,7 +79,12 @@ export default async function EventDetailPage({ params, searchParams }: { params
       .where(and(eq(eventRegistrations.eventId, event.id), eq(eventRegistrations.userId, session.user.id)));
     alreadyRegistered = !!existing;
     askBranch =
-      !alreadyRegistered && !event.requiresSensus && !(await hasCompletedSensus(session.user.id));
+      !alreadyRegistered &&
+      !event.requiresSensus &&
+      // Acara requiresBiodata menanyakan Kota/Ranting di blok biodata, jadi
+      // pertanyaan cabang terpisah cuma jadi dobel.
+      !event.requiresBiodata &&
+      !(await hasCompletedSensus(session.user.id));
     const [committee] = await db
       .select({ divisionName: eventDivisions.name, role: eventCommittee.role })
       .from(eventCommittee)
@@ -103,6 +112,54 @@ export default async function EventDetailPage({ params, searchParams }: { params
           .from(eventQuestions)
           .where(eq(eventQuestions.eventId, event.id))
           .orderBy(eventQuestions.orderIndex, eventQuestions.id)
+      : [];
+
+  // Biodata lengkap peserta (acara requiresBiodata, mis. WIF). Kalau sensusnya
+  // sudah lengkap, nilainya dipakai read-only + di-snapshot server-side; kalau
+  // belum, form isian yang di-prefill dari sensus parsial / akun.
+  const showBiodata =
+    !!session?.user?.id && event.requiresBiodata && !alreadyRegistered && canRegister;
+  let biodata: {
+    sensusComplete: boolean;
+    defaults: BiodataDefaults;
+    cityOptions: string[];
+  } | null = null;
+  if (showBiodata && session?.user?.id) {
+    const [profile] = await db
+      .select()
+      .from(sensusProfiles)
+      .where(eq(sensusProfiles.userId, session.user.id));
+    const [account] = await db
+      .select({ name: users.name })
+      .from(users)
+      .where(eq(users.id, session.user.id));
+    const cities = await db.select({ label: coverageCities.label }).from(coverageCities);
+    biodata = {
+      sensusComplete: profile?.completionStatus === "complete",
+      cityOptions: cities.map((c) => c.label).sort((a, b) => a.localeCompare(b)),
+      defaults: {
+        fullName: profile?.fullName ?? account?.name ?? "",
+        passportNumber: profile?.passportNumber ?? "",
+        wechatId: profile?.wechatId ?? "",
+        chinaPhone: profile?.phoneActive ?? "",
+        branch: profile?.branch ?? "",
+        university: profile?.university ?? "",
+        major: profile?.major ?? "",
+        entryYear: profile?.entryYear != null ? String(profile.entryYear) : "",
+        studentProofUrl: profile?.studentCardUrl ?? "",
+      },
+    };
+  }
+
+  // Kategori tarif: kalau acara berbayar & punya kategori, peserta memilih satu
+  // saat mendaftar dan nominal itulah yang harus dibayar.
+  const feeOptions =
+    event.isPaid && canRegister && !alreadyRegistered
+      ? await db
+          .select({ id: eventFeeOptions.id, label: eventFeeOptions.label, amountCny: eventFeeOptions.amountCny })
+          .from(eventFeeOptions)
+          .where(eq(eventFeeOptions.eventId, event.id))
+          .orderBy(eventFeeOptions.orderIndex, eventFeeOptions.id)
       : [];
 
   // Pendaftaran volunteer terbuka: tampilkan formnya beserta pilihan divisinya.
@@ -338,79 +395,142 @@ export default async function EventDetailPage({ params, searchParams }: { params
                     </a>
                   ) : canRegister ? (
                     session?.user?.id ? (
-                      <form action={registerForEvent.bind(null, event.id, slug)} className="flex flex-col gap-3">
-                        {askBranch && (
-                          <label className="flex flex-col gap-2 text-left">
-                            <span className="text-label-caps uppercase tracking-wide text-on-surface-variant">
-                              {t("events.branchQuestion")}
-                              <span className="text-error" aria-hidden="true"> *</span>
-                            </span>
-                            <select
-                              name="branch"
-                              required
-                              defaultValue=""
-                              className="bg-soft-gray rounded-md p-3 text-body-md focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-container"
-                            >
-                              <option value="" disabled>
-                                {t("events.branchPlaceholder")}
-                              </option>
-                              {branchOptions.map((b) => (
-                                <option key={b} value={b}>
-                                  {b}
-                                </option>
-                              ))}
-                              <option value={NON_STUDENT_BRANCH}>{t("events.branchNonStudent")}</option>
-                            </select>
-                            <span className="text-xs text-on-surface-variant">{t("events.branchHint")}</span>
-                          </label>
-                        )}
-                        {questions.map((q) => {
-                          const options = (q.options ?? "").split("\n").map((l) => l.trim()).filter(Boolean);
-                          const fieldClass =
-                            "bg-soft-gray rounded-md p-3 text-body-md focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-container";
-                          return (
-                            <fieldset key={q.id} className="flex flex-col gap-2 text-left border-0 p-0 m-0">
-                              <legend className="text-label-caps uppercase tracking-wide text-on-surface-variant p-0">
-                                {q.label}
-                                {q.required && <span className="text-error" aria-hidden="true"> *</span>}
-                              </legend>
-                              {q.type === "text" && (
-                                <input name={q.id} required={q.required} className={fieldClass} />
-                              )}
-                              {q.type === "textarea" && (
-                                <textarea name={q.id} required={q.required} rows={3} className={`${fieldClass} resize-none`} />
-                              )}
-                              {q.type === "select" && (
-                                <select name={q.id} required={q.required} defaultValue="" className={fieldClass}>
-                                  <option value="" disabled>—</option>
-                                  {options.map((o) => (
-                                    <option key={o} value={o}>{o}</option>
-                                  ))}
-                                </select>
-                              )}
-                              {(q.type === "radio" || q.type === "multiselect") &&
-                                options.map((o) => (
-                                  <label key={o} className="flex items-center gap-2 bg-soft-gray rounded-md p-2.5 text-body-md cursor-pointer">
-                                    <input
-                                      type={q.type === "radio" ? "radio" : "checkbox"}
-                                      name={q.id}
-                                      value={o}
-                                      required={q.required && q.type === "radio"}
-                                      className="h-4 w-4 accent-[var(--color-primary-container)]"
+                      <EventRegisterWizard
+                        action={registerForEvent.bind(null, event.id, slug)}
+                        submitLabel={t("events.registerNow")}
+                        steps={[
+                          ...(biodata
+                            ? [
+                                {
+                                  id: "biodata",
+                                  title: t("events.stepBiodata"),
+                                  content: (
+                                    <EventBiodataFields
+                                      sensusComplete={biodata.sensusComplete}
+                                      defaults={biodata.defaults}
+                                      cityOptions={biodata.cityOptions}
                                     />
-                                    {o}
-                                  </label>
-                                ))}
-                            </fieldset>
-                          );
-                        })}
-                        <button
-                          type="submit"
-                          className="w-full inline-flex items-center justify-center gap-2 bg-primary-container text-on-primary text-label-caps uppercase tracking-wide px-6 py-4 rounded-md hover:bg-primary transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-container focus-visible:ring-offset-2 focus-visible:ring-offset-surface-container-low"
-                        >
-                          <Ticket size={18} aria-hidden="true" /> {t("events.registerNow")}
-                        </button>
-                      </form>
+                                  ),
+                                },
+                              ]
+                            : []),
+                          ...(askBranch || questions.length > 0
+                            ? [
+                                {
+                                  id: "questions",
+                                  title: t("events.stepQuestions"),
+                                  content: (
+                                    <>
+                                      {askBranch && (
+                                        <label className="flex flex-col gap-2 text-left">
+                                          <span className="text-label-caps uppercase tracking-wide text-on-surface-variant">
+                                            {t("events.branchQuestion")}
+                                            <span className="text-error" aria-hidden="true"> *</span>
+                                          </span>
+                                          <Select
+                                            name="branch"
+                                            required
+                                            defaultValue=""
+                                            placeholder={t("events.branchPlaceholder")}
+                                            className="w-full"
+                                          >
+                                            {branchOptions.map((b) => (
+                                              <option key={b} value={b}>
+                                                {b}
+                                              </option>
+                                            ))}
+                                            <option value={NON_STUDENT_BRANCH}>{t("events.branchNonStudent")}</option>
+                                          </Select>
+                                          <span className="text-xs text-on-surface-variant">{t("events.branchHint")}</span>
+                                        </label>
+                                      )}
+                                      {questions.map((q) => {
+                                        const options = (q.options ?? "").split("\n").map((l) => l.trim()).filter(Boolean);
+                                        const fieldClass =
+                                          "bg-soft-gray rounded-md p-3 text-body-md focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-container";
+                                        return (
+                                          <fieldset key={q.id} className="flex flex-col gap-2 text-left border-0 p-0 m-0">
+                                            <legend className="text-label-caps uppercase tracking-wide text-on-surface-variant p-0">
+                                              {q.label}
+                                              {q.required && <span className="text-error" aria-hidden="true"> *</span>}
+                                            </legend>
+                                            {q.type === "text" && (
+                                              <input name={q.id} required={q.required} className={fieldClass} />
+                                            )}
+                                            {q.type === "textarea" && (
+                                              <textarea name={q.id} required={q.required} rows={3} className={`${fieldClass} resize-none`} />
+                                            )}
+                                            {q.type === "select" && (
+                                              <Select name={q.id} required={q.required} defaultValue="" placeholder="—" className="w-full">
+                                                {options.map((o) => (
+                                                  <option key={o} value={o}>{o}</option>
+                                                ))}
+                                              </Select>
+                                            )}
+                                            {q.type === "file" && (
+                                              <FileUpload
+                                                name={q.id}
+                                                folder="event-doc"
+                                                required={q.required}
+                                                autoUpload
+                                                accept="application/pdf,.doc,.docx,image/*"
+                                                hint={t("events.fileHint")}
+                                              />
+                                            )}
+                                            {(q.type === "radio" || q.type === "multiselect") &&
+                                              options.map((o) => (
+                                                <label key={o} className="flex items-center gap-2 bg-soft-gray rounded-md p-2.5 text-body-md cursor-pointer">
+                                                  <input
+                                                    type={q.type === "radio" ? "radio" : "checkbox"}
+                                                    name={q.id}
+                                                    value={o}
+                                                    required={q.required && q.type === "radio"}
+                                                    className="h-4 w-4 accent-[var(--color-primary-container)]"
+                                                  />
+                                                  {o}
+                                                </label>
+                                              ))}
+                                          </fieldset>
+                                        );
+                                      })}
+                                    </>
+                                  ),
+                                },
+                              ]
+                            : []),
+                          ...(feeOptions.length > 0
+                            ? [
+                                {
+                                  id: "fee",
+                                  title: t("events.feeOptionQuestion"),
+                                  content: (
+                                    <fieldset className="flex flex-col gap-2 text-left border-0 p-0 m-0">
+                                      <legend className="text-label-caps uppercase tracking-wide text-on-surface-variant p-0">
+                                        {t("events.feeOptionQuestion")}
+                                        <span className="text-error" aria-hidden="true"> *</span>
+                                      </legend>
+                                      {feeOptions.map((o) => (
+                                        <label
+                                          key={o.id}
+                                          className="flex items-center gap-2 bg-soft-gray rounded-md p-2.5 text-body-md cursor-pointer"
+                                        >
+                                          <input
+                                            type="radio"
+                                            name="feeOptionId"
+                                            value={o.id}
+                                            required
+                                            className="h-4 w-4 accent-[var(--color-primary-container)]"
+                                          />
+                                          {o.label} <span className="text-on-surface-variant">(¥{o.amountCny})</span>
+                                        </label>
+                                      ))}
+                                    </fieldset>
+                                  ),
+                                },
+                              ]
+                            : []),
+                        ]}
+                      />
                     ) : (
                       <Link
                         href={`/login?returnTo=${encodeURIComponent(`/events/${slug}`)}`}
@@ -476,12 +596,12 @@ export default async function EventDetailPage({ params, searchParams }: { params
                           <input name="fullName" required placeholder="Nama lengkap *" aria-label="Nama lengkap" className="bg-soft-gray rounded-md p-2.5 text-body-md" />
                           <input name="email" type="email" required placeholder="Email * (untuk akun portal)" aria-label="Email" className="bg-soft-gray rounded-md p-2.5 text-body-md" />
                           <input name="whatsapp" placeholder="WhatsApp / WeChat (opsional)" aria-label="WhatsApp atau WeChat" className="bg-soft-gray rounded-md p-2.5 text-body-md" />
-                          <select name="divisionId" defaultValue="" aria-label="Divisi yang diminati" className="bg-soft-gray rounded-md p-2.5 text-body-md">
+                          <Select name="divisionId" defaultValue="" aria-label="Divisi yang diminati" className="w-full">
                             <option value="">Divisi yang diminati — bebas</option>
                             {volunteerOptions.map((label, i) => (
                               <option key={volunteerDivisions[i].id} value={volunteerDivisions[i].id}>{label}</option>
                             ))}
-                          </select>
+                          </Select>
                           <button
                             type="submit"
                             className="w-full inline-flex items-center justify-center gap-2 bg-secondary-container text-on-secondary-container text-label-caps uppercase tracking-wide px-6 py-3 rounded-md hover:bg-secondary transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-container"

@@ -8,6 +8,7 @@ import type { MembershipFieldDef } from "@/lib/membership-form";
 import { GRID_TYPES, CORE_KEYS, isSectionType } from "@/lib/membership-form";
 import { ImageUploadCropper } from "@/components/upload/image-upload-cropper";
 import { FileUploadField } from "@/components/upload/file-upload-field";
+import { Select } from "@/components/console/form";
 import { useT } from "@/lib/i18n/client";
 
 type Props = {
@@ -408,7 +409,7 @@ export function MembershipApplicationForm({ fields, periodId, defaults, action, 
                     className={`${common} resize-none`}
                   />
                 ) : f.type === "select" ? (
-                  <select
+                  <Select
                     id={id}
                     name={f.key}
                     disabled={preview}
@@ -417,17 +418,15 @@ export function MembershipApplicationForm({ fields, periodId, defaults, action, 
                     aria-describedby={describedBy}
                     onChange={(e) => update(f.key, e.target.value)}
                     className={common}
+                    placeholder={t("membership.form.selectPlaceholder")}
                   >
-                    <option value="" disabled>
-                      {t("membership.form.selectPlaceholder")}
-                    </option>
                     {(f.options ?? []).map((opt) => (
                       <option key={opt} value={opt}>
                         {opt}
                       </option>
                     ))}
-                  </select>
-                 ) : f.type === "image" ? (
+                  </Select>
+                ) : f.type === "image" ? (
                   authenticated ? (
                     <ImageUploadCropper name={f.key} folder="membership" aspect={1} required={f.required} />
                   ) : (

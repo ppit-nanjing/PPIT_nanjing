@@ -14,6 +14,7 @@ import { emailSenderStatus, emailSenderAddress } from "@/lib/email";
 import { MembershipDeleteButton } from "@/components/console/membership-delete-button";
 import { MembershipTabs } from "@/components/console/membership-tabs";
 import { CollapsibleSection } from "@/components/console/collapsible-section";
+import { Select, CheckboxField } from "@/components/console/form";
 import { CORE_KEYS, type MembershipFieldDef } from "@/lib/membership-form";
 import Image from "next/image";
 import Link from "next/link";
@@ -200,12 +201,18 @@ export default async function MembershipDetailPage({ params }: { params: Promise
         >
           <h2 className="text-headline-md text-on-background mb-4">Status</h2>
           <input type="hidden" name="id" value={app.id} />
-          <select name="status" defaultValue={app.status} className="bg-soft-gray rounded-md p-3 text-body-md w-full">
-            <option value="pending">{STATUS_LABEL.pending}</option>
-            <option value="reviewed">{STATUS_LABEL.reviewed}</option>
-            <option value="accepted">{STATUS_LABEL.accepted}</option>
-            <option value="rejected">{STATUS_LABEL.rejected}</option>
-          </select>
+          <Select
+            name="status"
+            defaultValue={app.status}
+            className="w-full"
+            aria-label="Status pendaftaran"
+            options={[
+              { value: "pending", label: STATUS_LABEL.pending },
+              { value: "reviewed", label: STATUS_LABEL.reviewed },
+              { value: "accepted", label: STATUS_LABEL.accepted },
+              { value: "rejected", label: STATUS_LABEL.rejected },
+            ]}
+          />
           {emailStatus === "ready" && (
             <p className="text-label-caps text-on-surface-variant mt-3">
               Memilih &ldquo;{STATUS_LABEL.accepted}&rdquo; atau &ldquo;{STATUS_LABEL.rejected}&rdquo; otomatis mengirim
@@ -231,10 +238,12 @@ export default async function MembershipDetailPage({ params }: { params: Promise
             </p>
           )}
           {/* Decision emails are irreversible - keep them opt-out per save, not automatic. */}
-          <label className="flex items-center gap-2 mt-3 text-body-md text-on-background cursor-pointer">
-            <input type="checkbox" name="notifyApplicant" defaultChecked className="w-4 h-4 accent-[var(--color-primary-container)]" />
-            Kirim email pengumuman ke pendaftar saat status berubah jadi Diterima/Ditolak
-          </label>
+          <CheckboxField
+            name="notifyApplicant"
+            defaultChecked
+            label="Kirim email pengumuman ke pendaftar saat status berubah jadi Diterima/Ditolak"
+            className="mt-3 text-on-background"
+          />
           <button
             type="submit"
             className="mt-4 bg-primary-container text-on-primary text-label-caps uppercase tracking-wide px-6 py-3 rounded-md hover:bg-primary transition-colors"

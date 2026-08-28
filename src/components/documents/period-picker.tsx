@@ -1,5 +1,7 @@
 "use client";
 
+import { Select } from "@/components/console/form";
+
 type Props = {
   periods: { id: string; label: string }[];
   activePeriodId: string | null;
@@ -15,12 +17,12 @@ export function PeriodPicker({ periods, activePeriodId }: Props) {
     <form method="get" className="flex items-end gap-2">
       <label className="flex flex-col gap-1.5">
         <span className="text-label-caps uppercase tracking-wide text-on-surface-variant">Periode</span>
-        <select
+        <Select
           key={activePeriodId ?? "all"}
           name="period"
           defaultValue={activePeriodId ?? "all"}
           onChange={(e) => e.currentTarget.form?.requestSubmit()}
-          className="bg-surface-container-lowest border border-outline-variant rounded-lg px-3 py-2 text-body-md"
+          className="w-full sm:w-auto"
         >
           <option value="all">Pilih periode…</option>
           {periods.map((p) => (
@@ -28,7 +30,7 @@ export function PeriodPicker({ periods, activePeriodId }: Props) {
               {p.label}
             </option>
           ))}
-        </select>
+        </Select>
       </label>
     </form>
   );

@@ -9,9 +9,9 @@ import {
   assignMembersToDivision,
   removeCommittee,
 } from "@/app/actions/committee";
-import { EVENT_STRUCTURE_TEMPLATES, STRUCTURE_TEMPLATE_GROUPS } from "@/lib/event-structure-templates";
 import { DivisionMemberPicker } from "@/components/console/division-member-picker";
-import { fieldInput } from "@/components/console/form";
+import { TemplatePicker } from "@/components/console/template-picker";
+import { fieldInput, Select } from "@/components/console/form";
 
 // Peran penugasan baru. humas/acara/logistik/dokumentasi sengaja tidak ada:
 // itu nama DIVISI, bukan peran - di skema nilainya tinggal demi baris lama.
@@ -122,24 +122,11 @@ export function EventCommitteeStructure({
             jobdesc, dan divisinya bebas diubah-hapus setelah diterapkan. Atau bangun manual dari form
             di bawah.
           </p>
-          <form action={applyStructureTemplate} className="flex flex-wrap items-center gap-2">
+          <form action={applyStructureTemplate} className="flex flex-wrap items-start gap-2">
             <input type="hidden" name="eventId" value={eventId} />
-            <select
-              name="templateId"
-              defaultValue="wif"
-              aria-label="Pilih template struktur kepanitiaan"
-              className={`${input} w-auto min-w-[16rem]`}
-            >
-              {STRUCTURE_TEMPLATE_GROUPS.map((group) => (
-                <optgroup key={group.id} label={group.label}>
-                  {EVENT_STRUCTURE_TEMPLATES.filter((t) => t.group === group.id).map((t) => (
-                    <option key={t.id} value={t.id}>
-                      {t.label}
-                    </option>
-                  ))}
-                </optgroup>
-              ))}
-            </select>
+            {/* Deskripsi + pengingat peran inti template terpilih dirender
+                oleh picker ini sendiri (ikut berganti saat select berubah). */}
+            <TemplatePicker />
             <button
               type="submit"
               className="flex items-center gap-1.5 bg-primary-container text-on-primary text-label-caps uppercase tracking-wide px-4 py-2.5 rounded-md hover:bg-primary transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-container focus-visible:ring-offset-2 focus-visible:ring-offset-background motion-reduce:transition-none"
@@ -147,12 +134,6 @@ export function EventCommitteeStructure({
               <LayoutTemplate size={14} /> Terapkan Template
             </button>
           </form>
-          <p className="text-xs text-on-surface-variant max-w-2xl">
-            Peran inti tidak ikut template — mereka ditugaskan tanpa divisi lewat form panitia inti:
-            Acara Besar → Ketua Pelaksana, Wakil, Sekretaris, Bendahara, SC · Formal/Sidang →
-            PJ/Dewan Pengarah, Ketua KPU/Presidium, Notulis Utama, Bendahara · Proker Divisi →
-            Project Officer, Sekretaris &amp; Administrasi, Bendahara.
-          </p>
         </div>
       )}
 
@@ -229,14 +210,13 @@ export function EventCommitteeStructure({
                 <input type="hidden" name="eventId" value={eventId} />
                 <input type="hidden" name="divisionId" value={dept.id} />
                 <input type="hidden" name="role" value="ketua" />
-                <select name="userId" required defaultValue="" className={`${input} w-auto`} aria-label={`Pilih ketua ${dept.name}`}>
-                  <option value="" disabled>Ganti / tetapkan ketua…</option>
+                <Select name="userId" required defaultValue="" aria-label={`Pilih ketua ${dept.name}`} className="w-auto" placeholder="Ganti / tetapkan ketua…">
                   {candidates
                     .filter((c) => c.id !== ketuaOf(dept.id)?.userId)
                     .map((c) => (
                       <option key={c.id} value={c.id}>{c.name ?? c.email}</option>
                     ))}
-                </select>
+                </Select>
                 <button type="submit" className="text-label-caps uppercase tracking-wide border border-outline-variant px-3 py-1.5 rounded-md hover:bg-surface-container-low transition-colors">
                   Tetapkan Ketua
                 </button>
@@ -333,14 +313,14 @@ export function EventCommitteeStructure({
           </label>
           <label className="flex flex-col gap-1">
             <span className={label}>Di bawah</span>
-            <select name="parentDivisionId" defaultValue="" className={input}>
+            <Select name="parentDivisionId" defaultValue="" className="w-full">
               <option value="">— Departemen (tingkat atas)</option>
               {roots.map((d) => (
                 <option key={d.id} value={d.id}>
                   {d.name}
                 </option>
               ))}
-            </select>
+            </Select>
           </label>
           <label className="flex flex-col gap-1">
             <span className={label}>Kuota (orang)</span>
@@ -373,20 +353,18 @@ export function EventCommitteeStructure({
           <input type="hidden" name="eventId" value={eventId} />
           <label className="flex flex-col gap-1">
             <span className={label}>Orang *</span>
-            <select name="userId" required defaultValue="" className={input}>
-              <option value="" disabled>
-                Pilih anggota
-              </option>
-              {candidates.map((u) => (
-                <option key={u.id} value={u.id}>
-                  {u.name ?? u.email}
-                </option>
-              ))}
-            </select>
+            <Select
+              name="userId"
+              required
+              defaultValue=""
+              className="w-full"
+              placeholder="Pilih anggota"
+              options={candidates.map((u) => ({ value: u.id, label: u.name ?? u.email }))}
+            />
           </label>
           <label className="flex flex-col gap-1">
             <span className={label}>Divisi</span>
-            <select name="divisionId" defaultValue="" className={input}>
+            <Select name="divisionId" defaultValue="" className="w-full">
               <option value="">— Tanpa divisi (panitia inti)</option>
               {roots.map((d) => (
                 <optgroup key={d.id} label={d.name}>
@@ -398,17 +376,11 @@ export function EventCommitteeStructure({
                   ))}
                 </optgroup>
               ))}
-            </select>
+            </Select>
           </label>
           <label className="flex flex-col gap-1">
             <span className={label}>Peran di divisi</span>
-            <select name="role" defaultValue="anggota" className={input}>
-              {ROLES.map((r) => (
-                <option key={r} value={r}>
-                  {r}
-                </option>
-              ))}
-            </select>
+            <Select name="role" defaultValue="anggota" className="w-full" options={ROLES.map((r) => ({ value: r, label: r }))} />
           </label>
           <p className="text-xs text-on-surface-variant">
             Peran + nama divisi yang membentuk sebutan lengkapnya — <em>ketua</em> di divisi <em>Perlengkapan</em> =

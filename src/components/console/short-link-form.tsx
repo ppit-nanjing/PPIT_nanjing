@@ -2,6 +2,7 @@
 
 import { useActionState, useMemo } from "react";
 import type { ShortLinkFormState } from "@/app/actions/short-links";
+import { Select, ToggleSwitch, fieldInput } from "@/components/console/form";
 
 const CATEGORIES: { value: string; label: string }[] = [
   { value: "documentation", label: "Dokumentasi" },
@@ -65,7 +66,7 @@ export function ShortLinkForm({
           required
           defaultValue={initial?.title ?? ""}
           placeholder="mis. Dokumentasi AD/ART 2025/2026"
-          className="bg-surface-container-lowest border border-outline-variant rounded-lg px-4 py-2.5 text-body-md outline-none focus:border-primary"
+          className={fieldInput}
         />
       </label>
 
@@ -77,7 +78,7 @@ export function ShortLinkForm({
           type="url"
           defaultValue={initial?.targetUrl ?? ""}
           placeholder="https://drive.google.com/..."
-          className="bg-surface-container-lowest border border-outline-variant rounded-lg px-4 py-2.5 text-body-md outline-none focus:border-primary"
+          className={fieldInput}
         />
         <span className="text-label-caps text-on-surface-variant/80">
           Tujuan penerusan (Google Drive, Vercel Blob, dll). Catatan: Drive diblokir di Tiongkok.
@@ -92,7 +93,7 @@ export function ShortLinkForm({
           name="slug"
           defaultValue={initial?.slug ?? ""}
           placeholder={previewSlug || "dokumentasi-ad-art"}
-          className="bg-surface-container-lowest border border-outline-variant rounded-lg px-4 py-2.5 text-body-md outline-none focus:border-primary"
+          className={fieldInput}
         />
         <span className="text-label-caps text-on-surface-variant/80">
           Tautan publik: <code className="text-on-background">nanjing.ppitiongkok.com/l/{previewSlug || "…"}</code>
@@ -102,41 +103,27 @@ export function ShortLinkForm({
 
       <label className="flex flex-col gap-1.5">
         <span className="text-label-caps uppercase tracking-wide text-on-surface-variant">Kategori</span>
-        <select
-          name="category"
-          defaultValue={initial?.category ?? "other"}
-          className="bg-surface-container-lowest border border-outline-variant rounded-lg px-4 py-2.5 text-body-md outline-none focus:border-primary"
-        >
-          {CATEGORIES.map((c) => (
-            <option key={c.value} value={c.value}>
-              {c.label}
-            </option>
-          ))}
-        </select>
+        <Select name="category" defaultValue={initial?.category ?? "other"} options={CATEGORIES} className="w-full" />
       </label>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <label className="flex flex-col gap-1.5">
           <span className="text-label-caps uppercase tracking-wide text-on-surface-variant">Periode kepengurusan</span>
-          <select
-            name="managementPeriodId"
-            defaultValue={initial?.managementPeriodId ?? "none"}
-            className="bg-surface-container-lowest border border-outline-variant rounded-lg px-4 py-2.5 text-body-md outline-none focus:border-primary"
-          >
+          <Select name="managementPeriodId" defaultValue={initial?.managementPeriodId ?? "none"} className="w-full">
             <option value="none">— Tanpa periode —</option>
             {periods.map((p) => (
               <option key={p.id} value={p.id}>
                 {p.label}
               </option>
             ))}
-          </select>
+          </Select>
         </label>
         <label className="flex flex-col gap-1.5">
           <span className="text-label-caps uppercase tracking-wide text-on-surface-variant">Periode baru (opsional)</span>
           <input
             name="newPeriod"
             placeholder="isi untuk buat periode baru"
-            className="bg-surface-container-lowest border border-outline-variant rounded-lg px-4 py-2.5 text-body-md outline-none focus:border-primary"
+            className={fieldInput}
           />
         </label>
       </div>
@@ -149,7 +136,7 @@ export function ShortLinkForm({
           name="expiresAt"
           type="datetime-local"
           defaultValue={initial?.expiresAt ?? ""}
-          className="bg-surface-container-lowest border border-outline-variant rounded-lg px-4 py-2.5 text-body-md outline-none focus:border-primary"
+          className={fieldInput}
         />
       </label>
 
@@ -161,15 +148,12 @@ export function ShortLinkForm({
           name="description"
           rows={3}
           defaultValue={initial?.description ?? ""}
-          className="bg-surface-container-lowest border border-outline-variant rounded-lg px-4 py-2.5 text-body-md outline-none focus:border-primary resize-y"
+          className={`${fieldInput} resize-y`}
         />
       </label>
 
       {showActive && (
-        <label className="flex items-center gap-2.5">
-          <input type="checkbox" name="isActive" defaultChecked={initial?.isActive ?? true} className="w-4 h-4" />
-          <span className="text-body-md text-on-background">Tautan aktif (bisa dibuka publik)</span>
-        </label>
+        <ToggleSwitch name="isActive" defaultChecked={initial?.isActive ?? true} label="Tautan aktif (bisa dibuka publik)" />
       )}
 
       <button

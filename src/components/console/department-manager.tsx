@@ -4,6 +4,7 @@ import { useState, useTransition } from "react";
 import { ChevronUp, ChevronDown, Pencil, Plus, X } from "lucide-react";
 import { createDepartment, updateDepartment, moveDepartment } from "@/app/actions/admin-departments";
 import { ASSIGNABLE_SCOPE_KEYS, SENSITIVE_SCOPE_KEYS } from "@/lib/admin-scope-constants";
+import { Select, CheckboxField } from "@/components/console/form";
 
 interface Department {
   id: string;
@@ -76,16 +77,13 @@ export function DepartmentManager({
 function AccessFields({ dept, isFullAdmin }: { dept: Department; isFullAdmin: boolean }) {
   return (
     <div className="bg-surface-container-lowest rounded-md p-3 flex flex-col gap-2">
-      <label className="flex items-center gap-2 text-body-md text-on-background">
-        <input
-          type="checkbox"
-          name="grantsFullAdminAccess"
-          defaultChecked={dept.grantsFullAdminAccess}
-          disabled={!isFullAdmin}
-          className="w-4 h-4 disabled:opacity-50"
-        />
-        Berikan akses admin penuh ke semua anggota (mis. Divisi Teknologi)
-      </label>
+      <CheckboxField
+        name="grantsFullAdminAccess"
+        defaultChecked={dept.grantsFullAdminAccess}
+        disabled={!isFullAdmin}
+        label="Berikan akses admin penuh ke semua anggota (mis. Divisi Teknologi)"
+        className="text-on-background"
+      />
       {!isFullAdmin && (
         <p className="text-label-caps text-on-surface-variant">Hanya BPH yang dapat mengubah akses penuh &amp; modul sensitif.</p>
       )}
@@ -96,17 +94,15 @@ function AccessFields({ dept, isFullAdmin }: { dept: Department; isFullAdmin: bo
         {ASSIGNABLE_SCOPE_KEYS.map((m) => {
           const isSensitive = SENSITIVE_SCOPE_KEYS.includes(m.key as (typeof SENSITIVE_SCOPE_KEYS)[number]);
           return (
-            <label key={m.key} className="flex items-center gap-2 text-label-caps text-on-background">
-              <input
-                type="checkbox"
-                name="adminModuleScope"
-                value={m.key}
-                defaultChecked={dept.adminModuleScope.includes(m.key)}
-                disabled={isSensitive && !isFullAdmin}
-                className="w-3.5 h-3.5 disabled:opacity-50"
-              />
-              {m.label}
-            </label>
+            <CheckboxField
+              key={m.key}
+              name="adminModuleScope"
+              value={m.key}
+              defaultChecked={dept.adminModuleScope.includes(m.key)}
+              disabled={isSensitive && !isFullAdmin}
+              label={m.label}
+              className="text-label-caps text-on-background"
+            />
           );
         })}
       </div>
@@ -118,11 +114,11 @@ function HeadSelect({ dept, members }: { dept: Department; members: Member[] }) 
   return (
     <label className="flex flex-col gap-1">
       <span className="text-label-caps uppercase tracking-wide text-on-surface-variant">Kepala</span>
-      <select
+      <Select
         key={dept.headUserId ?? "none"}
         name="headUserId"
         defaultValue={dept.headUserId ?? ""}
-        className="bg-soft-gray rounded-md p-2 text-body-md"
+        className="w-full"
       >
         <option value="">— Tidak ada —</option>
         {members.map((m) => (
@@ -130,7 +126,7 @@ function HeadSelect({ dept, members }: { dept: Department; members: Member[] }) 
             {m.name ?? m.email}
           </option>
         ))}
-      </select>
+      </Select>
       {members.length === 0 && (
         <span className="text-label-caps text-on-surface-variant normal-case">
           Belum ada anggota di sini — tambahkan lewat halaman Pengguna dulu, baru bisa dipilih jadi kepala.

@@ -28,9 +28,29 @@
  */
 import { and, eq, isNull } from "drizzle-orm";
 import { db } from "./index";
-import { events, eventDivisions } from "./schema";
+import { events, eventDivisions, eventFeeOptions } from "./schema";
 
 const SLUG = "wif-2026";
+
+// Tarif masuk WIF: freshmen (S1 tahun pertama) vs bukan. Di-upsert lewat label
+// supaya menjalankan ulang tidak menggandakan; nominalnya di-update kalau
+// berubah, tapi kategori yang ditambah panitia lewat console tidak dihapus.
+const FEE_OPTIONS: { label: string; amountCny: number }[] = [
+  { label: "Freshmen", amountCny: 15 },
+  { label: "Non-freshmen", amountCny: 25 },
+];
+
+const PAYMENT_INSTRUCTIONS = [
+  "Bayar entrance fee sesuai kategori (Freshmen ¥15 / Non-freshmen ¥25) via Weixin Pay atau Alipay.",
+  "WAJIB cantumkan nama lengkap kamu di kolom notes/catatan transfer.",
+  "Unggah bukti transfer di halaman ini. Kalau ada kendala upload, hubungi panitia lewat WeChat.",
+].join("\n");
+
+const CONFIRMATION_INFO = [
+  "Masuk grup WeChat WIF 2026 — add salah satu:",
+  "WeChat ID: rhpxzz (Gwen)",
+  "WeChat ID: athayamzzra (Athaya)",
+].join("\n");
 
 // Kuota departemen = 1 (kursi Ketua Departemen); anggotanya dihitung di
 // sub-timnya masing-masing. Halaman struktur menjumlahkan ke atas, jadi
@@ -102,9 +122,14 @@ async function main() {
   const eventValues = {
     title: "WIF 2026 (Welcoming Indonesian Freshman)",
     slug: SLUG,
-    location: "Novotel",
+    location: "Novotel Hotel (Daminglu Station Line 3)",
     startAt,
     endAt,
+    // Form pendaftaran WIF: biodata lengkap peserta + entrance fee bertingkat.
+    requiresBiodata: true,
+    isPaid: true,
+    paymentInstructions: PAYMENT_INSTRUCTIONS,
+    confirmationInfo: CONFIRMATION_INFO,
     // Sengaja draft. Pengurus yang memutuskan kapan tampil ke publik.
     status: "draft" as const,
   };
@@ -113,10 +138,20 @@ async function main() {
   if (existing) {
     // Deskripsi, kapasitas, sampul, dan status TIDAK ditimpa: kalau sudah
     // disunting lewat console, menjalankan skrip ini lagi tidak boleh
-    // membatalkan suntingan itu.
+    // membatalkan suntingan itu. requiresBiodata/isPaid/instruksi bayar ikut
+    // di-set karena itu bagian dari "bentuk form WIF" yang skrip ini definisikan.
     await db
       .update(events)
-      .set({ title: eventValues.title, location: eventValues.location, startAt, endAt })
+      .set({
+        title: eventValues.title,
+        location: eventValues.location,
+        startAt,
+        endAt,
+        requiresBiodata: true,
+        isPaid: true,
+        paymentInstructions: PAYMENT_INSTRUCTIONS,
+        confirmationInfo: CONFIRMATION_INFO,
+      })
       .where(eq(events.id, existing.id));
     eventId = existing.id;
     console.log(`Acara sudah ada, diperbarui: ${eventValues.title}`);
@@ -125,6 +160,25 @@ async function main() {
     eventId = created.id;
     console.log(`Acara dibuat sebagai DRAFT: ${eventValues.title}`);
   }
+
+  // Kategori tarif (upsert per label).
+  let tarifBaru = 0;
+  for (const [i, opt] of FEE_OPTIONS.entries()) {
+    const [found] = await db
+      .select({ id: eventFeeOptions.id })
+      .from(eventFeeOptions)
+      .where(and(eq(eventFeeOptions.eventId, eventId), eq(eventFeeOptions.label, opt.label)));
+    if (found) {
+      await db
+        .update(eventFeeOptions)
+        .set({ amountCny: opt.amountCny, orderIndex: i })
+        .where(eq(eventFeeOptions.id, found.id));
+    } else {
+      await db.insert(eventFeeOptions).values({ eventId, label: opt.label, amountCny: opt.amountCny, orderIndex: i });
+      tarifBaru++;
+    }
+  }
+  console.log(`Kategori tarif: ${tarifBaru} dibuat, ${FEE_OPTIONS.length - tarifBaru} diperbarui.`);
 
   let dibuat = 0;
   let diperbarui = 0;

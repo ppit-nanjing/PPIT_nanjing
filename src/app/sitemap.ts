@@ -1,5 +1,5 @@
 import type { MetadataRoute } from "next";
-import { eq, and } from "drizzle-orm";
+import { eq } from "drizzle-orm";
 import { db } from "@/db";
 import { events, newsArticles, galleryAlbums, jobPostings } from "@/db/schema";
 

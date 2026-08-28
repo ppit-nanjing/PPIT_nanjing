@@ -5,6 +5,7 @@ import type { ContentFormState } from "@/app/actions/admin-content";
 import { ImageUploadCropper } from "@/components/upload/image-upload-cropper";
 import { AIImproveButton } from "@/components/ai/ai-improve-button";
 import { AIReviewButton } from "@/components/ai/ai-review-popup";
+import { CheckboxField } from "@/components/console/form";
 
 // Shared create/edit form for console news. Client component so validation
 // errors from upsertNewsArticle render inline (useActionState) instead of
@@ -78,10 +79,12 @@ export function NewsArticleForm({
           <AIReviewButton context="news" fields={[{ id: "news-title", label: "Judul" }, { id: "news-content", label: "Isi" }]} />
         </div>
       </div>
-      <label className="flex items-center gap-2 text-body-md text-on-background">
-        <input type="checkbox" name="publish" defaultChecked={alreadyPublished} className="w-4 h-4" />
-        {alreadyPublished ? "Dipublikasikan" : "Publikasikan sekarang (jika tidak dicentang, tersimpan sebagai draf)"}
-      </label>
+      <CheckboxField
+        name="publish"
+        defaultChecked={alreadyPublished}
+        label={alreadyPublished ? "Dipublikasikan" : "Publikasikan sekarang (jika tidak dicentang, tersimpan sebagai draf)"}
+        className="text-on-background"
+      />
       {alreadyPublished ? (
         <p className="text-label-caps text-on-surface-variant -mt-3">
           Sudah dipublikasikan — email pengumuman sudah terkirim ke pelanggan saat pertama kali dipublikasikan, dan

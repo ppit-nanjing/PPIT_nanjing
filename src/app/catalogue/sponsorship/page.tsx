@@ -13,6 +13,10 @@ const TIER_ORDER = ["platinum", "gold", "silver", "partner"];
 
 export default async function SponsorshipPage() {
   const { t, locale } = await getT();
+  // sponsors.description punya varian *_en auto-terjemahan (bisa null);
+  // sponsors.name TIDAK - nama organisasi/merek adalah nama diri.
+  const pickDesc = (s: { description: string | null; descriptionEn: string | null }) =>
+    locale === "en" ? (s.descriptionEn ?? s.description) : s.description;
   const [rows, participation] = await Promise.all([
     db
       .select()
@@ -131,7 +135,7 @@ export default async function SponsorshipPage() {
                     )}
                     <div className="min-w-0">
                       <h3 className="text-body-lg text-on-background">{s.name}</h3>
-                      {s.description && <p className="text-body-md text-on-surface-variant mt-1">{s.description}</p>}
+                      {pickDesc(s) && <p className="text-body-md text-on-surface-variant mt-1">{pickDesc(s)}</p>}
                       {s.websiteUrl && (
                         <a
                           href={s.websiteUrl}

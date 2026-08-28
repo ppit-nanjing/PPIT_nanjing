@@ -8,7 +8,7 @@ import { compressImage } from "@/lib/image-compress";
 
 type Props = {
   name: string;
-  folder: "resume" | "news" | "gallery" | "album" | "inventory" | "payment-proof";
+  folder: "resume" | "news" | "gallery" | "album" | "inventory" | "payment-proof" | "event-doc";
   label?: string;
   placeholder?: string;
   required?: boolean;

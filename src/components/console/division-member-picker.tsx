@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { CheckboxField } from "@/components/console/form";
 
 interface Candidate {
   id: string;
@@ -45,16 +46,18 @@ export function DivisionMemberPicker({
       />
       <div className="max-h-48 overflow-y-auto border border-outline-variant rounded-md p-2 flex flex-col gap-1 bg-surface-container-lowest">
         {filtered.map((c) => (
-          <label key={c.id} className="flex items-center gap-2 text-body-sm cursor-pointer rounded px-1 py-0.5 hover:bg-surface-container-low">
-            <input
-              type="checkbox"
-              name="userId"
-              value={c.id}
-              className="h-4 w-4 accent-[var(--color-primary-container)] shrink-0"
-            />
-            <span className="text-on-background truncate">{c.name ?? "(tanpa nama)"}</span>
-            <span className="text-on-surface-variant truncate">{c.email}</span>
-          </label>
+          <CheckboxField
+            key={c.id}
+            name="userId"
+            value={c.id}
+            className="text-body-sm rounded px-1 py-0.5 hover:bg-surface-container-low"
+            label={
+              <>
+                <span className="text-on-background">{c.name ?? "(tanpa nama)"}</span>{" "}
+                <span className="text-on-surface-variant">{c.email}</span>
+              </>
+            }
+          />
         ))}
         {filtered.length === 0 && (
           <p className="text-label-caps text-on-surface-variant py-2 text-center">Tidak ada yang cocok.</p>
