@@ -8,11 +8,12 @@ import { useT } from "@/lib/i18n/client";
 
 type Props = {
   action: (prev: AuthFormState, formData: FormData) => Promise<AuthFormState>;
+  googleAction?: (formData: FormData) => Promise<void>;
   mode: "signin" | "signup";
   returnTo?: string;
 };
 
-export function CredentialForm({ action, mode, returnTo }: Props) {
+export function CredentialForm({ action, googleAction, mode, returnTo }: Props) {
   const t = useT();
   const [state, formAction, pending] = useActionState(action, {} as AuthFormState);
   const emailRef = useRef<HTMLInputElement>(null);
@@ -91,6 +92,26 @@ export function CredentialForm({ action, mode, returnTo }: Props) {
         </div>
       )}
 
+      {mode === "signin" && (
+        <label className="flex cursor-pointer items-start gap-3 rounded-md border border-outline-variant bg-surface-container-low px-3 py-3 text-left transition-colors hover:bg-surface-container focus-within:ring-2 focus-within:ring-primary-container focus-within:ring-offset-2 focus-within:ring-offset-surface-container-lowest">
+          <input
+            id="remember"
+            name="remember"
+            type="checkbox"
+            value="true"
+            defaultChecked
+            aria-describedby="remember-description"
+            className="mt-0.5 h-4 w-4 shrink-0 cursor-pointer rounded border-outline accent-primary-container focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-container"
+          />
+          <span className="min-w-0">
+            <span className="block text-body-sm font-medium text-on-background">{t("auth.loginRemember")}</span>
+            <span id="remember-description" className="mt-0.5 block text-body-sm text-on-surface-variant">
+              {t("auth.loginRememberDesc")}
+            </span>
+          </span>
+        </label>
+      )}
+
       {state?.errorKey && (
         <div
           id={errorId}
@@ -111,6 +132,39 @@ export function CredentialForm({ action, mode, returnTo }: Props) {
         {pending && <Loader2 size={16} className="animate-spin" />}
         {mode === "signup" ? t("auth.submitSignUp") : t("auth.submitSignIn")}
       </button>
+
+      {mode === "signin" && googleAction && (
+        <>
+          <div className="flex items-center gap-3 py-2">
+            <span className="h-px flex-1 bg-outline-variant" />
+            <span className="text-label-caps uppercase tracking-wide text-on-surface-variant">{t("auth.or")}</span>
+            <span className="h-px flex-1 bg-outline-variant" />
+          </div>
+          <button
+            type="submit"
+            formAction={googleAction}
+            aria-label={t("auth.googleSignInAria")}
+            className="flex w-full items-center justify-center gap-3 rounded-md border border-outline-variant bg-surface-container-lowest py-3.5 text-body-md font-medium text-on-background transition-colors hover:bg-surface-container-low focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-container focus-visible:ring-offset-2 focus-visible:ring-offset-surface-container-lowest"
+          >
+            <svg width="18" height="18" viewBox="0 0 18 18" aria-hidden="true">
+              <path
+                fill="#4285F4"
+                d="M17.64 9.2c0-.64-.06-1.25-.16-1.84H9v3.48h4.84a4.14 4.14 0 0 1-1.8 2.72v2.26h2.9c1.7-1.57 2.7-3.87 2.7-6.62Z"
+              />
+              <path
+                fill="#34A853"
+                d="M9 18c2.43 0 4.47-.81 5.96-2.18l-2.9-2.26c-.81.54-1.85.86-3.06.86-2.35 0-4.34-1.59-5.05-3.72H.94v2.33A9 9 0 0 0 9 18Z"
+              />
+              <path fill="#FBBC05" d="M3.95 10.7A5.4 5.4 0 0 1 3.67 9c0-.59.1-1.17.28-1.7V4.97H.94A9 9 0 0 0 0 9c0 1.45.35 2.83.94 4.03l3.01-2.33Z" />
+              <path
+                fill="#EA4335"
+                d="M9 3.58c1.32 0 2.51.46 3.44 1.35l2.58-2.58C13.46.89 11.43 0 9 0A9 9 0 0 0 .94 4.97l3.01 2.33C4.66 5.17 6.65 3.58 9 3.58Z"
+              />
+            </svg>
+            {t("auth.googleContinue")}
+          </button>
+        </>
+      )}
 
       {mode === "signin" ? (
         <p className="text-body-sm text-on-surface-variant text-center">

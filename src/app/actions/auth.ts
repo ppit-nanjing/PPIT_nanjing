@@ -1,11 +1,12 @@
 "use server";
 
 import { AuthError } from "next-auth";
+import { cookies } from "next/headers";
 import { unstable_rethrow } from "next/navigation";
 import { eq } from "drizzle-orm";
 import { db } from "@/db";
 import { users } from "@/db/schema";
-import { signIn } from "@/auth";
+import { LOGIN_REMEMBER_COOKIE, signIn } from "@/auth";
 import { hashPassword } from "@/lib/password";
 import { safeRedirect } from "@/lib/safe-redirect";
 import type { TKey } from "@/lib/i18n/dictionaries/id";
@@ -88,8 +89,9 @@ export async function signInWithPassword(_prev: AuthFormState, formData: FormDat
   if (!email || !password) return { errorKey: "auth.errCredentialsRequired" };
 
   const returnTo = safeRedirect(String(formData.get("returnTo") ?? ""));
+  const remember = formData.get("remember") === "true" ? "true" : "false";
   try {
-    await signIn("credentials", { email, password, redirectTo: returnTo });
+    await signIn("credentials", { email, password, remember, redirectTo: returnTo });
   } catch (error) {
     // signIn() sets the session cookie and then throws redirect() on success.
     // On Next.js 16 a redirect caught in a try block is no longer recognised as
@@ -104,4 +106,17 @@ export async function signInWithPassword(_prev: AuthFormState, formData: FormDat
     throw error;
   }
   return {};
+}
+
+export async function signInWithGoogle(formData: FormData) {
+  const returnTo = safeRedirect(String(formData.get("returnTo") ?? ""));
+  const cookieStore = await cookies();
+  cookieStore.set(LOGIN_REMEMBER_COOKIE, formData.get("remember") === "true" ? "true" : "false", {
+    httpOnly: true,
+    maxAge: 15 * 60,
+    path: "/",
+    sameSite: "lax",
+    secure: process.env.NODE_ENV === "production",
+  });
+  await signIn("google", { redirectTo: returnTo });
 }
