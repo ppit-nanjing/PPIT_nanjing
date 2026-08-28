@@ -114,7 +114,7 @@ body {
 .brand-logo {
   display: block;
   flex: none;
-  background-color: #d6222a;
+  background-color: #ffffff;
   -webkit-mask: url("/logo.svg") center / contain no-repeat;
   mask: url("/logo.svg") center / contain no-repeat;
 }
