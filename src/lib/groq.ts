@@ -1,17 +1,25 @@
 const GROQ_URL = "https://api.groq.com/openai/v1/chat/completions";
 // Groq retired llama-3.3-70b-versatile (confirmed via GET /openai/v1/models -
 // 404 model_not_found as of 2026-08-28), which silently broke every AI feature
-// on the site (AI Improve, help-center chat, content suggestions, and the new
+// on the site (AI Improve, help-center chat, content suggestions, and
 // translateFields() below) since whatever day Groq pulled it - groqChat() only
-// throws a generic "Layanan AI sedang tidak tersedia", so nothing surfaced this
-// distinctly from a transient outage. Re-check /openai/v1/models if this 404s
-// again; Groq's active lineup rotates.
-const GROQ_DEFAULT_MODEL = "openai/gpt-oss-120b";
+// threw a generic "Layanan AI sedang tidak tersedia", indistinguishable from a
+// transient outage.
+//
+// Fix: walk this chain in order instead of hardcoding one model. One entry
+// being retired/rate-limited/momentarily down no longer takes out every AI
+// feature at once - it just falls through to the next. Re-check
+// GET /openai/v1/models if every entry starts 404ing; Groq's lineup rotates.
+// This only covers a single retired/unavailable MODEL, not Groq's API being
+// down entirely - that would need a second provider (OpenRouter/Gemini), not
+// wired up yet.
+const GROQ_MODEL_CHAIN = ["openai/gpt-oss-120b", "openai/gpt-oss-20b", "qwen/qwen3.8-27b"];
 
 export type GroqRole = "system" | "user" | "assistant";
 export type GroqMessage = { role: GroqRole; content: string };
 
 type GroqOptions = {
+  /** Pin an exact model, skipping the fallback chain entirely. No current caller does this. */
   model?: string;
   temperature?: number;
   maxTokens?: number;
@@ -27,30 +35,50 @@ export async function groqChat(messages: GroqMessage[], opts: GroqOptions = {}):
     throw new Error("GROQ_API_KEY belum diatur di environment");
   }
 
-  const res = await fetch(GROQ_URL, {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${apiKey}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      model: opts.model ?? GROQ_DEFAULT_MODEL,
-      messages,
-      temperature: opts.temperature ?? 0.6,
-      max_tokens: opts.maxTokens ?? 800,
-    }),
-  });
+  const candidates = opts.model ? [opts.model] : GROQ_MODEL_CHAIN;
+  let lastError = new Error("Layanan AI sedang tidak tersedia");
 
-  if (!res.ok) {
-    throw new Error(`Layanan AI sedang tidak tersedia (${res.status})`);
+  for (const model of candidates) {
+    let res: Response;
+    try {
+      res = await fetch(GROQ_URL, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${apiKey}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          model,
+          messages,
+          temperature: opts.temperature ?? 0.6,
+          max_tokens: opts.maxTokens ?? 800,
+        }),
+      });
+    } catch (err) {
+      lastError = err instanceof Error ? err : new Error(String(err));
+      continue; // network-level failure - try the next model
+    }
+
+    if (res.status === 401) {
+      // Bad/expired API key - every model in the chain fails identically, so
+      // stop now instead of burning N requests to learn that N times.
+      throw new Error(`Layanan AI sedang tidak tersedia (${res.status})`);
+    }
+    if (!res.ok) {
+      lastError = new Error(`Layanan AI sedang tidak tersedia (${res.status})`);
+      continue; // this model specifically is unavailable - try the next one
+    }
+
+    const data = await res.json();
+    const content = data?.choices?.[0]?.message?.content;
+    if (typeof content !== "string") {
+      lastError = new Error("Respons AI tidak valid");
+      continue;
+    }
+    return content.trim();
   }
 
-  const data = await res.json();
-  const content = data?.choices?.[0]?.message?.content;
-  if (typeof content !== "string") {
-    throw new Error("Respons AI tidak valid");
-  }
-  return content.trim();
+  throw lastError;
 }
 
 export type ImproveContext = "event" | "news" | "gallery" | "feedback";
@@ -95,10 +123,12 @@ export async function translateFields(fields: Record<string, string>): Promise<R
 
   const system =
     "Kamu penerjemah untuk situs publik PPIT Nanjing, organisasi mahasiswa Indonesia di Nanjing, Tiongkok. " +
-    "Kamu akan menerima satu objek JSON berisi teks Bahasa Indonesia. Terjemahkan NILAI setiap key ke Bahasa " +
-    "Inggris yang natural dan ringkas, JANGAN ubah key apa pun. Nama diri (tempat, merek, institusi) yang " +
-    "memang tidak lazim diterjemahkan boleh dibiarkan sama. JANGAN tambahkan key baru maupun penjelasan. " +
-    "Balas HANYA objek JSON valid satu baris, tanpa markdown code fence.";
+    "Kamu akan menerima satu objek JSON. Untuk setiap key, deteksi dulu bahasa isinya: kalau SUDAH Bahasa " +
+    "Inggris, kembalikan APA ADANYA verbatim - JANGAN diparafrase, dipoles, atau diubah gaya bahasanya sama " +
+    "sekali. Kalau bahasa lain (biasanya Indonesia), terjemahkan ke Bahasa Inggris yang natural dan ringkas. " +
+    "JANGAN ubah key apa pun. Nama diri (tempat, merek, institusi) yang memang tidak lazim diterjemahkan boleh " +
+    "dibiarkan sama. JANGAN tambahkan key baru maupun penjelasan. Balas HANYA objek JSON valid satu baris, " +
+    "tanpa markdown code fence.";
 
   let raw: string;
   try {
