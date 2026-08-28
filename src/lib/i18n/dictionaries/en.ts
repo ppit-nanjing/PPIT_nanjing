@@ -671,7 +671,7 @@ export const en = {
   "auth.loginTitle": "Sign in",
   "auth.loginIntro": "Sign in with your Google account, or use your email and password to register for events, fill in the census, and access other PPIT Nanjing services.",
   "auth.loginRemember": "Keep me signed in",
-  "auth.loginRememberDesc": "After signing in, you'll be redirected back to the page you were viewing.",
+  "auth.loginRememberDesc": "Stay signed in on this device for 30 days.",
   "auth.googleSignInAria": "Sign in with Google account",
   "auth.googleContinue": "Continue with Google",
   "auth.backHome": "Back to Home",
