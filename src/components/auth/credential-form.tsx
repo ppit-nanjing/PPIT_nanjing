@@ -56,10 +56,10 @@ export function CredentialForm({ action, mode, returnTo }: Props) {
     "absolute right-3 top-1/2 -translate-y-1/2 text-on-surface-variant hover:text-on-background transition-colors rounded-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-container";
 
   return (
-    <form action={formAction} className="flex flex-col gap-2 lg:gap-4" noValidate>
+    <form action={formAction} className="flex flex-col gap-2 lg:gap-1.5" noValidate>
       {returnTo ? <input type="hidden" name="returnTo" value={returnTo} /> : null}
 
-      <div className="flex flex-col gap-2">
+      <div className="flex flex-col gap-2 lg:gap-1.5">
         <label htmlFor="email" className="text-label-caps uppercase tracking-wide text-on-surface-variant">
           {t("auth.emailLabel")} <span className="text-error" aria-hidden="true">*</span>
         </label>
@@ -78,7 +78,7 @@ export function CredentialForm({ action, mode, returnTo }: Props) {
         />
       </div>
 
-      <div className="flex flex-col gap-2">
+      <div className="flex flex-col gap-2 lg:gap-1.5">
         <label htmlFor="password" className="text-label-caps uppercase tracking-wide text-on-surface-variant">
           {t("auth.passwordLabel")} <span className="text-error" aria-hidden="true">*</span>
         </label>
@@ -111,7 +111,7 @@ export function CredentialForm({ action, mode, returnTo }: Props) {
       </div>
 
       {mode === "signup" && (
-        <div className="flex flex-col gap-2">
+        <div className="flex flex-col gap-2 lg:gap-1.5">
           <label htmlFor="confirm" className="text-label-caps uppercase tracking-wide text-on-surface-variant">
             {t("auth.confirmLabel")} <span className="text-error" aria-hidden="true">*</span>
           </label>

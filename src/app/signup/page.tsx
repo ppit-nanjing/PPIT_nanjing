@@ -25,18 +25,18 @@ export default async function SignUpPage({
         <SeasonPanel />
       </div>
 
-      <div className="flex items-center justify-center px-[var(--spacing-container-padding)] py-4 s:py-6 lg:py-12">
+      <div className="flex items-center justify-center px-[var(--spacing-container-padding)] py-4 s:py-6 lg:py-4">
       <div className="max-w-sm w-full">
-        <div className="relative overflow-hidden bg-surface-container-lowest border border-outline-variant rounded-xl p-5 lg:p-8 shadow-[0_4px_24px_rgba(0,0,0,0.04)] text-center">
+        <div className="relative overflow-hidden bg-surface-container-lowest border border-outline-variant rounded-xl p-5 lg:p-3 shadow-[0_4px_24px_rgba(0,0,0,0.04)] text-center">
           <div className="absolute top-0 left-0 w-full h-1 bg-primary-container" />
-          <span className="text-headline-md font-bold text-primary uppercase tracking-tight block mb-2">PPIT Nanjing</span>
-          <h1 className="text-headline-lg text-on-background mb-2 lg:mb-3">{t("auth.signupTitle")}</h1>
-          <p className="text-body-md text-on-surface-variant mb-3 lg:mb-6">
+          <span className="text-headline-md font-bold text-primary uppercase tracking-tight block mb-2 lg:mb-1">PPIT Nanjing</span>
+          <h1 className="text-headline-lg text-on-background mb-2 lg:mb-1">{t("auth.signupTitle")}</h1>
+          <p className="text-body-md text-on-surface-variant mb-3 lg:mb-2">
             {t("auth.signupIntro")}
           </p>
 
           {returnTo !== "/" && (
-            <div className="flex items-start gap-3 bg-primary-container/10 border border-primary-container/20 rounded-lg p-3 lg:p-4 mb-3 lg:mb-6 text-left">
+            <div className="flex items-start gap-3 bg-primary-container/10 border border-primary-container/20 rounded-lg p-3 mb-3 text-left">
               <span className="text-label-caps uppercase tracking-wide text-primary-container font-semibold shrink-0">
                 {t("auth.signupRemember")}
               </span>
@@ -48,7 +48,7 @@ export default async function SignUpPage({
 
           <CredentialForm action={signUpWithPassword} mode="signup" returnTo={returnTo} />
 
-          <div className="flex items-center gap-3 my-3 lg:my-6">
+          <div className="flex items-center gap-3 my-3 lg:my-2">
             <span className="h-px flex-1 bg-outline-variant" />
             <span className="text-label-caps uppercase tracking-wide text-on-surface-variant">{t("auth.or")}</span>
             <span className="h-px flex-1 bg-outline-variant" />
@@ -76,7 +76,7 @@ export default async function SignUpPage({
            </form>
          </div>
 
-         <div className="text-center mt-3 lg:mt-6">
+         <div className="text-center mt-3 lg:mt-2">
            <Link
              href="/"
              className="group inline-flex items-center gap-2 text-label-caps uppercase tracking-wide text-on-surface-variant hover:text-on-background transition-colors rounded-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-container"
