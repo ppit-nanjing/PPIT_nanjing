@@ -944,6 +944,14 @@ export const id = {
   "places.empty": "Belum ada tempat yang ditampilkan",
   "places.emptyDesc": "Pengurus bisa menambahkannya lewat Console → Tempat.",
   "places.openMap": "Buka peta",
+  "places.densityAria": "Ukuran tampilan kartu",
+  "places.densityLabel": "Tampilan",
+  "places.densityS": "S",
+  "places.densityL": "L",
+  "places.densitySFull": "Kecil — dua kolom, ketuk untuk detail",
+  "places.densityLFull": "Besar — satu kolom dengan deskripsi",
+  "places.detailAria": "Detail tempat",
+  "places.detailHint": "Ketuk kartu untuk melihat detail",
 
   // /universities
   "uni.title": "Direktori Universitas",
