@@ -579,12 +579,25 @@ select.pp-select {
    reading as "spiking.") */
 .auth-season-star-wrap {
   opacity: 0;
-  transition: opacity var(--season-transition-duration) var(--season-transition-ease);
+  /* The whole star field turns gently across the season cycle (spring=0deg
+     baseline here; summer/autumn/winter below) - like the night sky slowly
+     wheeling, not a UI spin. The sun/moon orb is a sibling element entirely
+     outside .auth-season-star-wrap, so it can never be affected by this -
+     "only the sky rotates, the sun stays put" is structural, not a rule
+     anyone has to remember to preserve. Single monotonic value per
+     transition (never a dip-and-return), so this carries none of the
+     velocity-reversal cusp risk the old star-opacity animation had. */
+  transform: rotate(0deg);
+  transition: opacity var(--season-transition-duration) var(--season-transition-ease),
+              transform var(--season-transition-duration) var(--season-transition-ease);
 }
 .auth-season-panel[data-season="winter"] .auth-season-star-wrap,
 .auth-season-panel[data-season="spring"] .auth-season-star-wrap {
   opacity: 0.6;
 }
+.auth-season-panel[data-season="summer"] .auth-season-star-wrap { transform: rotate(8deg); }
+.auth-season-panel[data-season="autumn"] .auth-season-star-wrap { transform: rotate(16deg); }
+.auth-season-panel[data-season="winter"] .auth-season-star-wrap { transform: rotate(24deg); }
 .auth-season-mist {
   animation: auth-season-mist-drift 30s ease-in-out infinite;
 }

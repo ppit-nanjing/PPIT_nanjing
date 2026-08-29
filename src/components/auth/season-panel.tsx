@@ -341,14 +341,26 @@ export function SeasonPanel() {
           scales. At lg: this reverts to exactly today's h-full/no-transform
           behavior - the percentages inside resolve the same way either way. */}
       <div className="auth-season-scene absolute inset-x-0 bottom-0 h-[320px] origin-bottom scale-[0.2] s:scale-[0.25] m:scale-[0.3] l:scale-[0.35] sm:scale-[0.45] lg:h-full lg:scale-100">
+        {/* Rotates as a whole on season change (see globals.css) - the sun/moon
+            orb below is a sibling, not a descendant, so it's structurally
+            unaffected: only the sky turns, the orb stays put. */}
         <div className="auth-season-star-wrap absolute inset-0 pointer-events-none">
           <div className="auth-season-star absolute" style={{ top: "8%", left: "20%", width: 3, height: 3, borderRadius: "50%", background: "#fff", animationDelay: "0s" }} />
           <div className="auth-season-star absolute" style={{ top: "14%", left: "42%", width: 3, height: 3, borderRadius: "50%", background: "#fff", animationDelay: "1.4s" }} />
           <div className="auth-season-star absolute" style={{ top: "10%", left: "85%", width: 3, height: 3, borderRadius: "50%", background: "#fff", animationDelay: "0.7s" }} />
+          <div className="auth-season-star absolute" style={{ top: "6%", left: "65%", width: 3, height: 3, borderRadius: "50%", background: "#fff", animationDelay: "2.1s" }} />
+          <div className="auth-season-star absolute" style={{ top: "18%", left: "8%", width: 3, height: 3, borderRadius: "50%", background: "#fff", animationDelay: "0.4s" }} />
         </div>
 
-        <div className="auth-season-orb-glow absolute rounded-full" style={{ top: "44%", left: "58%", width: 200, height: 200 }} />
-        <div className="auth-season-orb-disc absolute rounded-full" style={{ top: "52%", left: "66%", width: 34, height: 34 }} />
+        {/* top/left here are the orb's CENTER (via the translate below), not
+            its corner - this is what keeps glow and disc perfectly
+            concentric at every scene size. Positioned to sit near/behind the
+            front ridge's actual peak (see globals.css for why - the ridges
+            paint after these divs in DOM order, so they naturally occlude
+            the orb's lower portion for a "sun near the horizon" look instead
+            of floating in empty sky). */}
+        <div className="auth-season-orb-glow absolute rounded-full -translate-x-1/2 -translate-y-1/2" style={{ top: "72%", left: "52%", width: 200, height: 200 }} />
+        <div className="auth-season-orb-disc absolute rounded-full -translate-x-1/2 -translate-y-1/2" style={{ top: "72%", left: "52%", width: 34, height: 34 }} />
 
         <div className="auth-season-mist absolute -left-[15%] w-[130%] h-[60px] rounded-full" style={{ bottom: 82, opacity: 0.7, filter: "blur(14px)", background: "rgba(255,255,255,0.08)", animationDuration: "34s" }} />
         <div ref={backRef} className="auth-season-ridge absolute -left-[10%] bottom-0 w-[120%] transition-transform duration-500 ease-out" style={{ opacity: 0.7 }}>
