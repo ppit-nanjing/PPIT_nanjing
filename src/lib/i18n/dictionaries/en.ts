@@ -941,6 +941,14 @@ export const en = {
   "places.empty": "No places listed yet",
   "places.emptyDesc": "Committee members can add them from Console → Places.",
   "places.openMap": "Open in maps",
+  "places.densityAria": "Card display size",
+  "places.densityLabel": "View",
+  "places.densityS": "S",
+  "places.densityL": "L",
+  "places.densitySFull": "Small — two columns, tap for details",
+  "places.densityLFull": "Large — one column with descriptions",
+  "places.detailAria": "Place details",
+  "places.detailHint": "Tap a card to see details",
 
   // /universities
   "uni.title": "University Directory",
