@@ -508,18 +508,37 @@ select.pp-select {
   background: var(--season-orb);
   transition: background 1s ease;
 }
+/* Perpetual twinkle only - lives on its own element (.auth-season-star-wrap
+   below) so its @keyframes, which drives `opacity` continuously forever,
+   doesn't fight the per-season visibility target on the SAME property.
+   (That collision used to make the per-season gating below have no visible
+   effect at all - stars twinkled in all four seasons, not just spring/
+   winter as intended, because an infinitely-running animation permanently
+   overrides a plain declared value for the same property.) Nested opacities
+   multiply, so the two concerns compose cleanly on separate elements. */
 .auth-season-star {
   animation: auth-season-twinkle 3.4s ease-in-out infinite;
-  opacity: 0;
-  transition: opacity 1s ease;
-}
-.auth-season-panel[data-season="winter"] .auth-season-star,
-.auth-season-panel[data-season="spring"] .auth-season-star {
-  opacity: 0.6;
 }
 @keyframes auth-season-twinkle {
   0%, 100% { opacity: 0.25; }
   50% { opacity: 0.85; }
+}
+/* Per-season visibility target - deliberately NO `transition` here. A season
+   change is animated entirely by the imperative Motion animate() call in
+   season-panel.tsx's choreography effect (dip to 0, then back to this
+   target); a plain CSS transition on the same property would auto-start the
+   instant data-season flips (independent of that JS), racing it for control
+   of the same value - confirmed live to leave the element settled on the
+   wrong opacity depending on timing. Under reduced motion, no animate() call
+   runs at all, so with no transition either, the value simply snaps
+   instantly on data-season change - exactly the desired reduced-motion
+   behavior, not a compromise. */
+.auth-season-star-wrap {
+  opacity: 0;
+}
+.auth-season-panel[data-season="winter"] .auth-season-star-wrap,
+.auth-season-panel[data-season="spring"] .auth-season-star-wrap {
+  opacity: 0.6;
 }
 .auth-season-mist {
   animation: auth-season-mist-drift 30s ease-in-out infinite;
@@ -534,6 +553,24 @@ select.pp-select {
 }
 .auth-season-panel[data-season="spring"] .auth-season-branch {
   opacity: 0.95;
+}
+/* One-off "event" light sweep across the whole panel at the moment the
+   season changes - NOT the same as .auth-season-mist above (that's a
+   continuous 30s ambient drift, unrelated to season change). Rest state is
+   invisible; position and opacity are driven entirely by an imperative
+   Motion animate() call in season-panel.tsx's choreography effect (not a
+   CSS transition/animation), so it only ever plays once per season change
+   instead of looping. `screen` blend mode lightens the sky/ridges/particles
+   beneath it without washing them out to flat white. */
+.auth-season-sweep {
+  opacity: 0;
+  background: linear-gradient(
+    115deg,
+    rgba(255, 255, 255, 0) 30%,
+    rgba(255, 255, 255, 0.55) 50%,
+    rgba(255, 255, 255, 0) 70%
+  );
+  mix-blend-mode: screen;
 }
 
 /* Respect users who prefer reduced motion: disable non-essential animation

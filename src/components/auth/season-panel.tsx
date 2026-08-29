@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { useReducedMotion } from "motion/react";
+import { useReducedMotion, animate } from "motion/react";
+import type { AnimationPlaybackControls } from "motion/react";
 import { useT } from "@/lib/i18n/client";
 import type { TKey } from "@/lib/i18n/dictionaries/id";
 
@@ -57,6 +58,25 @@ const SEASON_PARTICLE: Record<Season, keyof typeof PARTICLE_STYLE | null> = {
   winter: "snow",
 };
 
+// Mirrors the CSS .auth-season-star-wrap season-gating rule exactly
+// (globals.css) - keep both in sync if either changes.
+const SEASON_STAR_OPACITY: Record<Season, number> = {
+  spring: 0.6,
+  summer: 0,
+  autumn: 0,
+  winter: 0.6,
+};
+
+// Depth-proportioned vertical settle amplitude (px) for the season-change
+// "settle pulse" - ratio mirrors RIDGE_DEPTH's front:mid:back (18:10:5) so it
+// reads as the same depth ordering as the mousemove parallax.
+const RIDGE_SETTLE_AMPLITUDE = { front: -4, mid: -2, back: -1 } as const;
+
+// Total choreography window for a season change. Kept equal to the 1s CSS
+// crossfade duration in globals.css (.auth-season-panel's background/fill
+// transitions) so nothing outlives the base color fade.
+const TRANSITION_MS = 1000;
+
 type Particle = {
   x: number;
   y: number;
@@ -91,11 +111,60 @@ function makeParticles(key: keyof typeof PARTICLE_STYLE | null, width: number, h
   return Array.from({ length: style.count }, () => makeParticle(style, width, height));
 }
 
+// One particle set plus which style key it's drawn with (null = summer, no
+// particles). Two of these coexist briefly during a season-change crossfade:
+// the outgoing set fades out while the incoming set fades in, instead of an
+// instant swap.
+type ParticleSet = { key: keyof typeof PARTICLE_STYLE | null; particles: Particle[] };
+
+// Draws and advances one particle set, scaled by `alphaMul` (0-1) so the
+// canvas crossfade in tick() can cross-dissolve an outgoing/incoming pair.
+// Handles the `key === null` (summer) case for free: nothing to draw, so
+// petals dissolve into empty air going into summer and leaves materialize
+// from nothing coming out of it.
+function drawParticleSet(
+  ctx: CanvasRenderingContext2D,
+  key: keyof typeof PARTICLE_STYLE | null,
+  particles: Particle[],
+  width: number,
+  height: number,
+  alphaMul: number,
+) {
+  if (!key || alphaMul <= 0) return;
+  const style = PARTICLE_STYLE[key];
+  for (const p of particles) {
+    p.y += p.speed;
+    p.sway += p.swaySpeed;
+    p.x += Math.sin(p.sway) * style.sway;
+    p.rot += p.rotSpeed;
+    if (p.y > height + 20) {
+      p.y = -20;
+      p.x = Math.random() * width;
+    }
+    ctx.save();
+    ctx.translate(p.x, p.y);
+    ctx.rotate(p.rot);
+    ctx.globalAlpha = p.alpha * alphaMul;
+    ctx.fillStyle = p.useAlt && style.altColor ? style.altColor : style.color;
+    ctx.beginPath();
+    if (style.shape === "leaf") {
+      ctx.moveTo(0, -p.size);
+      ctx.quadraticCurveTo(p.size * 0.7, 0, 0, p.size);
+      ctx.quadraticCurveTo(-p.size * 0.7, 0, 0, -p.size);
+    } else {
+      ctx.ellipse(0, 0, p.size, p.size * (style.shape === "dot" ? 1 : 0.6), 0, 0, Math.PI * 2);
+    }
+    ctx.fill();
+    ctx.restore();
+  }
+}
+
 export function SeasonPanel() {
   const t = useT();
   const reduceMotion = useReducedMotion();
   const [seasonIdx, setSeasonIdx] = useState(0);
   const [paused, setPaused] = useState(false);
+  const [transitioning, setTransitioning] = useState(false);
   const season = SEASON_ORDER[seasonIdx];
 
   const frontRef = useRef<HTMLDivElement>(null);
@@ -103,6 +172,22 @@ export function SeasonPanel() {
   const backRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const seasonRef = useRef<Season>(season);
+
+  // Choreographed season-change transition: DOM targets for the sweep/star/
+  // ridge-settle animations, plus bookkeeping so a rapid re-trigger (fast
+  // repeated dot-clicks) can stop whatever's in flight instead of stacking.
+  const sweepRef = useRef<HTMLDivElement>(null);
+  const starWrapRef = useRef<HTMLDivElement>(null);
+  const frontWrapRef = useRef<HTMLDivElement>(null);
+  const midWrapRef = useRef<HTMLDivElement>(null);
+  const backWrapRef = useRef<HTMLDivElement>(null);
+  const mountedRef = useRef(false); // skip the choreography on initial mount
+  const transitionProgressRef = useRef(1); // particle crossfade blend, read by tick(); 1 = settled
+  const sweepControlsRef = useRef<AnimationPlaybackControls | null>(null);
+  const starControlsRef = useRef<AnimationPlaybackControls | null>(null);
+  const ridgeControlsRef = useRef<(AnimationPlaybackControls | null)[]>([null, null, null]);
+  const particleTweenControlsRef = useRef<AnimationPlaybackControls | null>(null);
+  const transitionTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Auto-rotate. Depending on seasonIdx means a manual dot click (which sets
   // it directly) tears down and restarts this timer for free - no separate
@@ -119,6 +204,100 @@ export function SeasonPanel() {
   useEffect(() => {
     seasonRef.current = season;
   }, [season]);
+
+  // Choreographed transition: a bounded ~1s scripted sequence (mist/light
+  // sweep, star dim-then-reappear, ridge settle pulse, particle-crossfade
+  // progress) layered on top of the existing CSS color crossfade in
+  // globals.css, which is untouched and keeps running underneath this.
+  // Skipped on the initial mount (nothing "changed" yet) and entirely under
+  // reduced motion - imperative animate() calls are NOT auto-gated by the
+  // app-wide <MotionConfig reducedMotion="user"> (that only covers React
+  // `motion.*` components), so `reduceMotion` is checked explicitly here too,
+  // matching how this file already gates the interval/mousemove/rAF loop.
+  useEffect(() => {
+    if (!mountedRef.current) {
+      mountedRef.current = true;
+      return;
+    }
+    if (reduceMotion) return;
+
+    // A rapid repeated dot-click fires this effect again before the previous
+    // transition finished: stop() commits each animation's current
+    // interpolated value as an inline style then releases the WAAPI effect,
+    // so restarting from `null` (the keyframe placeholder below, meaning
+    // "use current value") continues smoothly instead of snapping.
+    function stopAll() {
+      sweepControlsRef.current?.stop();
+      starControlsRef.current?.stop();
+      ridgeControlsRef.current.forEach((c) => c?.stop());
+      particleTweenControlsRef.current?.stop();
+      if (transitionTimeoutRef.current) clearTimeout(transitionTimeoutRef.current);
+    }
+    stopAll();
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- kicks off an external system (Motion/WAAPI animations below) in response to `season` changing; `transitioning` only drives the data-transitioning attribute for external inspection, doesn't feed back into this effect's own deps
+    setTransitioning(true);
+
+    const targetStarOpacity = SEASON_STAR_OPACITY[season];
+
+    if (sweepRef.current) {
+      sweepControlsRef.current = animate(
+        sweepRef.current,
+        { x: [null, "0%", "120%"], opacity: [null, 0.9, 0] },
+        { duration: 0.9, times: [0, 0.5, 1], ease: "easeInOut" },
+      );
+    }
+
+    if (starWrapRef.current) {
+      starControlsRef.current = animate(
+        starWrapRef.current,
+        { opacity: [null, 0, targetStarOpacity] },
+        { duration: 0.7, times: [0, 0.314, 1], ease: ["easeIn", "easeOut"] },
+      );
+    }
+
+    const ridgeWraps = [frontWrapRef, midWrapRef, backWrapRef] as const;
+    const amplitudes = [RIDGE_SETTLE_AMPLITUDE.front, RIDGE_SETTLE_AMPLITUDE.mid, RIDGE_SETTLE_AMPLITUDE.back];
+    const delays = [0.15, 0.23, 0.31];
+    ridgeWraps.forEach((ref, i) => {
+      if (!ref.current) return;
+      ridgeControlsRef.current[i] = animate(
+        ref.current,
+        { y: [null, amplitudes[i], 0] },
+        { duration: 0.5, delay: delays[i], ease: "easeOut" },
+      );
+    });
+
+    transitionProgressRef.current = 0;
+    particleTweenControlsRef.current = animate(0, 1, {
+      duration: 0.9,
+      ease: "easeInOut",
+      onUpdate: (v) => {
+        transitionProgressRef.current = v;
+      },
+    });
+
+    // Once the whole window has elapsed, explicitly cancel() (not stop())
+    // every control. A naturally-*finished* WAAPI animation is never
+    // auto-released - Motion's fill:"both" keeps its last value pinned above
+    // the CSS cascade indefinitely until cancelled - so without this, a
+    // later reduced-motion toggle would leave e.g. the star opacity stuck at
+    // whatever a past transition left it at instead of the current season's
+    // CSS-declared target. cancel() is safe here specifically because by
+    // this point every animation has already reached its final keyframe
+    // value, which equals the underlying CSS rest state (star target
+    // opacity; 0 opacity / no transform for the sweep and ridges) - so
+    // releasing control back to CSS causes no visual jump.
+    transitionTimeoutRef.current = setTimeout(() => {
+      sweepControlsRef.current?.cancel();
+      starControlsRef.current?.cancel();
+      ridgeControlsRef.current.forEach((c) => c?.cancel());
+      particleTweenControlsRef.current?.cancel();
+      transitionProgressRef.current = 1;
+      setTransitioning(false);
+    }, TRANSITION_MS);
+
+    return stopAll;
+  }, [season, reduceMotion]);
 
   function handleMouseMove(e: React.MouseEvent<HTMLDivElement>) {
     if (reduceMotion) return;
@@ -148,7 +327,12 @@ export function SeasonPanel() {
 
     let width = 0;
     let height = 0;
-    let particles: Particle[] = [];
+    // Two sets so a season change can cross-dissolve (outgoing fades out,
+    // incoming fades in) instead of popping - see drawParticleSet/tick()
+    // below. transitionProgressRef (written by the choreography effect
+    // above) is the 0->1 blend between them.
+    let outgoing: ParticleSet | null = null;
+    let incoming: ParticleSet = { key: SEASON_PARTICLE[seasonRef.current], particles: [] };
     let lastSeason: Season | null = null;
 
     // Read the size straight off the ResizeObserver entry rather than a
@@ -162,46 +346,35 @@ export function SeasonPanel() {
       const box = entry.contentBoxSize?.[0];
       width = canvas!.width = box ? box.inlineSize : entry.contentRect.width;
       height = canvas!.height = box ? box.blockSize : entry.contentRect.height;
-      particles = makeParticles(SEASON_PARTICLE[seasonRef.current], width, height);
+      // Resize mid-crossfade: simplest safe behavior is to collapse straight
+      // to a freshly-sized incoming set, matching this file's existing
+      // "resize regenerates particles" baseline rather than trying to resize
+      // two sets mid-blend.
+      outgoing = null;
+      transitionProgressRef.current = 1;
+      const key = SEASON_PARTICLE[seasonRef.current];
+      incoming = { key, particles: makeParticles(key, width, height) };
+      lastSeason = seasonRef.current;
     });
     observer.observe(parent);
 
     let rafId: number | null = null;
     function tick() {
       if (seasonRef.current !== lastSeason) {
+        // Season just changed (as observed by this rAF loop, which never
+        // itself restarts): retire the current set as "outgoing" and spin up
+        // a fresh "incoming" set, instead of an instant swap.
+        outgoing = incoming;
+        const key = SEASON_PARTICLE[seasonRef.current];
+        incoming = { key, particles: makeParticles(key, width, height) };
         lastSeason = seasonRef.current;
-        particles = makeParticles(SEASON_PARTICLE[seasonRef.current], width, height);
       }
       ctx!.clearRect(0, 0, width, height);
-      const key = SEASON_PARTICLE[seasonRef.current];
-      if (key) {
-        const style = PARTICLE_STYLE[key];
-        for (const p of particles) {
-          p.y += p.speed;
-          p.sway += p.swaySpeed;
-          p.x += Math.sin(p.sway) * style.sway;
-          p.rot += p.rotSpeed;
-          if (p.y > height + 20) {
-            p.y = -20;
-            p.x = Math.random() * width;
-          }
-          ctx!.save();
-          ctx!.translate(p.x, p.y);
-          ctx!.rotate(p.rot);
-          ctx!.globalAlpha = p.alpha;
-          ctx!.fillStyle = p.useAlt && style.altColor ? style.altColor : style.color;
-          ctx!.beginPath();
-          if (style.shape === "leaf") {
-            ctx!.moveTo(0, -p.size);
-            ctx!.quadraticCurveTo(p.size * 0.7, 0, 0, p.size);
-            ctx!.quadraticCurveTo(-p.size * 0.7, 0, 0, -p.size);
-          } else {
-            ctx!.ellipse(0, 0, p.size, p.size * (style.shape === "dot" ? 1 : 0.6), 0, 0, Math.PI * 2);
-          }
-          ctx!.fill();
-          ctx!.restore();
-        }
+      const progress = transitionProgressRef.current; // 0 (just switched) -> 1 (settled)
+      if (outgoing && progress < 1) {
+        drawParticleSet(ctx!, outgoing.key, outgoing.particles, width, height, 1 - progress);
       }
+      drawParticleSet(ctx!, incoming.key, incoming.particles, width, height, outgoing ? progress : 1);
       rafId = requestAnimationFrame(tick);
     }
     if (!reduceMotion) rafId = requestAnimationFrame(tick);
@@ -216,35 +389,44 @@ export function SeasonPanel() {
     <div
       className="auth-season-panel absolute inset-0 overflow-hidden flex flex-col justify-between px-8 py-10 lg:px-10"
       data-season={season}
+      data-transitioning={transitioning}
       onMouseMove={handleMouseMove}
       onMouseEnter={() => setPaused(true)}
       onMouseLeave={resetParallax}
     >
-      <div className="auth-season-star absolute" style={{ top: "8%", left: "20%", width: 3, height: 3, borderRadius: "50%", background: "#fff", animationDelay: "0s" }} />
-      <div className="auth-season-star absolute" style={{ top: "14%", left: "42%", width: 3, height: 3, borderRadius: "50%", background: "#fff", animationDelay: "1.4s" }} />
-      <div className="auth-season-star absolute" style={{ top: "10%", left: "85%", width: 3, height: 3, borderRadius: "50%", background: "#fff", animationDelay: "0.7s" }} />
+      <div ref={starWrapRef} className="auth-season-star-wrap absolute inset-0 pointer-events-none">
+        <div className="auth-season-star absolute" style={{ top: "8%", left: "20%", width: 3, height: 3, borderRadius: "50%", background: "#fff", animationDelay: "0s" }} />
+        <div className="auth-season-star absolute" style={{ top: "14%", left: "42%", width: 3, height: 3, borderRadius: "50%", background: "#fff", animationDelay: "1.4s" }} />
+        <div className="auth-season-star absolute" style={{ top: "10%", left: "85%", width: 3, height: 3, borderRadius: "50%", background: "#fff", animationDelay: "0.7s" }} />
+      </div>
 
       <div className="auth-season-orb-glow absolute rounded-full" style={{ top: "44%", left: "58%", width: 200, height: 200 }} />
       <div className="auth-season-orb-disc absolute rounded-full" style={{ top: "52%", left: "66%", width: 34, height: 34 }} />
 
       <div className="auth-season-mist absolute -left-[15%] w-[130%] h-[60px] rounded-full" style={{ bottom: 82, opacity: 0.7, filter: "blur(14px)", background: "rgba(255,255,255,0.08)", animationDuration: "34s" }} />
-      <div ref={backRef} className="auth-season-ridge absolute -left-[10%] bottom-0 w-[120%] transition-transform duration-500 ease-out" style={{ opacity: 0.7 }}>
-        <svg viewBox="0 0 400 150" preserveAspectRatio="none" className="block w-full h-auto">
-          <path d={RIDGE_PATH.back} style={{ fill: "var(--season-ridge-3)" }} />
-        </svg>
+      <div ref={backWrapRef} className="absolute inset-0 pointer-events-none">
+        <div ref={backRef} className="auth-season-ridge absolute -left-[10%] bottom-0 w-[120%] transition-transform duration-500 ease-out" style={{ opacity: 0.7 }}>
+          <svg viewBox="0 0 400 150" preserveAspectRatio="none" className="block w-full h-auto">
+            <path d={RIDGE_PATH.back} style={{ fill: "var(--season-ridge-3)" }} />
+          </svg>
+        </div>
       </div>
 
       <div className="auth-season-mist absolute -left-[15%] w-[130%] h-[60px] rounded-full" style={{ bottom: 50, opacity: 0.5, filter: "blur(14px)", background: "rgba(255,255,255,0.08)", animationDuration: "26s", animationDirection: "reverse" }} />
-      <div ref={midRef} className="auth-season-ridge absolute -left-[10%] bottom-0 w-[120%] transition-transform duration-500 ease-out" style={{ opacity: 0.85 }}>
-        <svg viewBox="0 0 400 150" preserveAspectRatio="none" className="block w-full h-auto">
-          <path d={RIDGE_PATH.mid} style={{ fill: "var(--season-ridge-2)" }} />
-        </svg>
+      <div ref={midWrapRef} className="absolute inset-0 pointer-events-none">
+        <div ref={midRef} className="auth-season-ridge absolute -left-[10%] bottom-0 w-[120%] transition-transform duration-500 ease-out" style={{ opacity: 0.85 }}>
+          <svg viewBox="0 0 400 150" preserveAspectRatio="none" className="block w-full h-auto">
+            <path d={RIDGE_PATH.mid} style={{ fill: "var(--season-ridge-2)" }} />
+          </svg>
+        </div>
       </div>
 
-      <div ref={frontRef} className="auth-season-ridge absolute -left-[10%] bottom-0 w-[120%] transition-transform duration-500 ease-out">
-        <svg viewBox="0 0 400 150" preserveAspectRatio="none" className="block w-full h-auto">
-          <path d={RIDGE_PATH.front} style={{ fill: "var(--season-ridge-1)" }} />
-        </svg>
+      <div ref={frontWrapRef} className="absolute inset-0 pointer-events-none">
+        <div ref={frontRef} className="auth-season-ridge absolute -left-[10%] bottom-0 w-[120%] transition-transform duration-500 ease-out">
+          <svg viewBox="0 0 400 150" preserveAspectRatio="none" className="block w-full h-auto">
+            <path d={RIDGE_PATH.front} style={{ fill: "var(--season-ridge-1)" }} />
+          </svg>
+        </div>
       </div>
 
       <svg
@@ -276,6 +458,8 @@ export function SeasonPanel() {
       </svg>
 
       <canvas ref={canvasRef} className="absolute inset-0" aria-hidden="true" />
+
+      <div ref={sweepRef} className="auth-season-sweep absolute inset-0 pointer-events-none" aria-hidden="true" />
 
       <div className="relative z-10 flex flex-col justify-between h-full" style={{ color: "var(--season-ink)" }}>
         <span className="font-bold text-label-caps uppercase tracking-wide">PPIT Nanjing</span>
