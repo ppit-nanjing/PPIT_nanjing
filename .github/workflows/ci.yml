@@ -42,6 +42,14 @@ jobs:
 
       - run: npm ci
 
+      # tsc needs Next's generated route types (LayoutProps, PageProps, etc.
+      # in .next/types/) - those only exist after next dev/build/typegen has
+      # run once. A fresh checkout has no .next/ (gitignored), so `tsc
+      # --noEmit` fails here with "Cannot find name 'LayoutProps'" without
+      # this step first. `next typegen` generates just the types, no bundling.
+      - name: Generate Next.js route types
+        run: npx next typegen
+
       - name: Typecheck
         run: npx tsc --noEmit
 
