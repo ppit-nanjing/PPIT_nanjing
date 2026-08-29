@@ -465,48 +465,72 @@ select.pp-select {
    seasons, not a theme-reactive surface. Don't "fix" it to follow the city
    theme switcher. Scoped under data-season on .auth-season-panel only -
    never touches <html>'s data-theme/data-mode. */
+
+/* A plain `--custom-prop: value` has syntax "*" (an opaque token stream) and
+   is NEVER interpolable, no matter what transition/duration is declared on
+   the property that references it - the referencing property's used value
+   just jumps discretely the instant the custom property changes. That
+   applies here even to otherwise-animatable properties like `fill`/
+   `background`, so every "transition: ... 1s ease" below was, until this
+   @property registration was added, silently doing nothing: the sky
+   gradient, ridge fills, and orb all snapped instantly on every season
+   change. Registering each one as <color> gives the browser an actual type
+   to interpolate, which is what makes those transitions real. (Widely
+   supported: Chrome/Edge 85+, Safari 16.4+, Firefox 128+.) */
+@property --season-sky-a { syntax: "<color>"; inherits: true; initial-value: #000000; }
+@property --season-sky-b { syntax: "<color>"; inherits: true; initial-value: #000000; }
+@property --season-sky-c { syntax: "<color>"; inherits: true; initial-value: #000000; }
+@property --season-ridge-1 { syntax: "<color>"; inherits: true; initial-value: #000000; }
+@property --season-ridge-2 { syntax: "<color>"; inherits: true; initial-value: #000000; }
+@property --season-ridge-3 { syntax: "<color>"; inherits: true; initial-value: #000000; }
+@property --season-orb-core { syntax: "<color>"; inherits: true; initial-value: #000000; }
+@property --season-orb-mid { syntax: "<color>"; inherits: true; initial-value: #000000; }
+@property --season-orb-edge { syntax: "<color>"; inherits: true; initial-value: #000000; }
+@property --season-orb-glow { syntax: "<color>"; inherits: true; initial-value: transparent; }
+@property --season-ink { syntax: "<color>"; inherits: true; initial-value: #000000; }
+
 .auth-season-panel[data-season="spring"] {
   --season-sky-a: #2a1a30; --season-sky-b: #5c3a4a; --season-sky-c: #c98a6a;
   --season-ridge-1: #241522; --season-ridge-2: #3d2536; --season-ridge-3: #5c3a4a;
-  --season-orb: radial-gradient(circle at 35% 32%, #fbe3d4 0%, #eeb894 55%, #d98a6a 100%);
+  --season-orb-core: #fbe3d4; --season-orb-mid: #eeb894; --season-orb-edge: #d98a6a;
   --season-orb-glow: rgba(238, 184, 148, 0.45);
   --season-ink: #f8ece6;
 }
 .auth-season-panel[data-season="summer"] {
   --season-sky-a: #26301f; --season-sky-b: #56663a; --season-sky-c: #d9c46a;
   --season-ridge-1: #1e2617; --season-ridge-2: #3a4a28; --season-ridge-3: #5c6b3e;
-  --season-orb: radial-gradient(circle at 35% 32%, #fdf6dc 0%, #f3e3a0 55%, #e0c667 100%);
+  --season-orb-core: #fdf6dc; --season-orb-mid: #f3e3a0; --season-orb-edge: #e0c667;
   --season-orb-glow: rgba(243, 227, 160, 0.5);
   --season-ink: #f7f4e6;
 }
 .auth-season-panel[data-season="autumn"] {
   --season-sky-a: #2e1810; --season-sky-b: #6b3420; --season-sky-c: #d9873f;
   --season-ridge-1: #23120c; --season-ridge-2: #4a2419; --season-ridge-3: #6e3826;
-  --season-orb: radial-gradient(circle at 35% 32%, #fbe6c8 0%, #f0a458 55%, #c9702f 100%);
+  --season-orb-core: #fbe6c8; --season-orb-mid: #f0a458; --season-orb-edge: #c9702f;
   --season-orb-glow: rgba(240, 164, 88, 0.5);
   --season-ink: #fbeee0;
 }
 .auth-season-panel[data-season="winter"] {
   --season-sky-a: #1c2033; --season-sky-b: #3f4a63; --season-sky-c: #c7d2df;
   --season-ridge-1: #171a28; --season-ridge-2: #2a2a3d; --season-ridge-3: #43435c;
-  --season-orb: radial-gradient(circle at 35% 32%, #ffffff 0%, #dbe4ee 55%, #aebbd0 100%);
+  --season-orb-core: #ffffff; --season-orb-mid: #dbe4ee; --season-orb-edge: #aebbd0;
   --season-orb-glow: rgba(219, 228, 238, 0.55);
   --season-ink: #eef1f7;
 }
 .auth-season-panel {
   background: linear-gradient(180deg, var(--season-sky-a) 0%, var(--season-sky-b) 45%, var(--season-sky-c) 100%);
-  transition: background 1s ease;
+  transition: background 1.4s ease;
 }
 .auth-season-panel .auth-season-ridge path {
-  transition: fill 1s ease;
+  transition: fill 1.4s ease;
 }
 .auth-season-panel .auth-season-orb-glow {
   background: radial-gradient(circle, var(--season-orb-glow), rgba(0, 0, 0, 0) 70%);
-  transition: background 1s ease;
+  transition: background 1.4s ease;
 }
 .auth-season-panel .auth-season-orb-disc {
-  background: var(--season-orb);
-  transition: background 1s ease;
+  background: radial-gradient(circle at 35% 32%, var(--season-orb-core) 0%, var(--season-orb-mid) 55%, var(--season-orb-edge) 100%);
+  transition: background 1.4s ease;
 }
 /* Perpetual twinkle only - lives on its own element (.auth-season-star-wrap
    below) so its @keyframes, which drives `opacity` continuously forever,
@@ -554,25 +578,6 @@ select.pp-select {
 .auth-season-panel[data-season="spring"] .auth-season-branch {
   opacity: 0.95;
 }
-/* One-off "event" light sweep across the whole panel at the moment the
-   season changes - NOT the same as .auth-season-mist above (that's a
-   continuous 30s ambient drift, unrelated to season change). Rest state is
-   invisible; position and opacity are driven entirely by an imperative
-   Motion animate() call in season-panel.tsx's choreography effect (not a
-   CSS transition/animation), so it only ever plays once per season change
-   instead of looping. `screen` blend mode lightens the sky/ridges/particles
-   beneath it without washing them out to flat white. */
-.auth-season-sweep {
-  opacity: 0;
-  background: linear-gradient(
-    115deg,
-    rgba(255, 255, 255, 0) 30%,
-    rgba(255, 255, 255, 0.55) 50%,
-    rgba(255, 255, 255, 0) 70%
-  );
-  mix-blend-mode: screen;
-}
-
 /* Respect users who prefer reduced motion: disable non-essential animation
    and transitions (spinners, blurs, reveals) without changing layout. */
 @media (prefers-reduced-motion: reduce) {

@@ -67,15 +67,11 @@ const SEASON_STAR_OPACITY: Record<Season, number> = {
   winter: 0.6,
 };
 
-// Depth-proportioned vertical settle amplitude (px) for the season-change
-// "settle pulse" - ratio mirrors RIDGE_DEPTH's front:mid:back (18:10:5) so it
-// reads as the same depth ordering as the mousemove parallax.
-const RIDGE_SETTLE_AMPLITUDE = { front: -4, mid: -2, back: -1 } as const;
-
-// Total choreography window for a season change. Kept equal to the 1s CSS
-// crossfade duration in globals.css (.auth-season-panel's background/fill
-// transitions) so nothing outlives the base color fade.
-const TRANSITION_MS = 1000;
+// Total window for the star dim/fade-in + particle crossfade. Kept equal to
+// the 1.4s CSS crossfade duration in globals.css (.auth-season-panel's
+// background/fill transitions - now genuinely smooth, see the @property
+// registrations there) so nothing outlives the base color fade.
+const TRANSITION_MS = 1400;
 
 type Particle = {
   x: number;
@@ -173,19 +169,14 @@ export function SeasonPanel() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const seasonRef = useRef<Season>(season);
 
-  // Choreographed season-change transition: DOM targets for the sweep/star/
-  // ridge-settle animations, plus bookkeeping so a rapid re-trigger (fast
-  // repeated dot-clicks) can stop whatever's in flight instead of stacking.
-  const sweepRef = useRef<HTMLDivElement>(null);
+  // Season-change transition: DOM target for the star dim/fade-in, plus
+  // bookkeeping so a rapid re-trigger (fast repeated dot-clicks) can stop
+  // whatever's in flight instead of stacking. The sky/ridge/orb color fade
+  // itself is plain CSS (globals.css) - no JS involved there at all.
   const starWrapRef = useRef<HTMLDivElement>(null);
-  const frontWrapRef = useRef<HTMLDivElement>(null);
-  const midWrapRef = useRef<HTMLDivElement>(null);
-  const backWrapRef = useRef<HTMLDivElement>(null);
   const mountedRef = useRef(false); // skip the choreography on initial mount
   const transitionProgressRef = useRef(1); // particle crossfade blend, read by tick(); 1 = settled
-  const sweepControlsRef = useRef<AnimationPlaybackControls | null>(null);
   const starControlsRef = useRef<AnimationPlaybackControls | null>(null);
-  const ridgeControlsRef = useRef<(AnimationPlaybackControls | null)[]>([null, null, null]);
   const particleTweenControlsRef = useRef<AnimationPlaybackControls | null>(null);
   const transitionTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -205,15 +196,16 @@ export function SeasonPanel() {
     seasonRef.current = season;
   }, [season]);
 
-  // Choreographed transition: a bounded ~1s scripted sequence (mist/light
-  // sweep, star dim-then-reappear, ridge settle pulse, particle-crossfade
-  // progress) layered on top of the existing CSS color crossfade in
-  // globals.css, which is untouched and keeps running underneath this.
-  // Skipped on the initial mount (nothing "changed" yet) and entirely under
-  // reduced motion - imperative animate() calls are NOT auto-gated by the
-  // app-wide <MotionConfig reducedMotion="user"> (that only covers React
-  // `motion.*` components), so `reduceMotion` is checked explicitly here too,
-  // matching how this file already gates the interval/mousemove/rAF loop.
+  // Season-change transition: the sky/ridge/orb color fade is plain CSS
+  // (globals.css, now genuinely smooth via @property) and needs no JS at
+  // all. This effect only handles the two things CSS/canvas can't do alone:
+  // a brief star dim-then-reappear, and the particle-crossfade progress
+  // consumed by tick() below. Skipped on the initial mount (nothing
+  // "changed" yet) and entirely under reduced motion - imperative animate()
+  // calls are NOT auto-gated by the app-wide <MotionConfig
+  // reducedMotion="user"> (that only covers React `motion.*` components), so
+  // `reduceMotion` is checked explicitly here too, matching how this file
+  // already gates the interval/mousemove/rAF loop.
   useEffect(() => {
     if (!mountedRef.current) {
       mountedRef.current = true;
@@ -227,9 +219,7 @@ export function SeasonPanel() {
     // so restarting from `null` (the keyframe placeholder below, meaning
     // "use current value") continues smoothly instead of snapping.
     function stopAll() {
-      sweepControlsRef.current?.stop();
       starControlsRef.current?.stop();
-      ridgeControlsRef.current.forEach((c) => c?.stop());
       particleTweenControlsRef.current?.stop();
       if (transitionTimeoutRef.current) clearTimeout(transitionTimeoutRef.current);
     }
@@ -239,14 +229,6 @@ export function SeasonPanel() {
 
     const targetStarOpacity = SEASON_STAR_OPACITY[season];
 
-    if (sweepRef.current) {
-      sweepControlsRef.current = animate(
-        sweepRef.current,
-        { x: [null, "0%", "120%"], opacity: [null, 0.9, 0] },
-        { duration: 0.9, times: [0, 0.5, 1], ease: "easeInOut" },
-      );
-    }
-
     if (starWrapRef.current) {
       starControlsRef.current = animate(
         starWrapRef.current,
@@ -254,18 +236,6 @@ export function SeasonPanel() {
         { duration: 0.7, times: [0, 0.314, 1], ease: ["easeIn", "easeOut"] },
       );
     }
-
-    const ridgeWraps = [frontWrapRef, midWrapRef, backWrapRef] as const;
-    const amplitudes = [RIDGE_SETTLE_AMPLITUDE.front, RIDGE_SETTLE_AMPLITUDE.mid, RIDGE_SETTLE_AMPLITUDE.back];
-    const delays = [0.15, 0.23, 0.31];
-    ridgeWraps.forEach((ref, i) => {
-      if (!ref.current) return;
-      ridgeControlsRef.current[i] = animate(
-        ref.current,
-        { y: [null, amplitudes[i], 0] },
-        { duration: 0.5, delay: delays[i], ease: "easeOut" },
-      );
-    });
 
     transitionProgressRef.current = 0;
     particleTweenControlsRef.current = animate(0, 1, {
@@ -280,17 +250,14 @@ export function SeasonPanel() {
     // every control. A naturally-*finished* WAAPI animation is never
     // auto-released - Motion's fill:"both" keeps its last value pinned above
     // the CSS cascade indefinitely until cancelled - so without this, a
-    // later reduced-motion toggle would leave e.g. the star opacity stuck at
+    // later reduced-motion toggle would leave the star opacity stuck at
     // whatever a past transition left it at instead of the current season's
     // CSS-declared target. cancel() is safe here specifically because by
-    // this point every animation has already reached its final keyframe
-    // value, which equals the underlying CSS rest state (star target
-    // opacity; 0 opacity / no transform for the sweep and ridges) - so
-    // releasing control back to CSS causes no visual jump.
+    // this point the animation has already reached its final keyframe value,
+    // which equals the underlying CSS rest state (the star target opacity) -
+    // so releasing control back to CSS causes no visual jump.
     transitionTimeoutRef.current = setTimeout(() => {
-      sweepControlsRef.current?.cancel();
       starControlsRef.current?.cancel();
-      ridgeControlsRef.current.forEach((c) => c?.cancel());
       particleTweenControlsRef.current?.cancel();
       transitionProgressRef.current = 1;
       setTransitioning(false);
@@ -404,29 +371,23 @@ export function SeasonPanel() {
       <div className="auth-season-orb-disc absolute rounded-full" style={{ top: "52%", left: "66%", width: 34, height: 34 }} />
 
       <div className="auth-season-mist absolute -left-[15%] w-[130%] h-[60px] rounded-full" style={{ bottom: 82, opacity: 0.7, filter: "blur(14px)", background: "rgba(255,255,255,0.08)", animationDuration: "34s" }} />
-      <div ref={backWrapRef} className="absolute inset-0 pointer-events-none">
-        <div ref={backRef} className="auth-season-ridge absolute -left-[10%] bottom-0 w-[120%] transition-transform duration-500 ease-out" style={{ opacity: 0.7 }}>
-          <svg viewBox="0 0 400 150" preserveAspectRatio="none" className="block w-full h-auto">
-            <path d={RIDGE_PATH.back} style={{ fill: "var(--season-ridge-3)" }} />
-          </svg>
-        </div>
+      <div ref={backRef} className="auth-season-ridge absolute -left-[10%] bottom-0 w-[120%] transition-transform duration-500 ease-out" style={{ opacity: 0.7 }}>
+        <svg viewBox="0 0 400 150" preserveAspectRatio="none" className="block w-full h-auto">
+          <path d={RIDGE_PATH.back} style={{ fill: "var(--season-ridge-3)" }} />
+        </svg>
       </div>
 
       <div className="auth-season-mist absolute -left-[15%] w-[130%] h-[60px] rounded-full" style={{ bottom: 50, opacity: 0.5, filter: "blur(14px)", background: "rgba(255,255,255,0.08)", animationDuration: "26s", animationDirection: "reverse" }} />
-      <div ref={midWrapRef} className="absolute inset-0 pointer-events-none">
-        <div ref={midRef} className="auth-season-ridge absolute -left-[10%] bottom-0 w-[120%] transition-transform duration-500 ease-out" style={{ opacity: 0.85 }}>
-          <svg viewBox="0 0 400 150" preserveAspectRatio="none" className="block w-full h-auto">
-            <path d={RIDGE_PATH.mid} style={{ fill: "var(--season-ridge-2)" }} />
-          </svg>
-        </div>
+      <div ref={midRef} className="auth-season-ridge absolute -left-[10%] bottom-0 w-[120%] transition-transform duration-500 ease-out" style={{ opacity: 0.85 }}>
+        <svg viewBox="0 0 400 150" preserveAspectRatio="none" className="block w-full h-auto">
+          <path d={RIDGE_PATH.mid} style={{ fill: "var(--season-ridge-2)" }} />
+        </svg>
       </div>
 
-      <div ref={frontWrapRef} className="absolute inset-0 pointer-events-none">
-        <div ref={frontRef} className="auth-season-ridge absolute -left-[10%] bottom-0 w-[120%] transition-transform duration-500 ease-out">
-          <svg viewBox="0 0 400 150" preserveAspectRatio="none" className="block w-full h-auto">
-            <path d={RIDGE_PATH.front} style={{ fill: "var(--season-ridge-1)" }} />
-          </svg>
-        </div>
+      <div ref={frontRef} className="auth-season-ridge absolute -left-[10%] bottom-0 w-[120%] transition-transform duration-500 ease-out">
+        <svg viewBox="0 0 400 150" preserveAspectRatio="none" className="block w-full h-auto">
+          <path d={RIDGE_PATH.front} style={{ fill: "var(--season-ridge-1)" }} />
+        </svg>
       </div>
 
       <svg
@@ -459,9 +420,7 @@ export function SeasonPanel() {
 
       <canvas ref={canvasRef} className="absolute inset-0" aria-hidden="true" />
 
-      <div ref={sweepRef} className="auth-season-sweep absolute inset-0 pointer-events-none" aria-hidden="true" />
-
-      <div className="relative z-10 flex flex-col justify-between h-full" style={{ color: "var(--season-ink)" }}>
+      <div className="relative z-10 flex flex-col justify-between h-full transition-colors duration-[1400ms] ease-in-out" style={{ color: "var(--season-ink)" }}>
         <span className="font-bold text-label-caps uppercase tracking-wide">PPIT Nanjing</span>
         <div className="flex flex-col gap-3.5">
           <p className="hidden lg:block font-medium text-body-lg leading-snug max-w-[20ch] text-balance">
