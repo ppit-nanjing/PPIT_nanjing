@@ -72,7 +72,7 @@ export default async function LoginPage({
             <button
               type="submit"
               aria-label={t("auth.googleSignInAria")}
-              className="w-full flex items-center justify-center gap-3 bg-surface-container-lowest border border-outline-variant text-on-background text-body-md font-medium py-3.5 rounded-md hover:bg-surface-container-low transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-container focus-visible:ring-offset-2 focus-visible:ring-offset-surface-container-lowest"
+              className="w-full flex items-center justify-center gap-3 bg-surface-container-lowest border border-outline-variant text-on-background text-body-md font-medium py-3.5 rounded-md hover:bg-surface-container-low active:scale-[0.98] transition-[background-color,transform] focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-container focus-visible:ring-offset-2 focus-visible:ring-offset-surface-container-lowest"
             >
               <svg width="18" height="18" viewBox="0 0 18 18">
                 <path
@@ -97,9 +97,9 @@ export default async function LoginPage({
          <div className="text-center mt-6">
            <Link
              href="/"
-             className="inline-flex items-center gap-2 text-label-caps uppercase tracking-wide text-on-surface-variant hover:text-on-background transition-colors rounded-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-container"
+             className="group inline-flex items-center gap-2 text-label-caps uppercase tracking-wide text-on-surface-variant hover:text-on-background transition-colors rounded-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-container"
            >
-             <ArrowLeft size={14} /> {t("auth.backHome")}
+             <ArrowLeft size={14} className="transition-transform group-hover:-translate-x-1" /> {t("auth.backHome")}
            </Link>
          </div>
       </div>

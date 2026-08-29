@@ -677,6 +677,8 @@ export const en = {
   "auth.emailPlaceholder": "name@mail.com",
   "auth.passwordLabel": "Password",
   "auth.passwordHint": "At least 8 characters.",
+  "auth.showPassword": "Show password",
+  "auth.hidePassword": "Hide password",
   "auth.confirmLabel": "Confirm Password",
   "auth.submitSignUp": "Sign up",
   "auth.submitSignIn": "Sign in",

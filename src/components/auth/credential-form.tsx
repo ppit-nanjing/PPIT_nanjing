@@ -1,8 +1,8 @@
 "use client";
 
-import { useActionState, useRef, useEffect } from "react";
+import { useActionState, useRef, useEffect, useState } from "react";
 import Link from "next/link";
-import { AlertCircle, Loader2 } from "lucide-react";
+import { AlertCircle, ArrowRight, Eye, EyeOff, Loader2, Lock, Mail } from "lucide-react";
 import type { AuthFormState } from "@/app/actions/auth";
 import { useT } from "@/lib/i18n/client";
 
@@ -12,6 +12,32 @@ type Props = {
   returnTo?: string;
 };
 
+// Input dengan ikon leading tetap (mail/lock) - satu-satunya alasan ini bukan
+// <input> polos: menyisipkan ikon di dalam field butuh wrapper relative +
+// padding kiri yang pas, dipakai berulang untuk email/password/confirm di
+// bawah jadi disatukan di sini ketimbang diketik ulang 3x.
+function IconField({
+  icon: Icon,
+  trailing,
+  className = "",
+  ...rest
+}: React.ComponentProps<"input"> & { icon: React.ElementType; trailing?: React.ReactNode }) {
+  return (
+    <div className="relative">
+      <Icon
+        size={17}
+        aria-hidden="true"
+        className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-on-surface-variant"
+      />
+      <input
+        {...rest}
+        className={`w-full bg-soft-gray rounded-md py-3 pl-10 text-body-md focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-container ${trailing ? "pr-10" : "pr-3"} ${className}`}
+      />
+      {trailing}
+    </div>
+  );
+}
+
 export function CredentialForm({ action, mode, returnTo }: Props) {
   const t = useT();
   const [state, formAction, pending] = useActionState(action, {} as AuthFormState);
@@ -19,13 +45,15 @@ export function CredentialForm({ action, mode, returnTo }: Props) {
   const errorId = "credential-error";
   const passwordHintId = "password-hint";
   const invalid = Boolean(state?.errorKey);
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirm, setShowConfirm] = useState(false);
 
   useEffect(() => {
     if (invalid) emailRef.current?.focus();
   }, [invalid]);
 
-  const fieldClass =
-    "bg-soft-gray rounded-md p-3 text-body-md focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-container";
+  const toggleBtnClass =
+    "absolute right-3 top-1/2 -translate-y-1/2 text-on-surface-variant hover:text-on-background transition-colors rounded-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-container";
 
   return (
     <form action={formAction} className="flex flex-col gap-4" noValidate>
@@ -35,8 +63,9 @@ export function CredentialForm({ action, mode, returnTo }: Props) {
         <label htmlFor="email" className="text-label-caps uppercase tracking-wide text-on-surface-variant">
           {t("auth.emailLabel")} <span className="text-error" aria-hidden="true">*</span>
         </label>
-        <input
+        <IconField
           ref={emailRef}
+          icon={Mail}
           id="email"
           type="email"
           name="email"
@@ -46,7 +75,6 @@ export function CredentialForm({ action, mode, returnTo }: Props) {
           placeholder={t("auth.emailPlaceholder")}
           aria-invalid={invalid}
           aria-describedby={invalid ? errorId : undefined}
-          className={fieldClass}
         />
       </div>
 
@@ -54,16 +82,26 @@ export function CredentialForm({ action, mode, returnTo }: Props) {
         <label htmlFor="password" className="text-label-caps uppercase tracking-wide text-on-surface-variant">
           {t("auth.passwordLabel")} <span className="text-error" aria-hidden="true">*</span>
         </label>
-        <input
+        <IconField
+          icon={Lock}
           id="password"
-          type="password"
+          type={showPassword ? "text" : "password"}
           name="password"
           required
           autoComplete={mode === "signup" ? "new-password" : "current-password"}
           placeholder="••••••••"
           aria-invalid={invalid}
           aria-describedby={invalid ? errorId : mode === "signup" ? passwordHintId : undefined}
-          className={fieldClass}
+          trailing={
+            <button
+              type="button"
+              onClick={() => setShowPassword((v) => !v)}
+              aria-label={showPassword ? t("auth.hidePassword") : t("auth.showPassword")}
+              className={toggleBtnClass}
+            >
+              {showPassword ? <EyeOff size={17} aria-hidden="true" /> : <Eye size={17} aria-hidden="true" />}
+            </button>
+          }
         />
         {mode === "signup" && (
           <span id={passwordHintId} className="text-label-caps text-on-surface-variant">
@@ -77,16 +115,26 @@ export function CredentialForm({ action, mode, returnTo }: Props) {
           <label htmlFor="confirm" className="text-label-caps uppercase tracking-wide text-on-surface-variant">
             {t("auth.confirmLabel")} <span className="text-error" aria-hidden="true">*</span>
           </label>
-          <input
+          <IconField
+            icon={Lock}
             id="confirm"
-            type="password"
+            type={showConfirm ? "text" : "password"}
             name="confirm"
             required
             autoComplete="new-password"
             placeholder="••••••••"
             aria-invalid={invalid}
             aria-describedby={invalid ? errorId : undefined}
-            className={fieldClass}
+            trailing={
+              <button
+                type="button"
+                onClick={() => setShowConfirm((v) => !v)}
+                aria-label={showConfirm ? t("auth.hidePassword") : t("auth.showPassword")}
+                className={toggleBtnClass}
+              >
+                {showConfirm ? <EyeOff size={17} aria-hidden="true" /> : <Eye size={17} aria-hidden="true" />}
+              </button>
+            }
           />
         </div>
       )}
@@ -106,17 +154,21 @@ export function CredentialForm({ action, mode, returnTo }: Props) {
       <button
         type="submit"
         disabled={pending}
-        className="bg-primary-container text-on-primary text-label-caps uppercase tracking-wide py-3.5 rounded-md hover:bg-primary transition-colors flex items-center justify-center gap-2 disabled:opacity-60 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-container focus-visible:ring-offset-2 focus-visible:ring-offset-surface-container-lowest"
+        className="group bg-primary-container text-on-primary text-label-caps uppercase tracking-wide py-3.5 rounded-md hover:bg-primary transition-[background-color,transform] flex items-center justify-center gap-2 disabled:opacity-60 active:scale-[0.98] focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-container focus-visible:ring-offset-2 focus-visible:ring-offset-surface-container-lowest"
       >
-        {pending && <Loader2 size={16} className="animate-spin" />}
         {mode === "signup" ? t("auth.submitSignUp") : t("auth.submitSignIn")}
+        {pending ? (
+          <Loader2 size={16} className="animate-spin" />
+        ) : (
+          <ArrowRight size={16} className="transition-transform group-hover:translate-x-1" aria-hidden="true" />
+        )}
       </button>
 
       {mode === "signin" && (
         <p className="text-body-sm text-center -mt-1">
           <Link
             href="/reset-password"
-            className="text-on-surface-variant hover:text-on-background hover:underline rounded-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-container"
+            className="text-on-surface-variant hover:text-on-background underline decoration-transparent hover:decoration-current underline-offset-4 transition-colors rounded-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-container"
           >
             {t("auth.forgotPassword")}
           </Link>

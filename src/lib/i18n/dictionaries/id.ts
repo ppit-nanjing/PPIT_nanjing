@@ -680,6 +680,8 @@ export const id = {
   "auth.emailPlaceholder": "nama@mail.com",
   "auth.passwordLabel": "Kata Sandi",
   "auth.passwordHint": "Minimal 8 karakter.",
+  "auth.showPassword": "Tampilkan kata sandi",
+  "auth.hidePassword": "Sembunyikan kata sandi",
   "auth.confirmLabel": "Konfirmasi Kata Sandi",
   "auth.submitSignUp": "Daftar",
   "auth.submitSignIn": "Masuk",
