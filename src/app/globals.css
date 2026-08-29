@@ -518,19 +518,36 @@ select.pp-select {
   --season-ink: #eef1f7;
 }
 .auth-season-panel {
+  /* Single shared duration/curve for every season-change-triggered fade
+     below (background, ridge fill, orb, ink text, branch, star) - they used
+     to run on 5 different completion times and 2 different easing curves,
+     which read as an uncoordinated, "spiking" mess even after each one
+     individually became capable of smooth interpolation. cubic-bezier(0.4, 0,
+     0.2, 1) is Material's "standard" easing, documented specifically for
+     elements that are visible for the whole transition and at rest on both
+     ends (exactly this: an in-place recolor, nothing entering/exiting) - it's
+     also literally Tailwind's own `ease-in-out` token value, so adopting it
+     everywhere doesn't introduce a new/unfamiliar curve. 900ms (not the
+     previous 1.4s) reads as atmospheric without dragging, and matches the
+     particle-crossfade tween's duration exactly (see season-panel.tsx). */
+  --season-transition-duration: 900ms;
+  --season-transition-ease: cubic-bezier(0.4, 0, 0.2, 1);
   background: linear-gradient(180deg, var(--season-sky-a) 0%, var(--season-sky-b) 45%, var(--season-sky-c) 100%);
-  transition: background 1.4s ease;
+  transition: background var(--season-transition-duration) var(--season-transition-ease);
 }
 .auth-season-panel .auth-season-ridge path {
-  transition: fill 1.4s ease;
+  transition: fill var(--season-transition-duration) var(--season-transition-ease);
 }
 .auth-season-panel .auth-season-orb-glow {
   background: radial-gradient(circle, var(--season-orb-glow), rgba(0, 0, 0, 0) 70%);
-  transition: background 1.4s ease;
+  transition: background var(--season-transition-duration) var(--season-transition-ease);
 }
 .auth-season-panel .auth-season-orb-disc {
   background: radial-gradient(circle at 35% 32%, var(--season-orb-core) 0%, var(--season-orb-mid) 55%, var(--season-orb-edge) 100%);
-  transition: background 1.4s ease;
+  transition: background var(--season-transition-duration) var(--season-transition-ease);
+}
+.auth-season-ink {
+  transition: color var(--season-transition-duration) var(--season-transition-ease);
 }
 /* Perpetual twinkle only - lives on its own element (.auth-season-star-wrap
    below) so its @keyframes, which drives `opacity` continuously forever,
@@ -547,18 +564,22 @@ select.pp-select {
   0%, 100% { opacity: 0.25; }
   50% { opacity: 0.85; }
 }
-/* Per-season visibility target - deliberately NO `transition` here. A season
-   change is animated entirely by the imperative Motion animate() call in
-   season-panel.tsx's choreography effect (dip to 0, then back to this
-   target); a plain CSS transition on the same property would auto-start the
-   instant data-season flips (independent of that JS), racing it for control
-   of the same value - confirmed live to leave the element settled on the
-   wrong opacity depending on timing. Under reduced motion, no animate() call
-   runs at all, so with no transition either, the value simply snaps
-   instantly on data-season change - exactly the desired reduced-motion
-   behavior, not a compromise. */
+/* Per-season visibility target - a plain CSS transition on a literal
+   selector-matched value (not indirected through a custom property), so it's
+   always been capable of smooth interpolation on its own, no JS or
+   @property needed. This also makes the spring<->winter case correct by
+   construction: both resolve to the same 0.6, so the computed value never
+   actually changes when swapping between them, and the browser fires no
+   transition at all - no pointless blink. (An earlier version drove this via
+   an imperative Motion animate() dip-to-zero-then-back specifically to make
+   the transition "feel like an event" - removed because it always fully
+   blacked out the stars even when the target didn't change, with a hard
+   velocity-reversal cusp at the bottom of the dip: a literal spike in the
+   motion curve, and the most likely single cause of the whole transition
+   reading as "spiking.") */
 .auth-season-star-wrap {
   opacity: 0;
+  transition: opacity var(--season-transition-duration) var(--season-transition-ease);
 }
 .auth-season-panel[data-season="winter"] .auth-season-star-wrap,
 .auth-season-panel[data-season="spring"] .auth-season-star-wrap {
@@ -573,7 +594,7 @@ select.pp-select {
 }
 .auth-season-branch {
   opacity: 0;
-  transition: opacity 0.8s ease;
+  transition: opacity var(--season-transition-duration) var(--season-transition-ease);
 }
 .auth-season-panel[data-season="spring"] .auth-season-branch {
   opacity: 0.95;

@@ -58,20 +58,12 @@ const SEASON_PARTICLE: Record<Season, keyof typeof PARTICLE_STYLE | null> = {
   winter: "snow",
 };
 
-// Mirrors the CSS .auth-season-star-wrap season-gating rule exactly
-// (globals.css) - keep both in sync if either changes.
-const SEASON_STAR_OPACITY: Record<Season, number> = {
-  spring: 0.6,
-  summer: 0,
-  autumn: 0,
-  winter: 0.6,
-};
-
-// Total window for the star dim/fade-in + particle crossfade. Kept equal to
-// the 1.4s CSS crossfade duration in globals.css (.auth-season-panel's
-// background/fill transitions - now genuinely smooth, see the @property
-// registrations there) so nothing outlives the base color fade.
-const TRANSITION_MS = 1400;
+// Total window for the particle crossfade. Kept equal to
+// --season-transition-duration in globals.css (.auth-season-panel's shared
+// background/fill/opacity transition duration) so nothing outlives the base
+// color fade - that's the single source of truth for season-change timing,
+// this is just its JS-side mirror for the one remaining imperative tween.
+const TRANSITION_MS = 900;
 
 type Particle = {
   x: number;
@@ -169,14 +161,13 @@ export function SeasonPanel() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const seasonRef = useRef<Season>(season);
 
-  // Season-change transition: DOM target for the star dim/fade-in, plus
-  // bookkeeping so a rapid re-trigger (fast repeated dot-clicks) can stop
-  // whatever's in flight instead of stacking. The sky/ridge/orb color fade
-  // itself is plain CSS (globals.css) - no JS involved there at all.
-  const starWrapRef = useRef<HTMLDivElement>(null);
+  // Season-change transition bookkeeping so a rapid re-trigger (fast
+  // repeated dot-clicks) can stop whatever's in flight instead of stacking.
+  // The sky/ridge/orb/ink/branch/star fade is all plain CSS now (globals.css,
+  // one shared duration/curve) - the particle crossfade is the only thing
+  // left that needs imperative JS, since canvas alpha isn't CSS-drivable.
   const mountedRef = useRef(false); // skip the choreography on initial mount
   const transitionProgressRef = useRef(1); // particle crossfade blend, read by tick(); 1 = settled
-  const starControlsRef = useRef<AnimationPlaybackControls | null>(null);
   const particleTweenControlsRef = useRef<AnimationPlaybackControls | null>(null);
   const transitionTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -196,16 +187,15 @@ export function SeasonPanel() {
     seasonRef.current = season;
   }, [season]);
 
-  // Season-change transition: the sky/ridge/orb color fade is plain CSS
-  // (globals.css, now genuinely smooth via @property) and needs no JS at
-  // all. This effect only handles the two things CSS/canvas can't do alone:
-  // a brief star dim-then-reappear, and the particle-crossfade progress
-  // consumed by tick() below. Skipped on the initial mount (nothing
-  // "changed" yet) and entirely under reduced motion - imperative animate()
-  // calls are NOT auto-gated by the app-wide <MotionConfig
-  // reducedMotion="user"> (that only covers React `motion.*` components), so
-  // `reduceMotion` is checked explicitly here too, matching how this file
-  // already gates the interval/mousemove/rAF loop.
+  // Season-change transition: the sky/ridge/orb/ink/branch/star fade is all
+  // plain CSS (globals.css, one shared duration/curve) and needs no JS at
+  // all. This effect only handles the particle-crossfade progress consumed
+  // by tick() below - canvas alpha isn't something CSS can drive. Skipped on
+  // the initial mount (nothing "changed" yet) and entirely under reduced
+  // motion - imperative animate() calls are NOT auto-gated by the app-wide
+  // <MotionConfig reducedMotion="user"> (that only covers React `motion.*`
+  // components), so `reduceMotion` is checked explicitly here too, matching
+  // how this file already gates the interval/mousemove/rAF loop.
   useEffect(() => {
     if (!mountedRef.current) {
       mountedRef.current = true;
@@ -214,50 +204,31 @@ export function SeasonPanel() {
     if (reduceMotion) return;
 
     // A rapid repeated dot-click fires this effect again before the previous
-    // transition finished: stop() commits each animation's current
-    // interpolated value as an inline style then releases the WAAPI effect,
-    // so restarting from `null` (the keyframe placeholder below, meaning
-    // "use current value") continues smoothly instead of snapping.
+    // transition finished: stop() commits the tween's current interpolated
+    // value then releases it, so restarting continues smoothly instead of
+    // snapping.
     function stopAll() {
-      starControlsRef.current?.stop();
       particleTweenControlsRef.current?.stop();
       if (transitionTimeoutRef.current) clearTimeout(transitionTimeoutRef.current);
     }
     stopAll();
-    // eslint-disable-next-line react-hooks/set-state-in-effect -- kicks off an external system (Motion/WAAPI animations below) in response to `season` changing; `transitioning` only drives the data-transitioning attribute for external inspection, doesn't feed back into this effect's own deps
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- kicks off an external system (the particle tween below) in response to `season` changing; `transitioning` only drives the data-transitioning attribute for external inspection, doesn't feed back into this effect's own deps
     setTransitioning(true);
-
-    const targetStarOpacity = SEASON_STAR_OPACITY[season];
-
-    if (starWrapRef.current) {
-      starControlsRef.current = animate(
-        starWrapRef.current,
-        { opacity: [null, 0, targetStarOpacity] },
-        { duration: 0.7, times: [0, 0.314, 1], ease: ["easeIn", "easeOut"] },
-      );
-    }
 
     transitionProgressRef.current = 0;
     particleTweenControlsRef.current = animate(0, 1, {
       duration: 0.9,
-      ease: "easeInOut",
+      ease: [0.4, 0, 0.2, 1], // same curve as every CSS transition below - see --season-transition-ease in globals.css
       onUpdate: (v) => {
         transitionProgressRef.current = v;
       },
     });
 
-    // Once the whole window has elapsed, explicitly cancel() (not stop())
-    // every control. A naturally-*finished* WAAPI animation is never
-    // auto-released - Motion's fill:"both" keeps its last value pinned above
-    // the CSS cascade indefinitely until cancelled - so without this, a
-    // later reduced-motion toggle would leave the star opacity stuck at
-    // whatever a past transition left it at instead of the current season's
-    // CSS-declared target. cancel() is safe here specifically because by
-    // this point the animation has already reached its final keyframe value,
-    // which equals the underlying CSS rest state (the star target opacity) -
-    // so releasing control back to CSS causes no visual jump.
+    // Once the window has elapsed, explicitly cancel() (not stop()) the
+    // tween. A naturally-*finished* Motion animation is never auto-released
+    // otherwise, which could leave `transitionProgressRef` pinned to a stale
+    // value if reduced motion toggles on later.
     transitionTimeoutRef.current = setTimeout(() => {
-      starControlsRef.current?.cancel();
       particleTweenControlsRef.current?.cancel();
       transitionProgressRef.current = 1;
       setTransitioning(false);
@@ -354,74 +325,84 @@ export function SeasonPanel() {
 
   return (
     <div
-      className="auth-season-panel absolute inset-0 overflow-hidden flex flex-col justify-between px-8 py-10 lg:px-10"
+      className="auth-season-panel absolute inset-0 overflow-hidden flex flex-col justify-between px-8 py-2 s:py-2.5 m:py-3 l:py-3.5 sm:py-5 lg:py-10 lg:px-10"
       data-season={season}
       data-transitioning={transitioning}
       onMouseMove={handleMouseMove}
       onMouseEnter={() => setPaused(true)}
       onMouseLeave={resetParallax}
     >
-      <div ref={starWrapRef} className="auth-season-star-wrap absolute inset-0 pointer-events-none">
-        <div className="auth-season-star absolute" style={{ top: "8%", left: "20%", width: 3, height: 3, borderRadius: "50%", background: "#fff", animationDelay: "0s" }} />
-        <div className="auth-season-star absolute" style={{ top: "14%", left: "42%", width: 3, height: 3, borderRadius: "50%", background: "#fff", animationDelay: "1.4s" }} />
-        <div className="auth-season-star absolute" style={{ top: "10%", left: "85%", width: 3, height: 3, borderRadius: "50%", background: "#fff", animationDelay: "0.7s" }} />
-      </div>
+      {/* Fixed 320px reference "canvas" for the whole illustration, scaled
+          down per mobile tier so the mountain/orb/stars shrink together as
+          one true geometric miniature instead of each fighting the tiny
+          outer strip height independently (which used to clip the ridge
+          SVGs down to a thin baseline sliver, since they're sized off width
+          not height). origin-bottom keeps the mountain grounded as it
+          scales. At lg: this reverts to exactly today's h-full/no-transform
+          behavior - the percentages inside resolve the same way either way. */}
+      <div className="auth-season-scene absolute inset-x-0 bottom-0 h-[320px] origin-bottom scale-[0.2] s:scale-[0.25] m:scale-[0.3] l:scale-[0.35] sm:scale-[0.45] lg:h-full lg:scale-100">
+        <div className="auth-season-star-wrap absolute inset-0 pointer-events-none">
+          <div className="auth-season-star absolute" style={{ top: "8%", left: "20%", width: 3, height: 3, borderRadius: "50%", background: "#fff", animationDelay: "0s" }} />
+          <div className="auth-season-star absolute" style={{ top: "14%", left: "42%", width: 3, height: 3, borderRadius: "50%", background: "#fff", animationDelay: "1.4s" }} />
+          <div className="auth-season-star absolute" style={{ top: "10%", left: "85%", width: 3, height: 3, borderRadius: "50%", background: "#fff", animationDelay: "0.7s" }} />
+        </div>
 
-      <div className="auth-season-orb-glow absolute rounded-full" style={{ top: "44%", left: "58%", width: 200, height: 200 }} />
-      <div className="auth-season-orb-disc absolute rounded-full" style={{ top: "52%", left: "66%", width: 34, height: 34 }} />
+        <div className="auth-season-orb-glow absolute rounded-full" style={{ top: "44%", left: "58%", width: 200, height: 200 }} />
+        <div className="auth-season-orb-disc absolute rounded-full" style={{ top: "52%", left: "66%", width: 34, height: 34 }} />
 
-      <div className="auth-season-mist absolute -left-[15%] w-[130%] h-[60px] rounded-full" style={{ bottom: 82, opacity: 0.7, filter: "blur(14px)", background: "rgba(255,255,255,0.08)", animationDuration: "34s" }} />
-      <div ref={backRef} className="auth-season-ridge absolute -left-[10%] bottom-0 w-[120%] transition-transform duration-500 ease-out" style={{ opacity: 0.7 }}>
-        <svg viewBox="0 0 400 150" preserveAspectRatio="none" className="block w-full h-auto">
-          <path d={RIDGE_PATH.back} style={{ fill: "var(--season-ridge-3)" }} />
-        </svg>
-      </div>
+        <div className="auth-season-mist absolute -left-[15%] w-[130%] h-[60px] rounded-full" style={{ bottom: 82, opacity: 0.7, filter: "blur(14px)", background: "rgba(255,255,255,0.08)", animationDuration: "34s" }} />
+        <div ref={backRef} className="auth-season-ridge absolute -left-[10%] bottom-0 w-[120%] transition-transform duration-500 ease-out" style={{ opacity: 0.7 }}>
+          <svg viewBox="0 0 400 150" preserveAspectRatio="none" className="block w-full h-auto">
+            <path d={RIDGE_PATH.back} style={{ fill: "var(--season-ridge-3)" }} />
+          </svg>
+        </div>
 
-      <div className="auth-season-mist absolute -left-[15%] w-[130%] h-[60px] rounded-full" style={{ bottom: 50, opacity: 0.5, filter: "blur(14px)", background: "rgba(255,255,255,0.08)", animationDuration: "26s", animationDirection: "reverse" }} />
-      <div ref={midRef} className="auth-season-ridge absolute -left-[10%] bottom-0 w-[120%] transition-transform duration-500 ease-out" style={{ opacity: 0.85 }}>
-        <svg viewBox="0 0 400 150" preserveAspectRatio="none" className="block w-full h-auto">
-          <path d={RIDGE_PATH.mid} style={{ fill: "var(--season-ridge-2)" }} />
-        </svg>
-      </div>
+        <div className="auth-season-mist absolute -left-[15%] w-[130%] h-[60px] rounded-full" style={{ bottom: 50, opacity: 0.5, filter: "blur(14px)", background: "rgba(255,255,255,0.08)", animationDuration: "26s", animationDirection: "reverse" }} />
+        <div ref={midRef} className="auth-season-ridge absolute -left-[10%] bottom-0 w-[120%] transition-transform duration-500 ease-out" style={{ opacity: 0.85 }}>
+          <svg viewBox="0 0 400 150" preserveAspectRatio="none" className="block w-full h-auto">
+            <path d={RIDGE_PATH.mid} style={{ fill: "var(--season-ridge-2)" }} />
+          </svg>
+        </div>
 
-      <div ref={frontRef} className="auth-season-ridge absolute -left-[10%] bottom-0 w-[120%] transition-transform duration-500 ease-out">
-        <svg viewBox="0 0 400 150" preserveAspectRatio="none" className="block w-full h-auto">
-          <path d={RIDGE_PATH.front} style={{ fill: "var(--season-ridge-1)" }} />
-        </svg>
-      </div>
+        <div ref={frontRef} className="auth-season-ridge absolute -left-[10%] bottom-0 w-[120%] transition-transform duration-500 ease-out">
+          <svg viewBox="0 0 400 150" preserveAspectRatio="none" className="block w-full h-auto">
+            <path d={RIDGE_PATH.front} style={{ fill: "var(--season-ridge-1)" }} />
+          </svg>
+        </div>
 
-      <svg
-        className="auth-season-branch absolute top-0 right-0 w-3/5 h-auto"
-        viewBox="0 0 300 300"
-        preserveAspectRatio="xMaxYMin meet"
-        aria-hidden="true"
-      >
-        <defs>
-          <g id="auth-season-blossom">
-            <g fill="#f2b8c6">
-              <ellipse cx="0" cy="-7" rx="4.5" ry="7" />
-              <ellipse cx="0" cy="-7" rx="4.5" ry="7" transform="rotate(72)" />
-              <ellipse cx="0" cy="-7" rx="4.5" ry="7" transform="rotate(144)" />
-              <ellipse cx="0" cy="-7" rx="4.5" ry="7" transform="rotate(216)" />
-              <ellipse cx="0" cy="-7" rx="4.5" ry="7" transform="rotate(288)" />
+        <svg
+          className="auth-season-branch absolute top-0 right-0 w-3/5 h-auto"
+          viewBox="0 0 300 300"
+          preserveAspectRatio="xMaxYMin meet"
+          aria-hidden="true"
+        >
+          <defs>
+            <g id="auth-season-blossom">
+              <g fill="#f2b8c6">
+                <ellipse cx="0" cy="-7" rx="4.5" ry="7" />
+                <ellipse cx="0" cy="-7" rx="4.5" ry="7" transform="rotate(72)" />
+                <ellipse cx="0" cy="-7" rx="4.5" ry="7" transform="rotate(144)" />
+                <ellipse cx="0" cy="-7" rx="4.5" ry="7" transform="rotate(216)" />
+                <ellipse cx="0" cy="-7" rx="4.5" ry="7" transform="rotate(288)" />
+              </g>
+              <circle r="2.2" fill="#e8b23f" />
             </g>
-            <circle r="2.2" fill="#e8b23f" />
-          </g>
-        </defs>
-        <path d="M300,0 C276,26 256,6 234,40 C220,62 238,84 212,108 C194,128 170,114 148,146" fill="none" stroke="#2a140f" strokeWidth="4" strokeLinecap="round" />
-        <path d="M234,40 C250,54 266,48 282,68" fill="none" stroke="#2a140f" strokeWidth="3" strokeLinecap="round" />
-        <path d="M194,128 C180,148 158,142 144,168" fill="none" stroke="#2a140f" strokeWidth="3" strokeLinecap="round" />
-        <use href="#auth-season-blossom" transform="translate(148,146) scale(1.4)" />
-        <use href="#auth-season-blossom" transform="translate(282,68) scale(1.1)" />
-        <use href="#auth-season-blossom" transform="translate(144,168) scale(1.2)" />
-        <use href="#auth-season-blossom" transform="translate(212,108) scale(0.85)" />
-        <use href="#auth-season-blossom" transform="translate(266,20) scale(0.65)" />
-      </svg>
+          </defs>
+          <path d="M300,0 C276,26 256,6 234,40 C220,62 238,84 212,108 C194,128 170,114 148,146" fill="none" stroke="#2a140f" strokeWidth="4" strokeLinecap="round" />
+          <path d="M234,40 C250,54 266,48 282,68" fill="none" stroke="#2a140f" strokeWidth="3" strokeLinecap="round" />
+          <path d="M194,128 C180,148 158,142 144,168" fill="none" stroke="#2a140f" strokeWidth="3" strokeLinecap="round" />
+          <use href="#auth-season-blossom" transform="translate(148,146) scale(1.4)" />
+          <use href="#auth-season-blossom" transform="translate(282,68) scale(1.1)" />
+          <use href="#auth-season-blossom" transform="translate(144,168) scale(1.2)" />
+          <use href="#auth-season-blossom" transform="translate(212,108) scale(0.85)" />
+          <use href="#auth-season-blossom" transform="translate(266,20) scale(0.65)" />
+        </svg>
 
-      <canvas ref={canvasRef} className="absolute inset-0" aria-hidden="true" />
+        <canvas ref={canvasRef} className="absolute inset-0" aria-hidden="true" />
+      </div>
 
-      <div className="relative z-10 flex flex-col justify-between h-full transition-colors duration-[1400ms] ease-in-out" style={{ color: "var(--season-ink)" }}>
-        <span className="font-bold text-label-caps uppercase tracking-wide">PPIT Nanjing</span>
+      <div className="relative z-10 flex flex-col justify-end lg:justify-between h-full auth-season-ink" style={{ color: "var(--season-ink)" }}>
+        <span className="hidden lg:block font-bold text-label-caps uppercase tracking-wide">PPIT Nanjing</span>
         <div className="flex flex-col gap-3.5">
           <p className="hidden lg:block font-medium text-body-lg leading-snug max-w-[20ch] text-balance">
             {t("auth.seasonTagline")}
