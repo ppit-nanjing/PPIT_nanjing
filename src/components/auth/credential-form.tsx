@@ -165,6 +165,17 @@ export function CredentialForm({ action, googleAction, mode, returnTo }: Props) 
         </>
       )}
 
+      {mode === "signin" && (
+        <p className="text-body-sm text-center -mt-1">
+          <Link
+            href="/reset-password"
+            className="text-on-surface-variant hover:text-on-background underline decoration-transparent hover:decoration-current underline-offset-4 transition-colors rounded-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-container"
+          >
+            {t("auth.forgotPassword")}
+          </Link>
+        </p>
+      )}
+
       {mode === "signin" ? (
         <p className="text-body-sm text-on-surface-variant text-center">
           {t("auth.noAccount")}{" "}

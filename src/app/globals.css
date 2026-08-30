@@ -1,3 +1,9 @@
+/* Shimmer pada progress scan paspor (passport-scanner.tsx). */
+@keyframes passport-scan-shimmer {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(100%); }
+}
+
 @import "tailwindcss";
 
 /* Design tokens ported from Design System/Color System.md, Typography.md, Spacing System.md
@@ -109,18 +115,6 @@
 body {
   background: var(--color-background);
   color: var(--color-on-background);
-}
-
-.brand-logo {
-  display: block;
-  flex: none;
-  background-color: #ffffff;
-  -webkit-mask: url("/logo.svg") center / contain no-repeat;
-  mask: url("/logo.svg") center / contain no-repeat;
-}
-
-[data-mode="dark"] .brand-logo {
-  background-color: #000000;
 }
 
 /* ===== Tema kota (紫金山 default, dua alternatif di bawah) =====
@@ -333,12 +327,12 @@ body {
   --color-muted-gold: #c98f62;
 }
 
-
 /* Judul memakai serif - Nanjing sebagai ibu kota sastra Jiangnan (六朝古都).
    Badan teks tetap Inter demi keterbacaan. */
 h1, h2, h3 {
   font-family: var(--font-serif);
 }
+
 
 /* ===== Org chart (Struktur Organisasi) ===== */
 .ppit-org-tree {
@@ -469,12 +463,161 @@ select.pp-select {
   background-position: right 0.65rem center;
 }
 
-/* Shimmer pada progress scan paspor (passport-scanner.tsx). */
-@keyframes passport-scan-shimmer {
-  0% { transform: translateX(-100%); }
-  100% { transform: translateX(100%); }
-}
+/* ===== Auth pages: seasonal brand panel (/login, /signup) =====
+   One mountain silhouette (紫金山 Zijin - the default theme's own namesake),
+   recoloured across four real Nanjing seasons instead of four unrelated
+   illustrations. Deliberately its OWN fixed palette, independent of
+   [data-theme]/[data-mode] - it depicts a specific real place across real
+   seasons, not a theme-reactive surface. Don't "fix" it to follow the city
+   theme switcher. Scoped under data-season on .auth-season-panel only -
+   never touches <html>'s data-theme/data-mode. */
 
+/* A plain `--custom-prop: value` has syntax "*" (an opaque token stream) and
+   is NEVER interpolable, no matter what transition/duration is declared on
+   the property that references it - the referencing property's used value
+   just jumps discretely the instant the custom property changes. That
+   applies here even to otherwise-animatable properties like `fill`/
+   `background`, so every "transition: ... 1s ease" below was, until this
+   @property registration was added, silently doing nothing: the sky
+   gradient, ridge fills, and orb all snapped instantly on every season
+   change. Registering each one as <color> gives the browser an actual type
+   to interpolate, which is what makes those transitions real. (Widely
+   supported: Chrome/Edge 85+, Safari 16.4+, Firefox 128+.) */
+@property --season-sky-a { syntax: "<color>"; inherits: true; initial-value: #000000; }
+@property --season-sky-b { syntax: "<color>"; inherits: true; initial-value: #000000; }
+@property --season-sky-c { syntax: "<color>"; inherits: true; initial-value: #000000; }
+@property --season-ridge-1 { syntax: "<color>"; inherits: true; initial-value: #000000; }
+@property --season-ridge-2 { syntax: "<color>"; inherits: true; initial-value: #000000; }
+@property --season-ridge-3 { syntax: "<color>"; inherits: true; initial-value: #000000; }
+@property --season-orb-core { syntax: "<color>"; inherits: true; initial-value: #000000; }
+@property --season-orb-mid { syntax: "<color>"; inherits: true; initial-value: #000000; }
+@property --season-orb-edge { syntax: "<color>"; inherits: true; initial-value: #000000; }
+@property --season-orb-glow { syntax: "<color>"; inherits: true; initial-value: transparent; }
+@property --season-ink { syntax: "<color>"; inherits: true; initial-value: #000000; }
+
+.auth-season-panel[data-season="spring"] {
+  --season-sky-a: #2a1a30; --season-sky-b: #5c3a4a; --season-sky-c: #c98a6a;
+  --season-ridge-1: #241522; --season-ridge-2: #3d2536; --season-ridge-3: #5c3a4a;
+  --season-orb-core: #fbe3d4; --season-orb-mid: #eeb894; --season-orb-edge: #d98a6a;
+  --season-orb-glow: rgba(238, 184, 148, 0.45);
+  --season-ink: #f8ece6;
+}
+.auth-season-panel[data-season="summer"] {
+  --season-sky-a: #26301f; --season-sky-b: #56663a; --season-sky-c: #d9c46a;
+  --season-ridge-1: #1e2617; --season-ridge-2: #3a4a28; --season-ridge-3: #5c6b3e;
+  --season-orb-core: #fdf6dc; --season-orb-mid: #f3e3a0; --season-orb-edge: #e0c667;
+  --season-orb-glow: rgba(243, 227, 160, 0.5);
+  --season-ink: #f7f4e6;
+}
+.auth-season-panel[data-season="autumn"] {
+  --season-sky-a: #2e1810; --season-sky-b: #6b3420; --season-sky-c: #d9873f;
+  --season-ridge-1: #23120c; --season-ridge-2: #4a2419; --season-ridge-3: #6e3826;
+  --season-orb-core: #fbe6c8; --season-orb-mid: #f0a458; --season-orb-edge: #c9702f;
+  --season-orb-glow: rgba(240, 164, 88, 0.5);
+  --season-ink: #fbeee0;
+}
+.auth-season-panel[data-season="winter"] {
+  --season-sky-a: #1c2033; --season-sky-b: #3f4a63; --season-sky-c: #c7d2df;
+  --season-ridge-1: #171a28; --season-ridge-2: #2a2a3d; --season-ridge-3: #43435c;
+  --season-orb-core: #ffffff; --season-orb-mid: #dbe4ee; --season-orb-edge: #aebbd0;
+  --season-orb-glow: rgba(219, 228, 238, 0.55);
+  --season-ink: #eef1f7;
+}
+.auth-season-panel {
+  /* Single shared duration/curve for every season-change-triggered fade
+     below (background, ridge fill, orb, ink text, branch, star) - they used
+     to run on 5 different completion times and 2 different easing curves,
+     which read as an uncoordinated, "spiking" mess even after each one
+     individually became capable of smooth interpolation. cubic-bezier(0.4, 0,
+     0.2, 1) is Material's "standard" easing, documented specifically for
+     elements that are visible for the whole transition and at rest on both
+     ends (exactly this: an in-place recolor, nothing entering/exiting) - it's
+     also literally Tailwind's own `ease-in-out` token value, so adopting it
+     everywhere doesn't introduce a new/unfamiliar curve. 900ms (not the
+     previous 1.4s) reads as atmospheric without dragging, and matches the
+     particle-crossfade tween's duration exactly (see season-panel.tsx). */
+  --season-transition-duration: 900ms;
+  --season-transition-ease: cubic-bezier(0.4, 0, 0.2, 1);
+  background: linear-gradient(180deg, var(--season-sky-a) 0%, var(--season-sky-b) 45%, var(--season-sky-c) 100%);
+  transition: background var(--season-transition-duration) var(--season-transition-ease);
+}
+.auth-season-panel .auth-season-ridge path {
+  transition: fill var(--season-transition-duration) var(--season-transition-ease);
+}
+.auth-season-panel .auth-season-orb-glow {
+  background: radial-gradient(circle, var(--season-orb-glow), rgba(0, 0, 0, 0) 70%);
+  transition: background var(--season-transition-duration) var(--season-transition-ease);
+}
+.auth-season-panel .auth-season-orb-disc {
+  background: radial-gradient(circle at 35% 32%, var(--season-orb-core) 0%, var(--season-orb-mid) 55%, var(--season-orb-edge) 100%);
+  transition: background var(--season-transition-duration) var(--season-transition-ease);
+}
+.auth-season-ink {
+  transition: color var(--season-transition-duration) var(--season-transition-ease);
+}
+/* Perpetual twinkle only - lives on its own element (.auth-season-star-wrap
+   below) so its @keyframes, which drives `opacity` continuously forever,
+   doesn't fight the per-season visibility target on the SAME property.
+   (That collision used to make the per-season gating below have no visible
+   effect at all - stars twinkled in all four seasons, not just spring/
+   winter as intended, because an infinitely-running animation permanently
+   overrides a plain declared value for the same property.) Nested opacities
+   multiply, so the two concerns compose cleanly on separate elements. */
+.auth-season-star {
+  animation: auth-season-twinkle 3.4s ease-in-out infinite;
+}
+@keyframes auth-season-twinkle {
+  0%, 100% { opacity: 0.25; }
+  50% { opacity: 0.85; }
+}
+/* Per-season visibility target - a plain CSS transition on a literal
+   selector-matched value (not indirected through a custom property), so it's
+   always been capable of smooth interpolation on its own, no JS or
+   @property needed. This also makes the spring<->winter case correct by
+   construction: both resolve to the same 0.6, so the computed value never
+   actually changes when swapping between them, and the browser fires no
+   transition at all - no pointless blink. (An earlier version drove this via
+   an imperative Motion animate() dip-to-zero-then-back specifically to make
+   the transition "feel like an event" - removed because it always fully
+   blacked out the stars even when the target didn't change, with a hard
+   velocity-reversal cusp at the bottom of the dip: a literal spike in the
+   motion curve, and the most likely single cause of the whole transition
+   reading as "spiking.") */
+.auth-season-star-wrap {
+  opacity: 0;
+  /* The whole star field turns gently across the season cycle (spring=0deg
+     baseline here; summer/autumn/winter below) - like the night sky slowly
+     wheeling, not a UI spin. The sun/moon orb is a sibling element entirely
+     outside .auth-season-star-wrap, so it can never be affected by this -
+     "only the sky rotates, the sun stays put" is structural, not a rule
+     anyone has to remember to preserve. Single monotonic value per
+     transition (never a dip-and-return), so this carries none of the
+     velocity-reversal cusp risk the old star-opacity animation had. */
+  transform: rotate(0deg);
+  transition: opacity var(--season-transition-duration) var(--season-transition-ease),
+              transform var(--season-transition-duration) var(--season-transition-ease);
+}
+.auth-season-panel[data-season="winter"] .auth-season-star-wrap,
+.auth-season-panel[data-season="spring"] .auth-season-star-wrap {
+  opacity: 0.6;
+}
+.auth-season-panel[data-season="summer"] .auth-season-star-wrap { transform: rotate(8deg); }
+.auth-season-panel[data-season="autumn"] .auth-season-star-wrap { transform: rotate(16deg); }
+.auth-season-panel[data-season="winter"] .auth-season-star-wrap { transform: rotate(24deg); }
+.auth-season-mist {
+  animation: auth-season-mist-drift 30s ease-in-out infinite;
+}
+@keyframes auth-season-mist-drift {
+  0%, 100% { transform: translateX(0); }
+  50% { transform: translateX(24px); }
+}
+.auth-season-branch {
+  opacity: 0;
+  transition: opacity var(--season-transition-duration) var(--season-transition-ease);
+}
+.auth-season-panel[data-season="spring"] .auth-season-branch {
+  opacity: 0.95;
+}
 /* Respect users who prefer reduced motion: disable non-essential animation
    and transitions (spinners, blurs, reveals) without changing layout. */
 @media (prefers-reduced-motion: reduce) {
