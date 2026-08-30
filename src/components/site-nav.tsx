@@ -119,7 +119,7 @@ export function SiteNav() {
   // `min(100%, 1000px)` value isn't interpolable, so the pill would snap
   // straight to the end instead of easing. max-width px -> px interpolates
   // smoothly while width stays 100%.
-  const maxWidth = compact ? "1000px" : "var(--container-max)";
+  const maxWidth = compact ? "1200px" : "1320px";
 
   // Glass + shadow appear on scroll only; opaque & flat at rest.
   const bgAlpha = scrolled ? 0.82 : 1;
@@ -128,7 +128,7 @@ export function SiteNav() {
 
   return (
     <>
-      <header className="w-full sticky top-0 z-50 flex justify-center p-2.5">
+      <header className="w-full sticky top-0 z-50 flex justify-center p-2.5 xl:px-1.5">
         <nav
           className="rounded-full"
           style={{
@@ -144,12 +144,20 @@ export function SiteNav() {
               "max-width 350ms cubic-bezier(0.22, 1, 0.36, 1), background-color 350ms ease, backdrop-filter 350ms ease, -webkit-backdrop-filter 350ms ease, box-shadow 350ms ease",
           }}
         >
-          <div className="max-w-[var(--container-max)] mx-auto flex justify-between items-center gap-2 sm:gap-4 h-12 md:h-14 px-4 sm:px-6">
+          <div
+            className="mx-auto flex justify-between items-center gap-2 sm:gap-4 h-12 md:h-14 px-4 sm:px-6"
+            style={{ maxWidth }}
+          >
             <Link
               href="/"
-              className="text-headline-sm sm:text-headline-md font-bold text-primary uppercase tracking-tight shrink-0 whitespace-nowrap"
+              className="inline-flex items-center gap-1.5 text-headline-sm sm:text-headline-md font-bold text-primary uppercase tracking-tight shrink-0 whitespace-nowrap"
             >
-              PPIT Nanjing
+              <span
+                aria-hidden="true"
+                className="brand-logo w-6 h-6"
+                style={{ backgroundColor: "currentColor" }}
+              />
+              <span>PPIT Nanjing</span>
             </Link>
 
             {/* Inline links: desktop (lg) and up only - narrower viewports use

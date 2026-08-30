@@ -1,9 +1,11 @@
 import NextAuth from "next-auth";
+import { encode } from "@auth/core/jwt";
 import Google from "next-auth/providers/google";
 import Credentials from "next-auth/providers/credentials";
 import { DrizzleAdapter } from "@auth/drizzle-adapter";
 import { cache } from "react";
 import { and, eq, sql } from "drizzle-orm";
+import { cookies } from "next/headers";
 import { db } from "@/db";
 import { users, accounts, sessions, verificationTokens } from "@/db/schema";
 import { verifyPassword } from "@/lib/password";
@@ -15,6 +17,9 @@ import { verifyPassword } from "@/lib/password";
 // needs a shared store (e.g. Upstash Redis), which isn't provisioned yet.
 const MAX_ATTEMPTS = 5;
 const LOCK_MS = 5 * 60 * 1000;
+const SHORT_SESSION_MAX_AGE = 12 * 60 * 60;
+const REMEMBERED_SESSION_MAX_AGE = 30 * 24 * 60 * 60;
+export const LOGIN_REMEMBER_COOKIE = "ppit-login-remember";
 const attempts = new Map<string, { count: number; lockUntil: number }>();
 
 function checkThrottle(key: string): { locked: boolean; retryAfterMs: number } {
@@ -33,6 +38,11 @@ function registerFailure(key: string) {
 
 function registerSuccess(key: string) {
   attempts.delete(key);
+}
+
+function getRememberMePreference(user: unknown): boolean | undefined {
+  if (typeof user !== "object" || user === null || !("remember" in user)) return undefined;
+  return typeof user.remember === "boolean" ? user.remember : undefined;
 }
 
 // Admin-access rule per docs/Data Dictionary.md "Admin Access Rule" (sourced from the
@@ -104,10 +114,15 @@ const { handlers, auth: uncachedAuth, signIn, signOut } = NextAuth({
       credentials: {
         email: { label: "Email", type: "email" },
         password: { label: "Password", type: "password" },
+        remember: { label: "Keep me signed in", type: "checkbox" },
       },
       async authorize(credentials) {
         const email = String(credentials?.email ?? "").trim().toLowerCase();
         const password = String(credentials?.password ?? "");
+        const rememberValue = credentials?.remember;
+        let remember: boolean | undefined;
+        if (rememberValue === "true") remember = true;
+        if (rememberValue === "false") remember = false;
         if (!email || !password) return null;
 
         const { locked, retryAfterMs } = checkThrottle(email);
@@ -133,7 +148,7 @@ const { handlers, auth: uncachedAuth, signIn, signOut } = NextAuth({
         }
 
         registerSuccess(email);
-        return { id: user.id, email: user.email, name: user.name, image: user.image };
+        return { id: user.id, email: user.email, name: user.name, image: user.image, remember };
       },
     }),
   ],
@@ -141,7 +156,16 @@ const { handlers, auth: uncachedAuth, signIn, signOut } = NextAuth({
   // (callback/index.js) always JWT-encodes the session cookie and never writes a
   // row to the sessions table, so database sessions cannot persist a credentials
   // login. JWT is the supported strategy for a Credentials + OAuth mix.
-  session: { strategy: "jwt" },
+  session: { strategy: "jwt", maxAge: REMEMBERED_SESSION_MAX_AGE },
+  jwt: {
+    async encode({ token, ...params }) {
+      return encode({
+        ...params,
+        token,
+        maxAge: token?.remember === false ? SHORT_SESSION_MAX_AGE : REMEMBERED_SESSION_MAX_AGE,
+      });
+    },
+  },
   callbacks: {
     // Handles admin-invited accounts: a `users` row may exist with status
     // "invited" and no passwordHash when an admin pre-provisioned an account for
@@ -187,6 +211,13 @@ const { handlers, auth: uncachedAuth, signIn, signOut } = NextAuth({
       // then); on later refreshes we keep the existing token.id.
       if (user?.id) {
         token.id = user.id;
+        const remember = getRememberMePreference(user);
+        if (remember === undefined) {
+          const cookieStore = await cookies();
+          token.remember = cookieStore.get(LOGIN_REMEMBER_COOKIE)?.value !== "false";
+        } else {
+          token.remember = remember;
+        }
         await db.update(users).set({ lastLoginAt: new Date() }).where(eq(users.id, user.id));
       }
       return token;

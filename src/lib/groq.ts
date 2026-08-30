@@ -104,6 +104,26 @@ export async function improveIndonesianText(text: string, context: ImproveContex
   );
 }
 
+// Parse balasan Groq untuk translateFields: buang code fence, ambil hanya
+// pasangan key->string yang valid. null = respons tidak bisa dipakai.
+function parseTranslationReply(raw: string): Record<string, string> | null {
+  // Model kadang membungkus balasan dalam ```json ... ``` walau diminta tidak -
+  // lucuti sebelum parse.
+  const cleaned = raw.trim().replace(/^```(?:json)?\s*/i, "").replace(/```\s*$/, "").trim();
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(cleaned);
+  } catch {
+    return null;
+  }
+  if (typeof parsed !== "object" || parsed === null) return null;
+  const result: Record<string, string> = {};
+  for (const [key, value] of Object.entries(parsed as Record<string, unknown>)) {
+    if (typeof value === "string" && value.trim()) result[key] = value.trim();
+  }
+  return result;
+}
+
 /**
  * Terjemahkan satu atau lebih field teks Indonesia ke Inggris dalam SATU
  * panggilan Groq (bukan satu panggilan per field) - dipakai city-content.ts
@@ -130,34 +150,41 @@ export async function translateFields(fields: Record<string, string>): Promise<R
     "dibiarkan sama. JANGAN tambahkan key baru maupun penjelasan. Balas HANYA objek JSON valid satu baris, " +
     "tanpa markdown code fence.";
 
-  let raw: string;
-  try {
-    raw = await groqChat(
-      [
-        { role: "system", content: system },
-        { role: "user", content: JSON.stringify(Object.fromEntries(entries)) },
-      ],
-      { temperature: 0.3, maxTokens: 800 },
-    );
-  } catch {
-    return {}; // Groq down/rate-limited - pemanggil fallback, jangan sampai gagalkan submit form
-  }
-
-  // Model kadang membungkus balasan dalam ```json ... ``` walau diminta tidak -
-  // lucuti sebelum parse.
-  const cleaned = raw.trim().replace(/^```(?:json)?\s*/i, "").replace(/```\s*$/, "").trim();
-  let parsed: unknown;
-  try {
-    parsed = JSON.parse(cleaned);
-  } catch {
-    return {}; // respons bukan JSON valid - fallback, bukan error
-  }
-  if (typeof parsed !== "object" || parsed === null) return {};
-
+  // Maks 800 token per panggilan - pecah field jadi potongan kecil supaya JSON
+  // tidak terpotong di tengah saat payload besar (mis. 8 field deskripsi
+  // panjang). Kegagalan potongan mana pun = return {} seluruhnya (semantik
+  // sama dengan sebelumnya: pemanggil fallback, bukan error).
   const result: Record<string, string> = {};
-  for (const [key] of entries) {
-    const value = (parsed as Record<string, unknown>)[key];
-    if (typeof value === "string" && value.trim()) result[key] = value.trim();
+  const CHUNK_CHARS = 600;
+  for (let offset = 0; offset < entries.length; ) {
+    const chunk: Record<string, string> = {};
+    let size = 0;
+    while (offset < entries.length && size < CHUNK_CHARS) {
+      const [key, value] = entries[offset];
+      chunk[key] = value;
+      size += key.length + value.length + 2;
+      offset++;
+    }
+
+    let raw: string;
+    try {
+      raw = await groqChat(
+        [
+          { role: "system", content: system },
+          { role: "user", content: JSON.stringify(chunk) },
+        ],
+        { temperature: 0.3, maxTokens: 800 },
+      );
+    } catch {
+      return {}; // Groq down/rate-limited - pemanggil fallback, jangan sampai gagalkan submit form
+    }
+
+    const parsed = parseTranslationReply(raw);
+    if (!parsed) return {}; // respons bukan JSON valid - fallback, bukan error
+
+    for (const [key] of Object.entries(chunk)) {
+      if (parsed[key]) result[key] = parsed[key];
+    }
   }
   return result;
 }

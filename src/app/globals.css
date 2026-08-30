@@ -1,3 +1,9 @@
+/* Shimmer pada progress scan paspor (passport-scanner.tsx). */
+@keyframes passport-scan-shimmer {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(100%); }
+}
+
 @import "tailwindcss";
 
 /* Design tokens ported from Design System/Color System.md, Typography.md, Spacing System.md

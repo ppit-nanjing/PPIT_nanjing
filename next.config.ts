@@ -36,7 +36,8 @@ function buildCsp() {
   const v = VERCEL_TOOLBAR_HOSTS;
   return [
     "default-src 'self'",
-    `script-src 'self' 'unsafe-inline'${DEV_EVAL}${v}`,
+    `script-src 'self' 'unsafe-inline' 'wasm-unsafe-eval'${DEV_EVAL}${v}`,
+    "worker-src 'self'",
     "style-src 'self' 'unsafe-inline'",
     `img-src 'self' data: blob: https://*.public.blob.vercel-storage.com https://*.googleusercontent.com${v}`,
     "font-src 'self'",
@@ -75,6 +76,10 @@ function securityHeaders(cameraPolicy: string) {
 }
 
 const nextConfig: NextConfig = {
+  // ngrok gives development tunnels a rotating *.ngrok-free.dev hostname.
+  // Next.js blocks those origins unless they are explicitly allow-listed for
+  // dev-only assets such as Turbopack chunks and HMR.
+  allowedDevOrigins: ["*.ngrok-free.dev"],
   // Default Server Action body limit is 1MB, which silently rejects most
   // real documents (scanned PDFs, signed contracts) uploaded via
   // uploadDriveFileAction in the Dokumen module. Raised, but capped at 4mb -

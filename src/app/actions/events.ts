@@ -26,6 +26,16 @@ async function normalizeRegistrationBranch(raw: FormDataEntryValue | null): Prom
   return known.length > 0 ? value : null;
 }
 
+// Berkas yang diunggah lewat /api/upload selalu berujung URL blob Vercel atau
+// route internal /api/... - apa pun di luar itu (mis. "javascript:...") tidak
+// boleh masuk DB karena nilainya nanti dirender sebagai <a href> di konsol.
+function isAllowedUploadUrl(value: string): boolean {
+  return (
+    /^https:\/\/[a-z0-9.-]*blob\.vercel-storage\.com\//i.test(value) ||
+    value.startsWith("/api/")
+  );
+}
+
 export async function registerForEvent(eventId: string, slug: string, formData?: FormData) {
   const session = await auth();
   if (!session?.user?.id) redirect(`/login?returnTo=/events/${slug}`);
@@ -114,6 +124,7 @@ export async function registerForEvent(eventId: string, slug: string, formData?:
         };
       } else {
         const g = (k: string) => String(formData?.get(k) ?? "").trim();
+        const studentProofUrl = g("bio_studentProofUrl");
         biodataJson = {
           fullName: g("bio_fullName"),
           passportNumber: g("bio_passportNumber"),
@@ -123,7 +134,9 @@ export async function registerForEvent(eventId: string, slug: string, formData?:
           university: g("bio_university"),
           major: g("bio_major"),
           entryYear: g("bio_entryYear"),
-          studentProofUrl: g("bio_studentProofUrl"),
+          // URL non-blob dianggap tidak ada - jaring pengaman di bawah akan
+          // menolak pendaftaran sampai pengunggah memakai FileUpload yang benar.
+          studentProofUrl: isAllowedUploadUrl(studentProofUrl) ? studentProofUrl : "",
           source: "form",
         };
         // Semua field biodata wajib di jalur form - kalau ada yang kosong,
