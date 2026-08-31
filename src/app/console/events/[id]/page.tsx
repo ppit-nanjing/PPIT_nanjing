@@ -20,6 +20,7 @@ import { Select, CheckboxField, CheckField } from "@/components/console/form";
 import { PAYMENT_STATUS_LABEL } from "@/lib/payment-status-labels";
 import { toDateLocalInput } from "@/lib/datetime";
 import { ConfirmButton } from "@/components/console/confirm-button";
+import { ProofView } from "@/components/console/proof-view";
 import { Download } from "lucide-react";
 
 const QUESTION_TYPE_LABELS: Record<string, string> = {
@@ -627,14 +628,9 @@ export default async function ConsoleEventDetailPage({ params }: { params: Promi
                           )}
                           {p.note && <p className="text-body-sm text-on-surface-variant mt-1">{p.note}</p>}
                           {p.proofUrl && (
-                            <a
-                              href={p.proofUrl}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="inline-block text-label-caps uppercase tracking-wide text-primary-container hover:underline mt-1"
-                            >
-                              Lihat bukti
-                            </a>
+                            <div className="mt-1.5 text-label-caps">
+                              <ProofView url={p.proofUrl} label="Bukti transfer" />
+                            </div>
                           )}
                         </div>
                         <form action={updatePaymentStatus} className="flex flex-col gap-2">

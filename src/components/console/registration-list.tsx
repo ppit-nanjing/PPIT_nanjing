@@ -3,6 +3,7 @@
 import { useState, useTransition } from "react";
 import { CheckCircle2, TriangleAlert } from "lucide-react";
 import { checkInRegistration } from "@/app/actions/admin-events";
+import { ProofView } from "@/components/console/proof-view";
 
 interface Registration {
   id: string;
@@ -114,15 +115,17 @@ export function RegistrationList({
     return (
       <ul className="mt-2 flex flex-col gap-0.5">
         {biodata.map((b) => (
-          <li key={b.label} className="text-label-caps text-on-surface-variant">
+          <li
+            key={b.label}
+            className={`text-label-caps text-on-surface-variant ${b.key === "studentProofUrl" ? "flex items-center gap-1.5 flex-wrap" : ""}`}
+          >
             {b.label}:{" "}
-            {/* Link hanya untuk URL http(s) yang aman; nilai lain dirender
-                sebagai teks biasa supaya skema javascript: tidak pernah jadi
-                href (server juga sudah memvalidasinya saat pendaftaran). */}
-            {b.key === "studentProofUrl" && /^https?:\/\//i.test(b.value) ? (
-              <a href={b.value} target="_blank" rel="noopener noreferrer" className="text-primary-container hover:underline normal-case">
-                lihat berkas
-              </a>
+            {/* ProofView cuma bikin <a href> untuk URL https:// / route /api/…
+                — nilai lain (javascript:, file://, path lokal) dirender sebagai
+                teks peringatan, tidak pernah jadi href. Server juga sudah
+                memvalidasinya saat pendaftaran. */}
+            {b.key === "studentProofUrl" ? (
+              <ProofView url={b.value} label={b.label} />
             ) : (
               <span className="text-on-background normal-case">{b.value}</span>
             )}

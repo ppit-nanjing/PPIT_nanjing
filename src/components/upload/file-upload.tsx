@@ -106,7 +106,14 @@ export function FileUpload({
           name={name}
           value={value}
           required={required && (autoUpload ? !value : !file)}
-          onChange={(e) => setValue(e.target.value)}
+          onChange={(e) => {
+            const v = e.target.value;
+            // Field ini hanya boleh berisi URL hasil unggah (https) atau kosong.
+            // Tolak file://, path lokal (C:\…, /Users/…), dan teks yang ter-drop
+            // dari OS — nilai begitu tak bisa dibuka admin dan menyesatkan.
+            if (v === "" || /^https:\/\//i.test(v.trim())) setValue(v.trim());
+          }}
+          onDrop={(e) => e.preventDefault()}
           placeholder={placeholder ?? t("upload.pasteOrFile")}
           className="bg-soft-gray rounded-md p-3 text-body-md focus:outline-none focus:ring-2 focus:ring-primary-container"
         />
