@@ -2,9 +2,7 @@ import { eq, and, ne, count, desc } from "drizzle-orm";
 import { notFound } from "next/navigation";
 import { auth } from "@/auth";
 import { db } from "@/db";
-import { events, eventRegistrations, eventQuestions, eventFeeOptions, eventDivisions, eventCommittee, galleryAlbums, galleryPhotos, regionalBranches, sensusProfiles, coverageCities, users } from "@/db/schema";
-import { NON_STUDENT_BRANCH } from "@/lib/membership-status";
-import { hasCompletedSensus } from "@/lib/sensus-gate";
+import { events, eventRegistrations, eventDivisions, eventCommittee, galleryAlbums, galleryPhotos } from "@/db/schema";
 import { SiteNav } from "@/components/site-nav";
 import { SiteFooter } from "@/components/site-footer";
 import { AnimatedHeroHeading } from "@/components/animated-hero-heading";
@@ -13,11 +11,7 @@ import { EventCard } from "@/components/event-card";
 import { GalleryLightbox } from "@/components/gallery-lightbox";
 import { CalendarDays, MapPin, Users, Ticket, ArrowLeft, ListChecks, Images, ArrowRight, CalendarX, PartyPopper, BadgeCheck } from "lucide-react";
 import Image from "next/image";
-import { registerForEvent } from "@/app/actions/events";
 import { Select } from "@/components/console/form";
-import { FileUpload } from "@/components/upload/file-upload";
-import { EventBiodataFields, type BiodataDefaults } from "@/components/events/event-biodata-fields";
-import { EventRegisterWizard } from "@/components/events/event-register-wizard";
 import Link from "next/link";
 import { applyAsVolunteer } from "@/app/actions/volunteers";
 import { getT } from "@/lib/i18n/server";
@@ -60,15 +54,6 @@ export default async function EventDetailPage({ params, searchParams }: { params
 
   const session = await auth();
   let alreadyRegistered = false;
-  // Cabang hanya ditanyakan ke peserta yang sensusnya belum lengkap - kalau
-  // sudah, cabangnya sudah kita ketahui dan menanyakan ulang cuma menambah
-  // gesekan pada tombol yang tadinya sekali klik.
-  //
-  // Acara ber-requiresSensus dikecualikan: siapa pun yang berhasil mendaftar ke
-  // sana pasti sensusnya sudah lengkap (kalau belum, registerForEvent
-  // mengalihkannya ke /sensus), jadi menanyakan cabang di situ hanya memasang
-  // dropdown wajib di depan tombol yang ujungnya mengalihkan juga.
-  let askBranch = false;
   // Penugasan panitia pengunjung ini pada acara yang sama - kalau ada, form
   // volunteer diganti pemberitahuan + tautan tiket kepanitiaan (QR absensi).
   let myCommitteeRole: { divisionName: string | null; role: string } | null = null;
@@ -78,13 +63,6 @@ export default async function EventDetailPage({ params, searchParams }: { params
       .from(eventRegistrations)
       .where(and(eq(eventRegistrations.eventId, event.id), eq(eventRegistrations.userId, session.user.id)));
     alreadyRegistered = !!existing;
-    askBranch =
-      !alreadyRegistered &&
-      !event.requiresSensus &&
-      // Acara requiresBiodata menanyakan Kota/Ranting di blok biodata, jadi
-      // pertanyaan cabang terpisah cuma jadi dobel.
-      !event.requiresBiodata &&
-      !(await hasCompletedSensus(session.user.id));
     const [committee] = await db
       .select({ divisionName: eventDivisions.name, role: eventCommittee.role })
       .from(eventCommittee)
@@ -93,74 +71,11 @@ export default async function EventDetailPage({ params, searchParams }: { params
       .limit(1);
     if (committee) myCommitteeRole = { divisionName: committee.divisionName, role: committee.role };
   }
-  const branchOptions = askBranch
-    ? (await db.select({ cityName: regionalBranches.cityName }).from(regionalBranches))
-        .map((b) => b.cityName)
-        .sort((a, b) => a.localeCompare(b))
-    : [];
 
   const now = new Date();
   const deadlinePassed = event.registrationDeadline ? new Date(event.registrationDeadline) < now : false;
   const isFull = event.capacity != null && registeredCount >= event.capacity;
   const canRegister = event.status === "published" && !isFull && !deadlinePassed;
-
-  // Pertanyaan kustom hanya relevan bagi yang benar-benar akan melihat form.
-  const questions =
-    session?.user?.id && !alreadyRegistered && canRegister && !event.requiresSensus
-      ? await db
-          .select()
-          .from(eventQuestions)
-          .where(eq(eventQuestions.eventId, event.id))
-          .orderBy(eventQuestions.orderIndex, eventQuestions.id)
-      : [];
-
-  // Biodata lengkap peserta (acara requiresBiodata, mis. WIF). Kalau sensusnya
-  // sudah lengkap, nilainya dipakai read-only + di-snapshot server-side; kalau
-  // belum, form isian yang di-prefill dari sensus parsial / akun.
-  const showBiodata =
-    !!session?.user?.id && event.requiresBiodata && !alreadyRegistered && canRegister;
-  let biodata: {
-    sensusComplete: boolean;
-    defaults: BiodataDefaults;
-    cityOptions: string[];
-  } | null = null;
-  if (showBiodata && session?.user?.id) {
-    const [profile] = await db
-      .select()
-      .from(sensusProfiles)
-      .where(eq(sensusProfiles.userId, session.user.id));
-    const [account] = await db
-      .select({ name: users.name })
-      .from(users)
-      .where(eq(users.id, session.user.id));
-    const cities = await db.select({ label: coverageCities.label }).from(coverageCities);
-    biodata = {
-      sensusComplete: profile?.completionStatus === "complete",
-      cityOptions: cities.map((c) => c.label).sort((a, b) => a.localeCompare(b)),
-      defaults: {
-        fullName: profile?.fullName ?? account?.name ?? "",
-        passportNumber: profile?.passportNumber ?? "",
-        wechatId: profile?.wechatId ?? "",
-        chinaPhone: profile?.phoneActive ?? "",
-        branch: profile?.branch ?? "",
-        university: profile?.university ?? "",
-        major: profile?.major ?? "",
-        entryYear: profile?.entryYear != null ? String(profile.entryYear) : "",
-        studentProofUrl: profile?.studentCardUrl ?? "",
-      },
-    };
-  }
-
-  // Kategori tarif: kalau acara berbayar & punya kategori, peserta memilih satu
-  // saat mendaftar dan nominal itulah yang harus dibayar.
-  const feeOptions =
-    event.isPaid && canRegister && !alreadyRegistered
-      ? await db
-          .select({ id: eventFeeOptions.id, label: eventFeeOptions.label, amountCny: eventFeeOptions.amountCny })
-          .from(eventFeeOptions)
-          .where(eq(eventFeeOptions.eventId, event.id))
-          .orderBy(eventFeeOptions.orderIndex, eventFeeOptions.id)
-      : [];
 
   // Pendaftaran volunteer terbuka: tampilkan formnya beserta pilihan divisinya.
   const volunteerDivisions = event.volunteerSignupOpen
@@ -189,105 +104,198 @@ export default async function EventDetailPage({ params, searchParams }: { params
   const agendaItems = event.agenda
     ? event.agenda.split("\n").map((l) => l.trim()).filter(Boolean)
     : [];
+  // "13.00 - Registrasi" -> { time: "13.00", label: "Registrasi" }; baris tanpa
+  // pola waktu-di-depan dibiarkan utuh sebagai label.
+  const agenda = agendaItems.map((raw) => {
+    const m = raw.match(/^(\d{1,2}[.:]\d{2}(?:\s*[-–—]\s*\d{1,2}[.:]\d{2})?)\s*[-–—]\s*(.+)$/);
+    return m ? { time: m[1].trim(), label: m[2].trim() } : { time: null, label: raw };
+  });
+
+  const startDate = event.startAt ? new Date(event.startAt) : null;
+  const fmtTime = (d: Date) =>
+    d.getHours() !== 0 || d.getMinutes() !== 0
+      ? d.toLocaleTimeString(INTL_LOCALE[locale], { hour: "2-digit", minute: "2-digit" })
+      : null;
+  const timeRange = startDate
+    ? [fmtTime(startDate), event.endAt ? fmtTime(new Date(event.endAt)) : null].filter(Boolean).join(" – ")
+    : "";
+
+  const statusChip =
+    event.status === "registration_closed"
+      ? t("events.notOpen")
+      : event.status === "completed"
+        ? t("events.ended")
+        : null;
 
   return (
-    <div className="min-h-screen bg-background text-on-background">
-      <SiteNav />
+    <div className="relative min-h-screen overflow-hidden bg-background text-on-background">
+      {/* Latar ambient dari poster — bikin halaman terasa senada dengan acaranya
+          tanpa menyentuh warna tombol (biar kontras/AA tetap aman). */}
+      {event.coverImageUrl && (
+        <div aria-hidden className="pointer-events-none absolute inset-x-0 top-0 -z-0 h-[75vh] opacity-[0.12]">
+          <Image src={event.coverImageUrl} alt="" fill sizes="100vw" className="scale-110 object-cover blur-3xl" />
+          <div className="absolute inset-0 bg-gradient-to-b from-transparent via-background/40 to-background" />
+        </div>
+      )}
 
-      <main className="max-w-[var(--container-max)] mx-auto px-[var(--spacing-container-padding)] py-10">
-        <Link
-          href="/events"
-          className="inline-flex items-center gap-2 text-label-caps uppercase tracking-wide text-primary-container hover:text-primary transition-colors mb-6 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-container focus-visible:ring-offset-2 focus-visible:ring-offset-background rounded"
-        >
-           <ArrowLeft size={16} aria-hidden="true" /> {t("events.back")}
-         </Link>
+      <div className="relative z-10">
+        <SiteNav />
 
-        {event.coverImageUrl && (
-          <Reveal>
-            <div className="relative w-full h-64 md:h-96 rounded-xl overflow-hidden mb-8">
-              <Image
-                src={event.coverImageUrl}
-                alt={event.title}
-                fill
-                sizes="(max-width: 768px) 100vw, 768px"
-                className="object-cover"
-              />
-              <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent" />
-            </div>
-          </Reveal>
-        )}
+        <main className="mx-auto max-w-[var(--container-max)] px-[var(--spacing-container-padding)] py-10">
+          <Link
+            href="/events"
+            className="mb-6 inline-flex items-center gap-2 rounded text-label-caps uppercase tracking-wide text-primary-container transition-colors hover:text-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-container focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+          >
+            <ArrowLeft size={16} aria-hidden="true" /> {t("events.back")}
+          </Link>
 
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
-          <div className="lg:col-span-8">
-            {event.category && (
-              <span className="text-label-caps uppercase tracking-wide text-primary-container mb-3 block">
-                {event.category}
-              </span>
-            )}
-            {event.requiresSensus && (
-              <span className="text-label-caps uppercase tracking-wide bg-surface-container-low text-primary-container px-2.5 py-1 rounded mb-3 block w-fit">
-                {t("events.sensusOnly")}
-              </span>
-            )}
-            <AnimatedHeroHeading
-              words={event.title.split(" ")}
-              className="text-display-hero-mobile md:text-display-hero text-on-background mb-6 leading-tight"
-            />
-
-            {event.description && (
-              <Reveal>
-                <p className="text-body-lg text-on-surface-variant whitespace-pre-wrap mb-10">
-                  {event.description}
-                </p>
-              </Reveal>
-            )}
-
-            {agendaItems.length > 0 && (
-              <Reveal>
-                <section className="mb-10">
-                  <h2 className="text-headline-md text-on-background mb-6 flex items-center gap-2">
-                    <ListChecks className="text-primary-container" size={20} /> {t("events.agenda")}
-                  </h2>
-                  <ul className="flex flex-col gap-4">
-                    {agendaItems.map((item, i) => (
-                      <li key={i} className="flex items-start gap-3 border-l-2 border-primary-container pl-4">
-                        <span className="text-body-md text-on-background">{item}</span>
-                      </li>
-                    ))}
-                  </ul>
-                </section>
-              </Reveal>
-            )}
-
-            {photos.length > 0 && (
-              <Reveal>
-                <section className="mb-10">
-                  <h2 className="text-headline-md text-on-background mb-6 flex items-center gap-2">
-                    <Images className="text-primary-container" size={20} /> {t("events.gallery")}
-                      </h2>
-                  <GalleryLightbox
-                    photos={photos.map((p) => ({
-                      id: p.id,
-                      imageUrl: p.imageUrl,
-                      caption: p.caption ?? null,
-                    }))}
-                  />
-                  {album && (
-                    <a
-                      href={`/gallery/${album.id}`}
-                      className="inline-flex items-center gap-1 text-label-caps uppercase text-primary-container hover:text-primary transition-colors mt-4"
-                    >
-                       {t("events.viewAlbum")} <ArrowRight size={14} />
-                    </a>
-                  )}
-                </section>
-              </Reveal>
-            )}
-          </div>
-
-          <div className="lg:col-span-4">
+          {event.coverImageUrl ? (
             <Reveal>
-              <div className="sticky top-24 bg-surface-container-low border border-outline-variant rounded-xl p-6 flex flex-col gap-5">
+              <header className="relative mb-12 overflow-hidden rounded-3xl border border-outline-variant">
+                <div className="relative h-[22rem] w-full sm:h-[28rem] lg:h-[32rem]">
+                  <Image
+                    src={event.coverImageUrl}
+                    alt={event.title}
+                    fill
+                    priority
+                    sizes="(max-width: 1024px) 100vw, 1100px"
+                    className="object-cover"
+                  />
+                  <div className="absolute inset-0 bg-black/25" />
+                  <div className="absolute inset-0 bg-gradient-to-t from-black via-black/80 to-transparent" />
+                </div>
+                <div className="absolute inset-x-0 bottom-0 flex flex-col gap-4 p-6 sm:p-10">
+                  <div className="flex flex-wrap items-center gap-2">
+                    {event.category && (
+                      <span className="rounded-full bg-white/15 px-3 py-1 text-label-caps uppercase tracking-wide text-white backdrop-blur">
+                        {event.category}
+                      </span>
+                    )}
+                    {event.requiresSensus && (
+                      <span className="rounded-full bg-white/15 px-3 py-1 text-label-caps uppercase tracking-wide text-white backdrop-blur">
+                        {t("events.sensusOnly")}
+                      </span>
+                    )}
+                    {statusChip && (
+                      <span className="rounded-full bg-error/85 px-3 py-1 text-label-caps uppercase tracking-wide text-white backdrop-blur">
+                        {statusChip}
+                      </span>
+                    )}
+                  </div>
+                  <AnimatedHeroHeading
+                    words={event.title.split(" ")}
+                    className="max-w-3xl text-display-hero-mobile leading-tight text-white md:text-display-hero"
+                  />
+                  <div className="flex flex-wrap gap-x-5 gap-y-2 text-body-sm text-white/85">
+                    {startDate && (
+                      <span className="flex items-center gap-1.5">
+                        <CalendarDays size={15} aria-hidden="true" />
+                        {startDate.toLocaleDateString(INTL_LOCALE[locale], { dateStyle: "long" })}
+                        {timeRange && ` · ${timeRange}`}
+                      </span>
+                    )}
+                    {event.location && (
+                      <span className="flex items-center gap-1.5">
+                        <MapPin size={15} aria-hidden="true" /> {event.location}
+                      </span>
+                    )}
+                    <span className="flex items-center gap-1.5">
+                      <Users size={15} aria-hidden="true" /> {t("events.registered", { count: registeredCount })}
+                    </span>
+                  </div>
+                </div>
+              </header>
+            </Reveal>
+          ) : (
+            <div className="mb-12">
+              {event.category && (
+                <span className="mb-3 block text-label-caps uppercase tracking-wide text-primary-container">
+                  {event.category}
+                </span>
+              )}
+              {event.requiresSensus && (
+                <span className="mb-3 block w-fit rounded bg-surface-container-low px-2.5 py-1 text-label-caps uppercase tracking-wide text-primary-container">
+                  {t("events.sensusOnly")}
+                </span>
+              )}
+              <AnimatedHeroHeading
+                words={event.title.split(" ")}
+                className="text-display-hero-mobile leading-tight text-on-background md:text-display-hero"
+              />
+            </div>
+          )}
+
+          <div className="grid grid-cols-1 gap-10 lg:grid-cols-12">
+            <div className="flex flex-col gap-12 lg:col-span-8">
+              {event.description && (
+                <Reveal>
+                  <div className="rounded-2xl border border-outline-variant bg-surface-container-lowest/70 p-6 sm:p-8">
+                    <p className="whitespace-pre-wrap text-body-lg leading-relaxed text-on-surface-variant">
+                      {event.description}
+                    </p>
+                  </div>
+                </Reveal>
+              )}
+
+              {agenda.length > 0 && (
+                <Reveal>
+                  <section>
+                    <h2 className="mb-7 flex items-center gap-2 text-headline-md text-on-background">
+                      <ListChecks className="text-primary-container" size={20} /> {t("events.agenda")}
+                    </h2>
+                    <ol className="ml-2 flex flex-col gap-6 border-l-2 border-primary-container/30">
+                      {agenda.map((item, i) => (
+                        <li key={i} className="relative ml-6">
+                          <span
+                            aria-hidden
+                            className="absolute -left-[calc(1.5rem+1px)] top-1 h-3.5 w-3.5 -translate-x-1/2 rounded-full bg-primary-container ring-4 ring-background"
+                          />
+                          {item.time ? (
+                            <div className="flex flex-col gap-x-4 gap-y-0.5 sm:flex-row sm:items-baseline">
+                              <span className="shrink-0 text-label-caps uppercase tracking-wide tabular-nums text-primary-container">
+                                {item.time}
+                              </span>
+                              <span className="text-body-md text-on-background">{item.label}</span>
+                            </div>
+                          ) : (
+                            <span className="text-body-md text-on-background">{item.label}</span>
+                          )}
+                        </li>
+                      ))}
+                    </ol>
+                  </section>
+                </Reveal>
+              )}
+
+              {photos.length > 0 && (
+                <Reveal>
+                  <section>
+                    <h2 className="mb-6 flex items-center gap-2 text-headline-md text-on-background">
+                      <Images className="text-primary-container" size={20} /> {t("events.gallery")}
+                    </h2>
+                    <GalleryLightbox
+                      photos={photos.map((p) => ({
+                        id: p.id,
+                        imageUrl: p.imageUrl,
+                        caption: p.caption ?? null,
+                      }))}
+                    />
+                    {album && (
+                      <a
+                        href={`/gallery/${album.id}`}
+                        className="mt-4 inline-flex items-center gap-1 text-label-caps uppercase text-primary-container transition-colors hover:text-primary"
+                      >
+                        {t("events.viewAlbum")} <ArrowRight size={14} />
+                      </a>
+                    )}
+                  </section>
+                </Reveal>
+              )}
+            </div>
+
+            <div className="lg:col-span-4">
+              <Reveal>
+                <div className="sticky top-24 flex flex-col gap-5 rounded-2xl border border-outline-variant bg-surface-container-low p-6">
                 {event.startAt && (
                   <div className="flex items-start gap-3">
                     <CalendarDays className="text-primary-container shrink-0 mt-0.5" size={18} aria-hidden="true" />
@@ -369,6 +377,27 @@ export default async function EventDetailPage({ params, searchParams }: { params
                   </p>
                 )}
 
+                {agenda.length > 0 && (
+                  <div className="border-t border-outline-variant pt-5">
+                    <p className="mb-3 flex items-center gap-1.5 text-label-caps uppercase tracking-wide text-on-surface-variant">
+                      <ListChecks size={14} className="text-primary-container" aria-hidden="true" /> {t("events.agenda")}
+                    </p>
+                    <ul className="flex flex-col gap-2">
+                      {agenda.slice(0, 5).map((item, i) => (
+                        <li key={i} className="flex gap-2.5 text-body-sm">
+                          <span className="w-14 shrink-0 tabular-nums text-primary-container">{item.time ?? "•"}</span>
+                          <span className="text-on-surface-variant">{item.label}</span>
+                        </li>
+                      ))}
+                      {agenda.length > 5 && (
+                        <li className="text-label-caps text-on-surface-variant">
+                          +{agenda.length - 5} lagi &darr;
+                        </li>
+                      )}
+                    </ul>
+                  </div>
+                )}
+
                 <div className="border-t border-outline-variant pt-5" role="status" aria-live="polite">
                   {event.requiresSensus && !alreadyRegistered && (
                     <>
@@ -394,151 +423,24 @@ export default async function EventDetailPage({ params, searchParams }: { params
                       <Ticket size={18} aria-hidden="true" /> {t("events.myTicket")}
                     </a>
                   ) : canRegister ? (
-                    session?.user?.id ? (
-                      <EventRegisterWizard
-                        action={registerForEvent.bind(null, event.id, slug)}
-                        submitLabel={t("events.registerNow")}
-                        steps={[
-                          ...(biodata
-                            ? [
-                                {
-                                  id: "biodata",
-                                  title: t("events.stepBiodata"),
-                                  content: (
-                                    <EventBiodataFields
-                                      sensusComplete={biodata.sensusComplete}
-                                      defaults={biodata.defaults}
-                                      cityOptions={biodata.cityOptions}
-                                    />
-                                  ),
-                                },
-                              ]
-                            : []),
-                          ...(askBranch || questions.length > 0
-                            ? [
-                                {
-                                  id: "questions",
-                                  title: t("events.stepQuestions"),
-                                  content: (
-                                    <>
-                                      {askBranch && (
-                                        <label className="flex flex-col gap-2 text-left">
-                                          <span className="text-label-caps uppercase tracking-wide text-on-surface-variant">
-                                            {t("events.branchQuestion")}
-                                            <span className="text-error" aria-hidden="true"> *</span>
-                                          </span>
-                                          <Select
-                                            name="branch"
-                                            required
-                                            defaultValue=""
-                                            placeholder={t("events.branchPlaceholder")}
-                                            className="w-full"
-                                          >
-                                            {branchOptions.map((b) => (
-                                              <option key={b} value={b}>
-                                                {b}
-                                              </option>
-                                            ))}
-                                            <option value={NON_STUDENT_BRANCH}>{t("events.branchNonStudent")}</option>
-                                          </Select>
-                                          <span className="text-xs text-on-surface-variant">{t("events.branchHint")}</span>
-                                        </label>
-                                      )}
-                                      {questions.map((q) => {
-                                        const options = (q.options ?? "").split("\n").map((l) => l.trim()).filter(Boolean);
-                                        const fieldClass =
-                                          "bg-soft-gray rounded-md p-3 text-body-md focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-container";
-                                        return (
-                                          <fieldset key={q.id} className="flex flex-col gap-2 text-left border-0 p-0 m-0">
-                                            <legend className="text-label-caps uppercase tracking-wide text-on-surface-variant p-0">
-                                              {q.label}
-                                              {q.required && <span className="text-error" aria-hidden="true"> *</span>}
-                                            </legend>
-                                            {q.type === "text" && (
-                                              <input name={q.id} required={q.required} className={fieldClass} />
-                                            )}
-                                            {q.type === "textarea" && (
-                                              <textarea name={q.id} required={q.required} rows={3} className={`${fieldClass} resize-none`} />
-                                            )}
-                                            {q.type === "select" && (
-                                              <Select name={q.id} required={q.required} defaultValue="" placeholder="—" className="w-full">
-                                                {options.map((o) => (
-                                                  <option key={o} value={o}>{o}</option>
-                                                ))}
-                                              </Select>
-                                            )}
-                                            {q.type === "file" && (
-                                              <FileUpload
-                                                name={q.id}
-                                                folder="event-doc"
-                                                required={q.required}
-                                                autoUpload
-                                                accept="application/pdf,.doc,.docx,image/*"
-                                                hint={t("events.fileHint")}
-                                              />
-                                            )}
-                                            {(q.type === "radio" || q.type === "multiselect") &&
-                                              options.map((o) => (
-                                                <label key={o} className="flex items-center gap-2 bg-soft-gray rounded-md p-2.5 text-body-md cursor-pointer">
-                                                  <input
-                                                    type={q.type === "radio" ? "radio" : "checkbox"}
-                                                    name={q.id}
-                                                    value={o}
-                                                    required={q.required && q.type === "radio"}
-                                                    className="h-4 w-4 accent-[var(--color-primary-container)]"
-                                                  />
-                                                  {o}
-                                                </label>
-                                              ))}
-                                          </fieldset>
-                                        );
-                                      })}
-                                    </>
-                                  ),
-                                },
-                              ]
-                            : []),
-                          ...(feeOptions.length > 0
-                            ? [
-                                {
-                                  id: "fee",
-                                  title: t("events.feeOptionQuestion"),
-                                  content: (
-                                    <fieldset className="flex flex-col gap-2 text-left border-0 p-0 m-0">
-                                      <legend className="text-label-caps uppercase tracking-wide text-on-surface-variant p-0">
-                                        {t("events.feeOptionQuestion")}
-                                        <span className="text-error" aria-hidden="true"> *</span>
-                                      </legend>
-                                      {feeOptions.map((o) => (
-                                        <label
-                                          key={o.id}
-                                          className="flex items-center gap-2 bg-soft-gray rounded-md p-2.5 text-body-md cursor-pointer"
-                                        >
-                                          <input
-                                            type="radio"
-                                            name="feeOptionId"
-                                            value={o.id}
-                                            required
-                                            className="h-4 w-4 accent-[var(--color-primary-container)]"
-                                          />
-                                          {o.label} <span className="text-on-surface-variant">(¥{o.amountCny})</span>
-                                        </label>
-                                      ))}
-                                    </fieldset>
-                                  ),
-                                },
-                              ]
-                            : []),
-                        ]}
-                      />
-                    ) : (
-                      <Link
-                        href={`/login?returnTo=${encodeURIComponent(`/events/${slug}`)}`}
-                        className="w-full inline-flex items-center justify-center gap-2 bg-primary-container text-on-primary text-label-caps uppercase tracking-wide px-6 py-4 rounded-md hover:bg-primary transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-container focus-visible:ring-offset-2 focus-visible:ring-offset-surface-container-low"
-                      >
-                        <ArrowRight size={18} aria-hidden="true" /> {t("events.loginToRegister")}
-                      </Link>
-                    )
+                    <Link
+                      href={
+                        session?.user?.id
+                          ? `/events/${slug}/register`
+                          : `/login?returnTo=${encodeURIComponent(`/events/${slug}/register`)}`
+                      }
+                      className="w-full inline-flex items-center justify-center gap-2 bg-primary-container text-on-primary text-label-caps uppercase tracking-wide px-6 py-4 rounded-md hover:bg-primary transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-container focus-visible:ring-offset-2 focus-visible:ring-offset-surface-container-low"
+                    >
+                      {session?.user?.id ? (
+                        <>
+                          {t("events.registerNow")} <ArrowRight size={18} aria-hidden="true" />
+                        </>
+                      ) : (
+                        <>
+                          <ArrowRight size={18} aria-hidden="true" /> {t("events.loginToRegister")}
+                        </>
+                      )}
+                    </Link>
                   ) : (
                     <p className="flex items-center justify-center gap-2 text-body-md text-on-surface-variant text-center bg-surface-container-low rounded-md px-4 py-3">
                       {isFull ? (
@@ -643,9 +545,10 @@ export default async function EventDetailPage({ params, searchParams }: { params
             </div>
           </section>
         )}
-      </main>
+        </main>
 
-      <SiteFooter />
+        <SiteFooter />
+      </div>
     </div>
   );
 }
