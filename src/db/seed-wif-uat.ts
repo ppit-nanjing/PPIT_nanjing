@@ -103,6 +103,10 @@ async function seed() {
     category: "Uji Coba",
     location: "Novotel Hotel (Daminglu Station Line 3)",
     agenda: AGENDA,
+    // Warna halaman senada poster WIF (krem / lavender / pink).
+    themeBg: "#fff6e5",
+    themeAccent: "#d4c4e5",
+    themeAccent2: "#fdcbd8",
     startAt,
     endAt,
     requiresBiodata: true,

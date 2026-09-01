@@ -12,6 +12,7 @@ import { GalleryLightbox } from "@/components/gallery-lightbox";
 import { CalendarDays, MapPin, Users, Ticket, ArrowLeft, ListChecks, Images, ArrowRight, CalendarX, PartyPopper, BadgeCheck } from "lucide-react";
 import Image from "next/image";
 import { Select } from "@/components/console/form";
+import { EventThemeStyle } from "@/components/events/event-theme-style";
 import Link from "next/link";
 import { applyAsVolunteer } from "@/app/actions/volunteers";
 import { getT } from "@/lib/i18n/server";
@@ -127,18 +128,22 @@ export default async function EventDetailPage({ params, searchParams }: { params
         ? t("events.ended")
         : null;
 
+  const themed = !!(event.themeBg && event.themeAccent && event.themeAccent2);
+
   return (
     <div className="relative min-h-screen overflow-hidden bg-background text-on-background">
       {/* Latar ambient dari poster — bikin halaman terasa senada dengan acaranya
-          tanpa menyentuh warna tombol (biar kontras/AA tetap aman). */}
-      {event.coverImageUrl && (
+          tanpa menyentuh warna tombol (biar kontras/AA tetap aman). Kalau warna
+          halaman sudah dikustom, warna itulah yang jadi "senada"-nya. */}
+      {event.coverImageUrl && !themed && (
         <div aria-hidden className="pointer-events-none absolute inset-x-0 top-0 -z-0 h-[75vh] opacity-[0.12]">
           <Image src={event.coverImageUrl} alt="" fill sizes="100vw" className="scale-110 object-cover blur-3xl" />
           <div className="absolute inset-0 bg-gradient-to-b from-transparent via-background/40 to-background" />
         </div>
       )}
 
-      <div className="relative z-10">
+      <div className="relative z-10" data-event-themed={themed ? "" : undefined}>
+        <EventThemeStyle bg={event.themeBg} accent={event.themeAccent} accent2={event.themeAccent2} />
         <SiteNav />
 
         <main className="mx-auto max-w-[var(--container-max)] px-[var(--spacing-container-padding)] py-10">
@@ -167,12 +172,12 @@ export default async function EventDetailPage({ params, searchParams }: { params
                 <div className="absolute inset-x-0 bottom-0 flex flex-col gap-4 p-6 sm:p-10">
                   <div className="flex flex-wrap items-center gap-2">
                     {event.category && (
-                      <span className="rounded-full bg-white/15 px-3 py-1 text-label-caps uppercase tracking-wide text-white backdrop-blur">
+                      <span className="evt-chip rounded-full bg-white/15 px-3 py-1 text-label-caps uppercase tracking-wide text-white backdrop-blur">
                         {event.category}
                       </span>
                     )}
                     {event.requiresSensus && (
-                      <span className="rounded-full bg-white/15 px-3 py-1 text-label-caps uppercase tracking-wide text-white backdrop-blur">
+                      <span className="evt-chip rounded-full bg-white/15 px-3 py-1 text-label-caps uppercase tracking-wide text-white backdrop-blur">
                         {t("events.sensusOnly")}
                       </span>
                     )}
@@ -229,7 +234,7 @@ export default async function EventDetailPage({ params, searchParams }: { params
             <div className="flex flex-col gap-12 lg:col-span-8">
               {event.description && (
                 <Reveal>
-                  <div className="rounded-2xl border border-outline-variant bg-surface-container-lowest/70 p-6 sm:p-8">
+                  <div className="evt-surface rounded-2xl border border-outline-variant bg-surface-container-lowest/70 p-6 sm:p-8">
                     <p className="whitespace-pre-wrap text-body-lg leading-relaxed text-on-surface-variant">
                       {event.description}
                     </p>
@@ -243,12 +248,12 @@ export default async function EventDetailPage({ params, searchParams }: { params
                     <h2 className="mb-7 flex items-center gap-2 text-headline-md text-on-background">
                       <ListChecks className="text-primary-container" size={20} /> {t("events.agenda")}
                     </h2>
-                    <ol className="ml-2 flex flex-col gap-6 border-l-2 border-primary-container/30">
+                    <ol className="evt-rail ml-2 flex flex-col gap-6 border-l-2 border-primary-container/30">
                       {agenda.map((item, i) => (
                         <li key={i} className="relative ml-6">
                           <span
                             aria-hidden
-                            className="absolute -left-[calc(1.5rem+1px)] top-1 h-3.5 w-3.5 -translate-x-1/2 rounded-full bg-primary-container ring-4 ring-background"
+                            className="evt-dot absolute -left-[calc(1.5rem+1px)] top-1 h-3.5 w-3.5 -translate-x-1/2 rounded-full bg-primary-container ring-4 ring-background"
                           />
                           {item.time ? (
                             <div className="flex flex-col gap-x-4 gap-y-0.5 sm:flex-row sm:items-baseline">
@@ -295,7 +300,7 @@ export default async function EventDetailPage({ params, searchParams }: { params
 
             <div className="lg:col-span-4">
               <Reveal>
-                <div className="sticky top-24 flex flex-col gap-5 rounded-2xl border border-outline-variant bg-surface-container-low p-6">
+                <div className="evt-tintcard sticky top-24 flex flex-col gap-5 rounded-2xl border border-outline-variant bg-surface-container-low p-6">
                 {event.startAt && (
                   <div className="flex items-start gap-3">
                     <CalendarDays className="text-primary-container shrink-0 mt-0.5" size={18} aria-hidden="true" />

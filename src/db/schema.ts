@@ -428,6 +428,16 @@ export const events = pgTable("events", {
   // acara publik: cuma pendaftar yang perlu lihat. Freeform, whitespace
   // dipertahankan saat render.
   confirmationInfo: text("confirmation_info"),
+  // Warna halaman acara (opsional) - biar halaman terasa senada dengan poster.
+  // Ketiganya HEX (#rrggbb). Semua null = pakai tema situs seperti biasa.
+  //  themeBg      : latar halaman (warna terang, mis. krem poster)
+  //  themeAccent  : aksen utama - gradien hero, garis+titik timeline agenda, chip
+  //  themeAccent2 : aksen kedua - sorotan/hover
+  // Tombol daftar TETAP pakai warna primary situs (kontras aman); ketiga warna
+  // ini dipakai untuk permukaan & dekorasi saja.
+  themeBg: text("theme_bg"),
+  themeAccent: text("theme_accent"),
+  themeAccent2: text("theme_accent_2"),
 });
 
 // `feeCny` null = acara gratis; > 0 = peserta perlu membayar dan mengunggah bukti.

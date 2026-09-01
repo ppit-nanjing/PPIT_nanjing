@@ -22,6 +22,7 @@ import { Select } from "@/components/console/form";
 import { FileUpload } from "@/components/upload/file-upload";
 import { EventBiodataFields, type BiodataDefaults } from "@/components/events/event-biodata-fields";
 import { EventRegisterFlow, type FlowStep } from "@/components/events/event-register-flow";
+import { EventThemeStyle } from "@/components/events/event-theme-style";
 import { registerForEvent } from "@/app/actions/events";
 import { getT } from "@/lib/i18n/server";
 import { INTL_LOCALE } from "@/lib/i18n/config";
@@ -257,15 +258,18 @@ export default async function EventRegisterPage({ params }: { params: Promise<{ 
       }`
     : null;
 
+  const themed = !!(event.themeBg && event.themeAccent && event.themeAccent2);
+
   return (
     <div className="relative min-h-screen overflow-hidden bg-background text-on-background">
-      {event.coverImageUrl && (
+      {event.coverImageUrl && !themed && (
         <div aria-hidden className="pointer-events-none absolute inset-x-0 top-0 -z-0 h-[75vh] opacity-[0.12]">
           <Image src={event.coverImageUrl} alt="" fill sizes="100vw" className="scale-110 object-cover blur-3xl" />
           <div className="absolute inset-0 bg-gradient-to-b from-transparent via-background/40 to-background" />
         </div>
       )}
-      <div className="relative z-10">
+      <div className="relative z-10" data-event-themed={themed ? "" : undefined}>
+        <EventThemeStyle bg={event.themeBg} accent={event.themeAccent} accent2={event.themeAccent2} />
         <SiteNav />
         <main className="mx-auto max-w-[var(--container-max)] px-[var(--spacing-container-padding)] py-10">
           <Link

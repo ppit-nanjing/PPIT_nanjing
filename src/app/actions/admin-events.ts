@@ -40,6 +40,14 @@ function parseFeeCny(formData: FormData): number | null {
   return Math.round(parsed);
 }
 
+// Warna halaman acara: hanya HEX #rrggbb yang diterima, apa pun selain itu jadi
+// null (dipakai di <style> yang di-inline; validasi ini yang menjaga tidak ada
+// yang bisa menyuntik CSS lewat kolom warna).
+function parseHex(formData: FormData, key: string): string | null {
+  const v = String(formData.get(key) ?? "").trim().toLowerCase();
+  return /^#[0-9a-f]{6}$/.test(v) ? v : null;
+}
+
 // Inline-validation shape shared by console event forms - mirrors
 // ShortLinkFormState in short-links.ts.
 export type EventFormState = { error?: string };
@@ -92,6 +100,9 @@ export async function createEvent(_prev: EventFormState, formData: FormData): Pr
       alipayUid: String(formData.get("alipayUid") ?? "").trim() || null,
       certificateForParticipants: formData.get("certificateForParticipants") === "on",
       volunteerSignupOpen: formData.get("volunteerSignupOpen") === "on",
+      themeBg: parseHex(formData, "themeBg"),
+      themeAccent: parseHex(formData, "themeAccent"),
+      themeAccent2: parseHex(formData, "themeAccent2"),
     })
     .returning();
 
@@ -143,6 +154,9 @@ export async function updateEvent(id: string, formData: FormData) {
       alipayUid: String(formData.get("alipayUid") ?? "").trim() || null,
       certificateForParticipants: formData.get("certificateForParticipants") === "on",
       volunteerSignupOpen: formData.get("volunteerSignupOpen") === "on",
+      themeBg: parseHex(formData, "themeBg"),
+      themeAccent: parseHex(formData, "themeAccent"),
+      themeAccent2: parseHex(formData, "themeAccent2"),
     })
     .where(eq(events.id, id));
 

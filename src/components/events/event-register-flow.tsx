@@ -114,7 +114,7 @@ export function EventRegisterFlow({
   return (
     <div ref={topRef} className="mx-auto w-full max-w-2xl scroll-mt-6">
       {/* Identitas acara — biar peserta tahu persis mereka mendaftar ke apa. */}
-      <div className="overflow-hidden rounded-2xl border border-outline-variant bg-surface-container-lowest">
+      <div className="evt-surface overflow-hidden rounded-2xl border border-outline-variant bg-surface-container-lowest">
         {event.posterUrl && (
           <div className="relative h-40 w-full sm:h-52">
             <Image src={event.posterUrl} alt={event.title} fill sizes="(max-width: 640px) 100vw, 672px" className="object-cover" />
@@ -171,7 +171,7 @@ export function EventRegisterFlow({
                       : { opacity: active ? 1 : 0, x: active ? 0 : dir * 20 }
                   }
                   transition={{ duration: reduceMotion ? 0 : 0.25, ease: "easeOut" }}
-                  className="flex flex-col gap-4 rounded-2xl border border-outline-variant bg-surface-container-lowest p-5 sm:p-6"
+                  className="evt-surface flex flex-col gap-4 rounded-2xl border border-outline-variant bg-surface-container-lowest p-5 sm:p-6"
                 >
                   {!single && (
                     <div className="flex flex-col gap-1">

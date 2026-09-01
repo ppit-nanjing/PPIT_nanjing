@@ -12,6 +12,7 @@ import { EventCommitteeStructure } from "@/components/console/event-committee-st
 import { listEventDivisions, updatePaymentStatus, issueParticipantCertificates } from "@/app/actions/committee";
 import { requireModuleAccess, hasModuleAccess } from "@/lib/admin-scope";
 import { ImageUploadCropper } from "@/components/upload/image-upload-cropper";
+import { EventThemeFields } from "@/components/console/event-theme-fields";
 import { AIImproveButton } from "@/components/ai/ai-improve-button";
 import { AIReviewButton } from "@/components/ai/ai-review-popup";
 import { CollapsibleSection } from "@/components/console/collapsible-section";
@@ -178,6 +179,13 @@ export default async function ConsoleEventDetailPage({ params }: { params: Promi
                 aspect={16 / 9}
                 allowPaste
                 hint="Ideal 1920 × 1080 px (16:9) — gambar di-crop & dikompres otomatis."
+              />
+              <EventThemeFields
+                defaults={{
+                  themeBg: event.themeBg,
+                  themeAccent: event.themeAccent,
+                  themeAccent2: event.themeAccent2,
+                }}
               />
             </div>
           </details>
