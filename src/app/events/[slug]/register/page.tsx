@@ -261,15 +261,22 @@ export default async function EventRegisterPage({ params }: { params: Promise<{ 
   const themed = !!(event.themeBg && event.themeAccent && event.themeAccent2);
 
   return (
-    <div className="relative min-h-screen overflow-hidden bg-background text-on-background">
-      {event.coverImageUrl && !themed && (
-        <div aria-hidden className="pointer-events-none absolute inset-x-0 top-0 -z-0 h-[75vh] opacity-[0.12]">
+    <div
+      className="relative min-h-screen overflow-hidden bg-background text-on-background"
+      data-event-themed={themed ? "" : undefined}
+    >
+      <EventThemeStyle bg={event.themeBg} accent={event.themeAccent} accent2={event.themeAccent2} />
+      {event.coverImageUrl && (
+        <div
+          data-ambient
+          aria-hidden
+          className="pointer-events-none absolute inset-x-0 top-0 -z-0 h-[75vh] opacity-[0.12]"
+        >
           <Image src={event.coverImageUrl} alt="" fill sizes="100vw" className="scale-110 object-cover blur-3xl" />
           <div className="absolute inset-0 bg-gradient-to-b from-transparent via-background/40 to-background" />
         </div>
       )}
-      <div className="relative z-10" data-event-themed={themed ? "" : undefined}>
-        <EventThemeStyle bg={event.themeBg} accent={event.themeAccent} accent2={event.themeAccent2} />
+      <div className="relative z-10">
         <SiteNav />
         <main className="mx-auto max-w-[var(--container-max)] px-[var(--spacing-container-padding)] py-10">
           <Link
