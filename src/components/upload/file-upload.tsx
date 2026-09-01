@@ -3,7 +3,7 @@
 import { useState, useRef, type DragEvent } from "react";
 import { Upload, Loader2, ImageIcon, X } from "lucide-react";
 import { useT } from "@/lib/i18n/client";
-import { uploadErrorMessage } from "./upload-error";
+import { readUploadResult } from "./upload-error";
 import { compressImage } from "@/lib/image-compress";
 
 type Props = {
@@ -86,9 +86,7 @@ export function FileUpload({
       fd.append("file", new File([payload], name, { type: payload.type }));
       fd.append("folder", folder);
       const res = await fetch("/api/upload", { method: "POST", body: fd });
-      const data = await res.json();
-      if (!res.ok) throw new Error(uploadErrorMessage(t, data));
-      setValue(data.url);
+      setValue(await readUploadResult(res, t));
     } catch (e) {
       setError(e instanceof Error ? e.message : t("upload.errFailed"));
     } finally {

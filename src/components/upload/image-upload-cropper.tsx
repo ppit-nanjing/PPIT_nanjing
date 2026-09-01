@@ -5,7 +5,7 @@ import Cropper, { type Area } from "react-easy-crop";
 import { Upload, Loader2, ImageIcon, X, Crop } from "lucide-react";
 import { useT } from "@/lib/i18n/client";
 import type { T } from "@/lib/i18n/translate";
-import { uploadErrorMessage } from "./upload-error";
+import { readUploadResult } from "./upload-error";
 import { compressImage } from "@/lib/image-compress";
 
 type Props = {
@@ -117,9 +117,7 @@ export function ImageUploadCropper({
       fd.append("file", new File([blob], `${base}-${Date.now()}.${ext}`, { type: blob.type }));
       fd.append("folder", folder);
       const res = await fetch("/api/upload", { method: "POST", body: fd });
-      const data = await res.json();
-      if (!res.ok) throw new Error(uploadErrorMessage(t, data));
-      commit(data.url);
+      commit(await readUploadResult(res, t));
       if (previewUrl) {
         URL.revokeObjectURL(previewUrl);
         setPreviewUrl(null);

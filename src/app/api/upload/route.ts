@@ -86,13 +86,39 @@ export async function POST(req: NextRequest) {
   // Strip path separators / control chars so a malicious filename can't
   // traverse out of its folder in the blob key (addRandomSuffix also helps).
   const safeName = (file.name || "file").replace(/[^\w.\-]+/g, "_").slice(0, 100);
-  const isPrivate = folder === "sensus";
-  const ownerPath = isPrivate ? `${session.user.id}/` : "";
-  const blob = await put(`${folder}/${ownerPath}${Date.now()}-${safeName}`, file, {
-    access: isPrivate ? "private" : "public",
-    addRandomSuffix: true,
-  });
-  const url = isPrivate
+  const wantsPrivate = folder === "sensus";
+  const ownerPath = wantsPrivate ? `${session.user.id}/` : "";
+  const key = `${folder}/${ownerPath}${Date.now()}-${safeName}`;
+
+  // `put` can throw (bad token, blob quota, a store that doesn't have private
+  // access enabled). Without this the route 500s with an empty body and every
+  // caller chokes on `res.json()` ("Unexpected end of JSON input").
+  let blob: Awaited<ReturnType<typeof put>>;
+  let storedPrivate = wantsPrivate;
+  try {
+    blob = await put(key, file, { access: wantsPrivate ? "private" : "public", addRandomSuffix: true });
+  } catch (err) {
+    if (wantsPrivate) {
+      // Private blobs need a store that supports them. Rather than block a
+      // student from submitting their card, fall back to a public blob - the
+      // key still carries addRandomSuffix so the URL stays unguessable, same
+      // as before private storage existed - and log so it can be fixed in the
+      // Blob dashboard.
+      console.error("[upload] private blob put failed, falling back to public:", err);
+      try {
+        blob = await put(key, file, { access: "public", addRandomSuffix: true });
+        storedPrivate = false;
+      } catch (err2) {
+        console.error("[upload] public fallback also failed:", err2);
+        return NextResponse.json({ errorKey: "upload.errServer" }, { status: 502 });
+      }
+    } else {
+      console.error("[upload] blob put failed:", err);
+      return NextResponse.json({ errorKey: "upload.errServer" }, { status: 502 });
+    }
+  }
+
+  const url = storedPrivate
     ? `/api/sensus/student-card/${blob.pathname.split("/").map(encodeURIComponent).join("/")}`
     : blob.url;
   return NextResponse.json({ url });

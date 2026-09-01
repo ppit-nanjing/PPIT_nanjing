@@ -832,6 +832,7 @@ export const en = {
   "upload.errTooLarge": "That file is too large (max {{mb}}MB).",
   "upload.errType": "That file type is not supported.",
   "upload.errNotConfigured": "File uploads are not configured yet.",
+  "upload.errServer": "The upload failed on the server. Try again; if the file is large, shrink it below 4 MB first.",
 
   // Email/password auth errors (src/app/actions/auth.ts)
   "auth.errEmailInvalid": "That email address is not valid.",
