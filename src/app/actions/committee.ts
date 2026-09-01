@@ -8,10 +8,50 @@ import { db } from "@/db";
 import { eventCommittee, eventDivisions, certificates, events, users, eventRegistrations } from "@/db/schema";
 import { requireModuleAccess } from "@/lib/admin-scope";
 import { getStructureTemplate } from "@/lib/event-structure-templates";
+import { createTemplatedNotification } from "@/lib/notifications";
 
 // Committee membership is per-event on purpose: the treasurer of one event is
 // not necessarily the cabinet treasurer, which is the exact complaint in the
 // Website Ideas doc. So this never reads from departmentMembers.
+
+const COMMITTEE_ROLE_LABEL: Record<string, string> = {
+  ketua: "Ketua",
+  wakil: "Wakil",
+  sekretaris: "Sekretaris",
+  bendahara: "Bendahara",
+  supervisor: "Supervisor",
+  humas: "Humas",
+  acara: "Acara",
+  logistik: "Logistik",
+  dokumentasi: "Dokumentasi",
+  anggota: "Anggota",
+};
+
+// Notifikasi ke peserta yang baru masuk kepanitiaan. Dibungkus catch supaya
+// gagalnya notifikasi tidak pernah membatalkan penugasannya.
+async function notifyCommitteeAssigned(userId: string, eventId: string, role: string, divisionId: string | null) {
+  try {
+    const [event] = await db.select({ title: events.title }).from(events).where(eq(events.id, eventId));
+    let divisionName = "";
+    if (divisionId) {
+      const [d] = await db.select({ name: eventDivisions.name }).from(eventDivisions).where(eq(eventDivisions.id, divisionId));
+      if (d?.name) divisionName = ` ${d.name}`;
+    }
+    await createTemplatedNotification({
+      userId,
+      templateKey: "committee_assigned",
+      variables: {
+        eventTitle: event?.title ?? "kegiatan",
+        roleLabel: COMMITTEE_ROLE_LABEL[role] ?? role,
+        divisionName,
+      },
+      relatedEntityType: "event",
+      relatedEntityId: eventId,
+    });
+  } catch (err) {
+    console.error("[notify] committee_assigned failed:", err);
+  }
+}
 
 export async function listCommittee(eventId: string) {
   await requireModuleAccess("events");
@@ -54,6 +94,8 @@ export async function assignCommittee(formData: FormData) {
       target: [eventCommittee.eventId, eventCommittee.userId],
       set: assignment,
     });
+
+  await notifyCommitteeAssigned(userId, eventId, assignment.role, assignment.divisionId);
 
   revalidatePath(`/console/events/${eventId}`);
   revalidatePath("/console/work-ledger");
@@ -125,11 +167,32 @@ export async function assignMembersToDivision(formData: FormData): Promise<void>
       set: { divisionId, role: "anggota" },
     });
 
+  await Promise.allSettled(userIds.map((userId) => notifyCommitteeAssigned(userId, eventId, "anggota", divisionId)));
+
   revalidatePath(`/console/events/${eventId}`);
   revalidatePath("/console/work-ledger");
 }
 
 // ---------- sertifikat ----------
+
+// Menyisipkan baris sertifikat lalu memberi tahu tiap penerimanya. Semua jalur
+// penerbitan (satuan, per-divisi, seluruh acara, peserta) lewat sini supaya
+// notifikasinya konsisten dan tidak ada yang terlewat.
+async function insertCertificates(rows: (typeof certificates.$inferInsert)[]) {
+  if (rows.length === 0) return;
+  await db.insert(certificates).values(rows);
+  await Promise.allSettled(
+    rows.map((r) =>
+      createTemplatedNotification({
+        userId: r.userId,
+        templateKey: "certificate_issued",
+        variables: { certTitle: r.title },
+        relatedEntityType: "certificate",
+        relatedEntityId: r.eventId ?? null,
+      }),
+    ),
+  );
+}
 
 export async function issueCertificate(formData: FormData) {
   const session = await requireModuleAccess("events");
@@ -137,16 +200,18 @@ export async function issueCertificate(formData: FormData) {
   const title = String(formData.get("title") ?? "").trim();
   if (!userId || !title) throw new Error("Penerima dan judul sertifikat wajib diisi");
 
-  await db.insert(certificates).values({
-    userId,
-    eventId: String(formData.get("eventId") ?? "") || null,
-    kind: (String(formData.get("kind") ?? "peserta")) as "peserta",
-    title,
-    // A Google Drive link is fine - the ideas doc says so explicitly when
-    // storage is tight, and Vercel Blob is not provisioned yet anyway.
-    fileUrl: String(formData.get("fileUrl") ?? "").trim() || null,
-    issuedBy: session.user.id,
-  });
+  await insertCertificates([
+    {
+      userId,
+      eventId: String(formData.get("eventId") ?? "") || null,
+      kind: (String(formData.get("kind") ?? "peserta")) as "peserta",
+      title,
+      // A Google Drive link is fine - the ideas doc says so explicitly when
+      // storage is tight, and Vercel Blob is not provisioned yet anyway.
+      fileUrl: String(formData.get("fileUrl") ?? "").trim() || null,
+      issuedBy: session.user.id,
+    },
+  ]);
   revalidatePath("/console/work-ledger");
   revalidatePath("/profile/submissions");
 }
@@ -258,6 +323,22 @@ export async function updatePaymentStatus(formData: FormData) {
       .where(eq(eventRegistrations.id, id));
   }
 
+  // Beri tahu peserta hasil verifikasinya - selama ini diam-diam.
+  if (row?.userId && (status === "verified" || status === "rejected")) {
+    try {
+      const [event] = await db.select({ title: events.title }).from(events).where(eq(events.id, row.eventId));
+      await createTemplatedNotification({
+        userId: row.userId,
+        templateKey: status === "verified" ? "payment_verified" : "payment_rejected",
+        variables: { eventTitle: event?.title ?? "kegiatan" },
+        relatedEntityType: "event",
+        relatedEntityId: row.eventId,
+      });
+    } catch (err) {
+      console.error("[notify] payment status failed:", err);
+    }
+  }
+
   revalidatePath("/console/work-ledger");
   if (row) revalidatePath(`/console/events/${row.eventId}`);
 }
@@ -271,11 +352,27 @@ export async function submitPaymentProof(formData: FormData) {
   const slug = String(formData.get("slug") ?? "").trim();
   if (!proofUrl) throw new Error("Tautan bukti pembayaran wajib diisi");
 
-  await db
+  const [updated] = await db
     .update(eventRegistrations)
     .set({ paymentProofUrl: proofUrl, paymentStatus: "submitted" })
     // Scoped to the caller's own registration so nobody can mark someone else paid.
-    .where(and(eq(eventRegistrations.id, id), eq(eventRegistrations.userId, session.user.id)));
+    .where(and(eq(eventRegistrations.id, id), eq(eventRegistrations.userId, session.user.id)))
+    .returning({ eventId: eventRegistrations.eventId });
+
+  if (updated) {
+    try {
+      const [event] = await db.select({ title: events.title }).from(events).where(eq(events.id, updated.eventId));
+      await createTemplatedNotification({
+        userId: session.user.id,
+        templateKey: "payment_proof_submitted",
+        variables: { eventTitle: event?.title ?? "kegiatan" },
+        relatedEntityType: "event",
+        relatedEntityId: updated.eventId,
+      });
+    } catch (err) {
+      console.error("[notify] payment_proof_submitted failed:", err);
+    }
+  }
 
   revalidatePath("/profile/submissions");
   // Caller (the ticket page) already knows its own slug - passed through as a
@@ -479,7 +576,7 @@ export async function issueDivisionCertificates(formData: FormData): Promise<voi
       };
     });
 
-  if (toInsert.length > 0) await db.insert(certificates).values(toInsert);
+  await insertCertificates(toInsert);
 
   revalidatePath(`/console/events/${division.eventId}`);
   revalidatePath("/console/work-ledger");
@@ -531,7 +628,7 @@ export async function issueEventCertificates(formData: FormData): Promise<void> 
       issuedBy: session.user.id,
     }));
 
-  if (toInsert.length > 0) await db.insert(certificates).values(toInsert);
+  await insertCertificates(toInsert);
 
   revalidatePath(`/console/events/${eventId}`);
   revalidatePath("/console/work-ledger");
@@ -584,7 +681,7 @@ export async function issueParticipantCertificatesCore(eventId: string, actorId:
       issuedBy: actorId,
     }));
 
-  if (toInsert.length > 0) await db.insert(certificates).values(toInsert);
+  await insertCertificates(toInsert);
   return toInsert.length;
 }
 

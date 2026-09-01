@@ -7,6 +7,7 @@ import { auth } from "@/auth";
 import { db } from "@/db";
 import { eventCommittee, eventDivisions, eventVolunteers, events, users } from "@/db/schema";
 import { requireModuleAccess } from "@/lib/admin-scope";
+import { createTemplatedNotification } from "@/lib/notifications";
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
@@ -109,6 +110,7 @@ export async function setVolunteerStatus(formData: FormData): Promise<void> {
   // Akun sudah ada? Pakai. Belum? Buat baris invited - onConflictDoNothing
   // menangani balapan bila dua admin menerima bersamaan.
   let [account] = await db.select({ id: users.id }).from(users).where(eq(users.email, app.email));
+  const accountExisted = !!account;
   if (!account) {
     [account] = await db
       .insert(users)
@@ -136,6 +138,29 @@ export async function setVolunteerStatus(formData: FormData): Promise<void> {
     .update(eventVolunteers)
     .set({ status: "approved", assignedUserId: account.id })
     .where(eq(eventVolunteers.id, id));
+
+  // Anggota yang sudah pernah pakai portal diberi tahu lewat notifikasi in-app.
+  // Yang akunnya baru dibuat (invited) belum pernah login - untuk mereka
+  // pemberitahuannya jalur email undangan, bukan bell notifikasi.
+  if (accountExisted) {
+    try {
+      const [event] = await db.select({ title: events.title }).from(events).where(eq(events.id, app.eventId));
+      let divisionName = "";
+      if (app.divisionId) {
+        const [d] = await db.select({ name: eventDivisions.name }).from(eventDivisions).where(eq(eventDivisions.id, app.divisionId));
+        if (d?.name) divisionName = ` ${d.name}`;
+      }
+      await createTemplatedNotification({
+        userId: account.id,
+        templateKey: "committee_assigned",
+        variables: { eventTitle: event?.title ?? "kegiatan", roleLabel: "Anggota", divisionName },
+        relatedEntityType: "event",
+        relatedEntityId: app.eventId,
+      });
+    } catch (err) {
+      console.error("[notify] volunteer committee_assigned failed:", err);
+    }
+  }
 
   revalidatePath(`/console/events/${app.eventId}`);
 }

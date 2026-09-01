@@ -15,6 +15,11 @@
 export type NotificationTemplateKey =
   | "event_checkin"
   | "event_registration"
+  | "payment_proof_submitted"
+  | "payment_verified"
+  | "payment_rejected"
+  | "committee_assigned"
+  | "certificate_issued"
   | "borrow_approved"
   | "borrow_handed_over"
   | "borrow_return_requested_confirmed"
@@ -58,6 +63,56 @@ export const NOTIFICATION_TEMPLATES: NotificationTemplateDef[] = [
     variables: ["eventTitle"],
     defaultSubject: "Pendaftaran kegiatan berhasil",
     defaultBody: 'Kamu berhasil mendaftar ke kegiatan "{{eventTitle}}". Tiket masuk bisa dilihat di halaman kegiatan.',
+  },
+  {
+    key: "payment_proof_submitted",
+    group: "Kegiatan",
+    label: "Bukti pembayaran terkirim",
+    trigger: "Dikirim saat peserta mengunggah bukti transfer di halaman tiket kegiatan berbayar.",
+    variables: ["eventTitle"],
+    defaultSubject: "Bukti pembayaran terkirim",
+    defaultBody:
+      'Bukti pembayaran kamu untuk "{{eventTitle}}" sudah kami terima. Bendahara akan memverifikasi; QR check-in muncul otomatis di halaman tiket begitu disetujui.',
+  },
+  {
+    key: "payment_verified",
+    group: "Kegiatan",
+    label: "Pembayaran terverifikasi",
+    trigger: "Dikirim saat bendahara menandai pembayaran peserta sebagai terverifikasi.",
+    variables: ["eventTitle"],
+    defaultSubject: "Pembayaran terverifikasi",
+    defaultBody:
+      'Pembayaran kamu untuk "{{eventTitle}}" sudah diverifikasi. QR check-in kamu kini aktif di halaman tiket.',
+  },
+  {
+    key: "payment_rejected",
+    group: "Kegiatan",
+    label: "Pembayaran perlu dicek ulang",
+    trigger: "Dikirim saat bendahara menandai pembayaran peserta sebagai ditolak.",
+    variables: ["eventTitle"],
+    defaultSubject: "Pembayaran perlu dicek ulang",
+    defaultBody:
+      'Bukti pembayaran kamu untuk "{{eventTitle}}" belum bisa diverifikasi. Buka halaman tiket untuk melihat catatan dari bendahara, lalu kirim ulang bukti yang benar.',
+  },
+  {
+    key: "committee_assigned",
+    group: "Kegiatan",
+    label: "Ditugaskan jadi panitia",
+    trigger: "Dikirim saat admin menugaskan anggota ke kepanitiaan sebuah kegiatan (satuan maupun massal).",
+    variables: ["eventTitle", "roleLabel", "divisionName"],
+    defaultSubject: "Kamu ditugaskan jadi panitia",
+    defaultBody:
+      'Kamu ditugaskan sebagai {{roleLabel}}{{divisionName}} di kepanitiaan "{{eventTitle}}". Buka halaman kegiatan untuk tiket kepanitiaan (QR absensi) dan detail tugasnya.',
+  },
+  {
+    key: "certificate_issued",
+    group: "Kegiatan",
+    label: "Sertifikat terbit",
+    trigger: "Dikirim saat admin menerbitkan e-sertifikat (peserta maupun panitia) untuk seseorang.",
+    variables: ["certTitle"],
+    defaultSubject: "E-sertifikat kamu sudah terbit",
+    defaultBody:
+      'E-sertifikat "{{certTitle}}" sudah terbit. Lihat dan unduh di halaman Profil → Riwayat Pengajuan.',
   },
   {
     key: "borrow_approved",

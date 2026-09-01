@@ -209,6 +209,24 @@ export default async function EventTicketPage({ params }: { params: Promise<{ sl
             <p className="text-label-caps uppercase tracking-wide text-on-surface-variant mb-3">
               Status: {PAYMENT_STATUS_LABEL[registration.paymentStatus] ?? registration.paymentStatus}
             </p>
+            {registration.paymentStatus === "submitted" && (
+              <p className="mb-3 flex items-start gap-2 rounded-md bg-primary-container/10 px-4 py-3 text-body-sm text-on-background">
+                <CheckCircle2 size={16} className="mt-0.5 shrink-0 text-primary-container" aria-hidden="true" />
+                <span>
+                  Bukti transfer sudah terkirim. Bendahara akan memverifikasi — QR check-in muncul otomatis di
+                  halaman ini setelah disetujui. Kamu bisa memperbarui bukti di bawah bila perlu.
+                </span>
+              </p>
+            )}
+            {registration.paymentStatus === "rejected" && (
+              <p className="mb-3 flex items-start gap-2 rounded-md bg-error-container/40 px-4 py-3 text-body-sm text-on-error-container">
+                <span aria-hidden="true">⚠️</span>
+                <span>
+                  Bukti sebelumnya belum bisa diverifikasi{registration.paymentNote ? ` — ${registration.paymentNote}` : ""}.
+                  Kirim ulang bukti transfer yang benar di bawah.
+                </span>
+              </p>
+            )}
             {registration.paymentStatus !== "verified" && (
               <form action={submitPaymentProof} className="flex flex-col gap-3">
                 <input type="hidden" name="id" value={registration.id} />
