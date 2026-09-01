@@ -574,6 +574,7 @@ export const id = {
   "sensus.errFixFields": "Ada {{n}} isian yang perlu dilengkapi atau diperbaiki sebelum sensus bisa disimpan.",
   "sensus.errPassportTaken": "Nomor paspor ini sudah terdaftar atas akun lain. Kalau itu akunmu yang lama, hubungi pengurus untuk menggabungkannya — jangan mengisi sensus dua kali.",
   "sensus.errStudentCardRequired": "Kartu Tanda Mahasiswa wajib diunggah sebelum sensus bisa disimpan sebagai lengkap.",
+  "sensus.errStudentCard": "Berkas kartu mahasiswa belum benar-benar terunggah. Ulangi unggah berkasnya (tunggu sampai muncul pratinjaunya), jangan tempel path berkas.",
   "sensus.errTermsRequired": "Kamu harus menyetujui syarat, ketentuan, dan kebijakan privasi.",
   "sensus.prev": "Sebelumnya",
   "sensus.savedAt": "Tersimpan {{time}}",

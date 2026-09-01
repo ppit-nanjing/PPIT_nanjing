@@ -124,6 +124,13 @@ export function ImageUploadCropper({
       }
     } catch (e) {
       setError(e instanceof Error ? e.message : t("upload.errFailed"));
+      // Unggah gagal: buang pratinjau supaya tidak terlihat seolah tersimpan
+      // (nilai yang di-commit tidak berubah - kalau kosong, tetap kosong).
+      if (previewUrl) {
+        URL.revokeObjectURL(previewUrl);
+        setPreviewUrl(null);
+      }
+      setFile(null);
     } finally {
       setUploading(false);
     }
@@ -163,7 +170,11 @@ export function ImageUploadCropper({
     await uploadBlob(file, file.name);
   }
 
-  const displayUrl = previewUrl ?? currentValue;
+  // Nilai tersimpan yang bukan URL hasil unggah (mis. "file:///…" warisan data
+  // lama) tidak boleh ditampilkan sebagai gambar tersimpan - perlakukan seperti
+  // belum ada, supaya dropzone-nya kosong dan mendorong unggah ulang.
+  const savedUrl = /^(https?:\/\/|\/api\/|data:)/i.test(currentValue) ? currentValue : "";
+  const displayUrl = previewUrl ?? savedUrl;
 
   return (
     <div className="flex flex-col gap-2">
@@ -259,9 +270,9 @@ export function ImageUploadCropper({
           <Loader2 size={14} className="animate-spin" /> {t("upload.uploading")}
         </span>
       )}
-      {currentValue && !uploading && (
+      {savedUrl && !uploading && (
         <span className="flex items-center gap-1 text-body-sm text-primary-container truncate">
-          <Crop size={12} /> {currentValue.split("/").pop()}
+          <Crop size={12} /> {savedUrl.split("/").pop()}
         </span>
       )}
       {error && <p className="text-body-sm text-error">{error}</p>}

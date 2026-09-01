@@ -88,6 +88,8 @@ function issueMessage(t: T, issue: SensusIssue): string {
       return t("sensus.errGradBeforeEntry");
     case "passportTaken":
       return t("sensus.errPassportTaken");
+    case "studentCard":
+      return t("sensus.errStudentCard");
     case "required":
       // Dua field ini punya pesan sendiri karena bukan "isian kosong" biasa:
       // satu unggahan berkas, satu kotak persetujuan.

@@ -99,7 +99,7 @@ export interface SensusIssue {
   // "required" = kosong; sisanya = terisi tapi bentuknya salah.
   // "passportTaken" hanya bisa ditentukan server (perlu lihat baris lain di
   // database), jadi tidak pernah muncul dari validateSensus() di klien.
-  kind: "required" | "wechat" | "phone" | "whatsapp" | "year" | "gradBeforeEntry" | "passportTaken";
+  kind: "required" | "wechat" | "phone" | "whatsapp" | "year" | "gradBeforeEntry" | "passportTaken" | "studentCard";
 }
 
 // Semua masalah sekaligus, bukan berhenti di yang pertama, supaya pengisi form
@@ -116,6 +116,14 @@ export function validateSensus(input: SensusInput): SensusIssue[] {
   });
 
   const filled = (field: keyof SensusInput) => String(input[field] ?? "").trim().length > 0;
+
+  // Kartu mahasiswa HARUS URL hasil unggah - blob publik atau route internal
+  // /api/... Nilai seperti "file:///D:/..." (ter-drop dari file manager saat
+  // unggahannya diam-diam gagal) lolos cek "kosong" tapi tak berguna buat
+  // rekap ke pusat.
+  if (filled("studentCardUrl") && !/^(https:\/\/|\/api\/)/i.test(input.studentCardUrl.trim())) {
+    issues.push({ field: "studentCardUrl", step: 1, kind: "studentCard" });
+  }
 
   if (filled("wechatId") && !isValidWechatId(input.wechatId)) {
     issues.push({ field: "wechatId", step: 2, kind: "wechat" });

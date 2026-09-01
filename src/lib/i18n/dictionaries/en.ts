@@ -571,6 +571,7 @@ export const en = {
   "sensus.errFixFields": "{{n}} field(s) still need to be completed or corrected before the census can be saved.",
   "sensus.errPassportTaken": "This passport number is already registered to another account. If that is your old account, contact the committee to merge it — do not fill in the census twice.",
   "sensus.errStudentCardRequired": "The Student ID Card must be uploaded before the census can be saved as complete.",
+  "sensus.errStudentCard": "The student ID card file didn't actually upload. Upload it again (wait for the preview to appear) — don't paste a file path.",
   "sensus.errTermsRequired": "You must agree to the terms, conditions, and privacy policy.",
   "sensus.prev": "Previous",
   "sensus.savedAt": "Saved {{time}}",
