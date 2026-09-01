@@ -18,6 +18,7 @@ import { CollapsibleSection } from "@/components/console/collapsible-section";
 import { HtmFields } from "@/components/console/htm-fields";
 import { Select, CheckboxField, CheckField } from "@/components/console/form";
 import { PAYMENT_STATUS_LABEL } from "@/lib/payment-status-labels";
+import { checkInBlockReason } from "@/lib/event-checkin";
 import { toDateLocalInput } from "@/lib/datetime";
 import { ConfirmButton } from "@/components/console/confirm-button";
 import { ProofView } from "@/components/console/proof-view";
@@ -547,6 +548,10 @@ export default async function ConsoleEventDetailPage({ params }: { params: Promi
             answers: r.reg.answersJson ?? {},
             feeLabel: r.reg.feeOptionId ? feeOptionLabel.get(r.reg.feeOptionId) ?? null : null,
             biodata: r.reg.biodataJson ?? null,
+            checkInBlocked: checkInBlockReason(
+              { status: r.reg.status, paymentStatus: r.reg.paymentStatus },
+              event.isPaid,
+            ),
             membership: MEMBERSHIP_LABEL[
               membershipStatus(
                 r.sensusCompletion ? { branch: r.sensusBranch, completionStatus: r.sensusCompletion } : null

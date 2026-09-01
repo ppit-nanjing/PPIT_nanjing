@@ -8,6 +8,7 @@ import { db } from "@/db";
 import { events, eventRegistrations, eventQuestions, eventCommittee, eventFeeOptions, galleryAlbums } from "@/db/schema";
 import { hasModuleAccess } from "@/lib/admin-scope";
 import { createTemplatedNotification } from "@/lib/notifications";
+import { checkInBlockReason } from "@/lib/event-checkin";
 import { issueParticipantCertificatesCore } from "@/app/actions/committee";
 
 async function requireAdmin() {
@@ -292,20 +293,40 @@ export async function deleteFeeOption(formData: FormData) {
   if (row) revalidatePath(`/console/events/${row.eventId}`);
 }
 
-export async function checkInRegistration(registrationId: string, eventId: string) {
+export async function checkInRegistration(
+  registrationId: string,
+  eventId: string,
+): Promise<
+  { ok: true; already: boolean } | { ok: false; reason: "notfound" | "cancelled" | "unpaid" }
+> {
   await requireAdmin();
   const [registration] = await db
-    .select({ userId: eventRegistrations.userId })
+    .select({
+      userId: eventRegistrations.userId,
+      status: eventRegistrations.status,
+      paymentStatus: eventRegistrations.paymentStatus,
+    })
     .from(eventRegistrations)
     .where(eq(eventRegistrations.id, registrationId));
-  const [event] = await db.select({ title: events.title }).from(events).where(eq(events.id, eventId));
+  if (!registration) return { ok: false, reason: "notfound" };
+  const [event] = await db
+    .select({ title: events.title, isPaid: events.isPaid })
+    .from(events)
+    .where(eq(events.id, eventId));
+
+  if (registration.status === "attended") return { ok: true, already: true };
+
+  // Tombol check-in manual harus tunduk pada aturan yang sama dengan pintu QR:
+  // acara berbayar wajib pembayaran terverifikasi dulu.
+  const blocked = checkInBlockReason(registration, event?.isPaid ?? false);
+  if (blocked) return { ok: false, reason: blocked };
 
   await db
     .update(eventRegistrations)
     .set({ status: "attended", checkedInAt: new Date() })
     .where(eq(eventRegistrations.id, registrationId));
 
-  if (registration?.userId) {
+  if (registration.userId) {
     await createTemplatedNotification({
       userId: registration.userId,
       templateKey: "event_checkin",
@@ -316,6 +337,7 @@ export async function checkInRegistration(registrationId: string, eventId: strin
   }
 
   revalidatePath(`/console/events/${eventId}`);
+  return { ok: true, already: false };
 }
 
 // Check-in by the QR token scanned from a ticket. Separated from the scan page
@@ -326,7 +348,12 @@ export async function checkInByToken(token: string, eventId: string) {
   await requireAdmin();
 
   const [registration] = await db
-    .select({ id: eventRegistrations.id, userId: eventRegistrations.userId, status: eventRegistrations.status })
+    .select({
+      id: eventRegistrations.id,
+      userId: eventRegistrations.userId,
+      status: eventRegistrations.status,
+      paymentStatus: eventRegistrations.paymentStatus,
+    })
     .from(eventRegistrations)
     .where(and(eq(eventRegistrations.qrCodeToken, token), eq(eventRegistrations.eventId, eventId)));
 
@@ -336,12 +363,18 @@ export async function checkInByToken(token: string, eventId: string) {
     return { ok: true as const, already: true as const };
   }
 
+  const [event] = await db.select({ title: events.title, isPaid: events.isPaid }).from(events).where(eq(events.id, eventId));
+
+  // Jaring pengaman: normalnya pendaftaran berbayar yang belum lunas tidak
+  // punya QR sama sekali, tapi kalau pembayaran sempat terverifikasi (QR terbit)
+  // lalu dibatalkan/ditolak, QR-nya masih hidup - blokir di sini juga.
+  const blocked = checkInBlockReason(registration, event?.isPaid ?? false);
+  if (blocked) return { ok: false as const, reason: blocked };
+
   await db
     .update(eventRegistrations)
     .set({ status: "attended", checkedInAt: new Date() })
     .where(eq(eventRegistrations.id, registration.id));
-
-  const [event] = await db.select({ title: events.title }).from(events).where(eq(events.id, eventId));
   if (registration.userId) {
     await createTemplatedNotification({
       userId: registration.userId,

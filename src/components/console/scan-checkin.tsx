@@ -6,6 +6,11 @@ import { checkInByToken, checkInCommitteeByToken } from "@/app/actions/admin-eve
 
 type Status = "pending" | "done" | "invalid";
 
+const BLOCK_MESSAGE: Record<string, string> = {
+  cancelled: "Pendaftaran ini dibatalkan.",
+  unpaid: "Pembayaran belum terverifikasi — verifikasi dulu di halaman acara.",
+};
+
 export function ScanCheckIn({
   token,
   eventId,
@@ -23,6 +28,7 @@ export function ScanCheckIn({
 }) {
   const [status, setStatus] = useState<Status>("pending");
   const [already, setAlready] = useState(false);
+  const [blockReason, setBlockReason] = useState<string | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -31,6 +37,7 @@ export function ScanCheckIn({
       .then((res) => {
         if (cancelled) return;
         if (!res.ok) {
+          setBlockReason("reason" in res ? (res.reason as string) : null);
           setStatus("invalid");
         } else {
           setAlready(res.already);
@@ -49,7 +56,12 @@ export function ScanCheckIn({
     return (
       <div className="mb-8 rounded-xl border border-red-300 bg-surface-container-lowest p-6 flex flex-col items-center text-center">
         <XCircle className="text-red-500 mb-3" size={40} />
-        <p className="text-body-lg text-on-background font-semibold">Token tidak valid</p>
+        <p className="text-body-lg text-on-background font-semibold">
+          {blockReason && BLOCK_MESSAGE[blockReason] ? "Tidak bisa check-in" : "Token tidak valid"}
+        </p>
+        {blockReason && BLOCK_MESSAGE[blockReason] && (
+          <p className="mt-1 text-body-md text-on-surface-variant">{BLOCK_MESSAGE[blockReason]}</p>
+        )}
       </div>
     );
   }

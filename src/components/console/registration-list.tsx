@@ -4,6 +4,7 @@ import { useState, useTransition } from "react";
 import { CheckCircle2, TriangleAlert } from "lucide-react";
 import { checkInRegistration } from "@/app/actions/admin-events";
 import { ProofView } from "@/components/console/proof-view";
+import { CHECK_IN_BLOCK_LABEL, CHECK_IN_BLOCK_MESSAGE, type CheckInBlock } from "@/lib/event-checkin";
 
 interface Registration {
   id: string;
@@ -23,6 +24,9 @@ interface Registration {
   feeLabel?: string | null;
   // Biodata lengkap yang di-snapshot saat mendaftar (acara requiresBiodata).
   biodata?: Record<string, string> | null;
+  // Alasan peserta ini belum boleh di-check-in (dihitung di server dari status
+  // pendaftaran + status bayar). null = boleh.
+  checkInBlocked?: CheckInBlock | null;
 }
 
 const BIODATA_LABEL: Record<string, string> = {
@@ -70,7 +74,14 @@ export function RegistrationList({
     setCheckingId(registrationId);
     startTransition(async () => {
       try {
-        await checkInRegistration(registrationId, eventId);
+        const res = await checkInRegistration(registrationId, eventId);
+        if (!res.ok) {
+          setError(
+            res.reason === "notfound"
+              ? "Pendaftaran tidak ditemukan. Muat ulang halaman."
+              : CHECK_IN_BLOCK_MESSAGE[res.reason],
+          );
+        }
       } catch {
         setError("Check-in gagal. Muat ulang halaman lalu coba lagi.");
       } finally {
@@ -79,8 +90,19 @@ export function RegistrationList({
     });
   }
 
-  const CheckInButton = ({ r }: { r: Registration }) =>
-    r.status !== "attended" ? (
+  const CheckInButton = ({ r }: { r: Registration }) => {
+    if (r.status === "attended") return null;
+    if (r.checkInBlocked) {
+      return (
+        <span
+          className="flex items-center gap-1 text-label-caps text-on-surface-variant"
+          title={CHECK_IN_BLOCK_MESSAGE[r.checkInBlocked]}
+        >
+          <TriangleAlert size={13} aria-hidden /> {CHECK_IN_BLOCK_LABEL[r.checkInBlocked]}
+        </span>
+      );
+    }
+    return (
       <button
         onClick={() => checkIn(r.id)}
         disabled={isPending}
@@ -88,7 +110,8 @@ export function RegistrationList({
       >
         <CheckCircle2 size={14} /> {checkingId === r.id ? "Memproses…" : "Check-in"}
       </button>
-    ) : null;
+    );
+  };
 
   if (registrations.length === 0) {
     return <p className="text-body-md text-on-surface-variant">Belum ada yang mendaftar.</p>;
