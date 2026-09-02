@@ -11,6 +11,7 @@ import { ReservationManager } from "@/components/console/reservation-manager";
 import { CollapsibleSection } from "@/components/console/collapsible-section";
 import { GuideButton } from "@/components/console/guide-button";
 import { getGuide } from "@/lib/guides";
+import { markOverdueBorrows } from "@/lib/mark-overdue";
 import { requireModuleAccess } from "@/lib/admin-scope";
 import { Plus, Package, Pencil } from "lucide-react";
 import Link from "next/link";
@@ -20,6 +21,9 @@ import { fieldInput as input, primaryBtn, Select } from "@/components/console/fo
 
 export default async function ConsoleInventoryPage() {
   await requireModuleAccess("inventory");
+  // Defensif: kalau cron tidak jalan, buka halaman ini tetap menandai yang
+  // lewat jatuh tempo (pola sama dengan publishDueEvents di halaman acara).
+  await markOverdueBorrows();
   // Perf: all five reads are independent - run them concurrently instead of
   // stacking five serial round trips to the Neon proxy.
   const [items, requests, contributions, procurements, loans, reservations, eventList, guide] = await Promise.all([
@@ -83,6 +87,10 @@ export default async function ConsoleInventoryPage() {
               itemName: r.itemName ?? "(barang dihapus)",
               userName: r.userName,
               userEmail: r.userEmail,
+              borrowerName: r.req.borrowerName,
+              borrowerEmail: r.req.borrowerEmail,
+              borrowerWechat: r.req.borrowerWechat,
+              borrowerPhone: r.req.borrowerPhone,
               quantity: r.req.quantity,
               purpose: r.req.purpose,
               usageLocation: r.req.usageLocation,

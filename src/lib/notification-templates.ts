@@ -24,6 +24,7 @@ export type NotificationTemplateKey =
   | "borrow_handed_over"
   | "borrow_return_requested_confirmed"
   | "borrow_rejected"
+  | "borrow_overdue"
   | "contribution_approved"
   | "contribution_rejected"
   | "procurement_approved"
@@ -153,6 +154,16 @@ export const NOTIFICATION_TEMPLATES: NotificationTemplateDef[] = [
     defaultSubject: "Permintaan peminjaman ditolak",
     defaultBody:
       "Maaf, permintaan peminjaman barang kamu ditolak. Cek detail di riwayat pengajuan.",
+  },
+  {
+    key: "borrow_overdue",
+    group: "Peminjaman",
+    label: "Peminjaman terlambat",
+    trigger: "Dikirim otomatis saat tanggal pengembalian barang yang masih dipinjam sudah lewat.",
+    variables: ["itemName", "returnDate"],
+    defaultSubject: "Barang pinjaman sudah lewat jatuh tempo",
+    defaultBody:
+      'Barang "{{itemName}}" seharusnya dikembalikan pada {{returnDate}}. Mohon segera kembalikan ke Divisi Logistik. Keterlambatan jadi pertimbangan untuk peminjaman berikutnya.',
   },
   {
     key: "contribution_approved",
