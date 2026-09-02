@@ -12,10 +12,12 @@ export function BorrowRequestForm({
   itemId,
   maxQuantity,
   itemLocation,
+  external = false,
 }: {
   itemId: string;
   maxQuantity: number;
   itemLocation: string | null;
+  external?: boolean;
 }) {
   const t = useT();
   const [step, setStep] = useState(0);
@@ -24,8 +26,13 @@ export function BorrowRequestForm({
   const [requestedTo, setRequestedTo] = useState("");
   const [purpose, setPurpose] = useState("");
   const [usageLocation, setUsageLocation] = useState("");
+  const [contact, setContact] = useState({ name: "", email: "", wechat: "", phone: "" });
 
+  const contactValid =
+    !external ||
+    (contact.name.trim() && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(contact.email) && contact.wechat.trim() && contact.phone.trim());
   const detailsValid =
+    !!contactValid &&
     Number(quantity) >= 1 &&
     !!requestedFrom &&
     !!requestedTo &&
@@ -39,6 +46,14 @@ export function BorrowRequestForm({
       <input type="hidden" name="requestedTo" value={requestedTo} />
       <input type="hidden" name="purpose" value={purpose} />
       <input type="hidden" name="usageLocation" value={usageLocation} />
+      {external && (
+        <>
+          <input type="hidden" name="borrowerName" value={contact.name} />
+          <input type="hidden" name="borrowerEmail" value={contact.email} />
+          <input type="hidden" name="borrowerWechat" value={contact.wechat} />
+          <input type="hidden" name="borrowerPhone" value={contact.phone} />
+        </>
+      )}
 
       <div className="flex items-center gap-2 mb-2">
         {STEPS.map((s, i) => (
@@ -51,6 +66,29 @@ export function BorrowRequestForm({
 
       {step === 0 && (
         <div className="flex flex-col gap-6">
+          {external && (
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              {(
+                [
+                  ["name", "inventory.form.borrowerName", "text"],
+                  ["email", "inventory.form.borrowerEmail", "email"],
+                  ["wechat", "inventory.form.borrowerWechat", "text"],
+                  ["phone", "inventory.form.borrowerPhone", "text"],
+                ] as const
+              ).map(([key, label, type]) => (
+                <label key={key} className="flex flex-col gap-2">
+                  <span className="text-label-caps uppercase tracking-wide text-on-surface-variant">{t(label)} *</span>
+                  <input
+                    type={type}
+                    value={contact[key]}
+                    onChange={(e) => setContact((c) => ({ ...c, [key]: e.target.value }))}
+                    required
+                    className="bg-soft-gray rounded-md p-3 text-body-md focus:outline-none focus:ring-2 focus:ring-primary-container"
+                  />
+                </label>
+              ))}
+            </div>
+          )}
           <label className="flex flex-col gap-2">
             <span className="text-label-caps uppercase tracking-wide text-on-surface-variant">{t("inventory.form.quantity")} *</span>
             <input

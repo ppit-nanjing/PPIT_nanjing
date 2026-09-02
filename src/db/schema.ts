@@ -774,7 +774,16 @@ export const inventoryItems = pgTable("inventory_items", {
 export const borrowRequests = pgTable("borrow_requests", {
   id: uuid("id").defaultRandom().primaryKey(),
   itemId: uuid("item_id").notNull().references(() => inventoryItems.id, { onDelete: "cascade" }),
-  userId: uuid("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  // NULL untuk peminjam EKSTERNAL (pihak luar tanpa akun PPIT). Kontaknya di
+  // kolom borrower* di bawah. Diisi hanya untuk peminjam internal (mahasiswa
+  // tersensus yang login).
+  userId: uuid("user_id").references(() => users.id, { onDelete: "cascade" }),
+  // Kontak peminjam eksternal (dari Form Pengajuan Peminjaman Aset). NULL untuk
+  // peminjam internal - datanya ada di akun users-nya.
+  borrowerName: text("borrower_name"),
+  borrowerEmail: text("borrower_email"),
+  borrowerWechat: text("borrower_wechat"),
+  borrowerPhone: text("borrower_phone"),
   quantity: integer("quantity").notNull().default(1),
   purpose: text("purpose"),
   // Di mana aset akan dipakai (SOP: "lokasi penggunaan"). Beda dari

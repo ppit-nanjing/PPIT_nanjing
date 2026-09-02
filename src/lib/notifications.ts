@@ -8,7 +8,7 @@ import {
 } from "@/lib/notification-templates";
 
 export type NotificationInput = {
-  userId: string;
+  userId: string | null;
   title: string;
   body: string;
   relatedEntityType?: string | null;
@@ -16,7 +16,7 @@ export type NotificationInput = {
 };
 
 export type TemplatedNotificationInput = {
-  userId: string;
+  userId: string | null;
   templateKey: NotificationTemplateKey;
   variables?: Record<string, string>;
   relatedEntityType?: string | null;

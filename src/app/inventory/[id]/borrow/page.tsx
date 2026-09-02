@@ -5,21 +5,26 @@ import { inventoryItems } from "@/db/schema";
 import { SiteNav } from "@/components/site-nav";
 import { SiteFooter } from "@/components/site-footer";
 import { BorrowRequestForm } from "@/components/borrow-request-form";
-import { requireCompletedSensus } from "@/lib/sensus-gate";
+import { auth } from "@/auth";
+import { hasCompletedSensus } from "@/lib/sensus-gate";
 import { upcomingReservations } from "@/lib/inventory-reservations";
 import { conditionLabel } from "@/lib/inventory-labels";
-import { ArrowLeft, CalendarClock } from "lucide-react";
+import { ArrowLeft, CalendarClock, Info } from "lucide-react";
 import Link from "next/link";
 import { getT } from "@/lib/i18n/server";
 
 export default async function BorrowRequestPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  await requireCompletedSensus(`/inventory/${id}/borrow`);
 
   const [item] = await db.select().from(inventoryItems).where(eq(inventoryItems.id, id));
   if (!item) notFound();
 
   const reservations = await upcomingReservations(id);
+
+  // Jalur peminjam: INTERNAL = mahasiswa tersensus yang login; sisanya EKSTERNAL
+  // (pihak luar) - isi kontak lengkap, tanpa akun.
+  const session = await auth();
+  const isInternal = session?.user?.id ? await hasCompletedSensus(session.user.id) : false;
 
   const { t } = await getT();
 
@@ -40,6 +45,15 @@ export default async function BorrowRequestPage({ params }: { params: Promise<{ 
           {t("inventory.conditionLabel")}: {conditionLabel(item.condition)}
         </p>
 
+        <div className="mb-8 flex items-start gap-3 rounded-lg border border-outline-variant bg-surface-container-low p-5">
+          <Info className="mt-0.5 shrink-0 text-primary-container" size={18} aria-hidden />
+          <p className="text-body-sm text-on-surface-variant">
+            {isInternal
+              ? "Kamu mengajukan sebagai peminjam internal PPIT — nama & kontakmu diambil dari akun."
+              : "Kamu mengajukan sebagai pihak luar. Isi data kontak selengkapnya; Divisi Logistik akan menghubungimu lewat WeChat / Email untuk konfirmasi. Pengajuan tidak otomatis disetujui."}
+          </p>
+        </div>
+
         {reservations.length > 0 && (
           <div className="mb-8 flex flex-col gap-2 rounded-lg border border-outline-variant bg-surface-container-low p-5">
             <p className="flex items-center gap-2 text-label-caps uppercase tracking-wide text-primary-container">
@@ -58,7 +72,12 @@ export default async function BorrowRequestPage({ params }: { params: Promise<{ 
           </div>
         )}
 
-        <BorrowRequestForm itemId={id} maxQuantity={item.availableQuantity} itemLocation={item.location} />
+        <BorrowRequestForm
+          itemId={id}
+          maxQuantity={item.availableQuantity}
+          itemLocation={item.location}
+          external={!isInternal}
+        />
       </main>
       <SiteFooter />
     </div>

@@ -6,11 +6,17 @@ import { redirect } from "next/navigation";
 import { auth } from "@/auth";
 import { db } from "@/db";
 import { inventoryItems, borrowRequests } from "@/db/schema";
-import { requireCompletedSensus } from "@/lib/sensus-gate";
+import { hasCompletedSensus } from "@/lib/sensus-gate";
 import { overlappingReservations } from "@/lib/inventory-reservations";
 
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
 export async function submitBorrowRequest(itemId: string, formData: FormData) {
-  const session = await requireCompletedSensus(`/inventory/${itemId}/borrow`);
+  // Peminjam INTERNAL = mahasiswa tersensus yang login. Sisanya (belum login,
+  // atau login tapi sensus belum lengkap, atau pihak luar) = jalur EKSTERNAL:
+  // isi kontak lengkap, tidak butuh akun.
+  const session = await auth();
+  const isInternal = session?.user?.id ? await hasCompletedSensus(session.user.id) : false;
 
   const [item] = await db.select().from(inventoryItems).where(eq(inventoryItems.id, itemId));
   if (!item) throw new Error("Barang tidak ditemukan");
@@ -21,6 +27,22 @@ export async function submitBorrowRequest(itemId: string, formData: FormData) {
   const requestedFrom = String(formData.get("requestedFrom") ?? "");
   const requestedTo = String(formData.get("requestedTo") ?? "");
   const statementUrl = String(formData.get("statementUrl") ?? "").trim();
+
+  const g = (k: string) => String(formData.get(k) ?? "").trim();
+  const borrower = isInternal
+    ? null
+    : {
+        name: g("borrowerName"),
+        email: g("borrowerEmail"),
+        wechat: g("borrowerWechat"),
+        phone: g("borrowerPhone"),
+      };
+  if (borrower) {
+    if (!borrower.name || !borrower.email || !borrower.wechat || !borrower.phone) {
+      throw new Error("Nama, email, WeChat ID, dan No. HP China wajib diisi untuk peminjam pihak luar");
+    }
+    if (!EMAIL_RE.test(borrower.email)) throw new Error("Format email tidak valid");
+  }
 
   if (quantity < 1) throw new Error("Jumlah tidak valid");
   if (quantity > item.availableQuantity) throw new Error("Jumlah melebihi stok yang tersedia");
@@ -44,7 +66,11 @@ export async function submitBorrowRequest(itemId: string, formData: FormData) {
 
   await db.insert(borrowRequests).values({
     itemId,
-    userId: session.user.id,
+    userId: isInternal ? session!.user.id : null,
+    borrowerName: borrower?.name ?? null,
+    borrowerEmail: borrower?.email ?? null,
+    borrowerWechat: borrower?.wechat ?? null,
+    borrowerPhone: borrower?.phone ?? null,
     quantity,
     purpose,
     usageLocation,

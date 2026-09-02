@@ -15,6 +15,11 @@ interface Request {
   itemName: string;
   userName: string | null;
   userEmail: string | null;
+  // Peminjam eksternal (pihak luar tanpa akun) - null untuk peminjam internal.
+  borrowerName: string | null;
+  borrowerEmail: string | null;
+  borrowerWechat: string | null;
+  borrowerPhone: string | null;
   quantity: number;
   purpose: string | null;
   usageLocation: string | null;
@@ -69,13 +74,18 @@ export function BorrowRequestQueue({ requests }: { requests: Request[] }) {
             className={`rounded-lg p-5 border ${hasReturnRequest ? "border-primary-container bg-primary-container/5" : "bg-surface-container-lowest border-outline-variant"}`}
           >
             <div className="flex items-start justify-between gap-4 mb-2">
-              <div>
+              <div className="min-w-0">
                 <p className="text-body-md font-medium text-on-background">
                   {r.itemName} &times; {r.quantity}
                 </p>
                 <p className="text-label-caps text-on-surface-variant">
-                  {r.userName ?? r.userEmail ?? "Anonim"} &middot; {r.requestedFrom} &ndash; {r.requestedTo}
+                  {r.userName ?? r.borrowerName ?? r.userEmail ?? "Anonim"} &middot; {r.requestedFrom} &ndash; {r.requestedTo}
                 </p>
+                {r.borrowerName && (
+                  <p className="text-label-caps text-on-surface-variant break-all">
+                    Pihak luar &middot; {[r.borrowerEmail, r.borrowerWechat && `WeChat: ${r.borrowerWechat}`, r.borrowerPhone].filter(Boolean).join(" · ")}
+                  </p>
+                )}
               </div>
               <span className="text-label-caps uppercase tracking-wide bg-surface-container-low px-2.5 py-1 rounded shrink-0">
                 {STATUS_LABEL[r.status]}
