@@ -16,20 +16,30 @@ export async function submitBorrowRequest(itemId: string, formData: FormData) {
 
   const quantity = Number(formData.get("quantity") ?? 1);
   const purpose = String(formData.get("purpose") ?? "").trim();
+  const usageLocation = String(formData.get("usageLocation") ?? "").trim();
   const requestedFrom = String(formData.get("requestedFrom") ?? "");
   const requestedTo = String(formData.get("requestedTo") ?? "");
+  const statementUrl = String(formData.get("statementUrl") ?? "").trim();
 
   if (quantity < 1) throw new Error("Jumlah tidak valid");
   if (quantity > item.availableQuantity) throw new Error("Jumlah melebihi stok yang tersedia");
-  if (!purpose || !requestedFrom || !requestedTo) throw new Error("Semua kolom wajib diisi");
+  if (!purpose || !usageLocation || !requestedFrom || !requestedTo) throw new Error("Semua kolom wajib diisi");
+  if (requestedTo < requestedFrom) throw new Error("Tanggal pengembalian tidak boleh sebelum tanggal peminjaman");
+  // Pernyataan Peminjam WAJIB dan harus berkas hasil unggah (blob / route
+  // internal), bukan path lokal atau teks acak.
+  if (!/^(https:\/\/[a-z0-9.-]*blob\.vercel-storage\.com\/|\/api\/)/i.test(statementUrl)) {
+    throw new Error("Berkas Pernyataan Peminjam wajib diunggah");
+  }
 
   await db.insert(borrowRequests).values({
     itemId,
     userId: session.user.id,
     quantity,
     purpose,
+    usageLocation,
     requestedFrom,
     requestedTo,
+    statementUrl,
   });
 
   redirect("/inventory/borrow/success");

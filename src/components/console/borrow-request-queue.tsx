@@ -1,13 +1,14 @@
 "use client";
 
-import { useTransition } from "react";
-import { Check, X, RotateCcw, Hand, PackageCheck } from "lucide-react";
+import { useState, useTransition } from "react";
+import { Check, X, RotateCcw, Hand, PackageCheck, MapPin, TriangleAlert } from "lucide-react";
 import {
   approveBorrowRequest,
   rejectBorrowRequest,
   markHandedOver,
   markReturned,
 } from "@/app/actions/admin-inventory";
+import { ProofView } from "@/components/console/proof-view";
 
 interface Request {
   id: string;
@@ -16,6 +17,8 @@ interface Request {
   userEmail: string | null;
   quantity: number;
   purpose: string | null;
+  usageLocation: string | null;
+  statementUrl: string | null;
   status: "pending" | "approved" | "rejected" | "borrowed" | "returned" | "overdue";
   requestedFrom: string | null;
   requestedTo: string | null;
@@ -32,7 +35,19 @@ const STATUS_LABEL: Record<Request["status"], string> = {
 };
 
 export function BorrowRequestQueue({ requests }: { requests: Request[] }) {
-  const [, startTransition] = useTransition();
+  const [isPending, startTransition] = useTransition();
+  const [error, setError] = useState<string | null>(null);
+
+  function run(fn: () => Promise<unknown>) {
+    setError(null);
+    startTransition(async () => {
+      try {
+        await fn();
+      } catch (e) {
+        setError(e instanceof Error ? e.message : "Aksi gagal. Muat ulang halaman lalu coba lagi.");
+      }
+    });
+  }
 
   if (requests.length === 0) {
     return <p className="text-body-md text-on-surface-variant">Belum ada pengajuan peminjaman.</p>;
@@ -40,6 +55,11 @@ export function BorrowRequestQueue({ requests }: { requests: Request[] }) {
 
   return (
     <div className="flex flex-col gap-3">
+      {error && (
+        <p role="alert" className="flex items-center gap-2 rounded-lg bg-error-container/40 px-4 py-3 text-body-md text-on-error-container">
+          <TriangleAlert size={16} aria-hidden /> {error}
+        </p>
+      )}
       {requests.map((r) => {
         const isActive = r.status === "approved" || r.status === "borrowed" || r.status === "overdue";
         const hasReturnRequest = Boolean(r.returnRequestedAt) && (r.status === "borrowed" || r.status === "overdue");
@@ -61,7 +81,17 @@ export function BorrowRequestQueue({ requests }: { requests: Request[] }) {
                 {STATUS_LABEL[r.status]}
               </span>
             </div>
-            {r.purpose && <p className="text-body-md text-on-surface-variant mb-3">{r.purpose}</p>}
+            {r.purpose && <p className="text-body-md text-on-surface-variant mb-2">{r.purpose}</p>}
+            <div className="mb-3 flex flex-col gap-1 text-label-caps text-on-surface-variant">
+              {r.usageLocation && (
+                <span className="flex items-center gap-1.5">
+                  <MapPin size={13} aria-hidden /> Lokasi pakai: <span className="normal-case text-on-background">{r.usageLocation}</span>
+                </span>
+              )}
+              <span className="flex items-center gap-1.5">
+                Pernyataan Peminjam: <ProofView url={r.statementUrl} label="Pernyataan Peminjam" />
+              </span>
+            </div>
 
             {hasReturnRequest && (
               <p className="flex items-center gap-1.5 text-label-caps uppercase tracking-wide text-primary-container mb-3">
@@ -72,14 +102,16 @@ export function BorrowRequestQueue({ requests }: { requests: Request[] }) {
             {r.status === "pending" && (
               <div className="flex flex-wrap gap-2">
                 <button
-                  onClick={() => startTransition(() => approveBorrowRequest(r.id))}
-                  className="flex items-center gap-1 text-label-caps bg-primary-container/10 text-primary-container px-3 py-1.5 rounded-md hover:bg-primary-container/20 transition-colors"
+                  disabled={isPending}
+                  onClick={() => run(() => approveBorrowRequest(r.id))}
+                  className="flex items-center gap-1 text-label-caps bg-primary-container/10 text-primary-container px-3 py-1.5 rounded-md hover:bg-primary-container/20 transition-colors disabled:opacity-50"
                 >
                   <Check size={14} /> Setujui
                 </button>
                 <button
-                  onClick={() => startTransition(() => rejectBorrowRequest(r.id))}
-                  className="flex items-center gap-1 text-label-caps bg-error-container text-on-error-container px-3 py-1.5 rounded-md hover:opacity-80 transition-opacity"
+                  disabled={isPending}
+                  onClick={() => run(() => rejectBorrowRequest(r.id))}
+                  className="flex items-center gap-1 text-label-caps bg-error-container text-on-error-container px-3 py-1.5 rounded-md hover:opacity-80 transition-opacity disabled:opacity-50"
                 >
                   <X size={14} /> Tolak
                 </button>
@@ -88,14 +120,16 @@ export function BorrowRequestQueue({ requests }: { requests: Request[] }) {
             {r.status === "approved" && (
               <div className="flex flex-wrap items-center gap-3">
                 <button
-                  onClick={() => startTransition(() => markHandedOver(r.id))}
-                  className="flex items-center gap-1 text-label-caps bg-primary-container/10 text-primary-container px-3 py-1.5 rounded-md hover:bg-primary-container/20 transition-colors"
+                  disabled={isPending}
+                  onClick={() => run(() => markHandedOver(r.id))}
+                  className="flex items-center gap-1 text-label-caps bg-primary-container/10 text-primary-container px-3 py-1.5 rounded-md hover:bg-primary-container/20 transition-colors disabled:opacity-50"
                 >
                   <Hand size={14} /> Serahkan Barang (Tandai Dipinjam)
                 </button>
                 <button
-                  onClick={() => startTransition(() => markReturned(r.id))}
-                  className="flex items-center gap-1 text-label-caps text-on-surface-variant hover:text-primary-container transition-colors"
+                  disabled={isPending}
+                  onClick={() => run(() => markReturned(r.id))}
+                  className="flex items-center gap-1 text-label-caps text-on-surface-variant hover:text-primary-container transition-colors disabled:opacity-50"
                 >
                   <RotateCcw size={14} /> Batalkan / Langsung Dikembalikan
                 </button>
@@ -103,8 +137,9 @@ export function BorrowRequestQueue({ requests }: { requests: Request[] }) {
             )}
             {(r.status === "borrowed" || r.status === "overdue") && (
               <button
-                onClick={() => startTransition(() => markReturned(r.id))}
-                className={`flex items-center gap-1 text-label-caps px-3 py-1.5 rounded-md transition-colors ${hasReturnRequest ? "bg-primary-container text-on-primary hover:bg-primary" : "text-primary-container hover:text-primary"}`}
+                disabled={isPending}
+                onClick={() => run(() => markReturned(r.id))}
+                className={`flex items-center gap-1 text-label-caps px-3 py-1.5 rounded-md transition-colors disabled:opacity-50 ${hasReturnRequest ? "bg-primary-container text-on-primary hover:bg-primary" : "text-primary-container hover:text-primary"}`}
               >
                 <RotateCcw size={14} />
                 {hasReturnRequest ? "Konfirmasi Pengembalian" : "Tandai Dikembalikan"}

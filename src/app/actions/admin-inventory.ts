@@ -100,6 +100,16 @@ export async function approveBorrowRequest(requestId: string) {
   const [request] = await db.select().from(borrowRequests).where(eq(borrowRequests.id, requestId));
   if (!request || request.status !== "pending") return;
 
+  // Stok dicek DI SINI, bukan cuma saat pengajuan: beberapa pengajuan bisa
+  // antre untuk barang yang sama, dan yang lebih dulu disetujui sudah memotong
+  // stoknya. Tanpa cek ini availableQuantity bisa jadi negatif.
+  const [item] = await db.select().from(inventoryItems).where(eq(inventoryItems.id, request.itemId));
+  if (!item || item.availableQuantity < request.quantity) {
+    throw new Error(
+      `Stok tidak cukup untuk disetujui — tersedia ${item?.availableQuantity ?? 0}, diminta ${request.quantity}.`,
+    );
+  }
+
   await db
     .update(inventoryItems)
     .set({ availableQuantity: sql`${inventoryItems.availableQuantity} - ${request.quantity}` })

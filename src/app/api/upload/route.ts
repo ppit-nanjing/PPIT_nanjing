@@ -37,6 +37,9 @@ const FOLDER_MODULE: Record<string, AdminModule | null> = {
   // `file`, mis. LOA / bukti mahasiswa aktif untuk WIF). Sama seperti
   // payment-proof: pengunggahnya user biasa, panitia yang memeriksa.
   "event-doc": null,
+  // "Pernyataan Peminjam" bertanda tangan di form peminjaman aset - diunggah
+  // peminjam (anggota maupun pihak luar), Divisi Logistik yang memeriksa.
+  "borrow-doc": null,
   news: "content",
   gallery: "content",
   album: "content",

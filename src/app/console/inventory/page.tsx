@@ -72,6 +72,8 @@ export default async function ConsoleInventoryPage() {
               userEmail: r.userEmail,
               quantity: r.req.quantity,
               purpose: r.req.purpose,
+              usageLocation: r.req.usageLocation,
+              statementUrl: r.req.statementUrl,
               status: r.req.status,
               requestedFrom: r.req.requestedFrom,
               requestedTo: r.req.requestedTo,

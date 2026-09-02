@@ -776,8 +776,15 @@ export const borrowRequests = pgTable("borrow_requests", {
   userId: uuid("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
   quantity: integer("quantity").notNull().default(1),
   purpose: text("purpose"),
+  // Di mana aset akan dipakai (SOP: "lokasi penggunaan"). Beda dari
+  // inventory_items.location yang menyatakan di koper/box mana aset disimpan.
+  usageLocation: text("usage_location"),
   requestedFrom: date("requested_from"),
   requestedTo: date("requested_to"),
+  // URL berkas "Pernyataan Peminjam" yang sudah diunduh, diisi, dan
+  // ditandatangani peminjam lalu diunggah kembali (SOP langkah 1). Wajib untuk
+  // pengajuan baru; NULL = pengajuan lama sebelum kolom ini ada.
+  statementUrl: text("statement_url"),
   status: borrowRequestStatusEnum("status").notNull().default("pending"),
   approvedBy: uuid("approved_by").references(() => users.id),
   requestedAt: timestamp("requested_at").notNull().defaultNow(),
