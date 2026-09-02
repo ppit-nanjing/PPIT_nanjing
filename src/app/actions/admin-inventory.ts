@@ -4,7 +4,7 @@ import { eq, sql } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { auth } from "@/auth";
 import { db } from "@/db";
-import { inventoryItems, borrowRequests, inventoryAuditLogs, externalLoans } from "@/db/schema";
+import { inventoryItems, borrowRequests, inventoryAuditLogs, externalLoans, itemReservations } from "@/db/schema";
 import { hasModuleAccess } from "@/lib/admin-scope";
 import { createTemplatedNotification } from "@/lib/notifications";
 
@@ -304,5 +304,39 @@ export async function returnExternalLoan(formData: FormData) {
     note: `Dikembalikan oleh ${loan.borrowerName}`,
   });
 
+  revalidatePath("/console/inventory");
+}
+
+// ---------- Reservasi aset untuk acara PPIT (SOP langkah 2) ----------
+
+export async function createItemReservation(formData: FormData) {
+  const actorId = await requireAdmin();
+  const itemId = String(formData.get("itemId") ?? "").trim();
+  const reason = String(formData.get("reason") ?? "").trim();
+  const eventId = String(formData.get("eventId") ?? "").trim() || null;
+  const reservedFrom = String(formData.get("reservedFrom") ?? "").trim();
+  const reservedTo = String(formData.get("reservedTo") ?? "").trim();
+
+  if (!itemId || !reason || !reservedFrom || !reservedTo) {
+    throw new Error("Barang, alasan, dan rentang tanggal wajib diisi");
+  }
+  if (reservedTo < reservedFrom) throw new Error("Tanggal selesai tidak boleh sebelum tanggal mulai");
+
+  const [item] = await db.select({ id: inventoryItems.id }).from(inventoryItems).where(eq(inventoryItems.id, itemId));
+  if (!item) throw new Error("Barang tidak ditemukan");
+
+  await db.insert(itemReservations).values({ itemId, eventId, reason, reservedFrom, reservedTo, createdBy: actorId });
+  revalidatePath("/console/inventory");
+  revalidatePath(`/inventory/${itemId}/borrow`);
+}
+
+export async function releaseItemReservation(reservationId: string) {
+  await requireAdmin();
+  const [row] = await db
+    .update(itemReservations)
+    .set({ status: "released" })
+    .where(eq(itemReservations.id, reservationId))
+    .returning({ itemId: itemReservations.itemId });
+  if (row) revalidatePath(`/inventory/${row.itemId}/borrow`);
   revalidatePath("/console/inventory");
 }

@@ -84,6 +84,7 @@ export const inventoryAuditActionEnum = pgEnum("inventory_audit_action", [
 ]);
 
 export const externalLoanStatusEnum = pgEnum("external_loan_status", ["active", "returned", "overdue"]);
+export const itemReservationStatusEnum = pgEnum("item_reservation_status", ["active", "released"]);
 export const reportTypeEnum = pgEnum("report_type", [
   "event_attendance",
   "inventory_audit",
@@ -793,6 +794,24 @@ export const borrowRequests = pgTable("borrow_requests", {
   // for the console queue ("Konfirmasi Pengembalian") without adding a new
   // enum value. Cleared by markReturned().
   returnRequestedAt: timestamp("return_requested_at"),
+});
+
+// Blokir sebuah aset untuk periode tertentu karena akan dipakai acara PPIT
+// (SOP langkah 2: "cek jadwal guna menghindari tabrakan waktu"). Versi simpel:
+// satu reservasi aktif memblokir SELURUH aset itu sepanjang [reservedFrom,
+// reservedTo] — pengajuan peminjaman yang rentang tanggalnya beririsan ditolak.
+export const itemReservations = pgTable("item_reservations", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  itemId: uuid("item_id").notNull().references(() => inventoryItems.id, { onDelete: "cascade" }),
+  // Tautan opsional ke acara; kalau acaranya dihapus reservasinya tetap ada
+  // (alasannya sudah tersimpan sebagai teks).
+  eventId: uuid("event_id").references(() => events.id, { onDelete: "set null" }),
+  reason: text("reason").notNull(),
+  reservedFrom: date("reserved_from").notNull(),
+  reservedTo: date("reserved_to").notNull(),
+  status: itemReservationStatusEnum("status").notNull().default("active"),
+  createdBy: uuid("created_by").references(() => users.id),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
 });
 
 export const inventoryAuditLogs = pgTable("inventory_audit_logs", {

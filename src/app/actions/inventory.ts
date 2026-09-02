@@ -7,6 +7,7 @@ import { auth } from "@/auth";
 import { db } from "@/db";
 import { inventoryItems, borrowRequests } from "@/db/schema";
 import { requireCompletedSensus } from "@/lib/sensus-gate";
+import { overlappingReservations } from "@/lib/inventory-reservations";
 
 export async function submitBorrowRequest(itemId: string, formData: FormData) {
   const session = await requireCompletedSensus(`/inventory/${itemId}/borrow`);
@@ -25,6 +26,16 @@ export async function submitBorrowRequest(itemId: string, formData: FormData) {
   if (quantity > item.availableQuantity) throw new Error("Jumlah melebihi stok yang tersedia");
   if (!purpose || !usageLocation || !requestedFrom || !requestedTo) throw new Error("Semua kolom wajib diisi");
   if (requestedTo < requestedFrom) throw new Error("Tanggal pengembalian tidak boleh sebelum tanggal peminjaman");
+
+  // Aset yang sudah dipesan untuk acara PPIT tidak bisa dipinjam pada rentang
+  // tanggal itu (SOP: cek jadwal biar tidak tabrakan).
+  const clash = await overlappingReservations(itemId, requestedFrom, requestedTo);
+  if (clash.length > 0) {
+    const r = clash[0];
+    throw new Error(
+      `Barang ini sudah dipesan untuk "${r.reason}" pada ${r.reservedFrom}–${r.reservedTo}. Pilih tanggal lain.`,
+    );
+  }
   // Pernyataan Peminjam WAJIB dan harus berkas hasil unggah (blob / route
   // internal), bukan path lokal atau teks acak.
   if (!/^(https:\/\/[a-z0-9.-]*blob\.vercel-storage\.com\/|\/api\/)/i.test(statementUrl)) {

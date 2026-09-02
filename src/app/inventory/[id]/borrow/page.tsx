@@ -6,8 +6,9 @@ import { SiteNav } from "@/components/site-nav";
 import { SiteFooter } from "@/components/site-footer";
 import { BorrowRequestForm } from "@/components/borrow-request-form";
 import { requireCompletedSensus } from "@/lib/sensus-gate";
+import { upcomingReservations } from "@/lib/inventory-reservations";
 import { conditionLabel } from "@/lib/inventory-labels";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, CalendarClock } from "lucide-react";
 import Link from "next/link";
 import { getT } from "@/lib/i18n/server";
 
@@ -17,6 +18,8 @@ export default async function BorrowRequestPage({ params }: { params: Promise<{ 
 
   const [item] = await db.select().from(inventoryItems).where(eq(inventoryItems.id, id));
   if (!item) notFound();
+
+  const reservations = await upcomingReservations(id);
 
   const { t } = await getT();
 
@@ -36,6 +39,24 @@ export default async function BorrowRequestPage({ params }: { params: Promise<{ 
           {item.name} &middot; {t("inventory.unitsAvailable", { count: item.availableQuantity })} &middot;{" "}
           {t("inventory.conditionLabel")}: {conditionLabel(item.condition)}
         </p>
+
+        {reservations.length > 0 && (
+          <div className="mb-8 flex flex-col gap-2 rounded-lg border border-outline-variant bg-surface-container-low p-5">
+            <p className="flex items-center gap-2 text-label-caps uppercase tracking-wide text-primary-container">
+              <CalendarClock size={14} aria-hidden /> Tanggal yang sudah dipesan
+            </p>
+            <p className="text-body-sm text-on-surface-variant">
+              Barang ini sudah dibooking untuk acara PPIT pada periode berikut — pengajuan dengan tanggal yang beririsan akan ditolak.
+            </p>
+            <ul className="flex flex-col gap-1">
+              {reservations.map((r) => (
+                <li key={r.id} className="text-body-md text-on-background">
+                  {r.reservedFrom} – {r.reservedTo} <span className="text-on-surface-variant">· {r.reason}</span>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
 
         <BorrowRequestForm itemId={id} maxQuantity={item.availableQuantity} itemLocation={item.location} />
       </main>

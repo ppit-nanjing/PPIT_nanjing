@@ -1,12 +1,13 @@
 import { eq, desc } from "drizzle-orm";
 import { db } from "@/db";
-import { inventoryItems, borrowRequests, users, itemContributions, procurementRequests, externalLoans } from "@/db/schema";
+import { inventoryItems, borrowRequests, users, itemContributions, procurementRequests, externalLoans, itemReservations, events } from "@/db/schema";
 import { createInventoryItem, updateInventoryItem } from "@/app/actions/admin-inventory";
 import { FileUpload } from "@/components/upload/file-upload";
 import { BorrowRequestQueue } from "@/components/console/borrow-request-queue";
 import { ContributionReview } from "@/components/console/contribution-review";
 import { ProcurementReview } from "@/components/console/procurement-review";
 import { ExternalLoanManager } from "@/components/console/external-loan-manager";
+import { ReservationManager } from "@/components/console/reservation-manager";
 import { CollapsibleSection } from "@/components/console/collapsible-section";
 import { GuideButton } from "@/components/console/guide-button";
 import { getGuide } from "@/lib/guides";
@@ -21,7 +22,7 @@ export default async function ConsoleInventoryPage() {
   await requireModuleAccess("inventory");
   // Perf: all five reads are independent - run them concurrently instead of
   // stacking five serial round trips to the Neon proxy.
-  const [items, requests, contributions, procurements, loans, guide] = await Promise.all([
+  const [items, requests, contributions, procurements, loans, reservations, eventList, guide] = await Promise.all([
     db.select().from(inventoryItems),
     db
       .select({ req: borrowRequests, itemName: inventoryItems.name, userName: users.name, userEmail: users.email })
@@ -45,6 +46,18 @@ export default async function ConsoleInventoryPage() {
       .leftJoin(inventoryItems, eq(externalLoans.itemId, inventoryItems.id))
       .where(eq(externalLoans.status, "active"))
       .orderBy(desc(externalLoans.loanedAt)),
+    db
+      .select({ r: itemReservations, itemName: inventoryItems.name, eventTitle: events.title })
+      .from(itemReservations)
+      .leftJoin(inventoryItems, eq(itemReservations.itemId, inventoryItems.id))
+      .leftJoin(events, eq(itemReservations.eventId, events.id))
+      .where(eq(itemReservations.status, "active"))
+      .orderBy(desc(itemReservations.reservedFrom)),
+    db
+      .select({ id: events.id, title: events.title })
+      .from(events)
+      .where(eq(events.status, "published"))
+      .orderBy(desc(events.startAt)),
     getGuide("inventaris"),
   ]);
 
@@ -109,6 +122,21 @@ export default async function ConsoleInventoryPage() {
               urgency: x.r.urgency,
               status: x.r.status,
               userName: x.userName,
+            }))}
+          />
+        </CollapsibleSection>
+
+        <CollapsibleSection title="Reservasi Aset untuk Acara">
+          <ReservationManager
+            items={itemOptions.map((i) => ({ id: i.id, name: i.name }))}
+            events={eventList.map((e) => ({ id: e.id, name: e.title }))}
+            reservations={reservations.map((x) => ({
+              id: x.r.id,
+              itemName: x.itemName ?? "(barang dihapus)",
+              reason: x.r.reason,
+              reservedFrom: x.r.reservedFrom,
+              reservedTo: x.r.reservedTo,
+              eventTitle: x.eventTitle ?? null,
             }))}
           />
         </CollapsibleSection>
