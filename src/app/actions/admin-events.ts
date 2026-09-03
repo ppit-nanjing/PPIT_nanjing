@@ -57,14 +57,20 @@ function isValidHttpUrl(value: string): boolean {
   }
 }
 
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
 // Kehadiran final pasca-acara: diketik manual (Zoom/webinar sering tanpa
 // pendaftaran portal). Kosong = null (halaman pakai angka terdaftar seperti
-// biasa); apa pun yang diisi harus bilangan cacah non-negatif.
+// biasa); apa pun yang diisi harus bilangan cacah non-negatif dan muat di
+// kolom `integer` Postgres (batas atas 2^31-1) — kalau tidak, insert-nya
+// gagal di level DB dan seluruh simpanan admin hilang.
 function parseFinalAttendeeCount(formData: FormData): number | null {
   const raw = String(formData.get("finalAttendeeCount") ?? "").trim();
   if (!raw) return null;
   const parsed = Number(raw);
-  if (!Number.isInteger(parsed) || parsed < 0) throw new Error("Jumlah kehadiran harus berupa angka bulat >= 0");
+  if (!Number.isInteger(parsed) || parsed < 0 || parsed > 2_147_483_647) {
+    throw new Error("Jumlah kehadiran harus berupa angka bulat antara 0 dan 2.147.483.647");
+  }
   return parsed;
 }
 
@@ -192,13 +198,20 @@ export async function updateEvent(id: string, formData: FormData) {
     .where(eq(events.id, id));
 
   // Album dokumentasi: galleryAlbums.eventId adalah tautannya. Formulir kirim
-  // satu id (atau "" untuk lepas). Lepas dulu album lama yang menunjuk acara
-  // ini, lalu tautkan yang baru - satu acara satu album, dan pindah album ke
-  // acara lain otomatis melepasnya dari acara sebelumnya.
-  const albumId = String(formData.get("documentationAlbumId") ?? "").trim();
-  await db.update(galleryAlbums).set({ eventId: null }).where(eq(galleryAlbums.eventId, id));
-  if (albumId) {
-    await db.update(galleryAlbums).set({ eventId: id }).where(eq(galleryAlbums.id, albumId));
+  // satu id (atau "" untuk lepas). Validasi bentuk UUID dulu — kalau tidak,
+  // `eq(galleryAlbums.id, <sampah>)` melempar error sintaks UUID dari Postgres
+  // dan mengagalkan seluruh updateEvent. Album yang tidak ada → 0 baris, aman.
+  // Lepas dulu album lama yang menunjuk acara ini, lalu tautkan yang baru — satu
+  // acara satu album, dan memindah album ke acara lain otomatis melepasnya dari
+  // acara sebelumnya.
+  const albumIdRaw = String(formData.get("documentationAlbumId") ?? "").trim();
+  // "" = lepas tautan; UUID valid = tautkan; nilai lain (POST usil/rusak) =
+  // jangan sentuh tautan sama sekali.
+  if (albumIdRaw === "" || UUID_RE.test(albumIdRaw)) {
+    await db.update(galleryAlbums).set({ eventId: null }).where(eq(galleryAlbums.eventId, id));
+    if (albumIdRaw) {
+      await db.update(galleryAlbums).set({ eventId: id }).where(eq(galleryAlbums.id, albumIdRaw));
+    }
   }
 
   // An event can go free -> paid after people already registered (fee often
@@ -479,10 +492,15 @@ export async function checkInCommitteeByToken(token: string, eventId: string) {
 
 export async function deleteEvent(eventId: string) {
   await requireAdmin();
-  // galleryAlbums.eventId has no FK cascade, so delete albums (and their photos
-  // via cascade) first; eventRegistrations cascade from events automatically.
-  await db.delete(galleryAlbums).where(eq(galleryAlbums.eventId, eventId));
+  // Gallery albums are curated by the content team and merely *link* to an event
+  // (galleryAlbums.eventId, set from the "Setelah Acara" dropdown). Deleting the
+  // event must NOT destroy the album or its photos — just unlink it. The FK has
+  // no cascade, so do it explicitly before removing the event; eventRegistrations
+  // cascade from events automatically.
+  await db.update(galleryAlbums).set({ eventId: null }).where(eq(galleryAlbums.eventId, eventId));
   await db.delete(events).where(eq(events.id, eventId));
   revalidatePath("/console/events");
+  revalidatePath("/console/content");
+  revalidatePath("/gallery");
   redirect("/console/events");
 }

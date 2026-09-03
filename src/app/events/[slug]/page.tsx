@@ -81,8 +81,11 @@ export default async function EventDetailPage({ params, searchParams }: { params
   // Wajah pasca-acara: dipicu status "completed" ATAU tanggal mulai sudah lewat
   // (halaman daftar acara juga pakai startAt < now, jadi kartu "lampau" tidak
   // lagi mendarat di halaman yang masih "Daftar Sekarang"). Bagian pasca-acara
-  // hanya tampil kalau datanya memang diisi panitia.
-  const isPast = event.status === "completed" || (event.startAt ? new Date(event.startAt) < now : false);
+  // hanya tampil kalau datanya memang diisi panitia. Acara "cancelled"
+  // dikecualikan — itu dibatalkan, bukan selesai; jangan pasang chip "SELESAI".
+  const isPast =
+    event.status !== "cancelled" &&
+    (event.status === "completed" || (event.startAt ? new Date(event.startAt) < now : false));
 
   // Pendaftaran volunteer terbuka: tampilkan formnya beserta pilihan divisinya.
   const volunteerDivisions = event.volunteerSignupOpen
@@ -292,83 +295,71 @@ export default async function EventDetailPage({ params, searchParams }: { params
                 </Reveal>
               )}
 
-              {isPast && (event.recapVideoUrl || photos.length > 0 || album?.driveUrl) ? (
-                <Reveal>
-                  <section>
-                    <h2 className="mb-6 flex items-center gap-2 text-headline-md text-on-background">
-                      <Images className="text-primary-container" size={20} /> {t("events.materials")}
-                    </h2>
-                    {(event.recapVideoUrl || album?.driveUrl) && (
-                      <div className="mb-6 flex flex-wrap gap-3">
-                        {event.recapVideoUrl && (
-                          <a
-                            href={event.recapVideoUrl}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="inline-flex items-center gap-2 rounded-md bg-primary-container px-5 py-3 text-label-caps uppercase tracking-wide text-on-primary transition-colors hover:bg-primary"
-                          >
-                            <PlayCircle size={16} aria-hidden="true" /> {t("events.watchRecap")}
-                          </a>
-                        )}
-                        {album?.driveUrl && (
-                          <a
-                            href={album.driveUrl}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="inline-flex items-center gap-2 rounded-md border border-outline-variant px-5 py-3 text-label-caps uppercase tracking-wide text-on-background transition-colors hover:bg-surface-container-low"
-                          >
-                            <FolderOpen size={16} aria-hidden="true" /> {t("gallery.driveAll")}
-                          </a>
-                        )}
-                      </div>
-                    )}
-                    {photos.length > 0 && (
-                      <>
-                        <GalleryLightbox
-                          photos={photos.map((p) => ({
-                            id: p.id,
-                            imageUrl: p.imageUrl,
-                            caption: p.caption ?? null,
-                          }))}
-                        />
-                        {album && (
-                          <a
-                            href={`/gallery/${album.id}`}
-                            className="mt-4 inline-flex items-center gap-1 text-label-caps uppercase text-primary-container transition-colors hover:text-primary"
-                          >
-                            {t("events.viewAlbum")} <ArrowRight size={14} />
-                          </a>
-                        )}
-                      </>
-                    )}
-                  </section>
-                </Reveal>
-              ) : (
-                photos.length > 0 && (
+              {(() => {
+                // Satu bagian media, dua judul. Pasca-acara: "Dokumentasi &
+                // Materi" (recap + drive + foto). Pra-acara: "Galeri" (foto saja,
+                // langka — album biasanya belum ada). Kalau tidak ada yang bisa
+                // ditampilkan, tidak render apa pun.
+                const showMaterials =
+                  isPast && (!!event.recapVideoUrl || photos.length > 0 || !!album?.driveUrl);
+                const showGallery = !isPast && photos.length > 0;
+                if (!showMaterials && !showGallery) return null;
+                const btn =
+                  "inline-flex items-center gap-2 rounded-md px-5 py-3 text-label-caps uppercase tracking-wide transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-container focus-visible:ring-offset-2 focus-visible:ring-offset-background";
+                return (
                   <Reveal>
                     <section>
                       <h2 className="mb-6 flex items-center gap-2 text-headline-md text-on-background">
-                        <Images className="text-primary-container" size={20} /> {t("events.gallery")}
+                        <Images className="text-primary-container" size={20} />{" "}
+                        {showMaterials ? t("events.materials") : t("events.gallery")}
                       </h2>
-                      <GalleryLightbox
-                        photos={photos.map((p) => ({
-                          id: p.id,
-                          imageUrl: p.imageUrl,
-                          caption: p.caption ?? null,
-                        }))}
-                      />
-                      {album && (
-                        <a
-                          href={`/gallery/${album.id}`}
-                          className="mt-4 inline-flex items-center gap-1 text-label-caps uppercase text-primary-container transition-colors hover:text-primary"
-                        >
-                          {t("events.viewAlbum")} <ArrowRight size={14} />
-                        </a>
+                      {showMaterials && (event.recapVideoUrl || album?.driveUrl) && (
+                        <div className="mb-6 flex flex-wrap gap-3">
+                          {event.recapVideoUrl && (
+                            <a
+                              href={event.recapVideoUrl}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className={`${btn} bg-primary-container text-on-primary hover:bg-primary`}
+                            >
+                              <PlayCircle size={16} aria-hidden="true" /> {t("events.watchRecap")}
+                            </a>
+                          )}
+                          {album?.driveUrl && (
+                            <a
+                              href={album.driveUrl}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className={`${btn} border border-outline-variant text-on-background hover:bg-surface-container-low`}
+                            >
+                              <FolderOpen size={16} aria-hidden="true" /> {t("gallery.driveAll")}
+                            </a>
+                          )}
+                        </div>
+                      )}
+                      {photos.length > 0 && (
+                        <>
+                          <GalleryLightbox
+                            photos={photos.map((p) => ({
+                              id: p.id,
+                              imageUrl: p.imageUrl,
+                              caption: p.caption ?? null,
+                            }))}
+                          />
+                          {album && (
+                            <a
+                              href={`/gallery/${album.id}`}
+                              className="mt-4 inline-flex items-center gap-1 text-label-caps uppercase text-primary-container transition-colors hover:text-primary"
+                            >
+                              {t("events.viewAlbum")} <ArrowRight size={14} />
+                            </a>
+                          )}
+                        </>
                       )}
                     </section>
                   </Reveal>
-                )
-              )}
+                );
+              })()}
             </div>
 
             <div className="lg:col-span-4">
