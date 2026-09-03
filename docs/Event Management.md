@@ -26,6 +26,20 @@
 - **QR Check-in** — scan `EVENT_REGISTRATION.qr_code_token` di lokasi acara (`/console/events/[id]/scan`), bukan sekadar dekorasi tiket.
 - **Attendance Report** — agregat kehadiran vs pendaftaran per acara, untuk evaluasi/laporan kegiatan.
 
+### Halaman acara publik: pra- vs pasca-acara
+
+Halaman `/events/[slug]` punya dua wajah. Pemicunya: status `completed` **atau** tanggal mulai sudah lewat (`start_at < now`) — disamakan dengan penanda "lampau" di daftar acara, supaya kartu lampau tidak lagi mendarat di halaman yang masih "Daftar Sekarang".
+
+- **Pra-acara**: kapasitas `X / Y` + bar + sisa slot, tombol daftar, agenda di sidebar, form volunteer.
+- **Pasca-acara**: bar kapasitas & tombol daftar hilang, diganti "Acara ini sudah selesai."; agenda sidebar disembunyikan (timeline di kolom kiri tetap sebagai arsip); muncul bagian **Dokumentasi & Materi**.
+
+Yang diisi panitia lewat form Edit acara → seksi **"4 · Setelah Acara"** (scope `events`, jadi humas bisa mengisi):
+
+- **Jumlah Hadir (Final)** (`events.final_attendee_count`) — diketik manual, bukan dari check-in QR (acara Zoom/webinar sering tanpa pendaftaran portal). Kosong = halaman tetap memakai angka terdaftar.
+- **Rincian Kehadiran** (`events.attendance_note`) — teks bebas mis. "80 online · 40 offline".
+- **Link Video Recap / Rekaman** (`events.recap_video_url`) — tombol keluar "Tonton Recap", tidak di-embed (CSP + audiens daratan Tiongkok).
+- **Album Dokumentasi** — memilih di sini mengisi `gallery_albums.event_id`. Foto highlight album tampil di halaman acara + tautan album lengkap + tombol "Unduh Semua Foto" (drive album). Foto tetap diunggah tim konten di Konten › Galeri.
+
 ### Kepanitiaan per-acara
 
 Susunan panitia **dibentuk ulang untuk setiap acara** — jabatan dan divisi tidak mewarisi struktur kabinet, karena bendahara sebuah acara belum tentu bendahara kabinet, dan seseorang bisa memegang jabatan besar di satu acara tanpa jabatan struktural apa pun di kepengurusan.

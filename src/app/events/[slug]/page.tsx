@@ -9,7 +9,7 @@ import { AnimatedHeroHeading } from "@/components/animated-hero-heading";
 import { Reveal } from "@/components/reveal";
 import { EventCard } from "@/components/event-card";
 import { GalleryLightbox } from "@/components/gallery-lightbox";
-import { CalendarDays, MapPin, Users, Ticket, ArrowLeft, ListChecks, Images, ArrowRight, CalendarX, PartyPopper, BadgeCheck } from "lucide-react";
+import { CalendarDays, MapPin, Users, Ticket, ArrowLeft, ListChecks, Images, ArrowRight, CalendarX, PartyPopper, BadgeCheck, PlayCircle, FolderOpen } from "lucide-react";
 import Image from "next/image";
 import { Select } from "@/components/console/form";
 import { EventThemeStyle } from "@/components/events/event-theme-style";
@@ -78,6 +78,12 @@ export default async function EventDetailPage({ params, searchParams }: { params
   const isFull = event.capacity != null && registeredCount >= event.capacity;
   const canRegister = event.status === "published" && !isFull && !deadlinePassed;
 
+  // Wajah pasca-acara: dipicu status "completed" ATAU tanggal mulai sudah lewat
+  // (halaman daftar acara juga pakai startAt < now, jadi kartu "lampau" tidak
+  // lagi mendarat di halaman yang masih "Daftar Sekarang"). Bagian pasca-acara
+  // hanya tampil kalau datanya memang diisi panitia.
+  const isPast = event.status === "completed" || (event.startAt ? new Date(event.startAt) < now : false);
+
   // Pendaftaran volunteer terbuka: tampilkan formnya beserta pilihan divisinya.
   const volunteerDivisions = event.volunteerSignupOpen
     ? await db
@@ -92,7 +98,7 @@ export default async function EventDetailPage({ params, searchParams }: { params
 
   const [album] = await db.select().from(galleryAlbums).where(eq(galleryAlbums.eventId, event.id));
   const photos = album
-    ? await db.select().from(galleryPhotos).where(eq(galleryPhotos.albumId, album.id)).limit(4)
+    ? await db.select().from(galleryPhotos).where(and(eq(galleryPhotos.albumId, album.id), eq(galleryPhotos.isHighlight, true))).limit(4)
     : [];
 
   const related = await db
@@ -121,12 +127,11 @@ export default async function EventDetailPage({ params, searchParams }: { params
     ? [fmtTime(startDate), event.endAt ? fmtTime(new Date(event.endAt)) : null].filter(Boolean).join(" – ")
     : "";
 
-  const statusChip =
-    event.status === "registration_closed"
+  const statusChip = isPast
+    ? t("events.ended")
+    : event.status === "registration_closed"
       ? t("events.notOpen")
-      : event.status === "completed"
-        ? t("events.ended")
-        : null;
+      : null;
 
   const themed = !!(event.themeBg && event.themeAccent && event.themeAccent2);
 
@@ -211,9 +216,17 @@ export default async function EventDetailPage({ params, searchParams }: { params
                         <MapPin size={15} aria-hidden="true" /> {event.location}
                       </span>
                     )}
-                    <span className="flex items-center gap-1.5">
-                      <Users size={15} aria-hidden="true" /> {t("events.registered", { count: registeredCount })}
-                    </span>
+                    {isPast ? (
+                      event.finalAttendeeCount != null && (
+                        <span className="flex items-center gap-1.5">
+                          <Users size={15} aria-hidden="true" /> {t("events.attendedCount", { count: event.finalAttendeeCount })}
+                        </span>
+                      )
+                    ) : (
+                      <span className="flex items-center gap-1.5">
+                        <Users size={15} aria-hidden="true" /> {t("events.registered", { count: registeredCount })}
+                      </span>
+                    )}
                   </div>
                 </div>
               </header>
@@ -279,29 +292,82 @@ export default async function EventDetailPage({ params, searchParams }: { params
                 </Reveal>
               )}
 
-              {photos.length > 0 && (
+              {isPast && (event.recapVideoUrl || photos.length > 0 || album?.driveUrl) ? (
                 <Reveal>
                   <section>
                     <h2 className="mb-6 flex items-center gap-2 text-headline-md text-on-background">
-                      <Images className="text-primary-container" size={20} /> {t("events.gallery")}
+                      <Images className="text-primary-container" size={20} /> {t("events.materials")}
                     </h2>
-                    <GalleryLightbox
-                      photos={photos.map((p) => ({
-                        id: p.id,
-                        imageUrl: p.imageUrl,
-                        caption: p.caption ?? null,
-                      }))}
-                    />
-                    {album && (
-                      <a
-                        href={`/gallery/${album.id}`}
-                        className="mt-4 inline-flex items-center gap-1 text-label-caps uppercase text-primary-container transition-colors hover:text-primary"
-                      >
-                        {t("events.viewAlbum")} <ArrowRight size={14} />
-                      </a>
+                    {(event.recapVideoUrl || album?.driveUrl) && (
+                      <div className="mb-6 flex flex-wrap gap-3">
+                        {event.recapVideoUrl && (
+                          <a
+                            href={event.recapVideoUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="inline-flex items-center gap-2 rounded-md bg-primary-container px-5 py-3 text-label-caps uppercase tracking-wide text-on-primary transition-colors hover:bg-primary"
+                          >
+                            <PlayCircle size={16} aria-hidden="true" /> {t("events.watchRecap")}
+                          </a>
+                        )}
+                        {album?.driveUrl && (
+                          <a
+                            href={album.driveUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="inline-flex items-center gap-2 rounded-md border border-outline-variant px-5 py-3 text-label-caps uppercase tracking-wide text-on-background transition-colors hover:bg-surface-container-low"
+                          >
+                            <FolderOpen size={16} aria-hidden="true" /> {t("gallery.driveAll")}
+                          </a>
+                        )}
+                      </div>
+                    )}
+                    {photos.length > 0 && (
+                      <>
+                        <GalleryLightbox
+                          photos={photos.map((p) => ({
+                            id: p.id,
+                            imageUrl: p.imageUrl,
+                            caption: p.caption ?? null,
+                          }))}
+                        />
+                        {album && (
+                          <a
+                            href={`/gallery/${album.id}`}
+                            className="mt-4 inline-flex items-center gap-1 text-label-caps uppercase text-primary-container transition-colors hover:text-primary"
+                          >
+                            {t("events.viewAlbum")} <ArrowRight size={14} />
+                          </a>
+                        )}
+                      </>
                     )}
                   </section>
                 </Reveal>
+              ) : (
+                photos.length > 0 && (
+                  <Reveal>
+                    <section>
+                      <h2 className="mb-6 flex items-center gap-2 text-headline-md text-on-background">
+                        <Images className="text-primary-container" size={20} /> {t("events.gallery")}
+                      </h2>
+                      <GalleryLightbox
+                        photos={photos.map((p) => ({
+                          id: p.id,
+                          imageUrl: p.imageUrl,
+                          caption: p.caption ?? null,
+                        }))}
+                      />
+                      {album && (
+                        <a
+                          href={`/gallery/${album.id}`}
+                          className="mt-4 inline-flex items-center gap-1 text-label-caps uppercase text-primary-container transition-colors hover:text-primary"
+                        >
+                          {t("events.viewAlbum")} <ArrowRight size={14} />
+                        </a>
+                      )}
+                    </section>
+                  </Reveal>
+                )
               )}
             </div>
 
@@ -350,36 +416,52 @@ export default async function EventDetailPage({ params, searchParams }: { params
                 <div className="flex items-start gap-3">
                   <Users className="text-primary-container shrink-0 mt-0.5" size={18} aria-hidden="true" />
                   <div className="flex-1">
-                    <p className="text-label-caps uppercase text-on-surface-variant mb-0.5">{t("events.attendees")}</p>
-                    <p className="text-body-md text-on-background font-semibold">
-                      {t("events.registered", { count: registeredCount })}
-                      {event.capacity ? ` / ${event.capacity}` : ""}
-                    </p>
-                    {event.capacity != null && !isFull && (
-                      <p className="text-label-caps text-primary-container mt-0.5">
-                        {t("events.slotsLeft", { n: event.capacity - registeredCount })}
-                      </p>
-                    )}
-                    {event.capacity != null && (
-                      <div
-                        className="mt-2 h-2 w-full rounded-full bg-surface-container-low overflow-hidden"
-                        role="progressbar"
-                        aria-label={t("events.capacityLabel")}
-                        aria-valuemin={0}
-                        aria-valuemax={event.capacity}
-                        aria-valuenow={Math.min(registeredCount, event.capacity)}
-                      >
-                        <div
-                          className={`h-full rounded-full transition-all duration-500 motion-reduce:transition-none ${
-                            isFull ? "bg-error" : "bg-primary-container"
-                          }`}
-                          style={{ width: `${Math.min(100, (registeredCount / event.capacity) * 100)}%` }}
-                        />
-                      </div>
+                    {isPast ? (
+                      <>
+                        <p className="text-label-caps uppercase text-on-surface-variant mb-0.5">{t("events.attendance")}</p>
+                        <p className="text-body-md text-on-background font-semibold">
+                          {event.finalAttendeeCount != null
+                            ? t("events.attendedCount", { count: event.finalAttendeeCount })
+                            : t("events.registered", { count: registeredCount })}
+                        </p>
+                        {event.attendanceNote && (
+                          <p className="text-label-caps text-on-surface-variant mt-0.5">{event.attendanceNote}</p>
+                        )}
+                      </>
+                    ) : (
+                      <>
+                        <p className="text-label-caps uppercase text-on-surface-variant mb-0.5">{t("events.attendees")}</p>
+                        <p className="text-body-md text-on-background font-semibold">
+                          {t("events.registered", { count: registeredCount })}
+                          {event.capacity ? ` / ${event.capacity}` : ""}
+                        </p>
+                        {event.capacity != null && !isFull && (
+                          <p className="text-label-caps text-primary-container mt-0.5">
+                            {t("events.slotsLeft", { n: event.capacity - registeredCount })}
+                          </p>
+                        )}
+                        {event.capacity != null && (
+                          <div
+                            className="mt-2 h-2 w-full rounded-full bg-surface-container-low overflow-hidden"
+                            role="progressbar"
+                            aria-label={t("events.capacityLabel")}
+                            aria-valuemin={0}
+                            aria-valuemax={event.capacity}
+                            aria-valuenow={Math.min(registeredCount, event.capacity)}
+                          >
+                            <div
+                              className={`h-full rounded-full transition-all duration-500 motion-reduce:transition-none ${
+                                isFull ? "bg-error" : "bg-primary-container"
+                              }`}
+                              style={{ width: `${Math.min(100, (registeredCount / event.capacity) * 100)}%` }}
+                            />
+                          </div>
+                        )}
+                      </>
                     )}
                   </div>
                 </div>
-                {event.registrationDeadline && (
+                {!isPast && event.registrationDeadline && (
                   <p className="text-label-caps text-on-surface-variant">
                     {t("events.regDeadline", {
                       date: new Date(event.registrationDeadline).toLocaleDateString(INTL_LOCALE[locale], {
@@ -389,7 +471,7 @@ export default async function EventDetailPage({ params, searchParams }: { params
                   </p>
                 )}
 
-                {agenda.length > 0 && (
+                {agenda.length > 0 && !isPast && (
                   <div className="border-t border-outline-variant pt-5">
                     <p className="mb-3 flex items-center gap-1.5 text-label-caps uppercase tracking-wide text-on-surface-variant">
                       <ListChecks size={14} className="text-primary-container" aria-hidden="true" /> {t("events.agenda")}
@@ -411,6 +493,22 @@ export default async function EventDetailPage({ params, searchParams }: { params
                 )}
 
                 <div className="border-t border-outline-variant pt-5" role="status" aria-live="polite">
+                  {isPast ? (
+                    <div className="flex flex-col gap-3">
+                      {alreadyRegistered && (
+                        <a
+                          href={`/events/${slug}/ticket`}
+                          className="w-full inline-flex items-center justify-center gap-2 bg-primary-container text-on-primary text-label-caps uppercase tracking-wide px-6 py-4 rounded-md hover:bg-primary transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-container focus-visible:ring-offset-2 focus-visible:ring-offset-surface-container-low"
+                        >
+                          <Ticket size={18} aria-hidden="true" /> {t("events.myTicket")}
+                        </a>
+                      )}
+                      <p className="flex items-center justify-center gap-2 text-body-md text-on-surface-variant text-center bg-surface-container-low rounded-md px-4 py-3">
+                        <PartyPopper size={16} aria-hidden="true" /> {t("events.endedNote")}
+                      </p>
+                    </div>
+                  ) : (
+                   <>
                   {event.requiresSensus && !alreadyRegistered && (
                     <>
                       <p className="text-label-caps text-on-surface-variant mb-3 text-center">
@@ -468,8 +566,10 @@ export default async function EventDetailPage({ params, searchParams }: { params
                       )}
                     </p>
                   )}
+                   </>
+                  )}
                 </div>
-                {event.volunteerSignupOpen && event.status === "published" && (
+                {event.volunteerSignupOpen && event.status === "published" && !isPast && (
                   <div className="border-t border-outline-variant pt-5">
                     {myCommitteeRole ? (
                       <div className="flex flex-col gap-3">

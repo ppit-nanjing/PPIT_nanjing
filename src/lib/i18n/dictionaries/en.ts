@@ -236,6 +236,11 @@ export const en = {
   "events.notOpen": "Registration for this event is not open yet.",
   "events.viewDetail": "View details for {{title}}",
   "events.ended": "ENDED",
+  "events.endedNote": "This event has ended.",
+  "events.attendance": "Attendance",
+  "events.attendedCount": "{{count}} attended",
+  "events.materials": "Documentation & Materials",
+  "events.watchRecap": "Watch Recap",
 
   // Event ticket
   "ticket.success": "Registration Successful",

@@ -48,6 +48,26 @@ function parseHex(formData: FormData, key: string): string | null {
   return /^#[0-9a-f]{6}$/.test(v) ? v : null;
 }
 
+function isValidHttpUrl(value: string): boolean {
+  try {
+    const url = new URL(value);
+    return url.protocol === "https:" || url.protocol === "http:";
+  } catch {
+    return false;
+  }
+}
+
+// Kehadiran final pasca-acara: diketik manual (Zoom/webinar sering tanpa
+// pendaftaran portal). Kosong = null (halaman pakai angka terdaftar seperti
+// biasa); apa pun yang diisi harus bilangan cacah non-negatif.
+function parseFinalAttendeeCount(formData: FormData): number | null {
+  const raw = String(formData.get("finalAttendeeCount") ?? "").trim();
+  if (!raw) return null;
+  const parsed = Number(raw);
+  if (!Number.isInteger(parsed) || parsed < 0) throw new Error("Jumlah kehadiran harus berupa angka bulat >= 0");
+  return parsed;
+}
+
 // Inline-validation shape shared by console event forms - mirrors
 // ShortLinkFormState in short-links.ts.
 export type EventFormState = { error?: string };
@@ -124,9 +144,17 @@ export async function updateEvent(id: string, formData: FormData) {
   // the 'scheduled' state so it auto-publishes when the time arrives.
   if (scheduledPublishAt && status === "draft") status = "scheduled";
 
-  const [before] = await db.select({ status: events.status }).from(events).where(eq(events.id, id));
+  const [before] = await db
+    .select({ status: events.status, slug: events.slug })
+    .from(events)
+    .where(eq(events.id, id));
 
   const isPaid = formData.get("isPaid") === "on";
+
+  const recapVideoRaw = String(formData.get("recapVideoUrl") ?? "").trim();
+  if (recapVideoRaw && !isValidHttpUrl(recapVideoRaw)) {
+    throw new Error("Link video recap harus diawali http:// atau https://");
+  }
 
   await db
     .update(events)
@@ -157,8 +185,21 @@ export async function updateEvent(id: string, formData: FormData) {
       themeBg: parseHex(formData, "themeBg"),
       themeAccent: parseHex(formData, "themeAccent"),
       themeAccent2: parseHex(formData, "themeAccent2"),
+      finalAttendeeCount: parseFinalAttendeeCount(formData),
+      attendanceNote: String(formData.get("attendanceNote") ?? "").trim() || null,
+      recapVideoUrl: recapVideoRaw || null,
     })
     .where(eq(events.id, id));
+
+  // Album dokumentasi: galleryAlbums.eventId adalah tautannya. Formulir kirim
+  // satu id (atau "" untuk lepas). Lepas dulu album lama yang menunjuk acara
+  // ini, lalu tautkan yang baru - satu acara satu album, dan pindah album ke
+  // acara lain otomatis melepasnya dari acara sebelumnya.
+  const albumId = String(formData.get("documentationAlbumId") ?? "").trim();
+  await db.update(galleryAlbums).set({ eventId: null }).where(eq(galleryAlbums.eventId, id));
+  if (albumId) {
+    await db.update(galleryAlbums).set({ eventId: id }).where(eq(galleryAlbums.id, albumId));
+  }
 
   // An event can go free -> paid after people already registered (fee often
   // isn't known until a sponsor is confirmed). Anyone still "not_required"
@@ -182,6 +223,9 @@ export async function updateEvent(id: string, formData: FormData) {
   }
 
   revalidatePath(`/console/events/${id}`);
+  if (before?.slug) revalidatePath(`/events/${before.slug}`);
+  revalidatePath("/console/content");
+  revalidatePath("/gallery");
 }
 
 // Quick status change from the event list (e.g. a "Jadikan Draft" button).

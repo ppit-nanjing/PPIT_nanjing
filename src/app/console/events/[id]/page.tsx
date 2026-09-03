@@ -1,7 +1,7 @@
 import { eq, desc } from "drizzle-orm";
 import { notFound } from "next/navigation";
 import { db } from "@/db";
-import { certificates, events, eventDivisions, eventFeeOptions, eventQuestions, eventRegistrations, eventVolunteers, sensusProfiles, users } from "@/db/schema";
+import { certificates, events, eventDivisions, eventFeeOptions, eventQuestions, eventRegistrations, eventVolunteers, galleryAlbums, sensusProfiles, users } from "@/db/schema";
 import { MEMBERSHIP_LABEL, effectiveBranch, membershipStatus } from "@/lib/membership-status";
 import { updateEvent, saveEventQuestion, deleteEventQuestion, saveFeeOption, deleteFeeOption } from "@/app/actions/admin-events";
 import { setVolunteerStatus } from "@/app/actions/volunteers";
@@ -88,6 +88,16 @@ export default async function ConsoleEventDetailPage({ params }: { params: Promi
     .select({ id: users.id, name: users.name, email: users.email })
     .from(users)
     .orderBy(users.name);
+  // Album galeri untuk section "Setelah Acara": semua album, plus tandai mana
+  // yang sudah tertaut ke acara ini (galleryAlbums.eventId). Album yang tertaut
+  // ke acara LAIN tetap ditampilkan tapi diberi keterangan supaya tidak
+  // sengaja dicuri dari acara lain.
+  const albums = await db
+    .select({ id: galleryAlbums.id, title: galleryAlbums.title, eventId: galleryAlbums.eventId })
+    .from(galleryAlbums)
+    .orderBy(desc(galleryAlbums.createdAt));
+  const linkedAlbum = albums.find((a) => a.eventId === id) ?? null;
+
   const issuedCerts = await db
     .select({ userId: certificates.userId, kind: certificates.kind })
     .from(certificates)
@@ -275,6 +285,77 @@ export default async function ConsoleEventDetailPage({ params }: { params: Promi
                   className="bg-soft-gray rounded-md p-3 text-body-md"
                 />
                 <p className="text-xs text-on-surface-variant">Isi bila acara mau tampil ke publik hanya SETELAH tanggal/waktu ini (status &quot;Terjadwal&quot; dulu, rilis sendiri nanti). Kosongkan = langsung Draf, rilis saat kamu klik Publish manual.</p>
+              </div>
+            </div>
+          </details>
+
+          {/* Bagian 4 - setelah acara (kehadiran nyata + dokumentasi) */}
+          <details className="border border-outline-variant rounded-lg">
+            <summary className="px-4 py-3 cursor-pointer text-label-caps uppercase tracking-wide text-on-surface-variant">
+              4 · Setelah Acara
+            </summary>
+            <div className="px-4 pb-4 flex flex-col gap-4">
+              <p className="text-xs text-on-surface-variant">
+                Diisi setelah acara selesai. Begitu acara lewat (status &quot;Selesai&quot; atau tanggalnya
+                sudah lewat), halaman publik berganti ke tampilan pasca-acara: angka kehadiran nyata
+                menggantikan kapasitas, dan muncul bagian dokumentasi.
+              </p>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="flex flex-col gap-1">
+                  <span className="text-label-caps uppercase tracking-wide text-on-surface-variant">Jumlah Hadir (Final)</span>
+                  <input
+                    name="finalAttendeeCount"
+                    type="number"
+                    min={0}
+                    defaultValue={event.finalAttendeeCount ?? ""}
+                    placeholder={`mis. ${attended || 80}`}
+                    className="bg-soft-gray rounded-md p-3 text-body-md"
+                  />
+                  <p className="text-xs text-on-surface-variant">
+                    Ketik manual — tidak diambil dari check-in QR. Check-in portal saat ini: {attended}.
+                    Kosongkan untuk tetap pakai angka terdaftar.
+                  </p>
+                </div>
+                <div className="flex flex-col gap-1">
+                  <span className="text-label-caps uppercase tracking-wide text-on-surface-variant">Rincian Kehadiran</span>
+                  <input
+                    name="attendanceNote"
+                    defaultValue={event.attendanceNote ?? ""}
+                    placeholder="mis. 80 online · 40 offline"
+                    className="bg-soft-gray rounded-md p-3 text-body-md"
+                  />
+                  <p className="text-xs text-on-surface-variant">Teks bebas di bawah angka. Kosongkan bila tak perlu.</p>
+                </div>
+              </div>
+              <div className="flex flex-col gap-1">
+                <span className="text-label-caps uppercase tracking-wide text-on-surface-variant">Link Video Recap / Rekaman</span>
+                <input
+                  name="recapVideoUrl"
+                  type="url"
+                  defaultValue={event.recapVideoUrl ?? ""}
+                  placeholder="https://... (YouTube, Bilibili, Drive)"
+                  className="bg-soft-gray rounded-md p-3 text-body-md"
+                />
+                <p className="text-xs text-on-surface-variant">Muncul sebagai tombol &quot;Tonton Recap&quot; di bagian dokumentasi. Tidak di-embed.</p>
+              </div>
+              <div className="flex flex-col gap-1">
+                <span className="text-label-caps uppercase tracking-wide text-on-surface-variant">Album Dokumentasi (Galeri Foto)</span>
+                <Select name="documentationAlbumId" defaultValue={linkedAlbum?.id ?? ""} className="w-full" aria-label="Album dokumentasi">
+                  <option value="">— tidak ada —</option>
+                  {albums.map((a) => (
+                    <option key={a.id} value={a.id} disabled={a.eventId != null && a.eventId !== id}>
+                      {a.title}
+                      {a.eventId != null && a.eventId !== id ? " (tertaut acara lain)" : ""}
+                    </option>
+                  ))}
+                </Select>
+                <p className="text-xs text-on-surface-variant">
+                  Foto highlight album ini tampil di halaman acara + tautan album lengkap.
+                  Fotonya diunggah tim konten di{" "}
+                  <a href={linkedAlbum ? `/console/content/gallery/${linkedAlbum.id}` : "/console/content/gallery/new"} className="text-primary-container underline">
+                    {linkedAlbum ? "album ini" : "Konten › Galeri › Album Baru"}
+                  </a>.
+                </p>
               </div>
             </div>
           </details>

@@ -439,6 +439,21 @@ export const events = pgTable("events", {
   themeBg: text("theme_bg"),
   themeAccent: text("theme_accent"),
   themeAccent2: text("theme_accent_2"),
+  // ---------- Pasca-acara ----------
+  // Halaman acara punya dua wajah: pra-acara (kapasitas X/Y, tombol daftar) dan
+  // pasca-acara (kehadiran nyata, dokumentasi). Yang membedakan: status
+  // "completed" ATAU startAt sudah lewat. Field di bawah ini yang mengisi wajah
+  // kedua - semuanya opsional, panitia isi belakangan lewat "Setelah Acara".
+  //
+  // Kehadiran final: diketik manual, BUKAN dari check-in QR. Banyak acara (Zoom,
+  // webinar) tidak pakai pendaftaran portal sama sekali - panitia cuma tahu
+  // "80 orang hadir". `finalAttendeeCount` null = pakai angka terdaftar seperti
+  // biasa. `attendanceNote` untuk rincian bebas mis. "80 online · 40 offline".
+  finalAttendeeCount: integer("final_attendee_count"),
+  attendanceNote: text("attendance_note"),
+  // Tautan video recap / rekaman acara (YouTube, Bilibili, Drive - apa saja).
+  // Tidak di-embed (CSP + audiens daratan Tiongkok), hanya tombol keluar.
+  recapVideoUrl: text("recap_video_url"),
 });
 
 // `feeCny` null = acara gratis; > 0 = peserta perlu membayar dan mengunggah bukti.

@@ -239,6 +239,11 @@ export const id = {
   "events.notOpen": "Pendaftaran untuk kegiatan ini belum/tidak dibuka.",
   "events.viewDetail": "Lihat detail kegiatan {{title}}",
   "events.ended": "SELESAI",
+  "events.endedNote": "Acara ini sudah selesai.",
+  "events.attendance": "Kehadiran",
+  "events.attendedCount": "{{count}} hadir",
+  "events.materials": "Dokumentasi & Materi",
+  "events.watchRecap": "Tonton Recap",
 
   // Event ticket
   "ticket.success": "Pendaftaran Berhasil",
