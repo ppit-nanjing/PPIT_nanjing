@@ -703,6 +703,8 @@ export const id = {
   "auth.loginIntro": "Masuk dengan akun Google kamu, atau gunakan email dan kata sandi untuk mendaftar kegiatan, mengisi seluruh sensus, dan mengakses layanan PPIT Nanjing lainnya.",
   "auth.loginRemember": "Simpan login",
   "auth.loginRememberDesc": "Tetap masuk di perangkat ini selama 30 hari.",
+  "auth.loginReturnNotice": "Diarahkan otomatis",
+  "auth.loginReturnNoticeDesc": "Setelah masuk, kamu akan diarahkan kembali ke halaman yang sedang kamu buka.",
   "auth.googleSignInAria": "Masuk dengan akun Google",
   "auth.googleContinue": "Lanjutkan dengan Google",
   "auth.backHome": "Kembali ke Beranda",
