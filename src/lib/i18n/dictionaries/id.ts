@@ -700,7 +700,7 @@ export const id = {
   // Auth, Legal & Maintenance (W9)
   "auth.or": "atau",
   "auth.loginTitle": "Masuk",
-  "auth.loginIntro": "Masuk dengan akun Google kamu, atau gunakan email dan kata sandi untuk mendaftar kegiatan, mengisi seluruh sensus, dan mengakses layanan PPIT Nanjing lainnya.",
+  "auth.loginIntro": "Masuk untuk mendaftar kegiatan, mengisi sensus, dan memakai layanan PPIT Nanjing.",
   "auth.loginRemember": "Simpan login",
   "auth.loginRememberDesc": "Tetap masuk di perangkat ini selama 30 hari.",
   "auth.loginReturnNotice": "Diarahkan otomatis",

@@ -20,18 +20,21 @@ export default async function SignUpPage({
   if (session) redirect(returnTo);
 
   return (
-    <div className="min-h-screen bg-background relative overflow-hidden grid grid-cols-1 lg:grid-cols-2">
+    <div className="min-h-screen lg:h-screen bg-background relative overflow-hidden grid grid-cols-1 lg:grid-cols-2">
       <div className="relative h-16 s:h-20 m:h-24 l:h-28 sm:h-36 lg:h-auto">
         <SeasonPanel />
       </div>
 
-      <div className="flex items-center justify-center px-[var(--spacing-container-padding)] py-4 s:py-6 lg:py-6">
-      <div className="max-w-sm w-full">
-        <div className="relative overflow-hidden bg-surface-container-lowest border border-outline-variant rounded-xl p-6 lg:p-5 shadow-[0_4px_24px_rgba(0,0,0,0.04)] text-center">
+      {/* lg: fixed viewport height + own scroll, and the card centres via
+          `my-auto` (collapses instead of clipping the top if it ever overflows)
+          — the page itself never scrolls, so the season panel always fills. */}
+      <div className="flex flex-col items-center px-[var(--spacing-container-padding)] py-4 s:py-6 lg:h-screen lg:overflow-y-auto">
+      <div className="max-w-sm w-full lg:my-auto">
+        <div className="relative overflow-hidden bg-surface-container-lowest border border-outline-variant rounded-xl p-6 lg:p-4 shadow-[0_4px_24px_rgba(0,0,0,0.04)] text-center">
           <div className="absolute top-0 left-0 w-full h-1 bg-primary-container" />
-          <span className="text-headline-md font-bold text-primary uppercase tracking-tight block mb-2">PPIT Nanjing</span>
-          <h1 className="text-headline-lg text-on-background mb-2">{t("auth.signupTitle")}</h1>
-          <p className="text-body-md text-on-surface-variant mb-4">
+          <span className="text-headline-md font-bold text-primary uppercase tracking-tight block mb-1">PPIT Nanjing</span>
+          <h1 className="text-headline-lg text-on-background mb-1.5">{t("auth.signupTitle")}</h1>
+          <p className="text-body-sm text-on-surface-variant mb-3">
             {t("auth.signupIntro")}
           </p>
 
@@ -44,7 +47,7 @@ export default async function SignUpPage({
 
           <CredentialForm action={signUpWithPassword} mode="signup" returnTo={returnTo} />
 
-          <div className="flex items-center gap-3 my-4">
+          <div className="flex items-center gap-3 my-2">
             <span className="h-px flex-1 bg-outline-variant" />
             <span className="text-label-caps uppercase tracking-wide text-on-surface-variant">{t("auth.or")}</span>
             <span className="h-px flex-1 bg-outline-variant" />
@@ -59,7 +62,7 @@ export default async function SignUpPage({
             <button
               type="submit"
               aria-label={t("auth.googleSignUpAria")}
-              className="w-full flex items-center justify-center gap-3 bg-surface-container-lowest border border-outline-variant text-on-background text-body-md font-medium py-3.5 rounded-md hover:bg-surface-container-low active:scale-[0.98] transition-[background-color,transform] focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-container focus-visible:ring-offset-2 focus-visible:ring-offset-surface-container-lowest"
+              className="w-full flex items-center justify-center gap-3 bg-surface-container-lowest border border-outline-variant text-on-background text-body-md font-medium py-3 rounded-md hover:bg-surface-container-low active:scale-[0.98] transition-[background-color,transform] focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-container focus-visible:ring-offset-2 focus-visible:ring-offset-surface-container-lowest"
             >
               <svg width="18" height="18" viewBox="0 0 18 18">
                 <path fill="#4285F4" d="M17.64 9.2c0-.64-.06-1.25-.16-1.84H9v3.48h4.84a4.14 4.14 0 0 1-1.8 2.72v2.26h2.9c1.7-1.57 2.7-3.87 2.7-6.62Z" />

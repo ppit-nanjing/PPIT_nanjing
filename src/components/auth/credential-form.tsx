@@ -141,21 +141,18 @@ export function CredentialForm({ action, googleAction, mode, returnTo }: Props) 
       )}
 
       {mode === "signin" && (
-        <label className="flex cursor-pointer items-start gap-3 rounded-md border border-outline-variant bg-surface-container-low px-3 py-3 text-left transition-colors hover:bg-surface-container focus-within:ring-2 focus-within:ring-primary-container focus-within:ring-offset-2 focus-within:ring-offset-surface-container-lowest">
+        <label
+          className="flex cursor-pointer items-center gap-2.5 py-0.5 text-left text-body-sm text-on-background"
+          title={t("auth.loginRememberDesc")}
+        >
           <input
             id="remember"
             name="remember"
             type="checkbox"
             value="true"
-            aria-describedby="remember-description"
-            className="mt-0.5 h-4 w-4 shrink-0 cursor-pointer rounded border-outline accent-primary-container focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-container"
+            className="h-4 w-4 shrink-0 cursor-pointer rounded border-outline accent-primary-container focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-container"
           />
-          <span className="min-w-0">
-            <span className="block text-body-sm font-medium text-on-background">{t("auth.loginRemember")}</span>
-            <span id="remember-description" className="mt-0.5 block text-body-sm text-on-surface-variant">
-              {t("auth.loginRememberDesc")}
-            </span>
-          </span>
+          {t("auth.loginRemember")}
         </label>
       )}
 
@@ -174,7 +171,7 @@ export function CredentialForm({ action, googleAction, mode, returnTo }: Props) 
       <button
         type="submit"
         disabled={pending}
-        className="group bg-primary-container text-on-primary text-label-caps uppercase tracking-wide py-3.5 rounded-md hover:bg-primary transition-[background-color,transform] flex items-center justify-center gap-2 disabled:opacity-60 active:scale-[0.98] focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-container focus-visible:ring-offset-2 focus-visible:ring-offset-surface-container-lowest"
+        className="group bg-primary-container text-on-primary text-label-caps uppercase tracking-wide py-3 rounded-md hover:bg-primary transition-[background-color,transform] flex items-center justify-center gap-2 disabled:opacity-60 active:scale-[0.98] focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-container focus-visible:ring-offset-2 focus-visible:ring-offset-surface-container-lowest"
       >
         {mode === "signup" ? t("auth.submitSignUp") : t("auth.submitSignIn")}
         {pending ? (
@@ -195,7 +192,7 @@ export function CredentialForm({ action, googleAction, mode, returnTo }: Props) 
             type="submit"
             formAction={googleAction}
             aria-label={t("auth.googleSignInAria")}
-            className="flex w-full items-center justify-center gap-3 rounded-md border border-outline-variant bg-surface-container-lowest py-3.5 text-body-md font-medium text-on-background transition-[background-color,transform] hover:bg-surface-container-low active:scale-[0.98] focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-container focus-visible:ring-offset-2 focus-visible:ring-offset-surface-container-lowest"
+            className="flex w-full items-center justify-center gap-3 rounded-md border border-outline-variant bg-surface-container-lowest py-3 text-body-md font-medium text-on-background transition-[background-color,transform] hover:bg-surface-container-low active:scale-[0.98] focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-container focus-visible:ring-offset-2 focus-visible:ring-offset-surface-container-lowest"
           >
             <svg width="18" height="18" viewBox="0 0 18 18" aria-hidden="true">
               <path

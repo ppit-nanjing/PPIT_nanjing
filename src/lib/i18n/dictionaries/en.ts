@@ -697,7 +697,7 @@ export const en = {
   // Auth, Legal & Maintenance (W9)
   "auth.or": "or",
   "auth.loginTitle": "Sign in",
-  "auth.loginIntro": "Sign in with your Google account, or use your email and password to register for events, fill in the census, and access other PPIT Nanjing services.",
+  "auth.loginIntro": "Sign in to register for events, complete the census, and use PPIT Nanjing services.",
   "auth.loginRemember": "Keep me signed in",
   "auth.loginRememberDesc": "Stay signed in on this device for 30 days.",
   "auth.loginReturnNotice": "Automatic redirect",
