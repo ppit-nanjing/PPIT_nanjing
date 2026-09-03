@@ -332,27 +332,23 @@ export function SeasonPanel() {
       onMouseEnter={() => setPaused(true)}
       onMouseLeave={resetParallax}
     >
-      {/* Fixed 320px reference "canvas" for the whole illustration, scaled
-          down per mobile tier so the mountain/orb/stars shrink together as
-          one true geometric miniature instead of each fighting the tiny
-          outer strip height independently (which used to clip the ridge
-          SVGs down to a thin baseline sliver, since they're sized off width
-          not height). origin-bottom keeps the mountain grounded as it
-          scales.
+      {/* Mobile (< lg): a fixed-320px "reference canvas" scaled down per tier
+          so the mountain/orb/stars shrink together as one geometric miniature
+          instead of the width-sized ridge SVGs clipping to a baseline sliver
+          in the tiny strip. origin-bottom keeps the mountain grounded.
 
-          At lg the scene is one viewport tall (lg:h-screen), not lg:h-full.
-          h-full = height:100%, which resolves against the panel's height —
-          and the panel's height comes from `absolute inset-0` on a grid cell
-          that's only sized by the container's `align-content` stretch.
-          Chromium doesn't recompute a percentage height down that chain on
-          first paint, so the scene stayed at its 320px base (mountain + orb
-          squashed into a sliver at the bottom) until a resize — entering
-          fullscreen, opening devtools — forced a relayout. A viewport unit is
-          definite from the first pass and sidesteps the whole chain. It's
-          bottom-anchored, so on a viewport shorter than the form the only
-          effect is a strip of (still sky-coloured) panel above it with no
-          petals — unnoticeable in practice. */}
-      <div className="auth-season-scene absolute inset-x-0 bottom-0 h-[320px] origin-bottom scale-[0.2] s:scale-[0.25] m:scale-[0.3] l:scale-[0.35] sm:scale-[0.45] lg:h-screen lg:scale-100">
+          lg overrides ALL of it back to the pre-wrapper behavior: `lg:inset-0`
+          (top+bottom+left+right 0) + `lg:h-auto` (drop the 320px) + no scale.
+          The scene then fills `.auth-season-panel` (itself `absolute inset-0`)
+          the exact way these elements did when they were its direct children.
+          Key point: `inset-0` sizes from offsets, NOT `height:100%`. A
+          percentage height here had to resolve down a chain of grid-
+          `align-content`-stretched boxes that Chromium doesn't settle on
+          first paint — the scene stayed at its 320px base (mountain + orb
+          squashed to a sliver) until a resize (fullscreen, devtools) forced a
+          relayout. Offset-based sizing matches the panel and settles on the
+          first pass. */}
+      <div className="auth-season-scene absolute inset-x-0 bottom-0 h-[320px] origin-bottom scale-[0.2] s:scale-[0.25] m:scale-[0.3] l:scale-[0.35] sm:scale-[0.45] lg:inset-0 lg:h-auto lg:scale-100">
         {/* Rotates as a whole on season change (see globals.css) - the sun/moon
             orb below is a sibling, not a descendant, so it's structurally
             unaffected: only the sky turns, the orb stays put. */}
