@@ -338,9 +338,21 @@ export function SeasonPanel() {
           outer strip height independently (which used to clip the ridge
           SVGs down to a thin baseline sliver, since they're sized off width
           not height). origin-bottom keeps the mountain grounded as it
-          scales. At lg: this reverts to exactly today's h-full/no-transform
-          behavior - the percentages inside resolve the same way either way. */}
-      <div className="auth-season-scene absolute inset-x-0 bottom-0 h-[320px] origin-bottom scale-[0.2] s:scale-[0.25] m:scale-[0.3] l:scale-[0.35] sm:scale-[0.45] lg:h-full lg:scale-100">
+          scales.
+
+          At lg the scene is one viewport tall (lg:h-screen), not lg:h-full.
+          h-full = height:100%, which resolves against the panel's height —
+          and the panel's height comes from `absolute inset-0` on a grid cell
+          that's only sized by the container's `align-content` stretch.
+          Chromium doesn't recompute a percentage height down that chain on
+          first paint, so the scene stayed at its 320px base (mountain + orb
+          squashed into a sliver at the bottom) until a resize — entering
+          fullscreen, opening devtools — forced a relayout. A viewport unit is
+          definite from the first pass and sidesteps the whole chain. It's
+          bottom-anchored, so on a viewport shorter than the form the only
+          effect is a strip of (still sky-coloured) panel above it with no
+          petals — unnoticeable in practice. */}
+      <div className="auth-season-scene absolute inset-x-0 bottom-0 h-[320px] origin-bottom scale-[0.2] s:scale-[0.25] m:scale-[0.3] l:scale-[0.35] sm:scale-[0.45] lg:h-screen lg:scale-100">
         {/* Rotates as a whole on season change (see globals.css) - the sun/moon
             orb below is a sibling, not a descendant, so it's structurally
             unaffected: only the sky turns, the orb stays put. */}

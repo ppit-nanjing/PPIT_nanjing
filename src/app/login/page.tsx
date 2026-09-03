@@ -1,5 +1,5 @@
 import { redirect } from "next/navigation";
-import { ArrowLeft, CheckCircle2 } from "lucide-react";
+import { ArrowLeft, CheckCircle2, Undo2 } from "lucide-react";
 import { auth } from "@/auth";
 import { CredentialForm } from "@/components/auth/credential-form";
 import { SeasonPanel } from "@/components/auth/season-panel";
@@ -26,33 +26,29 @@ export default async function LoginPage({
         <SeasonPanel />
       </div>
 
-      <div className="flex items-center justify-center px-[var(--spacing-container-padding)] py-4 s:py-6 lg:py-4">
+      <div className="flex items-center justify-center px-[var(--spacing-container-padding)] py-4 s:py-6 lg:py-6">
       <div className="max-w-sm w-full">
-        <div className="relative overflow-hidden bg-surface-container-lowest border border-outline-variant rounded-xl p-5 lg:p-3 shadow-[0_4px_24px_rgba(0,0,0,0.04)] text-center">
+        <div className="relative overflow-hidden bg-surface-container-lowest border border-outline-variant rounded-xl p-6 lg:p-5 shadow-[0_4px_24px_rgba(0,0,0,0.04)] text-center">
           <div className="absolute top-0 left-0 w-full h-1 bg-primary-container" />
-          <span className="text-headline-md font-bold text-primary uppercase tracking-tight block mb-2 lg:mb-1">
+          <span className="text-headline-md font-bold text-primary uppercase tracking-tight block mb-2">
             PPIT Nanjing
           </span>
-          <h1 className="text-headline-lg text-on-background mb-2 lg:mb-1">{t("auth.loginTitle")}</h1>
-          <p className="text-body-md text-on-surface-variant mb-3 lg:mb-2">
+          <h1 className="text-headline-lg text-on-background mb-2">{t("auth.loginTitle")}</h1>
+          <p className="text-body-md text-on-surface-variant mb-4">
             {t("auth.loginIntro")}
           </p>
 
           {justReset && (
-            <div role="status" className="flex items-start gap-3 bg-primary-container/10 border border-primary-container/20 rounded-lg p-3 mb-3 text-left">
-              <CheckCircle2 className="text-primary-container shrink-0 mt-0.5" size={18} aria-hidden="true" />
+            <div role="status" className="flex items-start gap-2.5 bg-primary-container/10 border border-primary-container/20 rounded-lg px-3 py-2.5 mb-3 text-left">
+              <CheckCircle2 className="text-primary-container shrink-0 mt-0.5" size={16} aria-hidden="true" />
               <p className="text-body-sm text-on-surface-variant">{t("auth.resetSuccessFlash")}</p>
             </div>
           )}
 
           {returnTo !== "/" && (
-            <div className="flex items-start gap-3 bg-primary-container/10 border border-primary-container/20 rounded-lg p-3 mb-3 text-left">
-              <span className="text-label-caps uppercase tracking-wide text-primary-container font-semibold shrink-0">
-                {t("auth.loginReturnNotice")}
-              </span>
-              <p className="text-body-sm text-on-surface-variant">
-                {t("auth.loginReturnNoticeDesc")}
-              </p>
+            <div className="flex items-start gap-2.5 bg-primary-container/10 border border-primary-container/20 rounded-lg px-3 py-2.5 mb-3 text-left">
+              <Undo2 className="text-primary-container shrink-0 mt-0.5" size={16} aria-hidden="true" />
+              <p className="text-body-sm text-on-surface-variant">{t("auth.loginReturnNoticeDesc")}</p>
             </div>
           )}
 
