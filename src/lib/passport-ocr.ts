@@ -47,11 +47,39 @@ async function canvasBlob(canvas: HTMLCanvasElement): Promise<Blob> {
 }
 
 async function prepareMrzCrop(file: File, heightFraction: number, binary: boolean): Promise<Blob> {
-  const bitmap = await createImageBitmap(file, { imageOrientation: "from-image" });
+  const decoded = await createImageBitmap(file, { imageOrientation: "from-image" });
+  const targetWidth = Math.round(decoded.width * Math.min(3, Math.max(0.5, 1800 / decoded.width)));
+
+  // Firefox downscales drawImage with a bilinear filter only (it does not
+  // support imageSmoothingQuality), which blurs the thin MRZ strokes and
+  // breaks OCR on photos wider than 1800px - Chromium uses a high-quality
+  // resampler, which is why the same photo only failed on Firefox desktop.
+  // createImageBitmap with resize options goes through a high-quality
+  // resampler in every browser that supports it (Firefox 98+, Chrome 54+,
+  // Safari 15+), so the downscale is delegated to it.
+  let bitmap = decoded;
+  let scale = 1;
+  if (targetWidth < decoded.width) {
+    try {
+      bitmap = await createImageBitmap(decoded, {
+        resizeWidth: targetWidth,
+        resizeHeight: Math.round(decoded.height * (targetWidth / decoded.width)),
+        resizeQuality: "high",
+      });
+      decoded.close();
+    } catch {
+      // Older browsers without resize option support: let drawImage perform
+      // the downscale as before.
+      bitmap = decoded;
+      scale = targetWidth / decoded.width;
+    }
+  } else {
+    scale = Math.min(3, targetWidth / decoded.width);
+  }
+
   try {
     const sourceY = Math.floor(bitmap.height * (1 - heightFraction));
     const sourceHeight = bitmap.height - sourceY;
-    const scale = Math.min(3, Math.max(0.5, 1800 / bitmap.width));
     const canvas = document.createElement("canvas");
     canvas.width = Math.round(bitmap.width * scale);
     canvas.height = Math.round(sourceHeight * scale);
