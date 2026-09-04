@@ -117,6 +117,21 @@ body {
   color: var(--color-on-background);
 }
 
+/* Masked brand mark: the SVG shape is cut out of a solid fill so the logo
+   follows currentColor in the navbar and stays legible on the footer's
+   inverse surface in both modes. */
+.brand-logo {
+  display: block;
+  flex: none;
+  background-color: #ffffff;
+  -webkit-mask: url("/logo.svg") center / contain no-repeat;
+  mask: url("/logo.svg") center / contain no-repeat;
+}
+
+[data-mode="dark"] .brand-logo {
+  background-color: #000000;
+}
+
 /* ===== Tema kota (紫金山 default, dua alternatif di bawah) =====
    Setiap tema hanya menimpa token warna yang sama, jadi seluruh komponen ikut
    berubah tanpa satu pun diedit. Semua sudah dicek kontrasnya (WCAG AA).
