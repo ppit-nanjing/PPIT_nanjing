@@ -24,13 +24,24 @@
  */
 import { and, eq } from "drizzle-orm";
 import { db } from "./index";
-import { events, eventFeeOptions } from "./schema";
+import { events, eventFeeOptions, eventQuestions } from "./schema";
 
 const SLUG = "wif-uat";
 
 const FEE_OPTIONS: { label: string; amountCny: number }[] = [
   { label: "Freshmen", amountCny: 15 },
   { label: "Non-freshmen", amountCny: 25 },
+];
+
+// Pertanyaan tambahan di form pendaftaran. Di-upsert lewat label supaya
+// dijalankan ulang tidak menggandakan.
+const QUESTIONS: { label: string; type: "radio"; options: string; required: boolean }[] = [
+  {
+    label: "Apakah kamu punya rekening Bank Mandiri (Indonesia)?",
+    type: "radio",
+    options: "Ya\nTidak",
+    required: true,
+  },
 ];
 
 // Deskripsi = "broadcast message" acara: teks yang muncul di halaman acara.
@@ -143,6 +154,24 @@ async function seed() {
     }
   }
   console.log(`Kategori tarif: ${baru} dibuat, ${FEE_OPTIONS.length - baru} diperbarui.`);
+
+  let qBaru = 0;
+  for (const [i, q] of QUESTIONS.entries()) {
+    const [found] = await db
+      .select({ id: eventQuestions.id })
+      .from(eventQuestions)
+      .where(and(eq(eventQuestions.eventId, eventId), eq(eventQuestions.label, q.label)));
+    if (found) {
+      await db
+        .update(eventQuestions)
+        .set({ type: q.type, options: q.options, required: q.required, orderIndex: i })
+        .where(eq(eventQuestions.id, found.id));
+    } else {
+      await db.insert(eventQuestions).values({ eventId, label: q.label, type: q.type, options: q.options, required: q.required, orderIndex: i });
+      qBaru++;
+    }
+  }
+  console.log(`Pertanyaan: ${qBaru} dibuat, ${QUESTIONS.length - qBaru} diperbarui.`);
 
   console.log("");
   console.log(`URL publik  : /events/${SLUG}`);
