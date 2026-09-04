@@ -28,6 +28,7 @@ export default async function ConsoleDocumentsPage({
   let contents = null;
   let notConfigured = false;
   let noPeriod = false;
+  let driveError: string | null = null;
   // Real folder name for the breadcrumb when browsing a subfolder (?folder=);
   // the placeholder used to be the literal string "Folder".
   let folderName: string | null = null;
@@ -39,7 +40,7 @@ export default async function ConsoleDocumentsPage({
       folderName = meta.name ?? null;
     } catch (e) {
       if (e instanceof DriveNotConfiguredError) notConfigured = true;
-      else throw e;
+      else driveError = e instanceof Error ? e.message : "Gagal memuat folder.";
     }
   } else if (!activePeriodId) {
     noPeriod = true;
@@ -48,7 +49,7 @@ export default async function ConsoleDocumentsPage({
       contents = await getFolderContents({ periodId: activePeriodId, departmentId: null });
     } catch (e) {
       if (e instanceof DriveNotConfiguredError) notConfigured = true;
-      else throw e;
+      else driveError = e instanceof Error ? e.message : "Gagal memuat dokumen.";
     }
   }
 
@@ -68,6 +69,12 @@ export default async function ConsoleDocumentsPage({
         <p className="text-body-md text-on-error-container bg-error-container/40 rounded-lg px-4 py-3 mb-4">
           Google Drive belum dikonfigurasi. Setel <code>GOOGLE_DRIVE_ROOT_FOLDER_ID</code> dan{" "}
           <code>GOOGLE_DRIVE_SA_JSON</code> di environment.
+        </p>
+      )}
+
+      {driveError && (
+        <p className="text-body-md text-on-error-container bg-error-container/40 rounded-lg px-4 py-3 mb-4">
+          {driveError}
         </p>
       )}
 
