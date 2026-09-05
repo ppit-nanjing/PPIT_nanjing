@@ -198,7 +198,6 @@ export default async function ConsoleKatalogPage() {
                       <input name="addressZh" defaultValue={p.addressZh ?? ""} placeholder="Alamat Mandarin" className={input} />
                       <input name="addressEn" defaultValue={p.addressEn ?? ""} placeholder="Alamat (Inggris) — kosongkan = otomatis" className={input} />
                       <input name="mapUrl" defaultValue={p.mapUrl ?? ""} placeholder="Tautan Peta" className={input} />
-                      <input name="orderIndex" type="number" defaultValue={p.orderIndex} placeholder="Urutan" className={input} />
                     </div>
                     <ImageUploadCropper name="imageUrl" folder="catalog" label="Gambar" placeholder="Tempel URL atau unggah gambar" defaultValue={p.imageUrl ?? ""} />
                     <ToggleSwitch name="published" defaultChecked={p.published} label="Tampil di situs publik" />
