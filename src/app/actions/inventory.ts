@@ -44,8 +44,10 @@ export async function submitBorrowRequest(itemId: string, formData: FormData) {
     if (!EMAIL_RE.test(borrower.email)) throw new Error("Format email tidak valid");
   }
 
-  if (quantity < 1) throw new Error("Jumlah tidak valid");
-  if (quantity > item.availableQuantity) throw new Error("Jumlah melebihi stok yang tersedia");
+  if (!Number.isInteger(quantity) || quantity < 1) throw new Error("Jumlah tidak valid");
+  if (quantity > item.availableQuantity) {
+    throw new Error(`Jumlah melebihi stok yang tersedia (${item.availableQuantity})`);
+  }
   if (!purpose || !usageLocation || !requestedFrom || !requestedTo) throw new Error("Semua kolom wajib diisi");
   if (requestedTo < requestedFrom) throw new Error("Tanggal pengembalian tidak boleh sebelum tanggal peminjaman");
 

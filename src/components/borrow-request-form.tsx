@@ -31,9 +31,21 @@ export function BorrowRequestForm({
   const contactValid =
     !external ||
     (contact.name.trim() && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(contact.email) && contact.wechat.trim() && contact.phone.trim());
+
+  // Jumlah tidak boleh melebihi stok yang tersedia — dicek di sini juga, bukan
+  // cuma lewat atribut `max` (yang tidak jalan karena nilainya dikirim lewat
+  // input hidden). Server tetap memvalidasi ulang.
+  const qtyNum = Number(quantity);
+  const qtyError =
+    !Number.isInteger(qtyNum) || qtyNum < 1
+      ? t("inventory.form.quantityInvalid")
+      : qtyNum > maxQuantity
+        ? t("inventory.form.quantityExceeds", { count: maxQuantity })
+        : null;
+
   const detailsValid =
     !!contactValid &&
-    Number(quantity) >= 1 &&
+    !qtyError &&
     !!requestedFrom &&
     !!requestedTo &&
     purpose.trim().length > 0 &&
@@ -93,13 +105,31 @@ export function BorrowRequestForm({
             <span className="text-label-caps uppercase tracking-wide text-on-surface-variant">{t("inventory.form.quantity")} *</span>
             <input
               type="number"
+              inputMode="numeric"
               min={1}
               max={maxQuantity}
+              step={1}
               value={quantity}
               onChange={(e) => setQuantity(e.target.value)}
+              onBlur={(e) => {
+                // Rapikan input di luar rentang begitu fokus lepas, biar nilai
+                // yang dikirim selalu masuk akal.
+                const n = Math.floor(Number(e.target.value));
+                if (Number.isFinite(n)) setQuantity(String(Math.min(Math.max(n, 1), maxQuantity)));
+              }}
               required
-              className="bg-soft-gray rounded-md p-3 text-body-md focus:outline-none focus:ring-2 focus:ring-primary-container"
+              aria-invalid={qtyError ? true : undefined}
+              aria-describedby="quantity-help"
+              className={`bg-soft-gray rounded-md p-3 text-body-md focus:outline-none focus:ring-2 ${
+                qtyError ? "ring-2 ring-error" : "focus:ring-primary-container"
+              }`}
             />
+            <span
+              id="quantity-help"
+              className={`text-label-caps ${qtyError ? "text-error" : "text-on-surface-variant"}`}
+            >
+              {qtyError ?? t("inventory.form.quantityAvailable", { count: maxQuantity })}
+            </span>
           </label>
           <div className="grid grid-cols-2 gap-4">
             <label className="flex flex-col gap-2">

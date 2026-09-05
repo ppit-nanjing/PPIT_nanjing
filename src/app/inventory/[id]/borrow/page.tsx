@@ -45,39 +45,54 @@ export default async function BorrowRequestPage({ params }: { params: Promise<{ 
           {t("inventory.conditionLabel")}: {conditionLabel(item.condition)}
         </p>
 
-        <div className="mb-8 flex items-start gap-3 rounded-lg border border-outline-variant bg-surface-container-low p-5">
-          <Info className="mt-0.5 shrink-0 text-primary-container" size={18} aria-hidden />
-          <p className="text-body-sm text-on-surface-variant">
-            {isInternal
-              ? "Kamu mengajukan sebagai peminjam internal PPIT — nama & kontakmu diambil dari akun."
-              : "Kamu mengajukan sebagai pihak luar. Isi data kontak selengkapnya; Divisi Logistik akan menghubungimu lewat WeChat / Email untuk konfirmasi. Pengajuan tidak otomatis disetujui."}
-          </p>
-        </div>
-
-        {reservations.length > 0 && (
-          <div className="mb-8 flex flex-col gap-2 rounded-lg border border-outline-variant bg-surface-container-low p-5">
-            <p className="flex items-center gap-2 text-label-caps uppercase tracking-wide text-primary-container">
-              <CalendarClock size={14} aria-hidden /> Tanggal yang sudah dipesan
-            </p>
-            <p className="text-body-sm text-on-surface-variant">
-              Barang ini sudah dibooking untuk acara PPIT pada periode berikut — pengajuan dengan tanggal yang beririsan akan ditolak.
-            </p>
-            <ul className="flex flex-col gap-1">
-              {reservations.map((r) => (
-                <li key={r.id} className="text-body-md text-on-background">
-                  {r.reservedFrom} – {r.reservedTo} <span className="text-on-surface-variant">· {r.reason}</span>
-                </li>
-              ))}
-            </ul>
+        {item.availableQuantity < 1 ? (
+          // Stok habis: semua unit sedang dipinjam. Daftar /inventory memang
+          // menyembunyikan tombol pinjam saat ini, tapi rute ini bisa diakses
+          // langsung atau stok bisa habis setelah halaman dimuat.
+          <div className="flex items-start gap-3 rounded-lg border border-outline-variant bg-surface-container-low p-5">
+            <Info className="mt-0.5 shrink-0 text-primary-container" size={18} aria-hidden />
+            <div>
+              <p className="text-body-md text-on-background mb-1">{t("inventory.form.outOfStockTitle")}</p>
+              <p className="text-body-sm text-on-surface-variant">{t("inventory.form.outOfStockDesc")}</p>
+            </div>
           </div>
-        )}
+        ) : (
+          <>
+            <div className="mb-8 flex items-start gap-3 rounded-lg border border-outline-variant bg-surface-container-low p-5">
+              <Info className="mt-0.5 shrink-0 text-primary-container" size={18} aria-hidden />
+              <p className="text-body-sm text-on-surface-variant">
+                {isInternal
+                  ? "Kamu mengajukan sebagai peminjam internal PPIT — nama & kontakmu diambil dari akun."
+                  : "Kamu mengajukan sebagai pihak luar. Isi data kontak selengkapnya; Divisi Logistik akan menghubungimu lewat WeChat / Email untuk konfirmasi. Pengajuan tidak otomatis disetujui."}
+              </p>
+            </div>
 
-        <BorrowRequestForm
-          itemId={id}
-          maxQuantity={item.availableQuantity}
-          itemLocation={item.location}
-          external={!isInternal}
-        />
+            {reservations.length > 0 && (
+              <div className="mb-8 flex flex-col gap-2 rounded-lg border border-outline-variant bg-surface-container-low p-5">
+                <p className="flex items-center gap-2 text-label-caps uppercase tracking-wide text-primary-container">
+                  <CalendarClock size={14} aria-hidden /> Tanggal yang sudah dipesan
+                </p>
+                <p className="text-body-sm text-on-surface-variant">
+                  Barang ini sudah dibooking untuk acara PPIT pada periode berikut — pengajuan dengan tanggal yang beririsan akan ditolak.
+                </p>
+                <ul className="flex flex-col gap-1">
+                  {reservations.map((r) => (
+                    <li key={r.id} className="text-body-md text-on-background">
+                      {r.reservedFrom} – {r.reservedTo} <span className="text-on-surface-variant">· {r.reason}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+
+            <BorrowRequestForm
+              itemId={id}
+              maxQuantity={item.availableQuantity}
+              itemLocation={item.location}
+              external={!isInternal}
+            />
+          </>
+        )}
       </main>
       <SiteFooter />
     </div>
