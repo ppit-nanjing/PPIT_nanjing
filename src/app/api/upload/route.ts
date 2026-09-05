@@ -50,13 +50,22 @@ const FOLDER_MODULE: Record<string, AdminModule | null> = {
   donation: "organization",
 };
 
+// Folder yang boleh diunggah TANPA login. Cuma "borrow-doc": Pernyataan Peminjam
+// bertanda tangan di form peminjaman aset harus bisa diunggah peminjam PIHAK
+// LUAR yang memang tidak punya akun PPIT (SOP Peminjaman Aset). Semua pengaman
+// lain (allowlist tipe, batas 10 MB, cek origin, nama diacak) tetap berlaku.
+const ANON_FOLDERS = new Set(["borrow-doc"]);
+
 export async function POST(req: NextRequest) {
   const session = await auth();
-  if (!session?.user?.id) return NextResponse.json({ errorKey: "upload.errUnauthorized" }, { status: 401 });
 
   const form = await req.formData();
   const file = form.get("file");
   const folder = String(form.get("folder") ?? "");
+
+  if (!session?.user?.id && !ANON_FOLDERS.has(folder)) {
+    return NextResponse.json({ errorKey: "upload.errUnauthorized" }, { status: 401 });
+  }
 
   // CSRF defense-in-depth: the session cookie is SameSite=Lax (so cross-site
   // POSTs don't carry it), but we also reject any request whose Origin doesn't
@@ -69,7 +78,10 @@ export async function POST(req: NextRequest) {
   if (!(file instanceof File)) return NextResponse.json({ errorKey: "upload.errNoFile" }, { status: 400 });
   if (!(folder in FOLDER_MODULE)) return NextResponse.json({ errorKey: "upload.errFolder" }, { status: 400 });
   const requiredModule = FOLDER_MODULE[folder];
-  if (requiredModule && !hasModuleAccess(session.user.adminScope, requiredModule)) {
+  // requiredModule hanya truthy untuk folder admin (tak ada di ANON_FOLDERS),
+  // jadi di sini sesi selalu ada - tapi tetap pakai optional chaining supaya
+  // anon yang menembak folder admin dapat 403, bukan crash.
+  if (requiredModule && !hasModuleAccess(session?.user?.adminScope ?? null, requiredModule)) {
     return NextResponse.json({ errorKey: "upload.errForbidden" }, { status: 403 });
   }
   if (file.size > MAX_BYTES)
@@ -89,8 +101,8 @@ export async function POST(req: NextRequest) {
   // Strip path separators / control chars so a malicious filename can't
   // traverse out of its folder in the blob key (addRandomSuffix also helps).
   const safeName = (file.name || "file").replace(/[^\w.\-]+/g, "_").slice(0, 100);
-  const wantsPrivate = folder === "sensus";
-  const ownerPath = wantsPrivate ? `${session.user.id}/` : "";
+  const wantsPrivate = folder === "sensus"; // sensus wajib login, jadi sesi pasti ada
+  const ownerPath = wantsPrivate && session?.user?.id ? `${session.user.id}/` : "";
   const key = `${folder}/${ownerPath}${Date.now()}-${safeName}`;
 
   // `put` can throw (bad token, blob quota, a store that doesn't have private

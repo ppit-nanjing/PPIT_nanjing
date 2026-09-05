@@ -2,21 +2,26 @@
 
 import { useState } from "react";
 import Image from "next/image";
-import { FileText, TriangleAlert, ExternalLink } from "lucide-react";
+import { FileText, TriangleAlert, ExternalLink, Download } from "lucide-react";
 
-// Menampilkan berkas yang diunggah peserta (bukti mahasiswa aktif, bukti
-// transfer) di panel admin:
-//  - blob publik gambar  -> thumbnail Next-optimized (ringan walau aslinya foto HP besar)
-//  - blob publik dokumen -> tautan "lihat berkas"
-//  - route internal /api/… (kartu mahasiswa privat dari sensus) -> <img> biasa
+// Menampilkan berkas yang diunggah peserta/peminjam (Pernyataan Peminjam
+// bertanda tangan, bukti mahasiswa aktif, bukti transfer) di panel admin, dengan
+// dua aksi: PREVIEW (buka / thumbnail) dan UNDUH (simpan sebagai arsip bukti).
+//
+//  - blob publik gambar  -> thumbnail Next-optimized + tautan Buka/Unduh
+//  - blob publik dokumen -> tautan Buka + Unduh (Unduh pakai ?download=1 supaya
+//    Vercel Blob mengirim Content-Disposition: attachment)
+//  - route internal /api/… (kartu mahasiswa privat) -> <img> biasa / tautan Buka
 //    (browser bawa cookie sesi; kalau admin tak punya akses `reports`, gambarnya
 //    gagal dan kita jatuh ke tautan)
-//  - selain itu (file://, C:\…, javascript:, teks acak) -> peringatan merah.
-//    Nilai begini sering muncul kalau unggahan gagal lalu peserta menempel path
-//    berkas di perangkatnya sendiri.
+//  - path relatif situs (/pernyataan-peminjam.docx dll) -> tautan Buka + Unduh
+//  - selain itu (file://, C:\…, \\server\, teks acak) -> peringatan merah.
+//    Nilai begini muncul kalau unggahan gagal lalu nilai path lokal ikut tersimpan.
 
 const IMG_EXT_RE = /\.(jpe?g|png|webp|gif|avif)(\?|$)/i;
 const BLOB_RE = /^https:\/\/[a-z0-9.-]*\.public\.blob\.vercel-storage\.com\//i;
+// path lokal perangkat, bukan berkas yang bisa dibuka admin
+const LOCAL_PATH_RE = /^([a-z]:[\\/]|file:|\\\\)/i;
 
 export function ProofView({ url, label }: { url: string | null | undefined; label: string }) {
   const clean = (url ?? "").trim();
@@ -27,16 +32,23 @@ export function ProofView({ url, label }: { url: string | null | undefined; labe
   }
 
   const isBlob = BLOB_RE.test(clean);
+  const isSameOriginPath = clean.startsWith("/") && !clean.startsWith("//");
+  const isHttps = /^https:\/\//i.test(clean);
   const isInternal = clean.startsWith("/api/");
 
   // Bukan sumber yang bisa dibuka admin.
-  if (!isBlob && !isInternal) {
+  if (clean.includes("\\") || LOCAL_PATH_RE.test(clean) || (!isBlob && !isSameOriginPath && !isHttps)) {
     return (
       <span className="inline-flex items-center gap-1 text-error normal-case" title={clean}>
         <TriangleAlert size={13} aria-hidden /> berkas tidak valid — minta peserta unggah ulang
       </span>
     );
   }
+
+  // Vercel Blob melayani berkas inline; `?download=1` memaksa attachment supaya
+  // admin bisa menyimpannya. Route internal & path statis tak punya opsi ini —
+  // tautan Unduh-nya buka biasa, admin simpan lewat menu browser.
+  const downloadHref = isBlob ? `${clean}${clean.includes("?") ? "&" : "?"}download=1` : clean;
 
   const openLink = (
     <a
@@ -45,38 +57,25 @@ export function ProofView({ url, label }: { url: string | null | undefined; labe
       rel="noopener noreferrer"
       className="inline-flex items-center gap-1 text-primary-container hover:underline normal-case"
     >
-      <FileText size={13} aria-hidden /> lihat berkas <ExternalLink size={11} aria-hidden />
+      <FileText size={13} aria-hidden /> Buka <ExternalLink size={11} aria-hidden />
     </a>
   );
 
-  // Blob dokumen (PDF/doc) — tak ada pratinjau.
-  if (isBlob && !IMG_EXT_RE.test(clean)) return openLink;
-
-  if (imgFailed) return openLink;
-
-  const thumb = isBlob ? (
-    <Image
-      src={clean}
-      alt={label}
-      width={128}
-      height={96}
-      onError={() => setImgFailed(true)}
-      className="h-16 w-auto max-w-[8rem] object-cover"
-    />
-  ) : (
-    // Route internal: optimizer Next tak bisa (butuh cookie), pakai <img> biasa.
-    // eslint-disable-next-line @next/next/no-img-element
-    <img
-      src={clean}
-      alt={label}
-      loading="lazy"
-      decoding="async"
-      onError={() => setImgFailed(true)}
-      className="h-16 w-auto max-w-[8rem] rounded-md border border-outline-variant object-cover"
-    />
+  const downloadLink = (
+    <a
+      href={downloadHref}
+      target={isBlob ? undefined : "_blank"}
+      rel="noopener noreferrer"
+      className="inline-flex items-center gap-1 text-on-surface-variant hover:text-primary-container normal-case"
+      title={`Unduh ${label}`}
+    >
+      <Download size={13} aria-hidden /> Unduh
+    </a>
   );
 
-  return (
+  const showThumb = (isBlob || isInternal || isSameOriginPath) && IMG_EXT_RE.test(clean) && !imgFailed;
+
+  const preview = showThumb ? (
     <a
       href={clean}
       target="_blank"
@@ -84,7 +83,37 @@ export function ProofView({ url, label }: { url: string | null | undefined; labe
       className="inline-block overflow-hidden rounded-md border border-outline-variant align-middle transition-opacity hover:opacity-90"
       title={`${label} — klik untuk memperbesar`}
     >
-      {thumb}
+      {isBlob ? (
+        <Image
+          src={clean}
+          alt={label}
+          width={128}
+          height={96}
+          onError={() => setImgFailed(true)}
+          className="h-16 w-auto max-w-[8rem] object-cover"
+        />
+      ) : (
+        // Route internal / path statis: optimizer Next dilewati (butuh cookie /
+        // sederhana), pakai <img> biasa.
+        // eslint-disable-next-line @next/next/no-img-element
+        <img
+          src={clean}
+          alt={label}
+          loading="lazy"
+          decoding="async"
+          onError={() => setImgFailed(true)}
+          className="h-16 w-auto max-w-[8rem] rounded-md border border-outline-variant object-cover"
+        />
+      )}
     </a>
+  ) : (
+    openLink
+  );
+
+  return (
+    <span className="inline-flex flex-wrap items-center gap-x-3 gap-y-1 align-middle">
+      {preview}
+      {downloadLink}
+    </span>
   );
 }
