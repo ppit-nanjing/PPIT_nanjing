@@ -19,9 +19,12 @@ import { FileText, TriangleAlert, ExternalLink, Download } from "lucide-react";
 //    Nilai begini muncul kalau unggahan gagal lalu nilai path lokal ikut tersimpan.
 
 const IMG_EXT_RE = /\.(jpe?g|png|webp|gif|avif)(\?|$)/i;
-const BLOB_RE = /^https:\/\/[a-z0-9.-]*\.public\.blob\.vercel-storage\.com\//i;
-// path lokal perangkat, bukan berkas yang bisa dibuka admin
-const LOCAL_PATH_RE = /^([a-z]:[\\/]|file:|\\\\)/i;
+// Blob publik Vercel — cocokkan `*.public.blob…` maupun `*.blob…` (sama seperti
+// isAllowedUploadUrl di actions/events.ts).
+const BLOB_RE = /^https:\/\/[a-z0-9.-]+\.blob\.vercel-storage\.com\//i;
+// Path lokal perangkat / non-web, bukan berkas yang bisa dibuka admin: drive
+// Windows (C:\), file:, UNC (\\server), dan folder khas OS di path Unix.
+const LOCAL_PATH_RE = /^([a-z]:[\\/]|file:|\\\\|\/(Users|home|root|mnt|media|private|var|tmp|opt|etc)\/)/i;
 
 export function ProofView({ url, label }: { url: string | null | undefined; label: string }) {
   const clean = (url ?? "").trim();
@@ -33,11 +36,11 @@ export function ProofView({ url, label }: { url: string | null | undefined; labe
 
   const isBlob = BLOB_RE.test(clean);
   const isSameOriginPath = clean.startsWith("/") && !clean.startsWith("//");
-  const isHttps = /^https:\/\//i.test(clean);
   const isInternal = clean.startsWith("/api/");
 
-  // Bukan sumber yang bisa dibuka admin.
-  if (clean.includes("\\") || LOCAL_PATH_RE.test(clean) || (!isBlob && !isSameOriginPath && !isHttps)) {
+  // Bukan sumber yang bisa dibuka admin. statementUrl / proofUrl divalidasi
+  // server-side (blob atau /api/…), jadi selain itu = data rusak / path lokal.
+  if (clean.includes("\\") || LOCAL_PATH_RE.test(clean) || (!isBlob && !isSameOriginPath)) {
     return (
       <span className="inline-flex items-center gap-1 text-error normal-case" title={clean}>
         <TriangleAlert size={13} aria-hidden /> berkas tidak valid — minta peserta unggah ulang
