@@ -152,8 +152,9 @@ export default async function ConsoleKatalogPage() {
           </label>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <label className="flex flex-col gap-2">
-              <span className={label}>Alamat</span>
-              <input name="address" className={input} />
+              {/* Kolom DB-nya masih `address`; isinya sekarang stasiun metro terdekat. */}
+              <span className={label}>Metro Station</span>
+              <input name="address" placeholder="mis. Metro Line 2 Muxuyuan Station, Exit 1" className={input} />
             </label>
             <label className="flex flex-col gap-2">
               <span className={label}>Alamat Mandarin</span>
@@ -194,9 +195,9 @@ export default async function ConsoleKatalogPage() {
                     <textarea name="description" rows={2} defaultValue={p.description ?? ""} placeholder="Deskripsi" className={`${input} resize-none`} />
                     <textarea name="descriptionEn" rows={2} defaultValue={p.descriptionEn ?? ""} placeholder="Deskripsi (Inggris) — kosongkan = otomatis" className={`${input} resize-none`} />
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                      <input name="address" defaultValue={p.address ?? ""} placeholder="Alamat" className={input} />
+                      {/* Kolom DB-nya masih `address`; isinya sekarang stasiun metro terdekat. */}
+                      <input name="address" defaultValue={p.address ?? ""} placeholder="Metro Station" className={input} />
                       <input name="addressZh" defaultValue={p.addressZh ?? ""} placeholder="Alamat Mandarin" className={input} />
-                      <input name="addressEn" defaultValue={p.addressEn ?? ""} placeholder="Alamat (Inggris) — kosongkan = otomatis" className={input} />
                       <input name="mapUrl" defaultValue={p.mapUrl ?? ""} placeholder="Tautan Peta" className={input} />
                     </div>
                     <ImageUploadCropper name="imageUrl" folder="catalog" label="Gambar" placeholder="Tempel URL atau unggah gambar" defaultValue={p.imageUrl ?? ""} />

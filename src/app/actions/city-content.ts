@@ -79,8 +79,10 @@ export async function createPlace(formData: FormData) {
   const name = str(formData, "name");
   if (!name) throw new Error("Nama tempat wajib diisi");
   const description = str(formData, "description");
+  // `address` sekarang menampung stasiun metro terdekat - namanya sama saja di
+  // kedua bahasa, jadi tidak ikut diterjemahkan dan addressEn tidak diisi lagi.
   const address = str(formData, "address");
-  const en = await withEnglish({}, { name, description, address });
+  const en = await withEnglish({}, { name, description });
   await db.insert(places).values({
     name,
     nameZh: str(formData, "nameZh"),
@@ -91,7 +93,6 @@ export async function createPlace(formData: FormData) {
     descriptionEn: en.description,
     address,
     addressZh: str(formData, "addressZh"),
-    addressEn: en.address,
     imageUrl: str(formData, "imageUrl"),
     mapUrl: str(formData, "mapUrl"),
     // orderIndex sengaja tidak diisi - /places mengurut sendiri (kategori →
@@ -117,10 +118,11 @@ export async function updatePlace(formData: FormData) {
   const name = str(formData, "name");
   if (!id || !name) throw new Error("Nama tempat wajib diisi");
   const description = str(formData, "description");
+  // Lihat catatan di createPlace: `address` = stasiun metro, tidak diterjemahkan.
   const address = str(formData, "address");
   const en = await withEnglish(
-    { name: str(formData, "nameEn"), description: str(formData, "descriptionEn"), address: str(formData, "addressEn") },
-    { name, description, address },
+    { name: str(formData, "nameEn"), description: str(formData, "descriptionEn") },
+    { name, description },
   );
   await db
     .update(places)
@@ -134,7 +136,6 @@ export async function updatePlace(formData: FormData) {
       descriptionEn: en.description,
       address,
       addressZh: str(formData, "addressZh"),
-      addressEn: en.address,
       imageUrl: str(formData, "imageUrl"),
       mapUrl: str(formData, "mapUrl"),
       // orderIndex tidak ikut di-set: form tempat sudah tidak punya field
