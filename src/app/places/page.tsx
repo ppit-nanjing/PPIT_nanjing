@@ -62,23 +62,15 @@ export default async function PlacesPage({
         ? and(eq(places.published, true), eq(places.category, valid as "tourism"))
         : eq(places.published, true),
     )
-    // Di dalam satu kategori: abjad distrik, lalu abjad nama - jadi tempat
-    // yang sedistrik otomatis berdekatan tanpa perlu diatur admin. Distrik
-    // null jatuh ke akhir (default NULLS LAST Postgres). Pengurutan antar
-    // kategorinya sendiri dikerjakan di JS di bawah, bukan di sini: `category`
-    // itu enum Postgres, dan ASC pada enum mengikuti urutan deklarasi di
-    // schema.ts - yang berbeda dari urutan CATEGORY/filter bar di atas.
+    // Abjad distrik, lalu abjad nama - tempat yang sedistrik selalu berdekatan
+    // tanpa perlu diatur admin. Distrik null jatuh ke akhir (default NULLS LAST
+    // Postgres). Ini sudah urutan final untuk tab "Semua": distriknya menaik
+    // lurus dari atas ke bawah, tidak mengulang per kategori.
     .orderBy(asc(places.district), asc(places.name));
 
-  // Samakan urutan kelompok kategori dengan urutan tombol di filter bar.
-  // Kategori di luar CATEGORY (mis. nilai enum baru yang belum didaftarkan)
-  // ditaruh di akhir, bukan dibuang, supaya tidak ada tempat yang hilang.
-  const CATEGORY_RANK = Object.keys(CATEGORY);
-  const rankOf = (c: string) => {
-    const i = CATEGORY_RANK.indexOf(c);
-    return i === -1 ? CATEGORY_RANK.length : i;
-  };
-  rows.sort((a, b) => rankOf(a.category) - rankOf(b.category));
+  // Saat satu kategori difilter, semua baris sudah sekategori - jadi tidak ada
+  // pengurutan kategori di sini sama sekali. Mengelompokkan per kategori di tab
+  // "Semua" justru membuat distriknya mengulang dari awal tiap ganti kategori.
 
   const districts = [...new Set(rows.map((p) => p.district).filter(Boolean))];
 
