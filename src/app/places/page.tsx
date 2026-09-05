@@ -62,7 +62,12 @@ export default async function PlacesPage({
         ? and(eq(places.published, true), eq(places.category, valid as "tourism"))
         : eq(places.published, true),
     )
-    .orderBy(asc(places.orderIndex), asc(places.name));
+    // Abjad nama tempat.
+    .orderBy(asc(places.name));
+
+  // Saat satu kategori difilter, semua baris sudah sekategori - jadi tidak ada
+  // pengurutan kategori di sini sama sekali. Mengelompokkan per kategori di tab
+  // "Semua" justru membuat distriknya mengulang dari awal tiap ganti kategori.
 
   const districts = [...new Set(rows.map((p) => p.district).filter(Boolean))];
 
@@ -130,7 +135,9 @@ export default async function PlacesPage({
               name: pick(p.name, p.nameEn) ?? p.name,
               nameZh: p.nameZh,
               description: pick(p.description, p.descriptionEn),
-              address: pick(p.address, p.addressEn),
+              // Nama stasiun metro sama saja di kedua bahasa ("Metro Line 2
+              // Muxuyuan Station"), jadi tidak lewat pick()/kolom *_en.
+              metroStation: p.address,
               addressZh: p.addressZh,
               imageUrl: p.imageUrl,
               mapUrl: p.mapUrl,

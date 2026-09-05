@@ -42,7 +42,8 @@ export type PlaceCard = {
   name: string;
   nameZh: string | null;
   description: string | null;
-  address: string | null;
+  /** Stasiun metro terdekat - kolom DB-nya masih bernama `address`. */
+  metroStation: string | null;
   addressZh: string | null;
   imageUrl: string | null;
   mapUrl: string | null;
@@ -269,13 +270,18 @@ export function PlacesGrid({ places }: { places: PlaceCard[] }) {
                 {p.description && (
                   <p className="text-body-md text-on-surface-variant flex-1">{p.description}</p>
                 )}
-                {p.address && (
+                {/* Stasiun metro dan alamat Mandarin berdiri sendiri-sendiri:
+                    salah satunya boleh kosong tanpa menyembunyikan yang lain. */}
+                {p.metroStation && (
                   <p className="text-body-sm text-on-surface-variant flex items-start gap-1.5">
-                    <MapPin size={14} className="mt-0.5 shrink-0" aria-hidden />
-                    <span>
-                      {p.address}
-                      {p.addressZh && <span className="block">{p.addressZh}</span>}
-                    </span>
+                    <span className="mt-0.5 shrink-0" aria-hidden>🚇</span>
+                    <span>{p.metroStation}</span>
+                  </p>
+                )}
+                {p.addressZh && (
+                  <p className="text-body-sm text-on-surface-variant flex items-start gap-1.5">
+                    <span className="mt-0.5 shrink-0" aria-hidden>📍</span>
+                    <span>{p.addressZh}</span>
                   </p>
                 )}
                 {p.mapUrl && (
@@ -505,16 +511,23 @@ function PlaceDetailDialog({
                 </motion.p>
               )}
 
-              {place.address && (
+              {place.metroStation && (
                 <motion.p
                   variants={LINE_VARIANTS}
                   className="text-body-sm text-on-surface-variant flex items-start gap-1.5"
                 >
-                  <MapPin size={14} className="mt-0.5 shrink-0" aria-hidden />
-                  <span>
-                    {place.address}
-                    {place.addressZh && <span className="block">{place.addressZh}</span>}
-                  </span>
+                  <span className="mt-0.5 shrink-0" aria-hidden>🚇</span>
+                  <span>{place.metroStation}</span>
+                </motion.p>
+              )}
+
+              {place.addressZh && (
+                <motion.p
+                  variants={LINE_VARIANTS}
+                  className="text-body-sm text-on-surface-variant flex items-start gap-1.5"
+                >
+                  <span className="mt-0.5 shrink-0" aria-hidden>📍</span>
+                  <span>{place.addressZh}</span>
                 </motion.p>
               )}
 

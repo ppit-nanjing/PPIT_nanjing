@@ -60,7 +60,10 @@ function refresh() {
 export async function listCityContent() {
   await requireModuleAccess(CONTENT);
   const [placeRows, uniRows, districtRows, merchRows, sponsorRows] = await Promise.all([
-    db.select().from(places).orderBy(asc(places.orderIndex), asc(places.name)),
+    // Distrik → nama, seperti /places, supaya daftar di konsol memakai susunan
+    // yang sama dengan yang dilihat pengunjung. Tanpa pengelompokan kategori:
+    // di sini tiap baris sudah menampilkan kategorinya masing-masing.
+    db.select().from(places).orderBy(asc(places.district), asc(places.name)),
     db.select().from(universities).orderBy(asc(universities.orderIndex), asc(universities.name)),
     db.select().from(districts).orderBy(asc(districts.orderIndex), asc(districts.name)),
     db.select().from(merchandise).orderBy(asc(merchandise.orderIndex), asc(merchandise.name)),
@@ -76,8 +79,10 @@ export async function createPlace(formData: FormData) {
   const name = str(formData, "name");
   if (!name) throw new Error("Nama tempat wajib diisi");
   const description = str(formData, "description");
+  // `address` sekarang menampung stasiun metro terdekat - namanya sama saja di
+  // kedua bahasa, jadi tidak ikut diterjemahkan dan addressEn tidak diisi lagi.
   const address = str(formData, "address");
-  const en = await withEnglish({}, { name, description, address });
+  const en = await withEnglish({}, { name, description });
   await db.insert(places).values({
     name,
     nameZh: str(formData, "nameZh"),
@@ -88,10 +93,12 @@ export async function createPlace(formData: FormData) {
     descriptionEn: en.description,
     address,
     addressZh: str(formData, "addressZh"),
-    addressEn: en.address,
     imageUrl: str(formData, "imageUrl"),
     mapUrl: str(formData, "mapUrl"),
-    orderIndex: num(formData, "orderIndex") ?? 0,
+    // orderIndex sengaja tidak diisi - /places mengurut sendiri (kategori →
+    // distrik → nama), jadi form tempat tidak lagi punya field "Urutan".
+    // Kolomnya dibiarkan ada di schema dengan default 0. Tabel katalog lain
+    // (universities, districts, merchandise, sponsors) MASIH memakainya.
     published: !formData.has("publishedTouched") || bool(formData, "published"),
   });
   refresh();
@@ -111,10 +118,11 @@ export async function updatePlace(formData: FormData) {
   const name = str(formData, "name");
   if (!id || !name) throw new Error("Nama tempat wajib diisi");
   const description = str(formData, "description");
+  // Lihat catatan di createPlace: `address` = stasiun metro, tidak diterjemahkan.
   const address = str(formData, "address");
   const en = await withEnglish(
-    { name: str(formData, "nameEn"), description: str(formData, "descriptionEn"), address: str(formData, "addressEn") },
-    { name, description, address },
+    { name: str(formData, "nameEn"), description: str(formData, "descriptionEn") },
+    { name, description },
   );
   await db
     .update(places)
@@ -128,10 +136,11 @@ export async function updatePlace(formData: FormData) {
       descriptionEn: en.description,
       address,
       addressZh: str(formData, "addressZh"),
-      addressEn: en.address,
       imageUrl: str(formData, "imageUrl"),
       mapUrl: str(formData, "mapUrl"),
-      orderIndex: num(formData, "orderIndex") ?? 0,
+      // orderIndex tidak ikut di-set: form tempat sudah tidak punya field
+      // "Urutan", jadi membacanya dari FormData cuma akan menimpa nilai lama
+      // dengan 0 di tiap penyimpanan. Lihat catatan di createPlace.
       published: bool(formData, "published"),
     })
     .where(eq(places.id, id));
