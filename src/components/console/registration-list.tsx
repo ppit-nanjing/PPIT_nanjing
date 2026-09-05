@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { CheckCircle2, TriangleAlert } from "lucide-react";
+import { CheckCircle2, TriangleAlert, ChevronRight } from "lucide-react";
 import { checkInRegistration } from "@/app/actions/admin-events";
 import { ProofView } from "@/components/console/proof-view";
 import { CHECK_IN_BLOCK_LABEL, CHECK_IN_BLOCK_MESSAGE, type CheckInBlock } from "@/lib/event-checkin";
@@ -53,6 +53,13 @@ const STATUS_LABEL: Record<Registration["status"], string> = {
   cancelled: "Dibatalkan",
 };
 
+const STATUS_STYLE: Record<Registration["status"], string> = {
+  pending: "bg-surface-container-low text-on-surface-variant",
+  confirmed: "bg-primary-container/10 text-primary-container",
+  attended: "bg-primary-container/10 text-primary-container",
+  cancelled: "bg-error-container/50 text-on-error-container",
+};
+
 export function RegistrationList({
   eventId,
   registrations,
@@ -63,11 +70,20 @@ export function RegistrationList({
   questions?: QuestionRef[];
 }) {
   const [isPending, startTransition] = useTransition();
-  // Satu banner error + id baris yang sedang diproses, dipakai bersama tabel
-  // dan tampilan mobile. Tanpa ini, kegagalan (mis. sesi habis saat admin
-  // meninggalkan tab) meledak ke error boundary dan menghapus posisi scroll.
   const [error, setError] = useState<string | null>(null);
   const [checkingId, setCheckingId] = useState<string | null>(null);
+  // Baris dibuka satu per satu — daftar pendaftar bisa panjang, jadi defaultnya
+  // semua tertutup dan admin cukup lihat nama dulu.
+  const [open, setOpen] = useState<Set<string>>(new Set());
+
+  const toggle = (id: string) =>
+    setOpen((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  const allOpen = registrations.length > 0 && registrations.every((r) => open.has(r.id));
 
   function checkIn(registrationId: string) {
     setError(null);
@@ -95,7 +111,7 @@ export function RegistrationList({
     if (r.checkInBlocked) {
       return (
         <span
-          className="flex items-center gap-1 text-label-caps text-on-surface-variant"
+          className="inline-flex items-center gap-1 text-label-caps text-on-surface-variant"
           title={CHECK_IN_BLOCK_MESSAGE[r.checkInBlocked]}
         >
           <TriangleAlert size={13} aria-hidden /> {CHECK_IN_BLOCK_LABEL[r.checkInBlocked]}
@@ -106,7 +122,7 @@ export function RegistrationList({
       <button
         onClick={() => checkIn(r.id)}
         disabled={isPending}
-        className="flex items-center gap-1 text-label-caps text-primary-container hover:text-primary disabled:opacity-50"
+        className="inline-flex items-center gap-1 text-label-caps text-primary-container hover:text-primary disabled:opacity-50"
       >
         <CheckCircle2 size={14} /> {checkingId === r.id ? "Memproses…" : "Check-in"}
       </button>
@@ -117,12 +133,8 @@ export function RegistrationList({
     return <p className="text-body-md text-on-surface-variant">Belum ada yang mendaftar.</p>;
   }
 
-  // Jawaban dirakit sekali per baris; pertanyaan yang sudah dihapus dari acara
-  // menyisakan kunci mati di answersJson - dilewati, bukan ditampilkan kosong.
   const answersOf = (r: Registration) =>
-    questions
-      .map((q) => ({ label: q.label, value: r.answers?.[q.id] ?? "" }))
-      .filter((a) => a.value);
+    questions.map((q) => ({ label: q.label, value: r.answers?.[q.id] ?? "" })).filter((a) => a.value);
 
   const biodataOf = (r: Registration) =>
     r.biodata
@@ -131,107 +143,102 @@ export function RegistrationList({
           .filter((b) => b.value)
       : [];
 
-  const AnswerList = ({ r }: { r: Registration }) => {
-    const answers = answersOf(r);
-    const biodata = biodataOf(r);
-    if (answers.length === 0 && biodata.length === 0) return null;
-    return (
-      <ul className="mt-2 flex flex-col gap-0.5">
-        {biodata.map((b) => (
-          <li
-            key={b.label}
-            className={`text-label-caps text-on-surface-variant ${b.key === "studentProofUrl" ? "flex items-center gap-1.5 flex-wrap" : ""}`}
-          >
-            {b.label}:{" "}
-            {/* ProofView cuma bikin <a href> untuk URL https:// / route /api/…
-                — nilai lain (javascript:, file://, path lokal) dirender sebagai
-                teks peringatan, tidak pernah jadi href. Server juga sudah
-                memvalidasinya saat pendaftaran. */}
-            {b.key === "studentProofUrl" ? (
-              <ProofView url={b.value} label={b.label} />
-            ) : (
-              <span className="text-on-background normal-case">{b.value}</span>
-            )}
-          </li>
-        ))}
-        {answers.map((a) => (
-          <li key={a.label} className="text-label-caps text-on-surface-variant">
-            {a.label}: <span className="text-on-background normal-case">{a.value}</span>
-          </li>
-        ))}
-      </ul>
-    );
-  };
-
   return (
-    <>
+    <div className="flex flex-col gap-2">
       {error && (
-        <p role="alert" className="flex items-center gap-2 bg-error-container/40 text-on-error-container text-body-md px-4 py-3 rounded-lg mb-3">
+        <p role="alert" className="flex items-center gap-2 rounded-lg bg-error-container/40 px-4 py-3 text-body-md text-on-error-container">
           <TriangleAlert size={16} aria-hidden /> {error}
         </p>
       )}
-      <div className="hidden sm:block bg-surface-container-lowest border border-outline-variant rounded-xl overflow-x-auto">
-        <table className="w-full text-body-md min-w-[480px]">
-          <thead className="bg-surface-container-low text-label-caps uppercase tracking-wide text-on-surface-variant">
-            <tr>
-              <th className="text-left px-5 py-3">Peserta</th>
-              <th className="text-left px-5 py-3">Asal</th>
-              <th className="text-left px-5 py-3">Status</th>
-              <th className="text-left px-5 py-3">Aksi</th>
-            </tr>
-          </thead>
-          <tbody>
-            {registrations.map((r) => (
-              <tr key={r.id} className="border-t border-outline-variant">
-                <td className="px-5 py-3">
-                  <p className="font-medium text-on-background">{r.userName ?? "(tanpa nama)"}</p>
-                  <p className="text-label-caps text-on-surface-variant">{r.userEmail}</p>
-                  {r.feeLabel && (
-                    <p className="text-label-caps text-on-surface-variant">Tarif: <span className="text-on-background normal-case">{r.feeLabel}</span></p>
-                  )}
-                  <AnswerList r={r} />
-                </td>
-                <td className="px-5 py-3">
-                  <p className="text-on-background">{r.branch ?? "—"}</p>
-                  <p className="text-label-caps text-on-surface-variant">{r.membership}</p>
-                </td>
-                <td className="px-5 py-3">
-                  <span className="text-label-caps uppercase tracking-wide bg-surface-container-low px-2 py-1 rounded">
-                    {STATUS_LABEL[r.status]}
-                  </span>
-                </td>
-                <td className="px-5 py-3">
-                  <CheckInButton r={r} />
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+
+      <div className="flex items-center justify-between">
+        <p className="text-label-caps uppercase tracking-wide text-on-surface-variant">
+          {registrations.length} pendaftar
+        </p>
+        <button
+          type="button"
+          onClick={() => setOpen(allOpen ? new Set() : new Set(registrations.map((r) => r.id)))}
+          className="text-label-caps uppercase tracking-wide text-primary-container hover:text-primary transition-colors"
+        >
+          {allOpen ? "Tutup semua" : "Buka semua"}
+        </button>
       </div>
 
-      <div className="sm:hidden flex flex-col gap-3">
-        {registrations.map((r) => (
-          <div key={r.id} className="bg-surface-container-lowest border border-outline-variant rounded-xl p-3 flex flex-col gap-2">
-            <div>
-              <p className="font-medium text-on-background">{r.userName ?? "(tanpa nama)"}</p>
-              <p className="text-label-caps text-on-surface-variant">{r.userEmail}</p>
-              <p className="text-label-caps text-on-surface-variant">
-                {r.branch ?? "—"} &middot; {r.membership}
-              </p>
-              {r.feeLabel && (
-                <p className="text-label-caps text-on-surface-variant">Tarif: <span className="text-on-background normal-case">{r.feeLabel}</span></p>
+      <ul className="flex flex-col gap-1.5 rounded-xl border border-outline-variant bg-surface-container-lowest overflow-hidden">
+        {registrations.map((r) => {
+          const isOpen = open.has(r.id);
+          const rows = [...biodataOf(r), ...answersOf(r).map((a) => ({ ...a, key: `q:${a.label}` }))];
+          return (
+            <li key={r.id} className="border-b border-outline-variant/60 last:border-0">
+              <button
+                type="button"
+                onClick={() => toggle(r.id)}
+                aria-expanded={isOpen}
+                className="flex w-full items-center gap-3 px-4 py-3 text-left hover:bg-surface-container-low/60 transition-colors"
+              >
+                <ChevronRight
+                  size={16}
+                  aria-hidden
+                  className={`shrink-0 text-on-surface-variant transition-transform ${isOpen ? "rotate-90" : ""}`}
+                />
+                <span className="min-w-0 flex-1">
+                  <span className="block truncate font-medium text-on-background">{r.userName ?? "(tanpa nama)"}</span>
+                  {!isOpen && (
+                    <span className="block truncate text-label-caps text-on-surface-variant">
+                      {[r.branch, r.membership].filter(Boolean).join(" · ")}
+                    </span>
+                  )}
+                </span>
+                <span className={`shrink-0 rounded px-2 py-1 text-label-caps uppercase tracking-wide ${STATUS_STYLE[r.status]}`}>
+                  {STATUS_LABEL[r.status]}
+                </span>
+              </button>
+
+              {isOpen && (
+                <div className="flex flex-col gap-2 px-4 pb-4 pl-11">
+                  <div className="flex flex-col gap-0.5 text-label-caps text-on-surface-variant">
+                    {r.userEmail && (
+                      <span>
+                        Email: <span className="text-on-background normal-case">{r.userEmail}</span>
+                      </span>
+                    )}
+                    <span>
+                      Asal: <span className="text-on-background normal-case">{[r.branch, r.membership].filter(Boolean).join(" · ") || "—"}</span>
+                    </span>
+                    {r.feeLabel && (
+                      <span>
+                        Tarif: <span className="text-on-background normal-case">{r.feeLabel}</span>
+                      </span>
+                    )}
+                    <span>
+                      Daftar:{" "}
+                      <span className="text-on-background normal-case">
+                        {new Date(r.registeredAt).toLocaleDateString("id-ID", { dateStyle: "medium" })}
+                      </span>
+                    </span>
+                    {rows.map((b) => (
+                      <span
+                        key={b.key}
+                        className={b.key === "studentProofUrl" ? "flex flex-wrap items-center gap-1.5" : undefined}
+                      >
+                        {b.label}:{" "}
+                        {b.key === "studentProofUrl" ? (
+                          <ProofView url={b.value} label={b.label} />
+                        ) : (
+                          <span className="text-on-background normal-case">{b.value}</span>
+                        )}
+                      </span>
+                    ))}
+                  </div>
+                  <div>
+                    <CheckInButton r={r} />
+                  </div>
+                </div>
               )}
-              <AnswerList r={r} />
-            </div>
-            <div className="flex items-center justify-between gap-2">
-              <span className="text-label-caps uppercase tracking-wide bg-surface-container-low px-2 py-1 rounded">
-                {STATUS_LABEL[r.status]}
-              </span>
-              <CheckInButton r={r} />
-            </div>
-          </div>
-        ))}
-      </div>
-    </>
+            </li>
+          );
+        })}
+      </ul>
+    </div>
   );
 }

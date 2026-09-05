@@ -156,12 +156,20 @@ export default async function EventTicketPage({ params }: { params: Promise<{ sl
 
         {hasFee && (
           <div className="bg-surface-container-lowest border border-outline-variant rounded-xl p-6 mt-6 text-left">
-            <h2 className="text-headline-sm text-on-background mb-2">Pembayaran</h2>
-            <p className="text-body-md text-on-background mb-1">
-              {feeAmount != null
-                ? `Biaya: ¥${feeAmount}${feeOption ? ` · ${feeOption.label}` : ""}`
-                : "Nominal biaya belum ditentukan, tunggu info dari panitia."}
-            </p>
+            <h2 className="text-headline-sm text-on-background mb-3">Pembayaran</h2>
+            {feeAmount != null ? (
+              <div className="mb-4 rounded-lg bg-primary-container/10 px-4 py-3">
+                <p className="text-label-caps uppercase tracking-wide text-on-surface-variant">Yang harus kamu bayar</p>
+                <p className="text-headline-md text-on-background">
+                  ¥{feeAmount}
+                  {feeOption ? <span className="text-body-md text-on-surface-variant"> · {feeOption.label}</span> : null}
+                </p>
+              </div>
+            ) : (
+              <p className="mb-4 text-body-md text-on-surface-variant">
+                Nominal biaya belum ditentukan, tunggu info dari panitia.
+              </p>
+            )}
             {event.paymentInstructions && (
               <p className="text-body-sm text-on-surface-variant whitespace-pre-line mb-4">{event.paymentInstructions}</p>
             )}
