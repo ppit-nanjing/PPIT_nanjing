@@ -29,8 +29,9 @@ const STOCK = 5;
 
 // Satu pengajuan contoh (peminjam EKSTERNAL / pihak luar) supaya antrean konsol
 // langsung ada isinya tanpa harus lewat form dulu. quantity < STOCK biar masih
-// bisa disetujui. statementUrl sengaja NULL — konsol akan menampilkan peringatan
-// "berkas tidak valid", itu memang salah satu hal yang perlu dicek.
+// bisa disetujui. statementUrl menunjuk ke berkas contoh statis di
+// public/contoh-pernyataan-peminjam.jpg — di konsol akan muncul thumbnail
+// "Pernyataan Peminjam" + tombol Buka/Unduh, persis seperti unggahan asli.
 const SAMPLE_REQUEST = {
   borrowerName: "[UJI COBA] Peminjam Tes",
   borrowerEmail: "uji.coba@example.com",
@@ -39,6 +40,7 @@ const SAMPLE_REQUEST = {
   quantity: 2,
   purpose: "[UJI COBA] Menguji alur persetujuan di konsol — bukan peminjaman sungguhan.",
   usageLocation: "Sekretariat PPIT Nanjing (uji coba)",
+  statementUrl: "/contoh-pernyataan-peminjam.jpg",
 } as const;
 
 // Rentang tanggal pengajuan contoh: mulai besok, 7 hari.
@@ -105,7 +107,6 @@ async function seed() {
       ...SAMPLE_REQUEST,
       requestedFrom: dateStr(1),
       requestedTo: dateStr(8),
-      statementUrl: null,
       status: "pending",
     });
     console.log("Pengajuan contoh (pihak luar, status: pending) dibuat.");
