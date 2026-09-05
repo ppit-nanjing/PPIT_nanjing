@@ -21,6 +21,11 @@ type Props = {
   autoUpload?: boolean;
   // Helper text shown under the label - recommended resolution/ratio guidance.
   hint?: string;
+  // Default true: gambar di-downscale + re-encode WebP di browser sebelum
+  // diunggah (hemat storage/bandwidth). Set false kalau berkas asli harus
+  // dipertahankan apa adanya - mis. Pernyataan Peminjam bertanda tangan yang
+  // jadi arsip bukti; pratinjau tetap ringan lewat next/image.
+  compressImages?: boolean;
 };
 
 export function FileUpload({
@@ -34,6 +39,7 @@ export function FileUpload({
   allowPaste = true,
   autoUpload = false,
   hint,
+  compressImages = true,
 }: Props) {
   const t = useT();
   const [value, setValue] = useState(defaultValue ?? "");
@@ -76,7 +82,7 @@ export function FileUpload({
       // through byte-for-byte.
       let payload = chosen as Blob;
       let name = chosen.name;
-      if (chosen.type.startsWith("image/") && chosen.type !== "image/gif") {
+      if (compressImages && chosen.type.startsWith("image/") && chosen.type !== "image/gif") {
         payload = await compressImage(chosen);
         const ext = payload.type === "image/webp" ? "webp" : "jpg";
         const base = name.replace(/\.[^.]+$/, "") || "image";

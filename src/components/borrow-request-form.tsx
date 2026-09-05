@@ -222,6 +222,7 @@ export function BorrowRequestForm({
               folder="borrow-doc"
               required
               autoUpload
+              compressImages={false}
               accept="application/pdf,.doc,.docx,image/*"
               hint={t("inventory.form.statementHint")}
             />
