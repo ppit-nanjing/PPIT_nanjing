@@ -62,11 +62,8 @@ export default async function PlacesPage({
         ? and(eq(places.published, true), eq(places.category, valid as "tourism"))
         : eq(places.published, true),
     )
-    // Abjad distrik, lalu abjad nama - tempat yang sedistrik selalu berdekatan
-    // tanpa perlu diatur admin. Distrik null jatuh ke akhir (default NULLS LAST
-    // Postgres). Ini sudah urutan final untuk tab "Semua": distriknya menaik
-    // lurus dari atas ke bawah, tidak mengulang per kategori.
-    .orderBy(asc(places.district), asc(places.name));
+    // Abjad nama tempat.
+    .orderBy(asc(places.name));
 
   // Saat satu kategori difilter, semua baris sudah sekategori - jadi tidak ada
   // pengurutan kategori di sini sama sekali. Mengelompokkan per kategori di tab
