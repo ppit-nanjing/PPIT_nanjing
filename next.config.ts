@@ -70,7 +70,7 @@ function securityHeaders(cameraPolicy: string) {
     },
     {
       key: "Permissions-Policy",
-      value: `camera=${cameraPolicy}, microphone=(), geolocation=(), browsing-topics=()`,
+      value: `camera=${cameraPolicy}, microphone=(), geolocation=()`,
     },
   ];
 }
