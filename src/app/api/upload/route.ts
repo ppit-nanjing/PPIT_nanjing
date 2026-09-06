@@ -56,6 +56,13 @@ const FOLDER_MODULE: Record<string, AdminModule | null> = {
 // lain (allowlist tipe, batas 10 MB, cek origin, nama diacak) tetap berlaku.
 const ANON_FOLDERS = new Set(["borrow-doc"]);
 
+// Batasan tipe per folder yang lebih ketat dari ALLOWED_TYPES umum. "borrow-doc"
+// hanya PDF: peminjam mengekspor Word ke PDF sebelum unggah, dan konsol
+// menampilkan pratinjau PDF inline (bukan gambar/office).
+const FOLDER_TYPES: Record<string, readonly string[]> = {
+  "borrow-doc": ["application/pdf"],
+};
+
 export async function POST(req: NextRequest) {
   const session = await auth();
 
@@ -89,7 +96,8 @@ export async function POST(req: NextRequest) {
       { errorKey: "upload.errTooLarge", vars: { mb: MAX_BYTES / 1024 / 1024 } },
       { status: 413 },
     );
-  if (!ALLOWED_TYPES.includes(file.type)) return NextResponse.json({ errorKey: "upload.errType" }, { status: 415 });
+  const allowedTypes = FOLDER_TYPES[folder] ?? ALLOWED_TYPES;
+  if (!allowedTypes.includes(file.type)) return NextResponse.json({ errorKey: "upload.errType" }, { status: 415 });
 
   if (!process.env.BLOB_READ_WRITE_TOKEN) {
     // The Vercel Blob store + BLOB_READ_WRITE_TOKEN aren't provisioned yet

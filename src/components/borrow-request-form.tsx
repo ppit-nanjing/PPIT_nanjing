@@ -223,7 +223,7 @@ export function BorrowRequestForm({
               required
               autoUpload
               compressImages={false}
-              accept="application/pdf,.doc,.docx,image/*"
+              accept="application/pdf"
               hint={t("inventory.form.statementHint")}
             />
           </div>

@@ -29,9 +29,11 @@ const STOCK = 5;
 
 // Satu pengajuan contoh (peminjam EKSTERNAL / pihak luar) supaya antrean konsol
 // langsung ada isinya tanpa harus lewat form dulu. quantity < STOCK biar masih
-// bisa disetujui. statementUrl menunjuk ke berkas contoh statis di
-// public/contoh-pernyataan-peminjam.jpg — di konsol akan muncul thumbnail
-// "Pernyataan Peminjam" + tombol Buka/Unduh, persis seperti unggahan asli.
+// bisa disetujui. statementUrl menunjuk ke PDF contoh statis di
+// public/contoh-pernyataan-peminjam.pdf — di konsol muncul tombol Buka + Unduh.
+// (Tombol "Pratinjau" iframe cuma untuk URL blob; berkas /public kena
+// X-Frame-Options global. Unggahan asli selalu blob, jadi di produksi
+// pratinjau-nya jalan.)
 const SAMPLE_REQUEST = {
   borrowerName: "[UJI COBA] Peminjam Tes",
   borrowerEmail: "uji.coba@example.com",
@@ -40,7 +42,7 @@ const SAMPLE_REQUEST = {
   quantity: 2,
   purpose: "[UJI COBA] Menguji alur persetujuan di konsol — bukan peminjaman sungguhan.",
   usageLocation: "Sekretariat PPIT Nanjing (uji coba)",
-  statementUrl: "/contoh-pernyataan-peminjam.jpg",
+  statementUrl: "/contoh-pernyataan-peminjam.pdf",
 } as const;
 
 // Rentang tanggal pengajuan contoh: mulai besok, 7 hari.
