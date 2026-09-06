@@ -9,7 +9,7 @@ import { publishDueEvents } from "@/lib/publish-events";
 import { DeleteEventButton } from "@/components/console/delete-event-button";
 import { RegistrationList } from "@/components/console/registration-list";
 import { EventCommitteeStructure } from "@/components/console/event-committee-structure";
-import { listEventDivisions, updatePaymentStatus, issueParticipantCertificates } from "@/app/actions/committee";
+import { listEventDivisions, issueParticipantCertificates } from "@/app/actions/committee";
 import { requireModuleAccess, hasModuleAccess } from "@/lib/admin-scope";
 import { ImageUploadCropper } from "@/components/upload/image-upload-cropper";
 import { EventThemeFields } from "@/components/console/event-theme-fields";
@@ -18,11 +18,10 @@ import { AIReviewButton } from "@/components/ai/ai-review-popup";
 import { CollapsibleSection } from "@/components/console/collapsible-section";
 import { HtmFields } from "@/components/console/htm-fields";
 import { Select, CheckboxField, CheckField } from "@/components/console/form";
-import { PAYMENT_STATUS_LABEL } from "@/lib/payment-status-labels";
+import { PaymentVerificationList } from "@/components/console/payment-verification-list";
 import { checkInBlockReason } from "@/lib/event-checkin";
 import { toDateLocalInput } from "@/lib/datetime";
 import { ConfirmButton } from "@/components/console/confirm-button";
-import { ProofView } from "@/components/console/proof-view";
 import { Download } from "lucide-react";
 
 const QUESTION_TYPE_LABELS: Record<string, string> = {
@@ -702,65 +701,9 @@ export default async function ConsoleEventDetailPage({ params }: { params: Promi
                 <li><strong className="text-on-background">Nama pengirim</strong> cocok dengan peserta</li>
                 <li><strong className="text-on-background">Waktu transfer</strong> setelah tanggal daftar</li>
               </ul>
-              <ul className="bg-surface-container-lowest border border-outline-variant rounded-xl px-4">
-                {pendingPayments.length === 0 ? (
-                  <li className="py-4 text-body-md text-on-surface-variant">Belum ada laporan pembayaran.</li>
-                ) : (
-                  pendingPayments.map((p) => (
-                    <li key={p.id} className="border-b border-outline-variant/60 py-4 last:border-0">
-                      <div className="flex flex-col gap-2">
-                        <div className="min-w-0">
-                          <p className="text-body-md text-on-background">{p.name ?? "(tanpa nama)"}</p>
-                          <p className="text-label-caps text-on-surface-variant">
-                            {p.email} · {PAYMENT_STATUS_LABEL[p.status] ?? p.status}
-                          </p>
-                          {(p.expected != null || p.feeLabel) && (
-                            <p className="text-label-caps text-on-background">
-                              Wajib bayar: {p.expected != null ? `¥${p.expected}` : "—"}
-                              {p.feeLabel ? ` · ${p.feeLabel}` : ""}
-                            </p>
-                          )}
-                          {p.note && <p className="text-body-sm text-on-surface-variant mt-1">{p.note}</p>}
-                          {p.proofUrl && (
-                            <div className="mt-1.5 text-label-caps">
-                              <ProofView url={p.proofUrl} label="Bukti transfer" />
-                            </div>
-                          )}
-                        </div>
-                        <form action={updatePaymentStatus} className="flex flex-col gap-2">
-                          <input type="hidden" name="id" value={p.id} />
-                          <input
-                            name="note"
-                            defaultValue={p.note ?? ""}
-                            placeholder="Catatan (opsional)"
-                            className="bg-soft-gray rounded-md p-2 text-body-md w-full"
-                          />
-                          <div className="flex items-center gap-2">
-                            <Select
-                              name="paymentStatus"
-                              defaultValue={p.status}
-                              className="flex-1"
-                              aria-label="Status pembayaran"
-                              options={[
-                                { value: "unpaid", label: "Belum Bayar" },
-                                { value: "submitted", label: "Menunggu Verifikasi" },
-                                { value: "verified", label: "Terverifikasi" },
-                                { value: "rejected", label: "Ditolak" },
-                              ]}
-                            />
-                            <button
-                              type="submit"
-                              className="bg-primary-container text-on-primary text-label-caps uppercase tracking-wide px-4 py-2 rounded-md hover:bg-primary transition-colors"
-                            >
-                              Simpan
-                            </button>
-                          </div>
-                        </form>
-                      </div>
-                    </li>
-                  ))
-                )}
-              </ul>
+              <PaymentVerificationList
+                payments={pendingPayments.map((p) => ({ ...p, registeredAt: p.registeredAt.toISOString() }))}
+              />
             </CollapsibleSection>
           )}
 
