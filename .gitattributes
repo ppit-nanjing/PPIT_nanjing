@@ -1,0 +1,17 @@
+# Binary assets — never apply autocrlf / text normalisation. A hand-written PDF
+# can be all-ASCII with no NUL bytes, so git's heuristic misclassifies it as
+# text and a LF->CRLF checkout on Windows corrupts the xref offsets.
+*.pdf   binary
+*.docx  binary
+*.doc   binary
+*.xlsx  binary
+*.xls   binary
+*.pptx  binary
+*.webp  binary
+*.png   binary
+*.jpg   binary
+*.jpeg  binary
+*.gif   binary
+*.ico   binary
+*.woff  binary
+*.woff2 binary
