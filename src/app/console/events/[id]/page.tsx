@@ -4,7 +4,7 @@ import { db } from "@/db";
 import { certificates, events, eventDivisions, eventFeeOptions, eventQuestions, eventRegistrations, eventVolunteers, galleryAlbums, sensusProfiles, users } from "@/db/schema";
 import { MEMBERSHIP_LABEL, effectiveBranch, membershipStatus } from "@/lib/membership-status";
 import { updateEvent, saveEventQuestion, deleteEventQuestion, saveFeeOption, deleteFeeOption } from "@/app/actions/admin-events";
-import { setVolunteerStatus } from "@/app/actions/volunteers";
+import { VolunteerApplicationList } from "@/components/console/volunteer-application-list";
 import { publishDueEvents } from "@/lib/publish-events";
 import { DeleteEventButton } from "@/components/console/delete-event-button";
 import { RegistrationList } from "@/components/console/registration-list";
@@ -724,69 +724,18 @@ export default async function ConsoleEventDetailPage({ params }: { params: Promi
                 &quot;Buka pendaftaran volunteer&quot; di form Edit.
               </p>
             )}
-            {volunteerApps.length === 0 ? (
-              <p className="text-body-md text-on-surface-variant">Belum ada yang melamar.</p>
-            ) : (
-              <ul className="flex flex-col gap-3">
-                {volunteerApps.map((v) => {
-                  const STATUS: Record<string, string> = {
-                    pending: "Menunggu",
-                    approved: "Diterima",
-                    rejected: "Ditolak",
-                  };
-                  const CHIP: Record<string, string> = {
-                    pending: "bg-surface-container-low text-on-surface-variant",
-                    approved: "bg-primary-container/10 text-primary-container",
-                    rejected: "bg-error-container text-on-error-container",
-                  };
-                  return (
-                    <li key={v.app.id} className="bg-surface-container-lowest border border-outline-variant rounded-lg p-3">
-                      <div className="flex flex-wrap items-start justify-between gap-2">
-                        <div className="min-w-0">
-                          <p className="text-body-md font-medium text-on-background">{v.app.fullName}</p>
-                          <p className="text-label-caps text-on-surface-variant break-all">
-                            {v.app.email}
-                            {v.app.whatsapp ? ` · ${v.app.whatsapp}` : ""}
-                          </p>
-                          <p className="text-label-caps text-on-surface-variant">
-                            minat: {v.divisionName ?? "bebas"}
-                            {v.app.status === "approved" && v.accountName ? ` · akun: ${v.accountName}` : ""}
-                          </p>
-                          {v.app.note && <p className="text-body-sm text-on-surface-variant mt-1">{v.app.note}</p>}
-                        </div>
-                        <span className={`text-label-caps uppercase tracking-wide px-2.5 py-1 rounded shrink-0 ${CHIP[v.app.status]}`}>
-                          {STATUS[v.app.status]}
-                        </span>
-                      </div>
-                      {v.app.status === "pending" && (
-                        <div className="flex gap-2 mt-3">
-                          <form action={setVolunteerStatus} className="flex-1">
-                            <input type="hidden" name="id" value={v.app.id} />
-                            <input type="hidden" name="decision" value="approved" />
-                            <button
-                              type="submit"
-                              className="w-full bg-primary-container text-on-primary text-label-caps uppercase tracking-wide px-3 py-1.5 rounded-md hover:bg-primary transition-colors"
-                            >
-                              Terima
-                            </button>
-                          </form>
-                          <ConfirmButton
-                            title="Tolak lamaran?"
-                            message={`Lamaran volunteer ${v.app.fullName} akan ditandai ditolak.`}
-                            confirmLabel="Ya, tolak"
-                            action={setVolunteerStatus}
-                            payload={{ id: v.app.id, decision: "rejected" }}
-                            className="w-full flex-1 text-label-caps uppercase tracking-wide text-error border border-error/40 px-3 py-1.5 rounded-md hover:bg-error-container/30 transition-colors"
-                          >
-                            Tolak
-                          </ConfirmButton>
-                        </div>
-                      )}
-                    </li>
-                  );
-                })}
-              </ul>
-            )}
+            <VolunteerApplicationList
+              applications={volunteerApps.map((v) => ({
+                id: v.app.id,
+                fullName: v.app.fullName,
+                email: v.app.email,
+                whatsapp: v.app.whatsapp,
+                note: v.app.note,
+                status: v.app.status,
+                divisionName: v.divisionName,
+                accountName: v.accountName,
+              }))}
+            />
           </CollapsibleSection>
         </aside>
       </div>

@@ -1,8 +1,9 @@
 "use client";
 
 import { useTransition } from "react";
-import { reviewProcurement } from "@/app/actions/procurement";
 import Image from "next/image";
+import { reviewProcurement } from "@/app/actions/procurement";
+import { CollapsibleRecordList, type BadgeTone } from "@/components/console/collapsible-record-list";
 
 type Request = {
   id: string;
@@ -16,28 +17,42 @@ type Request = {
   userName: string | null;
 };
 
-const STATUS_LABEL: Record<string, string> = {
+const STATUS_LABEL: Record<Request["status"], string> = {
   pending: "Menunggu",
   approved: "Disetujui",
   rejected: "Ditolak",
   fulfilled: "Terpenuhi",
 };
 
+const STATUS_TONE: Record<Request["status"], BadgeTone> = {
+  pending: "info",
+  approved: "info",
+  rejected: "danger",
+  fulfilled: "success",
+};
+
 export function ProcurementReview({ requests }: { requests: Request[] }) {
   const [pending, startTransition] = useTransition();
 
-  if (requests.length === 0) {
-    return <p className="text-body-md text-on-surface-variant">Belum ada usulan pengadaan.</p>;
-  }
-
   return (
-    <div className="flex flex-col gap-4">
-      {requests.map((r) => (
-        <form
-          key={r.id}
-          action={(fd) => startTransition(() => reviewProcurement(fd))}
-          className="bg-surface-container-low border border-outline-variant rounded-lg p-5 flex flex-col gap-3"
-        >
+    <CollapsibleRecordList
+      records={requests}
+      countLabel={(n) => `${n} usulan`}
+      emptyText="Belum ada usulan pengadaan."
+      defaultOpen={(r) => r.status === "pending"}
+      renderSummary={(r) => ({
+        title: r.itemName,
+        subtitle: [
+          `Urgensi: ${r.urgency}`,
+          r.estimatedCost != null ? `~RMB ${r.estimatedCost}` : null,
+          r.userName ? `oleh ${r.userName}` : null,
+        ]
+          .filter(Boolean)
+          .join(" · "),
+        badge: { text: STATUS_LABEL[r.status], tone: STATUS_TONE[r.status] },
+      })}
+      renderDetail={(r) => (
+        <form action={(fd) => startTransition(() => reviewProcurement(fd))} className="flex flex-col gap-3">
           <input type="hidden" name="id" value={r.id} />
           <div className="flex gap-4">
             {r.imageUrl && (
@@ -46,58 +61,63 @@ export function ProcurementReview({ requests }: { requests: Request[] }) {
                 alt={r.itemName}
                 width={96}
                 height={96}
-                className="w-24 h-24 object-cover rounded-md border border-outline-variant shrink-0"
+                className="h-24 w-24 shrink-0 rounded-md border border-outline-variant object-cover"
               />
             )}
-            <div className="min-w-0">
-              <p className="text-body-md font-semibold text-on-background">{r.itemName}</p>
-              <p className="text-label-caps text-on-surface-variant">
-                {STATUS_LABEL[r.status]} &middot; Urgensi: {r.urgency}
-                {r.estimatedCost != null ? ` &middot; ~RMB ${r.estimatedCost}` : ""}
-                {r.category ? ` &middot; ${r.category}` : ""}
+            <div className="min-w-0 text-label-caps text-on-surface-variant">
+              <p>
+                Urgensi: <span className="text-on-background normal-case">{r.urgency}</span>
+                {r.estimatedCost != null ? ` · ~RMB ${r.estimatedCost}` : ""}
+                {r.category ? ` · ${r.category}` : ""}
               </p>
-              {r.justification && <p className="text-body-md text-on-surface-variant mt-1">{r.justification}</p>}
-              {r.userName && <p className="text-label-caps text-on-surface-variant">Diusulkan oleh: {r.userName}</p>}
+              {r.userName && (
+                <p>
+                  Diusulkan oleh: <span className="text-on-background normal-case">{r.userName}</span>
+                </p>
+              )}
+              {r.justification && <p className="mt-1 text-body-md normal-case text-on-surface-variant">{r.justification}</p>}
             </div>
           </div>
 
-          <div className="flex gap-3 flex-wrap">
-            {r.status === "pending" && (
-              <>
+          {(r.status === "pending" || r.status === "approved") && (
+            <div className="flex flex-wrap gap-3">
+              {r.status === "pending" && (
+                <>
+                  <button
+                    type="submit"
+                    name="decision"
+                    value="approve"
+                    disabled={pending}
+                    className="rounded-md bg-primary-container px-5 py-2.5 text-label-caps uppercase tracking-wide text-on-primary transition-colors hover:bg-primary disabled:opacity-60 motion-reduce:transition-none"
+                  >
+                    Setujui
+                  </button>
+                  <button
+                    type="submit"
+                    name="decision"
+                    value="reject"
+                    disabled={pending}
+                    className="rounded-md border border-outline-variant px-5 py-2.5 text-label-caps uppercase tracking-wide text-secondary transition-colors hover:text-on-background disabled:opacity-60 motion-reduce:transition-none"
+                  >
+                    Tolak
+                  </button>
+                </>
+              )}
+              {r.status === "approved" && (
                 <button
                   type="submit"
                   name="decision"
-                  value="approve"
+                  value="fulfill"
                   disabled={pending}
-                  className="bg-primary-container text-on-primary text-label-caps uppercase tracking-wide px-5 py-2.5 rounded-md hover:bg-primary transition-colors disabled:opacity-60"
+                  className="rounded-md bg-primary-container px-5 py-2.5 text-label-caps uppercase tracking-wide text-on-primary transition-colors hover:bg-primary disabled:opacity-60 motion-reduce:transition-none"
                 >
-                  Setujui
+                  Tandai Terpenuhi
                 </button>
-                <button
-                  type="submit"
-                  name="decision"
-                  value="reject"
-                  disabled={pending}
-                  className="text-label-caps uppercase tracking-wide px-5 py-2.5 rounded-md border border-outline-variant text-secondary hover:text-on-background transition-colors disabled:opacity-60"
-                >
-                  Tolak
-                </button>
-              </>
-            )}
-            {r.status === "approved" && (
-              <button
-                type="submit"
-                name="decision"
-                value="fulfill"
-                disabled={pending}
-                className="bg-primary-container text-on-primary text-label-caps uppercase tracking-wide px-5 py-2.5 rounded-md hover:bg-primary transition-colors disabled:opacity-60"
-              >
-                Tandai Terpenuhi
-              </button>
-            )}
-          </div>
+              )}
+            </div>
+          )}
         </form>
-      ))}
-    </div>
+      )}
+    />
   );
 }

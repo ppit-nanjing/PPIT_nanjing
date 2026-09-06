@@ -1,10 +1,11 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { CheckCircle2, TriangleAlert, ChevronRight } from "lucide-react";
+import { CheckCircle2, TriangleAlert } from "lucide-react";
 import { checkInRegistration } from "@/app/actions/admin-events";
 import { ProofView } from "@/components/console/proof-view";
 import { CHECK_IN_BLOCK_LABEL, CHECK_IN_BLOCK_MESSAGE, type CheckInBlock } from "@/lib/event-checkin";
+import { CollapsibleRecordList, type BadgeTone } from "@/components/console/collapsible-record-list";
 
 interface Registration {
   id: string;
@@ -53,11 +54,11 @@ const STATUS_LABEL: Record<Registration["status"], string> = {
   cancelled: "Dibatalkan",
 };
 
-const STATUS_STYLE: Record<Registration["status"], string> = {
-  pending: "bg-surface-container-low text-on-surface-variant",
-  confirmed: "bg-primary-container/10 text-primary-container",
-  attended: "bg-primary-container/10 text-primary-container",
-  cancelled: "bg-error-container/50 text-on-error-container",
+const STATUS_TONE: Record<Registration["status"], BadgeTone> = {
+  pending: "neutral",
+  confirmed: "info",
+  attended: "success",
+  cancelled: "danger",
 };
 
 export function RegistrationList({
@@ -72,18 +73,6 @@ export function RegistrationList({
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
   const [checkingId, setCheckingId] = useState<string | null>(null);
-  // Baris dibuka satu per satu — daftar pendaftar bisa panjang, jadi defaultnya
-  // semua tertutup dan admin cukup lihat nama dulu.
-  const [open, setOpen] = useState<Set<string>>(new Set());
-
-  const toggle = (id: string) =>
-    setOpen((prev) => {
-      const next = new Set(prev);
-      if (next.has(id)) next.delete(id);
-      else next.add(id);
-      return next;
-    });
-  const allOpen = registrations.length > 0 && registrations.every((r) => open.has(r.id));
 
   function checkIn(registrationId: string) {
     setError(null);
@@ -129,10 +118,6 @@ export function RegistrationList({
     );
   };
 
-  if (registrations.length === 0) {
-    return <p className="text-body-md text-on-surface-variant">Belum ada yang mendaftar.</p>;
-  }
-
   const answersOf = (r: Registration) =>
     questions.map((q) => ({ label: q.label, value: r.answers?.[q.id] ?? "" })).filter((a) => a.value);
 
@@ -144,101 +129,67 @@ export function RegistrationList({
       : [];
 
   return (
-    <div className="flex flex-col gap-2">
-      {error && (
-        <p role="alert" className="flex items-center gap-2 rounded-lg bg-error-container/40 px-4 py-3 text-body-md text-on-error-container">
-          <TriangleAlert size={16} aria-hidden /> {error}
-        </p>
-      )}
-
-      <div className="flex items-center justify-between">
-        <p className="text-label-caps uppercase tracking-wide text-on-surface-variant">
-          {registrations.length} pendaftar
-        </p>
-        <button
-          type="button"
-          onClick={() => setOpen(allOpen ? new Set() : new Set(registrations.map((r) => r.id)))}
-          className="text-label-caps uppercase tracking-wide text-primary-container hover:text-primary transition-colors"
-        >
-          {allOpen ? "Tutup semua" : "Buka semua"}
-        </button>
-      </div>
-
-      <ul className="flex flex-col gap-1.5 rounded-xl border border-outline-variant bg-surface-container-lowest overflow-hidden">
-        {registrations.map((r) => {
-          const isOpen = open.has(r.id);
-          const rows = [...biodataOf(r), ...answersOf(r).map((a) => ({ ...a, key: `q:${a.label}` }))];
-          return (
-            <li key={r.id} className="border-b border-outline-variant/60 last:border-0">
-              <button
-                type="button"
-                onClick={() => toggle(r.id)}
-                aria-expanded={isOpen}
-                className="flex w-full items-center gap-3 px-4 py-3 text-left hover:bg-surface-container-low/60 transition-colors"
-              >
-                <ChevronRight
-                  size={16}
-                  aria-hidden
-                  className={`shrink-0 text-on-surface-variant transition-transform ${isOpen ? "rotate-90" : ""}`}
-                />
-                <span className="min-w-0 flex-1">
-                  <span className="block truncate font-medium text-on-background">{r.userName ?? "(tanpa nama)"}</span>
-                  {!isOpen && (
-                    <span className="block truncate text-label-caps text-on-surface-variant">
-                      {[r.branch, r.membership].filter(Boolean).join(" · ")}
-                    </span>
+    <CollapsibleRecordList
+      records={registrations}
+      countLabel={(n) => `${n} pendaftar`}
+      emptyText="Belum ada yang mendaftar."
+      banner={
+        error ? (
+          <p role="alert" className="flex items-center gap-2 rounded-lg bg-error-container/40 px-4 py-3 text-body-md text-on-error-container">
+            <TriangleAlert size={16} aria-hidden /> {error}
+          </p>
+        ) : null
+      }
+      renderSummary={(r) => ({
+        title: r.userName ?? "(tanpa nama)",
+        subtitle: [r.branch, r.membership].filter(Boolean).join(" · "),
+        badge: { text: STATUS_LABEL[r.status], tone: STATUS_TONE[r.status] },
+      })}
+      renderDetail={(r) => {
+        const rows = [...biodataOf(r), ...answersOf(r).map((a) => ({ ...a, key: `q:${a.label}` }))];
+        return (
+          <>
+            <div className="flex flex-col gap-0.5 text-label-caps text-on-surface-variant">
+              {r.userEmail && (
+                <span className="break-all normal-case">{r.userEmail}</span>
+              )}
+              <span>
+                Asal:{" "}
+                <span className="text-on-background normal-case">
+                  {[r.branch, r.membership].filter(Boolean).join(" · ") || "—"}
+                </span>
+              </span>
+              {r.feeLabel && (
+                <span>
+                  Tarif: <span className="text-on-background normal-case">{r.feeLabel}</span>
+                </span>
+              )}
+              <span>
+                Daftar:{" "}
+                <span className="text-on-background normal-case">
+                  {new Date(r.registeredAt).toLocaleDateString("id-ID", { dateStyle: "medium" })}
+                </span>
+              </span>
+              {rows.map((b) => (
+                <span
+                  key={b.key}
+                  className={b.key === "studentProofUrl" ? "flex flex-wrap items-center gap-1.5" : undefined}
+                >
+                  {b.label}:{" "}
+                  {b.key === "studentProofUrl" ? (
+                    <ProofView url={b.value} label={b.label} />
+                  ) : (
+                    <span className="text-on-background normal-case">{b.value}</span>
                   )}
                 </span>
-                <span className={`shrink-0 rounded px-2 py-1 text-label-caps uppercase tracking-wide ${STATUS_STYLE[r.status]}`}>
-                  {STATUS_LABEL[r.status]}
-                </span>
-              </button>
-
-              {isOpen && (
-                <div className="flex flex-col gap-2 px-4 pb-4 pl-11">
-                  <div className="flex flex-col gap-0.5 text-label-caps text-on-surface-variant">
-                    {r.userEmail && (
-                      <span>
-                        Email: <span className="text-on-background normal-case">{r.userEmail}</span>
-                      </span>
-                    )}
-                    <span>
-                      Asal: <span className="text-on-background normal-case">{[r.branch, r.membership].filter(Boolean).join(" · ") || "—"}</span>
-                    </span>
-                    {r.feeLabel && (
-                      <span>
-                        Tarif: <span className="text-on-background normal-case">{r.feeLabel}</span>
-                      </span>
-                    )}
-                    <span>
-                      Daftar:{" "}
-                      <span className="text-on-background normal-case">
-                        {new Date(r.registeredAt).toLocaleDateString("id-ID", { dateStyle: "medium" })}
-                      </span>
-                    </span>
-                    {rows.map((b) => (
-                      <span
-                        key={b.key}
-                        className={b.key === "studentProofUrl" ? "flex flex-wrap items-center gap-1.5" : undefined}
-                      >
-                        {b.label}:{" "}
-                        {b.key === "studentProofUrl" ? (
-                          <ProofView url={b.value} label={b.label} />
-                        ) : (
-                          <span className="text-on-background normal-case">{b.value}</span>
-                        )}
-                      </span>
-                    ))}
-                  </div>
-                  <div>
-                    <CheckInButton r={r} />
-                  </div>
-                </div>
-              )}
-            </li>
-          );
-        })}
-      </ul>
-    </div>
+              ))}
+            </div>
+            <div>
+              <CheckInButton r={r} />
+            </div>
+          </>
+        );
+      }}
+    />
   );
 }
