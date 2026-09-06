@@ -4,11 +4,19 @@ import { db } from "@/db";
 import { newsArticles, users } from "@/db/schema";
 import { requireModuleAccess } from "@/lib/admin-scope";
 import { emailSenderStatus } from "@/lib/email";
-import { upsertNewsArticle } from "@/app/actions/admin-content";
+import { upsertNewsArticle, setNewsArticleStatus } from "@/app/actions/admin-content";
 import { NewsArticleForm } from "@/components/console/news-article-form";
+import { ConfirmButton } from "@/components/console/confirm-button";
+import { DeleteNewsButton } from "@/components/console/delete-news-button";
 import { getSiteUrl } from "@/lib/site-url";
 import { ArrowLeft, ExternalLink } from "lucide-react";
 import Link from "next/link";
+
+const STATUS_LABEL: Record<string, string> = {
+  draft: "Draf",
+  published: "Dipublikasikan",
+  archived: "Arsip",
+};
 
 export default async function EditNewsArticlePage({ params }: { params: Promise<{ id: string }> }) {
   await requireModuleAccess("content");
@@ -20,6 +28,7 @@ export default async function EditNewsArticlePage({ params }: { params: Promise<
     .from(users)
     .where(and(eq(users.emailSubscribed, true), eq(users.status, "active")));
   const emailStatus = emailSenderStatus();
+  const isArchived = article.status === "archived";
 
   return (
     <div className="px-4 py-6 sm:px-6 lg:px-8 lg:py-10 max-w-2xl">
@@ -41,7 +50,44 @@ export default async function EditNewsArticlePage({ params }: { params: Promise<
           </a>
         )}
       </div>
-      <h1 className="text-headline-md sm:text-headline-lg text-on-background mb-8">Edit Berita</h1>
+
+      <div className="flex flex-wrap items-center justify-between gap-3 mb-8">
+        <div className="flex items-center gap-3">
+          <h1 className="text-headline-md sm:text-headline-lg text-on-background">Edit Berita</h1>
+          <span className="text-label-caps uppercase tracking-wide bg-surface-container-low text-on-surface-variant px-2 py-1 rounded">
+            {STATUS_LABEL[article.status]}
+          </span>
+        </div>
+        <div className="flex items-center gap-2">
+          {isArchived ? (
+            <ConfirmButton
+              title="Pulihkan berita?"
+              message="Berita akan kembali menjadi draf. Publikasikan lagi dengan mencentang “Publikasikan” di bawah."
+              confirmLabel="Ya, pulihkan"
+              action={setNewsArticleStatus}
+              payload={{ id: article.id, status: "draft" }}
+              danger={false}
+              className="text-label-caps uppercase tracking-wide px-3 py-2 rounded-md border border-outline-variant text-on-surface-variant hover:bg-surface-container-low transition-colors"
+            >
+              Pulihkan
+            </ConfirmButton>
+          ) : (
+            <ConfirmButton
+              title="Arsipkan berita?"
+              message="Berita akan disembunyikan dari halaman publik tapi tetap tersimpan di sini."
+              confirmLabel="Ya, arsipkan"
+              action={setNewsArticleStatus}
+              payload={{ id: article.id, status: "archived" }}
+              danger={false}
+              className="text-label-caps uppercase tracking-wide px-3 py-2 rounded-md border border-outline-variant text-on-surface-variant hover:bg-surface-container-low transition-colors"
+            >
+              Arsipkan
+            </ConfirmButton>
+          )}
+          <DeleteNewsButton id={article.id} />
+        </div>
+      </div>
+
       <NewsArticleForm
         action={upsertNewsArticle.bind(null, article.id)}
         initial={{
@@ -50,6 +96,7 @@ export default async function EditNewsArticlePage({ params }: { params: Promise<
           category: article.category ?? "",
           content: article.content ?? "",
           published: article.status === "published",
+          archived: isArchived,
         }}
         subscriberCount={subscriberCount}
         emailReady={emailStatus === "ready"}

@@ -38,7 +38,10 @@ export const eventRegistrationStatusEnum = pgEnum("event_registration_status", [
 // WeChat Pay butuh merchant account berbadan hukum Tiongkok dan QR pribadi tidak
 // punya webhook (lihat catatan di src/lib/email.ts & halaman donasi).
 export const paymentStatusEnum = pgEnum("payment_status", ["not_required", "unpaid", "submitted", "verified", "rejected"]);
-export const publishStatusEnum = pgEnum("publish_status", ["draft", "published"]);
+// "archived" = pernah tayang lalu dipensiunkan. Beda dari "draft" (belum pernah
+// tayang): dipakai untuk membedakan berita lama yang sengaja disimpan dari draf
+// yang belum selesai. Hanya newsArticles yang memakai enum ini.
+export const publishStatusEnum = pgEnum("publish_status", ["draft", "published", "archived"]);
 export const jobTypeEnum = pgEnum("job_type", ["internship", "full_time", "part_time", "volunteer"]);
 export const jobPostingStatusEnum = pgEnum("job_posting_status", ["open", "closed"]);
 export const jobApplicationStatusEnum = pgEnum("job_application_status", [

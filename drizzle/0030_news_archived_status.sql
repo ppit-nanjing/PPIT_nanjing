@@ -1,0 +1,12 @@
+-- Menambah nilai 'archived' ke enum publish_status (dipakai hanya oleh
+-- news_articles). Untuk berita yang pernah tayang lalu dipensiunkan — hilang
+-- dari halaman publik tapi tetap tersimpan di konsol, beda dari 'draft' yang
+-- belum pernah tayang.
+--
+-- Sudah diterapkan ke Neon 2026-09-07 via src/db/apply-sql.ts.
+--
+-- ALTER TYPE ... ADD VALUE hanya MENAMBAH nilai; tidak pernah drop/truncate,
+-- jadi aman di database produksi. IF NOT EXISTS membuatnya idempoten.
+-- Postgres menuntut ADD VALUE berdiri sendiri di luar blok transaksi;
+-- apply-sql.ts menjalankan tiap pernyataan terpisah.
+ALTER TYPE "publish_status" ADD VALUE IF NOT EXISTS 'archived';

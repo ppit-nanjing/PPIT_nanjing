@@ -62,6 +62,9 @@ export async function upsertNewsArticle(
     const [before] = await db.select({ status: newsArticles.status, publishedAt: newsArticles.publishedAt }).from(newsArticles).where(eq(newsArticles.id, existingId));
     wasPublished = before?.status === "published" || before?.publishedAt != null;
     previousPublishedAt = before?.publishedAt ?? null;
+    // Editing an archived article (typo fix, updated cover) must NOT silently
+    // un-archive it - only the explicit Arsipkan/Pulihkan buttons change that.
+    const unpublishedStatus = before?.status === "archived" ? "archived" : "draft";
     [article] = await db
       .update(newsArticles)
       .set({
@@ -69,7 +72,7 @@ export async function upsertNewsArticle(
         content: content || null,
         coverImageUrl: coverImageUrl || null,
         category: category || null,
-        status: publish ? "published" : "draft",
+        status: publish ? "published" : unpublishedStatus,
         publishedAt: publish ? (previousPublishedAt ?? new Date()) : previousPublishedAt,
       })
       .where(eq(newsArticles.id, existingId))
@@ -95,7 +98,57 @@ export async function upsertNewsArticle(
   }
 
   revalidatePath("/console/content");
+  revalidatePath("/news");
+  revalidatePath(`/news/${article.slug}`);
   redirect("/console/content");
+}
+
+// Hard delete - mirrors deleteEvent. For genuine mistakes / duplicates / spam;
+// retiring an article that should stay on record is setNewsArticleStatus(..,
+// "archived") instead. authorId has onDelete: no action but nothing references
+// newsArticles, so a plain delete is safe.
+export async function deleteNewsArticle(id: string) {
+  await requireContentAccess();
+  const [row] = await db.select({ slug: newsArticles.slug }).from(newsArticles).where(eq(newsArticles.id, id));
+  // Already gone (double-submit, stale tab) - the goal state is "not there", so
+  // just land back on the list instead of a 404.
+  if (!row) redirect("/console/content");
+  await db.delete(newsArticles).where(eq(newsArticles.id, id));
+  revalidatePath("/console/content");
+  revalidatePath("/news");
+  revalidatePath(`/news/${row.slug}`);
+  redirect("/console/content");
+}
+
+// draft <-> published <-> archived, without touching the article body. Never
+// emails subscribers (an archived article already has a publishedAt, so even a
+// later re-publish via upsertNewsArticle stays silent). publishedAt is kept as
+// history across archive/restore cycles.
+export async function setNewsArticleStatus(formData: FormData) {
+  await requireContentAccess();
+  const id = String(formData.get("id") ?? "");
+  const status = String(formData.get("status") ?? "");
+  if (!id || (status !== "draft" && status !== "published" && status !== "archived")) {
+    throw new Error("Permintaan tidak valid.");
+  }
+  const [before] = await db
+    .select({ slug: newsArticles.slug, publishedAt: newsArticles.publishedAt })
+    .from(newsArticles)
+    .where(eq(newsArticles.id, id));
+  if (!before) notFound();
+
+  await db
+    .update(newsArticles)
+    .set({
+      status,
+      publishedAt: status === "published" ? (before.publishedAt ?? new Date()) : before.publishedAt,
+    })
+    .where(eq(newsArticles.id, id));
+
+  revalidatePath("/console/content");
+  revalidatePath(`/console/content/news/${id}`);
+  revalidatePath("/news");
+  revalidatePath(`/news/${before.slug}`);
 }
 
 // Fans out to every member who opted in via the profile "Email Subscribed"

@@ -22,11 +22,13 @@ export default async function NewsDetailPage({
 }) {
   const { slug } = await params;
   const { t, locale } = await getT();
+  // Filter on status too: a draft or archived article must 404 by direct URL,
+  // not just be absent from the /news listing.
   const [row] = await db
     .select({ article: newsArticles, authorName: users.name })
     .from(newsArticles)
     .leftJoin(users, eq(newsArticles.authorId, users.id))
-    .where(eq(newsArticles.slug, slug));
+    .where(and(eq(newsArticles.slug, slug), eq(newsArticles.status, "published")));
 
   if (!row) notFound();
   const { article: a, authorName } = row;

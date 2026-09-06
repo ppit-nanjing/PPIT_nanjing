@@ -24,6 +24,7 @@ export function NewsArticleForm({
     category?: string;
     content?: string;
     published?: boolean;
+    archived?: boolean;
   };
   subscriberCount: number;
   emailReady: boolean;
@@ -31,6 +32,7 @@ export function NewsArticleForm({
 }) {
   const [state, formAction] = useActionState<ContentFormState, FormData>(action, {});
   const alreadyPublished = !!initial?.published;
+  const isArchived = !!initial?.archived;
 
   return (
     <form action={formAction} className="flex flex-col gap-6">
@@ -82,10 +84,21 @@ export function NewsArticleForm({
       <CheckboxField
         name="publish"
         defaultChecked={alreadyPublished}
-        label={alreadyPublished ? "Dipublikasikan" : "Publikasikan sekarang (jika tidak dicentang, tersimpan sebagai draf)"}
+        label={
+          alreadyPublished
+            ? "Dipublikasikan"
+            : isArchived
+              ? "Publikasikan sekarang (jika tidak dicentang, tetap di arsip)"
+              : "Publikasikan sekarang (jika tidak dicentang, tersimpan sebagai draf)"
+        }
         className="text-on-background"
       />
-      {alreadyPublished ? (
+      {isArchived && !alreadyPublished ? (
+        <p className="text-label-caps text-on-surface-variant -mt-3">
+          Berita ini diarsipkan. Menyimpan tanpa mencentang “Publikasikan” tidak mengubah statusnya — pakai tombol
+          Pulihkan di atas untuk mengembalikannya ke draf.
+        </p>
+      ) : alreadyPublished ? (
         <p className="text-label-caps text-on-surface-variant -mt-3">
           Sudah dipublikasikan — email pengumuman sudah terkirim ke pelanggan saat pertama kali dipublikasikan, dan
           tidak dikirim ulang lewat perubahan ini.
