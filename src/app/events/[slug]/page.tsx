@@ -9,12 +9,13 @@ import { AnimatedHeroHeading } from "@/components/animated-hero-heading";
 import { Reveal } from "@/components/reveal";
 import { EventCard } from "@/components/event-card";
 import { GalleryLightbox } from "@/components/gallery-lightbox";
-import { CalendarDays, MapPin, Users, Ticket, ArrowLeft, ListChecks, Images, ArrowRight, CalendarX, PartyPopper, BadgeCheck, PlayCircle, FolderOpen } from "lucide-react";
+import { CalendarDays, MapPin, Users, Ticket, ArrowLeft, ListChecks, Images, ArrowRight, CalendarX, PartyPopper, BadgeCheck, PlayCircle, FolderOpen, ScanLine, SlidersHorizontal } from "lucide-react";
 import Image from "next/image";
 import { Select } from "@/components/console/form";
 import { EventThemeStyle } from "@/components/events/event-theme-style";
 import Link from "next/link";
 import { applyAsVolunteer } from "@/app/actions/volunteers";
+import { getEventAccess } from "@/lib/event-access";
 import { getT } from "@/lib/i18n/server";
 import { INTL_LOCALE } from "@/lib/i18n/config";
 
@@ -72,6 +73,16 @@ export default async function EventDetailPage({ params, searchParams }: { params
       .limit(1);
     if (committee) myCommitteeRole = { divisionName: committee.divisionName, role: committee.role };
   }
+
+  // Akses panitia untuk acara ini (scanner + tautan ke konsol). getEventAccess
+  // memakai auth() yang sudah di-cache; satu lookup peran+grant tambahan.
+  const eventAccess = session?.user?.id ? await getEventAccess(event.id) : null;
+  const canScan = eventAccess?.can("event.scanAttendance") ?? false;
+  // "Kelola di Konsol" hanya untuk yang benar-benar bisa masuk /console
+  // (console/layout.tsx cek isAdmin). Panitia biasa belum — sampai halaman
+  // konsol acara dibuka untuk kepanitiaan (Slice D).
+  const hasEventConsoleAccess =
+    !!eventAccess && (eventAccess.isFullAdmin || eventAccess.moduleBridge);
 
   const now = new Date();
   const deadlinePassed = event.registrationDeadline ? new Date(event.registrationDeadline) < now : false;
@@ -365,6 +376,27 @@ export default async function EventDetailPage({ params, searchParams }: { params
             <div className="lg:col-span-4">
               <Reveal>
                 <div className="evt-tintcard sticky top-24 flex flex-col gap-5 rounded-2xl border border-outline-variant bg-surface-container-low p-6">
+                {(canScan || hasEventConsoleAccess) && (
+                  <div className="flex flex-col gap-2 rounded-xl border border-outline-variant bg-surface-container-lowest p-4">
+                    <p className="text-label-caps uppercase tracking-wide text-on-surface-variant">Panitia</p>
+                    {canScan && (
+                      <Link
+                        href={`/events/${slug}/scan`}
+                        className="inline-flex items-center justify-center gap-2 bg-primary-container text-on-primary text-label-caps uppercase tracking-wide px-4 py-3 rounded-md hover:bg-primary transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-container focus-visible:ring-offset-2 focus-visible:ring-offset-surface-container-lowest"
+                      >
+                        <ScanLine size={16} aria-hidden="true" /> Buka Scanner Check-in
+                      </Link>
+                    )}
+                    {hasEventConsoleAccess && (
+                      <Link
+                        href={`/console/events/${event.id}`}
+                        className="inline-flex items-center justify-center gap-2 border border-outline-variant text-on-background text-label-caps uppercase tracking-wide px-4 py-3 rounded-md hover:bg-surface-container-low transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-container focus-visible:ring-offset-2 focus-visible:ring-offset-surface-container-lowest"
+                      >
+                        <SlidersHorizontal size={16} aria-hidden="true" /> Kelola di Konsol
+                      </Link>
+                    )}
+                  </div>
+                )}
                 {event.startAt && (
                   <div className="flex items-start gap-3">
                     <CalendarDays className="text-primary-container shrink-0 mt-0.5" size={18} aria-hidden="true" />

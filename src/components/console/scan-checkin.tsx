@@ -18,6 +18,7 @@ export function ScanCheckIn({
   name,
   email,
   label,
+  scanPath,
 }: {
   token: string;
   eventId: string;
@@ -25,6 +26,8 @@ export function ScanCheckIn({
   name: string | null;
   email: string | null;
   label: string | null;
+  // Rute halaman scanner ini, untuk tombol "Scan Berikutnya".
+  scanPath: string;
 }) {
   const [status, setStatus] = useState<Status>("pending");
   const [already, setAlready] = useState(false);
@@ -93,7 +96,7 @@ export function ScanCheckIn({
       </div>
       {email && <p className="text-label-caps text-on-surface-variant">{email}</p>}
       <a
-        href={`/console/events/${eventId}/scan`}
+        href={scanPath}
         className="mt-5 inline-flex items-center gap-2 bg-primary-container text-on-primary text-label-caps uppercase tracking-wide px-6 py-3 rounded-md hover:bg-primary transition-colors"
       >
         <ScanLine size={16} /> Scan Berikutnya

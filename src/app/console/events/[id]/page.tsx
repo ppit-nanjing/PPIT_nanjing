@@ -672,7 +672,7 @@ export default async function ConsoleEventDetailPage({ params }: { params: Promi
               </div>
             </div>
             <a
-              href={`/console/events/${id}/scan`}
+              href={`/events/${event.slug}/scan`}
               className="inline-flex items-center justify-center gap-2 border border-outline-variant text-on-background text-label-caps uppercase tracking-wide px-4 py-2 rounded-md hover:bg-surface-container-low transition-colors"
             >
               Buka Scanner Check-in
