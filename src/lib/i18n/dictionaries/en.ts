@@ -114,7 +114,7 @@ export const en = {
     "The Nanjing branch of the Indonesia Student Association in China. Since 2008, a home for Indonesian students here to synergize, create, and contribute to the nation.",
   "home.hero.cta": "Explore Events",
   "home.quote.text":
-    "PPIT Nanjing is a home for thousands of young Indonesians' dreams in this historic city. Through collaboration and the spirit of mutual cooperation, we make sure every Indonesian student here has the best support system to create and contribute.",
+    "Thousands of young Indonesians study in this historic city, far from home. PPIT Nanjing exists so no one has to do that alone. The committee, the events, and the student network are here to help you settle in, create, and contribute.",
   "home.quote.author": "Chairman of PPIT Nanjing",
   "home.quote.period": "Term 2026-2027",
   "home.cities.kicker": "Regional Reach",
@@ -123,22 +123,22 @@ export const en = {
     "PPIT Nanjing serves Indonesian students in Nanjing and the cities around it. Open a card to read each city's role.",
   "home.city.nanjing.blurb": "Capital of Jiangsu province and the main base of PPIT Nanjing.",
   "home.city.nanjing.detail":
-    "As the centre of PPIT Nanjing Branch, this city is home to most Indonesian students in the region. Routine activities, forums, and inter-branch collaboration are centred here.",
+    "Most Indonesian students in the region live in Nanjing, and it is the base of PPIT Nanjing Branch. Regular activities, forums, and coordination between branches run from here.",
   "home.city.xuzhou.blurb": "Industrial & transport hub in northern Jiangsu with an active student community.",
   "home.city.xuzhou.detail":
-    "Known as the main railway hub of northern Jiangsu, Xuzhou gathers students from several campuses with solid, mutually supportive community activities.",
+    "Xuzhou is the main railway hub of northern Jiangsu. Its Indonesian students come from several campuses and run an active, supportive community.",
   "home.city.jurong.blurb": "A campus area that gathers Indonesian students around it.",
   "home.city.jurong.detail":
-    "A warm meeting point for local Indonesian students, often connected with activities in Nanjing.",
+    "Local Indonesian students meet here regularly, and many take part in activities over in Nanjing.",
   "home.city.manshan.blurb": "A city in Anhui, bordering close to Nanjing.",
   "home.city.manshan.detail":
-    "An industrial city in Anhui province located very close to Nanjing, so it is often involved in PPIT's cross-city activities.",
+    "Ma'anshan is an industrial city in Anhui, close enough to Nanjing that its students often join PPIT's cross-city activities.",
   "home.city.zhenjiang.blurb": "A city on the Yangtze River bank with quite a few Indonesian students.",
   "home.city.zhenjiang.detail":
-    "Sitting on the Yangtze River, Zhenjiang is home to a fair number of Indonesian students active in the PPIT Nanjing network.",
+    "Zhenjiang is on the Yangtze River. A number of its Indonesian students are active in the PPIT Nanjing network.",
   "home.city.huaian.blurb": "A historic city in northern Jiangsu, one of PPIT's active branches.",
   "home.city.huaian.detail":
-    "A historic city in northern Jiangsu and one of the active branches, helping extend PPIT's reach beyond Nanjing.",
+    "Huai'an is a historic city in northern Jiangsu, and one of the branches that keeps PPIT active beyond Nanjing.",
   "home.events.kicker": "Agenda",
   "home.events.title": "Latest Events",
   "home.news.kicker": "Publications",
@@ -154,27 +154,27 @@ export const en = {
 
   // MissionCards (about)
   "mission.1":
-    "Add to and expand PPIT Nanjing's work programs to increase opportunities for students in this city to interact and connect.",
+    "Grow PPIT Nanjing's work programs so more students in the city can meet and work together.",
   "mission.2": "Build an efficient and clear organizational structure to support the first mission.",
   "mission.3":
-    "Build close, positive coordination between PPIT Nanjing Branch and its branches and PPI Tiongkok.",
+    "Keep PPIT Nanjing, its campus branches, and PPI Tiongkok working closely together.",
 
   // About
   "about.kicker": "About Us",
   "about.title": "About PPIT Nanjing",
   "about.intro":
-    "PPIT Nanjing Branch is a student organization in the city of Nanjing that serves Indonesian students and scholars, as well as Indonesian student organizations in China, particularly the city of Nanjing. It was formed on 28 October 2008, coinciding with Youth Pledge Day.",
+    "PPIT Nanjing Branch is the student organization for Indonesian students and scholars in Nanjing, and it coordinates with other Indonesian student groups in the city and across China. It dates to 28 October 2008, Youth Pledge Day.",
   "about.coverageText":
-    "Beyond the city of Nanjing, PPIT Nanjing also serves Indonesian students in the surrounding cities: Xuzhou, Jurong, Ma'anshan, Zhenjiang, and Huai'an, with two active campus-level branches — INA at NUIST and JIA at JSAHVC.",
+    "PPIT Nanjing also serves Indonesian students in the cities around Nanjing: Xuzhou, Jurong, Ma'anshan, Zhenjiang, and Huai'an. Two campus-level branches are active too: INA at NUIST and JIA at JSAHVC.",
   "about.founded": "Founded 28 October 2008",
   "about.location": "Nanjing, China",
   "about.visionMissions": "Vision & Mission",
   "about.vision": "Vision",
   "about.visionText":
-    "Improve PPIT Nanjing's service to all Indonesian students under its care; make PPIT Nanjing more efficient internally; and make PPIT Nanjing an organization that gives every cabinet member the chance to develop and train themselves.",
+    "Serve the Indonesian students in its area better, run more efficiently inside the organization, and give every cabinet member room to grow and train.",
   "about.coverageTitle": "Coverage Area",
   "about.coverageDesc":
-    "Beyond the students in the city of Nanjing itself, PPIT Nanjing serves Indonesian students in the surrounding cities as well as two active campus-level branches.",
+    "PPIT Nanjing serves students in Nanjing, in the cities around it, and at two active campus-level branches.",
   "about.nearbyCities": "Nearby Cities",
   "about.branch": "Branch",
   "about.structCta": "View Organization Structure",
@@ -382,7 +382,7 @@ export const en = {
   "career.relatedArticles": "Related Articles",
   "career.relatedAria": "Related articles",
   "career.relatedArticleAria": "Read related article {{title}}",
-  "career.mentorship.intro": "Connect with experienced alumni in your field. Gain industry insight, career guidance, and expand your professional network within the Indonesian community in China and beyond.",
+  "career.mentorship.intro": "Talk with alumni who already work in your field. They can explain how the industry works, share career advice, and connect you with the Indonesian professional community in China.",
   "career.mentorship.whyTitle": "Why Join?",
   "career.mentorship.benefit.industry.title": "Industry Insights",
   "career.mentorship.benefit.industry.desc": "Learn workplace expectations and trends directly from alumni who are already established in their careers.",
@@ -634,7 +634,7 @@ export const en = {
   "org.explorer.noMembers": "No members registered yet.",
   "org.structure.term": "2026/2027 Board",
   "org.structure.title": "PPIT Nanjing Structure",
-  "org.structure.intro": "The Kabinet Maju PPIT Nanjing consists of the Daily Board (BPH) and three departments, each overseeing three divisions. Choose your preferred view below.",
+  "org.structure.intro": "Kabinet Maju PPIT Nanjing has a Daily Board (BPH) and three departments, and each department runs three divisions. Pick a view below.",
   "org.structure.emptyTitle": "Organization structure not available yet",
   "org.structure.emptyDesc": "The leadership chart will appear here once departments and divisions are added.",
   "org.spreadKicker": "Widespread Connection",
@@ -659,7 +659,7 @@ export const en = {
   "org.map.listAria": "Branch city list",
   "org.adart.officialDoc": "Official Document",
   "org.adart.title": "Articles of Association & Bylaws",
-  "org.adart.intro": "The AD/ART is the organization's foundational document containing the Articles of Association (AD) and Bylaws (ART) — the legal and operational basis of PPIT Nanjing.",
+  "org.adart.intro": "The AD/ART is PPIT Nanjing's governing document. It contains the Articles of Association (AD) and the Bylaws (ART), which set the organization's legal and operational rules.",
   "org.adart.docFallback": "PPIT Nanjing AD/ART",
   "org.adart.versionLine": "Version {{version}} · published {{date}}",
   "org.adart.latest": "latest",
