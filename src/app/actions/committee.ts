@@ -497,12 +497,13 @@ export async function saveEventDivision(formData: FormData) {
 
 export async function deleteEventDivision(formData: FormData) {
   const id = String(formData.get("id") ?? "");
-  const [row] = await db.select({ eventId: eventDivisions.eventId }).from(eventDivisions).where(eq(eventDivisions.id, id));
+  const [row] = await db.select({ eventId: eventDivisions.eventId, name: eventDivisions.name }).from(eventDivisions).where(eq(eventDivisions.id, id));
   if (!row) return;
-  await requireEventCapability(row.eventId, "event.manageCommittee");
+  const { session } = await requireEventCapability(row.eventId, "event.manageCommittee");
   // Sub-tim ikut terhapus (cascade), tapi panitianya tidak - kolom division_id
   // mereka jadi NULL, jadi catatan kepanitiaannya tetap utuh.
   await db.delete(eventDivisions).where(eq(eventDivisions.id, id));
+  await logEventAudit(session.user.id, row.eventId, "committee.removed", { before: { division: row.name } });
   revalidatePath(`/console/events/${row.eventId}`);
   revalidatePath("/console/work-ledger");
 }
@@ -540,7 +541,7 @@ export async function applyStructureTemplate(formData: FormData) {
   const eventId = String(formData.get("eventId") ?? "").trim();
   const template = getStructureTemplate(String(formData.get("templateId") ?? "").trim());
   if (!eventId || !template) throw new Error("Acara dan template wajib dipilih");
-  await requireEventCapability(eventId, "event.manageCommittee");
+  const { session } = await requireEventCapability(eventId, "event.manageCommittee");
 
   const [event] = await db.select({ id: events.id }).from(events).where(eq(events.id, eventId));
   if (!event) throw new Error("Acara tidak ditemukan");
@@ -589,6 +590,9 @@ export async function applyStructureTemplate(formData: FormData) {
     })),
   );
   await db.batch(childRows.length > 0 ? [rootInsert, db.insert(eventDivisions).values(childRows)] : [rootInsert]);
+  await logEventAudit(session.user.id, eventId, "committee.assigned", {
+    after: { template: template.label, divisions: template.departments.length },
+  });
 
   revalidatePath(`/console/events/${eventId}`);
 }

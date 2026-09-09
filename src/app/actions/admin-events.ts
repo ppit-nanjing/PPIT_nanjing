@@ -294,10 +294,11 @@ export async function setEventStatus(formData: FormData) {
     .set({ status: status as (typeof events.status.enumValues)[number] })
     .where(eq(events.id, id));
 
+  const hiddenFromPublic = ["draft", "scheduled", "cancelled"];
   const auditAction =
     status === "published" && before?.status !== "published"
       ? "event.published"
-      : before?.status === "published" && status !== "published"
+      : before?.status === "published" && hiddenFromPublic.includes(status)
         ? "event.unpublished"
         : "event.status";
   await logEventAudit(actorId, id, auditAction, { before: { status: before?.status }, after: { status } });
