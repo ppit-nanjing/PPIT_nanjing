@@ -9,6 +9,7 @@ import { eventCommittee, eventDivisions, certificates, events, users, eventRegis
 import { requireModuleAccess } from "@/lib/admin-scope";
 import { requireEventCapability, requireEventConsoleAccess } from "@/lib/event-access";
 import { EVENT_COMMITTEE_ROLE_LABEL, GRANTABLE_CAPABILITIES, type EventCommitteeRole } from "@/lib/event-capabilities";
+import { logEventAudit } from "@/lib/event-audit";
 import { getStructureTemplate } from "@/lib/event-structure-templates";
 import { createTemplatedNotification } from "@/lib/notifications";
 
@@ -64,7 +65,7 @@ export async function listCommittee(eventId: string) {
 
 export async function assignCommittee(formData: FormData) {
   const eventId = String(formData.get("eventId") ?? "");
-  await requireEventCapability(eventId, "event.manageCommittee");
+  const { session } = await requireEventCapability(eventId, "event.manageCommittee");
   const userId = String(formData.get("userId") ?? "");
   const role = String(formData.get("role") ?? "anggota");
   if (!eventId || !userId) throw new Error("Acara dan pengurus wajib dipilih");
@@ -87,6 +88,9 @@ export async function assignCommittee(formData: FormData) {
     });
 
   await notifyCommitteeAssigned(userId, eventId, assignment.role, assignment.divisionId);
+  await logEventAudit(session.user.id, eventId, "committee.assigned", {
+    after: { userId, role: assignment.role, divisionId: assignment.divisionId },
+  });
 
   revalidatePath(`/console/events/${eventId}`);
   revalidatePath("/console/work-ledger");
@@ -94,11 +98,17 @@ export async function assignCommittee(formData: FormData) {
 
 export async function removeCommittee(formData: FormData) {
   const id = String(formData.get("id") ?? "");
-  const [row] = await db.select({ eventId: eventCommittee.eventId }).from(eventCommittee).where(eq(eventCommittee.id, id));
+  const [row] = await db
+    .select({ eventId: eventCommittee.eventId, userId: eventCommittee.userId, role: eventCommittee.role })
+    .from(eventCommittee)
+    .where(eq(eventCommittee.id, id));
   if (!row) return;
   // Mengeluarkan panitia = wewenang BPH Panitia (event.manageCommittee).
-  await requireEventCapability(row.eventId, "event.manageCommittee");
+  const { session } = await requireEventCapability(row.eventId, "event.manageCommittee");
   await db.delete(eventCommittee).where(eq(eventCommittee.id, id));
+  await logEventAudit(session.user.id, row.eventId, "committee.removed", {
+    before: { userId: row.userId, role: row.role },
+  });
   revalidatePath(`/console/events/${row.eventId}`);
   revalidatePath("/console/work-ledger");
 }
@@ -147,7 +157,7 @@ export async function getWorkLedger() {
  */
 export async function assignMembersToDivision(formData: FormData): Promise<void> {
   const eventId = String(formData.get("eventId") ?? "");
-  await requireEventCapability(eventId, "event.manageCommittee");
+  const { session } = await requireEventCapability(eventId, "event.manageCommittee");
   const divisionId = String(formData.get("divisionId") ?? "").trim() || null;
   const userIds = formData.getAll("userId").map((v) => String(v)).filter(Boolean);
   if (!eventId || userIds.length === 0) return;
@@ -161,6 +171,7 @@ export async function assignMembersToDivision(formData: FormData): Promise<void>
     });
 
   await Promise.allSettled(userIds.map((userId) => notifyCommitteeAssigned(userId, eventId, "anggota", divisionId)));
+  await logEventAudit(session.user.id, eventId, "committee.assigned", { after: { userIds, divisionId, role: "anggota" } });
 
   revalidatePath(`/console/events/${eventId}`);
   revalidatePath("/console/work-ledger");
@@ -185,6 +196,17 @@ async function insertCertificates(rows: (typeof certificates.$inferInsert)[]) {
       }),
     ),
   );
+  // Satu entri audit per acara (jalur peserta/panitia/divisi bisa mencampur).
+  const byEvent = new Map<string, { count: number; issuedBy: string | null }>();
+  for (const r of rows) {
+    if (!r.eventId) continue;
+    const cur = byEvent.get(r.eventId) ?? { count: 0, issuedBy: r.issuedBy ?? null };
+    cur.count += 1;
+    byEvent.set(r.eventId, cur);
+  }
+  for (const [eventId, v] of byEvent) {
+    await logEventAudit(v.issuedBy, eventId, "certificate.issued", { after: { count: v.count } });
+  }
 }
 
 export async function issueCertificate(formData: FormData) {
@@ -217,11 +239,15 @@ export async function issueCertificate(formData: FormData) {
 
 export async function deleteCertificate(formData: FormData) {
   const id = String(formData.get("id") ?? "");
-  const [row] = await db.select({ eventId: certificates.eventId }).from(certificates).where(eq(certificates.id, id));
+  const [row] = await db.select({ eventId: certificates.eventId, title: certificates.title, userId: certificates.userId }).from(certificates).where(eq(certificates.id, id));
   if (!row) return;
-  if (row.eventId) await requireEventCapability(row.eventId, "event.issueCertificates");
+  let actorId: string | null = null;
+  if (row.eventId) actorId = (await requireEventCapability(row.eventId, "event.issueCertificates")).session.user.id;
   else await requireModuleAccess("events");
   await db.delete(certificates).where(eq(certificates.id, id));
+  if (row.eventId) {
+    await logEventAudit(actorId, row.eventId, "certificate.deleted", { before: { title: row.title, userId: row.userId } });
+  }
   revalidatePath("/console/work-ledger");
   revalidatePath("/profile/submissions");
 }
@@ -309,11 +335,24 @@ export async function updatePaymentStatus(formData: FormData) {
   if (!allowed.includes(status)) throw new Error("Status pembayaran tidak valid");
 
   const [reg] = await db
-    .select({ eventId: eventRegistrations.eventId })
+    .select({ eventId: eventRegistrations.eventId, before: eventRegistrations.paymentStatus, userId: eventRegistrations.userId })
     .from(eventRegistrations)
     .where(eq(eventRegistrations.id, id));
   if (!reg) throw new Error("Pendaftaran tidak ditemukan");
   const { session } = await requireEventCapability(reg.eventId, "event.manageFinance");
+
+  const auditAction =
+    status === "verified"
+      ? "payment.verified"
+      : status === "rejected"
+        ? "payment.rejected"
+        : reg.before === "verified"
+          ? "payment.unverified"
+          : "payment.other";
+  await logEventAudit(session.user.id, reg.eventId, auditAction, {
+    before: { paymentStatus: reg.before },
+    after: { paymentStatus: status, registrationId: id, participantId: reg.userId },
+  });
 
   const [row] = await db
     .update(eventRegistrations)
@@ -476,16 +515,20 @@ export async function deleteEventDivision(formData: FormData) {
 export async function updateDivisionGrants(formData: FormData) {
   const divisionId = String(formData.get("divisionId") ?? "");
   const [division] = await db
-    .select({ eventId: eventDivisions.eventId })
+    .select({ eventId: eventDivisions.eventId, name: eventDivisions.name, before: eventDivisions.grantedCapabilities })
     .from(eventDivisions)
     .where(eq(eventDivisions.id, divisionId));
   if (!division) throw new Error("Divisi tidak ditemukan");
-  await requireEventCapability(division.eventId, "event.manageCommittee");
+  const { session } = await requireEventCapability(division.eventId, "event.manageCommittee");
 
   const allowed = new Set<string>(GRANTABLE_CAPABILITIES.map((g) => g.key));
   const granted = formData.getAll("capability").map((v) => String(v)).filter((k) => allowed.has(k));
 
   await db.update(eventDivisions).set({ grantedCapabilities: granted }).where(eq(eventDivisions.id, divisionId));
+  await logEventAudit(session.user.id, division.eventId, "division.grants", {
+    before: { division: division.name, capabilities: division.before },
+    after: { division: division.name, capabilities: granted },
+  });
   revalidatePath(`/console/events/${division.eventId}`);
 }
 

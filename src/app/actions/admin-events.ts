@@ -8,6 +8,7 @@ import { db } from "@/db";
 import { events, eventRegistrations, eventQuestions, eventCommittee, eventFeeOptions, galleryAlbums } from "@/db/schema";
 import { hasModuleAccess } from "@/lib/admin-scope";
 import { requireEventCapability } from "@/lib/event-access";
+import { logEventAudit } from "@/lib/event-audit";
 import { UUID_RE } from "@/lib/uuid";
 import { createTemplatedNotification } from "@/lib/notifications";
 import { checkInBlockReason } from "@/lib/event-checkin";
@@ -292,6 +293,15 @@ export async function setEventStatus(formData: FormData) {
     .update(events)
     .set({ status: status as (typeof events.status.enumValues)[number] })
     .where(eq(events.id, id));
+
+  const auditAction =
+    status === "published" && before?.status !== "published"
+      ? "event.published"
+      : before?.status === "published" && status !== "published"
+        ? "event.unpublished"
+        : "event.status";
+  await logEventAudit(actorId, id, auditAction, { before: { status: before?.status }, after: { status } });
+
   // Selesai = e-sertifikat peserta keluar otomatis (idempoten).
   if (status === "completed" && before?.status !== "completed") {
     await issueParticipantCertificatesCore(id, actorId);
@@ -539,7 +549,11 @@ export async function checkInCommitteeByToken(token: string, eventId: string) {
 export async function deleteEvent(eventId: string) {
   // Tidak ada peran kepanitiaan yang boleh menghapus acara — hanya BPH "full"
   // (lolos lewat isFullAdmin di getEventAccess).
-  await requireEventCapability(eventId, "event.delete");
+  const { session } = await requireEventCapability(eventId, "event.delete");
+  const [doomed] = await db.select({ title: events.title, status: events.status }).from(events).where(eq(events.id, eventId));
+  // Dicatat SEBELUM dihapus; audit_logs.entity_id tidak ber-FK ke events jadi
+  // recordnya tetap ada setelah acaranya hilang.
+  await logEventAudit(session.user.id, eventId, "event.deleted", { before: { title: doomed?.title, status: doomed?.status } });
   // Gallery albums are curated by the content team and merely *link* to an event
   // (galleryAlbums.eventId, set from the "Setelah Acara" dropdown). Deleting the
   // event must NOT destroy the album or its photos — just unlink it. The FK has

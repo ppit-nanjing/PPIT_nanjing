@@ -30,6 +30,7 @@ export type EventCapability =
   // --- K: kepanitiaan ---
   | "event.manageCommittee" // susunan panitia, struktur divisi, keluarkan panitia, atur grant divisi
   | "event.issueCertificates" // terbitkan sertifikat panitia & peserta
+  | "event.viewAuditLog" // baca riwayat audit acara (BPH Panitia + BPH Kabinet)
   // --- U + X: keuangan & lintas-modul (grant per divisi) ---
   | "event.manageFinance" // verifikasi bayar, refund, tandai gratis, rekap & ekspor keuangan
   | "event.manageGallery" // album & foto galeri acara

@@ -1,7 +1,7 @@
 import { eq, and, desc, sql } from "drizzle-orm";
 import { notFound } from "next/navigation";
 import { db } from "@/db";
-import { certificates, events, eventDivisions, eventFeeOptions, eventQuestions, eventRegistrations, eventVolunteers, galleryAlbums, galleryPhotos, inventoryItems, itemReservations, newsArticles, sensusProfiles, users } from "@/db/schema";
+import { auditLogs, certificates, events, eventDivisions, eventFeeOptions, eventQuestions, eventRegistrations, eventVolunteers, galleryAlbums, galleryPhotos, inventoryItems, itemReservations, newsArticles, sensusProfiles, users } from "@/db/schema";
 import { MEMBERSHIP_LABEL, effectiveBranch, membershipStatus } from "@/lib/membership-status";
 import { updateEventInfo, updateEventContent, updateEventPostReport, setEventStatus, saveEventQuestion, deleteEventQuestion, saveFeeOption, deleteFeeOption } from "@/app/actions/admin-events";
 import { createEventGalleryAlbum } from "@/app/actions/admin-content";
@@ -13,6 +13,7 @@ import { EventCommitteeStructure } from "@/components/console/event-committee-st
 import { listEventDivisions, issueParticipantCertificates } from "@/app/actions/committee";
 import { requireEventConsoleAccess } from "@/lib/event-access";
 import { EVENT_STATUS_LABEL as STATUS_LABEL } from "@/lib/event-status-labels";
+import { EVENT_AUDIT_ACTION_LABEL, type EventAuditAction } from "@/lib/event-audit";
 import { ImageUploadCropper } from "@/components/upload/image-upload-cropper";
 import { EventThemeFields } from "@/components/console/event-theme-fields";
 import { AIImproveButton } from "@/components/ai/ai-improve-button";
@@ -107,6 +108,18 @@ export default async function ConsoleEventDetailPage({ params }: { params: Promi
     .where(eq(certificates.eventId, id));
   const committeeCertUserIds = issuedCerts.filter((c) => c.kind === "panitia").map((c) => c.userId);
   const participantCertCount = issuedCerts.filter((c) => c.kind === "peserta").length;
+
+  // Riwayat audit acara — BPH Panitia (ketua/wakil/sekretaris/SC) + BPH Kabinet.
+  const canViewAuditLog = can("event.viewAuditLog");
+  const auditRows = canViewAuditLog
+    ? await db
+        .select({ log: auditLogs, actorName: users.name })
+        .from(auditLogs)
+        .leftJoin(users, eq(auditLogs.actorUserId, users.id))
+        .where(and(eq(auditLogs.entityType, "event"), eq(auditLogs.entityId, id)))
+        .orderBy(desc(auditLogs.createdAt))
+        .limit(80)
+    : [];
 
   // Artikel berita acara — grant "Post artikel" atau BPH Panitia.
   const canPostArticle = can("event.postArticle");
@@ -825,6 +838,30 @@ export default async function ConsoleEventDetailPage({ params }: { params: Promi
             Simpan Laporan Pasca-Acara
           </button>
         </form>
+      </CollapsibleSection>
+      )}
+
+      {canViewAuditLog && (
+      <CollapsibleSection title="Riwayat Audit" description={`${auditRows.length} catatan terakhir`}>
+        <p className="text-body-md text-on-surface-variant mb-3 max-w-2xl">
+          Siapa mengubah apa &amp; kapan — aksi keuangan, publikasi, sertifikat, susunan panitia, dan izin divisi.
+        </p>
+        {auditRows.length === 0 ? (
+          <p className="text-body-md text-on-surface-variant">Belum ada aktivitas tercatat.</p>
+        ) : (
+          <ul className="flex flex-col gap-1.5">
+            {auditRows.map((a) => (
+              <li key={a.log.id} className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5 border-b border-outline-variant/50 pb-1.5">
+                <span className="text-body-sm text-on-background">
+                  {EVENT_AUDIT_ACTION_LABEL[a.log.action as EventAuditAction] ?? a.log.action}
+                </span>
+                <span className="text-label-caps text-on-surface-variant">
+                  {a.actorName ?? "(sistem)"} · {new Date(a.log.createdAt).toLocaleString("id-ID", { dateStyle: "short", timeStyle: "short" })}
+                </span>
+              </li>
+            ))}
+          </ul>
+        )}
       </CollapsibleSection>
       )}
         </div>
