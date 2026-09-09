@@ -2,7 +2,7 @@ import { eq, and } from "drizzle-orm";
 import { notFound } from "next/navigation";
 import { db } from "@/db";
 import { events, eventRegistrations, eventCommittee, eventDivisions, users } from "@/db/schema";
-import { requireModuleAccess } from "@/lib/admin-scope";
+import { requireEventCapability } from "@/lib/event-access";
 import { ScanCheckIn } from "@/components/console/scan-checkin";
 import { QrScanner } from "@/components/console/qr-scanner";
 import { XCircle, ArrowLeft } from "lucide-react";
@@ -14,8 +14,8 @@ export default async function EventScanPage({
   params: Promise<{ id: string }>;
   searchParams: Promise<{ t?: string }>;
 }) {
-  await requireModuleAccess("events");
   const { id } = await params;
+  await requireEventCapability(id, "event.scanAttendance");
   const { t } = await searchParams;
 
   const [event] = await db.select().from(events).where(eq(events.id, id));

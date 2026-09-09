@@ -7,6 +7,7 @@ import { auth } from "@/auth";
 import { db } from "@/db";
 import { events, eventRegistrations, eventQuestions, eventCommittee, eventFeeOptions, galleryAlbums } from "@/db/schema";
 import { hasModuleAccess } from "@/lib/admin-scope";
+import { requireEventCapability } from "@/lib/event-access";
 import { createTemplatedNotification } from "@/lib/notifications";
 import { checkInBlockReason } from "@/lib/event-checkin";
 import { issueParticipantCertificatesCore } from "@/app/actions/committee";
@@ -370,7 +371,7 @@ export async function checkInRegistration(
 ): Promise<
   { ok: true; already: boolean } | { ok: false; reason: "notfound" | "cancelled" | "unpaid" }
 > {
-  await requireAdmin();
+  const { session } = await requireEventCapability(eventId, "event.scanAttendance");
   const [registration] = await db
     .select({
       userId: eventRegistrations.userId,
@@ -394,7 +395,7 @@ export async function checkInRegistration(
 
   await db
     .update(eventRegistrations)
-    .set({ status: "attended", checkedInAt: new Date() })
+    .set({ status: "attended", checkedInAt: new Date(), checkedInBy: session.user.id })
     .where(eq(eventRegistrations.id, registrationId));
 
   if (registration.userId) {
@@ -416,7 +417,7 @@ export async function checkInRegistration(
 // after the page loads) rather than during the Server Component render - doing
 // a mutation inside a render breaks RSC streaming in production.
 export async function checkInByToken(token: string, eventId: string) {
-  await requireAdmin();
+  const { session } = await requireEventCapability(eventId, "event.scanAttendance");
 
   const [registration] = await db
     .select({
@@ -444,7 +445,7 @@ export async function checkInByToken(token: string, eventId: string) {
 
   await db
     .update(eventRegistrations)
-    .set({ status: "attended", checkedInAt: new Date() })
+    .set({ status: "attended", checkedInAt: new Date(), checkedInBy: session.user.id })
     .where(eq(eventRegistrations.id, registration.id));
   if (registration.userId) {
     await createTemplatedNotification({
@@ -463,7 +464,7 @@ export async function checkInByToken(token: string, eventId: string) {
 // attendance_token, dibuat lazily oleh halaman /events/[slug]/committee).
 // Pola persis checkInByToken - hanya tabel dan kolom waktunya yang beda.
 export async function checkInCommitteeByToken(token: string, eventId: string) {
-  await requireAdmin();
+  const { session } = await requireEventCapability(eventId, "event.scanAttendance");
 
   const [assignment] = await db
     .select({ id: eventCommittee.id, userId: eventCommittee.userId, checkedInAt: eventCommittee.checkedInAt })
@@ -473,7 +474,10 @@ export async function checkInCommitteeByToken(token: string, eventId: string) {
   if (!assignment) return { ok: false as const };
   if (assignment.checkedInAt) return { ok: true as const, already: true as const };
 
-  await db.update(eventCommittee).set({ checkedInAt: new Date() }).where(eq(eventCommittee.id, assignment.id));
+  await db
+    .update(eventCommittee)
+    .set({ checkedInAt: new Date(), checkedInBy: session.user.id })
+    .where(eq(eventCommittee.id, assignment.id));
 
   const [event] = await db.select({ title: events.title }).from(events).where(eq(events.id, eventId));
   if (assignment.userId) {
@@ -491,7 +495,9 @@ export async function checkInCommitteeByToken(token: string, eventId: string) {
 }
 
 export async function deleteEvent(eventId: string) {
-  await requireAdmin();
+  // Tidak ada peran kepanitiaan yang boleh menghapus acara — hanya BPH "full"
+  // (lolos lewat isFullAdmin di getEventAccess).
+  await requireEventCapability(eventId, "event.delete");
   // Gallery albums are curated by the content team and merely *link* to an event
   // (galleryAlbums.eventId, set from the "Setelah Acara" dropdown). Deleting the
   // event must NOT destroy the album or its photos — just unlink it. The FK has
