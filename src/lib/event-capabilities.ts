@@ -41,11 +41,10 @@ export type EventCapability =
   | "event.delete" // hapus acara
   | "event.takeOver"; // ambil alih acara yang panitianya vakum
 
-// Cermin event_committee_role di schema.ts. "pendataan" ditambahkan bersama
-// fitur ini; nilainya kini label jabatan saja (scan = fitur DASAR, bukan peran
-// khusus). Nilai lama humas/acara/logistik/dokumentasi = nama posisi/divisi
-// untuk tampilan + sertifikat, TIDAK memberi akses sendiri (akses dari
-// grant divisinya).
+// Cermin event_committee_role di schema.ts. Scan/pendataan BUKAN peran — itu
+// kapabilitas yang dicentang per divisi (GRANTABLE_CAPABILITIES). humas/acara/
+// logistik/dokumentasi = label posisi untuk tampilan + sertifikat, TIDAK
+// memberi akses sendiri (akses khusus dari grant divisinya).
 export type EventCommitteeRole =
   | "ketua"
   | "wakil"
@@ -56,7 +55,6 @@ export type EventCommitteeRole =
   | "acara"
   | "logistik"
   | "dokumentasi"
-  | "pendataan"
   | "anggota";
 
 // TINGKAT 3 — BPH Panitia. Jabatan pelaksana inti yang otomatis pegang SEMUA
@@ -191,6 +189,5 @@ export const EVENT_COMMITTEE_ROLE_LABEL: Record<EventCommitteeRole, string> = {
   acara: "Divisi Acara",
   logistik: "Logistik",
   dokumentasi: "Dokumentasi",
-  pendataan: "Petugas Pendataan",
   anggota: "Anggota",
 };

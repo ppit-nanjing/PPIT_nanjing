@@ -1210,13 +1210,14 @@ export const donationChannels = pgTable("donation_channels", {
 // divisi inilah sebutan lengkapnya terbentuk: "ketua" + divisi "Perlengkapan"
 // = Ketua Departemen Perlengkapan; "ketua" tanpa divisi = Ketua Pelaksana.
 //
-// `role` inilah KUNCI HAK AKSES konsol per-acara (lihat src/lib/event-access.ts
-// + event-capabilities.ts). Tiap orang satu peran per acara; peran itu yang
-// menentukan fitur Kegiatan apa yang boleh dia pakai untuk acara tsb.
-// `eventDivisions` tetap ada sebagai bagan organisasi + jobdesc, tapi tidak
-// memberi akses — "acara"/"humas"/"logistik"/"dokumentasi" di sini adalah PERAN
-// fungsional (Divisi Acara, Humas, dst.), bukan nama divisi. "anggota" = panitia
-// biasa tanpa akses konsol.
+// `role` menentukan TINGKAT akses konsol per-acara (lihat src/lib/event-access.ts
+// + event-capabilities.ts): ketua/wakil/sekretaris/supervisor = BPH Panitia
+// (semua fitur acaranya); selain itu = panitia biasa (fitur dasar saja). Fitur
+// KHUSUS (scan, sertifikat, galeri, keuangan, pinjam aset, artikel) dicentang
+// per divisi di `eventDivisions.grantedCapabilities`, bukan lewat peran.
+// "humas"/"acara"/"logistik"/"dokumentasi" = label peran fungsional untuk
+// tampilan + sertifikat, tidak memberi akses ekstra sendiri. "anggota" = panitia
+// biasa.
 export const eventCommitteeRoleEnum = pgEnum("event_committee_role", [
   "ketua",
   "wakil",
@@ -1229,9 +1230,6 @@ export const eventCommitteeRoleEnum = pgEnum("event_committee_role", [
   "acara",
   "logistik",
   "dokumentasi",
-  // Petugas Pendataan — jaga stand & scan QR kehadiran. Hanya buka scanner +
-  // catat hadir, tidak melihat data pribadi peserta lain, tidak mengubah acara.
-  "pendataan",
   "anggota",
 ]);
 

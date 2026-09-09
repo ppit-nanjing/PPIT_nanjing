@@ -5,24 +5,24 @@
 -- inti, otomatis dari role) pegang semua fitur acaranya · Panitia dapat fitur
 -- DASAR + kapabilitas yang dicentang untuk DIVISI-nya.
 --
--- 1) Peran baru "pendataan" (label jabatan; scan kini kapabilitas grant, bukan
---    peran). Nilai enum "humas"/"acara"/"logistik"/"dokumentasi" yang dulu
---    ditandai mati kini dipakai sebagai label posisi/divisi — tidak ada
---    perubahan skema, hanya makna.
--- 2) "granted_capabilities" di event_divisions — daftar kapabilitas khusus yang
+-- Scan/pendataan BUKAN peran — itu salah satu kapabilitas grant di poin 1.
+-- Peran enum "humas"/"acara"/"logistik"/"dokumentasi" yang sudah ada tetap
+-- dipakai sebagai label posisi (tidak ada perubahan pada tipe enum).
+--
+-- 1) "granted_capabilities" di event_divisions — daftar kapabilitas khusus yang
 --    dicentang BPH Panitia untuk divisi tsb (sertifikat, galeri, keuangan,
 --    pinjam aset, post artikel, scan). NULL/[] = anggotanya hanya fitur dasar.
--- 3) "checked_in_by" di event_registrations & event_committee — akun petugas
+-- 2) "checked_in_by" di event_registrations & event_committee — akun petugas
 --    yang men-scan, supaya kehadiran bisa ditelusuri ke orangnya.
+-- 3) "event_id" di news_articles + tabel baru "event_credits" (arsip/LPJ).
 --
--- ALTER TYPE ... ADD VALUE hanya MENAMBAH; aman di produksi. IF NOT EXISTS =
--- idempoten. Postgres menuntut ADD VALUE berdiri sendiri di luar blok
--- transaksi; apply-sql.ts menjalankan tiap pernyataan terpisah. Kolom uuid
--- mengikuti pola "payment_verified_by" (migrasi 0009).
+-- Semua pernyataan MURNI MENAMBAH (ADD COLUMN nullable/berdefault, CREATE TABLE
+-- baru) — tidak menyentuh data yang sudah ada, tidak menulis ulang tabel, tidak
+-- menyentuh users/sensus_profiles. IF NOT EXISTS = idempoten. apply-sql.ts
+-- menjalankan tiap pernyataan terpisah. Kolom uuid mengikuti pola
+-- "payment_verified_by" (migrasi 0009).
 --
 -- Terapkan ke Neon: npx tsx --env-file=.env src/db/apply-sql.ts drizzle/0032_event_rbac.sql
-
-ALTER TYPE "event_committee_role" ADD VALUE IF NOT EXISTS 'pendataan';
 
 ALTER TABLE "event_divisions"
   ADD COLUMN IF NOT EXISTS "granted_capabilities" text[] NOT NULL DEFAULT '{}';
