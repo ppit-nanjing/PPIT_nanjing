@@ -37,6 +37,17 @@ async function main() {
     .values({ name: "Dewan Pembina", accessTier: "advisory", description: "Mengayomi dan mengarahkan organisasi" })
     .returning();
 
+  // Ranting = sub-cabang setingkat kampus (INA @ NUIST, JIA @ JSAHVC). "BPH
+  // Ranting" -> hanya ringkasan sensus kampus sendiri (/console/ranting/sensus,
+  // key "sensus-ranting"); "Anggota Ranting" -> tanpa akses console. Dikenali
+  // lewat NAMA role di resolveAdminScope() (src/auth.ts) - lihat src/lib/rantings.ts.
+  await db.insert(roles).values([
+    { name: "[INA] BPH Ranting", accessTier: "scoped", description: "Pengurus ranting INA (NUIST) — akses ringkasan sensus kampus sendiri" },
+    { name: "[INA] Anggota Ranting", accessTier: "scoped", description: "Anggota ranting INA (NUIST) — tanpa akses console kecuali diberikan BPH pusat" },
+    { name: "[JIA] BPH Ranting", accessTier: "scoped", description: "Pengurus ranting JIA (JSAHVC) — akses ringkasan sensus kampus sendiri" },
+    { name: "[JIA] Anggota Ranting", accessTier: "scoped", description: "Anggota ranting JIA (JSAHVC) — tanpa akses console kecuali diberikan BPH pusat" },
+  ]);
+
   void wakilKetua;
   void sekretarisBph;
   void bendahara;

@@ -16,7 +16,11 @@
 // deliberately absent from ASSIGNABLE_SCOPE_KEYS below, so hasModuleAccess()
 // only ever returns true for it via the `scope === "full"` short-circuit -
 // same non-delegable treatment as users/organization/feedback.
-export type AdminModule = "users" | "organization" | "events" | "inventory" | "reports" | "sensus" | "content" | "feedback" | "membership" | "notifications" | "links" | "documents";
+// "sensus-ranting" is the same: not delegable, only ever put in a scope array by
+// resolveAdminScope() for a "[INA]/[JIA] BPH Ranting" role (src/auth.ts). It
+// unlocks ONLY /console/ranting/sensus (own-campus census summary), never the
+// full /console/sensus.
+export type AdminModule = "users" | "organization" | "events" | "inventory" | "reports" | "sensus" | "sensus-ranting" | "content" | "feedback" | "membership" | "notifications" | "links" | "documents";
 
 const MODULE_ALIASES: Partial<Record<AdminModule, string[]>> = {
   content: ["content", "gallery"],

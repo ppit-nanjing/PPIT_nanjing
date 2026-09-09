@@ -56,6 +56,7 @@ const GROUPS: { title: string; items: NavItem[] }[] = [
       { href: "/console/inventory", label: "Inventaris", icon: Package, module: "inventory" },
       { href: "/console/membership", label: "Pendaftaran", icon: UserPlus, module: "membership" },
       { href: "/console/sensus", label: "Sensus", icon: ClipboardCheck, module: "sensus" },
+      { href: "/console/ranting/sensus", label: "Sensus Ranting", icon: ClipboardCheck, module: "sensus-ranting" },
       { href: "/console/content", label: "Konten", icon: Images, module: "content" },
       { href: "/console/katalog", label: "Kota & Katalog", icon: Store, module: "content" },
     ],

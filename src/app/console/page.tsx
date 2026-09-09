@@ -7,6 +7,8 @@ import {
   membershipApplications,
   users,
 } from "@/db/schema";
+import { redirect } from "next/navigation";
+import { auth } from "@/auth";
 import { CollapsibleSection } from "@/components/console/collapsible-section";
 import { GuideButton } from "@/components/console/guide-button";
 import { getGuide } from "@/lib/guides";
@@ -114,6 +116,15 @@ function timeAgo(d: Date) {
 }
 
 export default async function ConsoleDashboardPage() {
+  // A ranting board member's only surface is their own-campus census summary -
+  // the org-wide dashboard below would just be noise (and shows counts they have
+  // no other page to act on). Send them straight there.
+  const session = await auth();
+  const scope = session?.user.adminScope;
+  if (Array.isArray(scope) && scope.length === 1 && scope[0] === "sensus-ranting") {
+    redirect("/console/ranting/sensus");
+  }
+
   const now = new Date();
   const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
 
