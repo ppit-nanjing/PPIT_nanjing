@@ -111,7 +111,7 @@ export const en = {
   // Home
   "home.hero.words": "Connecting|Indonesian|Students|in|Nanjing",
   "home.hero.subtext":
-    "The official umbrella of the Indonesia Student Association in China (PPIT) Nanjing Branch — to synergize, create, and contribute to the nation, since 2008.",
+    "The Nanjing branch of the Indonesia Student Association in China. Since 2008, a home for Indonesian students here to synergize, create, and contribute to the nation.",
   "home.hero.cta": "Explore Events",
   "home.quote.text":
     "PPIT Nanjing is a home for thousands of young Indonesians' dreams in this historic city. Through collaboration and the spirit of mutual cooperation, we make sure every Indonesian student here has the best support system to create and contribute.",
@@ -120,7 +120,7 @@ export const en = {
   "home.cities.kicker": "Regional Reach",
   "home.cities.title": "Cities Under PPIT Nanjing",
   "home.cities.description":
-    "Beyond the city of Nanjing, PPIT Nanjing also serves Indonesian students in the surrounding cities. Click each card to read more about each city's role.",
+    "PPIT Nanjing serves Indonesian students in Nanjing and the cities around it. Open a card to read each city's role.",
   "home.city.nanjing.blurb": "Capital of Jiangsu province and the main base of PPIT Nanjing.",
   "home.city.nanjing.detail":
     "As the centre of PPIT Nanjing Branch, this city is home to most Indonesian students in the region. Routine activities, forums, and inter-branch collaboration are centred here.",
@@ -145,11 +145,11 @@ export const en = {
   "home.news.title": "Latest News",
   "home.empty.events.title": "No events yet",
   "home.empty.events.desc":
-    "The latest events will appear here once published. In the meantime, see the full PPIT Nanjing agenda.",
+    "Published events appear here. For now, see the full PPIT Nanjing agenda.",
   "home.empty.events.cta": "View all events",
   "home.empty.news.title": "No news yet",
   "home.empty.news.desc":
-    "The latest information and announcements from PPIT Nanjing will appear here. Check the news page for updates.",
+    "PPIT Nanjing news and announcements appear here. See the news page for what is already published.",
   "home.empty.news.cta": "View all news",
 
   // MissionCards (about)
@@ -192,7 +192,7 @@ export const en = {
   "events.emptyCat": "No events in this category yet",
   "events.emptyAll": "No events scheduled yet",
   "events.emptyCatDesc": "Try another category or see all PPIT Nanjing events.",
-  "events.emptyAllDesc": "Keep an eye on this site — new events will appear here.",
+  "events.emptyAllDesc": "New events appear here as the committee schedules them.",
   "events.viewAllEvents": "View All Events",
   "events.upcoming": "Upcoming Events",
   "events.badgeUpcoming": "Upcoming",
@@ -202,7 +202,7 @@ export const en = {
   "events.branchQuestion": "Which PPI branch are you from?",
   "events.branchPlaceholder": "Select a branch",
   "events.branchNonStudent": "Not an Indonesian student in China",
-  "events.branchHint": "Asked once for this event only, so the organisers know who is attending. Complete the census to stop being asked.",
+  "events.branchHint": "We ask this once for this event so the organisers know who is coming. Complete the census and we stop asking.",
   "events.fileHint": "Upload one file: PDF, document, or image. Max 10 MB.",
   "events.feeOptionQuestion": "Entrance Fee",
   "events.wizardNext": "Next",
@@ -227,11 +227,14 @@ export const en = {
   "events.capacityLabel": "Registration capacity",
   "events.regDeadline": "Registration closes {{date}}",
   "events.sensusRequiredNote": "This event is only for participants who have fully completed the census.",
-  "events.sensusCompleteMsg": "Complete your census data to register — you'll return to this page.",
+  "events.sensusCompleteMsg": "Complete your census data to register. You'll come back to this page afterward.",
   "events.fillSensus": "Fill Census to Register",
   "events.myTicket": "View My Ticket",
   "events.loginToRegister": "Log in to Register",
   "events.full": "Registration is full.",
+  "events.quotaFull": "Full",
+  "events.earlyBird": "Early bird",
+  "events.earlyBirdActive": "Early bird pricing is active until {{date}} — register now for the lower rate.",
   "events.deadlinePassed": "The registration deadline has passed.",
   "events.notOpen": "Registration for this event is not open yet.",
   "events.viewDetail": "View details for {{title}}",
@@ -259,7 +262,7 @@ export const en = {
   "news.emptyCat": "This category is still empty",
   "news.emptyAll": "No news yet",
   "news.emptyCatDesc": "No news for this category yet. Try another category or see all news.",
-  "news.emptyAllDesc": "No news has been published yet. Keep an eye on this page for updates.",
+  "news.emptyAllDesc": "The committee has not published any articles yet. New ones show up on this page.",
   "news.viewAll": "View all news",
   "news.readAria": "Read featured article: {{title}}",
   "news.others": "Other Articles",
@@ -351,7 +354,7 @@ export const en = {
   "jobs.status.accepted": "Accepted",
   "jobs.status.rejected": "Rejected",
   "jobs.notAppliedTitle": "You haven't applied yet",
-  "jobs.notAppliedDesc": "You haven't submitted an application for {{title}} at {{company}} yet. Please apply first if you're interested in this opening.",
+  "jobs.notAppliedDesc": "You haven't applied for {{title}} at {{company}} yet. Apply from the job page if this opening interests you.",
   "jobs.viewJob": "View Job",
   "jobs.findOther": "Find Other Jobs",
   "jobs.submittedTitle": "Application Submitted",
@@ -452,7 +455,7 @@ export const en = {
   "inventory.back": "Back to Inventory",
   "inventory.viewSubmissions": "View Submission History",
   "inventory.contributeIntro": "Have personal items you'd like to donate or lend to PPIT? Submit here. Admin will review and notify you.",
-  "inventory.requestNewIntro": "Need an item not yet in PPIT's inventory? Suggest it so PPIT can procure it. This is only a suggestion — actual purchases still happen offline.",
+  "inventory.requestNewIntro": "Need an item PPIT doesn't have yet? Suggest it here so the committee can look into buying it. This is a suggestion only; purchases still happen offline.",
   "inventory.form.stepDetails": "Borrow Details",
   "inventory.form.stepPickup": "Pickup & Approval",
   "inventory.form.quantity": "Quantity",
@@ -513,8 +516,8 @@ export const en = {
   "joinus.guideHeading": "Application Guide",
   "joinus.guide1": "Make sure you are an active Indonesian student in Nanjing.",
   "joinus.guide2": "Fill out the form below with accurate and complete data.",
-  "joinus.guide3": "State your motivation & commitment clearly so the selection committee can assess you.",
-  "joinus.guide4": "After submitting, you will be notified via email about the interview/approval stage.",
+  "joinus.guide3": "State your motivation and commitment so the selection committee can assess you.",
+  "joinus.guide4": "After you submit, we email you about the interview and approval stage.",
   "joinus.prepHeading": "What to prepare",
   "joinus.prepDesc": "Prepare your personal data and motivation/commitment answers. Fields marked with * are required.",
   "joinus.closedHeading": "Registration is Currently Closed",
@@ -681,7 +684,7 @@ export const en = {
   // Notifications & Search (W8)
   "notifications.title": "Notifications",
   "notifications.emptyTitle": "No notifications yet",
-  "notifications.emptyDesc": "News about loans, event attendance, and item proposals will appear here.",
+  "notifications.emptyDesc": "Updates about loans, event attendance, and item proposals show up here.",
   "notifications.listAria": "Notification list",
   "notifications.unreadPrefix": "Unread:",
   "notifications.markAllRead": "Mark all as read",
@@ -731,7 +734,7 @@ export const en = {
   "auth.resetRequestTitle": "Reset Password",
   "auth.resetRequestIntro": "Enter your account email. If it's registered with a password, we'll send a link to set a new one.",
   "auth.resetRequestSubmit": "Send Reset Link",
-  "auth.resetRequestDone": "If that email is registered, a reset link is on its way. Check your inbox (and spam) — the link expires in 1 hour.",
+  "auth.resetRequestDone": "If that email is registered, a reset link is on its way. Check your inbox and spam. The link expires in 1 hour.",
   "auth.resetNewTitle": "Set a New Password",
   "auth.resetNewIntro": "Choose a new password for your account.",
   "auth.newPasswordLabel": "New Password",
@@ -784,7 +787,7 @@ export const en = {
   "legal.privacyRightsBody": "You have the right to request access, correction, or deletion of your personal data. For questions about this privacy policy or to submit a data request, please contact the PPIT Nanjing committee via the official email at",
   "legal.privacyRightsAfter": "or the organization's official communication channel.",
   "maintenance.title": "Under Maintenance",
-  "maintenance.body": "PPIT Nanjing is currently undergoing system maintenance to improve our services. We apologise for the inconvenience — we'll be back shortly.",
+  "maintenance.body": "PPIT Nanjing is down for system maintenance. Sorry for the disruption. We'll be back soon.",
   "maintenance.helpPrefix": "Need urgent help? Contact the committee via Instagram",
 
   "auth.googleSignUpAria": "Sign up with Google account",
@@ -920,7 +923,7 @@ export const en = {
 
   // 404
   "notFound.title": "Page not found",
-  "notFound.desc": "The page you are looking for may have been moved or removed, or it may never have existed. Try heading back home, or explore other PPIT Nanjing activities.",
+  "notFound.desc": "This page may have moved, or it never existed. Head back home, or explore other PPIT Nanjing activities.",
   "notFound.home": "Back to Home",
   "notFound.explore": "Explore Events",
 
@@ -1017,7 +1020,7 @@ export const en = {
   "catalogue.tabMerch": "Merchandise",
   "catalogue.tabDonation": "Donations",
   "catalogue.tabSponsorship": "Sponsorship",
-  "merch.intro": "Official PPIT Nanjing merchandise. This is a showcase — orders go through the committee; there is no direct payment on the site yet.",
+  "merch.intro": "Official PPIT Nanjing merchandise. A showcase for now: orders go through the committee, and the site takes no payments yet.",
   "merch.empty": "No merchandise yet",
   "merch.emptyDesc": "Committee members can add items from Console → Catalogue.",
   "merch.statusAvailable": "Available",
@@ -1025,7 +1028,7 @@ export const en = {
   "merch.statusUnavailable": "Not available",
 
   // /catalogue/donasi
-  "donation.intro": "Even a small contribution goes a long way — donations help fund events, print guidebooks, and cover the day-to-day needs of PPIT Nanjing's programmes.",
+  "donation.intro": "A small contribution still helps. Donations fund events, print guidebooks, and cover the running costs of PPIT Nanjing's programmes.",
   "donation.noticeBefore": "Transfers go directly to the channels below — this site",
   "donation.noticeStrong": "does not process payments",
   "donation.noticeAfter": "and stores no card or balance data of any kind. After transferring, report it through the form so the committee can verify and record it.",
