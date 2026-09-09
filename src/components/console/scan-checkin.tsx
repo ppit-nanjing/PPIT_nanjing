@@ -9,6 +9,7 @@ type Status = "pending" | "done" | "invalid";
 const BLOCK_MESSAGE: Record<string, string> = {
   cancelled: "Pendaftaran ini dibatalkan.",
   unpaid: "Pembayaran belum terverifikasi — verifikasi dulu di halaman acara.",
+  closed: "Acara sudah berakhir — pintu check-in ditutup otomatis.",
 };
 
 export function ScanCheckIn({

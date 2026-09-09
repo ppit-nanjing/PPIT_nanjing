@@ -4,7 +4,12 @@ import { useState, useTransition } from "react";
 import { CheckCircle2, TriangleAlert } from "lucide-react";
 import { checkInRegistration } from "@/app/actions/admin-events";
 import { ProofView } from "@/components/console/proof-view";
-import { CHECK_IN_BLOCK_LABEL, CHECK_IN_BLOCK_MESSAGE, type CheckInBlock } from "@/lib/event-checkin";
+import {
+  CHECK_IN_BLOCK_LABEL,
+  CHECK_IN_BLOCK_MESSAGE,
+  CHECK_IN_CLOSED_MESSAGE,
+  type CheckInBlock,
+} from "@/lib/event-checkin";
 import { CollapsibleRecordList, type BadgeTone } from "@/components/console/collapsible-record-list";
 
 interface Registration {
@@ -28,6 +33,10 @@ interface Registration {
   // Alasan peserta ini belum boleh di-check-in (dihitung di server dari status
   // pendaftaran + status bayar). null = boleh.
   checkInBlocked?: CheckInBlock | null;
+  // Kapan & oleh siapa peserta ini di-check-in (event_registrations.checked_in_by).
+  // null kalau belum hadir atau data lama sebelum kolomnya ada.
+  checkedInAt?: string | null;
+  checkedInByName?: string | null;
 }
 
 const BIODATA_LABEL: Record<string, string> = {
@@ -84,7 +93,9 @@ export function RegistrationList({
           setError(
             res.reason === "notfound"
               ? "Pendaftaran tidak ditemukan. Muat ulang halaman."
-              : CHECK_IN_BLOCK_MESSAGE[res.reason],
+              : res.reason === "closed"
+                ? CHECK_IN_CLOSED_MESSAGE.ended
+                : CHECK_IN_BLOCK_MESSAGE[res.reason],
           );
         }
       } catch {
@@ -170,6 +181,15 @@ export function RegistrationList({
                   {new Date(r.registeredAt).toLocaleDateString("id-ID", { dateStyle: "medium" })}
                 </span>
               </span>
+              {r.status === "attended" && r.checkedInAt && (
+                <span>
+                  Check-in:{" "}
+                  <span className="text-on-background normal-case">
+                    {new Date(r.checkedInAt).toLocaleString("id-ID", { dateStyle: "medium", timeStyle: "short" })}
+                    {r.checkedInByName && ` · oleh ${r.checkedInByName}`}
+                  </span>
+                </span>
+              )}
               {rows.map((b) => (
                 <span
                   key={b.key}

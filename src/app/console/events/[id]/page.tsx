@@ -1,4 +1,4 @@
-import { eq, and, desc, sql } from "drizzle-orm";
+import { eq, and, desc, sql, inArray } from "drizzle-orm";
 import { notFound } from "next/navigation";
 import { db } from "@/db";
 import { auditLogs, certificates, events, eventCredits, eventDivisions, eventFeeOptions, eventQuestions, eventRegistrations, eventVolunteers, galleryAlbums, galleryPhotos, inventoryItems, itemReservations, newsArticles, sensusProfiles, users } from "@/db/schema";
@@ -60,6 +60,22 @@ export default async function ConsoleEventDetailPage({ params }: { params: Promi
     .leftJoin(sensusProfiles, eq(sensusProfiles.userId, eventRegistrations.userId))
     .where(eq(eventRegistrations.eventId, id))
     .orderBy(desc(eventRegistrations.registeredAt));
+
+  // Nama petugas yang men-scan tiap kehadiran (event_registrations.checked_in_by)
+  // — satu lookup untuk semua id, dihindari self-join beralias.
+  const scannerIds = [
+    ...new Set(registrations.map((r) => r.reg.checkedInBy).filter((v): v is string => !!v)),
+  ];
+  const scannerNames = scannerIds.length
+    ? new Map(
+        (
+          await db
+            .select({ id: users.id, name: users.name })
+            .from(users)
+            .where(inArray(users.id, scannerIds))
+        ).map((u) => [u.id, u.name] as const),
+      )
+    : new Map<string, string | null>();
 
   // Struktur kepanitiaan acara ini (Departemen -> sub-tim) + daftar orang yang
   // bisa ditugaskan. Kandidatnya SEMUA akun, bukan cuma anggota departemen:
@@ -775,6 +791,8 @@ export default async function ConsoleEventDetailPage({ params }: { params: Promi
               { status: r.reg.status, paymentStatus: r.reg.paymentStatus },
               event.isPaid,
             ),
+            checkedInAt: r.reg.checkedInAt ? r.reg.checkedInAt.toISOString() : null,
+            checkedInByName: r.reg.checkedInBy ? scannerNames.get(r.reg.checkedInBy) ?? null : null,
             membership: MEMBERSHIP_LABEL[
               membershipStatus(
                 r.sensusCompletion ? { branch: r.sensusBranch, completionStatus: r.sensusCompletion } : null

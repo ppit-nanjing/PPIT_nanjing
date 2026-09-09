@@ -11,7 +11,7 @@ import { requireEventCapability } from "@/lib/event-access";
 import { logEventAudit } from "@/lib/event-audit";
 import { UUID_RE } from "@/lib/uuid";
 import { createTemplatedNotification } from "@/lib/notifications";
-import { checkInBlockReason } from "@/lib/event-checkin";
+import { checkInBlockReason, checkInClosedReason } from "@/lib/event-checkin";
 import { issueParticipantCertificatesCore } from "@/app/actions/committee";
 
 async function requireAdmin() {
@@ -422,7 +422,7 @@ export async function checkInRegistration(
   registrationId: string,
   eventId: string,
 ): Promise<
-  { ok: true; already: boolean } | { ok: false; reason: "notfound" | "cancelled" | "unpaid" }
+  { ok: true; already: boolean } | { ok: false; reason: "notfound" | "cancelled" | "unpaid" | "closed" }
 > {
   const { session } = await requireEventCapability(eventId, "event.scanAttendance");
   const [registration] = await db
@@ -435,11 +435,14 @@ export async function checkInRegistration(
     .where(eq(eventRegistrations.id, registrationId));
   if (!registration) return { ok: false, reason: "notfound" };
   const [event] = await db
-    .select({ title: events.title, isPaid: events.isPaid })
+    .select({ title: events.title, isPaid: events.isPaid, status: events.status, startAt: events.startAt, endAt: events.endAt })
     .from(events)
     .where(eq(events.id, eventId));
 
   if (registration.status === "attended") return { ok: true, already: true };
+
+  // Pintu check-in menutup otomatis setelah acara berakhir.
+  if (event && checkInClosedReason(event)) return { ok: false, reason: "closed" };
 
   // Tombol check-in manual harus tunduk pada aturan yang sama dengan pintu QR:
   // acara berbayar wajib pembayaran terverifikasi dulu.
@@ -488,7 +491,13 @@ export async function checkInByToken(token: string, eventId: string) {
     return { ok: true as const, already: true as const };
   }
 
-  const [event] = await db.select({ title: events.title, isPaid: events.isPaid }).from(events).where(eq(events.id, eventId));
+  const [event] = await db
+    .select({ title: events.title, isPaid: events.isPaid, status: events.status, startAt: events.startAt, endAt: events.endAt })
+    .from(events)
+    .where(eq(events.id, eventId));
+
+  // Pintu check-in menutup otomatis setelah acara berakhir.
+  if (event && checkInClosedReason(event)) return { ok: false as const, reason: "closed" as const };
 
   // Jaring pengaman: normalnya pendaftaran berbayar yang belum lunas tidak
   // punya QR sama sekali, tapi kalau pembayaran sempat terverifikasi (QR terbit)
@@ -527,12 +536,19 @@ export async function checkInCommitteeByToken(token: string, eventId: string) {
   if (!assignment) return { ok: false as const };
   if (assignment.checkedInAt) return { ok: true as const, already: true as const };
 
+  const [event] = await db
+    .select({ title: events.title, status: events.status, startAt: events.startAt, endAt: events.endAt })
+    .from(events)
+    .where(eq(events.id, eventId));
+
+  // Pintu check-in menutup otomatis setelah acara berakhir.
+  if (event && checkInClosedReason(event)) return { ok: false as const, reason: "closed" as const };
+
   await db
     .update(eventCommittee)
     .set({ checkedInAt: new Date(), checkedInBy: session.user.id })
     .where(eq(eventCommittee.id, assignment.id));
 
-  const [event] = await db.select({ title: events.title }).from(events).where(eq(events.id, eventId));
   if (assignment.userId) {
     await createTemplatedNotification({
       userId: assignment.userId,

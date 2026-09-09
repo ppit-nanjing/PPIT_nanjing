@@ -5,11 +5,12 @@ import { db } from "@/db";
 import { events, eventRegistrations, eventCommittee, eventDivisions, users } from "@/db/schema";
 import { requireEventCapability } from "@/lib/event-access";
 import { EVENT_COMMITTEE_ROLE_LABEL, type EventCommitteeRole } from "@/lib/event-capabilities";
+import { checkInClosedReason, CHECK_IN_CLOSED_MESSAGE } from "@/lib/event-checkin";
 import { SiteNav } from "@/components/site-nav";
 import { SiteFooter } from "@/components/site-footer";
 import { ScanCheckIn } from "@/components/console/scan-checkin";
 import { QrScanner } from "@/components/console/qr-scanner";
-import { XCircle, ArrowLeft } from "lucide-react";
+import { XCircle, ArrowLeft, CalendarX } from "lucide-react";
 
 // Scanner kehadiran — pindah keluar dari /console supaya Petugas Pendataan yang
 // hanya panitia acara (bukan admin kabinet) bisa membukanya. Gerbangnya di sini
@@ -93,6 +94,8 @@ export default async function EventScanPage({
   const committeeAttended = committeeRows.filter((c) => c.checkedInAt).length;
 
   const scanPath = `/events/${slug}/scan`;
+  // Pintu check-in menutup otomatis setelah acara berakhir (Spesifikasi §11).
+  const closed = checkInClosedReason(event);
 
   return (
     <div className="min-h-screen bg-background text-on-background">
@@ -110,40 +113,52 @@ export default async function EventScanPage({
           Scan QR tiket peserta atau tiket kepanitiaan untuk mencatat kehadiran.
         </p>
 
-        {t && lookup && (
-          <ScanCheckIn
-            token={t}
-            eventId={event.id}
-            kind={lookup.kind}
-            name={lookup.name}
-            email={lookup.email}
-            label={lookup.label}
-            scanPath={scanPath}
-          />
-        )}
-
-        {t && !lookup && (
-          <div className="mb-8 rounded-xl border border-red-300 bg-surface-container-lowest p-6 flex flex-col items-center text-center">
-            <XCircle className="text-red-500 mb-3" size={40} aria-hidden="true" />
-            <p className="text-body-lg text-on-background font-semibold">Token tidak valid</p>
+        {closed ? (
+          <div className="mb-8 rounded-xl border border-outline-variant bg-surface-container-lowest p-6 flex flex-col items-center text-center">
+            <CalendarX className="text-on-surface-variant mb-3" size={40} aria-hidden="true" />
+            <p className="text-body-lg text-on-background font-semibold mb-1">
+              {closed === "cancelled" ? "Acara dibatalkan" : "Check-in ditutup"}
+            </p>
+            <p className="text-body-md text-on-surface-variant max-w-sm">{CHECK_IN_CLOSED_MESSAGE[closed]}</p>
           </div>
+        ) : (
+          <>
+            {t && lookup && (
+              <ScanCheckIn
+                token={t}
+                eventId={event.id}
+                kind={lookup.kind}
+                name={lookup.name}
+                email={lookup.email}
+                label={lookup.label}
+                scanPath={scanPath}
+              />
+            )}
+
+            {t && !lookup && (
+              <div className="mb-8 rounded-xl border border-red-300 bg-surface-container-lowest p-6 flex flex-col items-center text-center">
+                <XCircle className="text-red-500 mb-3" size={40} aria-hidden="true" />
+                <p className="text-body-lg text-on-background font-semibold">Token tidak valid</p>
+              </div>
+            )}
+
+            {!t && <QrScanner />}
+
+            <form method="get" className="flex flex-col gap-3 sm:flex-row">
+              <input
+                name="t"
+                placeholder="Tempel/salin token QR manual"
+                className="flex-1 bg-soft-gray rounded-md p-3 text-body-md"
+              />
+              <button
+                type="submit"
+                className="bg-primary-container text-on-primary text-label-caps uppercase tracking-wide px-6 py-3 rounded-md hover:bg-primary transition-colors"
+              >
+                Cek Token
+              </button>
+            </form>
+          </>
         )}
-
-        {!t && <QrScanner />}
-
-        <form method="get" className="flex flex-col gap-3 sm:flex-row">
-          <input
-            name="t"
-            placeholder="Tempel/salin token QR manual"
-            className="flex-1 bg-soft-gray rounded-md p-3 text-body-md"
-          />
-          <button
-            type="submit"
-            className="bg-primary-container text-on-primary text-label-caps uppercase tracking-wide px-6 py-3 rounded-md hover:bg-primary transition-colors"
-          >
-            Cek Token
-          </button>
-        </form>
 
         <p className="text-label-caps text-on-surface-variant mt-8">
           {registeredCount} terdaftar &middot; {attendedCount} hadir

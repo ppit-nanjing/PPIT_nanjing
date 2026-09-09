@@ -1,4 +1,4 @@
-import { Users, Plus, Trash2, Award, AlertTriangle, LayoutTemplate, KeyRound } from "lucide-react";
+import { Users, Plus, Trash2, Award, AlertTriangle, LayoutTemplate, KeyRound, UserCheck } from "lucide-react";
 import {
   saveEventDivision,
   deleteEventDivision,
@@ -79,6 +79,9 @@ export interface MemberRow {
   userId: string | null;
   name: string | null;
   email: string | null;
+  // Kehadiran panitia lewat scan tiket kepanitiaan (event_committee.checked_in_by).
+  checkedInAt?: string | null;
+  checkedInByName?: string | null;
 }
 
 /**
@@ -478,6 +481,15 @@ function MemberList({ rows, certified }: { rows: MemberRow[]; certified?: Set<st
             {m.name ?? m.email ?? "(tanpa nama)"}
             <span className="text-on-surface-variant"> · {m.role}</span>
             {m.note && <span className="text-on-surface-variant"> · {m.note}</span>}
+            {m.checkedInAt && (
+              <span
+                className="text-primary-container"
+                title={`Hadir ${new Date(m.checkedInAt).toLocaleString("id-ID", { dateStyle: "medium", timeStyle: "short" })}${m.checkedInByName ? ` · di-scan oleh ${m.checkedInByName}` : ""}`}
+              >
+                {" · "}
+                <UserCheck size={12} className="inline align-[-1px]" aria-hidden /> hadir
+              </span>
+            )}
             {m.userId && certified?.has(m.userId) && (
               <span className="text-primary-container" title="Sertifikat panitia sudah terbit">
                 {" · "}

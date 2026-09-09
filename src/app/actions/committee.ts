@@ -528,13 +528,34 @@ export async function listEventDivisions(eventId: string) {
       userId: users.id,
       name: users.name,
       email: users.email,
+      checkedInAt: eventCommittee.checkedInAt,
+      checkedInBy: eventCommittee.checkedInBy,
     })
     .from(eventCommittee)
     .leftJoin(users, eq(eventCommittee.userId, users.id))
     .where(eq(eventCommittee.eventId, eventId))
     .orderBy(eventCommittee.role);
 
-  return { divisions, members };
+  // Nama petugas yang men-scan tiap panitia (checked_in_by) — satu lookup.
+  const scannerIds = [
+    ...new Set(members.map((m) => m.checkedInBy).filter((v): v is string => !!v)),
+  ];
+  const scannerNames = scannerIds.length
+    ? new Map(
+        (await db.select({ id: users.id, name: users.name }).from(users).where(inArray(users.id, scannerIds))).map(
+          (u) => [u.id, u.name] as const,
+        ),
+      )
+    : new Map<string, string | null>();
+
+  return {
+    divisions,
+    members: members.map(({ checkedInBy, checkedInAt, ...m }) => ({
+      ...m,
+      checkedInAt: checkedInAt ? checkedInAt.toISOString() : null,
+      checkedInByName: checkedInBy ? scannerNames.get(checkedInBy) ?? null : null,
+    })),
+  };
 }
 
 export async function saveEventDivision(formData: FormData) {
