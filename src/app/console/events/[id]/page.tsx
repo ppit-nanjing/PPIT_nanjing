@@ -3,7 +3,7 @@ import { notFound } from "next/navigation";
 import { db } from "@/db";
 import { certificates, events, eventDivisions, eventFeeOptions, eventQuestions, eventRegistrations, eventVolunteers, galleryAlbums, sensusProfiles, users } from "@/db/schema";
 import { MEMBERSHIP_LABEL, effectiveBranch, membershipStatus } from "@/lib/membership-status";
-import { updateEvent, saveEventQuestion, deleteEventQuestion, saveFeeOption, deleteFeeOption } from "@/app/actions/admin-events";
+import { updateEventInfo, updateEventContent, updateEventPostReport, setEventStatus, saveEventQuestion, deleteEventQuestion, saveFeeOption, deleteFeeOption } from "@/app/actions/admin-events";
 import { VolunteerApplicationList } from "@/components/console/volunteer-application-list";
 import { publishDueEvents } from "@/lib/publish-events";
 import { DeleteEventButton } from "@/components/console/delete-event-button";
@@ -31,6 +31,15 @@ const QUESTION_TYPE_LABELS: Record<string, string> = {
   radio: "Pilihan (radio)",
   multiselect: "Pilih Banyak (centang)",
   file: "Unggah Berkas (PDF/dokumen/gambar)",
+};
+
+const STATUS_LABEL: Record<string, string> = {
+  draft: "Draf",
+  scheduled: "Terjadwal (belum rilis)",
+  published: "Dipublikasikan",
+  registration_closed: "Pendaftaran Ditutup",
+  completed: "Selesai",
+  cancelled: "Dibatalkan",
 };
 
 export default async function ConsoleEventDetailPage({ params }: { params: Promise<{ id: string }> }) {
@@ -150,12 +159,57 @@ export default async function ConsoleEventDetailPage({ params }: { params: Promi
           (volunteer, verifikasi bayar) menempel di kolom kanan. */}
       <div className="grid grid-cols-1 xl:grid-cols-[minmax(0,1fr)_400px] gap-6 items-start">
         <div className="flex flex-col gap-6 min-w-0">
+      {/* Deskripsi & agenda — fitur DASAR: semua panitia acara bisa. */}
+      {can("event.editContent") && (
+      <CollapsibleSection title="Deskripsi & Agenda" description="Teks yang tampil di halaman acara publik.">
+        <form action={updateEventContent.bind(null, id)} className="flex flex-col gap-4">
+          <div>
+            <textarea id="event-description" name="description" defaultValue={event.description ?? ""} rows={3} className="bg-soft-gray rounded-md p-3 text-body-md resize-none w-full" />
+            <AIImproveButton context="event" targetId="event-description" className="mt-1" />
+          </div>
+          <textarea
+            id="event-agenda"
+            name="agenda"
+            defaultValue={event.agenda ?? ""}
+            placeholder={"Agenda/Jadwal (satu baris per item, contoh:\n18:00 - Registrasi\n19:00 - Pembukaan)"}
+            rows={3}
+            className="bg-soft-gray rounded-md p-3 text-body-md resize-none"
+          />
+          <div className="flex flex-col gap-1">
+            <span className="text-label-caps uppercase tracking-wide text-on-surface-variant">Info Setelah Daftar</span>
+            <textarea
+              name="confirmationInfo"
+              defaultValue={event.confirmationInfo ?? ""}
+              placeholder={"Muncul di halaman tiket peserta setelah mereka mendaftar (contoh:\nMasuk grup WeChat WIF 2026 — add salah satu:\nWechat ID: rhpxzz (Gwen)\nWechat ID: athayamzzra (Athaya))"}
+              rows={3}
+              className="bg-soft-gray rounded-md p-3 text-body-md resize-none"
+            />
+            <p className="text-xs text-on-surface-variant">Tidak tampil di halaman acara publik — hanya pendaftar yang melihatnya.</p>
+          </div>
+          <AIReviewButton
+            context="event"
+            fields={[
+              { id: "event-description", label: "Deskripsi" },
+              { id: "event-agenda", label: "Agenda" },
+            ]}
+          />
+          <button
+            type="submit"
+            className="self-start bg-primary-container text-on-primary text-label-caps uppercase tracking-wide px-6 py-3 rounded-md hover:bg-primary transition-colors"
+          >
+            Simpan Deskripsi &amp; Agenda
+          </button>
+        </form>
+      </CollapsibleSection>
+      )}
+
+      {/* Info & pengaturan acara — wewenang BPH Panitia (event.editInfo). */}
       {can("event.editInfo") && (
       <details className="bg-surface-container-lowest border border-outline-variant rounded-xl">
         <summary className="px-6 py-4 cursor-pointer text-label-caps text-primary-container uppercase tracking-wide">
-          Edit Detail Kegiatan
+          Info &amp; Pengaturan Acara
         </summary>
-        <form action={updateEvent.bind(null, id)} className="px-6 pb-6 flex flex-col gap-4">
+        <form action={updateEventInfo.bind(null, id)} className="px-6 pb-6 flex flex-col gap-4">
           {/* Bagian 1 - identitas acara */}
           <details open className="border border-outline-variant rounded-lg">
             <summary className="px-4 py-3 cursor-pointer text-label-caps uppercase tracking-wide text-primary-container">
@@ -199,10 +253,10 @@ export default async function ConsoleEventDetailPage({ params }: { params: Promi
             </div>
           </details>
 
-          {/* Bagian 2 - aturan pendaftaran & HTM */}
+          {/* Bagian 2 - aturan pendaftaran & HTM + jadwal rilis */}
           <details open className="border border-outline-variant rounded-lg">
             <summary className="px-4 py-3 cursor-pointer text-label-caps uppercase tracking-wide text-primary-container">
-              2 · Pendaftaran &amp; Biaya
+              2 · Pendaftaran, Biaya &amp; Jadwal Rilis
             </summary>
             <div className="px-4 pb-4 flex flex-col gap-4">
               <CheckField name="requiresSensus" defaultChecked={event.requiresSensus} label="Hanya untuk peserta yang sudah lengkap mengisi sensus (mahasiswa Indo di China)" />
@@ -243,38 +297,6 @@ export default async function ConsoleEventDetailPage({ params }: { params: Promi
                 />
                 <p className="text-xs text-on-surface-variant">Batas waktu peserta boleh mendaftar. Lewat dari ini tombol daftar tertutup otomatis. Kosongkan bila tak ada batas.</p>
               </div>
-            </div>
-          </details>
-
-          {/* Bagian 3 - konten & jadwal rilis */}
-          <details open className="border border-outline-variant rounded-lg">
-            <summary className="px-4 py-3 cursor-pointer text-label-caps uppercase tracking-wide text-on-surface-variant">
-              3 · Deskripsi, Agenda &amp; Jadwal Rilis
-            </summary>
-            <div className="px-4 pb-4 flex flex-col gap-4">
-              <div>
-                <textarea id="event-description" name="description" defaultValue={event.description ?? ""} rows={3} className="bg-soft-gray rounded-md p-3 text-body-md resize-none w-full" />
-                <AIImproveButton context="event" targetId="event-description" className="mt-1" />
-              </div>
-              <textarea
-                id="event-agenda"
-                name="agenda"
-                defaultValue={event.agenda ?? ""}
-                placeholder={"Agenda/Jadwal (satu baris per item, contoh:\n18:00 - Registrasi\n19:00 - Pembukaan)"}
-                rows={3}
-                className="bg-soft-gray rounded-md p-3 text-body-md resize-none"
-              />
-              <div className="flex flex-col gap-1">
-                <span className="text-label-caps uppercase tracking-wide text-on-surface-variant">Info Setelah Daftar</span>
-                <textarea
-                  name="confirmationInfo"
-                  defaultValue={event.confirmationInfo ?? ""}
-                  placeholder={"Muncul di halaman tiket peserta setelah mereka mendaftar (contoh:\nMasuk grup WeChat WIF 2026 — add salah satu:\nWechat ID: rhpxzz (Gwen)\nWechat ID: athayamzzra (Athaya))"}
-                  rows={3}
-                  className="bg-soft-gray rounded-md p-3 text-body-md resize-none"
-                />
-                <p className="text-xs text-on-surface-variant">Tidak tampil di halaman acara publik — hanya pendaftar yang melihatnya.</p>
-              </div>
               <div className="flex flex-col gap-1">
                 <input
                   name="scheduledPublishAt"
@@ -283,78 +305,7 @@ export default async function ConsoleEventDetailPage({ params }: { params: Promi
                   placeholder="Jadwal Rilis Publikasi (opsional)"
                   className="bg-soft-gray rounded-md p-3 text-body-md"
                 />
-                <p className="text-xs text-on-surface-variant">Isi bila acara mau tampil ke publik hanya SETELAH tanggal/waktu ini (status &quot;Terjadwal&quot; dulu, rilis sendiri nanti). Kosongkan = langsung Draf, rilis saat kamu klik Publish manual.</p>
-              </div>
-            </div>
-          </details>
-
-          {/* Bagian 4 - setelah acara (kehadiran nyata + dokumentasi) */}
-          <details className="border border-outline-variant rounded-lg">
-            <summary className="px-4 py-3 cursor-pointer text-label-caps uppercase tracking-wide text-on-surface-variant">
-              4 · Setelah Acara
-            </summary>
-            <div className="px-4 pb-4 flex flex-col gap-4">
-              <p className="text-xs text-on-surface-variant">
-                Diisi setelah acara selesai. Begitu acara lewat (status &quot;Selesai&quot; atau tanggalnya
-                sudah lewat), halaman publik berganti ke tampilan pasca-acara: angka kehadiran nyata
-                menggantikan kapasitas, dan muncul bagian dokumentasi.
-              </p>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div className="flex flex-col gap-1">
-                  <span className="text-label-caps uppercase tracking-wide text-on-surface-variant">Jumlah Hadir (Final)</span>
-                  <input
-                    name="finalAttendeeCount"
-                    type="number"
-                    min={0}
-                    defaultValue={event.finalAttendeeCount ?? ""}
-                    placeholder={`mis. ${attended || 80}`}
-                    className="bg-soft-gray rounded-md p-3 text-body-md"
-                  />
-                  <p className="text-xs text-on-surface-variant">
-                    Ketik manual — tidak diambil dari check-in QR. Check-in portal saat ini: {attended}.
-                    Kosongkan untuk tetap pakai angka terdaftar.
-                  </p>
-                </div>
-                <div className="flex flex-col gap-1">
-                  <span className="text-label-caps uppercase tracking-wide text-on-surface-variant">Rincian Kehadiran</span>
-                  <input
-                    name="attendanceNote"
-                    defaultValue={event.attendanceNote ?? ""}
-                    placeholder="mis. 80 online · 40 offline"
-                    className="bg-soft-gray rounded-md p-3 text-body-md"
-                  />
-                  <p className="text-xs text-on-surface-variant">Teks bebas di bawah angka. Kosongkan bila tak perlu.</p>
-                </div>
-              </div>
-              <div className="flex flex-col gap-1">
-                <span className="text-label-caps uppercase tracking-wide text-on-surface-variant">Link Video Recap / Rekaman</span>
-                <input
-                  name="recapVideoUrl"
-                  type="url"
-                  defaultValue={event.recapVideoUrl ?? ""}
-                  placeholder="https://... (YouTube, Bilibili, Drive)"
-                  className="bg-soft-gray rounded-md p-3 text-body-md"
-                />
-                <p className="text-xs text-on-surface-variant">Muncul sebagai tombol &quot;Tonton Recap&quot; di bagian dokumentasi. Tidak di-embed.</p>
-              </div>
-              <div className="flex flex-col gap-1">
-                <span className="text-label-caps uppercase tracking-wide text-on-surface-variant">Album Dokumentasi (Galeri Foto)</span>
-                <Select name="documentationAlbumId" defaultValue={linkedAlbum?.id ?? ""} className="w-full" aria-label="Album dokumentasi">
-                  <option value="">— tidak ada —</option>
-                  {albums.map((a) => (
-                    <option key={a.id} value={a.id} disabled={a.eventId != null && a.eventId !== id}>
-                      {a.title}
-                      {a.eventId != null && a.eventId !== id ? " (tertaut acara lain)" : ""}
-                    </option>
-                  ))}
-                </Select>
-                <p className="text-xs text-on-surface-variant">
-                  Foto highlight album ini tampil di halaman acara + tautan album lengkap.
-                  Fotonya diunggah tim konten di{" "}
-                  <a href={linkedAlbum ? `/console/content/gallery/${linkedAlbum.id}` : "/console/content/gallery/new"} className="text-primary-container underline">
-                    {linkedAlbum ? "album ini" : "Konten › Galeri › Album Baru"}
-                  </a>.
-                </p>
+                <p className="text-xs text-on-surface-variant">Isi bila acara mau tampil ke publik hanya SETELAH tanggal/waktu ini (status &quot;Terjadwal&quot; dulu, rilis sendiri nanti). Kosongkan = tetap Draf, rilis saat kamu klik Publikasikan.</p>
               </div>
             </div>
           </details>
@@ -365,50 +316,65 @@ export default async function ConsoleEventDetailPage({ params }: { params: Promi
               { id: "event-title", label: "Judul" },
               { id: "event-category", label: "Kategori" },
               { id: "event-location", label: "Lokasi" },
-              { id: "event-description", label: "Deskripsi" },
-              { id: "event-agenda", label: "Agenda" },
             ]}
           />
-          <Select
-            name="statusSelect"
-            defaultValue={event.status}
-            aria-label="Status acara"
-            className="w-full"
-            options={[
-              { value: "draft", label: "Draf" },
-              { value: "scheduled", label: "Terjadwal (belum rilis)" },
-              { value: "published", label: "Dipublikasikan" },
-              { value: "registration_closed", label: "Pendaftaran Ditutup" },
-              { value: "completed", label: "Selesai" },
-              { value: "cancelled", label: "Dibatalkan" },
-            ]}
-          />
-          <div className="flex flex-wrap gap-3">
-            <button
-              type="submit"
-              name="status"
-              value="draft"
-              className="self-start bg-surface-container-low text-on-background text-label-caps uppercase tracking-wide px-6 py-3 rounded-md border border-outline-variant hover:bg-surface-container transition-colors"
-            >
-              Simpan sebagai Draft
-            </button>
-            <button
-              type="submit"
-              name="status"
-              value="published"
-              className="self-start bg-primary-container text-on-primary text-label-caps uppercase tracking-wide px-6 py-3 rounded-md hover:bg-primary transition-colors"
-            >
-              Publikasikan
-            </button>
-            <button
-              type="submit"
-              className="self-start bg-surface-container-low text-on-background text-label-caps uppercase tracking-wide px-6 py-3 rounded-md border border-outline-variant hover:bg-surface-container transition-colors"
-            >
-              Simpan Perubahan
-            </button>
-          </div>
+          <button
+            type="submit"
+            className="self-start bg-primary-container text-on-primary text-label-caps uppercase tracking-wide px-6 py-3 rounded-md hover:bg-primary transition-colors"
+          >
+            Simpan Info &amp; Pengaturan
+          </button>
         </form>
       </details>
+      )}
+
+      {/* Status & publikasi. Buka/tutup pendaftaran = fitur DASAR; ganti status
+          lain = wewenang BPH Panitia (event.publish). */}
+      {(can("event.publish") || can("event.registrationToggle")) && (
+      <CollapsibleSection title="Status & Publikasi" description={STATUS_LABEL[event.status] ?? event.status}>
+        {can("event.publish") ? (
+          <form action={setEventStatus} className="flex flex-wrap items-end gap-3">
+            <input type="hidden" name="eventId" value={id} />
+            <label className="flex flex-col gap-1 min-w-[12rem]">
+              <span className="text-label-caps uppercase tracking-wide text-on-surface-variant">Status acara</span>
+              <Select
+                name="status"
+                defaultValue={event.status}
+                aria-label="Status acara"
+                options={[
+                  { value: "draft", label: "Draf" },
+                  { value: "scheduled", label: "Terjadwal (belum rilis)" },
+                  { value: "published", label: "Dipublikasikan" },
+                  { value: "registration_closed", label: "Pendaftaran Ditutup" },
+                  { value: "completed", label: "Selesai" },
+                  { value: "cancelled", label: "Dibatalkan" },
+                ]}
+              />
+            </label>
+            <button
+              type="submit"
+              className="bg-primary-container text-on-primary text-label-caps uppercase tracking-wide px-6 py-3 rounded-md hover:bg-primary transition-colors"
+            >
+              Ubah Status
+            </button>
+          </form>
+        ) : (event.status === "published" || event.status === "registration_closed") ? (
+          <form action={setEventStatus}>
+            <input type="hidden" name="eventId" value={id} />
+            <input type="hidden" name="status" value={event.status === "published" ? "registration_closed" : "published"} />
+            <button
+              type="submit"
+              className="bg-primary-container text-on-primary text-label-caps uppercase tracking-wide px-6 py-3 rounded-md hover:bg-primary transition-colors"
+            >
+              {event.status === "published" ? "Tutup Pendaftaran" : "Buka Pendaftaran"}
+            </button>
+          </form>
+        ) : (
+          <p className="text-body-md text-on-surface-variant">
+            Pendaftaran hanya bisa dibuka/tutup saat acara sudah dipublikasikan.
+          </p>
+        )}
+      </CollapsibleSection>
       )}
 
       {can("event.registrationForm") && (
@@ -660,6 +626,86 @@ export default async function ConsoleEventDetailPage({ params }: { params: Promi
             branch: effectiveBranch(r.sensusCompletion === "complete" ? r.sensusBranch : null, r.reg.branch),
           }))}
         />
+      </CollapsibleSection>
+      )}
+
+      {/* Laporan pasca-acara — fitur DASAR: semua panitia (Humas/Dokumentasi
+          biasanya yang mengisi). */}
+      {can("event.postEventReport") && (
+      <CollapsibleSection
+        title="Setelah Acara"
+        description="Kehadiran nyata + dokumentasi. Diisi setelah acara selesai."
+      >
+        <form action={updateEventPostReport.bind(null, id)} className="flex flex-col gap-4">
+          <p className="text-xs text-on-surface-variant">
+            Begitu acara lewat (status &quot;Selesai&quot; atau tanggalnya sudah lewat), halaman publik
+            berganti ke tampilan pasca-acara: angka kehadiran nyata menggantikan kapasitas, dan muncul
+            bagian dokumentasi.
+          </p>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="flex flex-col gap-1">
+              <span className="text-label-caps uppercase tracking-wide text-on-surface-variant">Jumlah Hadir (Final)</span>
+              <input
+                name="finalAttendeeCount"
+                type="number"
+                min={0}
+                defaultValue={event.finalAttendeeCount ?? ""}
+                placeholder={`mis. ${attended || 80}`}
+                className="bg-soft-gray rounded-md p-3 text-body-md"
+              />
+              <p className="text-xs text-on-surface-variant">
+                Ketik manual — tidak diambil dari check-in QR. Check-in portal saat ini: {attended}.
+                Kosongkan untuk tetap pakai angka terdaftar.
+              </p>
+            </div>
+            <div className="flex flex-col gap-1">
+              <span className="text-label-caps uppercase tracking-wide text-on-surface-variant">Rincian Kehadiran</span>
+              <input
+                name="attendanceNote"
+                defaultValue={event.attendanceNote ?? ""}
+                placeholder="mis. 80 online · 40 offline"
+                className="bg-soft-gray rounded-md p-3 text-body-md"
+              />
+              <p className="text-xs text-on-surface-variant">Teks bebas di bawah angka. Kosongkan bila tak perlu.</p>
+            </div>
+          </div>
+          <div className="flex flex-col gap-1">
+            <span className="text-label-caps uppercase tracking-wide text-on-surface-variant">Link Video Recap / Rekaman</span>
+            <input
+              name="recapVideoUrl"
+              type="url"
+              defaultValue={event.recapVideoUrl ?? ""}
+              placeholder="https://... (YouTube, Bilibili, Drive)"
+              className="bg-soft-gray rounded-md p-3 text-body-md"
+            />
+            <p className="text-xs text-on-surface-variant">Muncul sebagai tombol &quot;Tonton Recap&quot; di bagian dokumentasi. Tidak di-embed.</p>
+          </div>
+          <div className="flex flex-col gap-1">
+            <span className="text-label-caps uppercase tracking-wide text-on-surface-variant">Album Dokumentasi (Galeri Foto)</span>
+            <Select name="documentationAlbumId" defaultValue={linkedAlbum?.id ?? ""} className="w-full" aria-label="Album dokumentasi">
+              <option value="">— tidak ada —</option>
+              {albums.map((a) => (
+                <option key={a.id} value={a.id} disabled={a.eventId != null && a.eventId !== id}>
+                  {a.title}
+                  {a.eventId != null && a.eventId !== id ? " (tertaut acara lain)" : ""}
+                </option>
+              ))}
+            </Select>
+            <p className="text-xs text-on-surface-variant">
+              Foto highlight album ini tampil di halaman acara + tautan album lengkap.
+              Fotonya diunggah tim konten di{" "}
+              <a href={linkedAlbum ? `/console/content/gallery/${linkedAlbum.id}` : "/console/content/gallery/new"} className="text-primary-container underline">
+                {linkedAlbum ? "album ini" : "Konten › Galeri › Album Baru"}
+              </a>.
+            </p>
+          </div>
+          <button
+            type="submit"
+            className="self-start bg-primary-container text-on-primary text-label-caps uppercase tracking-wide px-6 py-3 rounded-md hover:bg-primary transition-colors"
+          >
+            Simpan Laporan Pasca-Acara
+          </button>
+        </form>
       </CollapsibleSection>
       )}
         </div>

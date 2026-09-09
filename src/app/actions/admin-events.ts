@@ -136,42 +136,36 @@ export async function createEvent(_prev: EventFormState, formData: FormData): Pr
   redirect(`/console/events/${created.id}`);
 }
 
-export async function updateEvent(id: string, formData: FormData) {
-  // Form edit acara menggabungkan info + konten + status. Digerbang di
-  // event.editInfo (BPH Panitia); panitia biasa yang cuma boleh ubah konten
-  // (event.editContent) belum lewat sini — pemisahan formnya menyusul.
-  const { session } = await requireEventCapability(id, "event.editInfo");
-  const actorId = session.user.id;
+// Form edit acara dipecah tiga sesuai tingkat aksesnya (lihat
+// event-capabilities.ts): Info & Pengaturan (event.editInfo, BPH Panitia),
+// Deskripsi & Agenda (event.editContent, DASAR), Setelah Acara
+// (event.postEventReport, DASAR). Status/publikasi lewat setEventStatus.
+
+async function revalidateEventPaths(id: string, slug?: string | null) {
+  revalidatePath(`/console/events/${id}`);
+  if (slug) revalidatePath(`/events/${slug}`);
+}
+
+/** Bagian 1–2: identitas acara + aturan pendaftaran + HTM + jadwal rilis. */
+export async function updateEventInfo(id: string, formData: FormData) {
+  await requireEventCapability(id, "event.editInfo");
   const title = String(formData.get("title") ?? "").trim();
   if (!title) throw new Error("Judul wajib diisi");
-
-  const scheduledPublishAt = formData.get("scheduledPublishAt")
-    ? new Date(String(formData.get("scheduledPublishAt")))
-    : null;
-  // A quick button (name="status") overrides the status <select> (name="statusSelect").
-  const quickStatus = formData.get("status") as string | null;
-  let status = (quickStatus ?? formData.get("statusSelect") ?? "draft") as (typeof events.status.enumValues)[number];
-  // If a publish schedule is set but the admin left it as a draft, move it to
-  // the 'scheduled' state so it auto-publishes when the time arrives.
-  if (scheduledPublishAt && status === "draft") status = "scheduled";
 
   const [before] = await db
     .select({ status: events.status, slug: events.slug })
     .from(events)
     .where(eq(events.id, id));
 
+  const scheduledPublishAt = formData.get("scheduledPublishAt")
+    ? new Date(String(formData.get("scheduledPublishAt")))
+    : null;
   const isPaid = formData.get("isPaid") === "on";
-
-  const recapVideoRaw = String(formData.get("recapVideoUrl") ?? "").trim();
-  if (recapVideoRaw && !isValidHttpUrl(recapVideoRaw)) {
-    throw new Error("Link video recap harus diawali http:// atau https://");
-  }
 
   await db
     .update(events)
     .set({
       title,
-      description: String(formData.get("description") ?? "").trim() || null,
       category: String(formData.get("category") ?? "").trim() || null,
       location: String(formData.get("location") ?? "").trim() || null,
       coverImageUrl: String(formData.get("coverImageUrl") ?? "").trim() || null,
@@ -182,48 +176,30 @@ export async function updateEvent(id: string, formData: FormData) {
       capacity: formData.get("capacity") ? Number(formData.get("capacity")) : null,
       requiresSensus: formData.get("requiresSensus") === "on",
       requiresBiodata: formData.get("requiresBiodata") === "on",
-      confirmationInfo: String(formData.get("confirmationInfo") ?? "").trim() || null,
-      agenda: String(formData.get("agenda") ?? "").trim() || null,
-      status,
+      certificateForParticipants: formData.get("certificateForParticipants") === "on",
+      volunteerSignupOpen: formData.get("volunteerSignupOpen") === "on",
       scheduledPublishAt,
       isPaid,
       feeCny: parseFeeCny(formData),
       paymentInstructions: String(formData.get("paymentInstructions") ?? "").trim() || null,
       paymentQrUrl: String(formData.get("paymentQrUrl") ?? "").trim() || null,
       alipayUid: String(formData.get("alipayUid") ?? "").trim() || null,
-      certificateForParticipants: formData.get("certificateForParticipants") === "on",
-      volunteerSignupOpen: formData.get("volunteerSignupOpen") === "on",
       themeBg: parseHex(formData, "themeBg"),
       themeAccent: parseHex(formData, "themeAccent"),
       themeAccent2: parseHex(formData, "themeAccent2"),
-      finalAttendeeCount: parseFinalAttendeeCount(formData),
-      attendanceNote: String(formData.get("attendanceNote") ?? "").trim() || null,
-      recapVideoUrl: recapVideoRaw || null,
     })
     .where(eq(events.id, id));
 
-  // Album dokumentasi: galleryAlbums.eventId adalah tautannya. Formulir kirim
-  // satu id (atau "" untuk lepas). Validasi bentuk UUID dulu — kalau tidak,
-  // `eq(galleryAlbums.id, <sampah>)` melempar error sintaks UUID dari Postgres
-  // dan mengagalkan seluruh updateEvent. Album yang tidak ada → 0 baris, aman.
-  // Lepas dulu album lama yang menunjuk acara ini, lalu tautkan yang baru — satu
-  // acara satu album, dan memindah album ke acara lain otomatis melepasnya dari
-  // acara sebelumnya.
-  const albumIdRaw = String(formData.get("documentationAlbumId") ?? "").trim();
-  // "" = lepas tautan; UUID valid = tautkan; nilai lain (POST usil/rusak) =
-  // jangan sentuh tautan sama sekali.
-  if (albumIdRaw === "" || UUID_RE.test(albumIdRaw)) {
-    await db.update(galleryAlbums).set({ eventId: null }).where(eq(galleryAlbums.eventId, id));
-    if (albumIdRaw) {
-      await db.update(galleryAlbums).set({ eventId: id }).where(eq(galleryAlbums.id, albumIdRaw));
-    }
+  // Jadwal rilis diisi tapi acara masih draft -> pindah ke "scheduled" supaya
+  // publik-nya rilis otomatis saat waktunya tiba.
+  if (scheduledPublishAt && before?.status === "draft") {
+    await db.update(events).set({ status: "scheduled" }).where(eq(events.id, id));
   }
 
   // An event can go free -> paid after people already registered (fee often
   // isn't known until a sponsor is confirmed). Anyone still "not_required"
-  // now owes money and needs to show up in the verification queue - without
-  // this they'd stay invisible forever. Only widens tracking, never narrows
-  // it: turning HTM back off does NOT revert anyone already "unpaid"/etc.
+  // now owes money and needs to show up in the verification queue. Only widens
+  // tracking, never narrows it.
   if (isPaid) {
     await db
       .update(eventRegistrations)
@@ -231,17 +207,54 @@ export async function updateEvent(id: string, formData: FormData) {
       .where(and(eq(eventRegistrations.eventId, id), eq(eventRegistrations.paymentStatus, "not_required")));
   }
 
-  // E-sertifikat peserta otomatis: begitu acara PERTAMA kali ditandai
-  // "Selesai", semua pendaftar yang diterima langsung kebagian sertifikat
-  // (bila checkbox-nya menyala). Idempoten - menjalankan ulang tidak
-  // menggandakan; tombol manual tetap ada untuk pendaftar belakangan.
-  if (status === "completed" && before?.status !== "completed") {
-    await issueParticipantCertificatesCore(id, actorId);
-    revalidatePath("/console/work-ledger");
+  await revalidateEventPaths(id, before?.slug);
+}
+
+/** Bagian 3: deskripsi, agenda, info setelah daftar. Fitur DASAR panitia. */
+export async function updateEventContent(id: string, formData: FormData) {
+  await requireEventCapability(id, "event.editContent");
+  const [before] = await db.select({ slug: events.slug }).from(events).where(eq(events.id, id));
+  await db
+    .update(events)
+    .set({
+      description: String(formData.get("description") ?? "").trim() || null,
+      agenda: String(formData.get("agenda") ?? "").trim() || null,
+      confirmationInfo: String(formData.get("confirmationInfo") ?? "").trim() || null,
+    })
+    .where(eq(events.id, id));
+  await revalidateEventPaths(id, before?.slug);
+}
+
+/** Bagian 4: kehadiran final + dokumentasi pasca-acara. Fitur DASAR panitia. */
+export async function updateEventPostReport(id: string, formData: FormData) {
+  await requireEventCapability(id, "event.postEventReport");
+  const recapVideoRaw = String(formData.get("recapVideoUrl") ?? "").trim();
+  if (recapVideoRaw && !isValidHttpUrl(recapVideoRaw)) {
+    throw new Error("Link video recap harus diawali http:// atau https://");
+  }
+  const [before] = await db.select({ slug: events.slug }).from(events).where(eq(events.id, id));
+
+  await db
+    .update(events)
+    .set({
+      finalAttendeeCount: parseFinalAttendeeCount(formData),
+      attendanceNote: String(formData.get("attendanceNote") ?? "").trim() || null,
+      recapVideoUrl: recapVideoRaw || null,
+    })
+    .where(eq(events.id, id));
+
+  // Album dokumentasi: galleryAlbums.eventId adalah tautannya. "" = lepas tautan;
+  // UUID valid = tautkan (dan lepaskan dari acara lain dulu); nilai lain =
+  // jangan sentuh — mencegah error sintaks UUID Postgres menggagalkan aksi.
+  const albumIdRaw = String(formData.get("documentationAlbumId") ?? "").trim();
+  if (albumIdRaw === "" || UUID_RE.test(albumIdRaw)) {
+    await db.update(galleryAlbums).set({ eventId: null }).where(eq(galleryAlbums.eventId, id));
+    if (albumIdRaw) {
+      await db.update(galleryAlbums).set({ eventId: id }).where(eq(galleryAlbums.id, albumIdRaw));
+    }
   }
 
-  revalidatePath(`/console/events/${id}`);
-  if (before?.slug) revalidatePath(`/events/${before.slug}`);
+  await revalidateEventPaths(id, before?.slug);
   revalidatePath("/console/content");
   revalidatePath("/gallery");
 }
@@ -252,19 +265,33 @@ export async function setEventStatus(formData: FormData) {
   const id = String(formData.get("eventId") ?? "");
   const status = String(formData.get("status") ?? "");
   if (!id || !status) throw new Error("eventId dan status wajib diisi");
-  const { session } = await requireEventCapability(id, "event.publish");
+
+  const [before] = await db.select({ status: events.status, slug: events.slug }).from(events).where(eq(events.id, id));
+
+  // "Buka / tutup pendaftaran" = tukar published <-> registration_closed. Itu
+  // fitur DASAR panitia (event.registrationToggle). Perubahan status lain
+  // (rilis, jadwalkan, selesai, batal) tetap wewenang BPH Panitia (event.publish).
+  const isRegistrationToggle =
+    (before?.status === "published" && status === "registration_closed") ||
+    (before?.status === "registration_closed" && status === "published");
+  const { session } = await requireEventCapability(
+    id,
+    isRegistrationToggle ? "event.registrationToggle" : "event.publish",
+  );
   const actorId = session.user.id;
-  const [before] = await db.select({ status: events.status }).from(events).where(eq(events.id, id));
+
   await db
     .update(events)
     .set({ status: status as (typeof events.status.enumValues)[number] })
     .where(eq(events.id, id));
-  // Sama seperti updateEvent: selesai = sertifikat peserta keluar otomatis.
+  // Selesai = e-sertifikat peserta keluar otomatis (idempoten).
   if (status === "completed" && before?.status !== "completed") {
     await issueParticipantCertificatesCore(id, actorId);
     revalidatePath("/console/work-ledger");
   }
   revalidatePath("/console/events");
+  revalidatePath(`/console/events/${id}`);
+  if (before?.slug) revalidatePath(`/events/${before.slug}`);
 }
 
 // ---------- Pertanyaan pendaftaran kustom per-acara ----------

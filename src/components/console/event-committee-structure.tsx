@@ -1,4 +1,4 @@
-import { Users, Plus, Trash2, Award, AlertTriangle, LayoutTemplate } from "lucide-react";
+import { Users, Plus, Trash2, Award, AlertTriangle, LayoutTemplate, KeyRound } from "lucide-react";
 import {
   saveEventDivision,
   deleteEventDivision,
@@ -8,13 +8,17 @@ import {
   assignCommittee,
   assignMembersToDivision,
   removeCommittee,
+  updateDivisionGrants,
 } from "@/app/actions/committee";
 import { DivisionMemberPicker } from "@/components/console/division-member-picker";
 import { TemplatePicker } from "@/components/console/template-picker";
 import { fieldInput, Select } from "@/components/console/form";
+import { GRANTABLE_CAPABILITIES } from "@/lib/event-capabilities";
 
-// Peran penugasan baru. humas/acara/logistik/dokumentasi sengaja tidak ada:
-// itu nama DIVISI, bukan peran - di skema nilainya tinggal demi baris lama.
+// Peran = jabatan/posisi orang di kepanitiaan. ketua/wakil/sekretaris/supervisor
+// otomatis jadi "BPH Panitia" (akses penuh acaranya). Fitur khusus divisi
+// (sertifikat, galeri, keuangan, dst) diatur lewat centang per divisi di bawah,
+// bukan lewat peran.
 const ROLES = ["ketua", "wakil", "sekretaris", "bendahara", "supervisor", "anggota"];
 
 // Alias primitif bersama - struktur form di komponen ini padat & spesifik
@@ -29,6 +33,42 @@ export interface DivisionRow {
   quota: number | null;
   jobDescription: string | null;
   orderIndex: number;
+  grantedCapabilities: string[];
+}
+
+/**
+ * Centang fitur khusus untuk sebuah divisi acara — semua anggota divisi itu ikut
+ * mendapatkannya (lihat src/lib/event-access.ts). Hanya BPH Panitia yang melihat
+ * bagian ini (section-nya sudah digerbang event.manageCommittee di halaman).
+ */
+function DivisionGrants({ divisionId, granted }: { divisionId: string; granted: string[] }) {
+  const set = new Set(granted);
+  return (
+    <details className="mt-2">
+      <summary className="text-label-caps uppercase tracking-wide text-on-surface-variant hover:text-on-background cursor-pointer w-fit flex items-center gap-1.5">
+        <KeyRound size={12} /> Izin fitur divisi
+        {granted.length > 0 && <span className="text-primary-container">· {granted.length} aktif</span>}
+      </summary>
+      <form action={updateDivisionGrants} className="mt-2 bg-surface-container-low border border-outline-variant rounded-lg p-3 flex flex-col gap-2 max-w-xl">
+        <input type="hidden" name="divisionId" value={divisionId} />
+        <p className="text-xs text-on-surface-variant">
+          Dicentang = semua anggota divisi ini boleh memakainya untuk acara ini.
+        </p>
+        {GRANTABLE_CAPABILITIES.map((g) => (
+          <label key={g.key} className="flex items-start gap-2 text-body-sm">
+            <input type="checkbox" name="capability" value={g.key} defaultChecked={set.has(g.key)} className="mt-0.5" />
+            <span>
+              <span className="text-on-background font-medium">{g.label}</span>
+              <span className="text-on-surface-variant"> — {g.hint}</span>
+            </span>
+          </label>
+        ))}
+        <button type="submit" className="self-start bg-primary-container text-on-primary text-label-caps uppercase tracking-wide px-4 py-2 rounded-md hover:bg-primary transition-colors">
+          Simpan Izin
+        </button>
+      </form>
+    </details>
+  );
 }
 
 export interface MemberRow {
@@ -197,6 +237,8 @@ export function EventCommitteeStructure({
               </form>
             </details>
 
+            <DivisionGrants divisionId={dept.id} granted={dept.grantedCapabilities} />
+
             {dept.jobDescription && <JobDesc text={dept.jobDescription} />}
             <MemberList rows={membersOf(dept.id)} certified={certified} />
 
@@ -255,6 +297,7 @@ export function EventCommitteeStructure({
                       </div>
                       {sub.jobDescription && <JobDesc text={sub.jobDescription} />}
                       <MemberList rows={membersOf(sub.id)} certified={certified} />
+                      <DivisionGrants divisionId={sub.id} granted={sub.grantedCapabilities} />
                       <details className="mt-2">
                         <summary className="text-label-caps uppercase tracking-wide text-primary-container hover:text-primary cursor-pointer w-fit">+ Tambah anggota (centang banyak)</summary>
                         <DivisionMemberPicker eventId={eventId} divisionId={sub.id} candidates={candidates} action={assignMembersToDivision} />
