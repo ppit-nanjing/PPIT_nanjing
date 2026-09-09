@@ -296,7 +296,13 @@ function isValidHttpUrl(value: string): boolean {
 // reached through the album's Drive link. Toggle is per-photo and instant.
 export async function setPhotoHighlight(photoId: string, albumId: string, highlight: boolean) {
   await requireGalleryAlbumAccess(albumId);
-  await db.update(galleryPhotos).set({ isHighlight: highlight }).where(eq(galleryPhotos.id, photoId));
+  // Scope ke album yang wewenangnya barusan dicek — jalur grant acara hanya
+  // memberi akses ke ALBUM acaranya, foto di album lain tidak boleh ikut kena
+  // lewat photoId yang tidak cocok.
+  await db
+    .update(galleryPhotos)
+    .set({ isHighlight: highlight })
+    .where(and(eq(galleryPhotos.id, photoId), eq(galleryPhotos.albumId, albumId)));
   revalidatePath(`/console/content/gallery/${albumId}`);
   revalidatePath("/gallery");
   revalidatePath(`/gallery/${albumId}`);
@@ -394,12 +400,14 @@ export async function updatePhotoCaption(photoId: string, albumId: string, capti
   await db
     .update(galleryPhotos)
     .set({ caption: caption.trim() || null })
-    .where(eq(galleryPhotos.id, photoId));
+    .where(and(eq(galleryPhotos.id, photoId), eq(galleryPhotos.albumId, albumId)));
   revalidatePath(`/console/content/gallery/${albumId}`);
 }
 
 export async function deleteGalleryPhoto(photoId: string, albumId: string) {
   await requireGalleryAlbumAccess(albumId);
-  await db.delete(galleryPhotos).where(eq(galleryPhotos.id, photoId));
+  await db
+    .delete(galleryPhotos)
+    .where(and(eq(galleryPhotos.id, photoId), eq(galleryPhotos.albumId, albumId)));
   revalidatePath(`/console/content/gallery/${albumId}`);
 }

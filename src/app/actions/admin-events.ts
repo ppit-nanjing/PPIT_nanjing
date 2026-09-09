@@ -351,7 +351,9 @@ export async function saveEventQuestion(formData: FormData) {
 
   const id = String(formData.get("id") ?? "").trim();
   if (id) {
-    await db.update(eventQuestions).set(values).where(eq(eventQuestions.id, id));
+    // `id` + `eventId` bersama: mengedit pertanyaan acara LAIN dengan meng-POST
+    // id-nya = no-op (0 baris), bukan pembajakan.
+    await db.update(eventQuestions).set(values).where(and(eq(eventQuestions.id, id), eq(eventQuestions.eventId, eventId)));
   } else {
     const [{ maxOrder }] = await db
       .select({ maxOrder: sql`coalesce(max(${eventQuestions.orderIndex}), 0)` })
@@ -393,7 +395,10 @@ export async function saveFeeOption(formData: FormData) {
 
   const id = String(formData.get("id") ?? "").trim();
   if (id) {
-    await db.update(eventFeeOptions).set({ label, amountCny }).where(eq(eventFeeOptions.id, id));
+    await db
+      .update(eventFeeOptions)
+      .set({ label, amountCny })
+      .where(and(eq(eventFeeOptions.id, id), eq(eventFeeOptions.eventId, eventId)));
   } else {
     const [{ maxOrder }] = await db
       .select({ maxOrder: sql`coalesce(max(${eventFeeOptions.orderIndex}), 0)` })
@@ -432,7 +437,10 @@ export async function checkInRegistration(
       paymentStatus: eventRegistrations.paymentStatus,
     })
     .from(eventRegistrations)
-    .where(eq(eventRegistrations.id, registrationId));
+    // Pendaftaran HARUS milik acara yang scanAttendance-nya barusan dicek —
+    // tanpa filter eventId, pemegang grant scan acara A bisa menandai hadir
+    // pendaftar acara B lewat registrationId-nya.
+    .where(and(eq(eventRegistrations.id, registrationId), eq(eventRegistrations.eventId, eventId)));
   if (!registration) return { ok: false, reason: "notfound" };
   const [event] = await db
     .select({ title: events.title, isPaid: events.isPaid, status: events.status, startAt: events.startAt, endAt: events.endAt })
@@ -452,7 +460,7 @@ export async function checkInRegistration(
   await db
     .update(eventRegistrations)
     .set({ status: "attended", checkedInAt: new Date(), checkedInBy: session.user.id })
-    .where(eq(eventRegistrations.id, registrationId));
+    .where(and(eq(eventRegistrations.id, registrationId), eq(eventRegistrations.eventId, eventId)));
 
   if (registration.userId) {
     await createTemplatedNotification({

@@ -19,6 +19,20 @@ import { createTemplatedNotification } from "@/lib/notifications";
 
 const COMMITTEE_ROLE_LABEL = EVENT_COMMITTEE_ROLE_LABEL;
 
+// Terima divisionId HANYA kalau divisi itu memang milik `eventId`. Mencegah
+// baris panitia yang divisionId-nya menunjuk divisi acara LAIN — selain data
+// yang membingungkan, join di getEventAccess bisa menarik grant divisi asing.
+// null (tanpa divisi) selalu lolos.
+async function divisionForEvent(divisionId: string | null, eventId: string): Promise<string | null> {
+  if (!divisionId) return null;
+  const [div] = await db
+    .select({ id: eventDivisions.id })
+    .from(eventDivisions)
+    .where(and(eq(eventDivisions.id, divisionId), eq(eventDivisions.eventId, eventId)));
+  if (!div) throw new Error("Divisi tidak valid untuk acara ini");
+  return divisionId;
+}
+
 // Notifikasi ke peserta yang baru masuk kepanitiaan. Dibungkus catch supaya
 // gagalnya notifikasi tidak pernah membatalkan penugasannya.
 async function notifyCommitteeAssigned(userId: string, eventId: string, role: string, divisionId: string | null) {
@@ -74,7 +88,7 @@ export async function assignCommittee(formData: FormData) {
     role: role as "anggota",
     note: String(formData.get("note") ?? "").trim() || null,
     // "" dari <select> kosong = panitia inti tanpa divisi, bukan uuid kosong.
-    divisionId: String(formData.get("divisionId") ?? "").trim() || null,
+    divisionId: await divisionForEvent(String(formData.get("divisionId") ?? "").trim() || null, eventId),
   };
 
   // One row per person per event: re-assigning changes their role instead of
@@ -230,10 +244,11 @@ export async function getWorkLedger() {
  */
 export async function assignMembersToDivision(formData: FormData): Promise<void> {
   const eventId = String(formData.get("eventId") ?? "");
+  if (!eventId) return;
   const { session } = await requireEventCapability(eventId, "event.manageCommittee");
-  const divisionId = String(formData.get("divisionId") ?? "").trim() || null;
+  const divisionId = await divisionForEvent(String(formData.get("divisionId") ?? "").trim() || null, eventId);
   const userIds = formData.getAll("userId").map((v) => String(v)).filter(Boolean);
-  if (!eventId || userIds.length === 0) return;
+  if (userIds.length === 0) return;
 
   await db
     .insert(eventCommittee)
@@ -581,7 +596,9 @@ export async function saveEventDivision(formData: FormData) {
     // Divisi tidak boleh jadi induk dirinya sendiri - itu bikin pohonnya
     // memutar dan halaman strukturnya tidak akan pernah selesai dirender.
     if (values.parentDivisionId === id) throw new Error("Divisi tidak bisa menjadi induk dirinya sendiri");
-    await db.update(eventDivisions).set(values).where(eq(eventDivisions.id, id));
+    // id + eventId bersama: meng-POST id divisi acara lain = no-op, bukan
+    // pembajakan.
+    await db.update(eventDivisions).set(values).where(and(eq(eventDivisions.id, id), eq(eventDivisions.eventId, eventId)));
   } else {
     await db.insert(eventDivisions).values(values);
   }

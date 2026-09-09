@@ -91,7 +91,16 @@ export const getEventAccess = cache(async function getEventAccess(
         endAt: events.endAt,
       })
       .from(eventCommittee)
-      .leftJoin(eventDivisions, eq(eventCommittee.divisionId, eventDivisions.id))
+      // divisi HARUS milik acara yang sama — kalau tidak, baris panitia yang
+      // divisionId-nya (karena bug / input jahil) menunjuk divisi acara LAIN
+      // bisa menarik grant divisi itu ke acara ini. Cocokkan eventId juga.
+      .leftJoin(
+        eventDivisions,
+        and(
+          eq(eventCommittee.divisionId, eventDivisions.id),
+          eq(eventDivisions.eventId, eventCommittee.eventId),
+        ),
+      )
       // Kolom acara di-join dari eventCommittee.eventId yang selalu = eventId,
       // jadi bila orang ini bukan panitia kita perlu lookup acara terpisah.
       .innerJoin(events, eq(events.id, eventCommittee.eventId))
