@@ -20,9 +20,32 @@ export default async function SensusSuccessPage() {
         >
           {t("sensus.successTitle")}
         </h1>
-        <div role="status" className="text-body-md text-on-surface-variant mb-10">
+        <div role="status" className="text-body-md text-on-surface-variant mb-8">
           {t("sensus.successNote")}
         </div>
+
+        {/* Langkah terakhir sensus: gabung grup WeChat PPIT Nanjing. Menggantikan
+            kewajiban unggah screenshot follow Instagram - sekarang cukup diarahkan
+            ke sini setelah selesai. */}
+        <div className="mb-10 rounded-xl border border-outline-variant bg-surface-container-lowest p-6 flex flex-col items-center gap-3">
+          <h2 className="text-headline-sm text-on-background">{t("sensus.wechatJoinTitle")}</h2>
+          {/* QR: <img> biasa, bukan next/image - kode QR butuh piksel tajam tanpa
+              re-encode, dan berkasnya statis di /public. */}
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src="/wechat-ppit-nanjing.png"
+            alt={t("sensus.wechatJoinTitle")}
+            width={220}
+            height={220}
+            className="h-[220px] w-[220px] rounded-lg border border-outline-variant bg-white object-contain p-2"
+          />
+          <p className="text-body-sm text-on-surface-variant">
+            {t("sensus.wechatIdLabel")}:{" "}
+            <span className="font-medium text-on-background select-all">ppitnanjing</span>
+          </p>
+          <p className="text-body-sm text-on-surface-variant">{t("sensus.wechatJoinNote")}</p>
+        </div>
+
         <div className="flex flex-col sm:flex-row gap-3 justify-center">
           <Link
             href="/sensus"
