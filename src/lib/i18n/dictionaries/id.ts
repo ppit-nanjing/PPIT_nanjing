@@ -107,8 +107,8 @@ export const id = {
     "Berita, kegiatan, dan konten lain yang ditulis pengurus tetap tampil dalam bahasa aslinya.",
 
   // StatsGrid (home)
-  "stats.activeStudents": "Pelajar Aktif",
   "stats.coveredCities": "Kota Naungan",
+  "stats.campuses": "Kampus",
   "stats.estSince": "Berdiri Sejak",
 
   // Home
@@ -116,6 +116,7 @@ export const id = {
   "home.hero.subtext":
     "Wadah resmi Perhimpunan Pelajar Indonesia Tiongkok (PPIT) Cabang Nanjing untuk bersinergi, berkarya, dan berkontribusi bagi bangsa — sejak 2008.",
   "home.hero.cta": "Jelajahi Kegiatan",
+  "home.hero.ctaSecondary": "Tentang PPIT Nanjing",
   "home.quote.text":
     "PPIT Nanjing adalah rumah bagi ribuan mimpi anak bangsa di kota bersejarah ini. Melalui kolaborasi dan semangat gotong royong, kita pastikan setiap pelajar Indonesia di sini memiliki support system terbaik untuk berkarya dan berkontribusi.",
   "home.quote.author": "Ketua Umum PPIT Nanjing",
@@ -142,6 +143,15 @@ export const id = {
   "home.city.huaian.blurb": "Kota historis di utara Jiangsu, salah satu ranting aktif PPIT.",
   "home.city.huaian.detail":
     "Kota bersejarah di utara Jiangsu yang merupakan salah satu ranting aktif, turut memperluas jangkauan PPIT di luar Nanjing.",
+  "home.city.lianyungang.blurb": "Kota pelabuhan pesisir di ujung timur laut Jiangsu.",
+  "home.city.lianyungang.detail":
+    "Lianyungang berada di pesisir Laut Kuning, di ujung timur jalur kereta Longhai. Sekelompok kecil pelajar Indonesia di sana tetap terhubung dengan jaringan PPIT Nanjing.",
+  "home.city.taizhou.blurb": "Kota di Jiangsu tengah, di tepi utara Sungai Yangtze.",
+  "home.city.taizhou.detail":
+    "Taizhou terletak di Jiangsu tengah, sebelah utara Sungai Yangtze antara Yangzhou dan Nantong. Pelajar Indonesianya turut serta dalam kegiatan lintas kota PPIT.",
+  "home.city.yancheng.blurb": "Kota pesisir di Jiangsu tengah dengan wilayah terluas di provinsi.",
+  "home.city.yancheng.detail":
+    "Yancheng membentang di sepanjang pesisir Jiangsu tengah dan dikenal dengan cagar alam lahan basahnya. Komunitas kecil pelajar Indonesia di sana menjadi bagian dari jaringan PPIT Nanjing.",
   "home.events.kicker": "Agenda",
   "home.events.title": "Kegiatan Terbaru",
   "home.news.kicker": "Publikasi",
@@ -168,7 +178,7 @@ export const id = {
   "about.intro":
     "PPIT Cabang Nanjing adalah organisasi kemahasiswaan di Kota Nanjing yang mewadahi pelajar dan mahasiswa Indonesia serta organisasi-organisasi pelajar Indonesia di Tiongkok, khususnya Kota Nanjing. Organisasi ini dibentuk pada 28 Oktober 2008, bertepatan dengan Hari Sumpah Pemuda.",
   "about.coverageText":
-    "Selain Kota Nanjing, PPIT Nanjing turut menaungi pelajar Indonesia di kota-kota sekitarnya: Xuzhou, Jurong, Ma'anshan, Zhenjiang, dan Huai'an, dengan dua ranting organisasi aktif setingkat kampus — INA di NUIST dan JIA di JSAHVC.",
+    "Selain Kota Nanjing, PPIT Nanjing menaungi pelajar Indonesia di kota-kota naungannya yang lain di Provinsi Jiangsu dan Ma'anshan (Anhui), serta dua ranting organisasi aktif setingkat kampus — INA di NUIST dan JIA di JSAHVC.",
   "about.founded": "Didirikan 28 Oktober 2008",
   "about.location": "Nanjing, Tiongkok",
   "about.visionMissions": "Visi & Misi",
@@ -177,8 +187,9 @@ export const id = {
     "Meningkatkan pelayanan PPIT Nanjing kepada seluruh mahasiswa Indonesia di bawah naungannya; membuat PPIT Nanjing secara internal lebih efisien; dan menjadikan PPIT Nanjing sebagai organisasi yang memberikan kesempatan bagi setiap anggota kabinet untuk mengembangkan dan melatih kemampuan diri.",
   "about.coverageTitle": "Wilayah Cakupan",
   "about.coverageDesc":
-    "Selain mahasiswa di Kota Nanjing sendiri, PPIT Nanjing menaungi pelajar Indonesia di kota-kota sekitarnya serta dua ranting organisasi aktif setingkat kampus.",
+    "Kota-kota di luar Nanjing yang turut dinaungi, beserta dua ranting organisasi setingkat kampus.",
   "about.nearbyCities": "Kota Sekitar",
+  "about.coverageMapLink": "Lihat peta cakupan",
   "about.branch": "Ranting",
   "about.structCta": "Lihat Struktur Organisasi",
   "about.regionalCta": "Cabang Regional",
@@ -186,6 +197,8 @@ export const id = {
   "common.viewAll": "Lihat Semua",
 
   "cities.readMore": "Baca selengkapnya",
+  "common.read": "Baca",
+  "common.readAria": "Baca selengkapnya: {{title}}",
   "cities.close": "Tutup",
 
   // Events
@@ -258,6 +271,30 @@ export const id = {
   "ticket.copyToken": "Salin Token",
   "ticket.calDetails": "Tunjukkan QR code ini saat check-in di lokasi acara.",
   "ticket.toDetail": "Ke Detail Kegiatan",
+  "ticket.pay.heading": "Pembayaran",
+  "ticket.pay.step1": "1. Bayar sesuai instruksi di bawah.",
+  "ticket.pay.step2": "2. Unggah bukti transfer.",
+  "ticket.pay.step3": "3. Bendahara memverifikasi — QR check-in muncul otomatis di halaman ini.",
+  "ticket.pay.amountLabel": "Yang harus kamu bayar",
+  "ticket.pay.amountTbd": "Nominal biaya belum ditentukan, tunggu info dari panitia.",
+  "ticket.pay.qrAdminAlt": "QR Alipay bendahara acara",
+  "ticket.pay.qrAdminHint": "Scan QR Alipay di atas dengan app Alipay, transfer sejumlah biaya, lalu unggah buktinya di bawah.",
+  "ticket.pay.qrAutoAlt": "QR pembayaran Alipay dengan nominal terisi otomatis",
+  "ticket.pay.qrAutoHint": "Scan pakai app Alipay dari HP lain, atau kalau lagi buka halaman ini di HP sendiri, langsung ketuk tombol di bawah.",
+  "ticket.pay.openAlipay": "Buka Alipay (nominal & catatan sudah terisi)",
+  "ticket.pay.openAlipayFallback": "Kalau tombolnya tidak terbuka (mis. dari browser dalam app WeChat), bayar manual sesuai instruksi di atas — tetap unggah buktinya di bawah.",
+  "ticket.pay.statusLabel": "Status",
+  "ticket.pay.status.not_required": "Tidak Diperlukan",
+  "ticket.pay.status.unpaid": "Belum Bayar",
+  "ticket.pay.status.submitted": "Menunggu Verifikasi",
+  "ticket.pay.status.verified": "Terverifikasi",
+  "ticket.pay.status.rejected": "Ditolak",
+  "ticket.pay.submittedNote": "Bukti transfer sudah terkirim. Bendahara akan memverifikasi — QR check-in muncul otomatis di halaman ini setelah disetujui. Kamu bisa memperbarui bukti di bawah bila perlu.",
+  "ticket.pay.rejectedNote": "Bukti sebelumnya belum bisa diverifikasi{{note}}. Kirim ulang bukti transfer yang benar di bawah.",
+  "ticket.pay.proofLabel": "Bukti transfer (screenshot)",
+  "ticket.pay.proofLabelUpdate": "Perbarui bukti transfer (screenshot)",
+  "ticket.pay.submitProof": "Kirim Bukti",
+  "ticket.nextSteps": "Langkah Berikutnya",
 
   // News
   "news.title": "Berita",
@@ -327,6 +364,7 @@ export const id = {
   "jobs.detailAria": "Lihat detail lowongan {{title}} di {{company}}",
   "jobs.viewDetail": "Lihat Detail",
   "jobs.resourcesHeading": "Sumber Daya Karir",
+  "jobs.mentorshipTitle": "Mentorship Jaringan Alumni",
   "jobs.mentorshipDesc": "Terhubung dengan alumni untuk bimbingan karir",
   "jobs.backToListAria": "Kembali ke daftar lowongan",
   "jobs.listLabel": "Lowongan",
@@ -467,6 +505,10 @@ export const id = {
   "inventory.form.quantityInvalid": "Masukkan jumlah berupa bilangan bulat minimal 1",
   "inventory.form.outOfStockTitle": "Stok sedang habis",
   "inventory.form.outOfStockDesc": "Semua unit barang ini sedang dipinjam. Coba lagi nanti atau hubungi Divisi Logistik.",
+  "inventory.form.internalNote": "Kamu mengajukan sebagai peminjam internal PPIT — nama & kontakmu diambil dari akun.",
+  "inventory.form.externalNote": "Kamu mengajukan sebagai pihak luar. Isi data kontak selengkapnya; Divisi Logistik akan menghubungimu lewat WeChat / Email untuk konfirmasi. Pengajuan tidak otomatis disetujui.",
+  "inventory.form.reservedHeading": "Tanggal yang sudah dipesan",
+  "inventory.form.reservedDesc": "Barang ini sudah dibooking untuk acara PPIT pada periode berikut — pengajuan dengan tanggal yang beririsan akan ditolak.",
   "inventory.form.fromDate": "Dari Tanggal",
   "inventory.form.toDate": "Sampai Tanggal",
   "inventory.form.purpose": "Keperluan",

@@ -5,7 +5,7 @@
 // array values resolve on either side of the RSC boundary.
 import { NAV_LINKS, DISCOVER_LINKS } from "@/lib/nav-links";
 import { ThemeSwitcher } from "@/components/theme-switcher";
-import { AnimatedLettersHeading } from "@/components/animated-letters-heading";
+import { AnimatedHeroHeading } from "@/components/animated-hero-heading";
 import { useT } from "@/lib/i18n/client";
 import type { TKey } from "@/lib/i18n/dictionaries/id";
 import { ArrowRight } from "lucide-react";
@@ -22,8 +22,11 @@ const ABOUT_LINKS = [
 function FooterColumn({ heading, links }: { heading: string; links: ReadonlyArray<{ href: string; labelKey: TKey }> }) {
   const t = useT();
   return (
+    // The group label is not a document heading - `<nav aria-label>` already
+    // names it for assistive tech, and four footer <h2>s otherwise sit in the
+    // page outline next to the real content sections.
     <nav aria-label={heading} className="flex flex-col gap-3">
-      <h2 className="text-label-caps uppercase tracking-wide text-inverse-on-surface/60">{heading}</h2>
+      <p className="text-label-caps uppercase tracking-wide text-inverse-on-surface/60">{heading}</p>
       <ul className="flex flex-col gap-2">
         {links.map((link) => (
           <li key={link.href}>
@@ -47,8 +50,9 @@ export function SiteFooter() {
     <footer className="w-full mt-16 bg-inverse-surface text-inverse-on-surface px-[var(--spacing-container-padding)]">
       <div className="max-w-[var(--container-max)] mx-auto pt-14 pb-8 flex flex-col gap-12">
         <div className="bg-primary-container text-on-primary rounded-2xl px-8 py-14 flex flex-col items-center text-center gap-8">
-          <AnimatedLettersHeading
-            text={t("footer.joinHeading")}
+          <AnimatedHeroHeading
+            as="h2"
+            words={[t("footer.joinHeading")]}
             className="text-display-hero-mobile md:text-display-hero"
           />
           <Link
@@ -71,7 +75,7 @@ export function SiteFooter() {
               target="_blank"
               rel="noopener noreferrer"
               aria-label={t("footer.instagramAria")}
-              className="inline-flex items-center justify-center w-9 h-9 rounded-full bg-inverse-on-surface/10 hover:bg-inverse-on-surface/20 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-on-primary mt-1"
+              className="inline-flex items-center justify-center w-11 h-11 rounded-full bg-inverse-on-surface/10 hover:bg-inverse-on-surface/20 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-on-primary mt-1"
             >
               <svg
                 viewBox="0 0 24 24"

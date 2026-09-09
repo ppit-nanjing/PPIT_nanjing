@@ -9,8 +9,8 @@ import type { TKey } from "@/lib/i18n/dictionaries/id";
 // so the site reads as this city and not as a generic chapter template. The
 // palettes themselves live in globals.css - this only flips data-theme.
 export const CITY_THEMES = [
-  { id: "zijin", label: "Zijin", hanzi: "紫金山", noteKey: "theme.note.zijin", swatch: "#4a3b78" },
-  { id: "meihua", label: "Meihua", hanzi: "梅花", noteKey: "theme.note.meihua", swatch: "#8e2b41" },
+  { id: "zijin", label: "Zijin", hanzi: "紫金山", noteKey: "theme.note.zijin", swatch: "#3f5a49" },
+  { id: "meihua", label: "Meihua", hanzi: "梅花", noteKey: "theme.note.meihua", swatch: "#a3304f" },
   { id: "mingwall", label: "Ming", hanzi: "明城墙", noteKey: "theme.note.mingwall", swatch: "#3f4e5e" },
 ] as const satisfies readonly { id: string; label: string; hanzi: string; noteKey: TKey; swatch: string }[];
 

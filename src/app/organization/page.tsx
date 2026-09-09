@@ -3,6 +3,7 @@ import { db } from "@/db";
 import { departments, departmentMembers, users } from "@/db/schema";
 import { SiteNav } from "@/components/site-nav";
 import { SiteFooter } from "@/components/site-footer";
+import { AnimatedHeroHeading } from "@/components/animated-hero-heading";
 import { OrgExplorer, type OrgNodeData, type OrgMember } from "@/components/org-explorer";
 import { Network } from "lucide-react";
 import { getT } from "@/lib/i18n/server";
@@ -98,9 +99,10 @@ export default async function OrganizationPage() {
           <span className="text-label-caps tracking-widest uppercase mb-2 block text-primary-container">
             {t("org.structure.term")}
           </span>
-          <h1 className="text-display-hero-mobile md:text-display-hero text-on-background mb-4">
-            {t("org.structure.title")}
-          </h1>
+          <AnimatedHeroHeading
+            words={[t("org.structure.title")]}
+            className="text-display-hero-mobile md:text-display-hero text-on-background mb-4"
+          />
           <p className="text-body-lg text-on-surface-variant max-w-2xl">
             {t("org.structure.intro")}
           </p>

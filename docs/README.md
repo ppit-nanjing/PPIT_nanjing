@@ -5,6 +5,8 @@
 ## 📍 Overview
 
 - [Overview](./Overview.md) — ringkasan proyek, status, langkah selanjutnya
+- [PRODUCT.md](../PRODUCT.md) — product truth (users, purpose, positioning, constraints, locked brand) — for the impeccable skill
+- [DESIGN.md](../DESIGN.md) — the **real** visual system extracted from `globals.css` + components (via `/impeccable document`, 2026-09-09). The `Design System/*` notes below are pre-2026-08 and describe a superseded palette
 
 ## 🧭 Information Architecture
 

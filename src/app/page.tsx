@@ -1,4 +1,4 @@
-import { eq, desc, asc } from "drizzle-orm";
+import { eq, desc, asc, count } from "drizzle-orm";
 import Link from "next/link";
 import { MovingArrow } from "@/components/icons/moving-arrow";
 import { AnimatedHeroHeading } from "@/components/animated-hero-heading";
@@ -13,11 +13,16 @@ import { StatsGrid } from "@/components/stats-grid";
 import { CitiesGrid } from "@/components/cities-grid";
 import { QuoteMark } from "@/components/quote-mark";
 import { db } from "@/db";
-import { events, newsArticles } from "@/db/schema";
+import { events, newsArticles, coverageCities, universities } from "@/db/schema";
 import { publishDueEvents } from "@/lib/publish-events";
 import { getT } from "@/lib/i18n/server";
 import { INTL_LOCALE } from "@/lib/i18n/config";
 
+// The nine cities PPIT Nanjing covers, for the home-page cities section. Copy
+// for each lives under `home.city.<slug>.*`. Editorial order: Nanjing (the
+// chapter seat) first, then the established branches, then the three smaller
+// student groups (Lianyungang, Taizhou, Yancheng). The canonical list is the
+// `coverage_cities` table; /coverage renders it alphabetically.
 const CITIES = [
   { name: "Nanjing", slug: "nanjing" },
   { name: "Xuzhou", slug: "xuzhou" },
@@ -25,6 +30,9 @@ const CITIES = [
   { name: "Ma'anshan", slug: "manshan" },
   { name: "Zhenjiang", slug: "zhenjiang" },
   { name: "Huai'an", slug: "huaian" },
+  { name: "Lianyungang", slug: "lianyungang" },
+  { name: "Taizhou", slug: "taizhou" },
+  { name: "Yancheng", slug: "yancheng" },
 ] as const;
 
 export default async function Home() {
@@ -44,54 +52,64 @@ export default async function Home() {
     .orderBy(desc(newsArticles.publishedAt))
     .limit(3);
 
+  // Real figures for the stats band - see StatsGrid on why no headcount. The
+  // campus count is filtered to published rows so it matches what a visitor can
+  // actually see on /universities (that page filters the same way).
+  const [[{ value: cityCount }], [{ value: campusCount }]] = await Promise.all([
+    db.select({ value: count() }).from(coverageCities),
+    db.select({ value: count() }).from(universities).where(eq(universities.published, true)),
+  ]);
+
   return (
     <div className="min-h-screen bg-background text-on-background">
       <SiteNav />
 
-      <header className="relative w-full h-[600px] md:h-[680px] flex items-center justify-center overflow-hidden bg-on-background">
-        {/* Layered depth: deep base -> directional glow -> decorative skyline silhouette.
-            Placeholder for a licensed Nanjing photograph (see docs/Design System/Iconography & Imagery.md) -
-            original vector art only, no hotlinked/unlicensed images. */}
-        <div className="absolute inset-0 bg-gradient-to-b from-on-background via-primary/40 to-on-background" />
-        <div className="absolute inset-0 [background:radial-gradient(circle_at_50%_20%,var(--color-primary-container)_0%,transparent_55%)] opacity-70" />
-        <svg
-          className="absolute bottom-0 left-0 w-full h-[45%] opacity-80"
-          viewBox="0 0 1200 300"
-          preserveAspectRatio="none"
-          fill="none"
-        >
-          <path
-            d="M0 300V180l60-20 20-40 20 40 40-60 40 60 20-30 20 30 80-90 80 90 30-40 30 40 60-70 60 70 40-50 40 50 60-30 60 30 40-60 40 60 60-20 60 20V300Z"
-            fill="var(--color-on-background)"
-            opacity="0.9"
-          />
-        </svg>
-        <div className="absolute inset-0 opacity-[0.08] [background-image:radial-gradient(circle_at_20%_30%,white_1px,transparent_1px)] [background-size:24px_24px]" />
+      <header className="relative w-full overflow-hidden bg-warm-cream border-b border-outline-variant">
+        {/* 紫金山 Zijin Shan - the chapter's namesake mountain, drawn in the active
+            palette's own neutrals as layered Jiangnan mist. This follows the
+            theme (no inverting dark panel) and replaces the placeholder gradient
+            hero; a licensed Nanjing photograph can take this slot later - see
+            docs/Design System/Iconography & Imagery.md. Ridge paths are shared
+            with the auth season panel. */}
+        <div className="pointer-events-none absolute inset-x-0 bottom-0 h-44 md:h-72" aria-hidden="true">
+          <svg viewBox="0 0 400 150" preserveAspectRatio="none" className="absolute inset-0 h-full w-full">
+            {/* one ink, three layers of receding mist */}
+            <path d="M0,150 L0,102 C55,88 95,98 145,88 C195,78 235,92 285,82 C325,74 355,80 400,76 L400,150 Z" fill="var(--color-on-surface-variant)" opacity="0.09" />
+            <path d="M0,150 L0,116 C60,98 105,110 155,98 C205,86 245,102 295,90 C335,80 365,88 400,84 L400,150 Z" fill="var(--color-on-surface-variant)" opacity="0.16" />
+            <path d="M0,150 L0,130 C50,110 90,124 135,108 C165,98 190,84 218,86 C245,88 270,108 305,100 C340,92 370,98 400,104 L400,150 Z" fill="var(--color-on-surface-variant)" opacity="0.24" />
+          </svg>
+        </div>
+        <div className="pointer-events-none absolute inset-x-0 bottom-0 h-px bg-muted-gold/50" aria-hidden="true" />
 
-        <div className="relative z-10 text-center px-[var(--spacing-container-padding)] max-w-3xl mx-auto flex flex-col items-center">
-          <span className="text-label-caps uppercase tracking-[0.2em] text-inverse-primary border border-inverse-primary/40 rounded-full px-4 py-1.5 mb-6">
-            EST. 2008
-          </span>
+        <div className="relative z-10 max-w-[var(--container-max)] mx-auto px-[var(--spacing-container-padding)] py-24 md:py-36 flex flex-col items-center text-center">
           <AnimatedHeroHeading
             words={t("home.hero.words").split("|")}
-            className="text-display-hero-mobile md:text-display-hero text-on-primary mb-[var(--spacing-stack-md)]"
+            className="text-display-hero-mobile md:text-display-hero text-on-background text-balance mb-6 max-w-4xl"
           />
           <AnimatedRevealText
             text={t("home.hero.subtext")}
-            className="text-body-lg text-on-primary-container mb-[var(--spacing-stack-md)] max-w-2xl"
+            className="text-body-lg text-on-surface-variant text-pretty mb-[var(--spacing-stack-md)] max-w-2xl"
           />
-          <Link
-            href="/events"
-            className="group inline-flex items-center gap-2 bg-on-primary text-primary text-label-caps uppercase tracking-wide px-8 py-4 rounded-md hover:scale-105 transition-transform motion-reduce:hover:scale-100 motion-reduce:transition-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-on-primary focus-visible:ring-offset-2 focus-visible:ring-offset-on-background"
-          >
-            {t("home.hero.cta")} <MovingArrow size={18} />
-          </Link>
+          <div className="flex flex-wrap items-center justify-center gap-x-3 gap-y-2">
+            <Link
+              href="/events"
+              className="group inline-flex items-center gap-2 bg-primary-container text-on-primary text-label-caps uppercase tracking-wide px-8 py-4 rounded-md hover:bg-primary transition-colors motion-reduce:transition-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-container focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+            >
+              {t("home.hero.cta")} <MovingArrow size={18} />
+            </Link>
+            <Link
+              href="/about"
+              className="group inline-flex items-center gap-1.5 px-4 py-4 rounded-md text-label-caps uppercase tracking-wide text-primary-container hover:text-primary transition-colors motion-reduce:transition-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-container focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+            >
+              {t("home.hero.ctaSecondary")} <MovingArrow size={16} />
+            </Link>
+          </div>
         </div>
       </header>
 
       <main className="max-w-[var(--container-max)] mx-auto px-[var(--spacing-container-padding)] flex flex-col gap-16 md:gap-[var(--spacing-section-gap)] py-16 md:py-[var(--spacing-section-gap)]">
         {/* Stats */}
-        <StatsGrid />
+        <StatsGrid cityCount={cityCount} campusCount={campusCount} />
 
         {/* Quote */}
         <Reveal>

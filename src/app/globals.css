@@ -9,50 +9,55 @@
 /* Design tokens ported from Design System/Color System.md, Typography.md, Spacing System.md
    (Warm Institutional - canonical). See docs/Design System Overview.md */
 @theme {
-  /* Colors - default theme: 紫金山 Zijin (Gunung Ungu-Emas).
-     Two alternates live in the [data-theme] blocks below; every one of them is
-     just an override of these same tokens, which is why swapping a theme needs
-     no component changes. All three are checked against WCAG AA. */
-  --color-primary: #3a2e62;
-  --color-primary-container: #4a3b78;
+  /* Colors - default theme: 紫金山 Zijin Shan, the chapter's namesake Purple
+     Mountain. It is a forested mountain of pine and grey stone; "紫金"
+     (purple-gold) is the atmospheric haze on its slopes at dawn and dusk - so
+     the primary is that pine green, and violet + a warm gold are the accent
+     "haze" (tertiary / muted-gold), used sparingly.
+     Two alternates (梅花 meihua, 明城墙 mingwall) live in the [data-theme]
+     blocks below; every one is just an override of these same tokens, which is
+     why swapping a theme needs no component changes. All checked against WCAG AA
+     (light + dark) 2026-09-09. */
+  --color-primary: #33493c;
+  --color-primary-container: #3f5a49;
   --color-on-primary: #ffffff;
-  --color-on-primary-container: #efeaf8;
-  --color-inverse-primary: #c4b5f0;
+  --color-on-primary-container: #e6f0ea;
+  --color-inverse-primary: #a9cbb4;
 
-  --color-secondary: #5a5867;
-  --color-secondary-container: #e4e1e8;
-  --color-on-secondary-container: #514f5e;
+  --color-secondary: #566058;
+  --color-secondary-container: #dfe4df;
+  --color-on-secondary-container: #444d46;
 
-  --color-tertiary: #6f5726;
-  --color-tertiary-container: #8a6e2e;
-  --color-on-tertiary-container: #fbf7ec;
+  --color-tertiary: #6a4d86;
+  --color-tertiary-container: #7c5c9a;
+  --color-on-tertiary-container: #f4eefa;
 
-  --color-background: #faf8f3;
-  --color-on-background: #22202b;
-  --color-surface: #faf8f3;
-  --color-surface-dim: #e4e0d6;
-  --color-surface-variant: #ece8de;
+  --color-background: #f8f7f1;
+  --color-on-background: #1e241f;
+  --color-surface: #f8f7f1;
+  --color-surface-dim: #dfe0d3;
+  --color-surface-variant: #e9eae0;
   --color-surface-container-lowest: #ffffff;
-  --color-surface-container-low: #f6f3eb;
-  --color-surface-container: #f1ede4;
-  --color-surface-container-high: #ebe7dc;
-  --color-surface-container-highest: #e4e0d6;
-  --color-on-surface: #22202b;
-  --color-on-surface-variant: #4e4b5c;
+  --color-surface-container-low: #f2f2e9;
+  --color-surface-container: #ecede2;
+  --color-surface-container-high: #e6e7db;
+  --color-surface-container-highest: #dfe0d3;
+  --color-on-surface: #1e241f;
+  --color-on-surface-variant: #48514a;
 
-  --color-outline: #6f6b80;
-  --color-outline-variant: #d6d1c4;
-  --color-inverse-surface: #302d3b;
-  --color-inverse-on-surface: #f4f1ea;
+  --color-outline: #64705f;
+  --color-outline-variant: #d3d6c9;
+  --color-inverse-surface: #2c332d;
+  --color-inverse-on-surface: #f0f2ec;
 
   --color-error: #b3261e;
   --color-on-error: #ffffff;
   --color-error-container: #f9dedc;
   --color-on-error-container: #8c1d18;
 
-  --color-warm-cream: #fdfbf6;
-  --color-soft-gray: #f1efe9;
-  --color-muted-gold: #8a6e2e;
+  --color-warm-cream: #fbfbf4;
+  --color-soft-gray: #eeefe7;
+  --color-muted-gold: #a97e34;
 
   /* Typography - see docs/Typography.md for the level-by-level hierarchy.
      CJK fallbacks are explicit because place names, campus names and the theme
@@ -76,10 +81,21 @@
   --text-headline-md--line-height: 1.4;
   --text-headline-md--letter-spacing: -0.01em;
   --text-headline-md--font-weight: 700;
+  /* Small title - card titles, list-row headings, the nav wordmark. Below
+     headline-md; still a heading voice, so weight 700. Added 2026-09-09 after an
+     audit found `text-headline-sm` used ~28x with no token behind it. */
+  --text-headline-sm: 20px;
+  --text-headline-sm--line-height: 1.35;
+  --text-headline-sm--letter-spacing: -0.01em;
+  --text-headline-sm--font-weight: 700;
   --text-body-lg: 18px;
   --text-body-lg--line-height: 1.75;
   --text-body-md: 16px;
   --text-body-md--line-height: 1.65;
+  /* Small body - captions, card metadata, secondary blurbs. The step between
+     body-md and label-caps. Added alongside headline-sm (used ~100x untokenised). */
+  --text-body-sm: 14px;
+  --text-body-sm--line-height: 1.55;
   --text-label-caps: 12px;
   --text-label-caps--line-height: 1.5;
   --text-label-caps--letter-spacing: 0.1em;
@@ -140,43 +156,46 @@ body {
    berubah tanpa satu pun diedit. Semua sudah dicek kontrasnya (WCAG AA).
    Tema disetel lewat data-theme di <html> oleh components/theme-switcher. */
 
-/* 梅花 Meihua - bunga prem, bunga resmi Kota Nanjing. */
+/* 梅花 Meihua - bunga prem, bunga resmi Kota Nanjing. A rose-crimson 朱砂梅
+   petal; the blossom's golden stamens are the `muted-gold` whisper. Retuned
+   2026-09-09 from a darker oxblood that read more "wine" than "blossom".
+   WCAG AA verified light + dark. */
 [data-theme="meihua"] {
-  --color-primary: #6e2032;
-  --color-primary-container: #8e2b41;
+  --color-primary: #9a2f4a;
+  --color-primary-container: #a3304f;
   --color-on-primary: #ffffff;
-  --color-on-primary-container: #fdeef1;
-  --color-inverse-primary: #f2b8c6;
+  --color-on-primary-container: #fdecf0;
+  --color-inverse-primary: #f4b3c3;
 
-  --color-secondary: #6a595e;
-  --color-secondary-container: #ebe0e3;
-  --color-on-secondary-container: #574a4e;
+  --color-secondary: #6d5a60;
+  --color-secondary-container: #ede0e4;
+  --color-on-secondary-container: #58484e;
 
-  --color-tertiary: #743b4d;
-  --color-tertiary-container: #8e4a60;
-  --color-on-tertiary-container: #fdf3f6;
+  --color-tertiary: #8a3a52;
+  --color-tertiary-container: #a34a63;
+  --color-on-tertiary-container: #fdeef2;
 
-  --color-background: #fbf7f7;
-  --color-on-background: #2a1f24;
-  --color-surface: #fbf7f7;
-  --color-surface-dim: #ece0e2;
-  --color-surface-variant: #f2e7e9;
+  --color-background: #fcf6f7;
+  --color-on-background: #2b1e22;
+  --color-surface: #fcf6f7;
+  --color-surface-dim: #e9dadd;
+  --color-surface-variant: #f2e6e9;
   --color-surface-container-lowest: #ffffff;
-  --color-surface-container-low: #f8f1f2;
-  --color-surface-container: #f5ecee;
-  --color-surface-container-high: #f0e6e8;
-  --color-surface-container-highest: #ece0e2;
-  --color-on-surface: #2a1f24;
-  --color-on-surface-variant: #57474d;
+  --color-surface-container-low: #f8eef0;
+  --color-surface-container: #f4e8ea;
+  --color-surface-container-high: #efe2e4;
+  --color-surface-container-highest: #e9dadd;
+  --color-on-surface: #2b1e22;
+  --color-on-surface-variant: #5c4750;
 
-  --color-outline: #7c6a70;
-  --color-outline-variant: #ded0d4;
-  --color-inverse-surface: #3a2c31;
+  --color-outline: #7d6870;
+  --color-outline-variant: #e0d2d6;
+  --color-inverse-surface: #3a2b30;
   --color-inverse-on-surface: #faf0f2;
 
-  --color-warm-cream: #fefafa;
-  --color-soft-gray: #f3edee;
-  --color-muted-gold: #8e4a60;
+  --color-warm-cream: #fef8f9;
+  --color-soft-gray: #f3ecee;
+  --color-muted-gold: #a5822f;
 }
 
 /* 明城墙 Ming Wall - tembok kota Ming, batu abu dengan aksen bata. */
@@ -227,46 +246,49 @@ body {
 [data-mode="dark"] {
   color-scheme: dark;
 
-  --color-primary: #cbbcf7;
-  --color-primary-container: #b7a6ef;
-  --color-on-primary: #241a45;
-  --color-on-primary-container: #241a45;
-  --color-inverse-primary: #4a3b78;
+  /* Dark 紫金山 (Hutan) - a deep forest at night. Primary lightens to sage
+     (Material dark convention: the container/on-primary roles flip, so
+     `text-primary-container` stays legible in its ~194 text uses). */
+  --color-primary: #a9cbb4;
+  --color-primary-container: #94bba1;
+  --color-on-primary: #14261c;
+  --color-on-primary-container: #14261c;
+  --color-inverse-primary: #3f5a49;
 
-  --color-secondary: #b6b0c6;
-  --color-secondary-container: #2e2a3b;
-  --color-on-secondary-container: #cfc9dc;
+  --color-secondary: #b3bdb4;
+  --color-secondary-container: #2b332d;
+  --color-on-secondary-container: #cdd6cd;
 
-  --color-tertiary: #d8b85e;
-  --color-tertiary-container: #8a6e2e;
-  --color-on-tertiary-container: #fbf7ec;
+  --color-tertiary: #c9b0e0;
+  --color-tertiary-container: #7c5c9a;
+  --color-on-tertiary-container: #f4eefa;
 
-  --color-background: #15121f;
-  --color-on-background: #edeaf5;
-  --color-surface: #15121f;
-  --color-surface-dim: #100e18;
-  --color-surface-variant: #2a2537;
-  --color-surface-container-lowest: #1e1a2b;
-  --color-surface-container-low: #221e30;
-  --color-surface-container: #262233;
-  --color-surface-container-high: #2c2739;
-  --color-surface-container-highest: #332d42;
-  --color-on-surface: #edeaf5;
-  --color-on-surface-variant: #b9b3c9;
+  --color-background: #141a15;
+  --color-on-background: #e6ece5;
+  --color-surface: #141a15;
+  --color-surface-dim: #0f140f;
+  --color-surface-variant: #29332b;
+  --color-surface-container-lowest: #1a211b;
+  --color-surface-container-low: #1e261f;
+  --color-surface-container: #222b23;
+  --color-surface-container-high: #2a332b;
+  --color-surface-container-highest: #313b32;
+  --color-on-surface: #e6ece5;
+  --color-on-surface-variant: #b3bdb4;
 
-  --color-outline: #8e88a0;
-  --color-outline-variant: #3a3450;
-  --color-inverse-surface: #edeaf5;
-  --color-inverse-on-surface: #302d3b;
+  --color-outline: #869082;
+  --color-outline-variant: #333c34;
+  --color-inverse-surface: #e6ece5;
+  --color-inverse-on-surface: #2c332d;
 
   --color-error: #ffb4ab;
   --color-on-error: #690005;
   --color-error-container: #93000a;
   --color-on-error-container: #ffdad6;
 
-  --color-warm-cream: #1e1a2b;
-  --color-soft-gray: #262233;
-  --color-muted-gold: #d8b85e;
+  --color-warm-cream: #1a211b;
+  --color-soft-gray: #222b23;
+  --color-muted-gold: #d8b878;
 }
 
 [data-mode="dark"][data-theme="meihua"] {
@@ -274,15 +296,15 @@ body {
   --color-primary-container: #f0a9b8;
   --color-on-primary-container: #4a0f1d;
   --color-on-primary: #4a0f1d;
-  --color-inverse-primary: #8e2b41;
+  --color-inverse-primary: #a3304f;
 
   --color-secondary: #c9b4bb;
   --color-secondary-container: #372a2f;
   --color-on-secondary-container: #dcc9d0;
 
-  --color-tertiary: #e2a0b0;
-  --color-tertiary-container: #8e4a60;
-  --color-on-tertiary-container: #fdf3f6;
+  --color-tertiary: #e6a8bc;
+  --color-tertiary-container: #a34a63;
+  --color-on-tertiary-container: #fdeef2;
 
   --color-background: #1c1418;
   --color-on-background: #f5e9ee;
@@ -304,7 +326,7 @@ body {
 
   --color-warm-cream: #261b21;
   --color-soft-gray: #2f2229;
-  --color-muted-gold: #e2a0b0;
+  --color-muted-gold: #dbb87a;
 }
 
 [data-mode="dark"][data-theme="mingwall"] {

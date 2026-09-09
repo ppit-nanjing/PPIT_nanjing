@@ -25,9 +25,11 @@ Hierarki ditegakkan lewat **ukuran + weight + pilihan face**, bukan warna. Kelas
 | **H1** — hero halaman | Spectral | `text-display-hero` | 56px (mobile 36px) | 800 | Satu per halaman: judul hero. |
 | **H1/H2** — judul section | Spectral | `text-headline-lg` | 32px | 700 | Kepala section besar di halaman publik. |
 | **H3** — judul card / subsection | Spectral | `text-headline-md` | 24px | 700 | Judul card, sub-bagian, judul modal. |
+| **Judul kecil** | Spectral (H3) / sans (non-heading) | `text-headline-sm` | 20px | 700 | Judul card kecil, judul baris daftar, wordmark nav. |
 | **H4–H6** — sub-judul inline | Plus Jakarta Sans | `text-body-lg` + `font-semibold` | 18px | 600 | Sub-judul di dalam badan teks (legal, artikel, detail). Sengaja **sans** — sedekat ini ke body, serif malah mengganggu. |
 | **Lead / intro** | Plus Jakarta Sans | `text-body-lg` | 18px | 400 | Paragraf pembuka, teks pengantar. |
 | **Body** | Plus Jakarta Sans | `text-body-md` | 16px | 400 | Teks isi default. |
+| **Body kecil** | Plus Jakarta Sans | `text-body-sm` | 14px | 400 | Caption, metadata card, blurb sekunder. Langkah antara `body-md` dan `label-caps`. |
 | **Label CAPS / eyebrow** | Plus Jakarta Sans | `text-label-caps` | 12px | 600, +0.1em | Eyebrow di atas judul, kategori section, badge. Selalu tracking positif. |
 | **Kutipan** | Spectral | `text-quote-text` | 22px | 400, italic | Kutipan pimpinan / testimoni. Kata kunci di-bold atau diwarnai `primary`. |
 | **Statistik besar** | Plus Jakarta Sans | setara `text-headline-lg`/`display-hero` | — | 700–800 | Angka besar ("15K+") dipasangkan `label-caps` kecil di bawahnya. |

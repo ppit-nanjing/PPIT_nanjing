@@ -85,7 +85,7 @@ export default async function ReviewAdArtGuidelinesPage() {
               </h2>
               <div className="text-body-md text-on-surface-variant flex flex-col gap-4">
                 <p>{t("org.adart.review.ethicsBody")}</p>
-                <div className="bg-soft-gray p-6 rounded-md border-l-4 border-primary-container">
+                <div className="bg-soft-gray p-6 rounded-md border-t-[3px] border-t-primary-container border-x border-b border-outline-variant">
                   <h4 className="text-headline-md text-on-background mb-2">{t("org.adart.review.codeOfEthics")}</h4>
                   <p className="mb-0">{t("org.adart.review.ethicsBox")}</p>
                 </div>

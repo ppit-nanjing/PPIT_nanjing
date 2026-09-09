@@ -5,6 +5,7 @@ import { db } from "@/db";
 import { jobPostings, jobApplications } from "@/db/schema";
 import { SiteNav } from "@/components/site-nav";
 import { SiteFooter } from "@/components/site-footer";
+import { AnimatedHeroHeading } from "@/components/animated-hero-heading";
 import { formatRelativeTime } from "@/lib/format-relative-time";
 import { getT } from "@/lib/i18n/server";
 import { INTL_LOCALE } from "@/lib/i18n/config";
@@ -120,7 +121,10 @@ export default async function JobDetailPage({ params }: { params: Promise<{ id: 
                 </span>
               )}
             </div>
-            <h1 className="text-display-hero-mobile md:text-display-hero text-on-background mb-3">{job.title}</h1>
+            <AnimatedHeroHeading
+              words={[job.title]}
+              className="text-display-hero-mobile md:text-display-hero text-on-background mb-3"
+            />
             <h2 className="text-headline-md text-secondary mb-6">{job.company}</h2>
             <div className="flex flex-wrap gap-6 text-body-md text-on-surface-variant">
               {job.location && (

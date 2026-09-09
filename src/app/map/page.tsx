@@ -4,6 +4,7 @@ import { db } from "@/db";
 import { places, universities } from "@/db/schema";
 import { SiteNav } from "@/components/site-nav";
 import { SiteFooter } from "@/components/site-footer";
+import { AnimatedHeroHeading } from "@/components/animated-hero-heading";
 import { CoverageMap } from "@/components/coverage-map";
 import type { CoverageFeature } from "@/app/coverage/page";
 import geo from "@/data/nanjing-districts.geo.json";
@@ -67,7 +68,10 @@ export default async function NanjingMapPage() {
 
       <header className="max-w-[var(--container-max)] mx-auto px-[var(--spacing-container-padding)] pt-16 pb-8">
         <p className="text-label-caps uppercase tracking-wide text-on-surface-variant mb-2">{t("explore.kicker")}</p>
-        <h1 className="text-display-hero-mobile md:text-display-hero text-on-background mb-4">{t("njmap.title")}</h1>
+        <AnimatedHeroHeading
+          words={[t("njmap.title")]}
+          className="text-display-hero-mobile md:text-display-hero text-on-background mb-4"
+        />
         <p className="text-body-lg text-on-surface-variant max-w-2xl">
           {t("njmap.lead", { n: features.length })}{" "}
           {totalTagged > 0 ? t("njmap.tagged", { n: totalTagged }) : t("njmap.untagged")}

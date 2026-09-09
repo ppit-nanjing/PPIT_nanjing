@@ -203,7 +203,7 @@ export function MembershipApplicationForm({ fields, periodId, defaults, action, 
         <div
           role="alert"
           aria-live="assertive"
-          className="flex items-start gap-2 bg-error-container/40 border-l-4 border-error rounded-r-lg p-3"
+          className="flex items-start gap-2 bg-error-container/40 border border-error/40 rounded-lg p-3"
         >
           <AlertCircle className="text-error shrink-0 mt-0.5" size={16} />
           <p className="text-body-sm text-on-background">{serverError}</p>
@@ -226,7 +226,7 @@ export function MembershipApplicationForm({ fields, periodId, defaults, action, 
             aria-valuenow={answeredCount}
             className="h-2 rounded-full bg-soft-gray overflow-hidden"
           >
-            <div className="h-full bg-primary-container transition-all" style={{ width: `${(answeredCount / questionFields.length) * 100}%` }} />
+            <div className="h-full bg-primary-container transition-[width] duration-300 motion-reduce:transition-none" style={{ width: `${(answeredCount / questionFields.length) * 100}%` }} />
           </div>
         </div>
       )}
@@ -243,7 +243,7 @@ export function MembershipApplicationForm({ fields, periodId, defaults, action, 
 
         if (f.type === "section") {
           return (
-            <div key={f.id ?? f.key} className="flex flex-col gap-1 bg-secondary-container/30 rounded-xl p-5 border-l-4 border-secondary-container">
+            <div key={f.id ?? f.key} className="flex flex-col gap-1 bg-secondary-container/30 rounded-xl p-5 border border-outline-variant">
               <h3 className="text-headline-sm text-on-background">{f.label}</h3>
               {f.helpText && <p className="text-body-md text-on-surface-variant">{f.helpText}</p>}
             </div>

@@ -43,7 +43,7 @@ export async function EventCard({
       <Link
         href={`/events/${event.slug}`}
         aria-label={t("events.viewDetail", { title: event.title })}
-        className="group relative block h-full bg-surface-container-lowest border border-outline-variant rounded-xl overflow-hidden hover:shadow-[0_14px_40px_rgba(39,23,22,0.10)] hover:-translate-y-1 transition-all duration-300 motion-reduce:transition-none motion-reduce:transform-none focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-container focus-visible:ring-offset-2 focus-visible:ring-offset-background flex flex-col"
+        className="group relative block h-full bg-surface-container-lowest border border-outline-variant rounded-xl overflow-hidden hover:shadow-[0_14px_40px_rgba(39,23,22,0.10)] hover:-translate-y-1 transition-[box-shadow,transform] duration-300 motion-reduce:transition-none motion-reduce:transform-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-container focus-visible:ring-offset-2 focus-visible:ring-offset-background flex flex-col"
       >
         <div className="h-44 bg-surface-container-low overflow-hidden relative">
           {isPast && (
@@ -79,7 +79,7 @@ export async function EventCard({
             <ArrowRight
               size={18}
               aria-hidden="true"
-              className="shrink-0 mt-1 opacity-0 -translate-x-1 group-hover:opacity-100 group-hover:translate-x-0 transition-all duration-300 motion-reduce:transition-none motion-reduce:transform-none motion-reduce:opacity-100"
+              className="shrink-0 mt-1 opacity-0 -translate-x-1 group-hover:opacity-100 group-hover:translate-x-0 transition-[opacity,transform] duration-300 motion-reduce:transition-none motion-reduce:transform-none motion-reduce:opacity-100"
             />
           </h3>
           <div className="flex flex-col gap-1.5 text-label-caps text-on-surface-variant mt-auto">

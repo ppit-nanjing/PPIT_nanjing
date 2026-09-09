@@ -171,7 +171,7 @@ export default async function EventDetailPage({ params, searchParams }: { params
 
           {event.coverImageUrl ? (
             <Reveal>
-              <header className="relative mb-12 overflow-hidden rounded-3xl border border-outline-variant">
+              <header className="relative mb-12 overflow-hidden rounded-xl border border-outline-variant">
                 <div className="relative h-[22rem] w-full sm:h-[28rem] lg:h-[32rem]">
                   <Image
                     src={event.coverImageUrl}
@@ -203,7 +203,7 @@ export default async function EventDetailPage({ params, searchParams }: { params
                     )}
                   </div>
                   <AnimatedHeroHeading
-                    words={event.title.split(" ")}
+                    words={[event.title]}
                     className="max-w-3xl text-display-hero-mobile leading-tight text-white md:text-display-hero"
                   />
                   <div className="flex flex-wrap gap-x-5 gap-y-2 text-body-sm text-white/85">
@@ -247,7 +247,7 @@ export default async function EventDetailPage({ params, searchParams }: { params
                 </span>
               )}
               <AnimatedHeroHeading
-                words={event.title.split(" ")}
+                words={[event.title]}
                 className="text-display-hero-mobile leading-tight text-on-background md:text-display-hero"
               />
             </div>
@@ -257,7 +257,7 @@ export default async function EventDetailPage({ params, searchParams }: { params
             <div className="flex flex-col gap-12 lg:col-span-8">
               {event.description && (
                 <Reveal>
-                  <div className="evt-surface rounded-2xl border border-outline-variant bg-surface-container-lowest/70 p-6 sm:p-8">
+                  <div className="evt-surface rounded-lg border border-outline-variant bg-surface-container-lowest/70 p-6 sm:p-8">
                     <p className="whitespace-pre-wrap text-body-lg leading-relaxed text-on-surface-variant">
                       {event.description}
                     </p>
@@ -364,7 +364,7 @@ export default async function EventDetailPage({ params, searchParams }: { params
 
             <div className="lg:col-span-4">
               <Reveal>
-                <div className="evt-tintcard sticky top-24 flex flex-col gap-5 rounded-2xl border border-outline-variant bg-surface-container-low p-6">
+                <div className="evt-tintcard sticky top-24 flex flex-col gap-5 rounded-lg border border-outline-variant bg-surface-container-low p-6">
                 {event.startAt && (
                   <div className="flex items-start gap-3">
                     <CalendarDays className="text-primary-container shrink-0 mt-0.5" size={18} aria-hidden="true" />
@@ -441,7 +441,7 @@ export default async function EventDetailPage({ params, searchParams }: { params
                             aria-valuenow={Math.min(registeredCount, event.capacity)}
                           >
                             <div
-                              className={`h-full rounded-full transition-all duration-500 motion-reduce:transition-none ${
+                              className={`h-full rounded-full transition-[width] duration-500 motion-reduce:transition-none ${
                                 isFull ? "bg-error" : "bg-primary-container"
                               }`}
                               style={{ width: `${Math.min(100, (registeredCount / event.capacity) * 100)}%` }}

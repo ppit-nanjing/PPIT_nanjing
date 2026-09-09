@@ -44,3 +44,6 @@ next-env.d.ts
 
 # Claude Code local worktrees (not part of the app)
 .claude/worktrees/
+
+# impeccable skill working archive (critique snapshots, ignore rules) - local only
+.impeccable/

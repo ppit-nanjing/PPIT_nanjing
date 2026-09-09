@@ -1,11 +1,15 @@
 import { CalendarDays, Newspaper, ArrowRight } from "lucide-react";
 import Image from "next/image";
+import { getT } from "@/lib/i18n/server";
 
 /**
  * Shared content card for the home page's Latest Events and Latest News grids.
  * Unifies the near-identical card markup that was duplicated across both lists.
+ * Async server component (like GalleryCard) so its own chrome copy - the
+ * "read" link and the card's aria-label - resolves through the dictionary
+ * rather than being hard-coded Indonesian.
  */
-export function ContentCard({
+export async function ContentCard({
   href,
   imageUrl,
   eyebrow,
@@ -24,13 +28,14 @@ export function ContentCard({
   fallbackIcon?: "calendar" | "news";
   metaIcon?: boolean;
 }) {
+  const { t } = await getT();
   const Icon = fallbackIcon === "news" ? Newspaper : CalendarDays;
 
   return (
     <a
       href={href}
-      aria-label={`Baca selengkapnya: ${title}`}
-      className="group bg-surface-container-lowest border border-outline-variant rounded-xl overflow-hidden hover:shadow-[0_14px_40px_rgba(39,23,22,0.10)] hover:-translate-y-1 transition-all duration-300 motion-reduce:transition-none motion-reduce:hover:translate-y-0 flex flex-col focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-container focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+      aria-label={t("common.readAria", { title })}
+      className="group bg-surface-container-lowest border border-outline-variant rounded-xl overflow-hidden hover:shadow-[0_14px_40px_rgba(39,23,22,0.10)] hover:-translate-y-1 transition-[box-shadow,transform] duration-300 motion-reduce:transition-none motion-reduce:hover:translate-y-0 flex flex-col focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-container focus-visible:ring-offset-2 focus-visible:ring-offset-background"
     >
       <div className="relative h-44 bg-surface-container-low overflow-hidden">
         {imageUrl ? (
@@ -64,7 +69,7 @@ export function ContentCard({
         <h3 className="text-headline-md text-on-background mb-2 text-balance">{title}</h3>
         {excerpt && <p className="text-body-md text-on-surface-variant line-clamp-2 text-pretty">{excerpt}</p>}
         <span className="mt-4 inline-flex w-fit items-center gap-1.5 rounded-md bg-primary-container px-3 py-2 text-label-caps uppercase tracking-wide text-on-primary transition-colors group-hover:bg-primary">
-          Baca <ArrowRight size={14} className="transition-transform group-hover:translate-x-1 motion-reduce:transition-none motion-reduce:group-hover:translate-x-0" />
+          {t("common.read")} <ArrowRight size={14} className="transition-transform group-hover:translate-x-1 motion-reduce:transition-none motion-reduce:group-hover:translate-x-0" />
         </span>
       </div>
     </a>

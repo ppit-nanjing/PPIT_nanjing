@@ -109,7 +109,7 @@ export default async function EventsPage({
                   <a
                     href={`/events/${featured.slug}`}
                     aria-label={t("events.viewDetail", { title: featured.title })}
-                    className="group grid grid-cols-1 lg:grid-cols-12 bg-surface-container-lowest border border-outline-variant rounded-xl overflow-hidden hover:shadow-[0_14px_40px_rgba(39,23,22,0.10)] hover:-translate-y-1 transition-all duration-300 motion-reduce:transform-none motion-reduce:transition-none focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-container focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+                    className="group grid grid-cols-1 lg:grid-cols-12 bg-surface-container-lowest border border-outline-variant rounded-xl overflow-hidden hover:shadow-[0_14px_40px_rgba(39,23,22,0.10)] hover:-translate-y-1 transition-[box-shadow,transform] duration-300 motion-reduce:transform-none motion-reduce:transition-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-container focus-visible:ring-offset-2 focus-visible:ring-offset-background"
                   >
                     <div className="lg:col-span-7 h-64 lg:h-auto relative overflow-hidden bg-surface-container-low">
                       {featured.coverImageUrl ? (
@@ -125,14 +125,14 @@ export default async function EventsPage({
                           <CalendarDays className="text-outline-variant" size={40} />
                         </div>
                       )}
-                       <span className="absolute top-6 left-6 bg-primary-container text-on-primary px-4 py-2 rounded-lg text-label-caps uppercase tracking-wide shadow-md">
+                       <span className="absolute top-6 left-6 bg-primary-container text-on-primary px-4 py-2 rounded-lg text-label-caps uppercase tracking-wide shadow-[0_10px_30px_rgba(39,23,22,0.10)]">
                         {t("events.badgeUpcoming")}
                       </span>
                     </div>
                     <div className="lg:col-span-5 p-10 flex flex-col justify-center">
                       <div className="flex items-center gap-3 mb-4">
                         {featured.category && (
-                          <span className="px-3 py-1.5 bg-outline text-on-primary text-label-caps uppercase rounded-lg">
+                          <span className="px-3 py-1.5 bg-primary-container/10 text-primary-container text-label-caps uppercase tracking-wide rounded-lg">
                             {featured.category}
                           </span>
                         )}

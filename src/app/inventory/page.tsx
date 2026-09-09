@@ -3,6 +3,7 @@ import { db } from "@/db";
 import { inventoryItems } from "@/db/schema";
 import { SiteNav } from "@/components/site-nav";
 import { SiteFooter } from "@/components/site-footer";
+import { AnimatedHeroHeading } from "@/components/animated-hero-heading";
 import { Package, MapPin, Search } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
@@ -35,9 +36,10 @@ export default async function InventoryPage({
       <SiteNav />
 
       <header className="max-w-[var(--container-max)] mx-auto px-[var(--spacing-container-padding)] pt-16 pb-8">
-        <h1 className="text-display-hero-mobile md:text-display-hero text-on-background mb-4">
-          {t("inventory.title")}
-        </h1>
+        <AnimatedHeroHeading
+          words={[t("inventory.title")]}
+          className="text-display-hero-mobile md:text-display-hero text-on-background mb-4"
+        />
         <p className="text-body-lg text-on-surface-variant max-w-2xl mb-8">
           {t("inventory.intro")}
         </p>
@@ -72,7 +74,7 @@ export default async function InventoryPage({
             type="search"
             defaultValue={q}
             placeholder={t("inventory.searchPlaceholder")}
-            className="w-full pl-12 pr-28 py-3.5 bg-surface-container-lowest border border-outline-variant rounded-md text-body-md focus:outline-none focus:ring-2 focus:ring-primary-container"
+            className="w-full pl-12 pr-28 py-3.5 bg-surface-container-lowest border border-outline-variant rounded-md text-body-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-container focus-visible:ring-offset-2 focus-visible:ring-offset-background"
           />
           {category && <input type="hidden" name="category" value={category} />}
           <button
