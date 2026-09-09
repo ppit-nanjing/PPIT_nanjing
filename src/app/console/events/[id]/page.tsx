@@ -1,9 +1,10 @@
-import { eq, desc } from "drizzle-orm";
+import { eq, and, desc, sql } from "drizzle-orm";
 import { notFound } from "next/navigation";
 import { db } from "@/db";
-import { certificates, events, eventDivisions, eventFeeOptions, eventQuestions, eventRegistrations, eventVolunteers, galleryAlbums, sensusProfiles, users } from "@/db/schema";
+import { certificates, events, eventDivisions, eventFeeOptions, eventQuestions, eventRegistrations, eventVolunteers, galleryAlbums, galleryPhotos, inventoryItems, itemReservations, sensusProfiles, users } from "@/db/schema";
 import { MEMBERSHIP_LABEL, effectiveBranch, membershipStatus } from "@/lib/membership-status";
 import { updateEventInfo, updateEventContent, updateEventPostReport, setEventStatus, saveEventQuestion, deleteEventQuestion, saveFeeOption, deleteFeeOption } from "@/app/actions/admin-events";
+import { createEventGalleryAlbum } from "@/app/actions/admin-content";
 import { VolunteerApplicationList } from "@/components/console/volunteer-application-list";
 import { publishDueEvents } from "@/lib/publish-events";
 import { DeleteEventButton } from "@/components/console/delete-event-button";
@@ -20,10 +21,11 @@ import { CollapsibleSection } from "@/components/console/collapsible-section";
 import { HtmFields } from "@/components/console/htm-fields";
 import { Select, CheckboxField, CheckField } from "@/components/console/form";
 import { PaymentVerificationList } from "@/components/console/payment-verification-list";
+import { ReservationManager } from "@/components/console/reservation-manager";
 import { checkInBlockReason } from "@/lib/event-checkin";
 import { toDateLocalInput } from "@/lib/datetime";
 import { ConfirmButton } from "@/components/console/confirm-button";
-import { Download } from "lucide-react";
+import { Download, Images } from "lucide-react";
 
 const QUESTION_TYPE_LABELS: Record<string, string> = {
   text: "Teks Pendek",
@@ -105,6 +107,28 @@ export default async function ConsoleEventDetailPage({ params }: { params: Promi
     .where(eq(certificates.eventId, id));
   const committeeCertUserIds = issuedCerts.filter((c) => c.kind === "panitia").map((c) => c.userId);
   const participantCertCount = issuedCerts.filter((c) => c.kind === "peserta").length;
+
+  // Galeri foto acara — grant "Galeri" (Divisi Dokumentasi) atau BPH Panitia.
+  const canManageGallery = can("event.manageGallery");
+  const albumPhotoCount =
+    canManageGallery && linkedAlbum
+      ? (await db.select({ n: sql<number>`count(*)::int` }).from(galleryPhotos).where(eq(galleryPhotos.albumId, linkedAlbum.id)))[0]?.n ?? 0
+      : 0;
+
+  // Reservasi aset Inventaris untuk acara ini — hanya diambil kalau viewer-nya
+  // punya grant "Pinjam aset" (Divisi Logistik acara) atau BPH Panitia.
+  const canBorrowAssets = can("event.borrowAssets");
+  const [assetItems, assetReservations] = canBorrowAssets
+    ? await Promise.all([
+        db.select({ id: inventoryItems.id, name: inventoryItems.name }).from(inventoryItems).orderBy(inventoryItems.name),
+        db
+          .select({ r: itemReservations, itemName: inventoryItems.name })
+          .from(itemReservations)
+          .leftJoin(inventoryItems, eq(itemReservations.itemId, inventoryItems.id))
+          .where(and(eq(itemReservations.eventId, id), eq(itemReservations.status, "active")))
+          .orderBy(desc(itemReservations.reservedFrom)),
+      ])
+    : [[], []];
 
   // Verifikasi pembayaran = data keuangan - digerbang event.manageFinance
   // (grant "Keuangan" per divisi + BPH Panitia + BPH Kabinet). Diturunkan dari
@@ -578,6 +602,67 @@ export default async function ConsoleEventDetailPage({ params }: { params: Promi
             kehadiran&quot; di form Edit di atas bila berubah pikiran.
           </p>
         )}
+      </CollapsibleSection>
+      )}
+
+      {canManageGallery && (
+      <CollapsibleSection
+        title="Galeri Foto Acara"
+        description={linkedAlbum ? `Album: ${linkedAlbum.title} · ${albumPhotoCount} foto` : "belum ada album"}
+      >
+        {linkedAlbum ? (
+          <div className="flex flex-col gap-3">
+            <p className="text-body-md text-on-surface-variant max-w-2xl">
+              Foto highlight album ini tampil di halaman acara publik. Unggah & atur foto di halaman album.
+            </p>
+            <a
+              href={`/console/content/gallery/${linkedAlbum.id}`}
+              className="self-start inline-flex items-center gap-2 bg-primary-container text-on-primary text-label-caps uppercase tracking-wide px-5 py-2.5 rounded-md hover:bg-primary transition-colors"
+            >
+              <Images size={15} aria-hidden /> Kelola Album Foto
+            </a>
+          </div>
+        ) : (
+          <form action={createEventGalleryAlbum} className="flex flex-col gap-3 max-w-md">
+            <input type="hidden" name="eventId" value={id} />
+            <p className="text-body-md text-on-surface-variant">
+              Buat album foto untuk acara ini. Kamu akan diarahkan ke halaman album untuk mengunggah foto.
+            </p>
+            <input
+              name="title"
+              required
+              defaultValue={`Dokumentasi ${event.title}`}
+              placeholder="Judul album *"
+              className="bg-soft-gray rounded-md p-3 text-body-md"
+            />
+            <button
+              type="submit"
+              className="self-start bg-primary-container text-on-primary text-label-caps uppercase tracking-wide px-5 py-2.5 rounded-md hover:bg-primary transition-colors"
+            >
+              <Images size={15} className="inline -mt-0.5 mr-1.5" aria-hidden /> Buat Album Foto
+            </button>
+          </form>
+        )}
+      </CollapsibleSection>
+      )}
+
+      {canBorrowAssets && (
+      <CollapsibleSection
+        title="Reservasi Aset (Inventaris)"
+        description={`${assetReservations.length} aset diblokir untuk acara ini`}
+      >
+        <ReservationManager
+          items={assetItems}
+          lockedEventId={id}
+          reservations={assetReservations.map((x) => ({
+            id: x.r.id,
+            itemName: x.itemName ?? "(barang dihapus)",
+            reason: x.r.reason,
+            reservedFrom: x.r.reservedFrom,
+            reservedTo: x.r.reservedTo,
+            eventTitle: null,
+          }))}
+        />
       </CollapsibleSection>
       )}
 

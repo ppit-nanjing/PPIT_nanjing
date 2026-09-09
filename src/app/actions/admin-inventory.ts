@@ -6,6 +6,7 @@ import { auth } from "@/auth";
 import { db } from "@/db";
 import { inventoryItems, borrowRequests, inventoryAuditLogs, externalLoans, itemReservations } from "@/db/schema";
 import { hasModuleAccess } from "@/lib/admin-scope";
+import { getEventAccess } from "@/lib/event-access";
 import { createTemplatedNotification } from "@/lib/notifications";
 
 async function requireAdmin() {
@@ -310,7 +311,6 @@ export async function returnExternalLoan(formData: FormData) {
 // ---------- Reservasi aset untuk acara PPIT (SOP langkah 2) ----------
 
 export async function createItemReservation(formData: FormData) {
-  const actorId = await requireAdmin();
   const itemId = String(formData.get("itemId") ?? "").trim();
   const reason = String(formData.get("reason") ?? "").trim();
   const eventId = String(formData.get("eventId") ?? "").trim() || null;
@@ -322,21 +322,33 @@ export async function createItemReservation(formData: FormData) {
   }
   if (reservedTo < reservedFrom) throw new Error("Tanggal selesai tidak boleh sebelum tanggal mulai");
 
+  // Divisi Logistik acara dengan grant "Pinjam aset" boleh mereservasi untuk
+  // ACARANYA. Selain itu: modul Inventaris kabinet.
+  const eventAccess = eventId ? await getEventAccess(eventId) : null;
+  const actorId = eventAccess?.can("event.borrowAssets")
+    ? eventAccess.session!.user.id
+    : await requireAdmin();
+
   const [item] = await db.select({ id: inventoryItems.id }).from(inventoryItems).where(eq(inventoryItems.id, itemId));
   if (!item) throw new Error("Barang tidak ditemukan");
 
   await db.insert(itemReservations).values({ itemId, eventId, reason, reservedFrom, reservedTo, createdBy: actorId });
   revalidatePath("/console/inventory");
   revalidatePath(`/inventory/${itemId}/borrow`);
+  if (eventId) revalidatePath(`/console/events/${eventId}`);
 }
 
 export async function releaseItemReservation(reservationId: string) {
-  await requireAdmin();
-  const [row] = await db
-    .update(itemReservations)
-    .set({ status: "released" })
-    .where(eq(itemReservations.id, reservationId))
-    .returning({ itemId: itemReservations.itemId });
-  if (row) revalidatePath(`/inventory/${row.itemId}/borrow`);
+  const [res] = await db
+    .select({ itemId: itemReservations.itemId, eventId: itemReservations.eventId })
+    .from(itemReservations)
+    .where(eq(itemReservations.id, reservationId));
+  if (!res) return;
+  const eventAccess = res.eventId ? await getEventAccess(res.eventId) : null;
+  if (!eventAccess?.can("event.borrowAssets")) await requireAdmin();
+
+  await db.update(itemReservations).set({ status: "released" }).where(eq(itemReservations.id, reservationId));
+  revalidatePath(`/inventory/${res.itemId}/borrow`);
   revalidatePath("/console/inventory");
+  if (res.eventId) revalidatePath(`/console/events/${res.eventId}`);
 }

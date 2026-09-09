@@ -7,6 +7,7 @@ import { auth } from "@/auth";
 import { db } from "@/db";
 import { newsArticles, galleryAlbums, galleryPhotos, users } from "@/db/schema";
 import { hasModuleAccess } from "@/lib/admin-scope";
+import { getEventAccess } from "@/lib/event-access";
 import { sendEmail } from "@/lib/email";
 import { renderMembershipEmail, renderMembershipEmailText } from "@/lib/membership-email";
 import { getSiteUrl } from "@/lib/site-url";
@@ -15,6 +16,19 @@ async function requireContentAccess() {
   const session = await auth();
   if (!hasModuleAccess(session?.user?.adminScope ?? null, "content")) throw new Error("Forbidden");
   return session!.user.id;
+}
+
+// Modul Konten kabinet ATAU Divisi Dokumentasi acara dengan grant "Galeri" —
+// tapi hanya untuk album yang tertaut ke acara mereka. Kembalikan actorId.
+async function requireGalleryAlbumAccess(albumId: string): Promise<string> {
+  const session = await auth();
+  if (hasModuleAccess(session?.user?.adminScope ?? null, "content")) return session!.user.id;
+  const [album] = await db.select({ eventId: galleryAlbums.eventId }).from(galleryAlbums).where(eq(galleryAlbums.id, albumId));
+  if (album?.eventId) {
+    const access = await getEventAccess(album.eventId);
+    if (access.can("event.manageGallery")) return access.session!.user.id;
+  }
+  throw new Error("Forbidden");
 }
 
 function slugify(title: string) {
@@ -214,6 +228,27 @@ export async function createGalleryAlbum(formData: FormData) {
   redirect(`/console/content/gallery/${album.id}`);
 }
 
+/**
+ * Divisi Dokumentasi acara (grant "Galeri") membuat album foto untuk ACARANYA.
+ * Album langsung tertaut ke acara; album lama yang menunjuk acara ini dilepas
+ * dulu (satu acara satu album, sama seperti updateEventPostReport).
+ */
+export async function createEventGalleryAlbum(formData: FormData) {
+  const eventId = String(formData.get("eventId") ?? "").trim();
+  const title = String(formData.get("title") ?? "").trim();
+  const access = eventId ? await getEventAccess(eventId) : null;
+  if (!access?.can("event.manageGallery")) throw new Error("Forbidden");
+  if (!title) throw new Error("Judul album wajib diisi");
+
+  await db.update(galleryAlbums).set({ eventId: null }).where(eq(galleryAlbums.eventId, eventId));
+  const [album] = await db.insert(galleryAlbums).values({ title, eventId }).returning();
+
+  revalidatePath("/console/content");
+  revalidatePath("/gallery");
+  revalidatePath(`/console/events/${eventId}`);
+  redirect(`/console/content/gallery/${album.id}`);
+}
+
 function isValidHttpUrl(value: string): boolean {
   try {
     const url = new URL(value);
@@ -226,7 +261,7 @@ function isValidHttpUrl(value: string): boolean {
 // Public gallery pages render only highlighted photos; everything else is
 // reached through the album's Drive link. Toggle is per-photo and instant.
 export async function setPhotoHighlight(photoId: string, albumId: string, highlight: boolean) {
-  await requireContentAccess();
+  await requireGalleryAlbumAccess(albumId);
   await db.update(galleryPhotos).set({ isHighlight: highlight }).where(eq(galleryPhotos.id, photoId));
   revalidatePath(`/console/content/gallery/${albumId}`);
   revalidatePath("/gallery");
@@ -234,7 +269,7 @@ export async function setPhotoHighlight(photoId: string, albumId: string, highli
 }
 
 export async function setAlbumDriveUrl(albumId: string, formData: FormData) {
-  await requireContentAccess();
+  await requireGalleryAlbumAccess(albumId);
   const driveUrl = String(formData.get("driveUrl") ?? "").trim();
   if (driveUrl && !isValidHttpUrl(driveUrl)) throw new Error("Link Drive tidak valid");
 
@@ -247,7 +282,7 @@ export async function setAlbumDriveUrl(albumId: string, formData: FormData) {
 }
 
 export async function addGalleryPhoto(albumId: string, formData: FormData) {
-  const actorId = await requireContentAccess();
+  const actorId = await requireGalleryAlbumAccess(albumId);
   const imageUrl = String(formData.get("imageUrl") ?? "").trim();
   const caption = String(formData.get("caption") ?? "").trim();
   if (!imageUrl) throw new Error("URL foto wajib diisi");
@@ -298,7 +333,7 @@ function parsePhotoEntries(raw: FormDataEntryValue | null): { imageUrl: string; 
 }
 
 export async function addGalleryPhotos(albumId: string, formData: FormData) {
-  const actorId = await requireContentAccess();
+  const actorId = await requireGalleryAlbumAccess(albumId);
 
   const [album] = await db.select({ id: galleryAlbums.id }).from(galleryAlbums).where(eq(galleryAlbums.id, albumId));
   if (!album) notFound();
@@ -321,7 +356,7 @@ export async function addGalleryPhotos(albumId: string, formData: FormData) {
 // Captions double as alt text on the public gallery - editable per tile so
 // screen readers aren't left with silence.
 export async function updatePhotoCaption(photoId: string, albumId: string, caption: string) {
-  await requireContentAccess();
+  await requireGalleryAlbumAccess(albumId);
   await db
     .update(galleryPhotos)
     .set({ caption: caption.trim() || null })
@@ -330,7 +365,7 @@ export async function updatePhotoCaption(photoId: string, albumId: string, capti
 }
 
 export async function deleteGalleryPhoto(photoId: string, albumId: string) {
-  await requireContentAccess();
+  await requireGalleryAlbumAccess(albumId);
   await db.delete(galleryPhotos).where(eq(galleryPhotos.id, photoId));
   revalidatePath(`/console/content/gallery/${albumId}`);
 }
