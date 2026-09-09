@@ -94,8 +94,19 @@ export const GRANTABLE_CAPABILITIES: { key: EventCapability; label: string; hint
 
 const GRANTABLE_KEYS = new Set<EventCapability>(GRANTABLE_CAPABILITIES.map((g) => g.key));
 
-// Hanya BPH Kabinet ("full"). Bukan dasar, bukan grantable, bukan BPH Panitia.
+// Hanya BPH Kabinet ("full"). Bukan dasar, bukan grantable, bahkan BPH Panitia
+// tidak dapat.
 export const FULL_ADMIN_ONLY_CAPABILITIES: EventCapability[] = ["event.delete", "event.takeOver"];
+
+// Kapabilitas yang TIDAK diberikan lewat jembatan transisi scope modul "events"
+// (event-access.ts moduleBridge). Selain FULL_ADMIN_ONLY, ini termasuk keuangan:
+// verifikasi pembayaran dulu terkunci di scope "organization" (BPH Kabinet
+// saja), jadi jembatan modul "events" tidak boleh membukanya diam-diam. BPH
+// Panitia & divisi ber-grant "Keuangan" tetap dapat lewat jalur peran.
+export const BRIDGE_EXCLUDED_CAPABILITIES: EventCapability[] = [
+  ...FULL_ADMIN_ONLY_CAPABILITIES,
+  "event.manageFinance",
+];
 
 /**
  * Pemeriksaan murni tingkat 3 + 4: apa peran ini + grant divisinya cukup untuk

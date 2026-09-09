@@ -1,6 +1,6 @@
 "use server";
 
-import { eq, and, sql } from "drizzle-orm";
+import { eq, and, or, isNull, sql } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { auth } from "@/auth";
@@ -8,6 +8,7 @@ import { db } from "@/db";
 import { events, eventRegistrations, eventQuestions, eventCommittee, eventFeeOptions, galleryAlbums } from "@/db/schema";
 import { hasModuleAccess } from "@/lib/admin-scope";
 import { requireEventCapability } from "@/lib/event-access";
+import { UUID_RE } from "@/lib/uuid";
 import { createTemplatedNotification } from "@/lib/notifications";
 import { checkInBlockReason } from "@/lib/event-checkin";
 import { issueParticipantCertificatesCore } from "@/app/actions/committee";
@@ -57,8 +58,6 @@ function isValidHttpUrl(value: string): boolean {
     return false;
   }
 }
-
-const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 // Kehadiran final pasca-acara: diketik manual (Zoom/webinar sering tanpa
 // pendaftaran portal). Kosong = null (halaman pakai angka terdaftar seperti
@@ -190,10 +189,14 @@ export async function updateEventInfo(id: string, formData: FormData) {
     })
     .where(eq(events.id, id));
 
-  // Jadwal rilis diisi tapi acara masih draft -> pindah ke "scheduled" supaya
-  // publik-nya rilis otomatis saat waktunya tiba.
+  // Jadwal rilis diisi tapi acara masih draft -> "scheduled" supaya publik-nya
+  // rilis otomatis saat waktunya tiba. Kebalikannya juga: jadwal dikosongkan
+  // pada acara "scheduled" -> kembali "draft", supaya tidak nyangkut selamanya
+  // (publishDueEvents menyaring scheduledPublishAt is not null).
   if (scheduledPublishAt && before?.status === "draft") {
     await db.update(events).set({ status: "scheduled" }).where(eq(events.id, id));
+  } else if (!scheduledPublishAt && before?.status === "scheduled") {
+    await db.update(events).set({ status: "draft" }).where(eq(events.id, id));
   }
 
   // An event can go free -> paid after people already registered (fee often
@@ -244,13 +247,18 @@ export async function updateEventPostReport(id: string, formData: FormData) {
     .where(eq(events.id, id));
 
   // Album dokumentasi: galleryAlbums.eventId adalah tautannya. "" = lepas tautan;
-  // UUID valid = tautkan (dan lepaskan dari acara lain dulu); nilai lain =
-  // jangan sentuh — mencegah error sintaks UUID Postgres menggagalkan aksi.
+  // UUID valid = tautkan; nilai lain = jangan sentuh (mencegah error sintaks
+  // UUID Postgres menggagalkan aksi). Penautan HANYA menerima album yang belum
+  // tertaut atau sudah milik acara ini — tanpa ini panitia mana pun bisa
+  // "mencuri" album acara lain dengan mem-POST UUID-nya.
   const albumIdRaw = String(formData.get("documentationAlbumId") ?? "").trim();
   if (albumIdRaw === "" || UUID_RE.test(albumIdRaw)) {
     await db.update(galleryAlbums).set({ eventId: null }).where(eq(galleryAlbums.eventId, id));
     if (albumIdRaw) {
-      await db.update(galleryAlbums).set({ eventId: id }).where(eq(galleryAlbums.id, albumIdRaw));
+      await db
+        .update(galleryAlbums)
+        .set({ eventId: id })
+        .where(and(eq(galleryAlbums.id, albumIdRaw), or(isNull(galleryAlbums.eventId), eq(galleryAlbums.eventId, id))));
     }
   }
 

@@ -482,8 +482,8 @@ export async function updateDivisionGrants(formData: FormData) {
   if (!division) throw new Error("Divisi tidak ditemukan");
   await requireEventCapability(division.eventId, "event.manageCommittee");
 
-  const allowed = new Set(GRANTABLE_CAPABILITIES.map((g) => g.key));
-  const granted = formData.getAll("capability").map((v) => String(v)).filter((k) => allowed.has(k as never));
+  const allowed = new Set<string>(GRANTABLE_CAPABILITIES.map((g) => g.key));
+  const granted = formData.getAll("capability").map((v) => String(v)).filter((k) => allowed.has(k));
 
   await db.update(eventDivisions).set({ grantedCapabilities: granted }).where(eq(eventDivisions.id, divisionId));
   revalidatePath(`/console/events/${division.eventId}`);

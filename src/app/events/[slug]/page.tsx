@@ -78,11 +78,12 @@ export default async function EventDetailPage({ params, searchParams }: { params
   // memakai auth() yang sudah di-cache; satu lookup peran+grant tambahan.
   const eventAccess = session?.user?.id ? await getEventAccess(event.id) : null;
   const canScan = eventAccess?.can("event.scanAttendance") ?? false;
-  // "Kelola di Konsol" hanya untuk yang benar-benar bisa masuk /console
-  // (console/layout.tsx cek isAdmin). Panitia biasa belum — sampai halaman
-  // konsol acara dibuka untuk kepanitiaan (Slice D).
+  // "Kelola di Konsol" untuk siapa pun yang bisa masuk /console/events/[id]:
+  // BPH Kabinet, pemegang modul "events", atau panitia acara ini (mana pun
+  // perannya — console/layout.tsx sudah dilonggarkan untuk kepanitiaan).
   const hasEventConsoleAccess =
-    !!eventAccess && (eventAccess.isFullAdmin || eventAccess.moduleBridge);
+    !!eventAccess &&
+    (eventAccess.isFullAdmin || eventAccess.moduleBridge || eventAccess.role != null);
 
   const now = new Date();
   const deadlinePassed = event.registrationDeadline ? new Date(event.registrationDeadline) < now : false;

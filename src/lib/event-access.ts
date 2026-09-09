@@ -8,10 +8,11 @@ import { hasModuleAccess } from "@/lib/admin-scope";
 import {
   type EventCapability,
   type EventCommitteeRole,
-  FULL_ADMIN_ONLY_CAPABILITIES,
+  BRIDGE_EXCLUDED_CAPABILITIES,
   hasEventCapability,
   isBphPanitiaRole,
 } from "@/lib/event-capabilities";
+import { UUID_RE } from "@/lib/uuid";
 
 // Server-only enforcement for the per-event committee model. Same shape as
 // admin-scope.ts: a resolver + a require() wrapper that redirects. Client
@@ -51,8 +52,6 @@ const DENIED: EventAccess = {
   can: () => false,
 };
 
-const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-
 export async function getEventAccess(eventId: string): Promise<EventAccess> {
   const session = await auth();
   if (!session?.user?.id) return DENIED;
@@ -91,7 +90,7 @@ export async function getEventAccess(eventId: string): Promise<EventAccess> {
     divisionGrants,
     can: (capability) =>
       isFullAdmin ||
-      (moduleBridge && !FULL_ADMIN_ONLY_CAPABILITIES.includes(capability)) ||
+      (moduleBridge && !BRIDGE_EXCLUDED_CAPABILITIES.includes(capability)) ||
       hasEventCapability(role, capability, divisionGrants),
   };
 }

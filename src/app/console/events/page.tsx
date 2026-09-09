@@ -1,6 +1,5 @@
-import { sql, inArray } from "drizzle-orm";
+import { sql, inArray, eq } from "drizzle-orm";
 import { redirect } from "next/navigation";
-import { eq } from "drizzle-orm";
 import { auth } from "@/auth";
 import { db } from "@/db";
 import { events, eventCommittee } from "@/db/schema";
@@ -8,6 +7,7 @@ import { setEventStatus } from "@/app/actions/admin-events";
 import { publishDueEvents } from "@/lib/publish-events";
 import { DeleteEventButton } from "@/components/console/delete-event-button";
 import { hasModuleAccess } from "@/lib/admin-scope";
+import { EVENT_STATUS_LABEL as STATUS_LABEL } from "@/lib/event-status-labels";
 import { CollapsibleSection } from "@/components/console/collapsible-section";
 import { GuideButton } from "@/components/console/guide-button";
 import { getGuide } from "@/lib/guides";
@@ -15,15 +15,6 @@ import { Plus } from "lucide-react";
 import Link from "next/link";
 import { EventCreateForm } from "@/components/console/event-create-form";
 import { ConfirmButton } from "@/components/console/confirm-button";
-
-const STATUS_LABEL: Record<string, string> = {
-  draft: "Draf",
-  scheduled: "Terjadwal (belum rilis)",
-  published: "Dipublikasikan",
-  registration_closed: "Pendaftaran Ditutup",
-  completed: "Selesai",
-  cancelled: "Dibatalkan",
-};
 
 export default async function ConsoleEventsPage() {
   const session = await auth();

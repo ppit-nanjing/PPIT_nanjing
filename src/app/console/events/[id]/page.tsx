@@ -11,6 +11,7 @@ import { RegistrationList } from "@/components/console/registration-list";
 import { EventCommitteeStructure } from "@/components/console/event-committee-structure";
 import { listEventDivisions, issueParticipantCertificates } from "@/app/actions/committee";
 import { requireEventConsoleAccess } from "@/lib/event-access";
+import { EVENT_STATUS_LABEL as STATUS_LABEL } from "@/lib/event-status-labels";
 import { ImageUploadCropper } from "@/components/upload/image-upload-cropper";
 import { EventThemeFields } from "@/components/console/event-theme-fields";
 import { AIImproveButton } from "@/components/ai/ai-improve-button";
@@ -31,15 +32,6 @@ const QUESTION_TYPE_LABELS: Record<string, string> = {
   radio: "Pilihan (radio)",
   multiselect: "Pilih Banyak (centang)",
   file: "Unggah Berkas (PDF/dokumen/gambar)",
-};
-
-const STATUS_LABEL: Record<string, string> = {
-  draft: "Draf",
-  scheduled: "Terjadwal (belum rilis)",
-  published: "Dipublikasikan",
-  registration_closed: "Pendaftaran Ditutup",
-  completed: "Selesai",
-  cancelled: "Dibatalkan",
 };
 
 export default async function ConsoleEventDetailPage({ params }: { params: Promise<{ id: string }> }) {
