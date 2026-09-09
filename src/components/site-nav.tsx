@@ -146,12 +146,12 @@ export function SiteNav() {
           }}
         >
           <div
-            className="mx-auto flex justify-between items-center gap-2 sm:gap-4 h-12 md:h-14 px-4 sm:px-6"
+            className="mx-auto flex justify-between items-center gap-1.5 sm:gap-4 h-12 md:h-14 px-4 sm:px-6"
             style={{ maxWidth }}
           >
             <Link
               href="/"
-              className="inline-flex items-center gap-1.5 text-headline-sm sm:text-headline-md font-bold text-primary uppercase tracking-tight shrink-0 whitespace-nowrap"
+              className="inline-flex items-center gap-1.5 text-body-lg sm:text-headline-md font-bold text-primary uppercase tracking-tight shrink-0 whitespace-nowrap"
             >
               <span
                 aria-hidden="true"
@@ -418,7 +418,10 @@ function LanguageToggle({
       className="flex items-center gap-1.5 text-on-background hover:bg-surface-container-low px-2 py-1.5 rounded-lg transition-colors shrink-0"
     >
       <Languages size={compact ? 20 : 18} />
-      {!compact && <span className="text-label-caps font-medium">{LOCALE_SHORT[target]}</span>}
+      {/* The short code is a nicety, not information (the icon + aria-label
+          carry it). Hidden below sm so the mobile bar has room for the burger
+          when a logged-out visitor also sees the LOG IN button. */}
+      {!compact && <span className="hidden sm:inline text-label-caps font-medium">{LOCALE_SHORT[target]}</span>}
     </button>
   );
 }

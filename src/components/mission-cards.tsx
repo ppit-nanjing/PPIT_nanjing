@@ -26,7 +26,11 @@ export function MissionCards() {
   const t = useT();
   return (
     <motion.div
-      className="grid grid-cols-1 sm:grid-cols-3 gap-6"
+      // 3-up on a full-width row (sm), stacked again from md - because there
+      // this grid sits inside the About bento's md:col-span-7, and three
+      // columns in ~400px collapse each card to a skinny 10-line sliver.
+      // Back to 3-up at lg, where the column finally has the width.
+      className="grid grid-cols-1 sm:grid-cols-3 md:grid-cols-1 lg:grid-cols-3 gap-6"
       initial="hidden"
       whileInView="visible"
       viewport={{ once: true, amount: 0.3 }}
