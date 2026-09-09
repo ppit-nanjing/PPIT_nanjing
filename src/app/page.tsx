@@ -1,6 +1,6 @@
 import { eq, desc, asc } from "drizzle-orm";
-import { ArrowRight } from "lucide-react";
 import Link from "next/link";
+import { MovingArrow } from "@/components/icons/moving-arrow";
 import { AnimatedHeroHeading } from "@/components/animated-hero-heading";
 import { AnimatedRevealText } from "@/components/animated-reveal-text";
 import { SiteNav } from "@/components/site-nav";
@@ -82,9 +82,9 @@ export default async function Home() {
           />
           <Link
             href="/events"
-            className="inline-flex items-center gap-2 bg-on-primary text-primary text-label-caps uppercase tracking-wide px-8 py-4 rounded-md hover:scale-105 transition-transform motion-reduce:hover:scale-100 motion-reduce:transition-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-on-primary focus-visible:ring-offset-2 focus-visible:ring-offset-on-background"
+            className="group inline-flex items-center gap-2 bg-on-primary text-primary text-label-caps uppercase tracking-wide px-8 py-4 rounded-md hover:scale-105 transition-transform motion-reduce:hover:scale-100 motion-reduce:transition-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-on-primary focus-visible:ring-offset-2 focus-visible:ring-offset-on-background"
           >
-            {t("home.hero.cta")} <ArrowRight size={18} aria-hidden="true" />
+            {t("home.hero.cta")} <MovingArrow size={18} />
           </Link>
         </div>
       </header>

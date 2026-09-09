@@ -3,8 +3,9 @@
 import { useCallback, useEffect, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
-import { Bell, CheckCheck } from "lucide-react";
+import { CheckCheck } from "lucide-react";
 import { formatRelativeTime } from "@/lib/format-relative-time";
+import { AnimatedBell } from "@/components/icons/animated-bell";
 import { Tooltip } from "@/components/ui/tooltip";
 import { useT } from "@/lib/i18n/client";
 import Link from "next/link";
@@ -68,7 +69,7 @@ export function NotificationBell() {
           onClick={() => setOpen((v) => !v)}
           className="relative text-on-background p-1 hover:bg-surface-container-low rounded-lg transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-container focus-visible:ring-offset-2 focus-visible:ring-offset-background motion-reduce:transition-none"
         >
-          <Bell size={20} />
+          <AnimatedBell count={unread} size={20} />
           {unread > 0 && (
             <span className="absolute -top-0.5 -right-0.5 min-w-4 h-4 px-1 rounded-full bg-error text-on-error text-[10px] font-bold flex items-center justify-center">
               {unread > 9 ? "9+" : unread}

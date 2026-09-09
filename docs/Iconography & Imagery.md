@@ -4,10 +4,14 @@
 
 ## Ikon
 
-- **Sistem ikon: Material Symbols Outlined** (variable font Google, dimuat dengan axis `wght,FILL@100..700,0..1`), diset default `'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24` di seluruh prototipe.
+- **Sistem ikon: Lucide React** (`lucide-react`, di-bundle — nol request ke CDN Google, wajib untuk keterjangkauan dari Tiongkok). Menggantikan Material Symbols Outlined yang dipakai di prototipe Stitch.
 - Gaya: **outlined/linear**, stroke weight konsisten, sedikit rounding di sudut — selaras dengan shape language [Components](./Components.md).
-- Prinsip aksesibilitas dari `patriotic_institutional/DESIGN.md`: **ikon selalu dipasangkan dengan teks** (kecuali ikon aksi yang sangat umum seperti close/search dengan `aria-label`), jangan mengandalkan ikon saja untuk makna.
-- ⚠️ Sama seperti font (lihat [Typography](./Typography.md)), Material Symbols dimuat dari `fonts.googleapis.com` — **berisiko lambat di Tiongkok**. Rekomendasi: ganti ke icon set yang di-bundle sebagai SVG/komponen React (mis. **Lucide** — disebut eksplisit sebagai alternatif di `patriotic_institutional/DESIGN.md`) saat produksi, alih-alih memuat font ikon dari CDN Google. Lihat [Tech Stack](./Tech%20Stack.md).
+- Prinsip aksesibilitas: **ikon selalu dipasangkan dengan teks** (kecuali ikon aksi yang sangat umum seperti close/search dengan `aria-label`), jangan mengandalkan ikon saja untuk makna.
+- Ukuran memakai prop `size` (px), warna lewat `currentColor` / token teks — jangan hardcode hex.
+
+### Ikon beranimasi
+
+`src/components/icons/` berisi segelintir ikon beranimasi tangan untuk tempat yang cue gerak-nya benar-benar membantu — **bukan** library, bukan ditabur di mana-mana (situs institusi, restraint jadi aturan). Sekarang: `AnimatedMenuIcon` (hamburger↔X morph di nav), `AnimatedBell` (bel bergoyang sekali saat notifikasi belum dibaca bertambah), `MovingArrow` (panah CTA menggeser saat `group` di-hover). Semua di atas `motion`, tunduk `<MotionConfig reducedMotion="user">`, tetap terbaca saat animasi mati. Aturan lengkap di `src/components/icons/README.md`.
 
 ## Arah Visual Fotografi & Ilustrasi
 

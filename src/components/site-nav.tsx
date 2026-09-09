@@ -3,10 +3,11 @@
 import { useEffect, useState } from "react";
 import { usePathname, useSearchParams } from "next/navigation";
 import { useSession } from "next-auth/react";
-import { Menu, X, Search, User, ChevronDown, Languages } from "lucide-react";
+import { Search, User, ChevronDown, Languages } from "lucide-react";
 import Image from "next/image";
 import { AccountMenu } from "@/components/account-menu";
 import { NotificationBell } from "@/components/notifications/notification-bell";
+import { AnimatedMenuIcon } from "@/components/icons/animated-menu-icon";
 import { CommandPalette, useCommandPalette } from "@/components/command-palette";
 import { NAV_LINKS, DISCOVER_LINKS } from "@/lib/nav-links";
 import { useT, useLocale, useLocaleSwitch, type Origin } from "@/lib/i18n/client";
@@ -252,7 +253,7 @@ export function SiteNav() {
                 className="lg:hidden text-on-background p-1 shrink-0"
                 onClick={() => setMenuOpen((v) => !v)}
               >
-                {menuOpen ? <X size={22} /> : <Menu size={22} />}
+                <AnimatedMenuIcon open={menuOpen} size={22} />
               </button>
             </div>
           </div>
