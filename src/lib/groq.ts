@@ -83,15 +83,37 @@ export async function groqChat(messages: GroqMessage[], opts: GroqOptions = {}):
 
 export type ImproveContext = "event" | "news" | "gallery" | "feedback";
 
+// Groq itu LLM, jadi tanpa rambu ini "merapikan" sering berarti *menambah* pola
+// tulisan AI. Ini subset lintas-bahasa dari skill stop-slop/humanizer - pola
+// yang tetap kentara di Bahasa Indonesia. TIDAK dipakai untuk konteks `feedback`,
+// di sana yang dijaga justru nada asli pengirim.
+const ANTI_SLOP_ID =
+  " Tulisannya harus wajar seperti ditulis orang, bukan AI: pakai kalimat aktif dan sebut pelakunya; " +
+  "langsung ke inti tanpa pembuka basa-basi ('perlu diketahui', 'pada dasarnya', 'tak dapat dipungkiri'); " +
+  "jangan pakai pola 'bukan sekadar X, melainkan Y' untuk menambah kesan; " +
+  "jangan menumpuk tiga hal hanya supaya terdengar lengkap; " +
+  "jangan menutup dengan kalimat satu baris yang cuma mengulang; " +
+  "jangan melebih-lebihkan ('momen penting', 'membuktikan dedikasi', 'semangat membara'); " +
+  "hindari tanda pisah (—) sebagai penyambung, pakai titik atau koma; variasikan panjang kalimat.";
+
+const OUTPUT_RULE = " Balas HANYA teks yang sudah diperbaiki, tanpa tanda kutip dan tanpa penjelasan.";
+
 const SYSTEM_BY_CONTEXT: Record<ImproveContext, string> = {
   event:
-    "Kamu adalah editor konten PPIT Nanjing, organisasi mahasiswa Indonesia di Nanjing, Tiongkok. Perbaiki teks deskripsi kegiatan berikut: perbaiki ejaan dan tata bahasa, buat lebih jelas dan menarik, dan bila cocok tambahkan satu emoji di awal. JANGAN mengubah fakta, tanggal, atau nama. Balas HANYA teks yang sudah diperbaiki, tanpa tanda kutip dan tanpa penjelasan.",
+    "Kamu adalah editor konten PPIT Nanjing, organisasi mahasiswa Indonesia di Nanjing, Tiongkok. Perbaiki teks deskripsi kegiatan berikut: perbaiki ejaan dan tata bahasa, buat lebih jelas dan menarik, dan bila cocok tambahkan satu emoji di awal. JANGAN mengubah fakta, tanggal, atau nama." +
+    ANTI_SLOP_ID +
+    OUTPUT_RULE,
   news:
-    "Kamu adalah editor berita PPIT Nanjing, organisasi mahasiswa Indonesia di Nanjing, Tiongkok. Perbaiki teks berita berikut: perbaiki ejaan dan tata bahasa, buat lebih enak dibaca, dan bila cocok tambahkan emoji yang pantas. JANGAN mengubah fakta. Balas HANYA teks yang sudah diperbaiki, tanpa tanda kutip dan tanpa penjelasan.",
+    "Kamu adalah editor berita PPIT Nanjing, organisasi mahasiswa Indonesia di Nanjing, Tiongkok. Perbaiki teks berita berikut: perbaiki ejaan dan tata bahasa, buat lebih enak dibaca, dan bila cocok tambahkan emoji yang pantas. JANGAN mengubah fakta." +
+    ANTI_SLOP_ID +
+    OUTPUT_RULE,
   gallery:
-    "Kamu adalah editor konten PPIT Nanjing. Perbaiki keterangan foto berikut menjadi singkat, jelas, dan natural. Boleh tambahkan emoji bila cocok. JANGAN mengubah fakta. Balas HANYA teks yang sudah diperbaiki, tanpa tanda kutip dan tanpa penjelasan.",
+    "Kamu adalah editor konten PPIT Nanjing. Perbaiki keterangan foto berikut menjadi singkat, jelas, dan natural. Boleh tambahkan emoji bila cocok. JANGAN mengubah fakta." +
+    ANTI_SLOP_ID +
+    OUTPUT_RULE,
   feedback:
-    "Kamu membantu menyunting masukan (feedback) pengguna PPIT Nanjing agar lebih jelas dan sopan. Perbaiki ejaan dan tata bahasa, perjelas maksud, tapi pertahankan nada asli pengirim dan JANGAN mengubah substansi keluhan/ide. Balas HANYA teks yang sudah diperbaiki, tanpa tanda kutip dan tanpa penjelasan.",
+    "Kamu membantu menyunting masukan (feedback) pengguna PPIT Nanjing agar lebih jelas dan sopan. Perbaiki ejaan dan tata bahasa, perjelas maksud, tapi pertahankan nada asli pengirim dan JANGAN mengubah substansi keluhan/ide." +
+    OUTPUT_RULE,
 };
 
 export async function improveIndonesianText(text: string, context: ImproveContext): Promise<string> {
