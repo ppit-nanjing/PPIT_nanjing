@@ -1,29 +1,42 @@
 # Typography
 
-> Bagian dari [Design System Overview](./Design%20System%20Overview.md).
+> Bagian dari [Design System Overview](./Design%20System%20Overview.md). Sumber kebenaran teknis: `src/app/layout.tsx` (pemuatan font) + `@theme` di `src/app/globals.css` (token skala).
 
 ## Font Family
 
-- **Inter** — satu-satunya typeface untuk seluruh UI (weight 400/700/800 dimuat via Google Fonts di semua prototipe: `family=Inter:wght@400;700;800`).
-- **Material Symbols Outlined** — font ikon variable (lihat [Iconography & Imagery](./Iconography%20&%20Imagery.md)).
+| Peran | Typeface | Kenapa |
+|---|---|---|
+| **Display / judul** (H1–H3) | **Spectral** (serif) | Nanjing sebagai ibu kota sastra Jiangnan (六朝古都). Memberi bobot "institusi resmi" tanpa terasa kaku. |
+| **Badan, UI, label, tabel** | **Plus Jakarta Sans** (humanist sans) | Dikomisikan untuk branding kota Jakarta — sans berakar Indonesia, hangat di ukuran baca, tetap rapi di tabel `/console` yang padat. Menggantikan Inter (mulai 2026-09-09). |
+| **Fallback CJK** | PingFang SC → Hiragino Sans GB → Microsoft YaHei → Noto Sans CJK SC | Nama tempat / kampus / label tema (紫金山) muncul inline dengan teks Latin; tidak ada face Latin yang menutup glyph Han. |
 
-⚠️ Kedua font di-load dari `fonts.googleapis.com` di setiap prototipe. Ini **berisiko lambat/gagal load** untuk pengguna yang mengakses dari Tiongkok daratan (Google domains sering diblokir/lambat tanpa VPN) — lihat catatan penting di [Tech Stack](./Tech%20Stack.md) § Pertimbangan Jaringan Tiongkok. **Rekomendasi:** self-host file font Inter (`.woff2`) dan ganti Material Symbols dengan icon set yang di-bundle (mis. Lucide) alih-alih memuat dari CDN Google saat produksi.
+Keduanya **di-self-host lewat `next/font/google`** — di-download & di-bundle saat build, **nol request runtime ke `fonts.googleapis.com`** (wajib untuk keterjangkauan dari Tiongkok daratan, lihat [Tech Stack](./Tech%20Stack.md)). Jangan pernah menambahkan `<link>` ke Google Fonts atau `@import` font dari CDN di file ini.
 
-## Skala Tipografi (Warm Institutional — kanonik)
+Weight yang dimuat: Plus Jakarta Sans `400/500/600/700/800`, Spectral `400/600/800`.
 
-| Token | Ukuran | Weight | Line-height | Letter-spacing | Pemakaian |
+Ikon: **Lucide React** (di-bundle), bukan Material Symbols via CDN — lihat [Iconography & Imagery](./Iconography%20&%20Imagery.md).
+
+## Hierarki per level
+
+Hierarki ditegakkan lewat **ukuran + weight + pilihan face**, bukan warna. Kelas utility (`text-display-hero`, `text-headline-lg`, dst) di-generate dari token `@theme` di `globals.css`.
+
+| Level | Face | Token / kelas | Ukuran | Weight | Pemakaian |
 |---|---|---|---|---|---|
-| `display-hero` | 56px (mobile: 36px) | 800 | 1.1 (mobile 1.2) | −0.03em (mobile −0.02em) | Judul hero halaman utama |
-| `headline-lg` | 32px | 700 | 1.3 | −0.01em | Judul section besar |
-| `headline-md` | 24px | 700 | 1.4 | −0.01em | Judul card/subsection |
-| `body-lg` | 18px | 400 | 1.75 | — | Intro paragraph, lead text |
-| `body-md` | 16px | 400 | 1.65 | — | Body text default |
-| `label-caps` | 12px | 600 | 1.5 | +0.1em | Label UPPERCASE (kategori, eyebrow text) |
-| `quote-text` | 22px | 400 (italic saat dipakai) | 1.6 | — | Kutipan pimpinan/testimoni |
+| **H1** — hero halaman | Spectral | `text-display-hero` | 56px (mobile 36px) | 800 | Satu per halaman: judul hero. |
+| **H1/H2** — judul section | Spectral | `text-headline-lg` | 32px | 700 | Kepala section besar di halaman publik. |
+| **H3** — judul card / subsection | Spectral | `text-headline-md` | 24px | 700 | Judul card, sub-bagian, judul modal. |
+| **H4–H6** — sub-judul inline | Plus Jakarta Sans | `text-body-lg` + `font-semibold` | 18px | 600 | Sub-judul di dalam badan teks (legal, artikel, detail). Sengaja **sans** — sedekat ini ke body, serif malah mengganggu. |
+| **Lead / intro** | Plus Jakarta Sans | `text-body-lg` | 18px | 400 | Paragraf pembuka, teks pengantar. |
+| **Body** | Plus Jakarta Sans | `text-body-md` | 16px | 400 | Teks isi default. |
+| **Label CAPS / eyebrow** | Plus Jakarta Sans | `text-label-caps` | 12px | 600, +0.1em | Eyebrow di atas judul, kategori section, badge. Selalu tracking positif. |
+| **Kutipan** | Spectral | `text-quote-text` | 22px | 400, italic | Kutipan pimpinan / testimoni. Kata kunci di-bold atau diwarnai `primary`. |
+| **Statistik besar** | Plus Jakarta Sans | setara `text-headline-lg`/`display-hero` | — | 700–800 | Angka besar ("15K+") dipasangkan `label-caps` kecil di bawahnya. |
 
-Semua nilai ini di-generate sebagai custom `fontSize` key di `tailwind.config` tiap file (`text-display-hero`, `text-headline-lg`, dst) — bukan skala default Tailwind. Saat implementasi, definisikan sebagai `theme.extend.fontSize` persis seperti ini agar kelas utility (`text-headline-lg` dll) bisa dipakai langsung dari hasil prototipe tanpa refactor besar.
+Aturan di `globals.css`: `h1,h2,h3 { font-family: var(--font-serif) }` dan `h4,h5,h6 { font-family: var(--font-sans); font-weight: 600 }`. Kelas utility Tailwind tetap menang atas default ini, jadi elemen yang sudah diberi kelas ukuran/weight tidak berubah.
 
 ## Legacy — Patriotic Institutional (v1)
+
+Skala lama, dijaga sebagai referensi historis saja (Warm Institutional adalah kanonik):
 
 | Token | Ukuran | Weight | Line-height |
 |---|---|---|---|
@@ -35,20 +48,21 @@ Semua nilai ini di-generate sebagai custom `fontSize` key di `tailwind.config` t
 | `label-caps` | 12px | 700 | 16px, +0.05em |
 | `quote-text` | 20px | 400 | 32px |
 
-Perbedaan utama vs Warm: ukuran hero lebih kecil (48px vs 56px), line-height dalam px absolut (bukan rasio), tracking label lebih sempit. Warm Institutional lebih "lapang" secara sengaja — lihat rationale di `warm_institutional/DESIGN.md`.
+Warm Institutional sengaja lebih "lapang": hero 56px (vs 48px), line-height rasio (bukan px absolut), tracking label lebih lebar.
 
-## Prinsip Hierarki
+## Prinsip
 
-- **Hierarki lewat ukuran + weight**, bukan warna — `display-hero`/`headline-*` selalu bold/extra-bold, body selalu regular (400).
-- **Uppercase label** (`label-caps`) dipakai untuk eyebrow text, kategori section, dan badge — selalu dengan tracking positif agar tetap terbaca meski kecil.
-- **Quote/kutipan** memakai ukuran lebih besar dari body-lg tapi lebih ringan secara visual (italic), dengan kata kunci di-bold atau diwarnai `primary`.
-- **Statistik besar** (mis. "15K+ INDONESIAN STUDENTS" di homepage referensi) memakai angka bold skala besar (setara `headline-lg`/`display-hero`) dipasangkan dengan label kecil `label-caps` di bawahnya.
+- **Hierarki lewat ukuran + weight + face**, tidak pernah lewat warna saja.
+- **H1–H3 serif, sisanya sans.** Jangan memakai serif untuk sub-judul H4+ atau untuk UI.
+- **Uppercase label** selalu dengan tracking positif (`+0.1em`) agar terbaca meski 12px.
+- **Kutipan** lebih besar dari `body-lg` tapi lebih ringan secara visual (italic Spectral).
 
 ## Bahasa Konten
 
-Konten produk memakai **campuran Bahasa Indonesia dan Inggris** tergantung konteks — halaman publik utama (Home, About, Sensus, Events) sebagian besar berbahasa Indonesia (`lang="id"` di `<html>`), sementara Admin Console dan beberapa halaman karir/dokumentasi berbahasa Inggris. **Rekomendasi:** rencanakan i18n (mis. `next-intl`) sejak awal alih-alih hardcode string campuran, supaya konsisten — lihat [Tech Stack](./Tech%20Stack.md).
+Default `lang="id"`. i18n memakai kamus custom (`src/lib/i18n/`), locale `id`/`en`, tanpa prefix URL — lihat [AGENTS.md](../AGENTS.md) § Internationalization. Sebagian besar `/console` sengaja tetap Bahasa Indonesia (pembacanya pengurus). Konten buatan admin di DB tidak diterjemahkan otomatis.
 
 ## Terkait
 
 - [Spacing System](./Spacing%20System.md) — jarak vertikal antar blok teks
 - [Components](./Components.md)
+- [Iconography & Imagery](./Iconography%20&%20Imagery.md)

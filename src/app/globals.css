@@ -54,8 +54,11 @@
   --color-soft-gray: #f1efe9;
   --color-muted-gold: #8a6e2e;
 
-  /* Typography */
-  --font-sans: var(--font-inter);
+  /* Typography - see docs/Typography.md for the level-by-level hierarchy.
+     CJK fallbacks are explicit because place names, campus names and the theme
+     labels (紫金山 etc.) render inline with Latin copy and neither Latin face
+     covers Han glyphs. Order: iOS/macOS, older macOS, Windows, Linux/Android. */
+  --font-sans: var(--font-jakarta), "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "Noto Sans CJK SC", sans-serif;
   --font-serif: var(--font-spectral), Georgia, "Songti SC", "SimSun", serif;
   --text-display-hero: 56px;
   --text-display-hero--line-height: 1.1;
@@ -342,10 +345,18 @@ body {
   --color-muted-gold: #c98f62;
 }
 
-/* Judul memakai serif - Nanjing sebagai ibu kota sastra Jiangnan (六朝古都).
-   Badan teks tetap Inter demi keterbacaan. */
+/* Hierarki font (lengkap di docs/Typography.md):
+   - H1-H3  -> Spectral serif. Nanjing sebagai ibu kota sastra Jiangnan (六朝古都);
+     dipakai untuk hero (display-hero) dan judul section/card (headline-lg/md).
+   - H4-H6  -> sengaja tetap sans (Plus Jakarta Sans). Sub-judul sedekat ini ke
+     badan teks lebih terbaca sebagai sans; bedakan lewat weight, bukan serif.
+   - Badan, label, tombol, tabel -> Plus Jakarta Sans. */
 h1, h2, h3 {
   font-family: var(--font-serif);
+}
+h4, h5, h6 {
+  font-family: var(--font-sans);
+  font-weight: 600;
 }
 
 

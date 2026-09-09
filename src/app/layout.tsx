@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Inter, Spectral } from "next/font/google";
+import { Plus_Jakarta_Sans, Spectral } from "next/font/google";
 import { Providers } from "@/components/providers";
 import { OnboardingModal } from "@/components/onboarding-modal";
 import { HelpCenter } from "@/components/ai/help-center";
@@ -11,14 +11,18 @@ import "./globals.css";
 // next/font/google downloads and self-hosts the font at build time - no runtime
 // request to fonts.googleapis.com ever happens (important for reachability from
 // mainland China, see docs/Tech Stack.md).
-const inter = Inter({
-  variable: "--font-inter",
+//
+// Body + UI face: Plus Jakarta Sans. Commissioned for Jakarta's city branding -
+// an Indonesian-rooted humanist sans that stays warm at reading sizes and holds
+// up in the dense console tables. Replaces Inter (see docs/Typography.md).
+const jakarta = Plus_Jakarta_Sans({
+  variable: "--font-jakarta",
   subsets: ["latin"],
-  weight: ["400", "700", "800"],
+  weight: ["400", "500", "600", "700", "800"],
 });
 
 // Serif display face for headings - Nanjing as the Jiangnan literary capital.
-// Self-hosted through next/font for the same China-reachability reason as Inter.
+// Self-hosted through next/font for the same China-reachability reason as Jakarta.
 const spectral = Spectral({
   variable: "--font-spectral",
   subsets: ["latin"],
@@ -49,7 +53,7 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
     <html
       lang={locale}
       suppressHydrationWarning
-      className={`${inter.variable} ${spectral.variable} scroll-smooth`}
+      className={`${jakarta.variable} ${spectral.variable} scroll-smooth`}
     >
       <body className="antialiased">
         {/* Applies the saved city theme + colour mode before anything paints.
