@@ -8,7 +8,7 @@ import { CollapsibleSection } from "@/components/console/collapsible-section";
 import { GuideButton } from "@/components/console/guide-button";
 import { getGuide } from "@/lib/guides";
 import { SelectField, TextField, primaryBtn } from "@/components/console/form";
-import { FileCheck2, FileX2, ChevronRight, Search } from "lucide-react";
+import { FileCheck2, FileX2, ChevronRight, Search, Download, History } from "lucide-react";
 
 // Halaman ini menampilkan data sensus yang diisi anggota lewat /sensus,
 // LENGKAP per orang termasuk nomor paspor + bukti mahasiswa. Sengaja terkunci
@@ -35,6 +35,7 @@ export default async function ConsoleSensusPage({ searchParams }: { searchParams
   const status = one(sp.status) || "all"; // all | complete | incomplete
   const branch = one(sp.branch) || "all";
   const proof = one(sp.proof) || "all"; // all | has | missing
+  const university = one(sp.university) || "all";
 
   const [rows, guide] = await Promise.all([
     db
@@ -48,12 +49,16 @@ export default async function ConsoleSensusPage({ searchParams }: { searchParams
   const branches = [...new Set(rows.map((r) => r.sensus.branch).filter((b): b is string => Boolean(b)))].sort((a, b) =>
     a.localeCompare(b, "id"),
   );
+  const universities = [
+    ...new Set(rows.map((r) => r.sensus.university).filter((u): u is string => Boolean(u))),
+  ].sort((a, b) => a.localeCompare(b, "id"));
 
   const needle = q.toLowerCase();
   const filtered = rows.filter(({ sensus: s, userName, userEmail }) => {
     if (status === "complete" && s.completionStatus !== "complete") return false;
     if (status === "incomplete" && s.completionStatus === "complete") return false;
     if (branch !== "all" && s.branch !== branch) return false;
+    if (university !== "all" && s.university !== university) return false;
     if (proof === "has" && !s.studentCardUrl) return false;
     if (proof === "missing" && s.studentCardUrl) return false;
     if (needle) {
@@ -77,6 +82,14 @@ export default async function ConsoleSensusPage({ searchParams }: { searchParams
     { total: 0, complete: 0, incomplete: 0, anggota: 0, cabang_lain: 0, tamu: 0 },
   );
 
+  // Ekspor mengikuti filter yang sedang aktif (rute /api/console/sensus/export
+  // menerapkan lagi filter yang sama di sisi server).
+  const exportQs = new URLSearchParams(
+    Object.entries({ q, status, branch, proof, university }).filter(
+      ([, v]) => v && v !== "all",
+    ) as [string, string][],
+  ).toString();
+
   const chips = [
     { label: "Mengisi sensus", value: counts.total },
     { label: "Lengkap", value: counts.complete },
@@ -96,7 +109,15 @@ export default async function ConsoleSensusPage({ searchParams }: { searchParams
             mahasiswa / LOA. Dipakai untuk memverifikasi status mahasiswa dan rekap ke PPI Tiongkok pusat.
           </p>
         </div>
-        {guide && <GuideButton title={guide.title} content={guide.content} docSlug="sensus" />}
+        <div className="flex items-center gap-3">
+          <Link
+            href="/console/sensus/audit-log"
+            className="inline-flex items-center gap-1.5 text-label-caps uppercase tracking-wide text-on-surface-variant hover:text-on-background transition-colors"
+          >
+            <History size={14} aria-hidden /> Log Perubahan
+          </Link>
+          {guide && <GuideButton title={guide.title} content={guide.content} docSlug="sensus" />}
+        </div>
       </div>
 
       <div className="flex flex-wrap gap-3 mb-6">
@@ -112,8 +133,20 @@ export default async function ConsoleSensusPage({ searchParams }: { searchParams
       </div>
 
       <form method="get" className="bg-surface-container-lowest border border-outline-variant rounded-xl p-4 sm:p-6 mb-6">
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
-          <TextField name="q" label="Cari" defaultValue={q} placeholder="Nama, paspor, universitas, email" />
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+          <TextField name="q" label="Cari pengguna" defaultValue={q} placeholder="Nama, paspor, universitas, email" />
+          <SelectField
+            name="university"
+            label="Universitas / Kampus"
+            defaultValue={university}
+            options={[{ value: "all", label: "Semua kampus" }, ...universities.map((u) => ({ value: u, label: u }))]}
+          />
+          <SelectField
+            name="branch"
+            label="Cabang"
+            defaultValue={branch}
+            options={[{ value: "all", label: "Semua cabang" }, ...branches.map((b) => ({ value: b, label: b }))]}
+          />
           <SelectField
             name="status"
             label="Kelengkapan"
@@ -123,12 +156,6 @@ export default async function ConsoleSensusPage({ searchParams }: { searchParams
               { value: "complete", label: "Lengkap" },
               { value: "incomplete", label: "Belum lengkap" },
             ]}
-          />
-          <SelectField
-            name="branch"
-            label="Cabang"
-            defaultValue={branch}
-            options={[{ value: "all", label: "Semua cabang" }, ...branches.map((b) => ({ value: b, label: b }))]}
           />
           <SelectField
             name="proof"
@@ -141,15 +168,30 @@ export default async function ConsoleSensusPage({ searchParams }: { searchParams
             ]}
           />
         </div>
-        <div className="flex items-center gap-3 mt-4">
+        <div className="flex flex-wrap items-center gap-3 mt-4">
           <button type="submit" className={`${primaryBtn} inline-flex items-center gap-2`}>
-            <Search size={16} /> Terapkan
+            <Search size={16} /> Cari
           </button>
-          {(q || status !== "all" || branch !== "all" || proof !== "all") && (
+          {(q || status !== "all" || branch !== "all" || proof !== "all" || university !== "all") && (
             <Link href="/console/sensus" className="text-label-caps uppercase tracking-wide text-on-surface-variant hover:text-on-background">
               Reset
             </Link>
           )}
+          <span className="ml-auto flex items-center gap-3 text-label-caps uppercase tracking-wide">
+            <span className="text-on-surface-variant">Ekspor {filtered.length} baris</span>
+            <a
+              href={`/api/console/sensus/export?${exportQs}&format=csv`}
+              className="inline-flex items-center gap-1.5 text-primary-container hover:text-primary transition-colors"
+            >
+              <Download size={14} aria-hidden /> CSV
+            </a>
+            <a
+              href={`/api/console/sensus/export?${exportQs}&format=xlsx`}
+              className="inline-flex items-center gap-1.5 text-primary-container hover:text-primary transition-colors"
+            >
+              <Download size={14} aria-hidden /> XLSX
+            </a>
+          </span>
         </div>
       </form>
 

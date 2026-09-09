@@ -1,25 +1,34 @@
 import { desc, eq } from "drizzle-orm";
+import Link from "next/link";
 import { redirect } from "next/navigation";
 import { db } from "@/db";
 import { sensusProfiles, users } from "@/db/schema";
 import { requireModuleAccess } from "@/lib/admin-scope";
 import { RANTINGS, universityInRanting } from "@/lib/rantings";
 import { CollapsibleSection } from "@/components/console/collapsible-section";
-import { FileCheck2, FileX2 } from "lucide-react";
+import { TextField, primaryBtn } from "@/components/console/form";
+import { FileCheck2, FileX2, Search, Download } from "lucide-react";
 
 // Ringkasan sensus untuk pengurus ranting (role "[INA]/[JIA] BPH Ranting").
 // SENGAJA minimal: hanya kampus sendiri, hanya "siapa yang sudah/belum isi" +
 // apakah kartu mahasiswa diunggah. Tanpa nomor paspor, tanpa halaman detail,
-// tanpa ekspor - itu semua ada di /console/sensus yang terkunci ke modul penuh
+// tanpa CRUD - itu semua ada di /console/sensus yang terkunci ke modul penuh
 // "sensus". Lihat src/lib/rantings.ts dan resolveAdminScope() di src/auth.ts.
 
-export default async function RantingSensusPage() {
+type SearchParams = Promise<Record<string, string | string[] | undefined>>;
+
+export default async function RantingSensusPage({ searchParams }: { searchParams: SearchParams }) {
   const session = await requireModuleAccess("sensus-ranting");
   const code = session.user.rantingCode;
   // Full admin tanpa ranting bisa sampai sini lewat item sidebar - tidak ada
   // kampus untuk difilter, jadi arahkan ke /console/sensus yang memang untuk
   // mereka.
   if (!code) redirect("/console/sensus");
+
+  const sp = await searchParams;
+  const qRaw = sp.q;
+  const q = (Array.isArray(qRaw) ? qRaw[0] : qRaw ?? "").trim();
+  const needle = q.toLowerCase();
 
   const ranting = RANTINGS[code];
   const rows = await db
@@ -28,14 +37,24 @@ export default async function RantingSensusPage() {
     .leftJoin(users, eq(sensusProfiles.userId, users.id))
     .orderBy(desc(sensusProfiles.updatedAt));
 
-  const mine = rows.filter((r) => universityInRanting(r.sensus.university, code));
-  const complete = mine.filter((r) => r.sensus.completionStatus === "complete").length;
-  const withCard = mine.filter((r) => r.sensus.studentCardUrl).length;
+  const campusRows = rows.filter((r) => universityInRanting(r.sensus.university, code));
+  const mine = needle
+    ? campusRows.filter((r) =>
+        // Tanpa paspor - ranting tidak melihat itu.
+        [r.sensus.fullName, r.sensus.major, r.userName, r.userEmail]
+          .filter(Boolean)
+          .join(" ")
+          .toLowerCase()
+          .includes(needle),
+      )
+    : campusRows;
+  const complete = campusRows.filter((r) => r.sensus.completionStatus === "complete").length;
+  const withCard = campusRows.filter((r) => r.sensus.studentCardUrl).length;
 
   const chips = [
-    { label: "Mengisi sensus", value: mine.length },
+    { label: "Mengisi sensus", value: campusRows.length },
     { label: "Lengkap", value: complete },
-    { label: "Belum lengkap", value: mine.length - complete },
+    { label: "Belum lengkap", value: campusRows.length - complete },
     { label: "Ada kartu / LOA", value: withCard },
   ];
 
@@ -61,6 +80,28 @@ export default async function RantingSensusPage() {
           </div>
         ))}
       </div>
+
+      <form method="get" className="bg-surface-container-lowest border border-outline-variant rounded-xl p-4 sm:p-6 mb-6">
+        <div className="max-w-sm">
+          <TextField name="q" label="Cari pengguna" defaultValue={q} placeholder="Nama atau jurusan" />
+        </div>
+        <div className="flex flex-wrap items-center gap-3 mt-4">
+          <button type="submit" className={`${primaryBtn} inline-flex items-center gap-2`}>
+            <Search size={16} /> Cari
+          </button>
+          {q && (
+            <Link href="/console/ranting/sensus" className="text-label-caps uppercase tracking-wide text-on-surface-variant hover:text-on-background">
+              Reset
+            </Link>
+          )}
+          <a
+            href={`/api/console/sensus/export?format=csv${q ? `&q=${encodeURIComponent(q)}` : ""}`}
+            className="ml-auto inline-flex items-center gap-1.5 text-label-caps uppercase tracking-wide text-primary-container hover:text-primary transition-colors"
+          >
+            <Download size={14} aria-hidden /> Ekspor CSV
+          </a>
+        </div>
+      </form>
 
       <CollapsibleSection title={`Daftar (${mine.length})`}>
         {mine.length === 0 ? (

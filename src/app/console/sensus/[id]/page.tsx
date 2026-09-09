@@ -1,17 +1,21 @@
-import { eq } from "drizzle-orm";
+import { and, desc, eq } from "drizzle-orm";
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
 import type { ReactNode } from "react";
+import { Pencil } from "lucide-react";
 import { db } from "@/db";
-import { sensusProfiles, users } from "@/db/schema";
+import { auditLogs, sensusProfiles, users } from "@/db/schema";
 import { requireModuleAccess } from "@/lib/admin-scope";
 import { MEMBERSHIP_LABEL, membershipStatus } from "@/lib/membership-status";
 import { CollapsibleSection } from "@/components/console/collapsible-section";
 import { ProofView } from "@/components/console/proof-view";
+import { SensusDeleteButton } from "@/components/console/sensus-delete-button";
+import { summarizeAuditChange } from "@/lib/audit-diff";
 
-// Tampilan baca-saja: sensus diisi sendiri anggota lewat /sensus, pengurus tidak
-// mengeditnya di sini. Terkunci ke modul "sensus" — lihat page.tsx sebelah.
+// Sebagian besar baca-saja (sensus diisi sendiri anggota lewat /sensus), tapi
+// pengurus pemegang modul "sensus" bisa Ubah / Hapus dari sini; tercatat di
+// audit_logs. Terkunci ke modul "sensus" — lihat page.tsx sebelah.
 
 function fmtDate(value: string | Date | null | undefined): string {
   if (!value) return "—";
@@ -52,6 +56,14 @@ export default async function ConsoleSensusDetailPage({ params }: { params: Prom
 
   if (!row) notFound();
   const { s } = row;
+
+  const history = await db
+    .select({ log: auditLogs, actorName: users.name, actorEmail: users.email })
+    .from(auditLogs)
+    .leftJoin(users, eq(auditLogs.actorUserId, users.id))
+    .where(and(eq(auditLogs.entityType, "sensus_profile"), eq(auditLogs.entityId, id)))
+    .orderBy(desc(auditLogs.createdAt))
+    .limit(20);
   const ms = membershipStatus(s);
   const who = s.fullName || row.userName || row.userEmail || "Tanpa nama";
 
@@ -75,9 +87,18 @@ export default async function ConsoleSensusDetailPage({ params }: { params: Prom
           {s.completionStatus === "complete" ? "Lengkap" : "Belum lengkap"}
         </span>
       </div>
-      <p className="text-body-md text-on-surface-variant mb-8">
+      <p className="text-body-md text-on-surface-variant mb-4">
         Diisi sendiri oleh anggota lewat halaman Sensus &middot; terakhir diperbarui {fmtDate(s.updatedAt)}
       </p>
+      <div className="flex flex-wrap items-center gap-3 mb-8">
+        <Link
+          href={`/console/sensus/${id}/edit`}
+          className="inline-flex items-center gap-2 bg-primary-container text-on-primary text-label-caps uppercase tracking-wide px-5 py-2.5 rounded-md hover:bg-primary transition-colors"
+        >
+          <Pencil size={15} aria-hidden /> Ubah
+        </Link>
+        <SensusDeleteButton id={id} />
+      </div>
 
       <div className="flex flex-col gap-6">
         <CollapsibleSection title="Akun">
@@ -153,6 +174,36 @@ export default async function ConsoleSensusDetailPage({ params }: { params: Prom
             <Field label="Setuju Syarat & Ketentuan">{s.agreeTerms ? "Ya" : "Tidak"}</Field>
             <Field label="Berlangganan Newsletter">{s.subscribeNewsletter ? "Ya" : "Tidak"}</Field>
           </Group>
+        </CollapsibleSection>
+
+        <CollapsibleSection title={`Riwayat Perubahan (${history.length})`} defaultOpen={false}>
+          {history.length === 0 ? (
+            <p className="text-body-md text-on-surface-variant">
+              Belum ada perubahan oleh pengurus. Data ini masih persis seperti yang diisi anggota.
+            </p>
+          ) : (
+            <ul className="flex flex-col gap-2">
+              {history.map(({ log, actorName, actorEmail }) => (
+                <li
+                  key={log.id}
+                  className="bg-surface-container-lowest border border-outline-variant rounded-lg px-4 py-3 text-body-sm"
+                >
+                  <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1">
+                    <span className="text-on-background">
+                      {log.action === "deleted" ? "Dihapus" : "Diperbarui"} oleh{" "}
+                      {actorName ?? actorEmail ?? "pengurus"}
+                    </span>
+                    <span className="text-label-caps text-on-surface-variant">
+                      {new Date(log.createdAt).toLocaleString("id-ID", { dateStyle: "medium", timeStyle: "short" })}
+                    </span>
+                  </div>
+                  <p className="text-on-surface-variant mt-0.5">
+                    {summarizeAuditChange(log.action, log.beforeJson, log.afterJson)}
+                  </p>
+                </li>
+              ))}
+            </ul>
+          )}
         </CollapsibleSection>
       </div>
     </div>
