@@ -9,15 +9,16 @@
 /* Design tokens ported from Design System/Color System.md, Typography.md, Spacing System.md
    (Warm Institutional - canonical). See docs/Design System Overview.md */
 @theme {
-  /* Colors - default theme: 紫金山 Zijin Shan, the chapter's namesake Purple
-     Mountain. It is a forested mountain of pine and grey stone; "紫金"
-     (purple-gold) is the atmospheric haze on its slopes at dawn and dusk - so
-     the primary is that pine green, and violet + a warm gold are the accent
-     "haze" (tertiary / muted-gold), used sparingly.
+  /* Colors - default theme: 紫金山 Zijin Shan, the chapter's namesake mountain.
+     A forested mountain of pine and grey stone - so the primary is pine green,
+     the tertiary a mistier pine-teal (the far ridge seen through haze), and a
+     warm antique gold (muted-gold) is the one non-green accent. The name means
+     "purple-gold", but the retune keeps no violet: it read as costume, not
+     place (2026-09-10).
      Two alternates (梅花 meihua, 明城墙 mingwall) live in the [data-theme]
      blocks below; every one is just an override of these same tokens, which is
      why swapping a theme needs no component changes. All checked against WCAG AA
-     (light + dark) 2026-09-09. */
+     (light + dark). */
   --color-primary: #33493c;
   --color-primary-container: #3f5a49;
   --color-on-primary: #ffffff;
@@ -28,9 +29,9 @@
   --color-secondary-container: #dfe4df;
   --color-on-secondary-container: #444d46;
 
-  --color-tertiary: #6a4d86;
-  --color-tertiary-container: #7c5c9a;
-  --color-on-tertiary-container: #f4eefa;
+  --color-tertiary: #356057;
+  --color-tertiary-container: #45766b;
+  --color-on-tertiary-container: #edf5f2;
 
   --color-background: #f8f7f1;
   --color-on-background: #1e241f;
@@ -259,9 +260,9 @@ body {
   --color-secondary-container: #2b332d;
   --color-on-secondary-container: #cdd6cd;
 
-  --color-tertiary: #c9b0e0;
-  --color-tertiary-container: #7c5c9a;
-  --color-on-tertiary-container: #f4eefa;
+  --color-tertiary: #8fc9bd;
+  --color-tertiary-container: #45766b;
+  --color-on-tertiary-container: #edf5f2;
 
   --color-background: #141a15;
   --color-on-background: #e6ece5;

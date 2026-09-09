@@ -8,12 +8,14 @@ import { OrgExplorer, type OrgNodeData, type OrgMember } from "@/components/org-
 import { Network } from "lucide-react";
 import { getT } from "@/lib/i18n/server";
 
-// Warm-institutional branch accents (kept subtle to match the design system).
+// Warm-institutional branch accents - three genuinely distinct hues (pine, gold,
+// green-slate). A fourth top-level unit cycles back to pine; tertiary is left
+// out because in the zijin retune it is a pine-teal too close to primary to
+// read as a separate branch at a glance.
 const BRANCH_ACCENT = [
   "var(--color-primary)",
   "var(--color-muted-gold)",
   "var(--color-secondary)",
-  "var(--color-tertiary)",
 ];
 
 function toMember(row: {

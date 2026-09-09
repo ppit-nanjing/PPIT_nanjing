@@ -10,9 +10,9 @@ colors:
   secondary: "#566058"
   secondary-container: "#dfe4df"
   on-secondary-container: "#444d46"
-  tertiary: "#6a4d86"
-  tertiary-container: "#7c5c9a"
-  on-tertiary-container: "#f4eefa"
+  tertiary: "#356057"
+  tertiary-container: "#45766b"
+  on-tertiary-container: "#edf5f2"
   background: "#f8f7f1"
   on-background: "#1e241f"
   surface-container-lowest: "#ffffff"
@@ -168,9 +168,10 @@ no slogan bombast).
 
 A Material-3-derived role system (surface / on-surface / container tiers) in a
 warm, low-chroma register. The default palette is **zijin**: 紫金山 is a forested
-mountain of pine and grey stone, and "紫金" (purple-gold) is the atmospheric haze
-on its slopes at dawn and dusk — so the primary is that **pine green**, and a
-**violet** plus a **warm gold** are the accent "haze", used sparingly.
+mountain of pine and grey stone. The primary is that **pine green**; the tertiary
+a mistier **pine-teal** — the far ridge seen through haze; and a **warm antique
+gold** (`muted-gold`) is the one non-green accent, used sparingly. The name means
+"purple-gold", but the palette carries no violet — it read as costume, not place.
 
 ### Primary
 - **Pine** (`#33493c`): brand mark, active/current state, accent text, link
@@ -191,12 +192,15 @@ on its slopes at dawn and dusk — so the primary is that **pine green**, and a
   that should not read as branded.
 
 ### Tertiary
-- **Haze Violet** (`#6a4d86`) / **Haze Violet Bright** (`#7c5c9a`,
-  `tertiary-container`): the "purple" half of 紫金 — the dawn/dusk haze. Category
-  badges, decorative rules, cultural accents. Never a primary action.
-- **Gold** (`#a97e34`, `muted-gold`): the "金" half — a warm antique gold for the
-  hero's base hairline and selective decorative accents. Not body text (it
-  clears large-text contrast only).
+- **Ridge Teal** (`#356057`) / **Ridge Teal Bright** (`#45766b`,
+  `tertiary-container`): a mistier pine-teal — the far ridge through haze. Category
+  badges, decorative rules, cultural accents. Never a primary action. Cooler and
+  bluer than the primary pine, but close enough that it is *not* a second brand
+  colour — it does not carry the org-chart branch coding (that uses pine / gold /
+  green-slate).
+- **Gold** (`#a97e34`, `muted-gold`): the "金" of the name — a warm antique gold
+  for the hero's base hairline and selective decorative accents. The one accent
+  that isn't a green. Not body text (it clears large-text contrast only).
 
 ### Neutral
 - **Paper** (`#f8f7f1`, `background` / `surface`): the page ground. Warm off-white

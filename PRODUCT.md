@@ -150,11 +150,11 @@ Binding — locked, not open to redesign:
   `chongqing.ppitiongkok.com`.** Nanjing's lighter, city-rooted look is a deliberate
   identity decision, not an accident to "correct". (Chongqing: dark maroon + gold,
   Archivo / Fraunces. Nanjing went light on purpose.)
-- **The three Nanjing city themes** — *zijin* (紫金山, pine green of the namesake
-  forested mountain, default; retuned from a flat violet 2026-09-09), *meihua*
-  (梅花, city flower, wine maroon), *mingwall* (明城墙, Ming-wall slate) — each with
-  a dark variant, are part of the identity, not decoration. All six are WCAG-AA
-  verified. Do not remove them.
+- **The three Nanjing city themes** — *zijin* (紫金山, pine green + gold of the
+  namesake forested mountain, default; retuned from a flat violet, and the last
+  violet accent removed 2026-09-10), *meihua* (梅花, city flower, rose-crimson),
+  *mingwall* (明城墙, Ming-wall blue-slate) — each with a dark variant, are part of
+  the identity, not decoration. All six are WCAG-AA verified. Do not remove them.
 
 Established but open to impeccable's review:
 
