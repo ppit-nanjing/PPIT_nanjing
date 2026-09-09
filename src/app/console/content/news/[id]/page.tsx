@@ -29,15 +29,13 @@ export default async function EditNewsArticlePage({ params }: { params: Promise<
   // yang artikel ini liput.
   const session = await auth();
   if (!session) redirect("/login");
-  let allowed = hasModuleAccess(session.user.adminScope ?? null, "content");
+  const hasContent = hasModuleAccess(session.user.adminScope ?? null, "content");
+  let allowed = hasContent;
   if (!allowed && article.eventId) {
     allowed = (await getEventAccess(article.eventId)).can("event.postArticle");
   }
   if (!allowed) redirect("/console");
-  const backHref =
-    !hasModuleAccess(session.user.adminScope ?? null, "content") && article.eventId
-      ? `/console/events/${article.eventId}`
-      : "/console/content";
+  const backHref = !hasContent && article.eventId ? `/console/events/${article.eventId}` : "/console/content";
   const [{ value: subscriberCount }] = await db
     .select({ value: count() })
     .from(users)

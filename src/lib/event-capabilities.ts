@@ -99,13 +99,18 @@ const GRANTABLE_KEYS = new Set<EventCapability>(GRANTABLE_CAPABILITIES.map((g) =
 export const FULL_ADMIN_ONLY_CAPABILITIES: EventCapability[] = ["event.delete", "event.takeOver"];
 
 // Kapabilitas yang TIDAK diberikan lewat jembatan transisi scope modul "events"
-// (event-access.ts moduleBridge). Selain FULL_ADMIN_ONLY, ini termasuk keuangan:
-// verifikasi pembayaran dulu terkunci di scope "organization" (BPH Kabinet
-// saja), jadi jembatan modul "events" tidak boleh membukanya diam-diam. BPH
-// Panitia & divisi ber-grant "Keuangan" tetap dapat lewat jalur peran.
+// (event-access.ts moduleBridge). Jembatan itu hanya untuk MEMPERTAHANKAN apa
+// yang sudah bisa dilakukan pemegang modul "events" sebelum fitur ini —
+// keuangan (dulu scope "organization"), galeri & post artikel (dulu scope
+// "content"), pinjam aset (dulu scope "inventory") BUKAN termasuk, jadi
+// jembatan tidak boleh membukanya diam-diam. BPH Panitia & divisi ber-grant
+// tetap dapat lewat jalur peran.
 export const BRIDGE_EXCLUDED_CAPABILITIES: EventCapability[] = [
   ...FULL_ADMIN_ONLY_CAPABILITIES,
   "event.manageFinance",
+  "event.manageGallery",
+  "event.borrowAssets",
+  "event.postArticle",
 ];
 
 /**
