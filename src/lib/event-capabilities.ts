@@ -99,6 +99,41 @@ const GRANTABLE_KEYS = new Set<EventCapability>(GRANTABLE_CAPABILITIES.map((g) =
 // tidak dapat.
 export const FULL_ADMIN_ONLY_CAPABILITIES: EventCapability[] = ["event.delete", "event.takeOver"];
 
+// Kapabilitas baca — tetap boleh walau acara sudah terkunci (>2 minggu setelah
+// selesai). Semua kapabilitas TULIS lainnya ditolak untuk panitia begitu kunci
+// aktif; hanya BPH Kabinet ("full") yang tetap bisa mengubah.
+export const READ_ONLY_CAPABILITIES: EventCapability[] = [
+  "event.viewRegistrants",
+  "event.viewAuditLog",
+];
+
+// Spesifikasi §9: setelah acara selesai, panitia boleh mengubah data selama 2
+// minggu, lalu terkunci otomatis — perubahan hanya lewat BPH Kabinet.
+export const COMMITTEE_LOCK_GRACE_DAYS = 14;
+
+type EventTiming = { status: string; startAt: Date | string | null; endAt: Date | string | null };
+
+/** Kapan kunci panitia aktif untuk acara ini (atau null bila belum relevan). */
+export function committeeLockAt(ev: EventTiming): Date | null {
+  const end = ev.endAt ?? ev.startAt;
+  if (!end) return ev.status === "cancelled" ? new Date(0) : null;
+  const lock = new Date(end);
+  lock.setDate(lock.getDate() + COMMITTEE_LOCK_GRACE_DAYS);
+  return lock;
+}
+
+/** Apakah acara ini sudah melewati masa 2 minggu pasca-selesai? */
+export function isCommitteeLocked(ev: EventTiming, now: Date = new Date()): boolean {
+  const end = ev.endAt ?? ev.startAt;
+  const ended =
+    ev.status === "completed" ||
+    ev.status === "cancelled" ||
+    (end != null && new Date(end) < now);
+  if (!ended) return false;
+  const lock = committeeLockAt(ev);
+  return lock != null && now > lock;
+}
+
 // Kapabilitas yang TIDAK diberikan lewat jembatan transisi scope modul "events"
 // (event-access.ts moduleBridge). Jembatan itu hanya untuk MEMPERTAHANKAN apa
 // yang sudah bisa dilakukan pemegang modul "events" sebelum fitur ini —

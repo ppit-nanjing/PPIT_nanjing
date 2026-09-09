@@ -10,7 +10,7 @@ import { publishDueEvents } from "@/lib/publish-events";
 import { DeleteEventButton } from "@/components/console/delete-event-button";
 import { RegistrationList } from "@/components/console/registration-list";
 import { EventCommitteeStructure } from "@/components/console/event-committee-structure";
-import { listEventDivisions, issueParticipantCertificates } from "@/app/actions/committee";
+import { listEventDivisions, issueParticipantCertificates, takeOverEvent } from "@/app/actions/committee";
 import { requireEventConsoleAccess } from "@/lib/event-access";
 import { EVENT_STATUS_LABEL as STATUS_LABEL } from "@/lib/event-status-labels";
 import { EVENT_AUDIT_ACTION_LABEL, type EventAuditAction } from "@/lib/event-audit";
@@ -192,6 +192,23 @@ export default async function ConsoleEventDetailPage({ params }: { params: Promi
           {registrations.length} terdaftar &middot; {attended} hadir
           {event.capacity ? ` &middot; kapasitas ${event.capacity}` : ""}
         </p>
+        {access.locked && !access.isFullAdmin && (
+          <p className="mt-3 rounded-lg border border-outline-variant bg-surface-container-low px-4 py-3 text-body-md text-on-surface-variant">
+            Acara ini <strong className="text-on-background">terkunci</strong> — sudah lewat 2 minggu setelah
+            selesai. Panitia hanya bisa melihat; perubahan lewat BPH Kabinet.
+          </p>
+        )}
+        {can("event.takeOver") && access.role == null && (
+          <form action={takeOverEvent} className="mt-3">
+            <input type="hidden" name="eventId" value={id} />
+            <button
+              type="submit"
+              className="inline-flex items-center gap-2 rounded-md border border-outline-variant px-4 py-2 text-label-caps uppercase tracking-wide text-on-background hover:bg-surface-container-low transition-colors"
+            >
+              Ambil Alih Acara (BPH)
+            </button>
+          </form>
+        )}
       </header>
 
       {/* Layar lebar: kerja utama di kiri; ringkasan + antrean tindakan

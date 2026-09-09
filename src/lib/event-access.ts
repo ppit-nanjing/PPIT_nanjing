@@ -3,14 +3,16 @@ import { redirect } from "next/navigation";
 import { and, eq } from "drizzle-orm";
 import { auth } from "@/auth";
 import { db } from "@/db";
-import { eventCommittee, eventDivisions } from "@/db/schema";
+import { eventCommittee, eventDivisions, events } from "@/db/schema";
 import { hasModuleAccess } from "@/lib/admin-scope";
 import {
   type EventCapability,
   type EventCommitteeRole,
   BRIDGE_EXCLUDED_CAPABILITIES,
+  READ_ONLY_CAPABILITIES,
   hasEventCapability,
   isBphPanitiaRole,
+  isCommitteeLocked,
 } from "@/lib/event-capabilities";
 import { UUID_RE } from "@/lib/uuid";
 
@@ -39,6 +41,9 @@ export type EventAccess = {
   moduleBridge: boolean;
   // Kapabilitas yang dicentang untuk divisi orang ini (subset GRANTABLE_*).
   divisionGrants: string[];
+  // Acara sudah >2 minggu pasca-selesai: panitia hanya bisa BACA, ubah lewat
+  // BPH Kabinet. `false` untuk full admin (mereka tetap bisa mengubah).
+  locked: boolean;
   can: (capability: EventCapability) => boolean;
 };
 
@@ -49,6 +54,7 @@ const DENIED: EventAccess = {
   isFullAdmin: false,
   moduleBridge: false,
   divisionGrants: [],
+  locked: false,
   can: () => false,
 };
 
@@ -67,18 +73,35 @@ export async function getEventAccess(eventId: string): Promise<EventAccess> {
   // melempar sintaks uuid; anggap saja "bukan panitia".
   let role: EventCommitteeRole | null = null;
   let divisionGrants: string[] = [];
+  let locked = false;
   if (UUID_RE.test(eventId)) {
     const [row] = await db
       .select({
         role: eventCommittee.role,
         divisionGrants: eventDivisions.grantedCapabilities,
+        status: events.status,
+        startAt: events.startAt,
+        endAt: events.endAt,
       })
       .from(eventCommittee)
       .leftJoin(eventDivisions, eq(eventCommittee.divisionId, eventDivisions.id))
+      // Kolom acara di-join dari eventCommittee.eventId yang selalu = eventId,
+      // jadi bila orang ini bukan panitia kita perlu lookup acara terpisah.
+      .innerJoin(events, eq(events.id, eventCommittee.eventId))
       .where(and(eq(eventCommittee.eventId, eventId), eq(eventCommittee.userId, session.user.id)))
       .limit(1);
-    role = (row?.role as EventCommitteeRole | undefined) ?? null;
-    divisionGrants = row?.divisionGrants ?? [];
+    if (row) {
+      role = (row.role as EventCommitteeRole | undefined) ?? null;
+      divisionGrants = row.divisionGrants ?? [];
+      locked = isCommitteeLocked({ status: row.status, startAt: row.startAt, endAt: row.endAt });
+    } else if (!isFullAdmin) {
+      // Bukan panitia (mis. moduleBridge) — tetap perlu tahu status kunci acara.
+      const [ev] = await db
+        .select({ status: events.status, startAt: events.startAt, endAt: events.endAt })
+        .from(events)
+        .where(eq(events.id, eventId));
+      if (ev) locked = isCommitteeLocked(ev);
+    }
   }
 
   return {
@@ -88,10 +111,16 @@ export async function getEventAccess(eventId: string): Promise<EventAccess> {
     isFullAdmin,
     moduleBridge,
     divisionGrants,
-    can: (capability) =>
-      isFullAdmin ||
-      (moduleBridge && !BRIDGE_EXCLUDED_CAPABILITIES.includes(capability)) ||
-      hasEventCapability(role, capability, divisionGrants),
+    locked,
+    can: (capability) => {
+      if (isFullAdmin) return true;
+      // Acara terkunci: panitia (& moduleBridge) hanya boleh kapabilitas BACA.
+      if (locked && !READ_ONLY_CAPABILITIES.includes(capability)) return false;
+      return (
+        (moduleBridge && !BRIDGE_EXCLUDED_CAPABILITIES.includes(capability)) ||
+        hasEventCapability(role, capability, divisionGrants)
+      );
+    },
   };
 }
 

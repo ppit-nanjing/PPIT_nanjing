@@ -114,6 +114,30 @@ export async function removeCommittee(formData: FormData) {
 }
 
 /**
+ * BPH Kabinet mengambil alih acara yang kepanitiaannya vakum (Spesifikasi §9:
+ * "boleh kapan saja tanpa izin"). Mereka sudah punya akses penuh lewat
+ * isFullAdmin — aksi ini menjadikannya RESMI & TERCATAT: BPH masuk ke daftar
+ * panitia sebagai Supervisory Committee, jadi semua orang tahu BPH turun tangan.
+ * Gerbang event.takeOver = hanya "full" (FULL_ADMIN_ONLY, tidak lewat jembatan).
+ */
+export async function takeOverEvent(formData: FormData) {
+  const eventId = String(formData.get("eventId") ?? "");
+  const { session } = await requireEventCapability(eventId, "event.takeOver");
+
+  await db
+    .insert(eventCommittee)
+    .values({ eventId, userId: session.user.id, role: "supervisor", note: "Diambil alih BPH" })
+    .onConflictDoUpdate({
+      target: [eventCommittee.eventId, eventCommittee.userId],
+      set: { role: "supervisor", note: "Diambil alih BPH" },
+    });
+
+  await logEventAudit(session.user.id, eventId, "event.takeover", { after: { by: session.user.name ?? session.user.id } });
+  revalidatePath(`/console/events/${eventId}`);
+  revalidatePath("/console/work-ledger");
+}
+
+/**
  * The work ledger BPH actually asked for: one row per person with how many
  * committees they sit on, so nobody quietly ends up on eight at once.
  */
