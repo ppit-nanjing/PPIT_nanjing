@@ -31,12 +31,15 @@ export const CHECK_IN_BLOCK_MESSAGE: Record<CheckInBlock, string> = {
 
 // Pintu check-in menutup otomatis begitu acara berakhir (Spesifikasi §11 —
 // "akses scan berhenti saat acara selesai"). "Berakhir" = status
-// completed/cancelled, atau lewat dari (endAt ?? startAt) + jeda. Jeda memberi
-// ruang scan telat di pintu keluar & peserta yang baru datang; untuk acara
-// tanpa endAt, startAt + jeda dianggap akhir acara. Berlaku untuk semua orang
+// completed/cancelled, atau lewat dari waktu tutup. Berlaku untuk semua orang
 // termasuk BPH — koreksi kehadiran pasca-acara lewat "Jumlah Hadir (Final)" di
 // laporan, bukan lewat scan.
+//
+// Waktu tutup: kalau endAt diisi → endAt + jeda pendek (scan telat di pintu
+// keluar). Kalau hanya startAt → durasinya tak diketahui, jadi baru menutup
+// 24 jam setelah mulai supaya acara sehari penuh tetap bisa di-scan.
 export const CHECKIN_GRACE_HOURS = 12;
+const CHECKIN_NO_ENDAT_WINDOW_HOURS = 24;
 
 export type CheckInClosed = "ended" | "cancelled";
 
@@ -48,7 +51,9 @@ export function checkInClosedReason(ev: EventTiming, now: Date = new Date()): Ch
   const end = ev.endAt ?? ev.startAt;
   if (!end) return null; // jadwal belum pasti — jangan tutup
   const closesAt = new Date(end);
-  closesAt.setHours(closesAt.getHours() + CHECKIN_GRACE_HOURS);
+  closesAt.setHours(
+    closesAt.getHours() + (ev.endAt ? CHECKIN_GRACE_HOURS : CHECKIN_NO_ENDAT_WINDOW_HOURS),
+  );
   return now > closesAt ? "ended" : null;
 }
 
