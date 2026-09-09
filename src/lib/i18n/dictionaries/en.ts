@@ -244,6 +244,7 @@ export const en = {
   "events.attendedCount": "{{count}} attended",
   "events.materials": "Documentation & Materials",
   "events.watchRecap": "Watch Recap",
+  "events.committee": "Committee",
 
   // Event ticket
   "ticket.success": "Registration Successful",

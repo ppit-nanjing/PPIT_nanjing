@@ -5,8 +5,11 @@ import { and, desc, eq, inArray, sql as raw } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { auth } from "@/auth";
 import { db } from "@/db";
-import { eventCommittee, eventDivisions, certificates, events, users, eventRegistrations } from "@/db/schema";
+import { eventCommittee, eventCredits, eventDivisions, certificates, events, users, eventRegistrations } from "@/db/schema";
 import { requireModuleAccess } from "@/lib/admin-scope";
+import { requireEventCapability, requireEventConsoleAccess } from "@/lib/event-access";
+import { EVENT_COMMITTEE_ROLE_LABEL, GRANTABLE_CAPABILITIES, type EventCommitteeRole } from "@/lib/event-capabilities";
+import { logEventAudit } from "@/lib/event-audit";
 import { getStructureTemplate } from "@/lib/event-structure-templates";
 import { createTemplatedNotification } from "@/lib/notifications";
 
@@ -14,18 +17,21 @@ import { createTemplatedNotification } from "@/lib/notifications";
 // not necessarily the cabinet treasurer, which is the exact complaint in the
 // Website Ideas doc. So this never reads from departmentMembers.
 
-const COMMITTEE_ROLE_LABEL: Record<string, string> = {
-  ketua: "Ketua",
-  wakil: "Wakil",
-  sekretaris: "Sekretaris",
-  bendahara: "Bendahara",
-  supervisor: "Supervisor",
-  humas: "Humas",
-  acara: "Acara",
-  logistik: "Logistik",
-  dokumentasi: "Dokumentasi",
-  anggota: "Anggota",
-};
+const COMMITTEE_ROLE_LABEL = EVENT_COMMITTEE_ROLE_LABEL;
+
+// Terima divisionId HANYA kalau divisi itu memang milik `eventId`. Mencegah
+// baris panitia yang divisionId-nya menunjuk divisi acara LAIN — selain data
+// yang membingungkan, join di getEventAccess bisa menarik grant divisi asing.
+// null (tanpa divisi) selalu lolos.
+async function divisionForEvent(divisionId: string | null, eventId: string): Promise<string | null> {
+  if (!divisionId) return null;
+  const [div] = await db
+    .select({ id: eventDivisions.id })
+    .from(eventDivisions)
+    .where(and(eq(eventDivisions.id, divisionId), eq(eventDivisions.eventId, eventId)));
+  if (!div) throw new Error("Divisi tidak valid untuk acara ini");
+  return divisionId;
+}
 
 // Notifikasi ke peserta yang baru masuk kepanitiaan. Dibungkus catch supaya
 // gagalnya notifikasi tidak pernah membatalkan penugasannya.
@@ -42,7 +48,7 @@ async function notifyCommitteeAssigned(userId: string, eventId: string, role: st
       templateKey: "committee_assigned",
       variables: {
         eventTitle: event?.title ?? "kegiatan",
-        roleLabel: COMMITTEE_ROLE_LABEL[role] ?? role,
+        roleLabel: COMMITTEE_ROLE_LABEL[role as EventCommitteeRole] ?? role,
         divisionName,
       },
       relatedEntityType: "event",
@@ -54,7 +60,7 @@ async function notifyCommitteeAssigned(userId: string, eventId: string, role: st
 }
 
 export async function listCommittee(eventId: string) {
-  await requireModuleAccess("events");
+  await requireEventConsoleAccess(eventId);
   return db
     .select({
       id: eventCommittee.id,
@@ -72,8 +78,8 @@ export async function listCommittee(eventId: string) {
 }
 
 export async function assignCommittee(formData: FormData) {
-  await requireModuleAccess("events");
   const eventId = String(formData.get("eventId") ?? "");
+  const { session } = await requireEventCapability(eventId, "event.manageCommittee");
   const userId = String(formData.get("userId") ?? "");
   const role = String(formData.get("role") ?? "anggota");
   if (!eventId || !userId) throw new Error("Acara dan pengurus wajib dipilih");
@@ -82,7 +88,7 @@ export async function assignCommittee(formData: FormData) {
     role: role as "anggota",
     note: String(formData.get("note") ?? "").trim() || null,
     // "" dari <select> kosong = panitia inti tanpa divisi, bukan uuid kosong.
-    divisionId: String(formData.get("divisionId") ?? "").trim() || null,
+    divisionId: await divisionForEvent(String(formData.get("divisionId") ?? "").trim() || null, eventId),
   };
 
   // One row per person per event: re-assigning changes their role instead of
@@ -96,18 +102,102 @@ export async function assignCommittee(formData: FormData) {
     });
 
   await notifyCommitteeAssigned(userId, eventId, assignment.role, assignment.divisionId);
+  await logEventAudit(session.user.id, eventId, "committee.assigned", {
+    after: { userId, role: assignment.role, divisionId: assignment.divisionId },
+  });
 
   revalidatePath(`/console/events/${eventId}`);
   revalidatePath("/console/work-ledger");
 }
 
 export async function removeCommittee(formData: FormData) {
-  await requireModuleAccess("events");
   const id = String(formData.get("id") ?? "");
-  const [row] = await db.select({ eventId: eventCommittee.eventId }).from(eventCommittee).where(eq(eventCommittee.id, id));
+  const [row] = await db
+    .select({ eventId: eventCommittee.eventId, userId: eventCommittee.userId, role: eventCommittee.role })
+    .from(eventCommittee)
+    .where(eq(eventCommittee.id, id));
+  if (!row) return;
+  // Mengeluarkan panitia = wewenang BPH Panitia (event.manageCommittee).
+  const { session } = await requireEventCapability(row.eventId, "event.manageCommittee");
   await db.delete(eventCommittee).where(eq(eventCommittee.id, id));
-  if (row) revalidatePath(`/console/events/${row.eventId}`);
+  await logEventAudit(session.user.id, row.eventId, "committee.removed", {
+    before: { userId: row.userId, role: row.role },
+  });
+  revalidatePath(`/console/events/${row.eventId}`);
   revalidatePath("/console/work-ledger");
+}
+
+/**
+ * BPH Kabinet mengambil alih acara yang kepanitiaannya vakum (Spesifikasi §9:
+ * "boleh kapan saja tanpa izin"). Mereka sudah punya akses penuh lewat
+ * isFullAdmin — aksi ini menjadikannya RESMI & TERCATAT: BPH masuk ke daftar
+ * panitia sebagai Supervisory Committee, jadi semua orang tahu BPH turun tangan.
+ * Gerbang event.takeOver = hanya "full" (FULL_ADMIN_ONLY, tidak lewat jembatan).
+ */
+export async function takeOverEvent(formData: FormData) {
+  const eventId = String(formData.get("eventId") ?? "");
+  const { session } = await requireEventCapability(eventId, "event.takeOver");
+
+  await db
+    .insert(eventCommittee)
+    .values({ eventId, userId: session.user.id, role: "supervisor", note: "Diambil alih BPH" })
+    .onConflictDoUpdate({
+      target: [eventCommittee.eventId, eventCommittee.userId],
+      set: { role: "supervisor", note: "Diambil alih BPH" },
+    });
+
+  await logEventAudit(session.user.id, eventId, "event.takeover", { after: { by: session.user.name ?? session.user.id } });
+  revalidatePath(`/console/events/${eventId}`);
+  revalidatePath("/console/work-ledger");
+}
+
+// ---------- Kredit / arsip kepanitiaan (Spesifikasi §10) ----------
+// FITUR TERPISAH: baris di sini murni tampilan di halaman acara publik,
+// TIDAK memberi akses apa pun. Diisi Sekretaris (event.editCredits, tetap boleh
+// walau acara sudah terkunci — LPJ sering belakangan).
+
+export async function addEventCredit(formData: FormData) {
+  const eventId = String(formData.get("eventId") ?? "");
+  if (!eventId) throw new Error("Acara wajib dipilih");
+  const { session } = await requireEventCapability(eventId, "event.editCredits");
+  const userId = String(formData.get("userId") ?? "").trim() || null;
+  const roleLabel = String(formData.get("roleLabel") ?? "").trim() || null;
+  let displayName = String(formData.get("displayName") ?? "").trim();
+
+  // Dari picker akun: displayName di-snapshot dari nama akunnya.
+  if (userId && !displayName) {
+    const [u] = await db.select({ name: users.name, email: users.email }).from(users).where(eq(users.id, userId));
+    displayName = u?.name ?? u?.email ?? "";
+  }
+  if (!displayName) throw new Error("Nama wajib diisi");
+
+  const [{ maxOrder }] = await db
+    .select({ maxOrder: raw<number>`coalesce(max(${eventCredits.orderIndex}), 0)` })
+    .from(eventCredits)
+    .where(eq(eventCredits.eventId, eventId));
+
+  await db.insert(eventCredits).values({ eventId, userId, displayName, roleLabel, orderIndex: Number(maxOrder) + 1 });
+  await logEventAudit(session.user.id, eventId, "credit.added", { after: { credit: displayName, roleLabel } });
+
+  revalidatePath(`/console/events/${eventId}`);
+  const [ev] = await db.select({ slug: events.slug }).from(events).where(eq(events.id, eventId));
+  if (ev?.slug) revalidatePath(`/events/${ev.slug}`);
+}
+
+export async function removeEventCredit(formData: FormData) {
+  const id = String(formData.get("id") ?? "");
+  if (!id) return;
+  const [row] = await db
+    .select({ eventId: eventCredits.eventId, displayName: eventCredits.displayName })
+    .from(eventCredits)
+    .where(eq(eventCredits.id, id));
+  if (!row) return;
+  const { session } = await requireEventCapability(row.eventId, "event.editCredits");
+  await db.delete(eventCredits).where(eq(eventCredits.id, id));
+  await logEventAudit(session.user.id, row.eventId, "credit.removed", { before: { credit: row.displayName } });
+  revalidatePath(`/console/events/${row.eventId}`);
+  const [ev] = await db.select({ slug: events.slug }).from(events).where(eq(events.id, row.eventId));
+  if (ev?.slug) revalidatePath(`/events/${ev.slug}`);
 }
 
 /**
@@ -153,11 +243,12 @@ export async function getWorkLedger() {
  * karena satu orang satu baris per acara.
  */
 export async function assignMembersToDivision(formData: FormData): Promise<void> {
-  await requireModuleAccess("events");
   const eventId = String(formData.get("eventId") ?? "");
-  const divisionId = String(formData.get("divisionId") ?? "").trim() || null;
+  if (!eventId) return;
+  const { session } = await requireEventCapability(eventId, "event.manageCommittee");
+  const divisionId = await divisionForEvent(String(formData.get("divisionId") ?? "").trim() || null, eventId);
   const userIds = formData.getAll("userId").map((v) => String(v)).filter(Boolean);
-  if (!eventId || userIds.length === 0) return;
+  if (userIds.length === 0) return;
 
   await db
     .insert(eventCommittee)
@@ -168,6 +259,7 @@ export async function assignMembersToDivision(formData: FormData): Promise<void>
     });
 
   await Promise.allSettled(userIds.map((userId) => notifyCommitteeAssigned(userId, eventId, "anggota", divisionId)));
+  await logEventAudit(session.user.id, eventId, "committee.assigned", { after: { userIds, divisionId, role: "anggota" } });
 
   revalidatePath(`/console/events/${eventId}`);
   revalidatePath("/console/work-ledger");
@@ -192,18 +284,35 @@ async function insertCertificates(rows: (typeof certificates.$inferInsert)[]) {
       }),
     ),
   );
+  // Satu entri audit per acara (jalur peserta/panitia/divisi bisa mencampur).
+  const byEvent = new Map<string, { count: number; issuedBy: string | null }>();
+  for (const r of rows) {
+    if (!r.eventId) continue;
+    const cur = byEvent.get(r.eventId) ?? { count: 0, issuedBy: r.issuedBy ?? null };
+    cur.count += 1;
+    byEvent.set(r.eventId, cur);
+  }
+  for (const [eventId, v] of byEvent) {
+    await logEventAudit(v.issuedBy, eventId, "certificate.issued", { after: { count: v.count } });
+  }
 }
 
 export async function issueCertificate(formData: FormData) {
-  const session = await requireModuleAccess("events");
   const userId = String(formData.get("userId") ?? "");
   const title = String(formData.get("title") ?? "").trim();
+  const eventId = String(formData.get("eventId") ?? "") || null;
   if (!userId || !title) throw new Error("Penerima dan judul sertifikat wajib diisi");
+
+  // Sertifikat bertaut acara → wewenang event.issueCertificates untuk acara itu.
+  // Sertifikat lepas (tanpa acara) tetap butuh modul "events" tingkat kabinet.
+  const session = eventId
+    ? (await requireEventCapability(eventId, "event.issueCertificates")).session
+    : await requireModuleAccess("events");
 
   await insertCertificates([
     {
       userId,
-      eventId: String(formData.get("eventId") ?? "") || null,
+      eventId,
       kind: (String(formData.get("kind") ?? "peserta")) as "peserta",
       title,
       // A Google Drive link is fine - the ideas doc says so explicitly when
@@ -217,8 +326,16 @@ export async function issueCertificate(formData: FormData) {
 }
 
 export async function deleteCertificate(formData: FormData) {
-  await requireModuleAccess("events");
-  await db.delete(certificates).where(eq(certificates.id, String(formData.get("id") ?? "")));
+  const id = String(formData.get("id") ?? "");
+  const [row] = await db.select({ eventId: certificates.eventId, title: certificates.title, userId: certificates.userId }).from(certificates).where(eq(certificates.id, id));
+  if (!row) return;
+  let actorId: string | null = null;
+  if (row.eventId) actorId = (await requireEventCapability(row.eventId, "event.issueCertificates")).session.user.id;
+  else await requireModuleAccess("events");
+  await db.delete(certificates).where(eq(certificates.id, id));
+  if (row.eventId) {
+    await logEventAudit(actorId, row.eventId, "certificate.deleted", { before: { title: row.title, userId: row.userId } });
+  }
   revalidatePath("/console/work-ledger");
   revalidatePath("/profile/submissions");
 }
@@ -230,9 +347,13 @@ export async function deleteCertificate(formData: FormData) {
  * penerbitan (siapa/kapan) cuma demi mengisi satu URL.
  */
 export async function updateCertificateFileUrl(formData: FormData) {
-  await requireModuleAccess("events");
   const id = String(formData.get("id") ?? "");
   if (!id) throw new Error("ID sertifikat wajib diisi");
+
+  const [existing] = await db.select({ eventId: certificates.eventId }).from(certificates).where(eq(certificates.id, id));
+  if (!existing) throw new Error("Sertifikat tidak ditemukan");
+  if (existing.eventId) await requireEventCapability(existing.eventId, "event.issueCertificates");
+  else await requireModuleAccess("events");
 
   const [row] = await db
     .update(certificates)
@@ -267,11 +388,12 @@ export async function getMyCertificates() {
 
 // ---------- verifikasi pembayaran ----------
 
-// Payment verification is gated on "organization" - not the ordinary,
-// delegable "events" scope - because it's a financial record, same treatment
-// as donation verification (see src/app/actions/donations.ts).
+// Verifikasi pembayaran = kapabilitas grant "Keuangan" (event.manageFinance)
+// untuk divisi yang dicentang BPH Panitia — plus BPH Panitia sendiri & BPH
+// Kabinet. Rekap lintas-acara (tanpa eventId) tetap tingkat "organization".
 export async function listPendingPayments(eventId?: string) {
-  await requireModuleAccess("organization");
+  if (eventId) await requireEventCapability(eventId, "event.manageFinance");
+  else await requireModuleAccess("organization");
   const where = eventId
     ? and(eq(eventRegistrations.eventId, eventId), raw`${eventRegistrations.paymentStatus} <> 'not_required'`)
     : raw`${eventRegistrations.paymentStatus} <> 'not_required'`;
@@ -295,11 +417,30 @@ export async function listPendingPayments(eventId?: string) {
 }
 
 export async function updatePaymentStatus(formData: FormData) {
-  const session = await requireModuleAccess("organization");
   const id = String(formData.get("id") ?? "");
   const status = String(formData.get("paymentStatus") ?? "");
   const allowed = ["not_required", "unpaid", "submitted", "verified", "rejected"];
   if (!allowed.includes(status)) throw new Error("Status pembayaran tidak valid");
+
+  const [reg] = await db
+    .select({ eventId: eventRegistrations.eventId, before: eventRegistrations.paymentStatus, userId: eventRegistrations.userId })
+    .from(eventRegistrations)
+    .where(eq(eventRegistrations.id, id));
+  if (!reg) throw new Error("Pendaftaran tidak ditemukan");
+  const { session } = await requireEventCapability(reg.eventId, "event.manageFinance");
+
+  const auditAction =
+    status === "verified"
+      ? "payment.verified"
+      : status === "rejected"
+        ? "payment.rejected"
+        : reg.before === "verified"
+          ? "payment.unverified"
+          : "payment.other";
+  await logEventAudit(session.user.id, reg.eventId, auditAction, {
+    before: { paymentStatus: reg.before },
+    after: { paymentStatus: status, registrationId: id, participantId: reg.userId },
+  });
 
   const [row] = await db
     .update(eventRegistrations)
@@ -386,7 +527,7 @@ export async function submitPaymentProof(formData: FormData) {
 
 /** Seluruh divisi satu acara, induk lebih dulu, beserta jumlah anggotanya. */
 export async function listEventDivisions(eventId: string) {
-  await requireModuleAccess("events");
+  await requireEventConsoleAccess(eventId);
   const divisions = await db
     .select()
     .from(eventDivisions)
@@ -402,20 +543,41 @@ export async function listEventDivisions(eventId: string) {
       userId: users.id,
       name: users.name,
       email: users.email,
+      checkedInAt: eventCommittee.checkedInAt,
+      checkedInBy: eventCommittee.checkedInBy,
     })
     .from(eventCommittee)
     .leftJoin(users, eq(eventCommittee.userId, users.id))
     .where(eq(eventCommittee.eventId, eventId))
     .orderBy(eventCommittee.role);
 
-  return { divisions, members };
+  // Nama petugas yang men-scan tiap panitia (checked_in_by) — satu lookup.
+  const scannerIds = [
+    ...new Set(members.map((m) => m.checkedInBy).filter((v): v is string => !!v)),
+  ];
+  const scannerNames = scannerIds.length
+    ? new Map(
+        (await db.select({ id: users.id, name: users.name }).from(users).where(inArray(users.id, scannerIds))).map(
+          (u) => [u.id, u.name] as const,
+        ),
+      )
+    : new Map<string, string | null>();
+
+  return {
+    divisions,
+    members: members.map(({ checkedInBy, checkedInAt, ...m }) => ({
+      ...m,
+      checkedInAt: checkedInAt ? checkedInAt.toISOString() : null,
+      checkedInByName: checkedInBy ? scannerNames.get(checkedInBy) ?? null : null,
+    })),
+  };
 }
 
 export async function saveEventDivision(formData: FormData) {
-  await requireModuleAccess("events");
   const eventId = String(formData.get("eventId") ?? "");
   const name = String(formData.get("name") ?? "").trim();
   if (!eventId || !name) throw new Error("Acara dan nama divisi wajib diisi");
+  await requireEventCapability(eventId, "event.manageCommittee");
 
   const quotaRaw = String(formData.get("quota") ?? "").trim();
   const values = {
@@ -434,7 +596,9 @@ export async function saveEventDivision(formData: FormData) {
     // Divisi tidak boleh jadi induk dirinya sendiri - itu bikin pohonnya
     // memutar dan halaman strukturnya tidak akan pernah selesai dirender.
     if (values.parentDivisionId === id) throw new Error("Divisi tidak bisa menjadi induk dirinya sendiri");
-    await db.update(eventDivisions).set(values).where(eq(eventDivisions.id, id));
+    // id + eventId bersama: meng-POST id divisi acara lain = no-op, bukan
+    // pembajakan.
+    await db.update(eventDivisions).set(values).where(and(eq(eventDivisions.id, id), eq(eventDivisions.eventId, eventId)));
   } else {
     await db.insert(eventDivisions).values(values);
   }
@@ -443,14 +607,41 @@ export async function saveEventDivision(formData: FormData) {
 }
 
 export async function deleteEventDivision(formData: FormData) {
-  await requireModuleAccess("events");
   const id = String(formData.get("id") ?? "");
-  const [row] = await db.select({ eventId: eventDivisions.eventId }).from(eventDivisions).where(eq(eventDivisions.id, id));
+  const [row] = await db.select({ eventId: eventDivisions.eventId, name: eventDivisions.name }).from(eventDivisions).where(eq(eventDivisions.id, id));
+  if (!row) return;
+  const { session } = await requireEventCapability(row.eventId, "event.manageCommittee");
   // Sub-tim ikut terhapus (cascade), tapi panitianya tidak - kolom division_id
   // mereka jadi NULL, jadi catatan kepanitiaannya tetap utuh.
   await db.delete(eventDivisions).where(eq(eventDivisions.id, id));
-  if (row) revalidatePath(`/console/events/${row.eventId}`);
+  await logEventAudit(session.user.id, row.eventId, "committee.removed", { before: { division: row.name } });
+  revalidatePath(`/console/events/${row.eventId}`);
   revalidatePath("/console/work-ledger");
+}
+
+/**
+ * BPH Panitia mencentang kapabilitas khusus untuk sebuah divisi acara —
+ * sertifikat, galeri, keuangan, pinjam aset, post artikel, scan. Semua anggota
+ * divisi itu lalu ikut mendapatkannya (lihat src/lib/event-access.ts).
+ */
+export async function updateDivisionGrants(formData: FormData) {
+  const divisionId = String(formData.get("divisionId") ?? "");
+  const [division] = await db
+    .select({ eventId: eventDivisions.eventId, name: eventDivisions.name, before: eventDivisions.grantedCapabilities })
+    .from(eventDivisions)
+    .where(eq(eventDivisions.id, divisionId));
+  if (!division) throw new Error("Divisi tidak ditemukan");
+  const { session } = await requireEventCapability(division.eventId, "event.manageCommittee");
+
+  const allowed = new Set<string>(GRANTABLE_CAPABILITIES.map((g) => g.key));
+  const granted = formData.getAll("capability").map((v) => String(v)).filter((k) => allowed.has(k));
+
+  await db.update(eventDivisions).set({ grantedCapabilities: granted }).where(eq(eventDivisions.id, divisionId));
+  await logEventAudit(session.user.id, division.eventId, "division.grants", {
+    before: { division: division.name, capabilities: division.before },
+    after: { division: division.name, capabilities: granted },
+  });
+  revalidatePath(`/console/events/${division.eventId}`);
 }
 
 // Menerapkan template struktur kepanitiaan (src/lib/event-structure-templates.ts)
@@ -458,10 +649,10 @@ export async function deleteEventDivision(formData: FormData) {
 // berisi: template menyalin bentuk, bukan menimpa pekerjaan setengah jadi -
 // kalau mau ganti, hapus dulu divisinya (picker muncul lagi otomatis).
 export async function applyStructureTemplate(formData: FormData) {
-  await requireModuleAccess("events");
   const eventId = String(formData.get("eventId") ?? "").trim();
   const template = getStructureTemplate(String(formData.get("templateId") ?? "").trim());
   if (!eventId || !template) throw new Error("Acara dan template wajib dipilih");
+  const { session } = await requireEventCapability(eventId, "event.manageCommittee");
 
   const [event] = await db.select({ id: events.id }).from(events).where(eq(events.id, eventId));
   if (!event) throw new Error("Acara tidak ditemukan");
@@ -510,6 +701,9 @@ export async function applyStructureTemplate(formData: FormData) {
     })),
   );
   await db.batch(childRows.length > 0 ? [rootInsert, db.insert(eventDivisions).values(childRows)] : [rootInsert]);
+  await logEventAudit(session.user.id, eventId, "committee.assigned", {
+    after: { template: template.label, divisions: template.departments.length },
+  });
 
   revalidatePath(`/console/events/${eventId}`);
 }
@@ -530,12 +724,12 @@ export async function applyStructureTemplate(formData: FormData) {
  * masih terbaca setelah halaman di-reload, bukan pesan sekilas yang hilang.
  */
 export async function issueDivisionCertificates(formData: FormData): Promise<void> {
-  const session = await requireModuleAccess("events");
   const divisionId = String(formData.get("divisionId") ?? "");
   if (!divisionId) throw new Error("Divisi wajib dipilih");
 
   const [division] = await db.select().from(eventDivisions).where(eq(eventDivisions.id, divisionId));
   if (!division) throw new Error("Divisi tidak ditemukan");
+  const { session } = await requireEventCapability(division.eventId, "event.issueCertificates");
   const [event] = await db.select().from(events).where(eq(events.id, division.eventId));
 
   const children = await db
@@ -597,9 +791,9 @@ export async function issueDivisionCertificates(formData: FormData): Promise<voi
  * menerbitkan untuk yang baru itu.
  */
 export async function issueEventCertificates(formData: FormData): Promise<void> {
-  const session = await requireModuleAccess("events");
   const eventId = String(formData.get("eventId") ?? "");
   if (!eventId) throw new Error("Acara wajib dipilih");
+  const { session } = await requireEventCapability(eventId, "event.issueCertificates");
 
   const [event] = await db.select().from(events).where(eq(events.id, eventId));
   const members = await db
@@ -687,9 +881,9 @@ export async function issueParticipantCertificatesCore(eventId: string, actorId:
 
 /** Pembungkus form untuk tombol "Terbitkan Sertifikat Peserta" yang manual. */
 export async function issueParticipantCertificates(formData: FormData): Promise<void> {
-  const session = await requireModuleAccess("events");
   const eventId = String(formData.get("eventId") ?? "");
   if (!eventId) throw new Error("Acara wajib dipilih");
+  const { session } = await requireEventCapability(eventId, "event.issueCertificates");
 
   await issueParticipantCertificatesCore(eventId, session.user.id);
 
