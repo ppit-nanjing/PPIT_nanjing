@@ -51,6 +51,8 @@ const DENIED: EventAccess = {
   can: () => false,
 };
 
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
 export async function getEventAccess(eventId: string): Promise<EventAccess> {
   const session = await auth();
   if (!session?.user?.id) return DENIED;
@@ -62,18 +64,23 @@ export async function getEventAccess(eventId: string): Promise<EventAccess> {
   // Peran + grant divisi orang ini untuk acara ini. Indeks unik
   // (event_id, user_id) menjamin paling banyak satu baris. Di-query untuk full
   // admin juga - pemanggil memakai `role` di UI dan biayanya satu lookup.
-  const [row] = await db
-    .select({
-      role: eventCommittee.role,
-      divisionGrants: eventDivisions.grantedCapabilities,
-    })
-    .from(eventCommittee)
-    .leftJoin(eventDivisions, eq(eventCommittee.divisionId, eventDivisions.id))
-    .where(and(eq(eventCommittee.eventId, eventId), eq(eventCommittee.userId, session.user.id)))
-    .limit(1);
-
-  const role = (row?.role as EventCommitteeRole | undefined) ?? null;
-  const divisionGrants = row?.divisionGrants ?? [];
+  // eventId non-UUID (mis. FormData kosong) tidak di-query - Postgres akan
+  // melempar sintaks uuid; anggap saja "bukan panitia".
+  let role: EventCommitteeRole | null = null;
+  let divisionGrants: string[] = [];
+  if (UUID_RE.test(eventId)) {
+    const [row] = await db
+      .select({
+        role: eventCommittee.role,
+        divisionGrants: eventDivisions.grantedCapabilities,
+      })
+      .from(eventCommittee)
+      .leftJoin(eventDivisions, eq(eventCommittee.divisionId, eventDivisions.id))
+      .where(and(eq(eventCommittee.eventId, eventId), eq(eventCommittee.userId, session.user.id)))
+      .limit(1);
+    role = (row?.role as EventCommitteeRole | undefined) ?? null;
+    divisionGrants = row?.divisionGrants ?? [];
+  }
 
   return {
     session,
@@ -113,4 +120,18 @@ export async function hasEventCapabilityFor(
 ): Promise<boolean> {
   const access = await getEventAccess(eventId);
   return access.can(capability);
+}
+
+/**
+ * Gerbang dasar halaman/aksi konsol acara: cukup punya SATU peran di kepanitiaan
+ * acara ini (atau BPH Kabinet / jembatan modul). Section di dalamnya masih
+ * disaring per-kapabilitas lewat `access.can(...)`.
+ */
+export async function requireEventConsoleAccess(
+  eventId: string,
+): Promise<EventAccess & { session: Session }> {
+  const access = await getEventAccess(eventId);
+  if (!access.session) redirect("/login");
+  if (!access.isFullAdmin && !access.moduleBridge && access.role == null) redirect("/console");
+  return access as EventAccess & { session: Session };
 }

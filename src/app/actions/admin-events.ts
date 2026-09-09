@@ -137,7 +137,11 @@ export async function createEvent(_prev: EventFormState, formData: FormData): Pr
 }
 
 export async function updateEvent(id: string, formData: FormData) {
-  const actorId = await requireAdmin();
+  // Form edit acara menggabungkan info + konten + status. Digerbang di
+  // event.editInfo (BPH Panitia); panitia biasa yang cuma boleh ubah konten
+  // (event.editContent) belum lewat sini — pemisahan formnya menyusul.
+  const { session } = await requireEventCapability(id, "event.editInfo");
+  const actorId = session.user.id;
   const title = String(formData.get("title") ?? "").trim();
   if (!title) throw new Error("Judul wajib diisi");
 
@@ -248,7 +252,8 @@ export async function setEventStatus(formData: FormData) {
   const id = String(formData.get("eventId") ?? "");
   const status = String(formData.get("status") ?? "");
   if (!id || !status) throw new Error("eventId dan status wajib diisi");
-  const actorId = await requireAdmin();
+  const { session } = await requireEventCapability(id, "event.publish");
+  const actorId = session.user.id;
   const [before] = await db.select({ status: events.status }).from(events).where(eq(events.id, id));
   await db
     .update(events)
@@ -282,8 +287,8 @@ function parseQuestionOptions(formData: FormData, type: string): string | null {
 
 /** Tambah / ubah satu pertanyaan. Ada `id` = ubah; tanpa `id` = tambah di urutan terakhir. */
 export async function saveEventQuestion(formData: FormData) {
-  await requireAdmin();
   const eventId = String(formData.get("eventId") ?? "");
+  await requireEventCapability(eventId, "event.registrationForm");
   const label = String(formData.get("label") ?? "").trim();
   const type = String(formData.get("type") ?? "text");
   if (!eventId || !label) throw new Error("Acara dan label pertanyaan wajib diisi");
@@ -312,14 +317,15 @@ export async function saveEventQuestion(formData: FormData) {
 }
 
 export async function deleteEventQuestion(formData: FormData) {
-  await requireAdmin();
   const id = String(formData.get("id") ?? "");
   const [row] = await db
     .select({ eventId: eventQuestions.eventId })
     .from(eventQuestions)
     .where(eq(eventQuestions.id, id));
+  if (!row) return;
+  await requireEventCapability(row.eventId, "event.registrationForm");
   await db.delete(eventQuestions).where(eq(eventQuestions.id, id));
-  if (row) revalidatePath(`/console/events/${row.eventId}`);
+  revalidatePath(`/console/events/${row.eventId}`);
 }
 
 // ---------- Kategori tarif per-acara (event_fee_options) ----------
@@ -333,10 +339,10 @@ function parseAmountCny(formData: FormData): number {
 
 /** Tambah / ubah satu kategori tarif. Ada `id` = ubah; tanpa = tambah di urutan terakhir. */
 export async function saveFeeOption(formData: FormData) {
-  await requireAdmin();
   const eventId = String(formData.get("eventId") ?? "");
   const label = String(formData.get("label") ?? "").trim();
   if (!eventId || !label) throw new Error("Acara dan label kategori wajib diisi");
+  await requireEventCapability(eventId, "event.feeTiers");
   const amountCny = parseAmountCny(formData);
 
   const id = String(formData.get("id") ?? "").trim();
@@ -353,16 +359,17 @@ export async function saveFeeOption(formData: FormData) {
 }
 
 export async function deleteFeeOption(formData: FormData) {
-  await requireAdmin();
   const id = String(formData.get("id") ?? "");
   const [row] = await db
     .select({ eventId: eventFeeOptions.eventId })
     .from(eventFeeOptions)
     .where(eq(eventFeeOptions.id, id));
+  if (!row) return;
+  await requireEventCapability(row.eventId, "event.feeTiers");
   // Baris pendaftaran yang menunjuk opsi ini otomatis jadi NULL (ON DELETE SET
   // NULL) - riwayat siapa daftar tidak hilang, cuma kategori tarifnya kosong.
   await db.delete(eventFeeOptions).where(eq(eventFeeOptions.id, id));
-  if (row) revalidatePath(`/console/events/${row.eventId}`);
+  revalidatePath(`/console/events/${row.eventId}`);
 }
 
 export async function checkInRegistration(

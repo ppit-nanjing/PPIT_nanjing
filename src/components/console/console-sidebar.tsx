@@ -27,7 +27,14 @@ import {
 import { hasModuleAccess, type AdminModule } from "@/lib/admin-scope-constants";
 import Link from "next/link";
 
-type NavItem = { href: string; label: string; icon: typeof LayoutDashboard; module: AdminModule | null };
+type NavItem = {
+  href: string;
+  label: string;
+  icon: typeof LayoutDashboard;
+  module: AdminModule | null;
+  // Juga tampil untuk panitia acara (non-admin) walau tidak punya modul-nya.
+  committeeToo?: boolean;
+};
 
 // `module: null` = always visible to anyone who got past the layout gate
 // (Dashboard, Documentation are meta/support, not sensitive management).
@@ -43,7 +50,7 @@ const GROUPS: { title: string; items: NavItem[] }[] = [
     items: [
       { href: "/console/users", label: "Pengguna", icon: Users, module: "users" },
       { href: "/console/organization", label: "Organisasi", icon: Building2, module: "organization" },
-      { href: "/console/events", label: "Kegiatan", icon: CalendarDays, module: "events" },
+      { href: "/console/events", label: "Kegiatan", icon: CalendarDays, module: "events", committeeToo: true },
       { href: "/console/work-ledger", label: "Work Ledger", icon: ClipboardList, module: "events" },
       { href: "/console/inventory", label: "Inventaris", icon: Package, module: "inventory" },
       { href: "/console/membership", label: "Pendaftaran", icon: UserPlus, module: "membership" },
@@ -68,11 +75,13 @@ const COLLAPSE_KEY = "console.sidebar.collapsed";
 
 function NavContent({
   scope,
+  isCommittee = false,
   pathname,
   onNavigate,
   collapsed = false,
 }: {
   scope: "full" | string[] | null;
+  isCommittee?: boolean;
   pathname: string;
   onNavigate: () => void;
   collapsed?: boolean;
@@ -83,7 +92,12 @@ function NavContent({
   return (
     <nav className={`flex-1 py-2 overflow-y-auto ${collapsed ? "px-2" : ""}`}>
       {GROUPS.map((group) => {
-        const items = group.items.filter((i) => i.module === null || hasModuleAccess(scope, i.module));
+        const items = group.items.filter(
+          (i) =>
+            i.module === null ||
+            hasModuleAccess(scope, i.module) ||
+            (i.committeeToo && isCommittee),
+        );
         if (items.length === 0) return null;
         return (
           <div key={group.title} className="mb-2">
@@ -125,7 +139,15 @@ function NavContent({
   );
 }
 
-export function ConsoleSidebar({ userName, scope }: { userName: string; scope: "full" | string[] | null }) {
+export function ConsoleSidebar({
+  userName,
+  scope,
+  isCommittee = false,
+}: {
+  userName: string;
+  scope: "full" | string[] | null;
+  isCommittee?: boolean;
+}) {
   const [open, setOpen] = useState(false);
   // Lipat = rail ikon saja di desktop. Pilihan diingat per browser supaya
   // admin tidak mengulang setiap pindah halaman.
@@ -172,7 +194,7 @@ export function ConsoleSidebar({ userName, scope }: { userName: string; scope: "
             {collapsed ? <PanelLeftOpen size={18} /> : <PanelLeftClose size={18} />}
           </button>
         </div>
-        <NavContent scope={scope} pathname={pathname} onNavigate={() => {}} collapsed={collapsed} />
+        <NavContent scope={scope} isCommittee={isCommittee} pathname={pathname} onNavigate={() => {}} collapsed={collapsed} />
         <Link
           href="/"
           title={collapsed ? "Kembali ke Situs" : undefined}
@@ -206,7 +228,7 @@ export function ConsoleSidebar({ userName, scope }: { userName: string; scope: "
                 <X size={22} />
               </button>
             </div>
-            <NavContent scope={scope} pathname={pathname} onNavigate={() => setOpen(false)} />
+            <NavContent scope={scope} isCommittee={isCommittee} pathname={pathname} onNavigate={() => setOpen(false)} />
             <Link
               href="/"
               onClick={() => setOpen(false)}

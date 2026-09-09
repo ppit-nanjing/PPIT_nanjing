@@ -6,7 +6,7 @@ import { redirect } from "next/navigation";
 import { auth } from "@/auth";
 import { db } from "@/db";
 import { eventCommittee, eventDivisions, eventVolunteers, events, users } from "@/db/schema";
-import { requireModuleAccess } from "@/lib/admin-scope";
+import { requireEventCapability } from "@/lib/event-access";
 import { createTemplatedNotification } from "@/lib/notifications";
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -91,7 +91,6 @@ export async function applyAsVolunteer(formData: FormData): Promise<void> {
  * panitia tinggal memberi tahu orangnya bahwa akunnya menunggu diklaim.
  */
 export async function setVolunteerStatus(formData: FormData): Promise<void> {
-  await requireModuleAccess("events");
   const id = String(formData.get("id") ?? "");
   const decision = String(formData.get("decision") ?? "");
   if (!id || !["approved", "rejected"].includes(decision)) {
@@ -100,6 +99,7 @@ export async function setVolunteerStatus(formData: FormData): Promise<void> {
 
   const [app] = await db.select().from(eventVolunteers).where(eq(eventVolunteers.id, id));
   if (!app) throw new Error("Lamaran tidak ditemukan");
+  await requireEventCapability(app.eventId, "event.manageVolunteers");
 
   if (decision === "rejected") {
     await db.update(eventVolunteers).set({ status: "rejected" }).where(eq(eventVolunteers.id, id));

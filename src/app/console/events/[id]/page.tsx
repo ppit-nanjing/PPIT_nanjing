@@ -10,7 +10,7 @@ import { DeleteEventButton } from "@/components/console/delete-event-button";
 import { RegistrationList } from "@/components/console/registration-list";
 import { EventCommitteeStructure } from "@/components/console/event-committee-structure";
 import { listEventDivisions, issueParticipantCertificates } from "@/app/actions/committee";
-import { requireModuleAccess, hasModuleAccess } from "@/lib/admin-scope";
+import { requireEventConsoleAccess } from "@/lib/event-access";
 import { ImageUploadCropper } from "@/components/upload/image-upload-cropper";
 import { EventThemeFields } from "@/components/console/event-theme-fields";
 import { AIImproveButton } from "@/components/ai/ai-improve-button";
@@ -34,8 +34,9 @@ const QUESTION_TYPE_LABELS: Record<string, string> = {
 };
 
 export default async function ConsoleEventDetailPage({ params }: { params: Promise<{ id: string }> }) {
-  const session = await requireModuleAccess("events");
   const { id } = await params;
+  const access = await requireEventConsoleAccess(id);
+  const can = access.can;
   await publishDueEvents();
   const [event] = await db.select().from(events).where(eq(events.id, id));
   if (!event) notFound();
@@ -104,12 +105,10 @@ export default async function ConsoleEventDetailPage({ params }: { params: Promi
   const committeeCertUserIds = issuedCerts.filter((c) => c.kind === "panitia").map((c) => c.userId);
   const participantCertCount = issuedCerts.filter((c) => c.kind === "peserta").length;
 
-  // Payment verification is financial data - gated on "organization", not the
-  // ordinary "events" scope everyone with events access already has. Derived
-  // from `registrations` (already fetched above) instead of a second query;
-  // only rendering is gated, so nothing sensitive reaches an unauthorized
-  // viewer's page even though it briefly exists in server memory here.
-  const canVerifyPayments = hasModuleAccess(session.user.adminScope, "organization");
+  // Verifikasi pembayaran = data keuangan - digerbang event.manageFinance
+  // (grant "Keuangan" per divisi + BPH Panitia + BPH Kabinet). Diturunkan dari
+  // `registrations` yang sudah diambil; hanya render-nya yang digerbang.
+  const canVerifyPayments = can("event.manageFinance");
   const feeOptionAmount = new Map(feeOptions.map((o) => [o.id, o.amountCny]));
   const pendingPayments = canVerifyPayments
     ? registrations
@@ -151,6 +150,7 @@ export default async function ConsoleEventDetailPage({ params }: { params: Promi
           (volunteer, verifikasi bayar) menempel di kolom kanan. */}
       <div className="grid grid-cols-1 xl:grid-cols-[minmax(0,1fr)_400px] gap-6 items-start">
         <div className="flex flex-col gap-6 min-w-0">
+      {can("event.editInfo") && (
       <details className="bg-surface-container-lowest border border-outline-variant rounded-xl">
         <summary className="px-6 py-4 cursor-pointer text-label-caps text-primary-container uppercase tracking-wide">
           Edit Detail Kegiatan
@@ -409,7 +409,9 @@ export default async function ConsoleEventDetailPage({ params }: { params: Promi
           </div>
         </form>
       </details>
+      )}
 
+      {can("event.registrationForm") && (
       <CollapsibleSection
         title="Pertanyaan Pendaftaran"
         description={questions.length > 0 ? `${questions.length} pertanyaan` : "tidak ada — form standar"}
@@ -507,7 +509,9 @@ export default async function ConsoleEventDetailPage({ params }: { params: Promi
           </div>
         </form>
       </CollapsibleSection>
+      )}
 
+      {can("event.feeTiers") && (
       <CollapsibleSection
         title="Kategori Tarif"
         description={feeOptions.length > 0 ? `${feeOptions.length} kategori` : "tidak ada — tarif tunggal"}
@@ -571,7 +575,9 @@ export default async function ConsoleEventDetailPage({ params }: { params: Promi
           </button>
         </form>
       </CollapsibleSection>
+      )}
 
+      {can("event.manageCommittee") && (
       <CollapsibleSection
         title="Struktur Kepanitiaan"
         description={`${divisions.length} divisi · ${committee.length} panitia`}
@@ -584,7 +590,9 @@ export default async function ConsoleEventDetailPage({ params }: { params: Promi
           certifiedUserIds={committeeCertUserIds}
         />
       </CollapsibleSection>
+      )}
 
+      {can("event.issueCertificates") && (
       <CollapsibleSection
         title="Sertifikat Peserta"
         description={`${eligible} berhak · ${participantCertCount} terbit`}
@@ -613,9 +621,11 @@ export default async function ConsoleEventDetailPage({ params }: { params: Promi
           </p>
         )}
       </CollapsibleSection>
+      )}
 
+      {can("event.viewRegistrants") && (
       <CollapsibleSection title="Daftar Pendaftar" description={`${registrations.length} terdaftar · ${attended} hadir`}>
-        {registrations.length > 0 && (
+        {registrations.length > 0 && can("event.exportRegistrants") && (
           <a
             href={`/api/console/events/${id}/registrations/export`}
             className="self-start inline-flex items-center gap-1.5 text-label-caps uppercase tracking-wide text-primary-container hover:text-primary transition-colors mb-3"
@@ -651,6 +661,7 @@ export default async function ConsoleEventDetailPage({ params }: { params: Promi
           }))}
         />
       </CollapsibleSection>
+      )}
         </div>
 
         {/* Kolom samping: ringkasan + antrean tindakan */}
@@ -671,13 +682,15 @@ export default async function ConsoleEventDetailPage({ params }: { params: Promi
                 <p className="text-label-caps text-on-surface-variant">Kuota</p>
               </div>
             </div>
-            <a
-              href={`/events/${event.slug}/scan`}
-              className="inline-flex items-center justify-center gap-2 border border-outline-variant text-on-background text-label-caps uppercase tracking-wide px-4 py-2 rounded-md hover:bg-surface-container-low transition-colors"
-            >
-              Buka Scanner Check-in
-            </a>
-            <DeleteEventButton eventId={id} label="Hapus Kegiatan" />
+            {can("event.scanAttendance") && (
+              <a
+                href={`/events/${event.slug}/scan`}
+                className="inline-flex items-center justify-center gap-2 border border-outline-variant text-on-background text-label-caps uppercase tracking-wide px-4 py-2 rounded-md hover:bg-surface-container-low transition-colors"
+              >
+                Buka Scanner Check-in
+              </a>
+            )}
+            {can("event.delete") && <DeleteEventButton eventId={id} label="Hapus Kegiatan" />}
           </section>
 
           {canVerifyPayments && event.isPaid && (
@@ -707,6 +720,7 @@ export default async function ConsoleEventDetailPage({ params }: { params: Promi
             </CollapsibleSection>
           )}
 
+          {can("event.manageVolunteers") && (
           <CollapsibleSection
             title="Pendaftar Volunteer"
             description={
@@ -737,6 +751,7 @@ export default async function ConsoleEventDetailPage({ params }: { params: Promi
               }))}
             />
           </CollapsibleSection>
+          )}
         </aside>
       </div>
     </div>

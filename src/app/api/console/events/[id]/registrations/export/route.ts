@@ -1,7 +1,7 @@
 import { desc, eq } from "drizzle-orm";
 import { db } from "@/db";
 import { events, eventRegistrations, eventQuestions, eventFeeOptions, users } from "@/db/schema";
-import { requireModuleAccess } from "@/lib/admin-scope";
+import { hasEventCapabilityFor } from "@/lib/event-access";
 
 // Same hardening as the membership export: quote/escape CSV specials and
 // neutralize Excel formula injection ("=HYPERLINK(...)" typed into a form
@@ -25,8 +25,10 @@ const STATUS_LABEL: Record<string, string> = {
 };
 
 export async function GET(_req: Request, { params }: { params: Promise<{ id: string }> }) {
-  await requireModuleAccess("events");
   const { id } = await params;
+  if (!(await hasEventCapabilityFor(id, "event.exportRegistrants"))) {
+    return new Response("Forbidden", { status: 403 });
+  }
 
   const [event] = await db.select({ title: events.title }).from(events).where(eq(events.id, id)).limit(1);
   if (!event) return new Response("Not found", { status: 404 });
