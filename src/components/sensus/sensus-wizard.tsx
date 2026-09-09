@@ -13,6 +13,8 @@ import {
   DEGREE_OPTIONS,
   FUNDING_OPTIONS,
   GENDER_OPTIONS,
+  MANDARIN_ABILITY_OPTIONS,
+  MEDIUM_OF_INSTRUCTION_OPTIONS,
   STUDENT_STATUS_OPTIONS,
   UNIVERSITY_OTHER,
   validateSensus,
@@ -44,6 +46,10 @@ const OPTION_KEYS: Record<string, TKey> = {
   "Self-funded": "sensus.fundSelf",
   "Partial Scholarship": "sensus.fundPartial",
   "Full Scholarship": "sensus.fundFull",
+  "Chinese-taught": "sensus.moiChinese",
+  "English-taught": "sensus.moiEnglish",
+  "Hybrid": "sensus.moiHybrid",
+  "Belum ada": "sensus.mandarinAbilityNone",
 };
 
 // Label tiap field, dipakai untuk menyusun pesan error ("<label> wajib diisi").
@@ -59,12 +65,18 @@ const FIELD_LABEL_KEYS: Partial<Record<keyof SensusInput, TKey>> = {
   university: "sensus.university",
   degreeLevel: "sensus.degreeLevel",
   major: "sensus.major",
+  mediumOfInstruction: "sensus.mediumOfInstruction",
+  mandarinAbility: "sensus.mandarinAbility",
   fundingSource: "sensus.fundingSource",
   entryYear: "sensus.entryYear",
   graduationYear: "sensus.graduationYear",
+  mandarinName: "sensus.mandarinName",
+  activeEmail: "sensus.activeEmail",
   wechatId: "sensus.wechatId",
   phoneActive: "sensus.phoneActive",
   whatsappNumber: "sensus.whatsappNumber",
+  emergencyContact: "sensus.emergencyContact",
+  chinaAddress: "sensus.chinaAddress",
   studentCardUrl: "sensus.studentCardLabel",
   agreeTerms: "sensus.agreeTerms",
 };
@@ -82,6 +94,8 @@ function issueMessage(t: T, issue: SensusIssue): string {
       return t("sensus.errPhone");
     case "whatsapp":
       return t("sensus.errWhatsapp");
+    case "email":
+      return t("sensus.errEmail");
     case "year":
       return t("sensus.errYear");
     case "gradBeforeEntry":
@@ -91,8 +105,8 @@ function issueMessage(t: T, issue: SensusIssue): string {
     case "studentCard":
       return t("sensus.errStudentCard");
     case "required":
-      // Dua field ini punya pesan sendiri karena bukan "isian kosong" biasa:
-      // satu unggahan berkas, satu kotak persetujuan.
+      // Field ini punya pesan sendiri karena bukan "isian kosong" biasa:
+      // unggahan berkas, satu kotak persetujuan.
       if (issue.field === "studentCardUrl") return t("sensus.errStudentCardRequired");
       if (issue.field === "agreeTerms") return t("sensus.errTermsRequired");
       return t("sensus.errRequired", { label: t(FIELD_LABEL_KEYS[issue.field] ?? "sensus.fullName") });
@@ -108,6 +122,7 @@ function PhoneField({
   prefixes,
   hint,
   error,
+  required = true,
 }: {
   label: string;
   value: string;
@@ -115,6 +130,7 @@ function PhoneField({
   prefixes: string[];
   hint: string;
   error?: string;
+  required?: boolean;
 }) {
   const t = useT();
   const locked = prefixes.length === 1;
@@ -136,7 +152,7 @@ function PhoneField({
     <div className="flex flex-col gap-2">
       <span className="text-label-caps uppercase tracking-wide text-on-surface-variant">
         {label}
-        <span className="text-error" aria-hidden="true"> *</span>
+        {required && <span className="text-error" aria-hidden="true"> *</span>}
       </span>
       <div className="flex gap-2">
         {locked ? (
@@ -166,7 +182,7 @@ function PhoneField({
           value={national}
           onChange={(e) => onChange(normalize(e.target.value, prefix))}
           placeholder={prefix === "+86" ? "13712345678" : "85211849390"}
-          aria-required="true"
+          aria-required={required || undefined}
           aria-invalid={error ? true : undefined}
           aria-describedby={error ? errorId : undefined}
           className="bg-soft-gray rounded-md p-3 text-body-md flex-1 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-container"
@@ -199,6 +215,7 @@ export function SensusWizard({
   const [step, setStep] = useState(0);
   const [form, setForm] = useState<SensusInput>({
     fullName: initial.fullName ?? "",
+    mandarinName: initial.mandarinName ?? "",
     passportNumber: initial.passportNumber ?? "",
     gender: initial.gender ?? "",
     passportExpiry: initial.passportExpiry ?? "",
@@ -209,12 +226,17 @@ export function SensusWizard({
     university: initial.university ?? "",
     degreeLevel: initial.degreeLevel ?? "",
     major: initial.major ?? "",
+    mediumOfInstruction: initial.mediumOfInstruction ?? "",
+    mandarinAbility: initial.mandarinAbility ?? "",
     fundingSource: initial.fundingSource ?? "",
     entryYear: initial.entryYear ?? "",
     graduationYear: initial.graduationYear ?? "",
+    activeEmail: initial.activeEmail ?? "",
     wechatId: initial.wechatId ?? "",
     phoneActive: initial.phoneActive ?? "",
     whatsappNumber: initial.whatsappNumber ?? "",
+    emergencyContact: initial.emergencyContact ?? "",
+    chinaAddress: initial.chinaAddress ?? "",
     studentCardUrl: initial.studentCardUrl ?? "",
     agreeTerms: initial.agreeTerms ?? false,
     subscribeNewsletter: initial.subscribeNewsletter ?? false,
@@ -232,12 +254,29 @@ export function SensusWizard({
   const [saving, setSaving] = useState(false);
   const [lastSaved, setLastSaved] = useState<Date | null>(null);
   const stepRef = useRef<HTMLDivElement>(null);
+  // Lompatan langkah pertama tidak boleh menggeser layar — pengisi baru saja
+  // membuka halaman dan mungkin sudah menggulir ke wizard dengan sengaja.
+  const firstRender = useRef(true);
 
   const branchUniversities = form.branch ? universitiesByBranch[form.branch] ?? [] : [];
 
   useEffect(() => {
+    // `preventScroll`: fokus tidak boleh menyeret viewport ke tengah field —
+    // di mobile itulah yang membuat pengisi "terjebak" di posisi bawah setelah
+    // ganti langkah. Kita yang mengatur gulir, lewat scrollTo di bawah.
     const first = stepRef.current?.querySelector<HTMLElement>("input, select, textarea, button");
-    first?.focus();
+    first?.focus({ preventScroll: true });
+
+    if (firstRender.current) {
+      firstRender.current = false;
+      return;
+    }
+    // Ganti langkah = mulai lagi dari atas. Hormati prefers-reduced-motion
+    // seperti sisa animasi situs.
+    const reduceMotion =
+      typeof window !== "undefined" &&
+      window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
+    window.scrollTo({ top: 0, behavior: reduceMotion ? "auto" : "smooth" });
   }, [step]);
 
   function update<K extends keyof SensusInput>(key: K, value: string | boolean) {
@@ -336,6 +375,7 @@ export function SensusWizard({
       placeholder?: string;
       disabled?: boolean;
       emptyLabel?: string;
+      multiline?: boolean;
       onChange?: (value: string) => void;
     }
   ) => {
@@ -369,6 +409,19 @@ export function SensusWizard({
               </option>
             ))}
           </Select>
+        ) : opts?.multiline ? (
+          <textarea
+            id={id}
+            rows={2}
+            value={form[key] as string}
+            onChange={(e) => onChange(e.target.value)}
+            placeholder={opts?.placeholder}
+            disabled={opts?.disabled}
+            aria-required={opts?.required || undefined}
+            aria-invalid={error ? true : undefined}
+            aria-describedby={describedBy || undefined}
+            className="bg-soft-gray rounded-md p-3 text-body-md resize-y focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-container disabled:opacity-60"
+          />
         ) : (
           <input
             id={id}
@@ -434,6 +487,10 @@ export function SensusWizard({
             <legend className="sr-only">{t(STEP_KEYS[0])}</legend>
               <PassportScanner onResult={applyPassportScan} />
             {field(t("sensus.fullName"), "fullName", { required: true })}
+            {field(t("sensus.mandarinName"), "mandarinName", {
+              hint: t("sensus.mandarinNameHint"),
+              placeholder: "张伟",
+            })}
             {field(t("sensus.passportNumber"), "passportNumber", {
               required: true,
               hint: t("sensus.passportHint"),
@@ -500,6 +557,15 @@ export function SensusWizard({
               required: true,
               placeholder: "Computer Science",
             })}
+            {field(t("sensus.mediumOfInstruction"), "mediumOfInstruction", {
+              options: MEDIUM_OF_INSTRUCTION_OPTIONS,
+              required: true,
+            })}
+            {field(t("sensus.mandarinAbility"), "mandarinAbility", {
+              options: MANDARIN_ABILITY_OPTIONS,
+              required: true,
+              hint: t("sensus.mandarinAbilityHint"),
+            })}
             {field(t("sensus.fundingSource"), "fundingSource", { options: FUNDING_OPTIONS, required: true })}
             {field(t("sensus.entryYear"), "entryYear", { type: "number", required: true, placeholder: "2024" })}
             {field(t("sensus.graduationYear"), "graduationYear", {
@@ -512,6 +578,7 @@ export function SensusWizard({
                 folder="sensus"
                 label={t("sensus.studentCardLabel")}
                 required
+                accept="image/*,application/pdf"
                 value={form.studentCardUrl}
                 onValueChange={(url) => update("studentCardUrl", url)}
               />
@@ -525,6 +592,12 @@ export function SensusWizard({
         {step === 2 && (
           <fieldset className="contents">
             <legend className="sr-only">{t(STEP_KEYS[2])}</legend>
+            {field(t("sensus.activeEmail"), "activeEmail", {
+              type: "email",
+              required: true,
+              placeholder: "nama@gmail.com",
+              hint: t("sensus.activeEmailHint"),
+            })}
             {field(t("sensus.wechatId"), "wechatId", {
               required: true,
               placeholder: "Xevuin12",
@@ -537,6 +610,7 @@ export function SensusWizard({
               prefixes={["+86"]}
               hint={t("sensus.phoneActiveHint")}
               error={errorFor("phoneActive")}
+              required={false}
             />
             <PhoneField
               label={t("sensus.whatsappNumber")}
@@ -546,6 +620,18 @@ export function SensusWizard({
               hint={t("sensus.whatsappHint")}
               error={errorFor("whatsappNumber")}
             />
+            {field(t("sensus.emergencyContact"), "emergencyContact", {
+              multiline: true,
+              required: true,
+              hint: t("sensus.emergencyContactHint"),
+              placeholder: "Milea, Ibu, +86 17081945",
+            })}
+            {field(t("sensus.chinaAddress"), "chinaAddress", {
+              multiline: true,
+              required: true,
+              hint: t("sensus.chinaAddressHint"),
+              placeholder: "Nanjing Xiaozhuang University",
+            })}
             <div className="flex flex-col gap-2">
               <CheckField
                 name="agreeTerms"

@@ -18,7 +18,9 @@
 
 ## Terkait admin
 
-Data agregat sensus dilaporkan di [Reports & Analytics](./Reports%20&%20Analytics.md) § Sensus Summary Report — laporan ini kemungkinan jadi alasan utama data sensus dikumpulkan (pelaporan ke organisasi tingkat nasional PPI Tiongkok atau ke KBRI/Atdikbud).
+- **Data per orang + bukti** ada di `/console/sensus` (daftar + detail): biodata, nomor paspor, kampus, dan bukti kartu mahasiswa / LOA. Dipakai untuk memverifikasi status mahasiswa aktif. Layar ini terkunci ke modul admin **`sensus`** — untuk sekarang hanya **BPH + Divisi Teknologi** (akun full-admin). Modul `sensus` tetap muncul sebagai checkbox di `/console/organization` sehingga full-admin bisa memberikannya ke divisi lain (mis. Humas) nanti; ia termasuk `SENSITIVE_SCOPE_KEYS` jadi hanya full-admin yang boleh memberikannya. Route berkas privat `/api/sensus/student-card/...` juga memakai modul `sensus` ini.
+- **Data agregat** (tanpa PII) tetap di `/console/reports` untuk pemilik modul `reports`: statistik kelengkapan, tally universitas/jenjang/cabang, status keanggotaan. Generator unduhan **"Ringkasan Sensus"** (memuat nomor paspor) ikut butuh modul `sensus`; **"Ekspor Data Mahasiswa"** (tanpa paspor) tetap di `reports`. Lihat [Reports & Analytics](./Reports%20&%20Analytics.md) § Sensus Summary Report — pelaporan ini alasan utama data sensus dikumpulkan (rekap ke PPI Tiongkok pusat).
+- Migrasi `drizzle/0033_sensus_scope_split.sql` melepas `sensus` dari alias `reports` dan membersihkan grant lama.
 
 ## Catatan implementasi
 
@@ -30,4 +32,4 @@ Langkah Biodata dapat membaca dua baris MRZ paspor dari foto. Tesseract.js hanya
 
 ### Fitur terencana: OCR kartu mahasiswa
 
-OCR kartu mahasiswa belum diaktifkan. Saat dikerjakan, pemrosesan teks harus berjalan di browser dan tidak boleh memakai layanan OCR pihak ketiga. Hasil OCR dicocokkan dengan daftar universitas cabang yang sudah dipilih melalui `findUniversityMatch()` di `src/lib/university-match.ts`; hasilnya hanya saran yang wajib dikonfirmasi pengguna. Berkas kartu mahasiswa yang diunggah disimpan sebagai Vercel Blob privat dan hanya dibaca melalui route yang memeriksa pemilik atau akses admin laporan.
+OCR kartu mahasiswa belum diaktifkan. Saat dikerjakan, pemrosesan teks harus berjalan di browser dan tidak boleh memakai layanan OCR pihak ketiga. Hasil OCR dicocokkan dengan daftar universitas cabang yang sudah dipilih melalui `findUniversityMatch()` di `src/lib/university-match.ts`; hasilnya hanya saran yang wajib dikonfirmasi pengguna. Berkas kartu mahasiswa yang diunggah disimpan sebagai Vercel Blob privat dan hanya dibaca melalui route yang memeriksa pemilik atau akses modul admin `sensus`.

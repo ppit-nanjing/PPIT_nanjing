@@ -225,6 +225,9 @@ export const sensusProfiles = pgTable("sensus_profiles", {
 
   // BIODATA
   fullName: text("full_name"),
+  // Nama Mandarin (中文名) — diminta form chapter "Sensus PPIT Nanjing", form
+  // PPI Tiongkok pusat tidak. Tetap opsional (form chapter: "isi kalau punya").
+  mandarinName: text("mandarin_name"),
   // UNIQUE: satu orang = satu baris sensus, ditegakkan lewat nomor paspor.
   // `user_id` yang unik saja tidak cukup — satu orang bisa punya dua akun
   // Google (pribadi + kampus), mengisi sensus dua kali, lalu terhitung dua
@@ -245,14 +248,32 @@ export const sensusProfiles = pgTable("sensus_profiles", {
   university: text("university"),
   degreeLevel: text("degree_level"),
   major: text("major"),
+  // Bahasa pengantar kuliah (Chinese-taught / English-taught / Hybrid) &
+  // kemampuan Mandarin (skala HSK 1–9) — form chapter Nanjing menandainya wajib
+  // (REQUIRED_BY_STEP), form pusat tidak punya field ini. Kolom nullable hanya
+  // untuk baris sensus lama yang diisi sebelum field ini ada.
+  mediumOfInstruction: text("medium_of_instruction"),
+  mandarinAbility: text("mandarin_ability"),
   fundingSource: text("funding_source"),
   entryYear: integer("entry_year"),
   graduationYear: integer("graduation_year"),
 
   // KONTAK
+  // Email aktif yang ditulis manual — form chapter Nanjing memintanya terpisah
+  // dari email akun (form pusat tidak punya field email sama sekali) dan
+  // menandainya wajib (REQUIRED_BY_STEP).
+  activeEmail: text("active_email"),
   wechatId: text("wechat_id"),
   phoneActive: text("phone_active"),
   whatsappNumber: text("whatsapp_number"),
+
+  // PENANGANAN DARURAT — blok dari form chapter "Sensus PPIT Nanjing". Form PPI
+  // Tiongkok pusat tidak memintanya, tapi form chapter menandai keduanya wajib,
+  // jadi masuk REQUIRED_BY_STEP (form chapter = superset form pusat). Rekap ke
+  // pusat tetap hanya membaca kolom form pusat. Kolom nullable hanya untuk baris
+  // sensus lama.
+  emergencyContact: text("emergency_contact"),
+  chinaAddress: text("china_address"),
 
   // Dokumen bukti & persetujuan
   // Kartu Tanda Mahasiswa - bukti mahasiswa aktif di Tiongkok (pengganti foto
@@ -286,7 +307,7 @@ export const departments = pgTable("departments", {
   // bisa pegang full akses juga" - they build/maintain the system).
   grantsFullAdminAccess: boolean("grants_full_admin_access").notNull().default(false),
   // Admin module keys this department's 'scoped' members can access, e.g. ["events"],
-  // ["sensus", "content"], ["inventory"]. Inferred from each division's stated duties in
+  // ["content", "gallery"], ["inventory"]. Inferred from each division's stated duties in
   // the recruitment guidebook - confirm/adjust with PPIT Nanjing before enforcing in prod.
   adminModuleScope: text("admin_module_scope").array().notNull().default([]),
 });

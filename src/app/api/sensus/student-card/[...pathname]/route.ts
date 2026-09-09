@@ -29,7 +29,7 @@ export async function GET(
     return Response.json({ error: "Not found" }, { status: 404 });
   }
   const ownsCard = pathname.startsWith(`sensus/${session.user.id}/`);
-  const canReviewCards = hasModuleAccess(session.user.adminScope, "reports");
+  const canReviewCards = hasModuleAccess(session.user.adminScope, "sensus");
   if (!ownsCard && !canReviewCards) {
     return Response.json({ error: "Forbidden" }, { status: 403 });
   }

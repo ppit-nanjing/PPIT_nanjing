@@ -39,6 +39,13 @@ export async function GET(request: Request) {
   if (!reportTypeEnum.enumValues.includes(type as ReportType)) {
     return NextResponse.json({ error: "Jenis laporan tidak valid" }, { status: 400 });
   }
+  // "Ringkasan Sensus" dumps raw passport numbers + full personal data per
+  // person, so it needs the sensitive "sensus" module, not just "reports"
+  // (which Divisi Usaha Dana holds for fundraising). Other report types stay
+  // on "reports".
+  if (type === "sensus_summary" && !hasModuleAccess(session.user.adminScope, "sensus")) {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  }
   if (format !== "csv" && format !== "xlsx") {
     return NextResponse.json({ error: "Format tidak didukung (csv|xlsx)" }, { status: 400 });
   }
@@ -181,7 +188,9 @@ export async function GET(request: Request) {
         // Tiongkok pusat (Biodata → Data Mahasiswa → Kontak). Rekap inilah yang
         // dipakai pengurus untuk memasukkan data anggota ke sistem pusat, jadi
         // ringkasan 5 kolom seperti sebelumnya tidak cukup — yang hilang harus
-        // dikejar satu-satu ke tiap anggota.
+        // dikejar satu-satu ke tiap anggota. Field khusus form chapter Nanjing
+        // (Nama Mandarin, dst.) ditaruh di BELAKANG, setelah kolom pusat, biar
+        // urutan yang dibaca pusat tidak bergeser.
         columns: [
           { header: "Nama Lengkap", key: "fullName" },
           { header: "Nomor Paspor", key: "passportNumber" },
@@ -203,6 +212,12 @@ export async function GET(request: Request) {
           { header: "Kartu Tanda Mahasiswa", key: "studentCardUrl" },
           { header: "Setuju S&K", key: "agreeTerms" },
           { header: "Newsletter", key: "subscribeNewsletter" },
+          { header: "Nama Mandarin", key: "mandarinName" },
+          { header: "Email Aktif", key: "activeEmail" },
+          { header: "Bahasa Pengantar", key: "mediumOfInstruction" },
+          { header: "Kemampuan Mandarin", key: "mandarinAbility" },
+          { header: "Kontak Darurat", key: "emergencyContact" },
+          { header: "Alamat di Tiongkok", key: "chinaAddress" },
           { header: "Status", key: "completionStatus" },
           { header: "Status Keanggotaan", key: "membershipStatus" },
         ],
@@ -227,6 +242,12 @@ export async function GET(request: Request) {
           studentCardUrl: r.studentCardUrl,
           agreeTerms: r.agreeTerms ? "Ya" : "Tidak",
           subscribeNewsletter: r.subscribeNewsletter ? "Ya" : "Tidak",
+          mandarinName: r.mandarinName,
+          activeEmail: r.activeEmail,
+          mediumOfInstruction: r.mediumOfInstruction,
+          mandarinAbility: r.mandarinAbility,
+          emergencyContact: r.emergencyContact,
+          chinaAddress: r.chinaAddress,
           completionStatus: r.completionStatus,
           membershipStatus: MEMBERSHIP_LABEL[membershipStatus(r)],
         })),
