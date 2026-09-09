@@ -479,6 +479,9 @@ export const eventRegistrations = pgTable(
     // NULL = pendaftaran lama, sebelum pertanyaan ini ada.
     branch: text("branch"),
     checkedInAt: timestamp("checked_in_at"),
+    // Petugas (akun) yang men-scan / menandai hadir. Tiap petugas pakai akunnya
+    // sendiri supaya waktu kehadiran bisa ditelusuri ke orangnya.
+    checkedInBy: uuid("checked_in_by").references((): AnyPgColumn => users.id),
     // Pembayaran: peserta mengunggah bukti, bendahara acara memverifikasi.
     paymentStatus: paymentStatusEnum("payment_status").notNull().default("not_required"),
     paymentProofUrl: text("payment_proof_url"),
@@ -1202,11 +1205,13 @@ export const donationChannels = pgTable("donation_channels", {
 // divisi inilah sebutan lengkapnya terbentuk: "ketua" + divisi "Perlengkapan"
 // = Ketua Departemen Perlengkapan; "ketua" tanpa divisi = Ketua Pelaksana.
 //
-// CATATAN: "humas", "acara", "logistik", dan "dokumentasi" sudah tidak relevan
-// sejak `eventDivisions` ada — itu nama DIVISI, bukan peran, dan sekarang
-// tempatnya di sana sebagai teks bebas. Nilainya sengaja tidak dihapus: baris
-// lama mungkin memakainya, dan menghapus nilai enum di Postgres berarti membuat
-// ulang seluruh tipenya. Jangan dipakai untuk penugasan baru.
+// `role` inilah KUNCI HAK AKSES konsol per-acara (lihat src/lib/event-access.ts
+// + event-capabilities.ts). Tiap orang satu peran per acara; peran itu yang
+// menentukan fitur Kegiatan apa yang boleh dia pakai untuk acara tsb.
+// `eventDivisions` tetap ada sebagai bagan organisasi + jobdesc, tapi tidak
+// memberi akses — "acara"/"humas"/"logistik"/"dokumentasi" di sini adalah PERAN
+// fungsional (Divisi Acara, Humas, dst.), bukan nama divisi. "anggota" = panitia
+// biasa tanpa akses konsol.
 export const eventCommitteeRoleEnum = pgEnum("event_committee_role", [
   "ketua",
   "wakil",
@@ -1219,6 +1224,9 @@ export const eventCommitteeRoleEnum = pgEnum("event_committee_role", [
   "acara",
   "logistik",
   "dokumentasi",
+  // Petugas Pendataan — jaga stand & scan QR kehadiran. Hanya buka scanner +
+  // catat hadir, tidak melihat data pribadi peserta lain, tidak mengubah acara.
+  "pendataan",
   "anggota",
 ]);
 
@@ -1256,6 +1264,12 @@ export const eventDivisions = pgTable("event_divisions", {
   // tidak bisa membukanya di portal.
   jobDescription: text("job_description"),
   orderIndex: integer("order_index").notNull().default(0),
+  // Kapabilitas khusus yang dicentang BPH Panitia untuk divisi ini — subset dari
+  // GRANTABLE_CAPABILITIES (src/lib/event-capabilities.ts): "event.issueCertificates",
+  // "event.manageGallery", "event.manageFinance", "event.borrowAssets",
+  // "event.postArticle", "event.scanAttendance". Semua anggota divisi ikut dapat.
+  // [] = anggotanya hanya fitur dasar.
+  grantedCapabilities: text("granted_capabilities").array().notNull().default([]),
 });
 
 export const eventCommittee = pgTable(
@@ -1269,10 +1283,9 @@ export const eventCommittee = pgTable(
     // onDelete "set null": menghapus divisi tidak boleh ikut menghapus catatan
     // bahwa orangnya pernah jadi panitia acara itu.
     divisionId: uuid("division_id").references((): AnyPgColumn => eventDivisions.id, { onDelete: "set null" }),
-    // Peran DI DALAM divisinya. Digabung dengan nama divisi, inilah yang
-    // membentuk sebutan lengkapnya: "ketua" + divisi "Perlengkapan" =
-    // Ketua Departemen Perlengkapan. Karena itu enumnya tidak perlu memuat
-    // tiap kombinasi jabatan-kali-divisi.
+    // Peran fungsional orang ini di kepanitiaan acara — DAN kunci hak akses
+    // konsol untuk acara ini (src/lib/event-access.ts). `divisionId` di atas
+    // hanya menempatkannya di bagan; `role` yang menentukan dia bisa apa.
     role: eventCommitteeRoleEnum("role").notNull().default("anggota"),
     // Catatan tugas spesifik, mis. "PJ konsumsi". Bebas supaya tidak perlu
     // menambah enum tiap kali ada peran baru.
@@ -1285,6 +1298,8 @@ export const eventCommittee = pgTable(
     // otomatis tercakup.
     attendanceToken: text("attendance_token").unique(),
     checkedInAt: timestamp("checked_in_at"),
+    // Petugas Pendataan (akun) yang men-scan tiket kepanitiaan ini.
+    checkedInBy: uuid("checked_in_by").references((): AnyPgColumn => users.id),
   },
   // Satu orang satu peran per acara; ganti peran = update, bukan baris baru.
   (t) => [uniqueIndex("event_committee_unique").on(t.eventId, t.userId)],
