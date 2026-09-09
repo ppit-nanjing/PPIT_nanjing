@@ -1,65 +1,73 @@
 # Event Flow
 
-> Bagian dari [Information Architecture](./Information%20Architecture.md).
+> Bagian dari [Information Architecture](./Information%20Architecture.md). Audit terhadap kode: **2026-09-09**.
 
-## Alur lengkap
+## Alur pendaftaran
 
 ```mermaid
-flowchart LR
-    List[Events Listing] --> Detail[Event Detail]
-    Detail --> Register[Event Registration Form]
-    Register --> Success[Registration Success]
-    Success --> Ticket[Success + QR Ticket]
-    Ticket --> History[Submission History]
-    Register -.status cek.-> SubmissionDetail[Event Submission Detail]
-    Ticket -. acara berbayar .-> Proof[Kirim Bukti Transfer]
-    Proof -. diverifikasi bendahara .-> Ticket
-    Ticket -. setelah acara selesai .-> Cert[E-Certificate di Profil]
+flowchart TD
+    List["/events"] --> Detail["/events/:slug"]
+    Detail -->|belum login| Login["/login → kembali"]
+    Detail -->|requires_sensus & sensus belum lengkap| Sensus["/sensus"]
+    Detail -->|"Daftar"| Reg["/events/:slug/register"]
+
+    subgraph Wizard["Form pendaftaran (satu POST)"]
+        Bio["Biodata — kalau requires_biodata<br/>(di-snapshot dari sensus bila lengkap)"]
+        Qs["Pertanyaan: cabang PPI + event_questions kustom"]
+        Fee["Kategori tarif — kalau ada event_fee_options<br/>(harga early bird bila registered_at ≤ early_bird_until)"]
+        Bio --> Qs --> Fee
+    end
+    Reg --> Wizard --> Submit["registerForEvent()"]
+
+    Submit -->|gratis / tarif tunggal| Ticket["/events/:slug/ticket — QR check-in"]
+    Submit -->|berbayar| Pending["Tiket: status pending, TANPA QR<br/>panduan bayar + deep-link Alipay opsional"]
+    Pending -->|"unggah bukti transfer"| Proof["payment_status = submitted"]
+    Proof -->|"bendahara acara verifikasi di /console/events/:id"| Verified["verified → status confirmed → QR terbit"]
+    Verified --> Ticket
+
+    Ticket --> Attend["Panitia scan QR di /console/events/:id/scan → attended"]
+    Attend -->|setelah acara| Cert["E-Certificate di /profile"]
+    Ticket -.-> History["/profile/submissions"]
 ```
 
-## Layar
+## Rute
 
-| Layar | File prototipe | Catatan |
-|---|---|---|
-| Events (listing) | `events_ppit_nanjing`, kanonik `events_master_edition` (+ `_animated`, `_refined`) | Filter kategori, grid card |
-| Event Detail | `event_details_ppit_nanjing` | Contoh konten: "Sumpah Pemuda Celebration Gala" |
-| Event Registration | `event_registration_ppit_nanjing` | Form pendaftaran |
-| Registration Success | `event_registration_success_ppit_nanjing` (batch 2) | Konfirmasi setelah submit |
-| Registration Success + QR Ticket | `event_registration_success_qr_ticket_ppit_nanjing` (batch 2) | Tiket digital dengan QR untuk check-in |
-| Event Submission Detail | `event_submission_detail_ppit_nanjing` (batch 2) | Detail satu pendaftaran (dilihat lagi dari riwayat) |
-| Submission History | `submission_history_ppit_nanjing` (batch 2) | "Riwayat Pengajuan" — kemungkinan gabungan semua jenis pengajuan user (event, borrow, job), bukan event saja |
-
-## Entitas terkait
-
-[EVENT](./Data%20Dictionary.md), [EVENT_REGISTRATION](./Data%20Dictionary.md), [CERTIFICATE](./Data%20Dictionary.md) — `qr_code_token` di-generate saat status `confirmed`, dipakai admin untuk check-in lewat [Event Management](./Event%20Management.md) § Manage Registrations / Attendance Report.
+| Rute | Isi |
+|---|---|
+| `/events` | Listing, filter kategori, badge kapasitas/deadline |
+| `/events/:slug` | Detail. Dua wajah: pra-acara (kapasitas X/Y, tombol daftar) vs pasca-acara (kehadiran nyata, dokumentasi, recap). |
+| `/events/:slug/register` | `EventRegisterWizard` — per-section (Biodata → Pertanyaan → Tarif), Back/Next, satu `<form>` yang POST sekali |
+| `/events/:slug/ticket` | Tiket peserta: QR check-in **atau** panduan bayar + unggah bukti. Menampilkan `confirmation_info` (mis. "add WeChat ini untuk masuk grup"). |
+| `/events/:slug/committee` | Tiket kepanitiaan — QR absensi, muncul kalau user punya baris `event_committee` di acara ini |
+| `/console/events/:id` | Sisi admin: pendaftar, verifikasi pembayaran, kategori tarif, "Setelah Acara" |
+| `/console/events/:id/scan` | Scanner kamera — coba `qr_code_token` peserta dulu, fallback ke `attendance_token` panitia |
 
 ## Acara berbayar (HTM)
 
-Jika event ditandai berbayar, registrasi masuk sebagai **`pending` TANPA QR** — tiket menampilkan panduan bayar, bukan QR:
+Kalau `events.is_paid`, pendaftaran masuk **`pending` tanpa QR**. Peserta transfer manual → unggah screenshot di halaman tiket → **bendahara acara** (bukan bendahara kabinet) memverifikasi di console. Set `verified` → pendaftaran naik ke `confirmed` → **QR check-in terbit seketika**. Itu satu-satunya pintu QR untuk acara berbayar.
 
-1. Peserta transfer sesuai instruksi bayar di detail/tiket event (opsional: deep-link Alipay yang sudah terisi nominal + memo).
-2. Dari halaman tiket (`/events/[slug]/ticket`) ia **mengunggah screenshot bukti transfer** (drag & drop / pilih file / kamera).
-3. Bendahara acara memverifikasi dari konsol (`/console/events/[id]`); begitu diset `verified`, pendaftaran otomatis naik ke `confirmed` dan **QR check-in diterbitkan seketika** — satu-satunya pintu QR untuk acara berbayar.
+Pembayaran **perorangan** — satu pendaftaran satu tanggungan. Tidak ada payment gateway: Alipay/WeChat Pay butuh merchant account berbadan hukum Tiongkok, QR pribadi tidak punya webhook. Deep-link `alipays://` yang mengisi nominal otomatis (`events.alipay_uid`) hanya mengurangi ketik, verifikasi tetap 100% manual.
 
-Pembayaran dihitung **perorangan**: satu pendaftaran satu tanggungan bayar, tidak ada pembayaran berkelompok. Detail sisi admin ada di [Event Management](./Event%20Management.md) § HTM.
+## Kategori tarif & early bird
 
-## Pertanyaan kustom saat mendaftar
+- Nol baris `event_fee_options` → tarif tunggal `events.fee_cny` (atau gratis).
+- ≥1 baris → peserta memilih satu kategori saat mendaftar; nominal dibaca dari opsinya, tidak disalin ke pendaftaran.
+- `event_fee_options.quota` membatasi per kategori — satu kategori penuh, kategori lain jalan terus.
+- Early bird: sampai `events.early_bird_until`, pendaftar kena `early_bird_amount_cny` (bila diisi). Tier dihitung live dari `registered_at`, jadi menggeser tanggal ikut menggeser harga pendaftar lama.
 
-Admin bisa menambah pertanyaan per acara (teks pendek/panjang, dropdown, pilihan, pilih banyak; opsi satu per baris; bisa wajib). Tanpa pertanyaan, form tetap standar. Jawaban disimpan bersama pendaftaran (`EVENT_REGISTRATION.answers_json`) dan tampil ke admin di Daftar Pendaftar.
+## Biodata lengkap (`requires_biodata`)
 
-## Setelah acara: e-certificate & riwayat
+Acara seperti WIF perlu menyetor daftar peserta lengkap ke sistem pusat. Peserta yang sensusnya sudah lengkap **tidak mengetik ulang** — biodatanya di-snapshot dari `sensus_profiles` (`source:"sensus"`). Yang lain isi `EventBiodataFields` inline (`source:"form"`), di-prefill dari sensus/akun sebagian. Dibekukan di `event_registrations.biodata_json` supaya ekspor selalu utuh.
 
-- **Semua peserta dapat e-certificate** secara bawaan — panitia menekan satu tombol "Terbitkan Sertifikat Peserta" di konsol untuk menerbitkan sekaligus (checkbox di acara bisa mematikannya untuk acara tanpa sertifikat). Sertifikat tambahan (juara, panitia, pemateri) diterbitkan manual lewat Work Ledger, lihat [Event Management](./Event%20Management.md) § Sertifikat.
-- Sertifikat yang sudah terbit tampil di **profil user**. Profil menyediakan dua akses riwayat:
-  - **E-Sertifikat** — semua sertifikat yang pernah diterima user;
-  - **Riwayat Acara** — acara yang pernah diikuti (semua pendaftaran, terbaru dulu, dengan chip status); riwayat lintas-domain lain (pinjam barang, lamaran kerja) tetap di `/profile/submissions`.
+## Pertanyaan kustom
 
-## Catatan implementasi
+Admin bisa menambah pertanyaan per acara (`event_questions`): teks, textarea, select, radio, multiselect, `file` (unggah satu berkas). Jawaban di `event_registrations.answers_json`, tampil ke admin di daftar pendaftar & ekspor.
 
-- QR code **wajib di-generate di server** (Edge Function), bukan di client, supaya token tidak bisa dipalsukan — lihat [Tech Stack](./Tech%20Stack.md).
-- "Submission History" kemungkinan adalah halaman gabungan lintas-domain (event + borrow + job) — pertimbangkan sebagai satu view yang query beberapa tabel (`EVENT_REGISTRATION`, `BORROW_REQUEST`, `JOB_APPLICATION`) filtered by `user_id`, bukan tabel tersendiri. **Status implementasi:** sudah jadi `/profile/submissions` dengan pola persis itu.
-- **Status:** E-Sertifikat dan Riwayat Acara sudah tampil di `/profile` (via `getMyCertificates` + query `EVENT_REGISTRATION`). `/profile/submissions` tetap ada sebagai riwayat lintas-domain (event + borrow + job).
+## Setelah acara: sertifikat & riwayat
 
-## Terkait admin
+- **Semua peserta dapat e-certificate** secara bawaan (`events.certificate_for_participants`, checkbox bisa mematikannya). Penerbitan tetap manual — satu tombol "Terbitkan Sertifikat Peserta" di console. Sertifikat panitia/pemateri/juara diterbitkan manual lewat Work Ledger.
+- `/profile` menampilkan **E-Sertifikat** (semua `certificates` user) + **Riwayat Acara** (semua `event_registrations`, terbaru dulu). Riwayat lintas-domain (pinjam barang, lamaran kerja) di `/profile/submissions`.
 
-[Event Management](./Event%20Management.md)
+## Terkait
+
+[Event Management](./Event%20Management.md) · [Entity Relationship Diagram](./Entity%20Relationship%20Diagram.md) § 3

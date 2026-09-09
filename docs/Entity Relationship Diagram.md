@@ -1,347 +1,388 @@
 # Entity Relationship Diagram — PPIT Nanjing
 
-> Bagian dari [PPIT Nanjing MOC](./README.md). Field lengkap tiap entitas ada di [Data Dictionary](./Data%20Dictionary.md). ERD ini diturunkan dari analisis fungsional seluruh ~63 layar unik di [Information Architecture](./Information%20Architecture.md) — setiap entitas dipetakan langsung ke satu atau lebih layar yang membutuhkannya (lihat kolom "Dipakai di" pada Data Dictionary).
+> Bagian dari [PPIT Nanjing MOC](./README.md). Kolom lengkap tiap entitas ada di [Data Dictionary](./Data%20Dictionary.md). **Sumber kebenaran = `src/db/schema.ts`** (58 tabel). Diagram dipecah per domain karena satu ERD utuh sudah tidak terbaca.
 
-## Diagram
+Audit terakhir terhadap `schema.ts`: **2026-09-09.**
+
+## Peta domain
+
+| # | Domain | Entitas inti | Layar / flow |
+|---|---|---|---|
+| 1 | **Identitas & Akses** | `users`, `roles`, `sensus_profiles`, `accounts`, `sessions`, `password_reset_tokens` | [Homepage & Login](./Homepage%20&%20Login.md), [Sensus Profile Flow](./Sensus%20Profile%20Flow.md), [User & Role Management](./User%20&%20Role%20Management.md) |
+| 2 | **Organisasi** | `departments`, `department_members`, `audit_logs`, `organization_documents`, `regional_branches`, `branch_universities`, `coverage_cities` | [Organization Management](./Organization%20Management.md), [Organization & Regional Branches](./Organization%20&%20Regional%20Branches.md) |
+| 3 | **Events** | `events`, `event_registrations`, `event_fee_options`, `event_questions`, `event_divisions`, `event_committee`, `event_volunteers`, `certificates` | [Event Flow](./Event%20Flow.md), [Event Management](./Event%20Management.md) |
+| 4 | **Konten, Karir & Keanggotaan** | `news_articles`, `gallery_albums`, `gallery_photos`, `job_postings`, `job_applications`, `career_guide_articles`, `mentorship_applications`, `recruitment_periods`, `membership_applications`, `membership_form_fields`, `membership_form_meta` | [Content Pages](./Content%20Pages.md), [Career Flow](./Career%20Flow.md), [Join Us Flow](./Join%20Us%20Flow.md) |
+| 5 | **Inventaris & Peminjaman** | `inventory_items`, `borrow_requests`, `item_reservations`, `item_contributions`, `procurement_requests`, `external_loans`, `inventory_audit_logs` | [Equipment Lending Flow](./Equipment%20Lending%20Flow.md), [Inventory Management](./Inventory%20Management.md) |
+| 6 | **Platform, Katalog & Konten Kota** | `notifications`, `notification_templates`, `reports`, `help_articles`, `release_notes`, `feedback`, `short_links`, `management_periods`, `drive_folders`, `merchandise`, `sponsors`, `donations`, `donation_channels`, `places`, `universities`, `districts` | [Reports & Analytics](./Reports%20&%20Analytics.md), [Documentation & Help Center](./Documentation%20&%20Help%20Center.md), Catalogue |
+
+⚠️ **Tabel mati:** `permissions` + `role_permissions` ada di schema tapi **tidak pernah di-query**. Otorisasi admin memakai `roles.access_tier` + `departments.grants_full_admin_access` + `departments.admin_module_scope`. Jangan bangun fitur baru di atasnya tanpa memutuskan ulang. `verification_tokens` = milik adapter Auth.js, bukan aplikasi.
+
+---
+
+## 1. Identitas & Akses
 
 ```mermaid
 erDiagram
-    ROLE ||--o{ USER : "assigned to"
-    ROLE ||--o{ ROLE_PERMISSION : has
-    PERMISSION ||--o{ ROLE_PERMISSION : "granted via"
-    USER ||--o| SENSUS_PROFILE : completes
-    DEPARTMENT ||--o{ DEPARTMENT : "parent of"
-    DEPARTMENT ||--o{ DEPARTMENT_MEMBER : includes
-    USER ||--o{ DEPARTMENT_MEMBER : "member of"
-    USER ||--o{ AUDIT_LOG : "actor for"
-    USER ||--o{ RELEASE_NOTE : authors
-    DEPARTMENT ||--o{ EVENT : organizes
-    USER ||--o{ EVENT : "created by"
-    EVENT ||--o{ EVENT_REGISTRATION : has
-    EVENT ||--o{ EVENT_QUESTION : asks
-    EVENT ||--o{ EVENT_VOLUNTEER : recruits
-    USER ||--o{ EVENT_REGISTRATION : registers
-    EVENT ||--o{ EVENT_DIVISION : structures
-    EVENT_DIVISION ||--o{ EVENT_DIVISION : "parent of"
-    EVENT ||--o{ EVENT_COMMITTEE : staffed
-    EVENT_DIVISION |o--o{ EVENT_COMMITTEE : groups
-    USER ||--o{ EVENT_COMMITTEE : serves
-    USER ||--o{ CERTIFICATE : holds
-    EVENT |o--o{ CERTIFICATE : issues
-    EVENT ||--o{ GALLERY_ALBUM : "documented by"
-    GALLERY_ALBUM ||--o{ GALLERY_PHOTO : contains
-    USER ||--o{ GALLERY_PHOTO : uploads
-    USER ||--o{ NEWS_ARTICLE : authors
-    USER ||--o{ JOB_POSTING : posts
-    JOB_POSTING ||--o{ JOB_APPLICATION : receives
-    USER ||--o{ JOB_APPLICATION : submits
-    USER ||--o{ CAREER_GUIDE_ARTICLE : authors
-    USER ||--o{ MENTORSHIP_APPLICATION : submits
-    RECRUITMENT_PERIOD ||--o{ MEMBERSHIP_APPLICATION : governs
-    USER |o--o{ MEMBERSHIP_APPLICATION : "converts to"
-    INVENTORY_ITEM ||--o{ BORROW_REQUEST : "requested via"
-    USER ||--o{ BORROW_REQUEST : requests
-    USER ||--o{ BORROW_REQUEST : approves
-    INVENTORY_ITEM ||--o{ INVENTORY_AUDIT_LOG : tracks
-    USER ||--o{ INVENTORY_AUDIT_LOG : performs
-    USER ||--o{ REPORT : generates
-    USER ||--o{ NOTIFICATION : receives
-    NOTIFICATION_TEMPLATE ||--o{ NOTIFICATION : "rendered from"
-    USER ||--o{ HELP_ARTICLE : authors
-    USER ||--o{ ORGANIZATION_DOCUMENT : publishes
-    DEPARTMENT ||--o{ ORGANIZATION_DOCUMENT : "owns (optional)"
-    USER ||--o{ MANAGEMENT_PERIOD : "created by"
-    USER ||--o{ SHORT_LINK : "created by"
-    MANAGEMENT_PERIOD ||--o{ SHORT_LINK : "groups"
+    ROLES ||--o{ USERS : "assigned to"
+    USERS ||--o| SENSUS_PROFILES : completes
+    USERS ||--o{ ACCOUNTS : "Google OAuth (Auth.js)"
+    USERS ||--o{ SESSIONS : "Auth.js"
+    USERS ||--o{ PASSWORD_RESET_TOKENS : requests
 
-    USER {
+    USERS {
         uuid id PK
-        string full_name
-        string email
+        string email UK
+        string password_hash "bcrypt, null utk akun Google-only"
         uuid role_id FK
-        enum status
-        timestamp created_at
+        enum status "invited / active / inactive / suspended"
+        bool email_subscribed "null = belum ditanya"
+        string locale "id / en, null = belum pilih"
     }
-    ROLE {
+    ROLES {
         uuid id PK
-        string name
-        string description
+        string name UK
+        enum access_tier "full / scoped / advisory"
     }
-    PERMISSION {
+    SENSUS_PROFILES {
         uuid id PK
-        string key
-        string description
-    }
-    ROLE_PERMISSION {
-        uuid role_id FK
-        uuid permission_id FK
-    }
-    SENSUS_PROFILE {
-        uuid id PK
-        uuid user_id FK
+        uuid user_id FK,UK
+        string passport_number UK "kunci identitas 1 orang = 1 baris"
+        string branch
         string university
-        string program
-        enum completion_status
+        enum completion_status "incomplete / complete"
     }
-    DEPARTMENT {
+    PASSWORD_RESET_TOKENS {
         uuid id PK
-        string name
-        uuid parent_department_id FK
-        uuid head_user_id FK
-        int order_index
-    }
-    DEPARTMENT_MEMBER {
         uuid user_id FK
-        uuid department_id FK
+        string token_hash UK "sha256; token mentah cuma di email"
+        timestamp expires_at "1 jam, sekali pakai"
+    }
+```
+
+- `USERS` **adalah** tabel `users` Auth.js sekaligus (adapter Drizzle). `accounts` / `sessions` / `verification_tokens` dipakai adapter; `password_reset_tokens` tabel terpisah buatan aplikasi untuk alur "lupa password" email/password.
+- `SENSUS_PROFILES` di-UNIQUE lewat `passport_number`, bukan cuma `user_id` — satu orang bisa punya dua akun Google dan mengisi sensus dua kali.
+
+## 2. Organisasi
+
+```mermaid
+erDiagram
+    DEPARTMENTS ||--o{ DEPARTMENTS : "parent of"
+    DEPARTMENTS ||--o{ DEPARTMENT_MEMBERS : has
+    USERS ||--o{ DEPARTMENT_MEMBERS : "member of"
+    DEPARTMENTS |o--o| USERS : "head"
+    DEPARTMENTS |o--o{ ORGANIZATION_DOCUMENTS : owns
+    USERS ||--o{ ORGANIZATION_DOCUMENTS : publishes
+    USERS ||--o{ AUDIT_LOGS : "actor for"
+    REGIONAL_BRANCHES ||--o{ BRANCH_UNIVERSITIES : lists
+
+    DEPARTMENTS {
+        uuid id PK
+        uuid parent_department_id FK "self, kedalaman bebas"
+        uuid head_user_id FK
+        bool grants_full_admin_access "true HANYA Divisi Teknologi"
+        string admin_module_scope "modul yg dilihat anggota scoped"
+    }
+    DEPARTMENT_MEMBERS {
+        uuid user_id PK,FK
+        uuid department_id PK,FK
         string position
     }
-    AUDIT_LOG {
+    REGIONAL_BRANCHES {
         uuid id PK
-        uuid actor_user_id FK
-        string entity_type
-        uuid entity_id
-        json before_json
-        json after_json
+        string city_name
+        enum region "north / east / south / central / west"
+        int member_count "NULL di semua 32 baris"
     }
-    RELEASE_NOTE {
+    BRANCH_UNIVERSITIES {
         uuid id PK
-        string version
-        text summary
-        uuid published_by FK
+        uuid branch_id FK
+        string name "selalu nama Inggris (bentuk yg direkap pusat)"
     }
-    EVENT {
+    COVERAGE_CITIES {
         uuid id PK
-        string title
-        uuid department_id FK
-        uuid created_by FK
-        timestamp start_at
-        enum status
+        string slug UK "cocok dgn nanjing-coverage.geo.json"
+        string label
+        int member_count
+    }
+```
+
+- `REGIONAL_BRANCHES` (32 cabang PPI se-Tiongkok) **tidak** FK ke `departments` (struktur kabinet Nanjing sendiri) — skop beda. `BRANCH_UNIVERSITIES` (±349 kampus) mengisi dropdown bertingkat Cabang→Universitas di form sensus.
+- `COVERAGE_CITIES` (9 kota naungan PPIT Nanjing) berdiri sendiri, tanpa FK — batas wilayahnya statis di `src/data/nanjing-coverage.geo.json`.
+
+## 3. Events
+
+```mermaid
+erDiagram
+    EVENTS ||--o{ EVENT_REGISTRATIONS : has
+    EVENTS ||--o{ EVENT_FEE_OPTIONS : "kategori tarif"
+    EVENTS ||--o{ EVENT_QUESTIONS : "pertanyaan kustom"
+    EVENTS ||--o{ EVENT_DIVISIONS : "pohon kepanitiaan"
+    EVENTS ||--o{ EVENT_COMMITTEE : staffed
+    EVENTS ||--o{ EVENT_VOLUNTEERS : recruits
+    EVENTS |o--o{ CERTIFICATES : issues
+    USERS ||--o{ EVENT_REGISTRATIONS : registers
+    EVENT_FEE_OPTIONS |o--o{ EVENT_REGISTRATIONS : "kategori dipilih"
+    EVENT_DIVISIONS ||--o{ EVENT_DIVISIONS : "parent of"
+    EVENT_DIVISIONS |o--o{ EVENT_COMMITTEE : groups
+    EVENT_DIVISIONS |o--o{ EVENT_VOLUNTEERS : "dilamar"
+    USERS ||--o{ EVENT_COMMITTEE : serves
+    USERS ||--o{ CERTIFICATES : holds
+
+    EVENTS {
+        uuid id PK
+        string slug UK
+        enum status "draft / scheduled / published / registration_closed / completed / cancelled"
         bool is_paid
-        int fee_cny
-        bool certificate_for_participants
+        int fee_cny "null = belum diputuskan"
+        timestamp early_bird_until "null = tanpa tahap early bird"
+        int capacity
+        bool requires_sensus
+        bool requires_biodata "form biodata lengkap (mis. WIF)"
+        uuid department_id FK
     }
-    EVENT_REGISTRATION {
+    EVENT_REGISTRATIONS {
         uuid id PK
         uuid event_id FK
         uuid user_id FK
-        enum status
-        string qr_code_token
-        timestamp checked_in_at
-        enum payment_status
-        string payment_proof_url
+        enum status "pending / confirmed / attended / cancelled"
+        string qr_code_token UK "terbit saat confirmed"
+        enum payment_status "not_required / unpaid / submitted / verified / rejected"
+        uuid fee_option_id FK
+        json biodata_json "snapshot, hanya utk requires_biodata"
+        json answers_json "jawaban event_questions"
     }
-    EVENT_DIVISION {
-        uuid id PK
-        uuid event_id FK
-        uuid parent_division_id FK
-        string name
-        int quota
-    }
-    EVENT_QUESTION {
+    EVENT_FEE_OPTIONS {
         uuid id PK
         uuid event_id FK
         string label
-        enum type
-        text options
-        bool required
+        int amount_cny
+        int early_bird_amount_cny "null = kategori ini tanpa diskon"
+        int quota "null = hanya events.capacity yg berlaku"
     }
-    EVENT_VOLUNTEER {
+    EVENT_DIVISIONS {
         uuid id PK
         uuid event_id FK
-        string full_name
-        string email
-        uuid division_id FK
-        enum status
-        uuid assigned_user_id FK
+        uuid parent_division_id FK "self"
+        string name "teks bebas, per acara"
+        int quota
     }
     EVENT_COMMITTEE {
         uuid id PK
         uuid event_id FK
         uuid user_id FK
         uuid division_id FK
-        enum role
-        string note
+        enum role "ketua / wakil / sekretaris / bendahara / supervisor / anggota / ..."
+        string attendance_token UK "QR absensi panitia, dibuat lazily"
     }
-    CERTIFICATE {
+    CERTIFICATES {
         uuid id PK
         uuid user_id FK
         uuid event_id FK
-        enum kind
-        string title
-        string file_url
-        timestamp issued_at
-        uuid issued_by FK
-    }
-    NEWS_ARTICLE {
-        uuid id PK
-        string title
-        uuid author_id FK
-        enum status
-        timestamp published_at
-    }
-    GALLERY_ALBUM {
-        uuid id PK
-        string title
-        uuid event_id FK
-    }
-    GALLERY_PHOTO {
-        uuid id PK
-        uuid album_id FK
-        string image_url
-        uuid uploaded_by FK
-    }
-    JOB_POSTING {
-        uuid id PK
-        string title
-        string company
-        uuid posted_by FK
-        enum status
-        date application_deadline
-    }
-    JOB_APPLICATION {
-        uuid id PK
-        uuid job_id FK
-        uuid user_id FK
-        string resume_url
-        enum status
-    }
-    CAREER_GUIDE_ARTICLE {
-        uuid id PK
-        string title
-        string category
-        uuid author_id FK
-    }
-    MENTORSHIP_APPLICATION {
-        uuid id PK
-        uuid user_id FK
-        string preferred_field
-        enum status
-    }
-    RECRUITMENT_PERIOD {
-        uuid id PK
-        boolean is_open
-        timestamp opens_at
-        timestamp closes_at
-    }
-    MEMBERSHIP_APPLICATION {
-        uuid id PK
-        uuid recruitment_period_id FK
-        uuid user_id FK
-        string full_name
-        enum status
-    }
-    INVENTORY_ITEM {
-        uuid id PK
-        string name
-        string category
-        int total_quantity
-        int available_quantity
-    }
-    BORROW_REQUEST {
-        uuid id PK
-        uuid item_id FK
-        uuid user_id FK
-        uuid approved_by FK
-        enum status
-        date requested_from
-        date requested_to
-    }
-    INVENTORY_AUDIT_LOG {
-        uuid id PK
-        uuid item_id FK
-        uuid performed_by FK
-        enum action
-        int quantity_delta
-    }
-    REPORT {
-        uuid id PK
-        enum type
-        uuid generated_by FK
-        json parameters_json
-        string file_url
-    }
-    NOTIFICATION_TEMPLATE {
-        uuid id PK
-        string key
-        enum channel
-        text body_template
-    }
-    NOTIFICATION {
-        uuid id PK
-        uuid user_id FK
-        uuid template_id FK
-        boolean is_read
-    }
-    HELP_ARTICLE {
-        uuid id PK
-        string section
-        string title
-        uuid author_id FK
-    }
-    ORGANIZATION_DOCUMENT {
-        uuid id PK
-        enum type
-        string title
-        string file_url
-        string version
-        uuid department_id FK
-        uuid published_by FK
-    }
-    MANAGEMENT_PERIOD {
-        uuid id PK
-        string label
-        timestamp starts_at
-        timestamp ends_at
-        bool is_current
-        uuid created_by FK
-    }
-    SHORT_LINK {
-        uuid id PK
-        string slug
-        string target_url
-        string title
-        enum category
-        uuid management_period_id FK
-        bool is_active
-        timestamp expires_at
-        int click_count
-        uuid created_by FK
-    }
-    REGIONAL_BRANCH {
-        uuid id PK
-        string city_name
-        string region
-        int member_count
-        float lat
-        float lng
+        enum kind "peserta / panitia / pemateri / lainnya"
+        string file_url "boleh tautan Google Drive"
     }
 ```
 
-> Catatan: `REGIONAL_BRANCH` sengaja **tidak** dihubungkan lewat FK ke entitas lain. Ia adalah data direktori nasional (32 cabang PPI Tiongkok, termasuk Nanjing sendiri) yang ditampilkan di halaman [Organization & Regional Branches](./Organization%20&%20Regional%20Branches.md) — skopnya beda dari struktur organisasi internal PPIT Nanjing (`DEPARTMENT`), yang hanya memodelkan struktur kepengurusan cabang Nanjing sendiri. Lihat § "Dua skop organisasi" di [Data Dictionary](./Data%20Dictionary.md).
+- **`EVENT_COMMITTEE` terpisah dari `DEPARTMENT_MEMBER`**: kepanitiaan per-acara, bukan per-kabinet (bendahara acara ≠ bendahara kabinet). `EVENT_DIVISIONS` bernama teks bebas — tiap acara punya susunan sendiri.
+- **Tarif dibaca live, tidak di-snapshot.** Tier early-bird diturunkan dari `event_registrations.registered_at` vs `events.early_bird_until` — memundurkan tanggal ikut menggeser harga pendaftar lama (sengaja).
+- `EVENT_VOLUNTEERS` = lamaran dari orang yang **belum tentu punya akun**; saat diterima, dibuatkan akun undangan lalu ditugaskan ke `EVENT_COMMITTEE`.
+- `GALLERY_ALBUMS` dan `ITEM_RESERVATIONS` juga menunjuk ke `events` — lihat domain 4 & 5.
 
-## Ringkasan Domain
+## 4. Konten, Karir & Keanggotaan
 
-| Domain | Entitas | Layar terkait |
-|---|---|---|
-| **Identitas & Akses** | USER, ROLE, PERMISSION, ROLE_PERMISSION, SENSUS_PROFILE | [Login & Account](./Homepage%20&%20Login.md), [Sensus Profile Flow](./Sensus%20Profile%20Flow.md), [User & Role Management](./User%20&%20Role%20Management.md) |
-| **Organisasi** | DEPARTMENT, DEPARTMENT_MEMBER, AUDIT_LOG, ORGANIZATION_DOCUMENT, REGIONAL_BRANCH | [Organization Management](./Organization%20Management.md), [Organization & Regional Branches](./Organization%20&%20Regional%20Branches.md) |
-| **Events** | EVENT, EVENT_REGISTRATION, EVENT_QUESTION, EVENT_VOLUNTEER, EVENT_DIVISION, EVENT_COMMITTEE, CERTIFICATE | [Event Flow](./Event%20Flow.md), [Event Management](./Event%20Management.md) |
-| **Konten** | NEWS_ARTICLE, GALLERY_ALBUM, GALLERY_PHOTO | [Content Pages](./Content%20Pages.md) |
-| **Karir** | JOB_POSTING, JOB_APPLICATION, CAREER_GUIDE_ARTICLE, MENTORSHIP_APPLICATION | [Career Flow](./Career%20Flow.md) |
-| **Keanggotaan** | RECRUITMENT_PERIOD, MEMBERSHIP_APPLICATION | [Join Us Flow](./Join%20Us%20Flow.md) |
-| **Inventaris** | INVENTORY_ITEM, BORROW_REQUEST, INVENTORY_AUDIT_LOG | [Equipment Lending Flow](./Equipment%20Lending%20Flow.md), [Inventory Management](./Inventory%20Management.md) |
-| **Admin & Sistem** | REPORT, NOTIFICATION_TEMPLATE, NOTIFICATION, HELP_ARTICLE, RELEASE_NOTE, MANAGEMENT_PERIOD, SHORT_LINK | [Reports & Analytics](./Reports%20&%20Analytics.md), [Documentation & Help Center](./Documentation%20&%20Help%20Center.md) |
+```mermaid
+erDiagram
+    USERS ||--o{ NEWS_ARTICLES : authors
+    GALLERY_ALBUMS ||--o{ GALLERY_PHOTOS : contains
+    USERS ||--o{ GALLERY_PHOTOS : uploads
+    EVENTS |o--o{ GALLERY_ALBUMS : "documented by"
+    USERS ||--o{ JOB_POSTINGS : posts
+    JOB_POSTINGS ||--o{ JOB_APPLICATIONS : receives
+    USERS ||--o{ JOB_APPLICATIONS : submits
+    USERS ||--o{ CAREER_GUIDE_ARTICLES : authors
+    USERS ||--o{ MENTORSHIP_APPLICATIONS : submits
+    RECRUITMENT_PERIODS ||--o{ MEMBERSHIP_APPLICATIONS : governs
+    USERS |o--o{ MEMBERSHIP_APPLICATIONS : "converts to"
+
+    NEWS_ARTICLES {
+        uuid id PK
+        string slug UK
+        enum status "draft / published / archived"
+        uuid author_id FK
+    }
+    GALLERY_ALBUMS {
+        uuid id PK
+        uuid event_id FK
+        string drive_url "set foto lengkap"
+    }
+    GALLERY_PHOTOS {
+        uuid id PK
+        uuid album_id FK
+        bool is_highlight "hanya highlight yg tampil publik"
+    }
+    JOB_APPLICATIONS {
+        uuid id PK
+        uuid job_id FK
+        uuid user_id FK
+        enum status "submitted / under_review / interview / offered / rejected"
+    }
+    MENTORSHIP_APPLICATIONS {
+        uuid id PK
+        uuid user_id FK
+        enum status "pending / matched / rejected"
+    }
+    RECRUITMENT_PERIODS {
+        uuid id PK
+        bool is_open
+        string batch_label
+    }
+    MEMBERSHIP_APPLICATIONS {
+        uuid id PK
+        uuid recruitment_period_id FK
+        uuid user_id FK "null kalau anonim"
+        enum status "pending / reviewed / accepted / rejected"
+        json responses "field kustom di luar kolom inti"
+    }
+```
+
+- Form Join Us bisa dikonfigurasi admin lewat `membership_form_fields` (per-field) + `membership_form_meta` (setelan satu-baris: judul, kuis mode, shuffle, dll) — keduanya **tidak** FK-linked, dibaca sebagai config.
+- `CAREER_GUIDE_ARTICLES` strukturnya sama dengan `news_articles` minus enum status.
+
+## 5. Inventaris & Peminjaman
+
+```mermaid
+erDiagram
+    INVENTORY_ITEMS ||--o{ BORROW_REQUESTS : "dipinjam via"
+    INVENTORY_ITEMS ||--o{ ITEM_RESERVATIONS : "diblokir oleh"
+    INVENTORY_ITEMS ||--o{ EXTERNAL_LOANS : "dipinjamkan keluar"
+    INVENTORY_ITEMS ||--o{ INVENTORY_AUDIT_LOGS : tracks
+    USERS |o--o{ BORROW_REQUESTS : "peminjam internal"
+    USERS ||--o{ ITEM_CONTRIBUTIONS : "sumbang / pinjamkan"
+    USERS ||--o{ PROCUREMENT_REQUESTS : "usul barang baru"
+    EVENTS |o--o{ ITEM_RESERVATIONS : reserves
+
+    INVENTORY_ITEMS {
+        uuid id PK
+        int total_quantity
+        int available_quantity
+        enum condition "new / good / fair / damaged / retired"
+        string custodian "PEMEGANG"
+    }
+    BORROW_REQUESTS {
+        uuid id PK
+        uuid item_id FK
+        uuid user_id FK "NULL = peminjam eksternal"
+        string borrower_name "diisi utk eksternal"
+        string statement_url "Pernyataan Peminjam bertanda tangan"
+        enum status "pending / approved / rejected / borrowed / returned / overdue"
+        timestamp return_requested_at
+    }
+    ITEM_CONTRIBUTIONS {
+        uuid id PK
+        uuid user_id FK
+        enum contribution_type "donate / lend_to_org"
+        enum status "pending / approved / rejected"
+    }
+    PROCUREMENT_REQUESTS {
+        uuid id PK
+        uuid user_id FK
+        enum urgency "low / medium / high"
+        enum status "pending / approved / rejected / fulfilled"
+    }
+    EXTERNAL_LOANS {
+        uuid id PK
+        uuid item_id FK
+        string borrower_name "pihak luar, bukan FK"
+        enum condition_out
+        enum condition_in "diisi saat kembali"
+        enum status "active / returned / overdue"
+    }
+    ITEM_RESERVATIONS {
+        uuid id PK
+        uuid item_id FK
+        uuid event_id FK
+        date reserved_from
+        date reserved_to
+        enum status "active / released"
+    }
+```
+
+- Empat pintu masuk barang: **pinjam** (`borrow_requests`, internal login atau eksternal tanpa akun), **sumbang/pinjamkan ke PPIT** (`item_contributions`, jadi milik PPIT hanya setelah admin approve → `inventory_items`), **usul pengadaan** (`procurement_requests`), **PPIT pinjamkan asetnya keluar** (`external_loans`, aksi admin).
+- `ITEM_RESERVATIONS` memblokir seluruh aset di rentang tanggal karena akan dipakai acara.
+
+## 6. Platform, Katalog & Konten Kota
+
+```mermaid
+erDiagram
+    USERS ||--o{ NOTIFICATIONS : receives
+    NOTIFICATION_TEMPLATES |o--o{ NOTIFICATIONS : "rendered from"
+    USERS ||--o{ REPORTS : generates
+    USERS ||--o{ HELP_ARTICLES : authors
+    USERS ||--o{ RELEASE_NOTES : publishes
+    USERS |o--o{ FEEDBACK : submits
+    USERS |o--o{ DONATIONS : reports
+    MANAGEMENT_PERIODS ||--o{ SHORT_LINKS : groups
+    MANAGEMENT_PERIODS ||--o{ DRIVE_FOLDERS : scopes
+    DEPARTMENTS |o--o{ DRIVE_FOLDERS : "owns folder"
+
+    NOTIFICATIONS {
+        uuid id PK
+        uuid user_id FK
+        uuid template_id FK "null = teks langsung"
+        bool is_read
+        string related_entity_type
+    }
+    REPORTS {
+        uuid id PK
+        enum type "event_attendance / inventory_audit / sensus_summary / student_export / custom"
+        json parameters_json
+        string file_url
+    }
+    FEEDBACK {
+        uuid id PK
+        enum category "bug / design / feature / general"
+        enum status "new / in_review / resolved"
+        uuid user_id FK "null = belum login"
+        string page_path
+        json element_rect "element picker"
+    }
+    SHORT_LINKS {
+        uuid id PK
+        string slug UK
+        string target_url
+        uuid management_period_id FK
+        int click_count
+    }
+    DRIVE_FOLDERS {
+        uuid id PK
+        uuid management_period_id FK
+        uuid department_id FK "null = folder tingkat periode"
+        string drive_folder_id
+    }
+    DONATIONS {
+        uuid id PK
+        uuid user_id FK
+        enum status "pending / verified / rejected"
+        string proof_url "diverifikasi admin manual"
+    }
+```
+
+- **Tabel referensi tanpa FK** (dikelola admin, tidak saling terkait): `merchandise`, `sponsors`, `donation_channels`, `places`, `universities`, `districts`. Kolom `*_en` di beberapa di antaranya diisi otomatis oleh Groq (`translateFields()` di `lib/groq.ts`).
+- `REPORTS` generik: 4 jenis laporan (`event_attendance`, `inventory_audit`, `sensus_summary`, `student_export`) dibedakan lewat `type` + `parameters_json`, bukan 4 tabel.
+- `AUDIT_LOGS` (jejak perubahan data, otomatis) ≠ `RELEASE_NOTES` (catatan rilis fitur, ditulis manual).
+
+---
 
 ## Keputusan Desain Data
 
-- **`USER` adalah tabel `users` itu sendiri**, yang sekaligus menjadi tabel Auth.js (adapter Drizzle). Password hashing (bcrypt), session JWT, dan OAuth Google ditangani Auth.js v5. Lihat [Tech Stack](./Tech%20Stack.md).
-- **Tidak ada tabel `MEDIA` polymorphic terpisah** — URL gambar/file disimpan langsung sebagai kolom string (`image_url`, `cover_image_url`, `file_url`) di tabel pemilik, menunjuk ke URL Vercel Blob. Ini pilihan sadar untuk kesederhanaan; pertimbangkan ulang hanya jika nanti dibutuhkan CMS media penuh dengan reuse antar entitas.
-- **`REPORT` generik** menaungi 4 jenis laporan yang punya layar sendiri di admin console (`event_attendance`, `inventory_audit`, `sensus_summary`, `student_export`) — dibedakan lewat kolom `type` + `parameters_json`, bukan 4 tabel terpisah, karena strukturnya (siapa generate, kapan, filter apa, file hasil) identik.
-- **`AUDIT_LOG` vs `RELEASE_NOTE`**: dua konsep berbeda yang keduanya muncul sebagai "changelog" di prototipe. `AUDIT_LOG` = jejak perubahan data organisasi (siapa mengubah apa) dari layar *Organizational Change Log*. `RELEASE_NOTE` = catatan rilis fitur produk dari layar *Full Changelog* (System Changelog) — ditulis manual oleh admin/dev, bukan otomatis dari aksi user.
-- **`EVENT_COMMITTEE` terpisah dari `DEPARTMENT_MEMBER`** karena kepanitiaan berlaku **per acara**, bukan per kabinet — bendahara sebuah acara belum tentu bendahara kabinet, dan divisi acara (`EVENT_DIVISION`) bernama teks bebas karena tiap acara boleh punya susunan sendiri. Volunteer dari luar PPIT masuk sebagai USER biasa lewat undangan akun, lalu ditugaskan ke sini.
-- **`CERTIFICATE` dicatat, bukan digenerate**: file sertifikat dibuat di luar aplikasi (boleh tautan Drive); penerbitan manual oleh panitia per acara — tidak semua peserta otomatis dapat (semua peserta / hanya pemenang adalah keputusan per acara). Pembayaran HTM pun serupa: `payment_*` di `EVENT_REGISTRATION` memodelkan verifikasi bukti transfer oleh bendahara, tanpa payment gateway.
+- **`USERS` = tabel `users` Auth.js.** Password bcrypt, session JWT, OAuth Google ditangani Auth.js v5. Lihat [Tech Stack](./Tech%20Stack.md).
+- **Tanpa tabel `MEDIA` polymorphic.** URL gambar/berkas disimpan langsung sebagai kolom string (`image_url`, `cover_image_url`, `file_url`) di tabel pemilik, menunjuk ke Vercel Blob. Pilihan sadar untuk kesederhanaan.
+- **`EVENT_COMMITTEE` terpisah dari `DEPARTMENT_MEMBER`** — kepanitiaan per-acara, bukan per-kabinet.
+- **`CERTIFICATES` dicatat, bukan digenerate** — file dibuat di luar aplikasi (boleh tautan Drive), penerbitan manual per acara.
+- **Pembayaran & donasi tidak menyentuh uang** — `payment_*` di `EVENT_REGISTRATIONS` dan seluruh `DONATIONS` memodelkan verifikasi bukti transfer manual oleh bendahara/admin. Alipay/WeChat Pay butuh merchant account berbadan hukum Tiongkok; QR pribadi tidak punya webhook.
+- **Kontrol akses di application layer**, bukan Postgres RLS — `roles.access_tier` + `departments.admin_module_scope`, dicek di `src/lib/admin-scope.ts`.
 
 ## Terkait
 
 - [Data Dictionary](./Data%20Dictionary.md) — kolom lengkap tiap entitas + enum values
-- [Tech Stack](./Tech%20Stack.md) — implementasi (Neon Postgres, kontrol akses per role di application layer)
+- [Tech Stack](./Tech%20Stack.md)
