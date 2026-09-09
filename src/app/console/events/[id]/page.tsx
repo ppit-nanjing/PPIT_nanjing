@@ -1,7 +1,7 @@
 import { eq, and, desc, sql } from "drizzle-orm";
 import { notFound } from "next/navigation";
 import { db } from "@/db";
-import { auditLogs, certificates, events, eventDivisions, eventFeeOptions, eventQuestions, eventRegistrations, eventVolunteers, galleryAlbums, galleryPhotos, inventoryItems, itemReservations, newsArticles, sensusProfiles, users } from "@/db/schema";
+import { auditLogs, certificates, events, eventCredits, eventDivisions, eventFeeOptions, eventQuestions, eventRegistrations, eventVolunteers, galleryAlbums, galleryPhotos, inventoryItems, itemReservations, newsArticles, sensusProfiles, users } from "@/db/schema";
 import { MEMBERSHIP_LABEL, effectiveBranch, membershipStatus } from "@/lib/membership-status";
 import { updateEventInfo, updateEventContent, updateEventPostReport, setEventStatus, saveEventQuestion, deleteEventQuestion, saveFeeOption, deleteFeeOption } from "@/app/actions/admin-events";
 import { createEventGalleryAlbum } from "@/app/actions/admin-content";
@@ -10,7 +10,7 @@ import { publishDueEvents } from "@/lib/publish-events";
 import { DeleteEventButton } from "@/components/console/delete-event-button";
 import { RegistrationList } from "@/components/console/registration-list";
 import { EventCommitteeStructure } from "@/components/console/event-committee-structure";
-import { listEventDivisions, issueParticipantCertificates, takeOverEvent } from "@/app/actions/committee";
+import { listEventDivisions, issueParticipantCertificates, takeOverEvent, addEventCredit, removeEventCredit } from "@/app/actions/committee";
 import { requireEventConsoleAccess } from "@/lib/event-access";
 import { EVENT_STATUS_LABEL as STATUS_LABEL } from "@/lib/event-status-labels";
 import { EVENT_AUDIT_ACTION_LABEL, type EventAuditAction } from "@/lib/event-audit";
@@ -119,6 +119,16 @@ export default async function ConsoleEventDetailPage({ params }: { params: Promi
         .where(and(eq(auditLogs.entityType, "event"), eq(auditLogs.entityId, id)))
         .orderBy(desc(auditLogs.createdAt))
         .limit(80)
+    : [];
+
+  // Kredit / arsip kepanitiaan (fitur tampilan, terpisah dari akses).
+  const canEditCredits = can("event.editCredits");
+  const credits = canEditCredits
+    ? await db
+        .select({ id: eventCredits.id, displayName: eventCredits.displayName, roleLabel: eventCredits.roleLabel })
+        .from(eventCredits)
+        .where(eq(eventCredits.eventId, id))
+        .orderBy(eventCredits.orderIndex, eventCredits.createdAt)
     : [];
 
   // Artikel berita acara — grant "Post artikel" atau BPH Panitia.
@@ -853,6 +863,83 @@ export default async function ConsoleEventDetailPage({ params }: { params: Promi
             className="self-start bg-primary-container text-on-primary text-label-caps uppercase tracking-wide px-6 py-3 rounded-md hover:bg-primary transition-colors"
           >
             Simpan Laporan Pasca-Acara
+          </button>
+        </form>
+      </CollapsibleSection>
+      )}
+
+      {/* Kredit / arsip kepanitiaan (Spesifikasi §10) — daftar TAMPILAN untuk
+          halaman acara publik & LPJ. TIDAK memberi akses apa pun; diisi
+          Sekretaris, tetap bisa walau acara sudah terkunci. */}
+      {canEditCredits && (
+      <CollapsibleSection
+        title="Kredit / Arsip Kepanitiaan"
+        description={`${credits.length} nama`}
+      >
+        <p className="text-body-md text-on-surface-variant mb-4 max-w-2xl">
+          Daftar nama panitia untuk ditampilkan di halaman acara publik (arsip / LPJ). Ini{" "}
+          <strong className="text-on-background">hanya tampilan</strong> — menambah nama di sini tidak
+          memberi akses konsol apa pun. Biasa diisi Sekretaris setelah acara.
+        </p>
+        {credits.length > 0 && (
+          <ul className="flex flex-col gap-1.5 mb-4">
+            {credits.map((c) => (
+              <li
+                key={c.id}
+                className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5 border-b border-outline-variant/50 pb-1.5"
+              >
+                <span className="text-body-md text-on-background">{c.displayName}</span>
+                {c.roleLabel && <span className="text-label-caps text-on-surface-variant">{c.roleLabel}</span>}
+                <ConfirmButton
+                  title="Hapus dari kredit?"
+                  message={`"${c.displayName}" dihapus dari daftar kredit acara. Tidak memengaruhi akses atau sertifikat.`}
+                  action={removeEventCredit}
+                  payload={{ id: c.id }}
+                  className="ml-auto text-label-caps uppercase tracking-wide text-error hover:bg-error-container/30 px-2 py-1 rounded-md"
+                >
+                  Hapus
+                </ConfirmButton>
+              </li>
+            ))}
+          </ul>
+        )}
+        <form
+          action={addEventCredit}
+          className="bg-surface-container-low border border-outline-variant rounded-lg p-4 flex flex-wrap items-end gap-3"
+        >
+          <input type="hidden" name="eventId" value={id} />
+          <div className="flex flex-col gap-1 min-w-[12rem]">
+            <span className="text-label-caps uppercase tracking-wide text-on-surface-variant">Dari Akun (opsional)</span>
+            <Select name="userId" defaultValue="" aria-label="Pilih akun">
+              <option value="">— ketik nama manual —</option>
+              {candidates.map((u) => (
+                <option key={u.id} value={u.id}>
+                  {u.name ?? u.email}
+                </option>
+              ))}
+            </Select>
+          </div>
+          <div className="flex flex-col gap-1">
+            <span className="text-label-caps uppercase tracking-wide text-on-surface-variant">Nama Tampil</span>
+            <input
+              name="displayName"
+              placeholder="kosongkan bila pakai akun"
+              className="bg-soft-gray rounded-md p-3 text-body-md"
+            />
+          </div>
+          <div className="flex flex-col gap-1">
+            <span className="text-label-caps uppercase tracking-wide text-on-surface-variant">Jabatan</span>
+            <input
+              name="roleLabel"
+              placeholder="mis. Ketua Pelaksana"
+              className="bg-soft-gray rounded-md p-3 text-body-md"
+            />
+          </div>
+          <button
+            type="submit"
+            className="bg-primary-container text-on-primary text-label-caps uppercase tracking-wide px-6 py-3 rounded-md hover:bg-primary transition-colors"
+          >
+            Tambah
           </button>
         </form>
       </CollapsibleSection>

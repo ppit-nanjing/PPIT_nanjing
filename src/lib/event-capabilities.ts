@@ -30,6 +30,7 @@ export type EventCapability =
   // --- K: kepanitiaan ---
   | "event.manageCommittee" // susunan panitia, struktur divisi, keluarkan panitia, atur grant divisi
   | "event.issueCertificates" // terbitkan sertifikat panitia & peserta
+  | "event.editCredits" // isi kredit / arsip kepanitiaan (LPJ) — tampilan, tidak memberi akses
   | "event.viewAuditLog" // baca riwayat audit acara (BPH Panitia + BPH Kabinet)
   // --- U + X: keuangan & lintas-modul (grant per divisi) ---
   | "event.manageFinance" // verifikasi bayar, refund, tandai gratis, rekap & ekspor keuangan
@@ -99,12 +100,15 @@ const GRANTABLE_KEYS = new Set<EventCapability>(GRANTABLE_CAPABILITIES.map((g) =
 // tidak dapat.
 export const FULL_ADMIN_ONLY_CAPABILITIES: EventCapability[] = ["event.delete", "event.takeOver"];
 
-// Kapabilitas baca — tetap boleh walau acara sudah terkunci (>2 minggu setelah
-// selesai). Semua kapabilitas TULIS lainnya ditolak untuk panitia begitu kunci
-// aktif; hanya BPH Kabinet ("full") yang tetap bisa mengubah.
-export const READ_ONLY_CAPABILITIES: EventCapability[] = [
+// Kapabilitas yang TETAP boleh walau acara sudah terkunci (>2 minggu setelah
+// selesai): baca daftar pendaftar + audit log, DAN mengisi kredit kepanitiaan
+// (LPJ sering baru berbulan setelah acara). Semua kapabilitas TULIS lainnya
+// ditolak untuk panitia begitu kunci aktif; hanya BPH Kabinet ("full") tetap
+// bisa mengubah apa pun.
+export const LOCK_EXEMPT_CAPABILITIES: EventCapability[] = [
   "event.viewRegistrants",
   "event.viewAuditLog",
+  "event.editCredits",
 ];
 
 // Spesifikasi §9: setelah acara selesai, panitia boleh mengubah data selama 2

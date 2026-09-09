@@ -5,7 +5,7 @@ import { and, desc, eq, inArray, sql as raw } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { auth } from "@/auth";
 import { db } from "@/db";
-import { eventCommittee, eventDivisions, certificates, events, users, eventRegistrations } from "@/db/schema";
+import { eventCommittee, eventCredits, eventDivisions, certificates, events, users, eventRegistrations } from "@/db/schema";
 import { requireModuleAccess } from "@/lib/admin-scope";
 import { requireEventCapability, requireEventConsoleAccess } from "@/lib/event-access";
 import { EVENT_COMMITTEE_ROLE_LABEL, GRANTABLE_CAPABILITIES, type EventCommitteeRole } from "@/lib/event-capabilities";
@@ -135,6 +135,53 @@ export async function takeOverEvent(formData: FormData) {
   await logEventAudit(session.user.id, eventId, "event.takeover", { after: { by: session.user.name ?? session.user.id } });
   revalidatePath(`/console/events/${eventId}`);
   revalidatePath("/console/work-ledger");
+}
+
+// ---------- Kredit / arsip kepanitiaan (Spesifikasi §10) ----------
+// FITUR TERPISAH: baris di sini murni tampilan di halaman acara publik,
+// TIDAK memberi akses apa pun. Diisi Sekretaris (event.editCredits, tetap boleh
+// walau acara sudah terkunci — LPJ sering belakangan).
+
+export async function addEventCredit(formData: FormData) {
+  const eventId = String(formData.get("eventId") ?? "");
+  const { session } = await requireEventCapability(eventId, "event.editCredits");
+  const userId = String(formData.get("userId") ?? "").trim() || null;
+  const roleLabel = String(formData.get("roleLabel") ?? "").trim() || null;
+  let displayName = String(formData.get("displayName") ?? "").trim();
+
+  // Dari picker akun: displayName di-snapshot dari nama akunnya.
+  if (userId && !displayName) {
+    const [u] = await db.select({ name: users.name, email: users.email }).from(users).where(eq(users.id, userId));
+    displayName = u?.name ?? u?.email ?? "";
+  }
+  if (!displayName) throw new Error("Nama wajib diisi");
+
+  const [{ maxOrder }] = await db
+    .select({ maxOrder: raw<number>`coalesce(max(${eventCredits.orderIndex}), 0)` })
+    .from(eventCredits)
+    .where(eq(eventCredits.eventId, eventId));
+
+  await db.insert(eventCredits).values({ eventId, userId, displayName, roleLabel, orderIndex: Number(maxOrder) + 1 });
+  await logEventAudit(session.user.id, eventId, "credit.added", { after: { credit: displayName, roleLabel } });
+
+  revalidatePath(`/console/events/${eventId}`);
+  const [ev] = await db.select({ slug: events.slug }).from(events).where(eq(events.id, eventId));
+  if (ev?.slug) revalidatePath(`/events/${ev.slug}`);
+}
+
+export async function removeEventCredit(formData: FormData) {
+  const id = String(formData.get("id") ?? "");
+  const [row] = await db
+    .select({ eventId: eventCredits.eventId, displayName: eventCredits.displayName })
+    .from(eventCredits)
+    .where(eq(eventCredits.id, id));
+  if (!row) return;
+  const { session } = await requireEventCapability(row.eventId, "event.editCredits");
+  await db.delete(eventCredits).where(eq(eventCredits.id, id));
+  await logEventAudit(session.user.id, row.eventId, "credit.removed", { before: { credit: row.displayName } });
+  revalidatePath(`/console/events/${row.eventId}`);
+  const [ev] = await db.select({ slug: events.slug }).from(events).where(eq(events.id, row.eventId));
+  if (ev?.slug) revalidatePath(`/events/${ev.slug}`);
 }
 
 /**

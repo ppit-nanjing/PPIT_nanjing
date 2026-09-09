@@ -23,6 +23,8 @@ export type EventAuditAction =
   | "committee.assigned"
   | "committee.removed"
   | "division.grants"
+  | "credit.added"
+  | "credit.removed"
   | "asset.reserved"
   | "asset.released";
 
@@ -62,6 +64,8 @@ export const EVENT_AUDIT_ACTION_LABEL: Record<EventAuditAction, string> = {
   "committee.assigned": "Panitia ditugaskan",
   "committee.removed": "Panitia dikeluarkan",
   "division.grants": "Izin fitur divisi diubah",
+  "credit.added": "Kredit kepanitiaan ditambah",
+  "credit.removed": "Kredit kepanitiaan dihapus",
   "asset.reserved": "Aset direservasi",
   "asset.released": "Reservasi aset dilepas",
 };

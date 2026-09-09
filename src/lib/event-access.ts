@@ -10,7 +10,7 @@ import {
   type EventCapability,
   type EventCommitteeRole,
   BRIDGE_EXCLUDED_CAPABILITIES,
-  READ_ONLY_CAPABILITIES,
+  LOCK_EXEMPT_CAPABILITIES,
   hasEventCapability,
   isBphPanitiaRole,
   isCommitteeLocked,
@@ -122,7 +122,7 @@ export const getEventAccess = cache(async function getEventAccess(
     can: (capability) => {
       if (isFullAdmin) return true;
       // Acara terkunci: panitia (& moduleBridge) hanya boleh kapabilitas BACA.
-      if (locked && !READ_ONLY_CAPABILITIES.includes(capability)) return false;
+      if (locked && !LOCK_EXEMPT_CAPABILITIES.includes(capability)) return false;
       return (
         (moduleBridge && !BRIDGE_EXCLUDED_CAPABILITIES.includes(capability)) ||
         hasEventCapability(role, capability, divisionGrants)

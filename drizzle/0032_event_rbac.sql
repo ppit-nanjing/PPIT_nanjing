@@ -37,3 +37,15 @@ ALTER TABLE "event_committee"
 -- "Post artikel" divisi. NULL = berita kabinet biasa.
 ALTER TABLE "news_articles"
   ADD COLUMN IF NOT EXISTS "event_id" uuid REFERENCES "events"("id") ON DELETE SET NULL;
+
+-- Kredit / arsip kepanitiaan (Spesifikasi §10) — daftar tampilan yang diisi
+-- Sekretaris saat LPJ, TERPISAH dari event_committee (yang mengatur akses).
+CREATE TABLE IF NOT EXISTS "event_credits" (
+  "id" uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  "event_id" uuid NOT NULL REFERENCES "events"("id") ON DELETE CASCADE,
+  "user_id" uuid REFERENCES "users"("id") ON DELETE SET NULL,
+  "display_name" text NOT NULL,
+  "role_label" text,
+  "order_index" integer NOT NULL DEFAULT 0,
+  "created_at" timestamp NOT NULL DEFAULT now()
+);

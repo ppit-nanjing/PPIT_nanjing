@@ -2,7 +2,7 @@ import { eq, and, ne, count, desc } from "drizzle-orm";
 import { notFound } from "next/navigation";
 import { auth } from "@/auth";
 import { db } from "@/db";
-import { events, eventRegistrations, eventDivisions, eventCommittee, galleryAlbums, galleryPhotos } from "@/db/schema";
+import { events, eventRegistrations, eventDivisions, eventCommittee, eventCredits, galleryAlbums, galleryPhotos } from "@/db/schema";
 import { SiteNav } from "@/components/site-nav";
 import { SiteFooter } from "@/components/site-footer";
 import { AnimatedHeroHeading } from "@/components/animated-hero-heading";
@@ -114,6 +114,20 @@ export default async function EventDetailPage({ params, searchParams }: { params
   const [album] = await db.select().from(galleryAlbums).where(eq(galleryAlbums.eventId, event.id));
   const photos = album
     ? await db.select().from(galleryPhotos).where(and(eq(galleryPhotos.albumId, album.id), eq(galleryPhotos.isHighlight, true))).limit(4)
+    : [];
+
+  // Kredit / arsip kepanitiaan (Spesifikasi §10) — daftar TAMPILAN diisi
+  // Sekretaris saat LPJ. Muncul hanya setelah acara; tidak terkait akses.
+  const credits = isPast
+    ? await db
+        .select({
+          id: eventCredits.id,
+          displayName: eventCredits.displayName,
+          roleLabel: eventCredits.roleLabel,
+        })
+        .from(eventCredits)
+        .where(eq(eventCredits.eventId, event.id))
+        .orderBy(eventCredits.orderIndex, eventCredits.createdAt)
     : [];
 
   const related = await db
@@ -372,6 +386,31 @@ export default async function EventDetailPage({ params, searchParams }: { params
                   </Reveal>
                 );
               })()}
+
+              {credits.length > 0 && (
+                <Reveal>
+                  <section>
+                    <h2 className="mb-6 flex items-center gap-2 text-headline-md text-on-background">
+                      <Users className="text-primary-container" size={20} /> {t("events.committee")}
+                    </h2>
+                    <ul className="flex flex-col gap-2">
+                      {credits.map((c) => (
+                        <li
+                          key={c.id}
+                          className="flex flex-wrap items-baseline gap-x-3 gap-y-0.5 border-b border-outline-variant/50 pb-2 last:border-0"
+                        >
+                          <span className="text-body-md text-on-background">{c.displayName}</span>
+                          {c.roleLabel && (
+                            <span className="text-label-caps uppercase tracking-wide text-on-surface-variant">
+                              {c.roleLabel}
+                            </span>
+                          )}
+                        </li>
+                      ))}
+                    </ul>
+                  </section>
+                </Reveal>
+              )}
             </div>
 
             <div className="lg:col-span-4">

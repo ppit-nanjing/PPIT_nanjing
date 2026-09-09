@@ -1310,6 +1310,24 @@ export const eventCommittee = pgTable(
   (t) => [uniqueIndex("event_committee_unique").on(t.eventId, t.userId)],
 );
 
+// Kredit / arsip kepanitiaan — FITUR TERPISAH dari event_committee (Spesifikasi
+// §10). Diisi Sekretaris saat LPJ sebagai daftar "siapa saja panitianya" untuk
+// ditampilkan di halaman acara publik. Mengisi baris di sini TIDAK memberi akses
+// apa pun — event_committee yang mengatur akses selama acara berjalan; ini murni
+// tampilan. `userId` opsional (boleh nama bebas untuk orang tanpa akun);
+// `displayName` selalu terisi sebagai snapshot supaya kreditnya utuh walau akun
+// dihapus.
+export const eventCredits = pgTable("event_credits", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  eventId: uuid("event_id").notNull().references(() => events.id, { onDelete: "cascade" }),
+  userId: uuid("user_id").references(() => users.id, { onDelete: "set null" }),
+  displayName: text("display_name").notNull(),
+  // Label peran bebas untuk tampilan, mis. "Ketua Pelaksana", "Divisi Acara".
+  roleLabel: text("role_label"),
+  orderIndex: integer("order_index").notNull().default(0),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
 // Sertifikat tidak dibuat otomatis: file-nya diunggah/dibuat di luar aplikasi,
 // di sini hanya dicatat + ditautkan. `fileUrl` boleh berupa tautan Google Drive
 // (dokumen ide menyebut ini eksplisit kalau storage terbatas).

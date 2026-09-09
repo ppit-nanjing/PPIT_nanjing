@@ -247,6 +247,7 @@ export const id = {
   "events.attendedCount": "{{count}} hadir",
   "events.materials": "Dokumentasi & Materi",
   "events.watchRecap": "Tonton Recap",
+  "events.committee": "Kepanitiaan",
 
   // Event ticket
   "ticket.success": "Pendaftaran Berhasil",
