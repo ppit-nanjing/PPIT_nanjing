@@ -1,4 +1,5 @@
 import type { Session } from "next-auth";
+import { cache } from "react";
 import { redirect } from "next/navigation";
 import { and, eq } from "drizzle-orm";
 import { auth } from "@/auth";
@@ -58,7 +59,13 @@ const DENIED: EventAccess = {
   can: () => false,
 };
 
-export async function getEventAccess(eventId: string): Promise<EventAccess> {
+// cache() dedupes within one server render — the console event page resolves
+// access several times (page gate + listEventDivisions + section helpers).
+// Outside a render (server actions) cache() is a passthrough, so behaviour there
+// is unchanged.
+export const getEventAccess = cache(async function getEventAccess(
+  eventId: string,
+): Promise<EventAccess> {
   const session = await auth();
   if (!session?.user?.id) return DENIED;
 
@@ -122,7 +129,7 @@ export async function getEventAccess(eventId: string): Promise<EventAccess> {
       );
     },
   };
-}
+});
 
 /**
  * Untuk halaman & server action konsol acara: redirect kalau tidak berwenang,
