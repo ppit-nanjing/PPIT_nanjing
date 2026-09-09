@@ -429,7 +429,7 @@ export async function checkInRegistration(
 ): Promise<
   { ok: true; already: boolean } | { ok: false; reason: "notfound" | "cancelled" | "unpaid" | "closed" }
 > {
-  const { session } = await requireEventCapability(eventId, "event.scanAttendance");
+  const { session, isFullAdmin } = await requireEventCapability(eventId, "event.scanAttendance");
   const [registration] = await db
     .select({
       userId: eventRegistrations.userId,
@@ -449,8 +449,10 @@ export async function checkInRegistration(
 
   if (registration.status === "attended") return { ok: true, already: true };
 
-  // Pintu check-in menutup otomatis setelah acara berakhir.
-  if (event && checkInClosedReason(event)) return { ok: false, reason: "closed" };
+  // Pintu check-in menutup otomatis setelah acara berakhir — kecuali BPH Kabinet
+  // / Divisi Teknologi (isFullAdmin), yang tetap bisa mengoreksi kehadiran kapan
+  // pun, sama seperti kunci 2-minggu.
+  if (!isFullAdmin && event && checkInClosedReason(event)) return { ok: false, reason: "closed" };
 
   // Tombol check-in manual harus tunduk pada aturan yang sama dengan pintu QR:
   // acara berbayar wajib pembayaran terverifikasi dulu.
@@ -481,7 +483,7 @@ export async function checkInRegistration(
 // after the page loads) rather than during the Server Component render - doing
 // a mutation inside a render breaks RSC streaming in production.
 export async function checkInByToken(token: string, eventId: string) {
-  const { session } = await requireEventCapability(eventId, "event.scanAttendance");
+  const { session, isFullAdmin } = await requireEventCapability(eventId, "event.scanAttendance");
 
   const [registration] = await db
     .select({
@@ -504,8 +506,9 @@ export async function checkInByToken(token: string, eventId: string) {
     .from(events)
     .where(eq(events.id, eventId));
 
-  // Pintu check-in menutup otomatis setelah acara berakhir.
-  if (event && checkInClosedReason(event)) return { ok: false as const, reason: "closed" as const };
+  // Pintu check-in menutup otomatis setelah acara berakhir (BPH Kabinet / Divisi
+  // Teknologi tetap bisa mengoreksi kapan pun).
+  if (!isFullAdmin && event && checkInClosedReason(event)) return { ok: false as const, reason: "closed" as const };
 
   // Jaring pengaman: normalnya pendaftaran berbayar yang belum lunas tidak
   // punya QR sama sekali, tapi kalau pembayaran sempat terverifikasi (QR terbit)
@@ -534,7 +537,7 @@ export async function checkInByToken(token: string, eventId: string) {
 // attendance_token, dibuat lazily oleh halaman /events/[slug]/committee).
 // Pola persis checkInByToken - hanya tabel dan kolom waktunya yang beda.
 export async function checkInCommitteeByToken(token: string, eventId: string) {
-  const { session } = await requireEventCapability(eventId, "event.scanAttendance");
+  const { session, isFullAdmin } = await requireEventCapability(eventId, "event.scanAttendance");
 
   const [assignment] = await db
     .select({ id: eventCommittee.id, userId: eventCommittee.userId, checkedInAt: eventCommittee.checkedInAt })
@@ -549,8 +552,9 @@ export async function checkInCommitteeByToken(token: string, eventId: string) {
     .from(events)
     .where(eq(events.id, eventId));
 
-  // Pintu check-in menutup otomatis setelah acara berakhir.
-  if (event && checkInClosedReason(event)) return { ok: false as const, reason: "closed" as const };
+  // Pintu check-in menutup otomatis setelah acara berakhir (BPH Kabinet / Divisi
+  // Teknologi tetap bisa mengoreksi kapan pun).
+  if (!isFullAdmin && event && checkInClosedReason(event)) return { ok: false as const, reason: "closed" as const };
 
   await db
     .update(eventCommittee)

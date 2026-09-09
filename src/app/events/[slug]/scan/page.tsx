@@ -31,7 +31,7 @@ export default async function EventScanPage({
   // Belum dirilis = tidak terjangkau, sama seperti halaman acara publik.
   if (event.status === "scheduled" || event.status === "draft") notFound();
 
-  await requireEventCapability(event.id, "event.scanAttendance");
+  const access = await requireEventCapability(event.id, "event.scanAttendance");
 
   // Read-only lookup only - the actual check-in mutation happens in the
   // ScanCheckIn client component (server action), never during this render.
@@ -95,7 +95,9 @@ export default async function EventScanPage({
 
   const scanPath = `/events/${slug}/scan`;
   // Pintu check-in menutup otomatis setelah acara berakhir (Spesifikasi §11).
-  const closed = checkInClosedReason(event);
+  // BPH Kabinet / Divisi Teknologi (isFullAdmin) dikecualikan — tetap bisa
+  // mengoreksi kehadiran kapan pun, konsisten dengan kunci 2-minggu.
+  const closed = access.isFullAdmin ? null : checkInClosedReason(event);
 
   return (
     <div className="min-h-screen bg-background text-on-background">

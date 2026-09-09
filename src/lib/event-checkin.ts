@@ -31,9 +31,10 @@ export const CHECK_IN_BLOCK_MESSAGE: Record<CheckInBlock, string> = {
 
 // Pintu check-in menutup otomatis begitu acara berakhir (Spesifikasi §11 —
 // "akses scan berhenti saat acara selesai"). "Berakhir" = status
-// completed/cancelled, atau lewat dari waktu tutup. Berlaku untuk semua orang
-// termasuk BPH — koreksi kehadiran pasca-acara lewat "Jumlah Hadir (Final)" di
-// laporan, bukan lewat scan.
+// completed/cancelled, atau lewat dari waktu tutup. Petugas/panitia acara
+// tunduk pada ini — koreksi kehadiran pasca-acara lewat "Jumlah Hadir (Final)".
+// BPH Kabinet / Divisi Teknologi (isFullAdmin) DIKECUALIKAN oleh pemanggil,
+// sama seperti kunci 2-minggu di event-access.ts.
 //
 // Waktu tutup: kalau endAt diisi → endAt + jeda pendek (scan telat di pintu
 // keluar). Kalau hanya startAt → durasinya tak diketahui, jadi baru menutup
