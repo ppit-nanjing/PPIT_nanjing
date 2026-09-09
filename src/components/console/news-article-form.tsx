@@ -16,6 +16,7 @@ export function NewsArticleForm({
   subscriberCount,
   emailReady,
   submitLabel,
+  eventId,
 }: {
   action: (prev: ContentFormState, formData: FormData) => Promise<ContentFormState>;
   initial?: {
@@ -29,6 +30,8 @@ export function NewsArticleForm({
   subscriberCount: number;
   emailReady: boolean;
   submitLabel: string;
+  // Kalau diset: artikel baru ditaut ke acara ini (jalur grant "Post artikel").
+  eventId?: string;
 }) {
   const [state, formAction] = useActionState<ContentFormState, FormData>(action, {});
   const alreadyPublished = !!initial?.published;
@@ -36,6 +39,7 @@ export function NewsArticleForm({
 
   return (
     <form action={formAction} className="flex flex-col gap-6">
+      {eventId && <input type="hidden" name="eventId" value={eventId} />}
       {state.error && (
         <p role="alert" className="bg-error-container/40 text-on-error-container text-body-md px-4 py-3 rounded-lg">
           {state.error}

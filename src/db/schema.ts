@@ -602,6 +602,11 @@ export const newsArticles = pgTable("news_articles", {
   // tabs (Goal.md Tier 1 #12), same pattern as events.category.
   category: text("category"),
   authorId: uuid("author_id").references(() => users.id),
+  // Acara yang artikel ini liput — NULL untuk berita kabinet biasa. Terisi kalau
+  // artikelnya ditulis panitia lewat grant "Post artikel" divisi; grant itu
+  // hanya mengizinkan artikel dengan eventId = acara mereka. onDelete set null:
+  // acara dihapus, artikelnya tetap ada sebagai berita lepas.
+  eventId: uuid("event_id").references(() => events.id, { onDelete: "set null" }),
   status: publishStatusEnum("status").notNull().default("draft"),
   publishedAt: timestamp("published_at"),
 });

@@ -31,6 +31,23 @@ async function requireGalleryAlbumAccess(albumId: string): Promise<string> {
   throw new Error("Forbidden");
 }
 
+// Berita: modul Konten kabinet (bebas), ATAU panitia dengan grant "Post artikel"
+// untuk artikel yang `eventId`-nya = acara mereka. `scoped` = jalur panitia:
+// eventId dikunci ke acara itu dan tidak boleh diubah.
+async function resolveNewsAccess(
+  articleEventId: string | null,
+): Promise<{ actorId: string; scoped: boolean }> {
+  const session = await auth();
+  if (hasModuleAccess(session?.user?.adminScope ?? null, "content")) {
+    return { actorId: session!.user.id, scoped: false };
+  }
+  if (articleEventId) {
+    const access = await getEventAccess(articleEventId);
+    if (access.can("event.postArticle")) return { actorId: access.session!.user.id, scoped: true };
+  }
+  throw new Error("Forbidden");
+}
+
 function slugify(title: string) {
   return (
     title
@@ -51,7 +68,19 @@ export async function upsertNewsArticle(
   _prev: ContentFormState,
   formData: FormData,
 ): Promise<ContentFormState> {
-  const actorId = await requireContentAccess();
+  const formEventId = String(formData.get("eventId") ?? "").trim() || null;
+
+  // Untuk artikel lama, `eventId`-nya yang menentukan wewenang (bukan yang di
+  // form). Untuk artikel baru, pakai yang di form.
+  let priorEventId: string | null = null;
+  if (existingId) {
+    const [ex] = await db.select({ eventId: newsArticles.eventId }).from(newsArticles).where(eq(newsArticles.id, existingId));
+    priorEventId = ex?.eventId ?? null;
+  }
+  const { actorId, scoped } = await resolveNewsAccess(existingId ? priorEventId : formEventId);
+  // Jalur panitia: eventId terkunci. Jalur konten kabinet: bebas set/lepas.
+  const eventId = scoped ? (existingId ? priorEventId : formEventId) : formEventId;
+
   const title = String(formData.get("title") ?? "").trim();
   const content = String(formData.get("content") ?? "").trim();
   const coverImageUrl = String(formData.get("coverImageUrl") ?? "").trim();
@@ -86,6 +115,7 @@ export async function upsertNewsArticle(
         content: content || null,
         coverImageUrl: coverImageUrl || null,
         category: category || null,
+        eventId,
         status: publish ? "published" : unpublishedStatus,
         publishedAt: publish ? (previousPublishedAt ?? new Date()) : previousPublishedAt,
       })
@@ -100,6 +130,7 @@ export async function upsertNewsArticle(
         content: content || null,
         coverImageUrl: coverImageUrl || null,
         category: category || null,
+        eventId,
         authorId: actorId,
         status: publish ? "published" : "draft",
         publishedAt: publish ? new Date() : null,
@@ -114,7 +145,8 @@ export async function upsertNewsArticle(
   revalidatePath("/console/content");
   revalidatePath("/news");
   revalidatePath(`/news/${article.slug}`);
-  redirect("/console/content");
+  if (eventId) revalidatePath(`/console/events/${eventId}`);
+  redirect(scoped && eventId ? `/console/events/${eventId}` : "/console/content");
 }
 
 // Hard delete - mirrors deleteEvent. For genuine mistakes / duplicates / spam;
@@ -122,16 +154,17 @@ export async function upsertNewsArticle(
 // "archived") instead. authorId has onDelete: no action but nothing references
 // newsArticles, so a plain delete is safe.
 export async function deleteNewsArticle(id: string) {
-  await requireContentAccess();
-  const [row] = await db.select({ slug: newsArticles.slug }).from(newsArticles).where(eq(newsArticles.id, id));
+  const [row] = await db.select({ slug: newsArticles.slug, eventId: newsArticles.eventId }).from(newsArticles).where(eq(newsArticles.id, id));
   // Already gone (double-submit, stale tab) - the goal state is "not there", so
   // just land back on the list instead of a 404.
   if (!row) redirect("/console/content");
+  const { scoped } = await resolveNewsAccess(row.eventId);
   await db.delete(newsArticles).where(eq(newsArticles.id, id));
   revalidatePath("/console/content");
   revalidatePath("/news");
   revalidatePath(`/news/${row.slug}`);
-  redirect("/console/content");
+  if (row.eventId) revalidatePath(`/console/events/${row.eventId}`);
+  redirect(scoped && row.eventId ? `/console/events/${row.eventId}` : "/console/content");
 }
 
 // draft <-> published <-> archived, without touching the article body. Never
@@ -139,17 +172,17 @@ export async function deleteNewsArticle(id: string) {
 // later re-publish via upsertNewsArticle stays silent). publishedAt is kept as
 // history across archive/restore cycles.
 export async function setNewsArticleStatus(formData: FormData) {
-  await requireContentAccess();
   const id = String(formData.get("id") ?? "");
   const status = String(formData.get("status") ?? "");
   if (!id || (status !== "draft" && status !== "published" && status !== "archived")) {
     throw new Error("Permintaan tidak valid.");
   }
   const [before] = await db
-    .select({ slug: newsArticles.slug, publishedAt: newsArticles.publishedAt })
+    .select({ slug: newsArticles.slug, publishedAt: newsArticles.publishedAt, eventId: newsArticles.eventId })
     .from(newsArticles)
     .where(eq(newsArticles.id, id));
   if (!before) notFound();
+  await resolveNewsAccess(before.eventId);
 
   await db
     .update(newsArticles)
@@ -163,6 +196,7 @@ export async function setNewsArticleStatus(formData: FormData) {
   revalidatePath(`/console/content/news/${id}`);
   revalidatePath("/news");
   revalidatePath(`/news/${before.slug}`);
+  if (before.eventId) revalidatePath(`/console/events/${before.eventId}`);
 }
 
 // Fans out to every member who opted in via the profile "Email Subscribed"

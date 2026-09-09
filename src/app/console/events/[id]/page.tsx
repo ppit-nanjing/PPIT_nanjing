@@ -1,7 +1,7 @@
 import { eq, and, desc, sql } from "drizzle-orm";
 import { notFound } from "next/navigation";
 import { db } from "@/db";
-import { certificates, events, eventDivisions, eventFeeOptions, eventQuestions, eventRegistrations, eventVolunteers, galleryAlbums, galleryPhotos, inventoryItems, itemReservations, sensusProfiles, users } from "@/db/schema";
+import { certificates, events, eventDivisions, eventFeeOptions, eventQuestions, eventRegistrations, eventVolunteers, galleryAlbums, galleryPhotos, inventoryItems, itemReservations, newsArticles, sensusProfiles, users } from "@/db/schema";
 import { MEMBERSHIP_LABEL, effectiveBranch, membershipStatus } from "@/lib/membership-status";
 import { updateEventInfo, updateEventContent, updateEventPostReport, setEventStatus, saveEventQuestion, deleteEventQuestion, saveFeeOption, deleteFeeOption } from "@/app/actions/admin-events";
 import { createEventGalleryAlbum } from "@/app/actions/admin-content";
@@ -107,6 +107,16 @@ export default async function ConsoleEventDetailPage({ params }: { params: Promi
     .where(eq(certificates.eventId, id));
   const committeeCertUserIds = issuedCerts.filter((c) => c.kind === "panitia").map((c) => c.userId);
   const participantCertCount = issuedCerts.filter((c) => c.kind === "peserta").length;
+
+  // Artikel berita acara — grant "Post artikel" atau BPH Panitia.
+  const canPostArticle = can("event.postArticle");
+  const eventArticles = canPostArticle
+    ? await db
+        .select({ id: newsArticles.id, title: newsArticles.title, status: newsArticles.status })
+        .from(newsArticles)
+        .where(eq(newsArticles.eventId, id))
+        .orderBy(desc(newsArticles.publishedAt))
+    : [];
 
   // Galeri foto acara — grant "Galeri" (Divisi Dokumentasi) atau BPH Panitia.
   const canManageGallery = can("event.manageGallery");
@@ -602,6 +612,38 @@ export default async function ConsoleEventDetailPage({ params }: { params: Promi
             kehadiran&quot; di form Edit di atas bila berubah pikiran.
           </p>
         )}
+      </CollapsibleSection>
+      )}
+
+      {canPostArticle && (
+      <CollapsibleSection title="Artikel Berita Acara" description={`${eventArticles.length} artikel`}>
+        <div className="flex flex-col gap-3">
+          <a
+            href={`/console/content/news/new?eventId=${id}`}
+            className="self-start inline-flex items-center gap-2 bg-primary-container text-on-primary text-label-caps uppercase tracking-wide px-5 py-2.5 rounded-md hover:bg-primary transition-colors"
+          >
+            + Tulis Artikel
+          </a>
+          {eventArticles.length === 0 ? (
+            <p className="text-body-md text-on-surface-variant">Belum ada artikel untuk acara ini.</p>
+          ) : (
+            <ul className="flex flex-col gap-1.5">
+              {eventArticles.map((a) => (
+                <li key={a.id}>
+                  <a
+                    href={`/console/content/news/${a.id}`}
+                    className="flex items-center justify-between gap-3 rounded-lg border border-outline-variant bg-surface-container-lowest px-4 py-2.5 hover:bg-surface-container-low transition-colors"
+                  >
+                    <span className="text-body-md text-on-background truncate">{a.title}</span>
+                    <span className="text-label-caps uppercase tracking-wide text-on-surface-variant shrink-0">
+                      {{ draft: "Draf", published: "Tayang", archived: "Arsip" }[a.status] ?? a.status}
+                    </span>
+                  </a>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
       </CollapsibleSection>
       )}
 

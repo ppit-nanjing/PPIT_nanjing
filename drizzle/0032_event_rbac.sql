@@ -32,3 +32,8 @@ ALTER TABLE "event_registrations"
 
 ALTER TABLE "event_committee"
   ADD COLUMN IF NOT EXISTS "checked_in_by" uuid REFERENCES "users"("id");
+
+-- Artikel berita yang meliput sebuah acara — ditulis panitia lewat grant
+-- "Post artikel" divisi. NULL = berita kabinet biasa.
+ALTER TABLE "news_articles"
+  ADD COLUMN IF NOT EXISTS "event_id" uuid REFERENCES "events"("id") ON DELETE SET NULL;

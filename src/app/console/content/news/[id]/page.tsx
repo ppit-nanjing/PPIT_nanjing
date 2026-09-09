@@ -1,8 +1,10 @@
 import { and, count, eq } from "drizzle-orm";
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
+import { auth } from "@/auth";
 import { db } from "@/db";
 import { newsArticles, users } from "@/db/schema";
-import { requireModuleAccess } from "@/lib/admin-scope";
+import { hasModuleAccess } from "@/lib/admin-scope";
+import { getEventAccess } from "@/lib/event-access";
 import { emailSenderStatus } from "@/lib/email";
 import { upsertNewsArticle, setNewsArticleStatus } from "@/app/actions/admin-content";
 import { NewsArticleForm } from "@/components/console/news-article-form";
@@ -19,10 +21,23 @@ const STATUS_LABEL: Record<string, string> = {
 };
 
 export default async function EditNewsArticlePage({ params }: { params: Promise<{ id: string }> }) {
-  await requireModuleAccess("content");
   const { id } = await params;
   const [article] = await db.select().from(newsArticles).where(eq(newsArticles.id, id));
   if (!article) notFound();
+
+  // Modul Konten kabinet ATAU panitia dengan grant "Post artikel" untuk acara
+  // yang artikel ini liput.
+  const session = await auth();
+  if (!session) redirect("/login");
+  let allowed = hasModuleAccess(session.user.adminScope ?? null, "content");
+  if (!allowed && article.eventId) {
+    allowed = (await getEventAccess(article.eventId)).can("event.postArticle");
+  }
+  if (!allowed) redirect("/console");
+  const backHref =
+    !hasModuleAccess(session.user.adminScope ?? null, "content") && article.eventId
+      ? `/console/events/${article.eventId}`
+      : "/console/content";
   const [{ value: subscriberCount }] = await db
     .select({ value: count() })
     .from(users)
@@ -34,10 +49,10 @@ export default async function EditNewsArticlePage({ params }: { params: Promise<
     <div className="px-4 py-6 sm:px-6 lg:px-8 lg:py-10 max-w-2xl">
       <div className="flex items-center justify-between gap-3 mb-4">
         <Link
-          href="/console/content"
+          href={backHref}
           className="inline-flex items-center gap-2 text-label-caps uppercase tracking-wide text-on-surface-variant hover:text-on-background"
         >
-          <ArrowLeft size={16} /> Kembali ke Konten
+          <ArrowLeft size={16} /> Kembali
         </Link>
         {article.status === "published" && (
           <a
@@ -101,6 +116,7 @@ export default async function EditNewsArticlePage({ params }: { params: Promise<
         subscriberCount={subscriberCount}
         emailReady={emailStatus === "ready"}
         submitLabel="Simpan Perubahan"
+        eventId={article.eventId ?? undefined}
       />
     </div>
   );
