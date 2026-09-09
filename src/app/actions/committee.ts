@@ -144,6 +144,7 @@ export async function takeOverEvent(formData: FormData) {
 
 export async function addEventCredit(formData: FormData) {
   const eventId = String(formData.get("eventId") ?? "");
+  if (!eventId) throw new Error("Acara wajib dipilih");
   const { session } = await requireEventCapability(eventId, "event.editCredits");
   const userId = String(formData.get("userId") ?? "").trim() || null;
   const roleLabel = String(formData.get("roleLabel") ?? "").trim() || null;
@@ -171,6 +172,7 @@ export async function addEventCredit(formData: FormData) {
 
 export async function removeEventCredit(formData: FormData) {
   const id = String(formData.get("id") ?? "");
+  if (!id) return;
   const [row] = await db
     .select({ eventId: eventCredits.eventId, displayName: eventCredits.displayName })
     .from(eventCredits)
