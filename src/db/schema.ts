@@ -225,6 +225,9 @@ export const sensusProfiles = pgTable("sensus_profiles", {
 
   // BIODATA
   fullName: text("full_name"),
+  // Nama Mandarin (中文名) — diminta form chapter "Sensus PPIT Nanjing", form
+  // PPI Tiongkok pusat tidak. Tetap opsional (form chapter: "isi kalau punya").
+  mandarinName: text("mandarin_name"),
   // UNIQUE: satu orang = satu baris sensus, ditegakkan lewat nomor paspor.
   // `user_id` yang unik saja tidak cukup — satu orang bisa punya dua akun
   // Google (pribadi + kampus), mengisi sensus dua kali, lalu terhitung dua
@@ -245,14 +248,32 @@ export const sensusProfiles = pgTable("sensus_profiles", {
   university: text("university"),
   degreeLevel: text("degree_level"),
   major: text("major"),
+  // Bahasa pengantar kuliah (Chinese-taught / English-taught / Hybrid) &
+  // kemampuan Mandarin (skala HSK 1–9) — form chapter Nanjing menandainya wajib
+  // (REQUIRED_BY_STEP), form pusat tidak punya field ini. Kolom nullable hanya
+  // untuk baris sensus lama yang diisi sebelum field ini ada.
+  mediumOfInstruction: text("medium_of_instruction"),
+  mandarinAbility: text("mandarin_ability"),
   fundingSource: text("funding_source"),
   entryYear: integer("entry_year"),
   graduationYear: integer("graduation_year"),
 
   // KONTAK
+  // Email aktif yang ditulis manual — form chapter Nanjing memintanya terpisah
+  // dari email akun (form pusat tidak punya field email sama sekali) dan
+  // menandainya wajib (REQUIRED_BY_STEP).
+  activeEmail: text("active_email"),
   wechatId: text("wechat_id"),
   phoneActive: text("phone_active"),
   whatsappNumber: text("whatsapp_number"),
+
+  // PENANGANAN DARURAT — blok dari form chapter "Sensus PPIT Nanjing". Form PPI
+  // Tiongkok pusat tidak memintanya, tapi form chapter menandai keduanya wajib,
+  // jadi masuk REQUIRED_BY_STEP (form chapter = superset form pusat). Rekap ke
+  // pusat tetap hanya membaca kolom form pusat. Kolom nullable hanya untuk baris
+  // sensus lama.
+  emergencyContact: text("emergency_contact"),
+  chinaAddress: text("china_address"),
 
   // Dokumen bukti & persetujuan
   // Kartu Tanda Mahasiswa - bukti mahasiswa aktif di Tiongkok (pengganti foto
@@ -286,7 +307,7 @@ export const departments = pgTable("departments", {
   // bisa pegang full akses juga" - they build/maintain the system).
   grantsFullAdminAccess: boolean("grants_full_admin_access").notNull().default(false),
   // Admin module keys this department's 'scoped' members can access, e.g. ["events"],
-  // ["sensus", "content"], ["inventory"]. Inferred from each division's stated duties in
+  // ["content", "gallery"], ["inventory"]. Inferred from each division's stated duties in
   // the recruitment guidebook - confirm/adjust with PPIT Nanjing before enforcing in prod.
   adminModuleScope: text("admin_module_scope").array().notNull().default([]),
 });
@@ -479,6 +500,9 @@ export const eventRegistrations = pgTable(
     // NULL = pendaftaran lama, sebelum pertanyaan ini ada.
     branch: text("branch"),
     checkedInAt: timestamp("checked_in_at"),
+    // Petugas (akun) yang men-scan / menandai hadir. Tiap petugas pakai akunnya
+    // sendiri supaya waktu kehadiran bisa ditelusuri ke orangnya.
+    checkedInBy: uuid("checked_in_by").references((): AnyPgColumn => users.id),
     // Pembayaran: peserta mengunggah bukti, bendahara acara memverifikasi.
     paymentStatus: paymentStatusEnum("payment_status").notNull().default("not_required"),
     paymentProofUrl: text("payment_proof_url"),
@@ -599,6 +623,11 @@ export const newsArticles = pgTable("news_articles", {
   // tabs (Goal.md Tier 1 #12), same pattern as events.category.
   category: text("category"),
   authorId: uuid("author_id").references(() => users.id),
+  // Acara yang artikel ini liput — NULL untuk berita kabinet biasa. Terisi kalau
+  // artikelnya ditulis panitia lewat grant "Post artikel" divisi; grant itu
+  // hanya mengizinkan artikel dengan eventId = acara mereka. onDelete set null:
+  // acara dihapus, artikelnya tetap ada sebagai berita lepas.
+  eventId: uuid("event_id").references(() => events.id, { onDelete: "set null" }),
   status: publishStatusEnum("status").notNull().default("draft"),
   publishedAt: timestamp("published_at"),
 });
@@ -1202,11 +1231,14 @@ export const donationChannels = pgTable("donation_channels", {
 // divisi inilah sebutan lengkapnya terbentuk: "ketua" + divisi "Perlengkapan"
 // = Ketua Departemen Perlengkapan; "ketua" tanpa divisi = Ketua Pelaksana.
 //
-// CATATAN: "humas", "acara", "logistik", dan "dokumentasi" sudah tidak relevan
-// sejak `eventDivisions` ada — itu nama DIVISI, bukan peran, dan sekarang
-// tempatnya di sana sebagai teks bebas. Nilainya sengaja tidak dihapus: baris
-// lama mungkin memakainya, dan menghapus nilai enum di Postgres berarti membuat
-// ulang seluruh tipenya. Jangan dipakai untuk penugasan baru.
+// `role` menentukan TINGKAT akses konsol per-acara (lihat src/lib/event-access.ts
+// + event-capabilities.ts): ketua/wakil/sekretaris/supervisor = BPH Panitia
+// (semua fitur acaranya); selain itu = panitia biasa (fitur dasar saja). Fitur
+// KHUSUS (scan, sertifikat, galeri, keuangan, pinjam aset, artikel) dicentang
+// per divisi di `eventDivisions.grantedCapabilities`, bukan lewat peran.
+// "humas"/"acara"/"logistik"/"dokumentasi" = label peran fungsional untuk
+// tampilan + sertifikat, tidak memberi akses ekstra sendiri. "anggota" = panitia
+// biasa.
 export const eventCommitteeRoleEnum = pgEnum("event_committee_role", [
   "ketua",
   "wakil",
@@ -1256,6 +1288,12 @@ export const eventDivisions = pgTable("event_divisions", {
   // tidak bisa membukanya di portal.
   jobDescription: text("job_description"),
   orderIndex: integer("order_index").notNull().default(0),
+  // Kapabilitas khusus yang dicentang BPH Panitia untuk divisi ini — subset dari
+  // GRANTABLE_CAPABILITIES (src/lib/event-capabilities.ts): "event.issueCertificates",
+  // "event.manageGallery", "event.manageFinance", "event.borrowAssets",
+  // "event.postArticle", "event.scanAttendance". Semua anggota divisi ikut dapat.
+  // [] = anggotanya hanya fitur dasar.
+  grantedCapabilities: text("granted_capabilities").array().notNull().default([]),
 });
 
 export const eventCommittee = pgTable(
@@ -1269,10 +1307,9 @@ export const eventCommittee = pgTable(
     // onDelete "set null": menghapus divisi tidak boleh ikut menghapus catatan
     // bahwa orangnya pernah jadi panitia acara itu.
     divisionId: uuid("division_id").references((): AnyPgColumn => eventDivisions.id, { onDelete: "set null" }),
-    // Peran DI DALAM divisinya. Digabung dengan nama divisi, inilah yang
-    // membentuk sebutan lengkapnya: "ketua" + divisi "Perlengkapan" =
-    // Ketua Departemen Perlengkapan. Karena itu enumnya tidak perlu memuat
-    // tiap kombinasi jabatan-kali-divisi.
+    // Peran fungsional orang ini di kepanitiaan acara — DAN kunci hak akses
+    // konsol untuk acara ini (src/lib/event-access.ts). `divisionId` di atas
+    // hanya menempatkannya di bagan; `role` yang menentukan dia bisa apa.
     role: eventCommitteeRoleEnum("role").notNull().default("anggota"),
     // Catatan tugas spesifik, mis. "PJ konsumsi". Bebas supaya tidak perlu
     // menambah enum tiap kali ada peran baru.
@@ -1285,10 +1322,30 @@ export const eventCommittee = pgTable(
     // otomatis tercakup.
     attendanceToken: text("attendance_token").unique(),
     checkedInAt: timestamp("checked_in_at"),
+    // Petugas Pendataan (akun) yang men-scan tiket kepanitiaan ini.
+    checkedInBy: uuid("checked_in_by").references((): AnyPgColumn => users.id),
   },
   // Satu orang satu peran per acara; ganti peran = update, bukan baris baru.
   (t) => [uniqueIndex("event_committee_unique").on(t.eventId, t.userId)],
 );
+
+// Kredit / arsip kepanitiaan — FITUR TERPISAH dari event_committee (Spesifikasi
+// §10). Diisi Sekretaris saat LPJ sebagai daftar "siapa saja panitianya" untuk
+// ditampilkan di halaman acara publik. Mengisi baris di sini TIDAK memberi akses
+// apa pun — event_committee yang mengatur akses selama acara berjalan; ini murni
+// tampilan. `userId` opsional (boleh nama bebas untuk orang tanpa akun);
+// `displayName` selalu terisi sebagai snapshot supaya kreditnya utuh walau akun
+// dihapus.
+export const eventCredits = pgTable("event_credits", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  eventId: uuid("event_id").notNull().references(() => events.id, { onDelete: "cascade" }),
+  userId: uuid("user_id").references(() => users.id, { onDelete: "set null" }),
+  displayName: text("display_name").notNull(),
+  // Label peran bebas untuk tampilan, mis. "Ketua Pelaksana", "Divisi Acara".
+  roleLabel: text("role_label"),
+  orderIndex: integer("order_index").notNull().default(0),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
 
 // Sertifikat tidak dibuat otomatis: file-nya diunggah/dibuat di luar aplikasi,
 // di sini hanya dicatat + ditautkan. `fileUrl` boleh berupa tautan Google Drive

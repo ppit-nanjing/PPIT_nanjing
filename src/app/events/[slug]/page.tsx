@@ -2,19 +2,20 @@ import { eq, and, ne, count, desc } from "drizzle-orm";
 import { notFound } from "next/navigation";
 import { auth } from "@/auth";
 import { db } from "@/db";
-import { events, eventRegistrations, eventDivisions, eventCommittee, galleryAlbums, galleryPhotos } from "@/db/schema";
+import { events, eventRegistrations, eventDivisions, eventCommittee, eventCredits, galleryAlbums, galleryPhotos } from "@/db/schema";
 import { SiteNav } from "@/components/site-nav";
 import { SiteFooter } from "@/components/site-footer";
 import { AnimatedHeroHeading } from "@/components/animated-hero-heading";
 import { Reveal } from "@/components/reveal";
 import { EventCard } from "@/components/event-card";
 import { GalleryLightbox } from "@/components/gallery-lightbox";
-import { CalendarDays, MapPin, Users, Ticket, ArrowLeft, ListChecks, Images, ArrowRight, CalendarX, PartyPopper, BadgeCheck, PlayCircle, FolderOpen } from "lucide-react";
+import { CalendarDays, MapPin, Users, Ticket, ArrowLeft, ListChecks, Images, ArrowRight, CalendarX, PartyPopper, BadgeCheck, PlayCircle, FolderOpen, ScanLine, SlidersHorizontal } from "lucide-react";
 import Image from "next/image";
 import { Select } from "@/components/console/form";
 import { EventThemeStyle } from "@/components/events/event-theme-style";
 import Link from "next/link";
 import { applyAsVolunteer } from "@/app/actions/volunteers";
+import { getEventAccess } from "@/lib/event-access";
 import { getT } from "@/lib/i18n/server";
 import { INTL_LOCALE } from "@/lib/i18n/config";
 
@@ -73,6 +74,17 @@ export default async function EventDetailPage({ params, searchParams }: { params
     if (committee) myCommitteeRole = { divisionName: committee.divisionName, role: committee.role };
   }
 
+  // Akses panitia untuk acara ini (scanner + tautan ke konsol). getEventAccess
+  // memakai auth() yang sudah di-cache; satu lookup peran+grant tambahan.
+  const eventAccess = session?.user?.id ? await getEventAccess(event.id) : null;
+  const canScan = eventAccess?.can("event.scanAttendance") ?? false;
+  // "Kelola di Konsol" untuk siapa pun yang bisa masuk /console/events/[id]:
+  // BPH Kabinet, pemegang modul "events", atau panitia acara ini (mana pun
+  // perannya — console/layout.tsx sudah dilonggarkan untuk kepanitiaan).
+  const hasEventConsoleAccess =
+    !!eventAccess &&
+    (eventAccess.isFullAdmin || eventAccess.moduleBridge || eventAccess.role != null);
+
   const now = new Date();
   const deadlinePassed = event.registrationDeadline ? new Date(event.registrationDeadline) < now : false;
   const isFull = event.capacity != null && registeredCount >= event.capacity;
@@ -102,6 +114,20 @@ export default async function EventDetailPage({ params, searchParams }: { params
   const [album] = await db.select().from(galleryAlbums).where(eq(galleryAlbums.eventId, event.id));
   const photos = album
     ? await db.select().from(galleryPhotos).where(and(eq(galleryPhotos.albumId, album.id), eq(galleryPhotos.isHighlight, true))).limit(4)
+    : [];
+
+  // Kredit / arsip kepanitiaan (Spesifikasi §10) — daftar TAMPILAN diisi
+  // Sekretaris saat LPJ. Muncul hanya setelah acara; tidak terkait akses.
+  const credits = isPast
+    ? await db
+        .select({
+          id: eventCredits.id,
+          displayName: eventCredits.displayName,
+          roleLabel: eventCredits.roleLabel,
+        })
+        .from(eventCredits)
+        .where(eq(eventCredits.eventId, event.id))
+        .orderBy(eventCredits.orderIndex, eventCredits.createdAt)
     : [];
 
   const related = await db
@@ -360,11 +386,57 @@ export default async function EventDetailPage({ params, searchParams }: { params
                   </Reveal>
                 );
               })()}
+
+              {credits.length > 0 && (
+                <Reveal>
+                  <section>
+                    <h2 className="mb-6 flex items-center gap-2 text-headline-md text-on-background">
+                      <Users className="text-primary-container" size={20} /> {t("events.committee")}
+                    </h2>
+                    <ul className="flex flex-col gap-2">
+                      {credits.map((c) => (
+                        <li
+                          key={c.id}
+                          className="flex flex-wrap items-baseline gap-x-3 gap-y-0.5 border-b border-outline-variant/50 pb-2 last:border-0"
+                        >
+                          <span className="text-body-md text-on-background">{c.displayName}</span>
+                          {c.roleLabel && (
+                            <span className="text-label-caps uppercase tracking-wide text-on-surface-variant">
+                              {c.roleLabel}
+                            </span>
+                          )}
+                        </li>
+                      ))}
+                    </ul>
+                  </section>
+                </Reveal>
+              )}
             </div>
 
             <div className="lg:col-span-4">
               <Reveal>
                 <div className="evt-tintcard sticky top-24 flex flex-col gap-5 rounded-lg border border-outline-variant bg-surface-container-low p-6">
+                {(canScan || hasEventConsoleAccess) && (
+                  <div className="flex flex-col gap-2 rounded-lg border border-outline-variant bg-surface-container-lowest p-4">
+                    <p className="text-label-caps uppercase tracking-wide text-on-surface-variant">Panitia</p>
+                    {canScan && (
+                      <Link
+                        href={`/events/${slug}/scan`}
+                        className="inline-flex items-center justify-center gap-2 bg-primary-container text-on-primary text-label-caps uppercase tracking-wide px-4 py-3 rounded-md hover:bg-primary transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-container focus-visible:ring-offset-2 focus-visible:ring-offset-surface-container-lowest"
+                      >
+                        <ScanLine size={16} aria-hidden="true" /> Buka Scanner Check-in
+                      </Link>
+                    )}
+                    {hasEventConsoleAccess && (
+                      <Link
+                        href={`/console/events/${event.id}`}
+                        className="inline-flex items-center justify-center gap-2 border border-outline-variant text-on-background text-label-caps uppercase tracking-wide px-4 py-3 rounded-md hover:bg-surface-container-low transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-container focus-visible:ring-offset-2 focus-visible:ring-offset-surface-container-lowest"
+                      >
+                        <SlidersHorizontal size={16} aria-hidden="true" /> Kelola di Konsol
+                      </Link>
+                    )}
+                  </div>
+                )}
                 {event.startAt && (
                   <div className="flex items-start gap-3">
                     <CalendarDays className="text-primary-container shrink-0 mt-0.5" size={18} aria-hidden="true" />

@@ -17,12 +17,17 @@ type Reservation = {
 
 export function ReservationManager({
   items,
-  events,
+  events = [],
   reservations,
+  lockedEventId,
 }: {
   items: Opt[];
-  events: Opt[];
+  events?: Opt[];
   reservations: Reservation[];
+  // Kalau diset: form ini selalu untuk acara ini (dipakai di halaman konsol
+  // acara oleh Divisi Logistik dengan grant "Pinjam aset"). Dropdown acara
+  // disembunyikan.
+  lockedEventId?: string;
 }) {
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
@@ -58,7 +63,8 @@ export function ReservationManager({
         <p className="text-label-caps uppercase tracking-wide text-primary-container">
           <Plus size={14} className="inline -mt-0.5" /> Reservasi baru
         </p>
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+        {lockedEventId && <input type="hidden" name="eventId" value={lockedEventId} />}
+        <div className={`grid grid-cols-1 gap-3 ${lockedEventId ? "" : "sm:grid-cols-2"}`}>
           <Select name="itemId" defaultValue="" required aria-label="Barang" className="w-full">
             <option value="" disabled>
               Pilih barang *
@@ -69,19 +75,21 @@ export function ReservationManager({
               </option>
             ))}
           </Select>
-          <Select name="eventId" defaultValue="" aria-label="Acara terkait" className="w-full">
-            <option value="">Tautkan ke acara (opsional)</option>
-            {events.map((e) => (
-              <option key={e.id} value={e.id}>
-                {e.name}
-              </option>
-            ))}
-          </Select>
+          {!lockedEventId && (
+            <Select name="eventId" defaultValue="" aria-label="Acara terkait" className="w-full">
+              <option value="">Tautkan ke acara (opsional)</option>
+              {events.map((e) => (
+                <option key={e.id} value={e.id}>
+                  {e.name}
+                </option>
+              ))}
+            </Select>
+          )}
         </div>
         <input
           name="reason"
           required
-          placeholder="Alasan / nama acara * — mis. WIF 2026"
+          placeholder="Alasan / keperluan * — mis. sound system panggung utama"
           className="rounded-md bg-soft-gray p-2.5 text-body-md"
         />
         <div className="grid grid-cols-2 gap-3">

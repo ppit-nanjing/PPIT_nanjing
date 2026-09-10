@@ -9,6 +9,7 @@ import { cookies } from "next/headers";
 import { db } from "@/db";
 import { users, accounts, sessions, verificationTokens } from "@/db/schema";
 import { verifyPassword } from "@/lib/password";
+import { isRantingBphRole, rantingCodeFromRoleName, type RantingCode } from "@/lib/rantings";
 
 // Best-effort brute-force throttle for the email/password path. NOTE: this is an
 // in-memory Map per function instance, so on Vercel (multiple Lambda instances)
@@ -53,6 +54,10 @@ function getRememberMePreference(user: unknown): boolean | undefined {
 // - accessTier 'scoped' (Anggota Divisi) -> only the module keys listed in the union of
 //   their department(s)' adminModuleScope arrays.
 // - accessTier 'advisory' (Dewan Pembina) or no role/department -> no admin access.
+// - a ranting role ("[INA]/[JIA] BPH Ranting") -> the single "sensus-ranting" key
+//   (own-campus census summary only, see src/lib/rantings.ts); "[INA]/[JIA]
+//   Anggota Ranting" -> no access. These are matched by role NAME and take
+//   precedence over accessTier.
 //
 // Perf: this used to be three sequential awaited helpers (resolveAdminScope's two
 // queries + emailSubscribed + locale = 4 round trips) and it runs inside the session
@@ -60,6 +65,7 @@ function getRememberMePreference(user: unknown): boolean | undefined {
 // to ap-southeast-1, so all four reads are fused into one joined SELECT here.
 type SessionContext = {
   accessTier: string | null;
+  roleName: string | null;
   emailSubscribed: boolean | null;
   locale: string | null;
   memberships: { grants: boolean; scope: string[] }[];
@@ -68,6 +74,7 @@ type SessionContext = {
 async function loadSessionContext(userId: string): Promise<SessionContext | null> {
   const result = await db.execute<SessionContext>(sql`
     select r.access_tier as "accessTier",
+           r.name as "roleName",
            u.email_subscribed as "emailSubscribed",
            u.locale as "locale",
            coalesce(
@@ -87,6 +94,12 @@ async function loadSessionContext(userId: string): Promise<SessionContext | null
 }
 
 function resolveAdminScope(ctx: SessionContext): "full" | string[] | null {
+  // Ranting roles are matched by name and win over everything else: a "[INA] BPH
+  // Ranting" gets exactly the own-campus census summary, an "[INA] Anggota
+  // Ranting" gets nothing until a full admin assigns them a different role.
+  if (rantingCodeFromRoleName(ctx.roleName)) {
+    return isRantingBphRole(ctx.roleName) ? ["sensus-ranting"] : null;
+  }
   if (ctx.accessTier === "full" || ctx.memberships.some((m) => m.grants)) return "full";
   if (ctx.accessTier !== "scoped") return null;
   const scope = [...new Set(ctx.memberships.flatMap((m) => m.scope))];
@@ -230,6 +243,9 @@ const { handlers, auth: uncachedAuth, signIn, signOut } = NextAuth({
       const scope = ctx ? resolveAdminScope(ctx) : null;
       session.user.adminScope = scope;
       session.user.isAdmin = scope === "full" || (Array.isArray(scope) && scope.length > 0);
+      // Which ranting a ranting-role user belongs to; null for everyone else.
+      // Drives the campus filter on /console/ranting/sensus.
+      session.user.rantingCode = (rantingCodeFromRoleName(ctx?.roleName) as RantingCode | null) ?? null;
       session.user.emailSubscribed = ctx?.emailSubscribed ?? null;
       // Locale fallback only - see the cookie-wins-over-session note in
       // src/lib/i18n/server.ts.

@@ -2,9 +2,11 @@
 
 import { and, eq, ne } from "drizzle-orm";
 import { redirect } from "next/navigation";
+import { revalidatePath } from "next/cache";
 import { auth } from "@/auth";
+import { requireModuleAccess } from "@/lib/admin-scope";
 import { db } from "@/db";
-import { sensusProfiles } from "@/db/schema";
+import { auditLogs, sensusProfiles } from "@/db/schema";
 import { validateSensus, type SensusInput, type SensusIssue } from "@/lib/sensus-form";
 
 // Tipe & aturan validasinya ada di src/lib/sensus-form.ts — berkas "use server"
@@ -14,6 +16,7 @@ import { validateSensus, type SensusInput, type SensusIssue } from "@/lib/sensus
 function toValues(input: SensusInput) {
   return {
     fullName: input.fullName || null,
+    mandarinName: input.mandarinName || null,
     passportNumber: input.passportNumber || null,
     gender: input.gender || null,
     passportExpiry: input.passportExpiry || null,
@@ -24,12 +27,17 @@ function toValues(input: SensusInput) {
     university: input.university || null,
     degreeLevel: input.degreeLevel || null,
     major: input.major || null,
+    mediumOfInstruction: input.mediumOfInstruction || null,
+    mandarinAbility: input.mandarinAbility || null,
     fundingSource: input.fundingSource || null,
     entryYear: input.entryYear ? Number(input.entryYear) : null,
     graduationYear: input.graduationYear ? Number(input.graduationYear) : null,
+    activeEmail: input.activeEmail || null,
     wechatId: input.wechatId || null,
     phoneActive: input.phoneActive || null,
     whatsappNumber: input.whatsappNumber || null,
+    emergencyContact: input.emergencyContact || null,
+    chinaAddress: input.chinaAddress || null,
     studentCardUrl: input.studentCardUrl || null,
     agreeTerms: Boolean(input.agreeTerms),
     subscribeNewsletter: Boolean(input.subscribeNewsletter),
@@ -119,4 +127,135 @@ export async function saveSensusStep(input: SensusInput): Promise<{ savedAt: str
     .onConflictDoUpdate({ target: sensusProfiles.userId, set: values });
 
   return { savedAt: values.updatedAt.toISOString() };
+}
+
+// ---------- Onboarding / first-login partial census save ----------
+// Menyimpan sebagian field dari modal onboarding supaya baris sensus sudah ada
+// dan bisa dilanjutkan dari /sensus. MERGE, bukan replace: hanya field yang
+// benar-benar diisi yang ditulis — tidak pernah mengosongkan progres /sensus
+// yang mungkin sudah ada. Tidak menyentuh completionStatus (baris baru =
+// "incomplete" lewat default kolom; baris lama biarkan apa adanya).
+const ONBOARDING_SENSUS_FIELDS = [
+  "fullName",
+  "branch",
+  "activeEmail",
+  "wechatId",
+  "whatsappNumber",
+] as const satisfies readonly (keyof SensusInput)[];
+
+export async function saveOnboardingSensus(
+  input: Partial<SensusInput>
+): Promise<{ savedAt: string } | { error: string }> {
+  const session = await auth();
+  if (!session?.user?.id) return { error: "unauthenticated" };
+
+  const patch: Partial<Record<(typeof ONBOARDING_SENSUS_FIELDS)[number], string>> = {};
+  for (const field of ONBOARDING_SENSUS_FIELDS) {
+    const value = String(input[field] ?? "").trim();
+    if (value) patch[field] = value;
+  }
+  const now = new Date();
+  if (Object.keys(patch).length === 0) return { savedAt: now.toISOString() };
+
+  const [existing] = await db
+    .select({ id: sensusProfiles.id })
+    .from(sensusProfiles)
+    .where(eq(sensusProfiles.userId, session.user.id));
+
+  if (existing) {
+    await db
+      .update(sensusProfiles)
+      .set({ ...patch, updatedAt: now })
+      .where(eq(sensusProfiles.userId, session.user.id));
+  } else {
+    await db
+      .insert(sensusProfiles)
+      .values({ userId: session.user.id, ...patch, completionStatus: "incomplete", updatedAt: now });
+  }
+
+  return { savedAt: now.toISOString() };
+}
+
+// ---------- Admin edit / delete (dari /console/sensus) ----------
+// Sensus tetap milik mahasiswa (diisi lewat /sensus). Ini untuk pengurus
+// pemegang modul "sensus" membetulkan typo / menghapus baris spam-duplikat.
+// Setiap perubahan dicatat ke audit_logs (entity_type "sensus_profile").
+
+const SENSUS_STRING_FIELDS = [
+  "fullName", "mandarinName", "passportNumber", "gender", "passportExpiry", "province", "birthDate",
+  "branch", "studentStatus", "university", "degreeLevel", "major", "mediumOfInstruction",
+  "mandarinAbility", "fundingSource", "entryYear", "graduationYear", "activeEmail", "wechatId",
+  "phoneActive", "whatsappNumber", "emergencyContact", "chinaAddress", "studentCardUrl",
+] as const;
+
+function formToSensusInput(formData: FormData): SensusInput {
+  const input = {} as Record<string, unknown>;
+  for (const f of SENSUS_STRING_FIELDS) input[f] = String(formData.get(f) ?? "").trim();
+  // Kartu mahasiswa tidak diedit sebagai teks - kotak "hapus berkas" saja.
+  if (formData.get("clearStudentCard") === "on") input.studentCardUrl = "";
+  else input.studentCardUrl = String(formData.get("currentStudentCardUrl") ?? "");
+  input.agreeTerms = formData.get("agreeTerms") === "on";
+  input.subscribeNewsletter = formData.get("subscribeNewsletter") === "on";
+  return input as unknown as SensusInput;
+}
+
+export async function updateSensusProfile(formData: FormData): Promise<void> {
+  const session = await requireModuleAccess("sensus");
+  const id = String(formData.get("id") ?? "");
+  if (!id) throw new Error("ID sensus tidak ada");
+
+  const [before] = await db.select().from(sensusProfiles).where(eq(sensusProfiles.id, id));
+  if (!before) throw new Error("Baris sensus tidak ditemukan");
+
+  const input = formToSensusInput(formData);
+
+  // Pre-check paspor supaya pesannya jelas (unique constraint di DB juga
+  // menangkapnya, tapi errornya mentah).
+  if (input.passportNumber && (await passportTakenByAnotherUser(before.userId, input.passportNumber))) {
+    throw new Error("Nomor paspor ini sudah dipakai baris sensus lain");
+  }
+
+  // Admin boleh menyimpan data yang belum lengkap; status dihitung ulang, bukan
+  // dipaksa. Kalau semua field wajib + formatnya benar -> "complete".
+  const issues = validateSensus(input);
+  const completionStatus = issues.length === 0 ? ("complete" as const) : ("incomplete" as const);
+
+  const [after] = await db
+    .update(sensusProfiles)
+    .set({ ...toValues(input), completionStatus, updatedAt: new Date() })
+    .where(eq(sensusProfiles.id, id))
+    .returning();
+
+  await db.insert(auditLogs).values({
+    actorUserId: session.user.id,
+    entityType: "sensus_profile",
+    entityId: id,
+    action: "updated",
+    beforeJson: before,
+    afterJson: after,
+  });
+
+  revalidatePath("/console/sensus");
+  revalidatePath(`/console/sensus/${id}`);
+  redirect(`/console/sensus/${id}`);
+}
+
+export async function deleteSensusProfile(id: string): Promise<void> {
+  const session = await requireModuleAccess("sensus");
+  const [before] = await db.select().from(sensusProfiles).where(eq(sensusProfiles.id, id));
+  if (!before) redirect("/console/sensus");
+
+  await db.delete(sensusProfiles).where(eq(sensusProfiles.id, id));
+
+  await db.insert(auditLogs).values({
+    actorUserId: session.user.id,
+    entityType: "sensus_profile",
+    entityId: id,
+    action: "deleted",
+    beforeJson: before,
+    afterJson: null,
+  });
+
+  revalidatePath("/console/sensus");
+  redirect("/console/sensus");
 }

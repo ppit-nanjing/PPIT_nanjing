@@ -1,8 +1,10 @@
 import { eq } from "drizzle-orm";
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
+import { auth } from "@/auth";
 import { db } from "@/db";
 import { galleryAlbums, galleryPhotos } from "@/db/schema";
-import { requireModuleAccess } from "@/lib/admin-scope";
+import { hasModuleAccess } from "@/lib/admin-scope";
+import { getEventAccess } from "@/lib/event-access";
 import { setAlbumDriveUrl } from "@/app/actions/admin-content";
 import { MultiPhotoUpload } from "@/components/console/multi-photo-upload";
 import { PhotoGrid } from "@/components/console/photo-grid";
@@ -11,19 +13,30 @@ import { ArrowLeft } from "lucide-react";
 import Link from "next/link";
 
 export default async function ConsoleAlbumDetailPage({ params }: { params: Promise<{ albumId: string }> }) {
-  await requireModuleAccess("content");
   const { albumId } = await params;
   const [album] = await db.select().from(galleryAlbums).where(eq(galleryAlbums.id, albumId));
   if (!album) notFound();
+
+  // Modul Konten kabinet ATAU Divisi Dokumentasi acara (grant "Galeri") kalau
+  // album ini tertaut ke acara mereka.
+  const session = await auth();
+  if (!session) redirect("/login");
+  const hasContent = hasModuleAccess(session.user.adminScope ?? null, "content");
+  let allowed = hasContent;
+  if (!allowed && album.eventId) {
+    allowed = (await getEventAccess(album.eventId)).can("event.manageGallery");
+  }
+  if (!allowed) redirect("/console");
+  const backHref = !hasContent && album.eventId ? `/console/events/${album.eventId}` : "/console/content";
   const photos = await db.select().from(galleryPhotos).where(eq(galleryPhotos.albumId, albumId));
 
   return (
     <div className="px-4 py-6 sm:px-6 lg:px-8 lg:py-10 max-w-3xl">
       <Link
-        href="/console/content"
+        href={backHref}
         className="inline-flex items-center gap-2 text-label-caps uppercase tracking-wide text-on-surface-variant hover:text-on-background mb-4"
       >
-        <ArrowLeft size={16} /> Kembali ke Konten
+        <ArrowLeft size={16} /> Kembali
       </Link>
       <h1 className="text-headline-md sm:text-headline-lg text-on-background mb-8">{album.title}</h1>
 

@@ -10,6 +10,10 @@ declare module "next-auth" {
       // module - counts as no access). null = no admin access at all
       // (accessTier 'advisory', or no role/department assigned).
       adminScope: "full" | string[] | null;
+      // Set only for users with a "[INA]/[JIA] …Ranting" role - which campus
+      // sub-branch they belong to. Drives the filter on /console/ranting/sensus.
+      // null for everyone else. See src/lib/rantings.ts.
+      rantingCode: "INA" | "JIA" | null;
       emailSubscribed: boolean | null;
       // Saved language preference, resolved fresh per session() callback call
       // (see resolveLocale() in src/auth.ts). Not the source of truth for

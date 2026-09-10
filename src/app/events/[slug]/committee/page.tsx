@@ -67,7 +67,7 @@ export default async function CommitteeTicketPage({ params }: { params: Promise<
   const host = headerList.get("x-forwarded-host") ?? headerList.get("host");
   const proto = headerList.get("x-forwarded-proto") ?? "https";
   const origin = host ? `${proto}://${host}` : "";
-  const checkInUrl = `${origin}/console/events/${event.id}/scan?t=${encodeURIComponent(token)}`;
+  const checkInUrl = `${origin}/events/${slug}/scan?t=${encodeURIComponent(token)}`;
   const qrDataUrl = await QRCode.toDataURL(checkInUrl, { margin: 1, width: 240 });
 
   const title = `${ROLE_LABEL[assignment.role] ?? assignment.role}${assignment.divisionName ? ` ${assignment.divisionName}` : ""}`;

@@ -45,13 +45,13 @@ export default async function EventTicketPage({ params }: { params: Promise<{ sl
   if (!registration) redirect(`/events/${slug}`);
 
   // Encode an absolute check-in URL (not just the raw token) so any phone camera
-  // can scan it and open the admin scanner directly, which identifies the user.
+  // can scan it and open the scanner directly, which identifies the user.
   const headerList = await headers();
   const host = headerList.get("x-forwarded-host") ?? headerList.get("host");
   const proto = headerList.get("x-forwarded-proto") ?? "https";
   const origin = host ? `${proto}://${host}` : "";
   const token = registration.qrCodeToken ?? registration.id;
-  const checkInUrl = `${origin}/console/events/${event.id}/scan?t=${encodeURIComponent(token)}`;
+  const checkInUrl = `${origin}/events/${event.slug}/scan?t=${encodeURIComponent(token)}`;
 
   const qrDataUrl = await QRCode.toDataURL(checkInUrl, { margin: 1, width: 240 });
 

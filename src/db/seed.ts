@@ -37,6 +37,17 @@ async function main() {
     .values({ name: "Dewan Pembina", accessTier: "advisory", description: "Mengayomi dan mengarahkan organisasi" })
     .returning();
 
+  // Ranting = sub-cabang setingkat kampus (INA @ NUIST, JIA @ JSAHVC). "BPH
+  // Ranting" -> hanya ringkasan sensus kampus sendiri (/console/ranting/sensus,
+  // key "sensus-ranting"); "Anggota Ranting" -> tanpa akses console. Dikenali
+  // lewat NAMA role di resolveAdminScope() (src/auth.ts) - lihat src/lib/rantings.ts.
+  await db.insert(roles).values([
+    { name: "[INA] BPH Ranting", accessTier: "scoped", description: "Pengurus ranting INA (NUIST) — akses ringkasan sensus kampus sendiri" },
+    { name: "[INA] Anggota Ranting", accessTier: "scoped", description: "Anggota ranting INA (NUIST) — tanpa akses console kecuali diberikan BPH pusat" },
+    { name: "[JIA] BPH Ranting", accessTier: "scoped", description: "Pengurus ranting JIA (JSAHVC) — akses ringkasan sensus kampus sendiri" },
+    { name: "[JIA] Anggota Ranting", accessTier: "scoped", description: "Anggota ranting JIA (JSAHVC) — tanpa akses console kecuali diberikan BPH pusat" },
+  ]);
+
   void wakilKetua;
   void sekretarisBph;
   void bendahara;
@@ -101,14 +112,18 @@ async function main() {
     },
   ]);
 
-  // Komunikasi & Media divisions -> Humas explicitly owns Sensus per the guidebook
-  // ("Mengkoordinasikan pelaksanaan sensus dan pemutakhiran data mahasiswa").
+  // Komunikasi & Media divisions -> Humas coordinates the census per the guidebook
+  // ("Mengkoordinasikan pelaksanaan sensus dan pemutakhiran data mahasiswa"), but
+  // the per-person census view exposes raw passport numbers + student cards, so
+  // for now only BPH + Divisi Teknologi (full admins) hold the "sensus" module.
+  // A full admin can tick "Sensus" for this division in /console/organization
+  // once that's wanted (drizzle/0033_sensus_scope_split.sql cleared the old grant).
   await db.insert(departments).values([
     {
       name: "Divisi Hubungan Masyarakat",
       parentDepartmentId: deptKomunikasiMedia.id,
       orderIndex: 0,
-      adminModuleScope: ["sensus", "content"],
+      adminModuleScope: ["content"],
       description: "Kehumasan, publikasi media sosial, koordinasi sensus & pemutakhiran data mahasiswa.",
     },
     {

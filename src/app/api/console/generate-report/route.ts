@@ -16,6 +16,7 @@ import {
 import { hasModuleAccess } from "@/lib/admin-scope";
 import { HOME_BRANCH, MEMBERSHIP_LABEL, membershipStatus } from "@/lib/membership-status";
 import { datasetToCsv, datasetToXlsx, type ReportDataset } from "@/lib/report-export";
+import { SENSUS_EXPORT_COLUMNS_FULL, sensusExportRowFull } from "@/lib/sensus-export";
 
 type ReportType = (typeof reportTypeEnum.enumValues)[number];
 
@@ -38,6 +39,13 @@ export async function GET(request: Request) {
   const format = (url.searchParams.get("format") ?? "csv").toLowerCase();
   if (!reportTypeEnum.enumValues.includes(type as ReportType)) {
     return NextResponse.json({ error: "Jenis laporan tidak valid" }, { status: 400 });
+  }
+  // "Ringkasan Sensus" dumps raw passport numbers + full personal data per
+  // person, so it needs the sensitive "sensus" module, not just "reports"
+  // (which Divisi Usaha Dana holds for fundraising). Other report types stay
+  // on "reports".
+  if (type === "sensus_summary" && !hasModuleAccess(session.user.adminScope, "sensus")) {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
   if (format !== "csv" && format !== "xlsx") {
     return NextResponse.json({ error: "Format tidak didukung (csv|xlsx)" }, { status: 400 });
@@ -177,59 +185,10 @@ export async function GET(request: Request) {
         type,
         generatedAt: now,
         filters,
-        // Kolomnya sengaja field-per-field, urut persis seperti form Sensus PPI
-        // Tiongkok pusat (Biodata → Data Mahasiswa → Kontak). Rekap inilah yang
-        // dipakai pengurus untuk memasukkan data anggota ke sistem pusat, jadi
-        // ringkasan 5 kolom seperti sebelumnya tidak cukup — yang hilang harus
-        // dikejar satu-satu ke tiap anggota.
-        columns: [
-          { header: "Nama Lengkap", key: "fullName" },
-          { header: "Nomor Paspor", key: "passportNumber" },
-          { header: "Jenis Kelamin", key: "gender" },
-          { header: "Tanggal Maksimal Berlaku Paspor", key: "passportExpiry" },
-          { header: "Asal Provinsi", key: "province" },
-          { header: "Tanggal Lahir", key: "birthDate" },
-          { header: "Asal Cabang", key: "branch" },
-          { header: "Status Mahasiswa", key: "studentStatus" },
-          { header: "Nama Universitas", key: "university" },
-          { header: "Jenjang Pendidikan", key: "degreeLevel" },
-          { header: "Jurusan", key: "major" },
-          { header: "Sumber Pembiayaan", key: "fundingSource" },
-          { header: "Tahun Masuk", key: "entryYear" },
-          { header: "Perkiraan Tahun Kelulusan", key: "graduationYear" },
-          { header: "WeChat ID", key: "wechatId" },
-          { header: "Nomor Telepon Aktif", key: "phoneActive" },
-          { header: "Nomor WhatsApp", key: "whatsappNumber" },
-          { header: "Kartu Tanda Mahasiswa", key: "studentCardUrl" },
-          { header: "Setuju S&K", key: "agreeTerms" },
-          { header: "Newsletter", key: "subscribeNewsletter" },
-          { header: "Status", key: "completionStatus" },
-          { header: "Status Keanggotaan", key: "membershipStatus" },
-        ],
-        rows: rows.map((r) => ({
-          fullName: r.fullName,
-          passportNumber: r.passportNumber,
-          gender: r.gender,
-          passportExpiry: r.passportExpiry,
-          province: r.province,
-          birthDate: r.birthDate,
-          branch: r.branch,
-          studentStatus: r.studentStatus,
-          university: r.university,
-          degreeLevel: r.degreeLevel,
-          major: r.major,
-          fundingSource: r.fundingSource,
-          entryYear: r.entryYear,
-          graduationYear: r.graduationYear,
-          wechatId: r.wechatId,
-          phoneActive: r.phoneActive,
-          whatsappNumber: r.whatsappNumber,
-          studentCardUrl: r.studentCardUrl,
-          agreeTerms: r.agreeTerms ? "Ya" : "Tidak",
-          subscribeNewsletter: r.subscribeNewsletter ? "Ya" : "Tidak",
-          completionStatus: r.completionStatus,
-          membershipStatus: MEMBERSHIP_LABEL[membershipStatus(r)],
-        })),
+        // Kolom & pemetaan baris ada di src/lib/sensus-export.ts — dipakai
+        // bersama dengan /api/console/sensus/export supaya tidak menyimpang.
+        columns: SENSUS_EXPORT_COLUMNS_FULL,
+        rows: rows.map(sensusExportRowFull),
       };
       break;
     }

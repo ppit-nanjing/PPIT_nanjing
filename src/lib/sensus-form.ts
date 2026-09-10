@@ -10,6 +10,7 @@
 export interface SensusInput {
   // BIODATA
   fullName: string;
+  mandarinName: string;
   passportNumber: string;
   gender: string;
   passportExpiry: string;
@@ -21,13 +22,20 @@ export interface SensusInput {
   university: string;
   degreeLevel: string;
   major: string;
+  mediumOfInstruction: string;
+  mandarinAbility: string;
   fundingSource: string;
   entryYear: string;
   graduationYear: string;
   // KONTAK
+  activeEmail: string;
   wechatId: string;
   phoneActive: string;
   whatsappNumber: string;
+  // PENANGANAN DARURAT & VERIFIKASI (blok form chapter Nanjing; sebagian wajib —
+  // lihat REQUIRED_BY_STEP)
+  emergencyContact: string;
+  chinaAddress: string;
   // Dokumen & persetujuan
   studentCardUrl: string;
   agreeTerms: boolean;
@@ -41,6 +49,24 @@ export const GENDER_OPTIONS = ["Laki-Laki", "Perempuan"];
 export const STUDENT_STATUS_OPTIONS = ["Mahasiswa Aktif", "Mahasiswa Non-Aktif", "Cuti", "Lulus"];
 export const DEGREE_OPTIONS = ["D3", "S1", "S2", "S3", "Sekolah Bahasa", "Lainnya"];
 export const FUNDING_OPTIONS = ["Self-funded", "Partial Scholarship", "Full Scholarship"];
+
+// Field khusus form chapter "Sensus PPIT Nanjing" (form pusat tidak minta).
+// Nilai yang DISIMPAN adalah string di bawah ini; terjemahan label lihat
+// OPTION_KEYS di sensus-wizard.tsx. "HSK 1".."HSK 9" tampil apa adanya
+// (skala HSK 3.0 memang sampai level 9).
+export const MEDIUM_OF_INSTRUCTION_OPTIONS = ["Chinese-taught", "English-taught", "Hybrid"];
+export const MANDARIN_ABILITY_OPTIONS = [
+  "HSK 1",
+  "HSK 2",
+  "HSK 3",
+  "HSK 4",
+  "HSK 5",
+  "HSK 6",
+  "HSK 7",
+  "HSK 8",
+  "HSK 9",
+  "Belum ada",
+];
 
 // Opsi pelarian di dropdown universitas. Daftar kampus per cabang di
 // `branch_universities` adalah daftar terbaik kita, bukan salinan resmi dropdown
@@ -58,7 +84,8 @@ export function isValidWechatId(value: string): boolean {
 }
 
 // "Nomor Telepon Aktif (+86)" — nomor Tiongkok yang dipakai sehari-hari, jadi
-// hanya +86 yang diterima (form pusat pun mengunci prefiksnya).
+// hanya +86 yang diterima. Opsional (form chapter Nanjing: "jika sudah
+// memiliki") — tapi kalau diisi, prefiksnya dikunci +86.
 export function isValidChinaPhone(value: string): boolean {
   return /^\+86\d{8,13}$/.test(value.trim());
 }
@@ -69,14 +96,29 @@ export function isValidWhatsApp(value: string): boolean {
   return /^\+(62|86)\d{7,15}$/.test(value.trim());
 }
 
+// Email aktif wajib di form chapter Nanjing. Cek bentuk minimal saja (ada "@"
+// dan domain bertitik) — tidak ada verifikasi kirim.
+export function isValidEmail(value: string): boolean {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value.trim());
+}
+
 export function isValidYear(value: string): boolean {
   const n = Number(value);
   return /^\d{4}$/.test(value.trim()) && n >= 1950 && n <= 2100;
 }
 
-// Field wajib per langkah wizard, urutannya sama dengan form pusat. Dipakai dua
-// arah: wizard melompat ke langkah pertama yang belum lengkap, server action
-// menolak submit yang masih bolong.
+// Field wajib per langkah wizard. Dipakai dua arah: wizard melompat ke langkah
+// pertama yang belum lengkap, server action menolak submit yang masih bolong.
+//
+// Isinya = field form PPI Tiongkok pusat + field yang ditandai wajib di form
+// chapter "Sensus PPIT Nanjing" (mediumOfInstruction, mandarinAbility,
+// activeEmail, emergencyContact, chinaAddress). Form chapter adalah superset
+// form pusat, jadi "complete" di sini otomatis lengkap juga untuk rekap ke
+// pusat — rekap tetap hanya membaca kolom milik form pusat.
+//
+// Tetap DI LUAR daftar ini: mandarinName & phoneActive — form chapter tidak
+// menandainya wajib ("isi kalau punya" / "jika sudah memiliki nomor HP aktif
+// di Tiongkok").
 export const REQUIRED_BY_STEP: ReadonlyArray<ReadonlyArray<keyof SensusInput>> = [
   ["fullName", "passportNumber", "gender", "passportExpiry", "province", "birthDate"],
   [
@@ -85,12 +127,14 @@ export const REQUIRED_BY_STEP: ReadonlyArray<ReadonlyArray<keyof SensusInput>> =
     "university",
     "degreeLevel",
     "major",
+    "mediumOfInstruction",
+    "mandarinAbility",
     "fundingSource",
     "entryYear",
     "graduationYear",
     "studentCardUrl",
   ],
-  ["wechatId", "phoneActive", "whatsappNumber", "agreeTerms"],
+  ["activeEmail", "wechatId", "whatsappNumber", "emergencyContact", "chinaAddress", "agreeTerms"],
 ];
 
 export interface SensusIssue {
@@ -99,7 +143,7 @@ export interface SensusIssue {
   // "required" = kosong; sisanya = terisi tapi bentuknya salah.
   // "passportTaken" hanya bisa ditentukan server (perlu lihat baris lain di
   // database), jadi tidak pernah muncul dari validateSensus() di klien.
-  kind: "required" | "wechat" | "phone" | "whatsapp" | "year" | "gradBeforeEntry" | "passportTaken" | "studentCard";
+  kind: "required" | "wechat" | "phone" | "whatsapp" | "email" | "year" | "gradBeforeEntry" | "passportTaken" | "studentCard";
 }
 
 // Semua masalah sekaligus, bukan berhenti di yang pertama, supaya pengisi form
@@ -125,6 +169,9 @@ export function validateSensus(input: SensusInput): SensusIssue[] {
     issues.push({ field: "studentCardUrl", step: 1, kind: "studentCard" });
   }
 
+  if (filled("activeEmail") && !isValidEmail(input.activeEmail)) {
+    issues.push({ field: "activeEmail", step: 2, kind: "email" });
+  }
   if (filled("wechatId") && !isValidWechatId(input.wechatId)) {
     issues.push({ field: "wechatId", step: 2, kind: "wechat" });
   }

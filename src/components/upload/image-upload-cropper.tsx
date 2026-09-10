@@ -2,7 +2,7 @@
 
 import { useRef, useState } from "react";
 import Cropper, { type Area } from "react-easy-crop";
-import { Upload, Loader2, ImageIcon, X, Crop } from "lucide-react";
+import { Upload, Loader2, ImageIcon, X, Crop, FileText } from "lucide-react";
 import { useT } from "@/lib/i18n/client";
 import type { T } from "@/lib/i18n/translate";
 import { readUploadResult } from "./upload-error";
@@ -107,17 +107,33 @@ export function ImageUploadCropper({
     setUploading(true);
     setError(null);
     try {
-      // Site-wide image policy: everything except profile pictures is
-      // re-encoded to WebP client-side; avatars keep their (JPEG) crop output
-      // for maximum compatibility with in-app browsers.
-      const blob = folder === "avatar" ? rawBlob : await compressImage(rawBlob);
-      const ext = blob.type === "image/webp" ? "webp" : blob.type === "image/png" ? "png" : "jpg";
+      // Berkas non-gambar (mis. PDF LOA / kartu mahasiswa di form Sensus) lewat
+      // apa adanya - tidak di-crop, tidak di-re-encode. compressImage() menggambar
+      // ke <canvas>, jadi memanggilnya untuk PDF hanya menghasilkan berkas rusak.
+      //
+      // Site-wide image policy: gambar (kecuali avatar) di-re-encode ke WebP di
+      // sisi klien; avatar menyimpan output crop JPEG-nya untuk kompatibilitas
+      // maksimum dengan in-app browser.
+      const isImage = rawBlob.type.startsWith("image/");
+      const blob = folder === "avatar" || !isImage ? rawBlob : await compressImage(rawBlob);
+      const origExt = filename.match(/\.([A-Za-z0-9]+)$/)?.[1]?.toLowerCase();
+      const ext = !isImage
+        ? origExt ?? "bin"
+        : blob.type === "image/webp"
+          ? "webp"
+          : blob.type === "image/png"
+            ? "png"
+            : "jpg";
       const base = filename.replace(/\.[^.]+$/, "") || "image";
       const fd = new FormData();
       fd.append("file", new File([blob], `${base}-${Date.now()}.${ext}`, { type: blob.type }));
       fd.append("folder", folder);
       const res = await fetch("/api/upload", { method: "POST", body: fd });
       commit(await readUploadResult(res, t));
+      // Sukses: nilai tersimpan (currentValue) jadi sumber tampilan; lepas file
+      // mentahnya supaya tombol "Unggah" manual tidak muncul lagi setelah unggah
+      // otomatis, dan chip nama berkas beralih membaca dari URL hasil unggah.
+      setFile(null);
       if (previewUrl) {
         URL.revokeObjectURL(previewUrl);
         setPreviewUrl(null);
@@ -141,8 +157,10 @@ export function ImageUploadCropper({
     if (previewUrl) URL.revokeObjectURL(previewUrl);
     const url = URL.createObjectURL(f);
     setPreviewUrl(url);
-    if (aspect) {
-      setFile(f);
+    setFile(f);
+    // Crop step hanya untuk gambar dengan aspect rasio; PDF/berkas lain tak
+    // pernah masuk cropper.
+    if (aspect && f.type.startsWith("image/")) {
       setCrop({ x: 0, y: 0 });
       setZoom(1);
       setCropping(true);
@@ -175,6 +193,14 @@ export function ImageUploadCropper({
   // belum ada, supaya dropzone-nya kosong dan mendorong unggah ulang.
   const savedUrl = /^(https?:\/\/|\/api\/|data:)/i.test(currentValue) ? currentValue : "";
   const displayUrl = previewUrl ?? savedUrl;
+  // Berkas non-gambar (PDF LOA dll) tak bisa dirender sebagai <img>. previewUrl
+  // (blob: dari file yang baru dipilih) tak berekstensi, jadi andalkan
+  // file.type; kalau nilainya sudah tersimpan, cek ekstensi di URL-nya.
+  const isNonImage = file
+    ? !file.type.startsWith("image/")
+    : /\.(pdf|docx?|xlsx?|pptx?|txt|csv|zip)(\?|#|$)/i.test(savedUrl);
+  const fileChipName =
+    file?.name ?? decodeURIComponent(savedUrl.split(/[?#]/)[0].split("/").pop() ?? "");
 
   return (
     <div className="flex flex-col gap-2">
@@ -207,9 +233,16 @@ export function ImageUploadCropper({
         }`}
       >
         {displayUrl ? (
-          <div className="flex flex-col items-center gap-1">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={displayUrl} alt={t("upload.preview")} className="max-h-40 rounded-md object-contain border border-outline-variant" />
+          <div className="flex flex-col items-center gap-1 max-w-full">
+            {isNonImage ? (
+              <span className="flex items-center gap-2 rounded-md border border-outline-variant bg-surface-container-lowest px-3 py-2 text-body-sm text-on-background max-w-full">
+                <FileText size={16} className="text-primary-container shrink-0" aria-hidden />
+                <span className="truncate">{fileChipName || t("upload.preview")}</span>
+              </span>
+            ) : (
+              /* eslint-disable-next-line @next/next/no-img-element */
+              <img src={displayUrl} alt={t("upload.preview")} className="max-h-40 rounded-md object-contain border border-outline-variant" />
+            )}
             <span className="text-label-caps text-on-surface-variant">{t("upload.preview")}</span>
             <div className="flex items-center gap-2 mt-1" onClick={(e) => e.stopPropagation()}>
               <button

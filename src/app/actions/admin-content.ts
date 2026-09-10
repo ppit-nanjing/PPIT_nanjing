@@ -7,6 +7,7 @@ import { auth } from "@/auth";
 import { db } from "@/db";
 import { newsArticles, galleryAlbums, galleryPhotos, users } from "@/db/schema";
 import { hasModuleAccess } from "@/lib/admin-scope";
+import { getEventAccess } from "@/lib/event-access";
 import { sendEmail } from "@/lib/email";
 import { renderMembershipEmail, renderMembershipEmailText } from "@/lib/membership-email";
 import { getSiteUrl } from "@/lib/site-url";
@@ -15,6 +16,36 @@ async function requireContentAccess() {
   const session = await auth();
   if (!hasModuleAccess(session?.user?.adminScope ?? null, "content")) throw new Error("Forbidden");
   return session!.user.id;
+}
+
+// Modul Konten kabinet ATAU Divisi Dokumentasi acara dengan grant "Galeri" —
+// tapi hanya untuk album yang tertaut ke acara mereka. Kembalikan actorId.
+async function requireGalleryAlbumAccess(albumId: string): Promise<string> {
+  const session = await auth();
+  if (hasModuleAccess(session?.user?.adminScope ?? null, "content")) return session!.user.id;
+  const [album] = await db.select({ eventId: galleryAlbums.eventId }).from(galleryAlbums).where(eq(galleryAlbums.id, albumId));
+  if (album?.eventId) {
+    const access = await getEventAccess(album.eventId);
+    if (access.can("event.manageGallery")) return access.session!.user.id;
+  }
+  throw new Error("Forbidden");
+}
+
+// Berita: modul Konten kabinet (bebas), ATAU panitia dengan grant "Post artikel"
+// untuk artikel yang `eventId`-nya = acara mereka. `scoped` = jalur panitia:
+// eventId dikunci ke acara itu dan tidak boleh diubah.
+async function resolveNewsAccess(
+  articleEventId: string | null,
+): Promise<{ actorId: string; scoped: boolean }> {
+  const session = await auth();
+  if (hasModuleAccess(session?.user?.adminScope ?? null, "content")) {
+    return { actorId: session!.user.id, scoped: false };
+  }
+  if (articleEventId) {
+    const access = await getEventAccess(articleEventId);
+    if (access.can("event.postArticle")) return { actorId: access.session!.user.id, scoped: true };
+  }
+  throw new Error("Forbidden");
 }
 
 function slugify(title: string) {
@@ -37,7 +68,19 @@ export async function upsertNewsArticle(
   _prev: ContentFormState,
   formData: FormData,
 ): Promise<ContentFormState> {
-  const actorId = await requireContentAccess();
+  const formEventId = String(formData.get("eventId") ?? "").trim() || null;
+
+  // Untuk artikel lama, `eventId`-nya yang menentukan wewenang (bukan yang di
+  // form). Untuk artikel baru, pakai yang di form.
+  let priorEventId: string | null = null;
+  if (existingId) {
+    const [ex] = await db.select({ eventId: newsArticles.eventId }).from(newsArticles).where(eq(newsArticles.id, existingId));
+    priorEventId = ex?.eventId ?? null;
+  }
+  const { actorId, scoped } = await resolveNewsAccess(existingId ? priorEventId : formEventId);
+  // Jalur panitia: eventId terkunci. Jalur konten kabinet: bebas set/lepas.
+  const eventId = scoped ? (existingId ? priorEventId : formEventId) : formEventId;
+
   const title = String(formData.get("title") ?? "").trim();
   const content = String(formData.get("content") ?? "").trim();
   const coverImageUrl = String(formData.get("coverImageUrl") ?? "").trim();
@@ -72,6 +115,7 @@ export async function upsertNewsArticle(
         content: content || null,
         coverImageUrl: coverImageUrl || null,
         category: category || null,
+        eventId,
         status: publish ? "published" : unpublishedStatus,
         publishedAt: publish ? (previousPublishedAt ?? new Date()) : previousPublishedAt,
       })
@@ -86,6 +130,7 @@ export async function upsertNewsArticle(
         content: content || null,
         coverImageUrl: coverImageUrl || null,
         category: category || null,
+        eventId,
         authorId: actorId,
         status: publish ? "published" : "draft",
         publishedAt: publish ? new Date() : null,
@@ -100,7 +145,8 @@ export async function upsertNewsArticle(
   revalidatePath("/console/content");
   revalidatePath("/news");
   revalidatePath(`/news/${article.slug}`);
-  redirect("/console/content");
+  if (eventId) revalidatePath(`/console/events/${eventId}`);
+  redirect(scoped && eventId ? `/console/events/${eventId}` : "/console/content");
 }
 
 // Hard delete - mirrors deleteEvent. For genuine mistakes / duplicates / spam;
@@ -108,16 +154,17 @@ export async function upsertNewsArticle(
 // "archived") instead. authorId has onDelete: no action but nothing references
 // newsArticles, so a plain delete is safe.
 export async function deleteNewsArticle(id: string) {
-  await requireContentAccess();
-  const [row] = await db.select({ slug: newsArticles.slug }).from(newsArticles).where(eq(newsArticles.id, id));
+  const [row] = await db.select({ slug: newsArticles.slug, eventId: newsArticles.eventId }).from(newsArticles).where(eq(newsArticles.id, id));
   // Already gone (double-submit, stale tab) - the goal state is "not there", so
   // just land back on the list instead of a 404.
   if (!row) redirect("/console/content");
+  const { scoped } = await resolveNewsAccess(row.eventId);
   await db.delete(newsArticles).where(eq(newsArticles.id, id));
   revalidatePath("/console/content");
   revalidatePath("/news");
   revalidatePath(`/news/${row.slug}`);
-  redirect("/console/content");
+  if (row.eventId) revalidatePath(`/console/events/${row.eventId}`);
+  redirect(scoped && row.eventId ? `/console/events/${row.eventId}` : "/console/content");
 }
 
 // draft <-> published <-> archived, without touching the article body. Never
@@ -125,17 +172,17 @@ export async function deleteNewsArticle(id: string) {
 // later re-publish via upsertNewsArticle stays silent). publishedAt is kept as
 // history across archive/restore cycles.
 export async function setNewsArticleStatus(formData: FormData) {
-  await requireContentAccess();
   const id = String(formData.get("id") ?? "");
   const status = String(formData.get("status") ?? "");
   if (!id || (status !== "draft" && status !== "published" && status !== "archived")) {
     throw new Error("Permintaan tidak valid.");
   }
   const [before] = await db
-    .select({ slug: newsArticles.slug, publishedAt: newsArticles.publishedAt })
+    .select({ slug: newsArticles.slug, publishedAt: newsArticles.publishedAt, eventId: newsArticles.eventId })
     .from(newsArticles)
     .where(eq(newsArticles.id, id));
   if (!before) notFound();
+  await resolveNewsAccess(before.eventId);
 
   await db
     .update(newsArticles)
@@ -149,6 +196,7 @@ export async function setNewsArticleStatus(formData: FormData) {
   revalidatePath(`/console/content/news/${id}`);
   revalidatePath("/news");
   revalidatePath(`/news/${before.slug}`);
+  if (before.eventId) revalidatePath(`/console/events/${before.eventId}`);
 }
 
 // Fans out to every member who opted in via the profile "Email Subscribed"
@@ -214,6 +262,27 @@ export async function createGalleryAlbum(formData: FormData) {
   redirect(`/console/content/gallery/${album.id}`);
 }
 
+/**
+ * Divisi Dokumentasi acara (grant "Galeri") membuat album foto untuk ACARANYA.
+ * Album langsung tertaut ke acara; album lama yang menunjuk acara ini dilepas
+ * dulu (satu acara satu album, sama seperti updateEventPostReport).
+ */
+export async function createEventGalleryAlbum(formData: FormData) {
+  const eventId = String(formData.get("eventId") ?? "").trim();
+  const title = String(formData.get("title") ?? "").trim();
+  const access = eventId ? await getEventAccess(eventId) : null;
+  if (!access?.can("event.manageGallery")) throw new Error("Forbidden");
+  if (!title) throw new Error("Judul album wajib diisi");
+
+  await db.update(galleryAlbums).set({ eventId: null }).where(eq(galleryAlbums.eventId, eventId));
+  const [album] = await db.insert(galleryAlbums).values({ title, eventId }).returning();
+
+  revalidatePath("/console/content");
+  revalidatePath("/gallery");
+  revalidatePath(`/console/events/${eventId}`);
+  redirect(`/console/content/gallery/${album.id}`);
+}
+
 function isValidHttpUrl(value: string): boolean {
   try {
     const url = new URL(value);
@@ -226,15 +295,21 @@ function isValidHttpUrl(value: string): boolean {
 // Public gallery pages render only highlighted photos; everything else is
 // reached through the album's Drive link. Toggle is per-photo and instant.
 export async function setPhotoHighlight(photoId: string, albumId: string, highlight: boolean) {
-  await requireContentAccess();
-  await db.update(galleryPhotos).set({ isHighlight: highlight }).where(eq(galleryPhotos.id, photoId));
+  await requireGalleryAlbumAccess(albumId);
+  // Scope ke album yang wewenangnya barusan dicek — jalur grant acara hanya
+  // memberi akses ke ALBUM acaranya, foto di album lain tidak boleh ikut kena
+  // lewat photoId yang tidak cocok.
+  await db
+    .update(galleryPhotos)
+    .set({ isHighlight: highlight })
+    .where(and(eq(galleryPhotos.id, photoId), eq(galleryPhotos.albumId, albumId)));
   revalidatePath(`/console/content/gallery/${albumId}`);
   revalidatePath("/gallery");
   revalidatePath(`/gallery/${albumId}`);
 }
 
 export async function setAlbumDriveUrl(albumId: string, formData: FormData) {
-  await requireContentAccess();
+  await requireGalleryAlbumAccess(albumId);
   const driveUrl = String(formData.get("driveUrl") ?? "").trim();
   if (driveUrl && !isValidHttpUrl(driveUrl)) throw new Error("Link Drive tidak valid");
 
@@ -247,7 +322,7 @@ export async function setAlbumDriveUrl(albumId: string, formData: FormData) {
 }
 
 export async function addGalleryPhoto(albumId: string, formData: FormData) {
-  const actorId = await requireContentAccess();
+  const actorId = await requireGalleryAlbumAccess(albumId);
   const imageUrl = String(formData.get("imageUrl") ?? "").trim();
   const caption = String(formData.get("caption") ?? "").trim();
   if (!imageUrl) throw new Error("URL foto wajib diisi");
@@ -298,7 +373,7 @@ function parsePhotoEntries(raw: FormDataEntryValue | null): { imageUrl: string; 
 }
 
 export async function addGalleryPhotos(albumId: string, formData: FormData) {
-  const actorId = await requireContentAccess();
+  const actorId = await requireGalleryAlbumAccess(albumId);
 
   const [album] = await db.select({ id: galleryAlbums.id }).from(galleryAlbums).where(eq(galleryAlbums.id, albumId));
   if (!album) notFound();
@@ -321,16 +396,18 @@ export async function addGalleryPhotos(albumId: string, formData: FormData) {
 // Captions double as alt text on the public gallery - editable per tile so
 // screen readers aren't left with silence.
 export async function updatePhotoCaption(photoId: string, albumId: string, caption: string) {
-  await requireContentAccess();
+  await requireGalleryAlbumAccess(albumId);
   await db
     .update(galleryPhotos)
     .set({ caption: caption.trim() || null })
-    .where(eq(galleryPhotos.id, photoId));
+    .where(and(eq(galleryPhotos.id, photoId), eq(galleryPhotos.albumId, albumId)));
   revalidatePath(`/console/content/gallery/${albumId}`);
 }
 
 export async function deleteGalleryPhoto(photoId: string, albumId: string) {
-  await requireContentAccess();
-  await db.delete(galleryPhotos).where(eq(galleryPhotos.id, photoId));
+  await requireGalleryAlbumAccess(albumId);
+  await db
+    .delete(galleryPhotos)
+    .where(and(eq(galleryPhotos.id, photoId), eq(galleryPhotos.albumId, albumId)));
   revalidatePath(`/console/content/gallery/${albumId}`);
 }

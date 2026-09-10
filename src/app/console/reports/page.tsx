@@ -1,12 +1,13 @@
 import { desc, eq } from "drizzle-orm";
 import { db } from "@/db";
 import { departments, regionalBranches, reports, sensusProfiles, users } from "@/db/schema";
-import { requireModuleAccess } from "@/lib/admin-scope";
+import { hasModuleAccess, requireModuleAccess } from "@/lib/admin-scope";
 import { HOME_BRANCH, MEMBERSHIP_LABEL, membershipStatus } from "@/lib/membership-status";
 import { CollapsibleSection } from "@/components/console/collapsible-section";
 import { GuideButton } from "@/components/console/guide-button";
 import { getGuide } from "@/lib/guides";
-import { Download, Users as UsersIcon, GraduationCap, MapPin, RotateCcw } from "lucide-react";
+import { Download, Users as UsersIcon, GraduationCap, MapPin, RotateCcw, ArrowRight } from "lucide-react";
+import Link from "next/link";
 import { TextField, SelectField, FormActions, primaryBtn } from "@/components/console/form";
 
 const REPORT_TYPE_LABEL: Record<string, string> = {
@@ -27,7 +28,11 @@ function tally(values: (string | null)[]): { label: string; count: number }[] {
 }
 
 export default async function ConsoleReportsPage() {
-  await requireModuleAccess("reports");
+  const session = await requireModuleAccess("reports");
+  // Per-person census data + proof lives on its own page now, behind the
+  // sensitive "sensus" module. Only surface the passport-bearing bits here to
+  // someone who also holds that.
+  const canSensus = hasModuleAccess(session.user.adminScope, "sensus");
   // Perf: all five reads are independent - run them concurrently instead of
   // adding up five serial round trips to the Neon proxy.
   const [allUsers, allSensus, allDepartments, branchRows, recentReports, guide] = await Promise.all([
@@ -55,12 +60,26 @@ export default async function ConsoleReportsPage() {
   const sensusByUser = new Map(allSensus.map((s) => [s.userId, s]));
   const byMembership = tally(allUsers.map((u) => MEMBERSHIP_LABEL[membershipStatus(sensusByUser.get(u.id))]));
 
+  // "Ringkasan Sensus" (kolom nomor paspor dst.) hanya untuk yang punya modul
+  // "sensus"; jenis laporan lain tetap untuk semua pemilik "reports".
+  const reportTypeOptions = Object.entries(REPORT_TYPE_LABEL)
+    .filter(([value]) => canSensus || value !== "sensus_summary")
+    .map(([value, label]) => ({ value, label }));
+
   return (
     <div className="px-4 py-6 sm:px-6 lg:px-8 lg:py-10">
       <div className="flex flex-wrap items-start justify-between gap-3 mb-8">
         <div>
           <h1 className="text-headline-md sm:text-headline-lg text-on-background mb-2">Laporan</h1>
           <p className="text-body-md text-on-surface-variant">Ringkasan sensus dan generator laporan.</p>
+          {canSensus && (
+            <Link
+              href="/console/sensus"
+              className="mt-2 inline-flex items-center gap-1 text-label-caps uppercase tracking-wide text-primary-container hover:text-primary transition-colors"
+            >
+              Lihat data sensus per orang <ArrowRight size={13} aria-hidden />
+            </Link>
+          )}
         </div>
         {guide && <GuideButton title={guide.title} content={guide.content} docSlug="laporan" />}
       </div>
@@ -78,7 +97,7 @@ export default async function ConsoleReportsPage() {
                 label="Jenis Laporan"
                 required
                 defaultValue="student_export"
-                options={Object.entries(REPORT_TYPE_LABEL).map(([value, label]) => ({ value, label }))}
+                options={reportTypeOptions}
               />
               <SelectField
                 name="departmentId"
