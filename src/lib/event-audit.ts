@@ -20,6 +20,8 @@ export type EventAuditAction =
   | "event.status"
   | "event.deleted"
   | "event.takeover"
+  | "registration.cancelled"
+  | "registration.restored"
   | "committee.assigned"
   | "committee.removed"
   | "division.grants"
@@ -61,6 +63,8 @@ export const EVENT_AUDIT_ACTION_LABEL: Record<EventAuditAction, string> = {
   "event.status": "Status acara diubah",
   "event.deleted": "Acara dihapus",
   "event.takeover": "Acara diambil alih BPH",
+  "registration.cancelled": "Pendaftaran peserta dibatalkan",
+  "registration.restored": "Pendaftaran peserta dipulihkan",
   "committee.assigned": "Panitia ditugaskan",
   "committee.removed": "Panitia dikeluarkan",
   "division.grants": "Izin fitur divisi diubah",
