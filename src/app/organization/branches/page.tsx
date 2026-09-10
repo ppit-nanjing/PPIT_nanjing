@@ -2,6 +2,7 @@ import { db } from "@/db";
 import { regionalBranches } from "@/db/schema";
 import { SiteNav } from "@/components/site-nav";
 import { SiteFooter } from "@/components/site-footer";
+import { AnimatedHeroHeading } from "@/components/animated-hero-heading";
 import { MapPin, Map, Users, Phone } from "lucide-react";
 import Link from "next/link";
 import { getT } from "@/lib/i18n/server";
@@ -49,9 +50,10 @@ export default async function RegionalBranchesPage() {
           <span className="text-label-caps text-primary-container tracking-widest uppercase mb-2 block">
             {t("org.spreadKicker")}
           </span>
-          <h1 className="text-display-hero-mobile md:text-display-hero text-on-background mb-4">
-            {t("org.branches.title")}
-          </h1>
+          <AnimatedHeroHeading
+            words={[t("org.branches.title")]}
+            className="text-display-hero-mobile md:text-display-hero text-on-background mb-4"
+          />
           <p className="text-body-lg text-on-surface-variant max-w-2xl mb-6">
             {t("org.branches.intro")}
             {branches.length > 0 && (

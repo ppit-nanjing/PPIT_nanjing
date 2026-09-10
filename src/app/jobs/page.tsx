@@ -3,6 +3,7 @@ import { db } from "@/db";
 import { jobPostings, careerGuideArticles } from "@/db/schema";
 import { SiteNav } from "@/components/site-nav";
 import { SiteFooter } from "@/components/site-footer";
+import { AnimatedHeroHeading } from "@/components/animated-hero-heading";
 import { formatRelativeTime } from "@/lib/format-relative-time";
 import { Briefcase, MapPin, Search, SlidersHorizontal, BookOpen, Users } from "lucide-react";
 import Link from "next/link";
@@ -70,9 +71,10 @@ export default async function JobsPage({
       <SiteNav />
 
       <header className="max-w-2xl mx-auto px-[var(--spacing-container-padding)] pt-16 pb-10 text-center flex flex-col items-center">
-        <h1 className="text-display-hero-mobile md:text-display-hero text-on-background mb-4">
-          {t("jobs.title")}
-        </h1>
+        <AnimatedHeroHeading
+          words={[t("jobs.title")]}
+          className="text-display-hero-mobile md:text-display-hero text-on-background mb-4"
+        />
         <p className="text-body-lg text-on-surface-variant mb-8">
           {t("jobs.subtitle")}
         </p>
@@ -245,7 +247,7 @@ export default async function JobsPage({
           >
             <Users className="text-primary-container shrink-0" size={22} />
             <div>
-              <h3 className="text-body-md font-semibold text-on-background mb-1">Alumni Network Mentorship</h3>
+              <h3 className="text-body-md font-semibold text-on-background mb-1">{t("jobs.mentorshipTitle")}</h3>
               <p className="text-label-caps text-on-surface-variant">{t("jobs.mentorshipDesc")}</p>
             </div>
           </Link>

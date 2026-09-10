@@ -104,15 +104,16 @@ export const en = {
     "News, events, and other content written by the committee still appear in their original language.",
 
   // StatsGrid (home)
-  "stats.activeStudents": "Active Students",
   "stats.coveredCities": "Covered Cities",
-  "stats.estSince": "Established Since",
+  "stats.campuses": "Campuses",
+  "stats.estSince": "Established",
 
   // Home
   "home.hero.words": "Connecting|Indonesian|Students|in|Nanjing",
   "home.hero.subtext":
     "The Nanjing branch of the Indonesia Student Association in China. Since 2008, a home for Indonesian students here to synergize, create, and contribute to the nation.",
   "home.hero.cta": "Explore Events",
+  "home.hero.ctaSecondary": "About PPIT Nanjing",
   "home.quote.text":
     "Thousands of young Indonesians study in this historic city, far from home. PPIT Nanjing exists so no one has to do that alone. The committee, the events, and the student network are here to help you settle in, create, and contribute.",
   "home.quote.author": "Chairman of PPIT Nanjing",
@@ -139,6 +140,15 @@ export const en = {
   "home.city.huaian.blurb": "A historic city in northern Jiangsu, one of PPIT's active branches.",
   "home.city.huaian.detail":
     "Huai'an is a historic city in northern Jiangsu, and one of the branches that keeps PPIT active beyond Nanjing.",
+  "home.city.lianyungang.blurb": "A coastal port city on the far northeast edge of Jiangsu.",
+  "home.city.lianyungang.detail":
+    "Lianyungang sits on the Yellow Sea coast at the eastern end of the Longhai railway. A small group of Indonesian students there stays connected to the PPIT Nanjing network.",
+  "home.city.taizhou.blurb": "A city in central Jiangsu, on the north bank of the Yangtze.",
+  "home.city.taizhou.detail":
+    "Taizhou lies in central Jiangsu, north of the Yangtze between Yangzhou and Nantong. Its Indonesian students take part in PPIT's cross-city activities.",
+  "home.city.yancheng.blurb": "A coastal city in central Jiangsu, the province's largest by area.",
+  "home.city.yancheng.detail":
+    "Yancheng runs along the central Jiangsu coast and is known for its wetland nature reserves. A small Indonesian student community there is part of the PPIT Nanjing network.",
   "home.events.kicker": "Agenda",
   "home.events.title": "Latest Events",
   "home.news.kicker": "Publications",
@@ -165,7 +175,7 @@ export const en = {
   "about.intro":
     "PPIT Nanjing Branch is the student organization for Indonesian students and scholars in Nanjing, and it coordinates with other Indonesian student groups in the city and across China. It dates to 28 October 2008, Youth Pledge Day.",
   "about.coverageText":
-    "PPIT Nanjing also serves Indonesian students in the cities around Nanjing: Xuzhou, Jurong, Ma'anshan, Zhenjiang, and Huai'an. Two campus-level branches are active too: INA at NUIST and JIA at JSAHVC.",
+    "Beyond Nanjing itself, PPIT Nanjing serves Indonesian students across its other coverage cities in Jiangsu and Ma'anshan (Anhui), plus two active campus-level branches — INA at NUIST and JIA at JSAHVC.",
   "about.founded": "Founded 28 October 2008",
   "about.location": "Nanjing, China",
   "about.visionMissions": "Vision & Mission",
@@ -174,8 +184,9 @@ export const en = {
     "Serve the Indonesian students in its area better, run more efficiently inside the organization, and give every cabinet member room to grow and train.",
   "about.coverageTitle": "Coverage Area",
   "about.coverageDesc":
-    "PPIT Nanjing serves students in Nanjing, in the cities around it, and at two active campus-level branches.",
+    "The cities beyond Nanjing that are also covered, plus two campus-level organizational branches.",
   "about.nearbyCities": "Nearby Cities",
+  "about.coverageMapLink": "See the coverage map",
   "about.branch": "Branch",
   "about.structCta": "View Organization Structure",
   "about.regionalCta": "Regional Branches",
@@ -183,6 +194,8 @@ export const en = {
   "common.viewAll": "View All",
 
   "cities.readMore": "Read more",
+  "common.read": "Read",
+  "common.readAria": "Read more: {{title}}",
   "cities.close": "Close",
 
   // Events
@@ -256,6 +269,30 @@ export const en = {
   "ticket.copyToken": "Copy Token",
   "ticket.calDetails": "Show this QR code when checking in at the venue.",
   "ticket.toDetail": "To Event Details",
+  "ticket.pay.heading": "Payment",
+  "ticket.pay.step1": "1. Pay following the instructions below.",
+  "ticket.pay.step2": "2. Upload your transfer proof.",
+  "ticket.pay.step3": "3. The treasurer verifies it — your check-in QR then appears here automatically.",
+  "ticket.pay.amountLabel": "What you need to pay",
+  "ticket.pay.amountTbd": "The fee amount is not set yet; wait for word from the committee.",
+  "ticket.pay.qrAdminAlt": "Event treasurer's Alipay QR",
+  "ticket.pay.qrAdminHint": "Scan the Alipay QR above with the Alipay app, transfer the fee, then upload your proof below.",
+  "ticket.pay.qrAutoAlt": "Alipay payment QR with the amount pre-filled",
+  "ticket.pay.qrAutoHint": "Scan it with the Alipay app from another phone, or if you are viewing this page on your own phone, just tap the button below.",
+  "ticket.pay.openAlipay": "Open Alipay (amount & note pre-filled)",
+  "ticket.pay.openAlipayFallback": "If the button does not open (e.g. from a browser inside WeChat), pay manually following the instructions above — still upload your proof below.",
+  "ticket.pay.statusLabel": "Status",
+  "ticket.pay.status.not_required": "Not required",
+  "ticket.pay.status.unpaid": "Not paid",
+  "ticket.pay.status.submitted": "Awaiting verification",
+  "ticket.pay.status.verified": "Verified",
+  "ticket.pay.status.rejected": "Rejected",
+  "ticket.pay.submittedNote": "Your transfer proof is in. The treasurer will verify it — your check-in QR appears here automatically once approved. You can update the proof below if needed.",
+  "ticket.pay.rejectedNote": "The previous proof could not be verified{{note}}. Please resend a correct transfer proof below.",
+  "ticket.pay.proofLabel": "Transfer proof (screenshot)",
+  "ticket.pay.proofLabelUpdate": "Update transfer proof (screenshot)",
+  "ticket.pay.submitProof": "Send proof",
+  "ticket.nextSteps": "Next Steps",
 
   // News
   "news.title": "News",
@@ -325,6 +362,7 @@ export const en = {
   "jobs.detailAria": "View details for {{title}} at {{company}}",
   "jobs.viewDetail": "View Details",
   "jobs.resourcesHeading": "Career Resources",
+  "jobs.mentorshipTitle": "Alumni Network Mentorship",
   "jobs.mentorshipDesc": "Connect with alumni for career guidance",
   "jobs.backToListAria": "Back to job listings",
   "jobs.listLabel": "Jobs",
@@ -465,6 +503,10 @@ export const en = {
   "inventory.form.quantityInvalid": "Enter a whole number of at least 1",
   "inventory.form.outOfStockTitle": "Currently out of stock",
   "inventory.form.outOfStockDesc": "All units of this item are on loan right now. Check back later or contact the Logistics Division.",
+  "inventory.form.internalNote": "You are requesting as an internal PPIT borrower — your name and contact come from your account.",
+  "inventory.form.externalNote": "You are requesting as an outside party. Fill in your full contact details; the Logistics Division will reach you on WeChat / email to confirm. Requests are not approved automatically.",
+  "inventory.form.reservedHeading": "Dates already reserved",
+  "inventory.form.reservedDesc": "This item is booked for PPIT events during the periods below — a request with overlapping dates will be rejected.",
   "inventory.form.fromDate": "From Date",
   "inventory.form.toDate": "To Date",
   "inventory.form.purpose": "Purpose",

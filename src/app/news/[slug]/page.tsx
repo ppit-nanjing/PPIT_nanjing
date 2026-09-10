@@ -76,7 +76,7 @@ export default async function NewsDetailPage({
               <span className="inline-flex items-center gap-2" aria-label={t("news.writtenBy", { name: authorName })}>
                 <span
                   aria-hidden="true"
-                  className="flex items-center justify-center w-6 h-6 rounded-full bg-primary-container/10 text-primary-container text-[10px] font-semibold uppercase"
+                  className="flex items-center justify-center w-7 h-7 rounded-full bg-primary-container/10 text-primary-container text-label-caps"
                 >
                   {authorName.split(" ").map((w) => w[0]).slice(0, 2).join("")}
                 </span>

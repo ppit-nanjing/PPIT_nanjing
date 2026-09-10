@@ -57,7 +57,7 @@ export default async function GalleryAlbumPage({
         </nav>
 
         <AnimatedHeroHeading
-          words={album.title.split(" ")}
+          words={[album.title]}
           className="text-display-hero-mobile md:text-display-hero text-on-background mb-2 leading-tight"
         />
         <Reveal>

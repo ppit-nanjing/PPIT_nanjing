@@ -35,7 +35,7 @@ export function AccountMenu({ compact = false }: { compact?: boolean }) {
     return (
       <Link
         href={`/login?returnTo=${encodeURIComponent(currentPath)}`}
-        className="bg-primary-container text-on-primary text-label-caps uppercase tracking-wide px-5 py-2.5 rounded-md hover:bg-primary transition-colors"
+        className="bg-primary-container text-on-primary text-label-caps uppercase tracking-wide px-3.5 py-2.5 sm:px-5 rounded-md hover:bg-primary transition-colors motion-reduce:transition-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-container focus-visible:ring-offset-2 focus-visible:ring-offset-background"
       >
         {t("accountMenu.login")}
       </Link>

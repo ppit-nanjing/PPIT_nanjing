@@ -1,15 +1,20 @@
+import { asc, ne } from "drizzle-orm";
+import { db } from "@/db";
+import { coverageCities } from "@/db/schema";
 import { SiteNav } from "@/components/site-nav";
 import { SiteFooter } from "@/components/site-footer";
 import { AnimatedRevealText } from "@/components/animated-reveal-text";
-import { AnimatedLettersHeading } from "@/components/animated-letters-heading";
+import { AnimatedHeroHeading } from "@/components/animated-hero-heading";
 import { MissionCards } from "@/components/mission-cards";
 import { Reveal } from "@/components/reveal";
 import { Compass, MapPinned, GraduationCap, CalendarDays, MapPin } from "lucide-react";
 import Link from "next/link";
 import { getT } from "@/lib/i18n/server";
 
-const COVERAGE_CITIES = ["Xuzhou", "Jurong", "Ma'anshan", "Zhenjiang", "Huai'an"];
-
+// The two campus-level ranting are real, committee-authored facts with no table
+// of their own - they live in `about.coverageText` too. The city list, by
+// contrast, is the `coverage_cities` table (same source as the homepage and
+// /coverage) so it can never drift stale.
 const RANTING = [
   { name: "INA", campus: "NUIST" },
   { name: "JIA", campus: "JSAHVC" },
@@ -17,6 +22,11 @@ const RANTING = [
 
 export default async function AboutPage() {
   const { t } = await getT();
+  const nearbyCities = await db
+    .select({ label: coverageCities.label })
+    .from(coverageCities)
+    .where(ne(coverageCities.slug, "nanjing"))
+    .orderBy(asc(coverageCities.label));
   return (
     <div className="min-h-screen bg-background text-on-background">
       <SiteNav />
@@ -25,9 +35,8 @@ export default async function AboutPage() {
         <span className="text-label-caps text-primary-container tracking-widest uppercase mb-2 block">
           {t("about.kicker")}
         </span>
-        <AnimatedLettersHeading
-          as="h1"
-          text={t("about.title")}
+        <AnimatedHeroHeading
+          words={[t("about.title")]}
           className="text-display-hero-mobile md:text-display-hero text-on-background mb-6"
         />
         <div className="max-w-3xl flex flex-col gap-4 text-body-lg text-on-surface-variant mb-6 sm:mb-8">
@@ -78,27 +87,33 @@ export default async function AboutPage() {
           </Reveal>
           <div className="flex flex-col gap-4">
             <Reveal delay={0.05}>
-              <div className="bg-surface-container-low border border-outline-variant text-on-background rounded-xl p-6 sm:p-8 transition-all duration-300 hover:-translate-y-1 hover:border-primary-container hover:shadow-md">
+              <div className="bg-surface-container-low border border-outline-variant text-on-background rounded-xl p-6 sm:p-8 transition-[box-shadow,border-color] motion-reduce:transition-none hover:border-primary-container hover:shadow-[0_10px_30px_rgba(39,23,22,0.05)]">
                 <div className="w-12 h-12 bg-primary-container/15 rounded-full flex items-center justify-center mb-4">
                   <MapPinned className="text-primary-container" size={22} aria-hidden />
                 </div>
                 <h3 className="text-headline-sm text-on-background mb-4">{t("about.nearbyCities")}</h3>
                 <div className="flex flex-wrap gap-2">
-                  {COVERAGE_CITIES.map((c) => (
+                  {nearbyCities.map((c) => (
                     <span
-                      key={c}
+                      key={c.label}
                       className="px-3 py-1.5 bg-primary-container/10 text-primary-container text-label-caps uppercase tracking-wide rounded-full"
                     >
-                      {c}
+                      {c.label}
                     </span>
                   ))}
                 </div>
+                <Link
+                  href="/coverage"
+                  className="mt-5 inline-flex items-center gap-1.5 text-label-caps uppercase tracking-wide text-primary-container hover:text-primary transition-colors motion-reduce:transition-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-container focus-visible:ring-offset-2 focus-visible:ring-offset-background rounded"
+                >
+                  <MapPinned size={14} aria-hidden /> {t("about.coverageMapLink")}
+                </Link>
               </div>
             </Reveal>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               {RANTING.map((r, i) => (
                 <Reveal key={r.name} delay={0.1 + i * 0.08} className="h-full">
-                  <div className="h-full bg-surface-container-low border border-outline-variant rounded-xl p-6 flex items-center gap-4 transition-all duration-300 hover:-translate-y-1 hover:border-primary-container hover:bg-surface-container">
+                  <div className="h-full bg-surface-container-low border border-outline-variant rounded-lg p-6 flex items-center gap-4 transition-[background-color,border-color] motion-reduce:transition-none hover:border-primary-container hover:bg-surface-container">
                     <div className="w-12 h-12 shrink-0 bg-primary-container/15 rounded-full flex items-center justify-center">
                       <GraduationCap className="text-primary-container" size={22} aria-hidden />
                     </div>

@@ -15,6 +15,7 @@ import { db } from "@/db";
 import { places } from "@/db/schema";
 import { SiteNav } from "@/components/site-nav";
 import { SiteFooter } from "@/components/site-footer";
+import { AnimatedHeroHeading } from "@/components/animated-hero-heading";
 import { PlacesGrid } from "@/components/places/places-grid";
 import { getT } from "@/lib/i18n/server";
 import type { TKey } from "@/lib/i18n/dictionaries/id";
@@ -77,9 +78,10 @@ export default async function PlacesPage({
 
       <header className="max-w-[var(--container-max)] mx-auto px-[var(--spacing-container-padding)] pt-16 pb-8">
         <p className="text-label-caps uppercase tracking-wide text-on-surface-variant mb-2">{t("explore.kicker")}</p>
-        <h1 className="text-display-hero-mobile md:text-display-hero text-on-background mb-4">
-          {t("places.title")}
-        </h1>
+        <AnimatedHeroHeading
+          words={[t("places.title")]}
+          className="text-display-hero-mobile md:text-display-hero text-on-background mb-4"
+        />
         <p className="text-body-lg text-on-surface-variant max-w-2xl mb-8">
           {rows.length > 0
             ? t("places.lead", {

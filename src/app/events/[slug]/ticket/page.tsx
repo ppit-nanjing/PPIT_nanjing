@@ -12,11 +12,21 @@ import Image from "next/image";
 import Link from "next/link";
 import { CheckCircle2, CalendarDays, MapPin, ArrowLeft, CalendarPlus } from "lucide-react";
 import { getT } from "@/lib/i18n/server";
+import type { TKey } from "@/lib/i18n/dictionaries/id";
 import { INTL_LOCALE } from "@/lib/i18n/config";
 import { submitPaymentProof } from "@/app/actions/committee";
-import { PAYMENT_STATUS_LABEL } from "@/lib/payment-status-labels";
 import { buildAlipayTransferLink } from "@/lib/alipay-deeplink";
 import { FileUpload } from "@/components/upload/file-upload";
+
+// Payment-status -> dictionary key. The console keeps its own Indonesian-only
+// PAYMENT_STATUS_LABEL map; this participant-facing page is bilingual.
+const PAY_STATUS_KEY: Record<string, TKey> = {
+  not_required: "ticket.pay.status.not_required",
+  unpaid: "ticket.pay.status.unpaid",
+  submitted: "ticket.pay.status.submitted",
+  verified: "ticket.pay.status.verified",
+  rejected: "ticket.pay.status.rejected",
+};
 
 export default async function EventTicketPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
@@ -105,9 +115,9 @@ export default async function EventTicketPage({ params }: { params: Promise<{ sl
         <div className="bg-surface-container-lowest border border-outline-variant rounded-xl p-8">
           {gated ? (
             <div className="mb-6 text-left text-body-sm text-on-surface-variant flex flex-col gap-1.5">
-              <p>1. Bayar sesuai instruksi di bawah.</p>
-              <p>2. Unggah bukti transfer.</p>
-              <p>3. Bendahara memverifikasi — QR check-in muncul otomatis di halaman ini.</p>
+              <p>{t("ticket.pay.step1")}</p>
+              <p>{t("ticket.pay.step2")}</p>
+              <p>{t("ticket.pay.step3")}</p>
             </div>
           ) : (
             <>
@@ -156,10 +166,10 @@ export default async function EventTicketPage({ params }: { params: Promise<{ sl
 
         {hasFee && (
           <div className="bg-surface-container-lowest border border-outline-variant rounded-xl p-6 mt-6 text-left">
-            <h2 className="text-headline-sm text-on-background mb-3">Pembayaran</h2>
+            <h2 className="text-headline-sm text-on-background mb-3">{t("ticket.pay.heading")}</h2>
             {feeAmount != null ? (
               <div className="mb-4 rounded-lg bg-primary-container/10 px-4 py-3">
-                <p className="text-label-caps uppercase tracking-wide text-on-surface-variant">Yang harus kamu bayar</p>
+                <p className="text-label-caps uppercase tracking-wide text-on-surface-variant">{t("ticket.pay.amountLabel")}</p>
                 <p className="text-headline-md text-on-background">
                   ¥{feeAmount}
                   {feeOption ? <span className="text-body-md text-on-surface-variant"> · {feeOption.label}</span> : null}
@@ -167,7 +177,7 @@ export default async function EventTicketPage({ params }: { params: Promise<{ sl
               </div>
             ) : (
               <p className="mb-4 text-body-md text-on-surface-variant">
-                Nominal biaya belum ditentukan, tunggu info dari panitia.
+                {t("ticket.pay.amountTbd")}
               </p>
             )}
             {event.paymentInstructions && (
@@ -178,13 +188,13 @@ export default async function EventTicketPage({ params }: { params: Promise<{ sl
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
                   src={event.paymentQrUrl}
-                  alt="QR Alipay bendahara acara"
+                  alt={t("ticket.pay.qrAdminAlt")}
                   width={200}
                   height={200}
                   className="rounded-lg border border-outline-variant bg-white p-1"
                 />
-                <p className="text-xs text-on-surface-variant text-center max-w-xs">
-                  Scan QR Alipay di atas dengan app Alipay, transfer sejumlah biaya, lalu unggah buktinya di bawah.
+                <p className="text-body-sm text-on-surface-variant text-center max-w-xs">
+                  {t("ticket.pay.qrAdminHint")}
                 </p>
               </div>
             )}
@@ -192,46 +202,42 @@ export default async function EventTicketPage({ params }: { params: Promise<{ sl
               <div className="flex flex-col items-center gap-2 mb-4 py-4 border-y border-outline-variant">
                 <Image
                   src={alipayQrDataUrl}
-                  alt="QR pembayaran Alipay dengan nominal terisi otomatis"
+                  alt={t("ticket.pay.qrAutoAlt")}
                   width={160}
                   height={160}
                   unoptimized
                   className="rounded-lg"
                 />
-                <p className="text-xs text-on-surface-variant text-center max-w-xs">
-                  Scan pakai app Alipay dari HP lain, atau kalau lagi buka halaman ini di HP sendiri, langsung
-                  ketuk tombol di bawah.
+                <p className="text-body-sm text-on-surface-variant text-center max-w-xs">
+                  {t("ticket.pay.qrAutoHint")}
                 </p>
                 <a
                   href={alipayLink}
-                  className="inline-flex items-center justify-center border border-outline-variant text-on-background text-label-caps uppercase tracking-wide px-4 py-2 rounded-md hover:bg-surface-container-low transition-colors"
+                  className="inline-flex items-center justify-center border border-outline-variant text-on-background text-label-caps uppercase tracking-wide px-4 py-2 rounded-md hover:bg-surface-container-low transition-colors motion-reduce:transition-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-container focus-visible:ring-offset-2 focus-visible:ring-offset-surface-container-lowest"
                 >
-                  Buka Alipay (nominal &amp; catatan sudah terisi)
+                  {t("ticket.pay.openAlipay")}
                 </a>
-                <p className="text-xs text-on-surface-variant text-center max-w-xs">
-                  Kalau tombolnya tidak terbuka (mis. dari browser dalam app WeChat), bayar manual sesuai instruksi
-                  di atas — tetap unggah buktinya di bawah.
+                <p className="text-body-sm text-on-surface-variant text-center max-w-xs">
+                  {t("ticket.pay.openAlipayFallback")}
                 </p>
               </div>
             )}
             <p className="text-label-caps uppercase tracking-wide text-on-surface-variant mb-3">
-              Status: {PAYMENT_STATUS_LABEL[registration.paymentStatus] ?? registration.paymentStatus}
+              {t("ticket.pay.statusLabel")}: {t(PAY_STATUS_KEY[registration.paymentStatus] ?? "ticket.pay.status.unpaid")}
             </p>
             {registration.paymentStatus === "submitted" && (
               <p className="mb-3 flex items-start gap-2 rounded-md bg-primary-container/10 px-4 py-3 text-body-sm text-on-background">
                 <CheckCircle2 size={16} className="mt-0.5 shrink-0 text-primary-container" aria-hidden="true" />
-                <span>
-                  Bukti transfer sudah terkirim. Bendahara akan memverifikasi — QR check-in muncul otomatis di
-                  halaman ini setelah disetujui. Kamu bisa memperbarui bukti di bawah bila perlu.
-                </span>
+                <span>{t("ticket.pay.submittedNote")}</span>
               </p>
             )}
             {registration.paymentStatus === "rejected" && (
               <p className="mb-3 flex items-start gap-2 rounded-md bg-error-container/40 px-4 py-3 text-body-sm text-on-error-container">
                 <span aria-hidden="true">⚠️</span>
                 <span>
-                  Bukti sebelumnya belum bisa diverifikasi{registration.paymentNote ? ` — ${registration.paymentNote}` : ""}.
-                  Kirim ulang bukti transfer yang benar di bawah.
+                  {t("ticket.pay.rejectedNote", {
+                    note: registration.paymentNote ? ` — ${registration.paymentNote}` : "",
+                  })}
                 </span>
               </p>
             )}
@@ -246,13 +252,13 @@ export default async function EventTicketPage({ params }: { params: Promise<{ sl
                   autoUpload
                   defaultValue={registration.paymentProofUrl ?? ""}
                   accept="image/*"
-                  label={gated ? "Bukti transfer (screenshot)" : "Perbarui bukti transfer (screenshot)"}
+                  label={gated ? t("ticket.pay.proofLabel") : t("ticket.pay.proofLabelUpdate")}
                 />
                 <button
                   type="submit"
-                  className="self-start bg-primary-container text-on-primary text-label-caps uppercase tracking-wide px-6 py-3 rounded-md hover:bg-primary transition-colors"
+                  className="self-start bg-primary-container text-on-primary text-label-caps uppercase tracking-wide px-6 py-3 rounded-md hover:bg-primary transition-colors motion-reduce:transition-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-container focus-visible:ring-offset-2 focus-visible:ring-offset-background"
                 >
-                  Kirim Bukti
+                  {t("ticket.pay.submitProof")}
                 </button>
               </form>
             )}
@@ -261,7 +267,7 @@ export default async function EventTicketPage({ params }: { params: Promise<{ sl
 
         {event.confirmationInfo && (
           <div className="bg-surface-container-lowest border border-outline-variant rounded-xl p-6 mt-6 text-left">
-            <h2 className="text-headline-sm text-on-background mb-2">Langkah Berikutnya</h2>
+            <h2 className="text-headline-sm text-on-background mb-2">{t("ticket.nextSteps")}</h2>
             <p className="text-body-md text-on-surface-variant whitespace-pre-line">{event.confirmationInfo}</p>
           </div>
         )}

@@ -5,10 +5,14 @@ import { useInView, animate } from "motion/react";
 
 /**
  * Count-up animation for the home page stats. Parses a leading integer from a
- * value like "600+" and animates 0 -> target when scrolled into view, keeping
- * any non-numeric suffix (e.g. "+"). Honors prefers-reduced-motion because
- * Motion's `animate` respects it; the initial SSR render is a deterministic
- * "0" so there's no hydration mismatch.
+ * value like "66" and animates 0 -> target when scrolled into view, keeping any
+ * non-numeric suffix (e.g. "+"). Honors prefers-reduced-motion because Motion's
+ * `animate` respects it.
+ *
+ * The initial render (server and first client render alike) shows the REAL
+ * number, not "0" - the figure is a fact the page states, and it must survive a
+ * crawl or a slow/failed hydration. When the element scrolls into view JS resets
+ * it to 0 and counts up as an enhancement.
  */
 export function CountUp({ value, className }: { value: string; className?: string }) {
   const ref = useRef<HTMLSpanElement>(null);
@@ -18,7 +22,7 @@ export function CountUp({ value, className }: { value: string; className?: strin
   const target = match ? parseInt(match[1], 10) : 0;
   const suffix = match ? match[2] : value;
 
-  const [display, setDisplay] = useState("0");
+  const [display, setDisplay] = useState(match ? match[1] : value);
 
   useEffect(() => {
     if (!inView || target === 0) return;

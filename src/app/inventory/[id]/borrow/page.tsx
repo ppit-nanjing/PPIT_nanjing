@@ -61,19 +61,17 @@ export default async function BorrowRequestPage({ params }: { params: Promise<{ 
             <div className="mb-8 flex items-start gap-3 rounded-lg border border-outline-variant bg-surface-container-low p-5">
               <Info className="mt-0.5 shrink-0 text-primary-container" size={18} aria-hidden />
               <p className="text-body-sm text-on-surface-variant">
-                {isInternal
-                  ? "Kamu mengajukan sebagai peminjam internal PPIT — nama & kontakmu diambil dari akun."
-                  : "Kamu mengajukan sebagai pihak luar. Isi data kontak selengkapnya; Divisi Logistik akan menghubungimu lewat WeChat / Email untuk konfirmasi. Pengajuan tidak otomatis disetujui."}
+                {isInternal ? t("inventory.form.internalNote") : t("inventory.form.externalNote")}
               </p>
             </div>
 
             {reservations.length > 0 && (
               <div className="mb-8 flex flex-col gap-2 rounded-lg border border-outline-variant bg-surface-container-low p-5">
                 <p className="flex items-center gap-2 text-label-caps uppercase tracking-wide text-primary-container">
-                  <CalendarClock size={14} aria-hidden /> Tanggal yang sudah dipesan
+                  <CalendarClock size={14} aria-hidden /> {t("inventory.form.reservedHeading")}
                 </p>
                 <p className="text-body-sm text-on-surface-variant">
-                  Barang ini sudah dibooking untuk acara PPIT pada periode berikut — pengajuan dengan tanggal yang beririsan akan ditolak.
+                  {t("inventory.form.reservedDesc")}
                 </p>
                 <ul className="flex flex-col gap-1">
                   {reservations.map((r) => (

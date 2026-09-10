@@ -57,7 +57,7 @@ export default async function JobApplyPage({ params }: { params: Promise<{ id: s
               name="coverLetter"
               rows={6}
               aria-describedby="coverLetter-help"
-              className="bg-soft-gray rounded-md p-3 text-body-md focus:outline-none focus:ring-2 focus:ring-primary-container resize-none"
+              className="bg-soft-gray rounded-md p-3 text-body-md focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-container resize-none"
             />
             <p id="coverLetter-help" className="text-body-sm text-on-surface-variant">
               {t("jobs.coverLetterHelp")}
