@@ -1,6 +1,7 @@
 "use client";
 
 import { useTransition } from "react";
+import { toast } from "sonner";
 import { Trash2, Image as ImageIcon, Star, Type as CaptionIcon } from "lucide-react";
 import NextImage from "next/image";
 import { deleteGalleryPhoto, setPhotoHighlight, updatePhotoCaption } from "@/app/actions/admin-content";
@@ -75,7 +76,10 @@ export function PhotoGrid({ albumId, photos }: { albumId: string; photos: Photo[
               <form
                 action={(fd) => {
                   const caption = String(fd.get("caption") ?? "");
-                  startTransition(() => updatePhotoCaption(p.id, albumId, caption));
+                  startTransition(async () => {
+                    await updatePhotoCaption(p.id, albumId, caption);
+                    toast.success("Caption tersimpan.");
+                  });
                 }}
                 className="bg-surface-container-lowest border-t border-outline-variant p-2 flex flex-col gap-2"
               >

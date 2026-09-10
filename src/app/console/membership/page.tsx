@@ -9,6 +9,7 @@ import { CollapsibleSection } from "@/components/console/collapsible-section";
 import { ConfirmButton } from "@/components/console/confirm-button";
 import { fieldInput as input, primaryBtn } from "@/components/console/form";
 import { createRecruitmentPeriod, setRecruitmentPeriodOpen } from "@/app/actions/membership";
+import { SubmitButton } from "@/components/console/submit-button";
 
 const STATUS_LABEL: Record<string, string> = {
   pending: "Menunggu",
@@ -88,9 +89,9 @@ export default async function ConsoleMembershipPage() {
               <input name="closesAt" type="datetime-local" className={input} />
             </label>
           </div>
-          <button type="submit" className={primaryBtn}>
+          <SubmitButton successMessage="Periode ditambahkan." className={primaryBtn}>
             Tambah Periode (mulai dalam status tutup)
-          </button>
+          </SubmitButton>
         </form>
 
         <ul className="bg-surface-container-lowest border border-outline-variant rounded-xl px-4">

@@ -10,6 +10,7 @@ import { MembershipApplicationForm } from "@/components/membership/membership-ap
 import { createFormField, initFormFields, getFormMeta, updateFormMeta } from "@/app/actions/membership";
 import { FIELD_TYPE_LABELS, type MembershipFieldDef } from "@/lib/membership-form";
 import { Select, ToggleSwitch } from "@/components/console/form";
+import { SubmitButton } from "@/components/console/submit-button";
 
 const ADD_TYPES: MembershipFieldDef["type"][] = [
   "text", "textarea", "email", "tel", "number", "select", "radio", "multiselect", "date", "checkbox", "rating", "image", "url",
@@ -91,12 +92,12 @@ export default async function MembershipFormPage() {
             <input name="spreadsheetUrl" placeholder="https://docs.google.com/spreadsheets/..." defaultValue={meta.spreadsheetUrl ?? ""} className="bg-soft-gray rounded-md p-3 text-body-md" />
             <span className="text-label-caps text-on-surface-variant">Muncul sebagai tombol &ldquo;Buka Spreadsheet&rdquo; di halaman Jawaban.</span>
           </div>
-          <button
-            type="submit"
+          <SubmitButton
+            successMessage="Setelan formulir tersimpan."
             className="self-start bg-primary-container text-on-primary text-label-caps uppercase tracking-wide px-6 py-3 rounded-md hover:bg-primary transition-colors"
           >
             Simpan Setelan
-          </button>
+          </SubmitButton>
         </form>
       </CollapsibleSection>
 
@@ -148,12 +149,12 @@ export default async function MembershipFormPage() {
               ))}
             </Select>
           </div>
-          <button
-            type="submit"
+          <SubmitButton
+            successMessage="Field ditambahkan."
             className="self-start bg-primary-container text-on-primary text-label-caps uppercase tracking-wide px-6 py-3 rounded-md hover:bg-primary transition-colors"
           >
             Tambah Field
-          </button>
+          </SubmitButton>
         </form>
       </CollapsibleSection>
 
@@ -169,12 +170,12 @@ export default async function MembershipFormPage() {
             <input name="label" placeholder="mis. Data Diri" className="bg-soft-gray rounded-md p-3 text-body-md" />
             <input type="hidden" name="type" value="section" />
           </div>
-          <button
-            type="submit"
+          <SubmitButton
+            successMessage="Bagian ditambahkan."
             className="self-start bg-secondary-container text-on-secondary-container text-label-caps uppercase tracking-wide px-6 py-3 rounded-md hover:opacity-90 transition-colors"
           >
             Tambah Bagian
-          </button>
+          </SubmitButton>
         </form>
       </CollapsibleSection>
 

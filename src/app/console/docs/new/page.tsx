@@ -1,6 +1,7 @@
 import { upsertHelpArticle } from "@/app/actions/admin-docs";
 import { CollapsibleSection } from "@/components/console/collapsible-section";
 import { TextField, SelectField, TextAreaField, FormActions, primaryBtn } from "@/components/console/form";
+import { SubmitButton } from "@/components/console/submit-button";
 
 const SECTIONS = ["Sering Dipakai", "Sering Membingungkan"];
 
@@ -19,7 +20,7 @@ export default function NewHelpArticlePage() {
           />
           <TextAreaField name="content" label="Isi Panduan" rows={10} />
           <FormActions>
-            <button type="submit" className={primaryBtn}>Publikasikan</button>
+            <SubmitButton successMessage="Panduan dipublikasikan." className={primaryBtn}>Publikasikan</SubmitButton>
           </FormActions>
         </form>
       </CollapsibleSection>

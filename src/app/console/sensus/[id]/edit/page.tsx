@@ -16,6 +16,7 @@ import {
 import { CollapsibleSection } from "@/components/console/collapsible-section";
 import { TextField, SelectField, TextAreaField, CheckboxField, primaryBtn } from "@/components/console/form";
 import { ProofView } from "@/components/console/proof-view";
+import { SubmitButton } from "@/components/console/submit-button";
 
 // Form ubah data sensus oleh pengurus (modul "sensus"). Perubahan dicatat ke
 // audit_logs oleh updateSensusProfile(). Berkas kartu tidak diedit sebagai
@@ -109,7 +110,7 @@ export default async function EditSensusPage({ params }: { params: Promise<{ id:
         </CollapsibleSection>
 
         <div className="flex items-center gap-3">
-          <button type="submit" className={primaryBtn}>Simpan Perubahan</button>
+          <SubmitButton successMessage="Sensus tersimpan." className={primaryBtn}>Simpan Perubahan</SubmitButton>
           <Link href={`/console/sensus/${id}`} className="text-label-caps uppercase tracking-wide text-on-surface-variant hover:text-on-background">
             Batal
           </Link>

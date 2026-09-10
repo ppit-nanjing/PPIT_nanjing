@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import { toast } from "sonner";
 import { CalendarClock, Plus, TriangleAlert, X } from "lucide-react";
 import { createItemReservation, releaseItemReservation } from "@/app/actions/admin-inventory";
 import { Select } from "@/components/console/form";
@@ -32,11 +33,12 @@ export function ReservationManager({
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
 
-  function run(fn: () => Promise<unknown>) {
+  function run(fn: () => Promise<unknown>, successMessage: string) {
     setError(null);
     startTransition(async () => {
       try {
         await fn();
+        toast.success(successMessage);
       } catch (e) {
         setError(e instanceof Error ? e.message : "Gagal. Coba lagi.");
       }
@@ -57,7 +59,7 @@ export function ReservationManager({
       )}
 
       <form
-        action={(fd) => run(() => createItemReservation(fd))}
+        action={(fd) => run(() => createItemReservation(fd), "Reservasi tersimpan.")}
         className="flex flex-col gap-3 rounded-lg border border-outline-variant bg-surface-container-low p-4"
       >
         <p className="text-label-caps uppercase tracking-wide text-primary-container">
@@ -133,7 +135,7 @@ export function ReservationManager({
               <button
                 type="button"
                 disabled={isPending}
-                onClick={() => run(() => releaseItemReservation(r.id))}
+                onClick={() => run(() => releaseItemReservation(r.id), "Reservasi dilepas.")}
                 className="inline-flex items-center gap-1 rounded-md px-3 py-1.5 text-label-caps uppercase tracking-wide text-error transition-colors hover:bg-error-container/30 disabled:opacity-50"
               >
                 <X size={13} /> Lepas

@@ -1,6 +1,7 @@
 "use client";
 
 import { useTransition } from "react";
+import { toast } from "sonner";
 import { reviewContribution } from "@/app/actions/contributions";
 import { Select } from "@/components/console/form";
 
@@ -32,7 +33,12 @@ export function ContributionReview({
       {contributions.map((c) => (
         <form
           key={c.id}
-          action={(fd) => startTransition(() => reviewContribution(fd))}
+          action={(fd) =>
+            startTransition(async () => {
+              await reviewContribution(fd);
+              toast.success(fd.get("decision") === "approve" ? "Pengajuan disetujui." : "Pengajuan ditolak.");
+            })
+          }
           className="bg-surface-container-low border border-outline-variant rounded-lg p-5 flex flex-col gap-3"
         >
           <input type="hidden" name="id" value={c.id} />

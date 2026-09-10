@@ -17,6 +17,7 @@ import {
 import { PAYMENT_STATUS_LABEL } from "@/lib/payment-status-labels";
 import { Field, TextField, SelectField, Select, FormActions, primaryBtn } from "@/components/console/form";
 import { ConfirmButton } from "@/components/console/confirm-button";
+import { SubmitButton } from "@/components/console/submit-button";
 
 // Peran penugasan baru. humas/acara/logistik/dokumentasi sengaja tidak ada:
 // itu nama DIVISI, bukan peran - di skema nilainya tinggal demi baris lama.
@@ -120,7 +121,7 @@ export default async function WorkLedgerPage() {
             Menugaskan orang yang sama dua kali di satu acara akan mengubah perannya, bukan menambah baris.
           </p>
           <FormActions>
-            <button type="submit" className={primaryBtn}>Tugaskan</button>
+            <SubmitButton successMessage="Panitia ditugaskan." className={primaryBtn}>Tugaskan</SubmitButton>
           </FormActions>
         </form>
       </CollapsibleSection>
@@ -247,7 +248,7 @@ export default async function WorkLedgerPage() {
             placeholder="https://drive.google.com/…"
           />
           <FormActions>
-            <button type="submit" className={primaryBtn}>Terbitkan Sertifikat</button>
+            <SubmitButton successMessage="Sertifikat diterbitkan." className={primaryBtn}>Terbitkan Sertifikat</SubmitButton>
           </FormActions>
         </form>
 
@@ -277,12 +278,12 @@ export default async function WorkLedgerPage() {
                       placeholder="tautan berkas (Drive)…"
                       className="bg-soft-gray rounded-md p-2 text-body-md w-44"
                     />
-                    <button
-                      type="submit"
+                    <SubmitButton
+                      successMessage="Tautan berkas tersimpan."
                       className="text-label-caps uppercase tracking-wide border border-outline-variant px-3 py-1.5 rounded-md hover:bg-surface-container-low transition-colors"
                     >
                       Simpan
-                    </button>
+                    </SubmitButton>
                   </form>
                   <ConfirmButton
                     title="Hapus sertifikat?"

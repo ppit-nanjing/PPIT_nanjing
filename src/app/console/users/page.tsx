@@ -7,6 +7,7 @@ import { CollapsibleSection } from "@/components/console/collapsible-section";
 import { GuideButton } from "@/components/console/guide-button";
 import { getGuide } from "@/lib/guides";
 import { Field, fieldInput, FormActions, primaryBtn } from "@/components/console/form";
+import { SubmitButton } from "@/components/console/submit-button";
 import { Download } from "lucide-react";
 
 export default async function ConsoleUsersPage() {
@@ -78,9 +79,9 @@ atau email saja: seseorang@contoh.com`}
               disiapkan (lihat <code>GMAIL_USER</code> di <code>.env.example</code>).
             </p>
             <FormActions>
-              <button type="submit" className={primaryBtn}>
+              <SubmitButton successMessage="Akun undangan dibuat." className={primaryBtn}>
                 Buat Akun Undangan
-              </button>
+              </SubmitButton>
             </FormActions>
           </form>
         </CollapsibleSection>

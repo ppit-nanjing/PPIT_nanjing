@@ -1,6 +1,7 @@
 "use client";
 
 import { useTransition } from "react";
+import { toast } from "sonner";
 import Image from "next/image";
 import { reviewProcurement } from "@/app/actions/procurement";
 import { CollapsibleRecordList, type BadgeTone } from "@/components/console/collapsible-record-list";
@@ -52,7 +53,18 @@ export function ProcurementReview({ requests }: { requests: Request[] }) {
         badge: { text: STATUS_LABEL[r.status], tone: STATUS_TONE[r.status] },
       })}
       renderDetail={(r) => (
-        <form action={(fd) => startTransition(() => reviewProcurement(fd))} className="flex flex-col gap-3">
+        <form
+          action={(fd) =>
+            startTransition(async () => {
+              await reviewProcurement(fd);
+              const decision = fd.get("decision");
+              toast.success(
+                decision === "approve" ? "Usulan disetujui." : decision === "reject" ? "Usulan ditolak." : "Ditandai terpenuhi.",
+              );
+            })
+          }
+          className="flex flex-col gap-3"
+        >
           <input type="hidden" name="id" value={r.id} />
           <div className="flex gap-4">
             {r.imageUrl && (

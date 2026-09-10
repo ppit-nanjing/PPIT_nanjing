@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { CheckboxField } from "@/components/console/form";
+import { SubmitButton } from "@/components/console/submit-button";
 
 interface Candidate {
   id: string;
@@ -63,13 +64,13 @@ export function DivisionMemberPicker({
           <p className="text-label-caps text-on-surface-variant py-2 text-center">Tidak ada yang cocok.</p>
         )}
       </div>
-      <button
-        type="submit"
+      <SubmitButton
         disabled={filtered.length === 0}
+        successMessage="Anggota ditambahkan."
         className="self-start text-label-caps uppercase tracking-wide bg-primary-container text-on-primary px-3 py-1.5 rounded-md hover:bg-primary transition-colors disabled:opacity-40 disabled:hover:bg-primary-container"
       >
         Tambahkan yang dicentang sebagai Anggota
-      </button>
+      </SubmitButton>
     </form>
   );
 }

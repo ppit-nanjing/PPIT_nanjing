@@ -15,6 +15,7 @@ import { MembershipDeleteButton } from "@/components/console/membership-delete-b
 import { MembershipTabs } from "@/components/console/membership-tabs";
 import { CollapsibleSection } from "@/components/console/collapsible-section";
 import { Select, CheckboxField } from "@/components/console/form";
+import { SubmitButton } from "@/components/console/submit-button";
 import { CORE_KEYS, type MembershipFieldDef } from "@/lib/membership-form";
 import Image from "next/image";
 import Link from "next/link";
@@ -244,12 +245,12 @@ export default async function MembershipDetailPage({ params }: { params: Promise
             label="Kirim email pengumuman ke pendaftar saat status berubah jadi Diterima/Ditolak"
             className="mt-3 text-on-background"
           />
-          <button
-            type="submit"
+          <SubmitButton
+            successMessage="Status pendaftar tersimpan."
             className="mt-4 bg-primary-container text-on-primary text-label-caps uppercase tracking-wide px-6 py-3 rounded-md hover:bg-primary transition-colors"
           >
             Simpan Status
-          </button>
+          </SubmitButton>
         </form>
 
         <form
@@ -265,12 +266,12 @@ export default async function MembershipDetailPage({ params }: { params: Promise
             placeholder="Catatan internal (tidak terlihat oleh pelamar)"
             className="bg-soft-gray rounded-md p-3 text-body-md w-full resize-none"
           />
-          <button
-            type="submit"
+          <SubmitButton
+            successMessage="Catatan tersimpan."
             className="mt-4 bg-primary-container text-on-primary text-label-caps uppercase tracking-wide px-6 py-3 rounded-md hover:bg-primary transition-colors"
           >
             Simpan Catatan
-          </button>
+          </SubmitButton>
         </form>
         </div>
       </CollapsibleSection>

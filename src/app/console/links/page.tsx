@@ -10,6 +10,7 @@ import { PeriodForm } from "@/components/console/management-period-form";
 import { GuideButton } from "@/components/console/guide-button";
 import { getGuide } from "@/lib/guides";
 import { Select } from "@/components/console/form";
+import { SubmitButton } from "@/components/console/submit-button";
 
 const CATEGORY_LABEL: Record<string, string> = {
   documentation: "Dokumentasi",
@@ -151,12 +152,12 @@ export default async function ConsoleLinksPage({
                   </span>
                 ) : (
                   <form action={setActivePeriod.bind(null, p.id)}>
-                    <button
-                      type="submit"
+                    <SubmitButton
+                      successMessage="Periode ditandai aktif."
                       className="text-label-caps uppercase tracking-wide text-primary-container hover:text-primary transition-colors shrink-0"
                     >
                       Tandai Aktif
-                    </button>
+                    </SubmitButton>
                   </form>
                 )}
               </div>
@@ -220,12 +221,12 @@ export default async function ConsoleLinksPage({
                         Edit
                       </a>
                       <form action={toggleShortLink.bind(null, l.id)}>
-                        <button
-                          type="submit"
+                        <SubmitButton
+                          successMessage="Status tautan diperbarui."
                           className="text-label-caps uppercase tracking-wide text-on-surface-variant hover:text-on-background transition-colors"
                         >
                           {l.isActive ? "Nonaktifkan" : "Aktifkan"}
-                        </button>
+                        </SubmitButton>
                       </form>
                       <ShortLinkDeleteButton action={deleteShortLink.bind(null, l.id)} />
                     </div>
@@ -274,12 +275,12 @@ export default async function ConsoleLinksPage({
                     Edit
                   </a>
                   <form action={toggleShortLink.bind(null, l.id)}>
-                    <button
-                      type="submit"
+                    <SubmitButton
+                      successMessage="Status tautan diperbarui."
                       className="text-label-caps uppercase tracking-wide text-on-surface-variant hover:text-on-background transition-colors"
                     >
                       {l.isActive ? "Nonaktifkan" : "Aktifkan"}
-                    </button>
+                    </SubmitButton>
                   </form>
                   <ShortLinkDeleteButton action={deleteShortLink.bind(null, l.id)} />
                 </div>

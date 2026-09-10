@@ -11,6 +11,7 @@ import { CopyLinkButton } from "@/components/console/copy-link-button";
 import { ShortLinkDeleteButton } from "@/components/console/short-link-delete-button";
 import { deleteShortLink, toggleShortLink, updateShortLink } from "@/app/actions/short-links";
 import { toDateLocalInput } from "@/lib/datetime";
+import { SubmitButton } from "@/components/console/submit-button";
 
 export default async function EditShortLinkPage({
   params,
@@ -79,12 +80,12 @@ export default async function EditShortLinkPage({
 
       <div className="flex flex-wrap gap-3 mt-8 max-w-2xl">
         <form action={toggleShortLink.bind(null, id)}>
-          <button
-            type="submit"
+          <SubmitButton
+            successMessage="Status tautan diperbarui."
             className="bg-surface-container-low border border-outline-variant text-on-background text-label-caps uppercase tracking-wide px-5 py-2.5 rounded-lg hover:bg-surface-container-lowest transition-colors"
           >
             {link.isActive ? "Nonaktifkan" : "Aktifkan"}
-          </button>
+          </SubmitButton>
         </form>
         <ShortLinkDeleteButton action={deleteShortLink.bind(null, id)} />
       </div>

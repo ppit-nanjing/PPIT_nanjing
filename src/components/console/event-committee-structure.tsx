@@ -13,6 +13,7 @@ import {
 import { DivisionMemberPicker } from "@/components/console/division-member-picker";
 import { TemplatePicker } from "@/components/console/template-picker";
 import { fieldInput, Select } from "@/components/console/form";
+import { SubmitButton } from "@/components/console/submit-button";
 import { GRANTABLE_CAPABILITIES } from "@/lib/event-capabilities";
 
 // Peran = jabatan/posisi orang di kepanitiaan. ketua/wakil/sekretaris/supervisor
@@ -63,9 +64,9 @@ function DivisionGrants({ divisionId, granted }: { divisionId: string; granted: 
             </span>
           </label>
         ))}
-        <button type="submit" className="self-start bg-primary-container text-on-primary text-label-caps uppercase tracking-wide px-4 py-2 rounded-md hover:bg-primary transition-colors">
+        <SubmitButton successMessage="Izin divisi tersimpan." className="self-start bg-primary-container text-on-primary text-label-caps uppercase tracking-wide px-4 py-2 rounded-md hover:bg-primary transition-colors">
           Simpan Izin
-        </button>
+        </SubmitButton>
       </form>
     </details>
   );
@@ -140,12 +141,12 @@ export function EventCommitteeStructure({
         {members.length > 0 && (
           <form action={issueEventCertificates}>
             <input type="hidden" name="eventId" value={eventId} />
-            <button
-              type="submit"
+            <SubmitButton
+              successMessage="Sertifikat panitia diterbitkan."
               className="flex items-center gap-2 bg-primary-container text-on-primary text-label-caps uppercase tracking-wide px-4 py-3 rounded-md hover:bg-primary transition-colors"
             >
               <Award size={16} /> Terbitkan Sertifikat Semua Panitia ({members.length - certifiedCount})
-            </button>
+            </SubmitButton>
           </form>
         )}
       </div>
@@ -170,12 +171,12 @@ export function EventCommitteeStructure({
             {/* Deskripsi + pengingat peran inti template terpilih dirender
                 oleh picker ini sendiri (ikut berganti saat select berubah). */}
             <TemplatePicker />
-            <button
-              type="submit"
+            <SubmitButton
+              successMessage="Template diterapkan."
               className="flex items-center gap-1.5 bg-primary-container text-on-primary text-label-caps uppercase tracking-wide px-4 py-2.5 rounded-md hover:bg-primary transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-container focus-visible:ring-offset-2 focus-visible:ring-offset-background motion-reduce:transition-none"
             >
               <LayoutTemplate size={14} /> Terapkan Template
-            </button>
+            </SubmitButton>
           </form>
         </div>
       )}
@@ -206,18 +207,18 @@ export function EventCommitteeStructure({
               <div className="flex items-center gap-2">
                 <form action={issueDivisionCertificates}>
                   <input type="hidden" name="divisionId" value={dept.id} />
-                  <button
-                    type="submit"
+                  <SubmitButton
+                    successMessage="Sertifikat divisi diterbitkan."
                     className="flex items-center gap-1 text-label-caps uppercase tracking-wide border border-outline-variant px-3 py-2 rounded-md hover:bg-surface-container-low transition-colors"
                   >
                     <Award size={14} /> Terbitkan Sertifikat
-                  </button>
+                  </SubmitButton>
                 </form>
                 <form action={deleteEventDivision}>
                   <input type="hidden" name="id" value={dept.id} />
-                  <button type="submit" className="text-error hover:opacity-70 p-2" aria-label={`Hapus ${dept.name}`}>
+                  <SubmitButton successMessage="Departemen dihapus." className="text-error hover:opacity-70 p-2" aria-label={`Hapus ${dept.name}`}>
                     <Trash2 size={16} />
-                  </button>
+                  </SubmitButton>
                 </form>
               </div>
             </div>
@@ -234,9 +235,9 @@ export function EventCommitteeStructure({
                 <input name="name" defaultValue={dept.name} required aria-label="Nama departemen" className={input} />
                 <input name="quota" type="number" min="1" defaultValue={dept.quota ?? ""} placeholder="Kuota ketua dept. (orang)" aria-label="Kuota" className={input} />
                 <textarea name="jobDescription" defaultValue={dept.jobDescription ?? ""} rows={2} placeholder="Job description (satu poin per baris)" aria-label="Job description" className={`${input} resize-none`} />
-                <button type="submit" className="self-start bg-primary-container text-on-primary text-label-caps uppercase tracking-wide px-4 py-2 rounded-md hover:bg-primary transition-colors">
+                <SubmitButton successMessage="Departemen tersimpan." className="self-start bg-primary-container text-on-primary text-label-caps uppercase tracking-wide px-4 py-2 rounded-md hover:bg-primary transition-colors">
                   Simpan Perubahan
-                </button>
+                </SubmitButton>
               </form>
             </details>
 
@@ -262,9 +263,9 @@ export function EventCommitteeStructure({
                       <option key={c.id} value={c.id}>{c.name ?? c.email}</option>
                     ))}
                 </Select>
-                <button type="submit" className="text-label-caps uppercase tracking-wide border border-outline-variant px-3 py-1.5 rounded-md hover:bg-surface-container-low transition-colors">
+                <SubmitButton successMessage="Ketua ditetapkan." className="text-label-caps uppercase tracking-wide border border-outline-variant px-3 py-1.5 rounded-md hover:bg-surface-container-low transition-colors">
                   Tetapkan Ketua
-                </button>
+                </SubmitButton>
               </form>
             </div>
 
@@ -293,9 +294,9 @@ export function EventCommitteeStructure({
                         </div>
                         <form action={deleteEventDivision}>
                           <input type="hidden" name="id" value={sub.id} />
-                          <button type="submit" className="text-error hover:opacity-70 p-1" aria-label={`Hapus ${sub.name}`}>
+                          <SubmitButton successMessage="Sub-tim dihapus." className="text-error hover:opacity-70 p-1" aria-label={`Hapus ${sub.name}`}>
                             <Trash2 size={14} />
-                          </button>
+                          </SubmitButton>
                         </form>
                       </div>
                       {sub.jobDescription && <JobDesc text={sub.jobDescription} />}
@@ -313,9 +314,9 @@ export function EventCommitteeStructure({
                           <input name="name" defaultValue={sub.name} required aria-label={`Nama ${sub.name}`} className={input} />
                           <input name="quota" type="number" min="1" defaultValue={sub.quota ?? ""} placeholder="Kuota (orang)" aria-label="Kuota" className={input} />
                           <textarea name="jobDescription" defaultValue={sub.jobDescription ?? ""} rows={2} placeholder="Job description (satu poin per baris)" aria-label="Job description" className={`${input} resize-none`} />
-                          <button type="submit" className="self-start text-label-caps uppercase tracking-wide border border-outline-variant px-3 py-1.5 rounded-md hover:bg-surface-container-low transition-colors">
+                          <SubmitButton successMessage="Sub-tim tersimpan." className="self-start text-label-caps uppercase tracking-wide border border-outline-variant px-3 py-1.5 rounded-md hover:bg-surface-container-low transition-colors">
                             Simpan
-                          </button>
+                          </SubmitButton>
                         </form>
                       </details>
                     </div>
@@ -381,12 +382,12 @@ export function EventCommitteeStructure({
               className={input}
             />
           </label>
-          <button
-            type="submit"
+          <SubmitButton
+            successMessage="Divisi ditambahkan."
             className="self-start bg-primary-container text-on-primary text-label-caps uppercase tracking-wide px-5 py-2 rounded-md hover:bg-primary transition-colors"
           >
             Simpan Divisi
-          </button>
+          </SubmitButton>
         </form>
 
         <form
@@ -436,12 +437,12 @@ export function EventCommitteeStructure({
             <span className={label}>Catatan</span>
             <input name="note" placeholder="mis. PJ konsumsi hari-H" className={input} />
           </label>
-          <button
-            type="submit"
+          <SubmitButton
+            successMessage="Panitia ditugaskan."
             className="self-start bg-primary-container text-on-primary text-label-caps uppercase tracking-wide px-5 py-2 rounded-md hover:bg-primary transition-colors"
           >
             Tugaskan
-          </button>
+          </SubmitButton>
         </form>
       </div>
 
@@ -499,9 +500,9 @@ function MemberList({ rows, certified }: { rows: MemberRow[]; certified?: Set<st
           </span>
           <form action={removeCommittee}>
             <input type="hidden" name="id" value={m.id} />
-            <button type="submit" className="text-error hover:opacity-70 text-label-caps" aria-label="Lepas">
+            <SubmitButton successMessage="Panitia dilepas." className="text-error hover:opacity-70 text-label-caps" aria-label="Lepas">
               Lepas
-            </button>
+            </SubmitButton>
           </form>
         </li>
       ))}

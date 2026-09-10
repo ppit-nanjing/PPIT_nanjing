@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import { toast } from "sonner";
 import { ChevronUp, ChevronDown, Pencil, Plus, X } from "lucide-react";
 import { createDepartment, updateDepartment, moveDepartment } from "@/app/actions/admin-departments";
 import { ASSIGNABLE_SCOPE_KEYS, SENSITIVE_SCOPE_KEYS } from "@/lib/admin-scope-constants";
@@ -202,6 +203,7 @@ function DepartmentCard({
           action={(fd) => {
             updateDepartment(dept.id, fd);
             setEditing(false);
+            toast.success("Departemen tersimpan.");
           }}
           className="flex flex-col gap-2 mb-4 mt-3"
         >
@@ -317,6 +319,7 @@ function DivisionCard({
           action={(fd) => {
             updateDepartment(division.id, fd);
             setEditing(false);
+            toast.success("Divisi tersimpan.");
           }}
           className="flex flex-col gap-2 mt-2"
         >
@@ -347,6 +350,7 @@ function AddForm({ parentDepartmentId, onDone }: { parentDepartmentId: string | 
       action={(fd) => {
         createDepartment(fd);
         onDone();
+        toast.success("Ditambahkan.");
       }}
       className="flex flex-col gap-2 mt-3 bg-surface-container-low rounded-lg p-4"
     >

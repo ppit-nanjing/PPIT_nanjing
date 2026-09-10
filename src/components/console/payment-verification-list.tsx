@@ -5,6 +5,7 @@ import { PAYMENT_STATUS_LABEL } from "@/lib/payment-status-labels";
 import { ProofView } from "@/components/console/proof-view";
 import { Select } from "@/components/console/form";
 import { CollapsibleRecordList, type BadgeTone } from "@/components/console/collapsible-record-list";
+import { SubmitButton } from "@/components/console/submit-button";
 
 export interface PaymentRow {
   id: string;
@@ -90,12 +91,12 @@ export function PaymentVerificationList({ payments }: { payments: PaymentRow[] }
                 aria-label="Status pembayaran"
                 options={STATUS_OPTIONS}
               />
-              <button
-                type="submit"
+              <SubmitButton
+                successMessage="Status pembayaran tersimpan."
                 className="rounded-md bg-primary-container px-4 py-2 text-label-caps uppercase tracking-wide text-on-primary transition-colors hover:bg-primary motion-reduce:transition-none"
               >
                 Simpan
-              </button>
+              </SubmitButton>
             </div>
           </form>
         </>

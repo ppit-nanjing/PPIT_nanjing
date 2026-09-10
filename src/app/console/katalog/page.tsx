@@ -33,6 +33,7 @@ import {
 // terasa identik; label & rowBtn tetap lokal karena spesifik halaman ini.
 import { fieldInput as input, primaryBtn, Select, CheckboxField, ToggleSwitch } from "@/components/console/form";
 import { ConfirmButton } from "@/components/console/confirm-button";
+import { SubmitButton } from "@/components/console/submit-button";
 import { Pencil } from "lucide-react";
 
 const label = "text-label-caps uppercase tracking-wide text-on-surface-variant";
@@ -166,9 +167,9 @@ export default async function ConsoleKatalogPage() {
             </label>
           </div>
           <ImageUploadCropper name="imageUrl" folder="catalog" label="Gambar" placeholder="Tempel URL atau unggah gambar" />
-          <button type="submit" className={primaryBtn}>
+          <SubmitButton successMessage="Tempat ditambahkan." className={primaryBtn}>
             Tambah Tempat
-          </button>
+          </SubmitButton>
         </form>
 
         <ul className="bg-surface-container-lowest border border-outline-variant rounded-xl px-4">
@@ -202,9 +203,9 @@ export default async function ConsoleKatalogPage() {
                     </div>
                     <ImageUploadCropper name="imageUrl" folder="catalog" label="Gambar" placeholder="Tempel URL atau unggah gambar" defaultValue={p.imageUrl ?? ""} />
                     <ToggleSwitch name="published" defaultChecked={p.published} label="Tampil di situs publik" />
-                    <button type="submit" className={primaryBtn}>
+                    <SubmitButton successMessage="Tempat tersimpan." className={primaryBtn}>
                       Simpan Perubahan
-                    </button>
+                    </SubmitButton>
                   </form>
                 }
               >
@@ -257,12 +258,12 @@ export default async function ConsoleKatalogPage() {
                   <span className={label}>Catatan</span>
                   <input name="note" defaultValue={c.note ?? ""} className="bg-soft-gray rounded-md p-2 text-body-md" />
                 </label>
-                <button
-                  type="submit"
+                <SubmitButton
+                  successMessage="Wilayah naungan tersimpan."
                   className="bg-primary-container text-on-primary text-label-caps uppercase tracking-wide px-4 py-2 rounded-md hover:bg-primary transition-colors"
                 >
                   Simpan
-                </button>
+                </SubmitButton>
               </form>
             </li>
           ))}
@@ -299,9 +300,9 @@ export default async function ConsoleKatalogPage() {
             <span className={label}>Deskripsi distrik (Inggris) — kosongkan untuk isi otomatis</span>
             <textarea name="descriptionEn" rows={3} className={`${input} resize-none`} />
           </label>
-          <button type="submit" className={primaryBtn}>
+          <SubmitButton successMessage="Distrik tersimpan." className={primaryBtn}>
             Simpan Distrik
-          </button>
+          </SubmitButton>
         </form>
 
         <ul className="bg-surface-container-lowest border border-outline-variant rounded-xl px-4">
@@ -376,9 +377,9 @@ export default async function ConsoleKatalogPage() {
           </label>
           <ImageUploadCropper name="logoUrl" folder="catalog" label="Logo" placeholder="Tempel URL atau unggah gambar" />
           <CheckboxField name="isPartner" label="Kampus mitra" className="text-on-background" />
-          <button type="submit" className={primaryBtn}>
+          <SubmitButton successMessage="Universitas ditambahkan." className={primaryBtn}>
             Tambah Universitas
-          </button>
+          </SubmitButton>
         </form>
 
         <ul className="bg-surface-container-lowest border border-outline-variant rounded-xl px-4">
@@ -410,9 +411,9 @@ export default async function ConsoleKatalogPage() {
                     <textarea name="descriptionEn" rows={2} defaultValue={u.descriptionEn ?? ""} placeholder="Deskripsi (Inggris) — kosongkan = otomatis" className={`${input} resize-none`} />
                     <ImageUploadCropper name="logoUrl" folder="catalog" label="Logo" placeholder="Tempel URL atau unggah gambar" defaultValue={u.logoUrl ?? ""} />
                     <CheckboxField name="isPartner" defaultChecked={u.isPartner} label="Kampus mitra" className="text-on-background" />
-                    <button type="submit" className={primaryBtn}>
+                    <SubmitButton successMessage="Universitas tersimpan." className={primaryBtn}>
                       Simpan Perubahan
-                    </button>
+                    </SubmitButton>
                   </form>
                 }
               >
@@ -461,9 +462,9 @@ export default async function ConsoleKatalogPage() {
             <span className={label}>Catatan pemesanan</span>
             <input name="contactNote" placeholder="mis. Pesan lewat WhatsApp pengurus" className={input} />
           </label>
-          <button type="submit" className={primaryBtn}>
+          <SubmitButton successMessage="Item ditambahkan." className={primaryBtn}>
             Tambah Item
-          </button>
+          </SubmitButton>
         </form>
 
         <ul className="bg-surface-container-lowest border border-outline-variant rounded-xl px-4">
@@ -490,9 +491,9 @@ export default async function ConsoleKatalogPage() {
                     <textarea name="description" rows={2} defaultValue={m.description ?? ""} placeholder="Deskripsi" className={`${input} resize-none`} />
                     <textarea name="descriptionEn" rows={2} defaultValue={m.descriptionEn ?? ""} placeholder="Deskripsi (Inggris) — kosongkan = otomatis" className={`${input} resize-none`} />
                     <input name="contactNote" defaultValue={m.contactNote ?? ""} placeholder="Catatan pemesanan" className={input} />
-                    <button type="submit" className={primaryBtn}>
+                    <SubmitButton successMessage="Item tersimpan." className={primaryBtn}>
                       Simpan Perubahan
-                    </button>
+                    </SubmitButton>
                   </form>
                 }
               >
@@ -534,9 +535,9 @@ export default async function ConsoleKatalogPage() {
             <span className={label}>Deskripsi</span>
             <textarea name="description" rows={2} className={`${input} resize-none`} />
           </label>
-          <button type="submit" className={primaryBtn}>
+          <SubmitButton successMessage="Sponsor ditambahkan." className={primaryBtn}>
             Tambah Sponsor
-          </button>
+          </SubmitButton>
         </form>
 
         <ul className="bg-surface-container-lowest border border-outline-variant rounded-xl px-4">
@@ -561,9 +562,9 @@ export default async function ConsoleKatalogPage() {
                     <ImageUploadCropper name="logoUrl" folder="catalog" label="Logo" placeholder="Tempel URL atau unggah gambar" defaultValue={s.logoUrl ?? ""} />
                     <textarea name="description" rows={2} defaultValue={s.description ?? ""} placeholder="Deskripsi" className={`${input} resize-none`} />
                     <textarea name="descriptionEn" rows={2} defaultValue={s.descriptionEn ?? ""} placeholder="Deskripsi (Inggris) — kosongkan = otomatis" className={`${input} resize-none`} />
-                    <button type="submit" className={primaryBtn}>
+                    <SubmitButton successMessage="Sponsor tersimpan." className={primaryBtn}>
                       Simpan Perubahan
-                    </button>
+                    </SubmitButton>
                   </form>
                 }
               >
@@ -609,9 +610,9 @@ export default async function ConsoleKatalogPage() {
                 <span className={label}>Petunjuk</span>
                 <input name="instructions" className={input} />
               </label>
-              <button type="submit" className={primaryBtn}>
+              <SubmitButton successMessage="Kanal ditambahkan." className={primaryBtn}>
                 Tambah Kanal
-              </button>
+              </SubmitButton>
             </form>
 
             <ul className="bg-surface-container-lowest border border-outline-variant rounded-xl px-4">
@@ -680,12 +681,12 @@ export default async function ConsoleKatalogPage() {
                             { value: "rejected", label: "Ditolak" },
                           ]}
                         />
-                        <button
-                          type="submit"
+                        <SubmitButton
+                          successMessage="Status donasi tersimpan."
                           className="bg-primary-container text-on-primary text-label-caps uppercase tracking-wide px-4 py-2 rounded-md hover:bg-primary transition-colors"
                         >
                           Simpan
-                        </button>
+                        </SubmitButton>
                       </form>
                     </div>
                   </li>

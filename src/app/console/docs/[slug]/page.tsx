@@ -5,6 +5,7 @@ import { helpArticles, users } from "@/db/schema";
 import { upsertHelpArticle } from "@/app/actions/admin-docs";
 import { CollapsibleSection } from "@/components/console/collapsible-section";
 import { TextField, SelectField, TextAreaField, FormActions, primaryBtn } from "@/components/console/form";
+import { SubmitButton } from "@/components/console/submit-button";
 
 export default async function HelpArticlePage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
@@ -43,7 +44,7 @@ export default async function HelpArticlePage({ params }: { params: Promise<{ sl
           />
           <TextAreaField name="content" label="Isi Panduan" rows={8} defaultValue={article.content} />
           <FormActions>
-            <button type="submit" className={primaryBtn}>Simpan Perubahan</button>
+            <SubmitButton successMessage="Panduan tersimpan." className={primaryBtn}>Simpan Perubahan</SubmitButton>
           </FormActions>
         </form>
       </CollapsibleSection>

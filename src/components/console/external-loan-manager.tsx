@@ -1,6 +1,7 @@
 "use client";
 
 import { useTransition } from "react";
+import { toast } from "sonner";
 import { recordExternalLoan, returnExternalLoan } from "@/app/actions/admin-inventory";
 import { Select } from "@/components/console/form";
 
@@ -30,7 +31,12 @@ export function ExternalLoanManager({ items, loans }: { items: Item[]; loans: Lo
   return (
     <div className="flex flex-col gap-6">
       <form
-        action={(fd) => startTransition(() => recordExternalLoan(fd))}
+        action={(fd) =>
+          startTransition(async () => {
+            await recordExternalLoan(fd);
+            toast.success("Peminjaman dicatat.");
+          })
+        }
         className="bg-surface-container-low border border-outline-variant rounded-xl p-5 grid grid-cols-1 md:grid-cols-2 gap-4"
       >
         <h3 className="text-headline-md text-on-background md:col-span-2">Catat Peminjaman Keluar</h3>
@@ -90,7 +96,12 @@ export function ExternalLoanManager({ items, loans }: { items: Item[]; loans: Lo
           loans.map((l) => (
             <form
               key={l.id}
-              action={(fd) => startTransition(() => returnExternalLoan(fd))}
+              action={(fd) =>
+                startTransition(async () => {
+                  await returnExternalLoan(fd);
+                  toast.success("Peminjaman ditandai kembali.");
+                })
+              }
               className="bg-surface-container-low border border-outline-variant rounded-lg p-5 flex flex-col gap-3"
             >
               <input type="hidden" name="loanId" value={l.id} />

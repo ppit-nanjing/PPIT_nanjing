@@ -9,6 +9,7 @@ import { setAlbumDriveUrl } from "@/app/actions/admin-content";
 import { MultiPhotoUpload } from "@/components/console/multi-photo-upload";
 import { PhotoGrid } from "@/components/console/photo-grid";
 import { CollapsibleSection } from "@/components/console/collapsible-section";
+import { SubmitButton } from "@/components/console/submit-button";
 import { ArrowLeft } from "lucide-react";
 import Link from "next/link";
 
@@ -54,12 +55,12 @@ export default async function ConsoleAlbumDetailPage({ params }: { params: Promi
               className="bg-soft-gray rounded-md p-3 text-body-md"
             />
           </label>
-          <button
-            type="submit"
+          <SubmitButton
+            successMessage="Link Google Drive tersimpan."
             className="bg-primary-container text-on-primary text-label-caps uppercase tracking-wide px-5 py-3 rounded-md hover:bg-primary transition-colors shrink-0"
           >
             Simpan Link
-          </button>
+          </SubmitButton>
         </form>
       </CollapsibleSection>
 

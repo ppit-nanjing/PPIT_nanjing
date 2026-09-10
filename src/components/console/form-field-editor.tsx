@@ -2,12 +2,12 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { useFormStatus } from "react-dom";
 import { ChevronDown, ChevronRight, GripVertical, MoreVertical, Copy } from "lucide-react";
 import type { MembershipFieldDef } from "@/lib/membership-form";
 import { OPTION_TYPES, SCALE_TYPES, CHOICE_TYPES, GRID_TYPES, FIELD_TYPE_LABELS, isSectionType, canDeleteField } from "@/lib/membership-form";
 import { updateFormField, deleteFormField, moveFormField, duplicateFormField } from "@/app/actions/membership";
 import { Select, CheckboxField } from "@/components/console/form";
+import { SubmitButton } from "@/components/console/submit-button";
 
 const ALL_TYPES: MembershipFieldDef["type"][] = [
   "text", "textarea", "email", "tel", "number", "select", "radio", "multiselect", "date", "checkbox", "rating", "image", "url", "section", "time", "linear_scale",   "grid_radio", "grid_checkbox", "file",
@@ -346,32 +346,25 @@ export function FormFieldEditor({ field, index, sectionLabel, isQuiz }: { field:
               </>
             )}
 
-            <SaveButton />
+            <SubmitButton
+              successMessage="Pertanyaan tersimpan."
+              pendingLabel="Menyimpan..."
+              className="self-start bg-primary-container text-on-primary text-label-caps uppercase tracking-wide px-6 py-2.5 rounded-md hover:bg-primary transition-colors disabled:opacity-60"
+            >
+              Simpan
+            </SubmitButton>
           </form>
 
           {deletable && confirmDelete && (
             <form action={deleteFormField} className="flex items-center gap-2 mt-3">
               <input type="hidden" name="id" value={field.id ?? ""} />
-              <button type="submit" className="bg-error text-on-error text-label-caps uppercase tracking-wide px-4 py-2.5 rounded-md">Yakin hapus?</button>
+              <SubmitButton successMessage="Pertanyaan dihapus." className="bg-error text-on-error text-label-caps uppercase tracking-wide px-4 py-2.5 rounded-md">Yakin hapus?</SubmitButton>
               <button type="button" onClick={() => setConfirmDelete(false)} className="text-label-caps uppercase tracking-wide px-3 py-2.5">Batal</button>
             </form>
           )}
         </div>
       )}
     </div>
-  );
-}
-
-function SaveButton() {
-  const { pending } = useFormStatus();
-  return (
-    <button
-      type="submit"
-      disabled={pending}
-      className="self-start bg-primary-container text-on-primary text-label-caps uppercase tracking-wide px-6 py-2.5 rounded-md hover:bg-primary transition-colors disabled:opacity-60"
-    >
-      {pending ? "Menyimpan..." : "Simpan"}
-    </button>
   );
 }
 

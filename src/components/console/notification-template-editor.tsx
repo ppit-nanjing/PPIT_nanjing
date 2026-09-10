@@ -9,6 +9,7 @@ import {
 } from "@/app/actions/admin-notifications";
 import { renderTemplate, type NotificationTemplateDef } from "@/lib/notification-templates";
 import { ConfirmButton } from "@/components/console/confirm-button";
+import { SubmitButton } from "@/components/console/submit-button";
 
 // Neutral stand-ins so the preview shows shape, not invented org facts (no fake
 // event names or item brands - same rule the rest of this project follows).
@@ -131,12 +132,12 @@ export function NotificationTemplateEditor({
         ) : null}
 
         <div className="flex flex-wrap gap-3">
-          <button
-            type="submit"
+          <SubmitButton
+            successMessage="Template notifikasi tersimpan."
             className="flex items-center gap-2 bg-primary-container text-on-primary text-label-caps uppercase tracking-wide px-5 py-3 rounded-md hover:bg-primary transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-container focus-visible:ring-offset-2 focus-visible:ring-offset-background motion-reduce:transition-none"
           >
             <Save size={16} aria-hidden /> Simpan
-          </button>
+          </SubmitButton>
           {customized ? (
             // Confirm first: reset permanently deletes the saved override.
             <ConfirmButton

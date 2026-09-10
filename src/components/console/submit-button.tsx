@@ -12,6 +12,7 @@ type Props = {
   /** Toast fired once the action finishes without throwing. Pass "" to suppress. */
   successMessage?: string;
   disabled?: boolean;
+  "aria-label"?: string;
 };
 
 // Drop-in replacement for a plain `<button type="submit">` inside a
@@ -26,7 +27,14 @@ type Props = {
 // (AGENTS.md's default), not ones that return inline `{error}` form state.
 // For those (useActionState / useFormState forms), toast from the returned
 // state instead of using this component.
-export function SubmitButton({ children, className, pendingLabel, successMessage = "Tersimpan.", disabled }: Props) {
+export function SubmitButton({
+  children,
+  className,
+  pendingLabel,
+  successMessage = "Tersimpan.",
+  disabled,
+  "aria-label": ariaLabel,
+}: Props) {
   const { pending } = useFormStatus();
   const wasPending = useRef(false);
 
@@ -36,7 +44,7 @@ export function SubmitButton({ children, className, pendingLabel, successMessage
   }, [pending, successMessage]);
 
   return (
-    <button type="submit" disabled={disabled || pending} className={className}>
+    <button type="submit" disabled={disabled || pending} className={className} aria-label={ariaLabel}>
       {pending ? (pendingLabel ?? children) : children}
     </button>
   );

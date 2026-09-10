@@ -3,6 +3,7 @@ import { db } from "@/db";
 import { releaseNotes } from "@/db/schema";
 import { publishReleaseNote } from "@/app/actions/admin-docs";
 import { CollapsibleSection } from "@/components/console/collapsible-section";
+import { SubmitButton } from "@/components/console/submit-button";
 import { Plus } from "lucide-react";
 
 export default async function ChangelogPage() {
@@ -20,12 +21,12 @@ export default async function ChangelogPage() {
           <input name="version" placeholder="Versi (mis. 1.1.0)" required className="bg-soft-gray rounded-md p-3 text-body-md" />
           <input name="summary" placeholder="Ringkasan singkat *" required className="bg-soft-gray rounded-md p-3 text-body-md" />
           <textarea name="details" placeholder="Detail (opsional)" rows={4} className="bg-soft-gray rounded-md p-3 text-body-md resize-none" />
-          <button
-            type="submit"
+          <SubmitButton
+            successMessage="Rilis dipublikasikan."
             className="self-start bg-primary-container text-on-primary text-label-caps uppercase tracking-wide px-6 py-3 rounded-md hover:bg-primary transition-colors"
           >
             Publikasikan
-          </button>
+          </SubmitButton>
         </form>
       </details>
 

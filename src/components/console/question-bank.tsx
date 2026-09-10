@@ -1,10 +1,10 @@
 "use client";
 
 import { useState } from "react";
-import { useFormStatus } from "react-dom";
 import { Plus, Search } from "lucide-react";
 import { QUESTION_BANK, FIELD_TYPE_LABELS, type QuestionTemplate } from "@/lib/membership-form";
 import { createFormFieldFromTemplate } from "@/app/actions/membership";
+import { SubmitButton } from "@/components/console/submit-button";
 
 export function QuestionBank() {
   const [query, setQuery] = useState("");
@@ -51,21 +51,19 @@ export function QuestionBank() {
 }
 
 function AddTemplateButton({ template }: { template: QuestionTemplate }) {
-  const { pending } = useFormStatus();
   return (
     <form action={createFormFieldFromTemplate} className="flex items-center justify-between gap-3 bg-soft-gray rounded-md px-4 py-3">
       <div className="min-w-0">
         <p className="text-body-md text-on-background truncate">{template.label}</p>
         <p className="text-label-caps text-on-surface-variant">{FIELD_TYPE_LABELS[template.type]}</p>
       </div>
-      <button
-        type="submit"
-        disabled={pending}
+      <SubmitButton
+        successMessage="Pertanyaan ditambahkan."
         aria-label={`Tambah ${template.label}`}
         className="shrink-0 inline-flex items-center gap-1 bg-primary-container text-on-primary text-label-caps uppercase tracking-wide px-3 py-2 rounded-md hover:bg-primary transition-colors disabled:opacity-60"
       >
         <Plus size={14} /> Tambah
-      </button>
+      </SubmitButton>
       <input type="hidden" name="templateKey" value={template.key} />
     </form>
   );

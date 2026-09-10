@@ -3,6 +3,7 @@
 import { setVolunteerStatus } from "@/app/actions/volunteers";
 import { ConfirmButton } from "@/components/console/confirm-button";
 import { CollapsibleRecordList, type BadgeTone } from "@/components/console/collapsible-record-list";
+import { SubmitButton } from "@/components/console/submit-button";
 
 export interface VolunteerApplication {
   id: string;
@@ -58,12 +59,12 @@ export function VolunteerApplicationList({ applications }: { applications: Volun
               <form action={setVolunteerStatus} className="flex-1">
                 <input type="hidden" name="id" value={v.id} />
                 <input type="hidden" name="decision" value="approved" />
-                <button
-                  type="submit"
+                <SubmitButton
+                  successMessage="Lamaran diterima."
                   className="w-full rounded-md bg-primary-container px-3 py-1.5 text-label-caps uppercase tracking-wide text-on-primary transition-colors hover:bg-primary motion-reduce:transition-none"
                 >
                   Terima
-                </button>
+                </SubmitButton>
               </form>
               <ConfirmButton
                 title="Tolak lamaran?"

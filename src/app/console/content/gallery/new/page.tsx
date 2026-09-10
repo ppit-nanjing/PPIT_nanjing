@@ -3,6 +3,7 @@ import { createGalleryAlbum } from "@/app/actions/admin-content";
 import { ImageUploadCropper } from "@/components/upload/image-upload-cropper";
 import { MultiPhotoUpload } from "@/components/console/multi-photo-upload";
 import { CollapsibleSection } from "@/components/console/collapsible-section";
+import { SubmitButton } from "@/components/console/submit-button";
 import { ArrowLeft } from "lucide-react";
 import Link from "next/link";
 
@@ -54,12 +55,12 @@ export default async function NewGalleryAlbumPage() {
             </span>
           </label>
 
-          <button
-            type="submit"
+          <SubmitButton
+            successMessage="Album dibuat."
             className="self-start bg-primary-container text-on-primary text-label-caps uppercase tracking-wide px-6 py-3 rounded-md hover:bg-primary transition-colors"
           >
             Buat Album
-          </button>
+          </SubmitButton>
         </form>
       </CollapsibleSection>
     </div>

@@ -17,6 +17,7 @@ import { Plus, Package, Pencil } from "lucide-react";
 import Link from "next/link";
 import { conditionLabel, INVENTORY_CONDITIONS, CONDITION_LABEL } from "@/lib/inventory-labels";
 import { fieldInput as input, primaryBtn, Select } from "@/components/console/form";
+import { SubmitButton } from "@/components/console/submit-button";
 
 
 export default async function ConsoleInventoryPage() {
@@ -180,12 +181,12 @@ export default async function ConsoleInventoryPage() {
               <input name="totalQuantity" type="number" min={1} placeholder="Jumlah Total *" required className="bg-soft-gray rounded-md p-3 text-body-md" />
               <textarea name="description" placeholder="Deskripsi" rows={2} className="bg-soft-gray rounded-md p-3 text-body-md resize-none" />
               <FileUpload name="imageUrl" folder="inventory" label="Foto Barang (opsional)" placeholder="URL atau unggah gambar" />
-              <button
-                type="submit"
+              <SubmitButton
+                successMessage="Barang ditambahkan."
                 className="self-start bg-primary-container text-on-primary text-label-caps uppercase tracking-wide px-6 py-3 rounded-md hover:bg-primary transition-colors"
               >
                 Tambah Barang
-              </button>
+              </SubmitButton>
             </form>
           </details>
 
@@ -242,9 +243,9 @@ export default async function ConsoleInventoryPage() {
                     </div>
                     <textarea name="description" rows={2} defaultValue={item.description ?? ""} placeholder="Deskripsi" className={`${input} resize-none`} />
                     <FileUpload name="imageUrl" folder="inventory" label="Foto Barang (opsional)" placeholder="URL atau unggah gambar" defaultValue={item.imageUrl ?? ""} />
-                    <button type="submit" className={primaryBtn}>
+                    <SubmitButton successMessage="Barang tersimpan." className={primaryBtn}>
                       Simpan Perubahan
-                    </button>
+                    </SubmitButton>
                   </form>
                 </details>
               </div>
