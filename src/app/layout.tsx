@@ -4,6 +4,9 @@ import { Providers } from "@/components/providers";
 import { OnboardingModal } from "@/components/onboarding-modal";
 import { HelpCenter } from "@/components/ai/help-center";
 import { auth } from "@/auth";
+import { db } from "@/db";
+import { regionalBranches } from "@/db/schema";
+import { asc } from "drizzle-orm";
 import { getT } from "@/lib/i18n/server";
 import { LocaleProvider } from "@/lib/i18n/client";
 import "./globals.css";
@@ -40,6 +43,18 @@ export async function generateMetadata(): Promise<Metadata> {
 export default async function RootLayout({ children }: LayoutProps<"/">) {
   const session = await auth();
   const { locale, dict } = await getT();
+  // Kota cabang untuk dropdown "Asal Kota" di modal onboarding. Cuma di-query
+  // kalau modal itu memang mungkin muncul (emailSubscribed belum diisi) — kalau
+  // tidak, jangan bebani tiap render layout root dengan satu round-trip DB.
+  const onboardingBranches =
+    session?.user && session.user.emailSubscribed == null
+      ? (
+          await db
+            .select({ cityName: regionalBranches.cityName })
+            .from(regionalBranches)
+            .orderBy(asc(regionalBranches.cityName))
+        ).map((b) => b.cityName)
+      : [];
   return (
     // suppressHydrationWarning ada karena skrip tema di bawah MEMANG mengubah
     // <html> sebelum React hydrate: server merender tanpa data-mode, skrip
@@ -71,7 +86,7 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
           <LocaleProvider locale={locale} dict={dict}>
             {children}
             <HelpCenter authed={!!session?.user} />
-            <OnboardingModal />
+            <OnboardingModal branchOptions={onboardingBranches} />
           </LocaleProvider>
         </Providers>
       </body>
