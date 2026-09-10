@@ -293,6 +293,7 @@ export const en = {
   "ticket.pay.proofLabelUpdate": "Update transfer proof (screenshot)",
   "ticket.pay.submitProof": "Send proof",
   "ticket.nextSteps": "Next Steps",
+  "ticket.contactQrAlt": "Committee contact QR code",
 
   // News
   "news.title": "News",

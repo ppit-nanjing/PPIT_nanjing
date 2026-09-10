@@ -461,6 +461,14 @@ export const events = pgTable("events", {
   // acara publik: cuma pendaftar yang perlu lihat. Freeform, whitespace
   // dipertahankan saat render.
   confirmationInfo: text("confirmation_info"),
+  // Foto QR "tambahkan sebagai kontak" (screenshot dari WeChat/Alipay dsb),
+  // ditampilkan berdampingan dengan confirmationInfo di halaman tiket - mis.
+  // WIF menggantikan instruksi "add WeChat ID ini" jadi QR yang bisa discan
+  // langsung. Dua slot tetap (bukan tabel/array) karena kebutuhannya memang
+  // sekadar 1-2 orang kontak per acara; tambah acara lain butuh lebih banyak,
+  // baru layak jadi tabel seperti event_fee_options.
+  confirmationContactQr1Url: text("confirmation_contact_qr1_url"),
+  confirmationContactQr2Url: text("confirmation_contact_qr2_url"),
   // Warna halaman acara (opsional) - biar halaman terasa senada dengan poster.
   // Ketiganya HEX (#rrggbb). Semua null = pakai tema situs seperti biasa.
   //  themeBg      : latar halaman (warna terang, mis. krem poster)

@@ -296,6 +296,7 @@ export const id = {
   "ticket.pay.proofLabelUpdate": "Perbarui bukti transfer (screenshot)",
   "ticket.pay.submitProof": "Kirim Bukti",
   "ticket.nextSteps": "Langkah Berikutnya",
+  "ticket.contactQrAlt": "QR tambah kontak panitia",
 
   // News
   "news.title": "Berita",

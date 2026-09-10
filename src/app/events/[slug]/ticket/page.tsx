@@ -283,10 +283,29 @@ export default async function EventTicketPage({ params }: { params: Promise<{ sl
           </div>
         )}
 
-        {event.confirmationInfo && (
+        {(event.confirmationInfo || event.confirmationContactQr1Url || event.confirmationContactQr2Url) && (
           <div className="bg-surface-container-lowest border border-outline-variant rounded-xl p-6 mt-6 text-left">
             <h2 className="text-headline-sm text-on-background mb-2">{t("ticket.nextSteps")}</h2>
-            <p className="text-body-md text-on-surface-variant whitespace-pre-line">{event.confirmationInfo}</p>
+            {event.confirmationInfo && (
+              <p className="text-body-md text-on-surface-variant whitespace-pre-line">{event.confirmationInfo}</p>
+            )}
+            {(event.confirmationContactQr1Url || event.confirmationContactQr2Url) && (
+              <div className="flex flex-wrap justify-center gap-6 mt-4">
+                {[event.confirmationContactQr1Url, event.confirmationContactQr2Url]
+                  .filter((url): url is string => !!url)
+                  .map((url) => (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      key={url}
+                      src={url}
+                      alt={t("ticket.contactQrAlt")}
+                      width={180}
+                      height={180}
+                      className="rounded-lg border border-outline-variant bg-white p-1"
+                    />
+                  ))}
+              </div>
+            )}
           </div>
         )}
 
