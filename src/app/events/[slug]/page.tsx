@@ -1,4 +1,4 @@
-import { eq, and, ne, count, desc } from "drizzle-orm";
+import { eq, and, ne, desc } from "drizzle-orm";
 import { notFound } from "next/navigation";
 import { auth } from "@/auth";
 import { db } from "@/db";
@@ -16,6 +16,7 @@ import { EventThemeStyle } from "@/components/events/event-theme-style";
 import Link from "next/link";
 import { applyAsVolunteer } from "@/app/actions/volunteers";
 import { getEventAccess } from "@/lib/event-access";
+import { getEventSeats } from "@/lib/event-capacity";
 import { getT } from "@/lib/i18n/server";
 import { INTL_LOCALE } from "@/lib/i18n/config";
 
@@ -49,10 +50,8 @@ export default async function EventDetailPage({ params, searchParams }: { params
   // penjagaan.
   if (event.status === "scheduled" || event.status === "draft") notFound();
 
-  const [{ value: registeredCount }] = await db
-    .select({ value: count() })
-    .from(eventRegistrations)
-    .where(eq(eventRegistrations.eventId, event.id));
+  const seats = await getEventSeats(event);
+  const registeredCount = seats.registered;
 
   const session = await auth();
   let alreadyRegistered = false;
@@ -87,7 +86,9 @@ export default async function EventDetailPage({ params, searchParams }: { params
 
   const now = new Date();
   const deadlinePassed = event.registrationDeadline ? new Date(event.registrationDeadline) < now : false;
-  const isFull = event.capacity != null && registeredCount >= event.capacity;
+  // Penuh = pagu total acara tercapai ATAU setiap kategori tarif berkuota
+  // sudah penuh (mis. WIF: Freshmen 130 + Non-freshmen 20).
+  const isFull = seats.isFull;
   const canRegister = event.status === "published" && !isFull && !deadlinePassed;
 
   // Wajah pasca-acara: dipicu status "completed" ATAU tanggal mulai sudah lewat
@@ -520,6 +521,27 @@ export default async function EventDetailPage({ params, searchParams }: { params
                             />
                           </div>
                         )}
+                        {/* Kuota per kategori tarif (mis. WIF: Freshmen 130,
+                            Non-freshmen 20) — begitu satu kategori penuh, hanya
+                            kategori itu yang tertutup. */}
+                        {seats.feeOptions.some((o) => o.quota != null) && (
+                          <ul className="mt-2 flex flex-col gap-1">
+                            {seats.feeOptions
+                              .filter((o) => o.quota != null)
+                              .map((o) => (
+                                <li
+                                  key={o.id}
+                                  className="flex flex-wrap items-center gap-x-2 text-label-caps uppercase tracking-wide text-on-surface-variant"
+                                >
+                                  <span className="text-on-background">{o.label}</span>
+                                  <span>
+                                    {o.registered} / {o.quota}
+                                  </span>
+                                  {o.isFull && <span className="text-error">· {t("events.quotaFull")}</span>}
+                                </li>
+                              ))}
+                          </ul>
+                        )}
                       </>
                     )}
                   </div>
@@ -532,27 +554,6 @@ export default async function EventDetailPage({ params, searchParams }: { params
                       }),
                     })}
                   </p>
-                )}
-
-                {agenda.length > 0 && !isPast && (
-                  <div className="border-t border-outline-variant pt-5">
-                    <p className="mb-3 flex items-center gap-1.5 text-label-caps uppercase tracking-wide text-on-surface-variant">
-                      <ListChecks size={14} className="text-primary-container" aria-hidden="true" /> {t("events.agenda")}
-                    </p>
-                    <ul className="flex flex-col gap-2">
-                      {agenda.slice(0, 5).map((item, i) => (
-                        <li key={i} className="flex gap-2.5 text-body-sm">
-                          <span className="w-14 shrink-0 tabular-nums text-primary-container">{item.time ?? "•"}</span>
-                          <span className="text-on-surface-variant">{item.label}</span>
-                        </li>
-                      ))}
-                      {agenda.length > 5 && (
-                        <li className="text-label-caps text-on-surface-variant">
-                          +{agenda.length - 5} lagi &darr;
-                        </li>
-                      )}
-                    </ul>
-                  </div>
                 )}
 
                 <div className="border-t border-outline-variant pt-5" role="status" aria-live="polite">
@@ -632,26 +633,32 @@ export default async function EventDetailPage({ params, searchParams }: { params
                    </>
                   )}
                 </div>
-                {event.volunteerSignupOpen && event.status === "published" && !isPast && (
+                {/* Panitia acara ini: tautan ke tiket kepanitiaan (QR absensi)
+                    selalu tampil — lepas dari apakah pendaftaran volunteer publik
+                    dibuka. Tanpa ini, panitia acara yang kepanitiaannya tertutup
+                    (mis. WIF, panitianya via SK) tidak punya jalan ke QR absensinya
+                    dari halaman acara. */}
+                {myCommitteeRole && event.status === "published" && !isPast && (
+                  <div className="border-t border-outline-variant pt-5 flex flex-col gap-3">
+                    <p className="flex items-start gap-2 text-body-md text-on-background bg-surface-container-low rounded-md px-4 py-3">
+                      <BadgeCheck size={18} className="text-primary-container shrink-0 mt-0.5" aria-hidden />
+                      <span>
+                        Kamu tercatat sebagai panitia acara ini
+                        {myCommitteeRole.divisionName ? ` — ${COMMITTEE_ROLE_LABEL[myCommitteeRole.role] ?? myCommitteeRole.role} ${myCommitteeRole.divisionName}` : ""}.
+                        {event.volunteerSignupOpen ? " Tidak perlu mendaftar volunteer lagi." : ""}
+                      </span>
+                    </p>
+                    <Link
+                      href={`/events/${slug}/committee`}
+                      className="self-start inline-flex items-center justify-center gap-2 bg-secondary-container text-on-secondary-container text-label-caps uppercase tracking-wide px-6 py-3 rounded-md hover:bg-secondary transition-colors"
+                    >
+                      <Ticket size={16} aria-hidden /> Tiket Kepanitiaan (QR Absensi)
+                    </Link>
+                  </div>
+                )}
+                {event.volunteerSignupOpen && event.status === "published" && !isPast && !myCommitteeRole && (
                   <div className="border-t border-outline-variant pt-5">
-                    {myCommitteeRole ? (
-                      <div className="flex flex-col gap-3">
-                        <p className="flex items-start gap-2 text-body-md text-on-background bg-surface-container-low rounded-md px-4 py-3">
-                          <BadgeCheck size={18} className="text-primary-container shrink-0 mt-0.5" aria-hidden />
-                          <span>
-                            Kamu sudah tercatat sebagai panitia acara ini
-                            {myCommitteeRole.divisionName ? ` — ${COMMITTEE_ROLE_LABEL[myCommitteeRole.role] ?? myCommitteeRole.role} ${myCommitteeRole.divisionName}` : ""}.
-                            {" "}Tidak perlu mendaftar volunteer lagi.
-                          </span>
-                        </p>
-                        <Link
-                          href={`/events/${slug}/committee`}
-                          className="self-start inline-flex items-center justify-center gap-2 bg-secondary-container text-on-secondary-container text-label-caps uppercase tracking-wide px-6 py-3 rounded-md hover:bg-secondary transition-colors"
-                        >
-                          <Ticket size={16} aria-hidden /> Tiket Kepanitiaan (QR Absensi)
-                        </Link>
-                      </div>
-                    ) : volunteerFlag === "committee" ? (
+                    {volunteerFlag === "committee" ? (
                       <p className="flex items-start gap-2 text-body-md text-on-background bg-surface-container-low rounded-md px-4 py-3">
                         <BadgeCheck size={18} className="text-primary-container shrink-0 mt-0.5" aria-hidden />
                         <span>Lamaran tidak terkirim — email ini sudah tercatat sebagai panitia acara ini. Hubungi admin bila ada kekeliruan.</span>

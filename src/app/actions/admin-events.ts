@@ -112,6 +112,9 @@ export async function createEvent(_prev: EventFormState, formData: FormData): Pr
       registrationDeadline: formData.get("registrationDeadline")
         ? new Date(String(formData.get("registrationDeadline")))
         : null,
+      earlyBirdUntil: formData.get("earlyBirdUntil")
+        ? new Date(String(formData.get("earlyBirdUntil")))
+        : null,
       capacity: formData.get("capacity") ? Number(formData.get("capacity")) : null,
       requiresSensus: formData.get("requiresSensus") === "on",
       requiresBiodata: formData.get("requiresBiodata") === "on",
@@ -172,6 +175,9 @@ export async function updateEventInfo(id: string, formData: FormData) {
       startAt: formData.get("startAt") ? new Date(String(formData.get("startAt"))) : null,
       registrationDeadline: formData.get("registrationDeadline")
         ? new Date(String(formData.get("registrationDeadline")))
+        : null,
+      earlyBirdUntil: formData.get("earlyBirdUntil")
+        ? new Date(String(formData.get("earlyBirdUntil")))
         : null,
       capacity: formData.get("capacity") ? Number(formData.get("capacity")) : null,
       requiresSensus: formData.get("requiresSensus") === "on",
@@ -385,6 +391,30 @@ function parseAmountCny(formData: FormData): number {
   return Math.round(parsed);
 }
 
+// Kuota per kategori tarif: kosong = tanpa batas per-kategori (hanya kapasitas
+// acara yang berlaku). Diisi = bilangan cacah yang muat di kolom `integer`.
+function parseFeeOptionQuota(formData: FormData): number | null {
+  const raw = String(formData.get("quota") ?? "").trim();
+  if (!raw) return null;
+  const parsed = Number(raw);
+  if (!Number.isInteger(parsed) || parsed < 0 || parsed > 2_147_483_647) {
+    throw new Error("Kuota harus berupa angka bulat antara 0 dan 2.147.483.647, atau dikosongkan");
+  }
+  return parsed;
+}
+
+// Tarif early bird per kategori: kosong = kategori ini tidak diskon (selalu
+// bayar nominal normal). Diisi = bilangan cacah non-negatif.
+function parseEarlyBirdAmountCny(formData: FormData): number | null {
+  const raw = String(formData.get("earlyBirdAmountCny") ?? "").trim();
+  if (!raw) return null;
+  const parsed = Number(raw);
+  if (!Number.isInteger(parsed) || parsed < 0 || parsed > 2_147_483_647) {
+    throw new Error("Tarif early bird harus berupa angka bulat >= 0, atau dikosongkan");
+  }
+  return parsed;
+}
+
 /** Tambah / ubah satu kategori tarif. Ada `id` = ubah; tanpa = tambah di urutan terakhir. */
 export async function saveFeeOption(formData: FormData) {
   const eventId = String(formData.get("eventId") ?? "");
@@ -392,19 +422,23 @@ export async function saveFeeOption(formData: FormData) {
   if (!eventId || !label) throw new Error("Acara dan label kategori wajib diisi");
   await requireEventCapability(eventId, "event.feeTiers");
   const amountCny = parseAmountCny(formData);
+  const quota = parseFeeOptionQuota(formData);
+  const earlyBirdAmountCny = parseEarlyBirdAmountCny(formData);
 
   const id = String(formData.get("id") ?? "").trim();
   if (id) {
     await db
       .update(eventFeeOptions)
-      .set({ label, amountCny })
+      .set({ label, amountCny, quota, earlyBirdAmountCny })
       .where(and(eq(eventFeeOptions.id, id), eq(eventFeeOptions.eventId, eventId)));
   } else {
     const [{ maxOrder }] = await db
       .select({ maxOrder: sql`coalesce(max(${eventFeeOptions.orderIndex}), 0)` })
       .from(eventFeeOptions)
       .where(eq(eventFeeOptions.eventId, eventId));
-    await db.insert(eventFeeOptions).values({ eventId, label, amountCny, orderIndex: Number(maxOrder) + 1 });
+    await db
+      .insert(eventFeeOptions)
+      .values({ eventId, label, amountCny, quota, earlyBirdAmountCny, orderIndex: Number(maxOrder) + 1 });
   }
   revalidatePath(`/console/events/${eventId}`);
 }

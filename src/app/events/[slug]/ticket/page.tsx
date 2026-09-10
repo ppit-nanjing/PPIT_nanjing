@@ -16,6 +16,7 @@ import type { TKey } from "@/lib/i18n/dictionaries/id";
 import { INTL_LOCALE } from "@/lib/i18n/config";
 import { submitPaymentProof } from "@/app/actions/committee";
 import { buildAlipayTransferLink } from "@/lib/alipay-deeplink";
+import { feeTierAt, amountForTier } from "@/lib/event-fee";
 import { FileUpload } from "@/components/upload/file-upload";
 
 // Payment-status -> dictionary key. The console keeps its own Indonesian-only
@@ -55,25 +56,37 @@ export default async function EventTicketPage({ params }: { params: Promise<{ sl
 
   const qrDataUrl = await QRCode.toDataURL(checkInUrl, { margin: 1, width: 240 });
 
-  // GERBANG PEMBAYARAN: acara berbayar baru menampilkan QR check-in setelah
-  // bendahara memverifikasi bukti transfer. Sebelum itu yang tampil panduan
-  // bayarnya - pendaftarannya sendiri berstatus "pending" tanpa QR.
-  const hasFee = event.isPaid;
-  const awaitingPayment = hasFee && registration.paymentStatus !== "verified";
-  const gated = registration.status === "pending" || awaitingPayment;
   // Nominal = kategori tarif yang dipilih peserta bila ada, kalau tidak tarif
-  // tunggal acara.
+  // tunggal acara. Tahap (early bird / normal) ditentukan dari KAPAN peserta
+  // mendaftar (registeredAt) vs events.earlyBirdUntil — bukan dari kapan dia
+  // buka halaman ini.
   const [feeOption] = registration.feeOptionId
     ? await db
-        .select({ label: eventFeeOptions.label, amountCny: eventFeeOptions.amountCny })
+        .select({
+          label: eventFeeOptions.label,
+          amountCny: eventFeeOptions.amountCny,
+          earlyBirdAmountCny: eventFeeOptions.earlyBirdAmountCny,
+        })
         .from(eventFeeOptions)
         .where(eq(eventFeeOptions.id, registration.feeOptionId))
     : [];
+  const feeTier = feeTierAt(event.earlyBirdUntil, new Date(registration.registeredAt));
   const feeAmount = feeOption
-    ? feeOption.amountCny
+    ? amountForTier(feeTier, feeOption.amountCny, feeOption.earlyBirdAmountCny)
     : event.feeCny != null && event.feeCny > 0
       ? event.feeCny
       : null;
+  const paidEarlyBird = feeTier === "early_bird" && !!feeOption && feeOption.earlyBirdAmountCny != null;
+
+  // GERBANG PEMBAYARAN: acara berbayar baru menampilkan QR check-in setelah
+  // bendahara memverifikasi bukti transfer. Sebelum itu yang tampil panduan
+  // bayarnya - pendaftarannya sendiri berstatus "pending" tanpa QR.
+  // `feeAmount === 0` (mis. tarif early bird gratis) = tidak ada yang dibayar →
+  // tidak digerbang, QR langsung tampil. `null` (nominal belum ditentukan) tetap
+  // digerbang seperti biasa.
+  const hasFee = event.isPaid && feeAmount !== 0;
+  const awaitingPayment = hasFee && registration.paymentStatus !== "verified";
+  const gated = registration.status === "pending" || awaitingPayment;
   const alipayLink =
     feeAmount != null && event.alipayUid
       ? buildAlipayTransferLink(event.alipayUid, feeAmount, `${session.user.name ?? "Peserta"} - ${event.title}`)
@@ -174,6 +187,11 @@ export default async function EventTicketPage({ params }: { params: Promise<{ sl
                   ¥{feeAmount}
                   {feeOption ? <span className="text-body-md text-on-surface-variant"> · {feeOption.label}</span> : null}
                 </p>
+                {paidEarlyBird && (
+                  <p className="text-label-caps uppercase tracking-wide text-primary-container mt-0.5">
+                    Harga early bird
+                  </p>
+                )}
               </div>
             ) : (
               <p className="mb-4 text-body-md text-on-surface-variant">

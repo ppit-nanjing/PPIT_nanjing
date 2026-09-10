@@ -2,6 +2,7 @@ import { desc, eq } from "drizzle-orm";
 import { db } from "@/db";
 import { events, eventRegistrations, eventQuestions, eventFeeOptions, users } from "@/db/schema";
 import { hasEventCapabilityFor } from "@/lib/event-access";
+import { feeTierAt, amountForTier } from "@/lib/event-fee";
 
 // Same hardening as the membership export: quote/escape CSV specials and
 // neutralize Excel formula injection ("=HYPERLINK(...)" typed into a form
@@ -30,7 +31,11 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
     return new Response("Forbidden", { status: 403 });
   }
 
-  const [event] = await db.select({ title: events.title }).from(events).where(eq(events.id, id)).limit(1);
+  const [event] = await db
+    .select({ title: events.title, earlyBirdUntil: events.earlyBirdUntil })
+    .from(events)
+    .where(eq(events.id, id))
+    .limit(1);
   if (!event) return new Response("Not found", { status: 404 });
 
   const [rows, questions, feeOptions] = await Promise.all([
@@ -51,12 +56,28 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
       .orderBy(desc(eventRegistrations.registeredAt)),
     db.select({ id: eventQuestions.id, label: eventQuestions.label }).from(eventQuestions).where(eq(eventQuestions.eventId, id)),
     db
-      .select({ id: eventFeeOptions.id, label: eventFeeOptions.label, amountCny: eventFeeOptions.amountCny })
+      .select({
+        id: eventFeeOptions.id,
+        label: eventFeeOptions.label,
+        amountCny: eventFeeOptions.amountCny,
+        earlyBirdAmountCny: eventFeeOptions.earlyBirdAmountCny,
+      })
       .from(eventFeeOptions)
       .where(eq(eventFeeOptions.eventId, id)),
   ]);
 
-  const feeLabel = new Map(feeOptions.map((o) => [o.id, `${o.label} (¥${o.amountCny})`]));
+  const feeOptionById = new Map(feeOptions.map((o) => [o.id, o]));
+  // Label kategori per pendaftaran: nominal efektif = tahap (early bird / normal)
+  // yang berlaku saat dia mendaftar.
+  const feeLabelFor = (feeOptionId: string | null, registeredAt: Date | string): string => {
+    if (!feeOptionId) return "";
+    const o = feeOptionById.get(feeOptionId);
+    if (!o) return "";
+    const tier = feeTierAt(event.earlyBirdUntil, new Date(registeredAt));
+    const eff = amountForTier(tier, o.amountCny, o.earlyBirdAmountCny);
+    const earlyBird = tier === "early_bird" && o.earlyBirdAmountCny != null;
+    return `${o.label} (¥${eff}${earlyBird ? " early bird" : ""})`;
+  };
   const anyFee = feeOptions.length > 0;
   const anyBiodata = rows.some((r) => r.biodataJson);
   const BIODATA_COLS: { key: keyof NonNullable<(typeof rows)[number]["biodataJson"]>; label: string }[] = [
@@ -93,7 +114,7 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
         // ISO date - locale-formatted dates ("10 Agu 2026") break Excel parsing.
         new Date(r.registeredAt).toISOString().slice(0, 10),
         r.branch ?? "",
-        ...(anyFee ? [r.feeOptionId ? feeLabel.get(r.feeOptionId) ?? "" : ""] : []),
+        ...(anyFee ? [feeLabelFor(r.feeOptionId, r.registeredAt)] : []),
         ...(anyBiodata ? BIODATA_COLS.map((c) => bio?.[c.key] ?? "") : []),
         ...questions.map((q) => {
           const v = answers[q.id];

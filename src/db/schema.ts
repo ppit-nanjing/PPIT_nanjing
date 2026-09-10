@@ -399,6 +399,14 @@ export const events = pgTable("events", {
   startAt: timestamp("start_at"),
   endAt: timestamp("end_at"),
   registrationDeadline: timestamp("registration_deadline"),
+  // Batas harga early bird. Sampai/di titik ini, peserta yang mendaftar kena
+  // tarif early bird (event_fee_options.earlyBirdAmountCny); setelahnya tarif
+  // normal (amountCny). NULL = tidak ada tahap early bird, semua bayar normal.
+  // Tier ditentukan dari event_registrations.registeredAt vs kolom ini — tidak
+  // disalin ke baris pendaftaran, jadi memundurkan/memajukan tanggal ini ikut
+  // menggeser tarif orang yang sudah daftar (sengaja: sejalan dengan "harga
+  // dibaca live, bisa dikoreksi panitia").
+  earlyBirdUntil: timestamp("early_bird_until"),
   capacity: integer("capacity"),
   // When true, only users who have completed the sensus (verified as Indonesian
   // students in China) may register. Regular events only require login.
@@ -555,6 +563,17 @@ export const eventFeeOptions = pgTable("event_fee_options", {
   eventId: uuid("event_id").notNull().references(() => events.id, { onDelete: "cascade" }),
   label: text("label").notNull(),
   amountCny: integer("amount_cny").notNull(),
+  // Tarif early bird kategori ini — dipakai untuk pendaftar yang mendaftar
+  // sebelum events.earlyBirdUntil. NULL = kategori ini tidak punya diskon early
+  // bird (selalu bayar amountCny, walau acaranya sedang tahap early bird).
+  earlyBirdAmountCny: integer("early_bird_amount_cny"),
+  // Batas jumlah pendaftar yang boleh memilih kategori ini. NULL = tanpa batas
+  // per-kategori (hanya events.capacity yang berlaku). Begitu satu kategori
+  // penuh, pendaftaran kategori itu saja yang tertutup — kategori lain jalan
+  // terus. Contoh WIF 2026: Freshmen 130, Non-freshmen 20 (jumlahnya = 150 =
+  // events.capacity). Boleh dijumlah di bawah events.capacity kalau memang ada
+  // sisa kursi yang diurus di luar portal (mis. jatah panitia).
+  quota: integer("quota"),
   orderIndex: integer("order_index").notNull().default(0),
 });
 

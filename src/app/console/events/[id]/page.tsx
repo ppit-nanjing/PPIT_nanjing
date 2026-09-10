@@ -24,6 +24,7 @@ import { Select, CheckboxField, CheckField } from "@/components/console/form";
 import { PaymentVerificationList } from "@/components/console/payment-verification-list";
 import { ReservationManager } from "@/components/console/reservation-manager";
 import { checkInBlockReason } from "@/lib/event-checkin";
+import { feeTierAt, amountForTier } from "@/lib/event-fee";
 import { toDateLocalInput } from "@/lib/datetime";
 import { ConfirmButton } from "@/components/console/confirm-button";
 import { Download, Images } from "lucide-react";
@@ -91,7 +92,29 @@ export default async function ConsoleEventDetailPage({ params }: { params: Promi
     .from(eventFeeOptions)
     .where(eq(eventFeeOptions.eventId, id))
     .orderBy(eventFeeOptions.orderIndex, eventFeeOptions.id);
-  const feeOptionLabel = new Map(feeOptions.map((o) => [o.id, `${o.label} (¥${o.amountCny})`]));
+  const feeOptionById = new Map(feeOptions.map((o) => [o.id, o]));
+  // Label kategori tarif untuk satu pendaftaran: pakai NOMINAL EFEKTIF-nya —
+  // tergantung tahap (early bird / normal) yang berlaku saat dia mendaftar.
+  function feeLabelFor(feeOptionId: string | null, registeredAt: Date | string): string | null {
+    if (!feeOptionId) return null;
+    const opt = feeOptionById.get(feeOptionId);
+    if (!opt) return null;
+    const tier = feeTierAt(event.earlyBirdUntil, new Date(registeredAt));
+    const eff = amountForTier(tier, opt.amountCny, opt.earlyBirdAmountCny);
+    const earlyBird = tier === "early_bird" && opt.earlyBirdAmountCny != null;
+    return `${opt.label} (¥${eff}${earlyBird ? " · early bird" : ""})`;
+  }
+  // Pendaftar (di luar yang dibatalkan) per kategori tarif — untuk "X / kuota"
+  // dan penanda kategori yang sudah penuh di panel Kategori Tarif.
+  const feeOptionRegCount = new Map<string, number>();
+  for (const r of registrations) {
+    if (r.reg.status === "cancelled" || !r.reg.feeOptionId) continue;
+    feeOptionRegCount.set(r.reg.feeOptionId, (feeOptionRegCount.get(r.reg.feeOptionId) ?? 0) + 1);
+  }
+  const feeOptionRows = feeOptions.map((o) => {
+    const registered = feeOptionRegCount.get(o.id) ?? 0;
+    return { ...o, registered, isFull: o.quota != null && registered >= o.quota };
+  });
   const volunteerApps = await db
     .select({
       app: eventVolunteers,
@@ -183,23 +206,28 @@ export default async function ConsoleEventDetailPage({ params }: { params: Promi
   // (grant "Keuangan" per divisi + BPH Panitia + BPH Kabinet). Diturunkan dari
   // `registrations` yang sudah diambil; hanya render-nya yang digerbang.
   const canVerifyPayments = can("event.manageFinance");
-  const feeOptionAmount = new Map(feeOptions.map((o) => [o.id, o.amountCny]));
   const pendingPayments = canVerifyPayments
     ? registrations
         .filter((r) => r.reg.paymentStatus !== "not_required")
-        .map((r) => ({
-          id: r.reg.id,
-          status: r.reg.paymentStatus,
-          proofUrl: r.reg.paymentProofUrl,
-          note: r.reg.paymentNote,
-          registeredAt: r.reg.registeredAt,
-          name: r.userName,
-          email: r.userEmail,
-          // Nominal yang wajib dibayar peserta ini: kategori tarifnya bila ada,
-          // kalau tidak tarif tunggal acara.
-          expected: r.reg.feeOptionId ? feeOptionAmount.get(r.reg.feeOptionId) ?? null : event.feeCny,
-          feeLabel: r.reg.feeOptionId ? feeOptionLabel.get(r.reg.feeOptionId) ?? null : null,
-        }))
+        .map((r) => {
+          const opt = r.reg.feeOptionId ? feeOptionById.get(r.reg.feeOptionId) ?? null : null;
+          // Tahap (early bird / normal) dari KAPAN peserta ini mendaftar.
+          const tier = feeTierAt(event.earlyBirdUntil, new Date(r.reg.registeredAt));
+          return {
+            id: r.reg.id,
+            status: r.reg.paymentStatus,
+            proofUrl: r.reg.paymentProofUrl,
+            note: r.reg.paymentNote,
+            registeredAt: r.reg.registeredAt,
+            name: r.userName,
+            email: r.userEmail,
+            // Nominal yang wajib dibayar peserta ini: kategori tarifnya (dengan
+            // tahap yang berlaku saat dia daftar) bila ada, kalau tidak tarif
+            // tunggal acara.
+            expected: opt ? amountForTier(tier, opt.amountCny, opt.earlyBirdAmountCny) : event.feeCny,
+            feeLabel: feeLabelFor(r.reg.feeOptionId, r.reg.registeredAt),
+          };
+        })
     : [];
 
   const attended = registrations.filter((r) => r.reg.status === "attended").length;
@@ -361,10 +389,13 @@ export default async function ConsoleEventDetailPage({ params }: { params: Promi
                 defaultInstructions={event.paymentInstructions}
                 defaultQrUrl={event.paymentQrUrl}
                 defaultAlipayUid={event.alipayUid}
+                defaultEarlyBirdUntil={
+                  event.earlyBirdUntil ? toDateLocalInput(new Date(event.earlyBirdUntil)) : ""
+                }
               />
               {event.isPaid && (
                 <p className="text-xs text-on-surface-variant">
-                  Butuh tarif bertingkat (mis. Freshmen ¥15 / Non-freshmen ¥25)? Atur di bagian
+                  Butuh tarif bertingkat (mis. Freshmen ¥5 / Non-freshmen ¥10)? Atur di bagian
                   &ldquo;Kategori Tarif&rdquo; di bawah — kalau ada minimal satu kategori, peserta wajib memilih
                   saat mendaftar dan nominal itu yang dipakai, bukan angka tunggal di atas.
                 </p>
@@ -566,12 +597,29 @@ export default async function ConsoleEventDetailPage({ params }: { params: Promi
       >
         <p className="text-body-md text-on-surface-variant mb-4 max-w-2xl">
           Kosong = pakai satu nominal (angka HTM di form Edit). Tambahkan kategori bila tarifnya
-          bertingkat — <strong className="text-on-background">Freshmen ¥15 / Non-freshmen ¥25</strong> untuk WIF,
+          bertingkat — <strong className="text-on-background">Freshmen ¥5 / Non-freshmen ¥10</strong> untuk WIF,
           satu baris flat untuk booth, satu baris per nomor untuk olahraga. Peserta wajib memilih satu
           saat mendaftar, dan nominal kategori itulah yang harus dibayar.
         </p>
+        <p className="text-body-md text-on-surface-variant mb-4 max-w-2xl">
+          <strong className="text-on-background">Kuota</strong> = batas pendaftar per kategori. Kosong = tanpa
+          batas per-kategori (hanya Kapasitas acara yang berlaku). Begitu satu kategori penuh, pendaftaran
+          kategori itu saja yang tertutup — kategori lain jalan terus. WIF 2026:
+          {" "}<strong className="text-on-background">Freshmen 130 · Non-freshmen 20</strong> (jumlahnya = 150,
+          sama dengan Kapasitas peserta; panitia ditugaskan lewat Struktur Kepanitiaan, tidak makan jatah ini).
+        </p>
+        <p className="text-body-md text-on-surface-variant mb-4 max-w-2xl">
+          <strong className="text-on-background">Early bird (¥)</strong> = tarif untuk yang mendaftar sebelum{" "}
+          <strong className="text-on-background">
+            {event.earlyBirdUntil
+              ? new Date(event.earlyBirdUntil).toLocaleString("id-ID", { dateStyle: "medium", timeStyle: "short" })
+              : "Batas harga early bird"}
+          </strong>{" "}
+          (atur di form Edit, bagian HTM). Kosong = kategori ini tidak diskon. Tahap ditentukan dari
+          kapan peserta mendaftar, bukan kapan dia bayar.
+        </p>
         <div className="flex flex-col gap-3">
-          {feeOptions.map((o) => (
+          {feeOptionRows.map((o) => (
             <form
               key={o.id}
               action={saveFeeOption}
@@ -583,9 +631,31 @@ export default async function ConsoleEventDetailPage({ params }: { params: Promi
                 <span className="text-label-caps uppercase tracking-wide text-on-surface-variant">Label</span>
                 <input name="label" defaultValue={o.label} required className="bg-soft-gray rounded-md p-2.5 text-body-md" />
               </label>
-              <label className="flex flex-col gap-1 w-32">
-                <span className="text-label-caps uppercase tracking-wide text-on-surface-variant">Nominal (¥)</span>
+              <label className="flex flex-col gap-1 w-24">
+                <span className="text-label-caps uppercase tracking-wide text-on-surface-variant">Normal (¥)</span>
                 <input name="amountCny" type="number" min={0} defaultValue={o.amountCny} required className="bg-soft-gray rounded-md p-2.5 text-body-md" />
+              </label>
+              <label className="flex flex-col gap-1 w-24">
+                <span className="text-label-caps uppercase tracking-wide text-on-surface-variant">Early bird (¥)</span>
+                <input
+                  name="earlyBirdAmountCny"
+                  type="number"
+                  min={0}
+                  defaultValue={o.earlyBirdAmountCny ?? ""}
+                  placeholder="—"
+                  className="bg-soft-gray rounded-md p-2.5 text-body-md"
+                />
+              </label>
+              <label className="flex flex-col gap-1 w-20">
+                <span className="text-label-caps uppercase tracking-wide text-on-surface-variant">Kuota</span>
+                <input
+                  name="quota"
+                  type="number"
+                  min={0}
+                  defaultValue={o.quota ?? ""}
+                  placeholder="∞"
+                  className="bg-soft-gray rounded-md p-2.5 text-body-md"
+                />
               </label>
               <button
                 type="submit"
@@ -602,6 +672,16 @@ export default async function ConsoleEventDetailPage({ params }: { params: Promi
               >
                 Hapus
               </ConfirmButton>
+              <p
+                className={`w-full text-label-caps uppercase tracking-wide ${
+                  o.isFull ? "text-error" : "text-on-surface-variant"
+                }`}
+              >
+                {o.registered}
+                {o.quota != null ? ` / ${o.quota}` : ""} terdaftar
+                {o.isFull ? " · penuh" : ""}
+                {o.earlyBirdAmountCny != null ? ` · early bird ¥${o.earlyBirdAmountCny} → normal ¥${o.amountCny}` : ""}
+              </p>
             </form>
           ))}
         </div>
@@ -611,9 +691,17 @@ export default async function ConsoleEventDetailPage({ params }: { params: Promi
             <span className="text-label-caps uppercase tracking-wide text-primary-container">+ Label kategori</span>
             <input name="label" required placeholder="mis. Freshmen" className="bg-soft-gray rounded-md p-2.5 text-body-md" />
           </label>
-          <label className="flex flex-col gap-1 w-32">
-            <span className="text-label-caps uppercase tracking-wide text-on-surface-variant">Nominal (¥)</span>
+          <label className="flex flex-col gap-1 w-24">
+            <span className="text-label-caps uppercase tracking-wide text-on-surface-variant">Normal (¥)</span>
             <input name="amountCny" type="number" min={0} required placeholder="15" className="bg-soft-gray rounded-md p-2.5 text-body-md" />
+          </label>
+          <label className="flex flex-col gap-1 w-24">
+            <span className="text-label-caps uppercase tracking-wide text-on-surface-variant">Early bird (¥)</span>
+            <input name="earlyBirdAmountCny" type="number" min={0} placeholder="—" className="bg-soft-gray rounded-md p-2.5 text-body-md" />
+          </label>
+          <label className="flex flex-col gap-1 w-20">
+            <span className="text-label-caps uppercase tracking-wide text-on-surface-variant">Kuota</span>
+            <input name="quota" type="number" min={0} placeholder="∞" className="bg-soft-gray rounded-md p-2.5 text-body-md" />
           </label>
           <button
             type="submit"
@@ -785,7 +873,7 @@ export default async function ConsoleEventDetailPage({ params }: { params: Promi
             status: r.reg.status,
             registeredAt: r.reg.registeredAt.toISOString(),
             answers: r.reg.answersJson ?? {},
-            feeLabel: r.reg.feeOptionId ? feeOptionLabel.get(r.reg.feeOptionId) ?? null : null,
+            feeLabel: feeLabelFor(r.reg.feeOptionId, r.reg.registeredAt),
             biodata: r.reg.biodataJson ?? null,
             checkInBlocked: checkInBlockReason(
               { status: r.reg.status, paymentStatus: r.reg.paymentStatus },
