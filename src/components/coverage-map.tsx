@@ -13,9 +13,6 @@ import { useT } from "@/lib/i18n/client";
 
 const WIDTH = 800;
 const PAD = 16;
-// Rough advance width per character for the UI sans at a given font size. Only
-// needs to be close enough to detect collisions, not to lay out text.
-const CHAR_W = 0.58;
 // Must match the tooltip's own max width, or the flip lands it half off-screen.
 const TIP_W = 240;
 const TIP_H = 100;
@@ -29,7 +26,7 @@ function ringsOf(f: CoverageFeature): Ring[] {
   return (g.coordinates as number[][][][]).flat() as Ring[];
 }
 
-/** Shoelace area, used only to rank which label wins a collision. */
+/** Shoelace area, used to rank which district is bigger. */
 function ringArea(ring: number[][]): number {
   let a = 0;
   for (let i = 0, j = ring.length - 1; i < ring.length; j = i++) {
@@ -38,12 +35,9 @@ function ringArea(ring: number[][]): number {
   return Math.abs(a / 2);
 }
 
-/** Strip accents/case so "Huai'an" matches "huaian" and "Ma’anshan" matches "maanshan". */
+/** Strip accents/case so "Huai'an" matches "huaian" and "Ma'anshan" matches "maanshan". */
 const norm = (s: string) =>
-  s.toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "").replace(/['’\-\s]/g, "");
-
-type Box = { x1: number; y1: number; x2: number; y2: number };
-const overlaps = (a: Box, b: Box) => a.x1 < b.x2 && b.x1 < a.x2 && a.y1 < b.y2 && b.y1 < a.y2;
+  s.toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "").replace(/[''\-\s]/g, "");
 
 export function CoverageMap({
   features,
@@ -127,26 +121,9 @@ export function CoverageMap({
       };
     });
 
-    // Which labels can be drawn without colliding. The previous rule only asked
-    // whether a name fit inside its own polygon, which is the wrong question:
-    // Xuanwu, Qinhuai and Jianye each passed that test while sitting 5-47 units
-    // apart, so their labels still landed on top of each other. Place biggest
-    // first and drop any label whose box hits one already placed - the dense
-    // urban core then falls back to dots and is named by the tooltip.
-    const placed: Box[] = [];
+    // No city name labels on the map — names already appear in the
+    // tooltip on hover/click and in the readout below.
     const labelled = new Set<string>();
-    for (const p of [...paths].sort((a, b) => b.area - a.area)) {
-      const w = p.label.length * fontSize * CHAR_W;
-      const box: Box = {
-        x1: p.center[0] - w / 2,
-        y1: p.center[1] - fontSize * 0.75,
-        x2: p.center[0] + w / 2,
-        y2: p.center[1] + fontSize * 0.35,
-      };
-      if (placed.some((q) => overlaps(box, q))) continue;
-      placed.push(box);
-      labelled.add(p.id);
-    }
 
     return { paths, height: h, labelled, fontSize };
   }, [features]);
@@ -262,37 +239,8 @@ export function CoverageMap({
             );
           })}
 
-          {/* Only non-colliding labels are drawn. Everything else gets a dot and
-              is named by the tooltip, the search box, or the list beside the map. */}
-          {paths.map((p) => {
-            const dimmed = highlighted != null && !highlighted.has(p.id);
-            const isOn = active === p.id || (highlighted?.has(p.id) ?? false);
-            if (!labelled.has(p.id)) {
-              return (
-                <circle
-                  key={`d-${p.id}`}
-                  cx={p.center[0]}
-                  cy={p.center[1]}
-                  r={(isOn ? 5 : 3.5) * (height / 620)}
-                  className="fill-on-background pointer-events-none"
-                  opacity={dimmed ? 0.3 : 0.85}
-                />
-              );
-            }
-            return (
-              <text
-                key={`t-${p.id}`}
-                x={p.center[0]}
-                y={p.center[1]}
-                textAnchor="middle"
-                className="fill-on-background pointer-events-none"
-                opacity={dimmed ? 0.35 : 1}
-                style={{ fontSize: p.within ? fontSize * 0.85 : fontSize, fontWeight: 500 }}
-              >
-                {p.label}
-              </text>
-            );
-          })}
+          {/* City name labels intentionally omitted — names appear
+              in the tooltip on hover/click and in the readout below. */}
         </svg>
 
         {/* HTML, not <text>: the SVG is scaled to fit the viewport, so anything
