@@ -127,9 +127,14 @@ export function EventBiodataFields({
       </label>
       <div className="flex flex-col gap-1">
         <span className="text-label-caps uppercase tracking-wide text-on-surface-variant">Bukti Tanda Mahasiswa Aktif *</span>
+        {/* Folder "sensus" (bukan "event-doc"): kartu mahasiswa = dokumen
+            pribadi, jadi disimpan di store Blob PRIVATE dan hanya bisa dibuka
+            lewat proxy ter-auth. Ini juga kartu yang sama yang diminta di
+            /sensus, jadi registerForEvent bisa langsung mengisikannya ke
+            profil sensus orangnya. */}
         <FileUpload
           name="bio_studentProofUrl"
-          folder="event-doc"
+          folder="sensus"
           required
           autoUpload
           accept="application/pdf,.doc,.docx,image/*"
