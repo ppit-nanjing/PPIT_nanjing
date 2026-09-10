@@ -230,6 +230,8 @@ export async function updateEventContent(id: string, formData: FormData) {
       description: String(formData.get("description") ?? "").trim() || null,
       agenda: String(formData.get("agenda") ?? "").trim() || null,
       confirmationInfo: String(formData.get("confirmationInfo") ?? "").trim() || null,
+      confirmationContactQr1Url: String(formData.get("confirmationContactQr1Url") ?? "").trim() || null,
+      confirmationContactQr2Url: String(formData.get("confirmationContactQr2Url") ?? "").trim() || null,
     })
     .where(eq(events.id, id));
   await revalidateEventPaths(id, before?.slug);

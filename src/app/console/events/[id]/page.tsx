@@ -296,6 +296,22 @@ export default async function ConsoleEventDetailPage({ params }: { params: Promi
             />
             <p className="text-xs text-on-surface-variant">Tidak tampil di halaman acara publik — hanya pendaftar yang melihatnya.</p>
           </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <ImageUploadCropper
+              name="confirmationContactQr1Url"
+              folder="events"
+              label="QR Kontak 1 (opsional)"
+              defaultValue={event.confirmationContactQr1Url ?? ""}
+              hint="Screenshot QR 'tambah kontak' (WeChat dsb). Tampil berdampingan dengan Info Setelah Daftar di atas."
+            />
+            <ImageUploadCropper
+              name="confirmationContactQr2Url"
+              folder="events"
+              label="QR Kontak 2 (opsional)"
+              defaultValue={event.confirmationContactQr2Url ?? ""}
+              hint="Kontak kedua, kalau ada. Kosongkan kalau cukup satu."
+            />
+          </div>
           <AIReviewButton
             context="event"
             fields={[
