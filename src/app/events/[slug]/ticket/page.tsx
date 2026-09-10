@@ -10,7 +10,7 @@ import { SiteFooter } from "@/components/site-footer";
 import { CopyButton } from "@/components/copy-button";
 import Image from "next/image";
 import Link from "next/link";
-import { CheckCircle2, CalendarDays, MapPin, ArrowLeft, CalendarPlus, Download } from "lucide-react";
+import { CheckCircle2, CalendarDays, MapPin, ArrowLeft, CalendarPlus, Download, Users } from "lucide-react";
 import { getT } from "@/lib/i18n/server";
 import type { TKey } from "@/lib/i18n/dictionaries/id";
 import { INTL_LOCALE } from "@/lib/i18n/config";
@@ -93,6 +93,16 @@ export default async function EventTicketPage({ params }: { params: Promise<{ sl
       : null;
   const alipayQrDataUrl = alipayLink ? await QRCode.toDataURL(alipayLink, { margin: 1, width: 200 }) : null;
 
+  // "Langkah Berikutnya" (gabung grup, kontak panitia) sering yang paling
+  // mendesak setelah daftar — dulu ada DI BAWAH kartu QR, jadi peserta yang
+  // tidak scroll melewatkannya. Sekarang: kalau ada, ia jadi kartu pertama +
+  // menonjol, dan di layar lebar berdampingan dengan kartu QR.
+  const hasNextSteps = !!(
+    event.confirmationInfo ||
+    event.confirmationContactQr1Url ||
+    event.confirmationContactQr2Url
+  );
+
   const fmtCal = (d: Date) => d.toISOString().replace(/[-:]/g, "").replace(/\.\d{3}/, "");
   const calUrl = event.startAt
     ? `https://www.google.com/calendar/render?action=TEMPLATE&text=${encodeURIComponent(
@@ -106,7 +116,11 @@ export default async function EventTicketPage({ params }: { params: Promise<{ sl
     <div className="min-h-screen bg-background text-on-background">
       <SiteNav />
 
-      <main className="max-w-md mx-auto px-[var(--spacing-container-padding)] py-16 text-center">
+      <main
+        className={`mx-auto px-[var(--spacing-container-padding)] py-16 text-center ${
+          hasNextSteps ? "max-w-md lg:max-w-4xl" : "max-w-md"
+        }`}
+      >
         <div className={`w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-6 ${gated ? "bg-surface-container-low" : "bg-primary-container/10"}`}>
           {gated ? (
             <CalendarDays className="text-on-surface-variant" size={28} aria-hidden="true" />
@@ -125,77 +139,108 @@ export default async function EventTicketPage({ params }: { params: Promise<{ sl
           </p>
         </div>
 
-        <div className="bg-surface-container-lowest border border-outline-variant rounded-xl p-8">
-          {gated ? (
-            <div className="mb-6 text-left text-body-sm text-on-surface-variant flex flex-col gap-1.5">
-              <p>{t("ticket.pay.step1")}</p>
-              <p>{t("ticket.pay.step2")}</p>
-              <p>{t("ticket.pay.step3")}</p>
+        <div className={`grid gap-6 ${hasNextSteps ? "lg:grid-cols-2 lg:items-start" : ""}`}>
+          {hasNextSteps && (
+            <div className="bg-primary-container/10 border border-primary-container/30 rounded-xl p-6 text-left">
+              <h2 className="text-headline-sm text-on-background mb-2 flex items-center gap-2">
+                <Users size={18} className="text-primary-container" aria-hidden="true" />
+                {t("ticket.nextSteps")}
+              </h2>
+              {event.confirmationInfo && (
+                <p className="text-body-md text-on-surface-variant whitespace-pre-line">{event.confirmationInfo}</p>
+              )}
+              {(event.confirmationContactQr1Url || event.confirmationContactQr2Url) && (
+                <div className="flex flex-wrap justify-center gap-6 mt-4">
+                  {[event.confirmationContactQr1Url, event.confirmationContactQr2Url]
+                    .filter((url): url is string => !!url)
+                    .map((url) => (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img
+                        key={url}
+                        src={url}
+                        alt={t("ticket.contactQrAlt")}
+                        width={180}
+                        height={180}
+                        className="rounded-lg border border-outline-variant bg-white p-1"
+                      />
+                    ))}
+                </div>
+              )}
             </div>
-          ) : (
-            <>
-              <Image
-                src={qrDataUrl}
-                alt={t("ticket.qrAlt", { title: event.title })}
-                width={240}
-                height={240}
-                unoptimized
-                className="mx-auto mb-4 rounded-lg"
-              />
-              {/* Data-URL download (same pattern as /console/links QR). Lets the
-                  attendee save the QR to their phone rather than screenshotting -
-                  useful when they'll scan in from a second device or offline. */}
-              <a
-                href={qrDataUrl}
-                download={`qr-checkin-${event.slug}.png`}
-                className="inline-flex items-center justify-center gap-2 border border-outline-variant text-on-background text-label-caps uppercase tracking-wide px-4 py-2.5 rounded-md hover:bg-surface-container-low transition-colors mb-6 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-container focus-visible:ring-offset-2 focus-visible:ring-offset-surface-container-lowest"
-              >
-                <Download size={16} aria-hidden="true" /> {t("ticket.downloadQr")}
-              </a>
-              <div className="flex flex-col items-center gap-2 mb-4">
-                <p className="text-label-caps text-on-surface-variant">{t("ticket.checkinToken")}</p>
-                <code className="bg-surface-container-low px-3 py-1.5 rounded-md text-body-sm break-all select-all">{token}</code>
-                <CopyButton value={token} label={t("ticket.copyToken")} />
+          )}
+
+          <div className="bg-surface-container-lowest border border-outline-variant rounded-xl p-8">
+            {gated ? (
+              <div className="mb-6 text-left text-body-sm text-on-surface-variant flex flex-col gap-1.5">
+                <p>{t("ticket.pay.step1")}</p>
+                <p>{t("ticket.pay.step2")}</p>
+                <p>{t("ticket.pay.step3")}</p>
               </div>
-            </>
-          )}
-          <h2 className="text-headline-md text-on-background mb-3">{event.title}</h2>
-
-          {calUrl && !gated && (
-            <a
-              href={calUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex items-center justify-center gap-2 border border-outline-variant text-on-background text-label-caps uppercase tracking-wide px-4 py-2.5 rounded-md hover:bg-surface-container-low transition-colors mb-5 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-container focus-visible:ring-offset-2 focus-visible:ring-offset-surface-container-lowest"
-            >
-              <CalendarPlus size={16} aria-hidden="true" /> {t("ticket.addCalendar")}
-            </a>
-          )}
-
-          <div className="flex flex-col gap-1.5 text-label-caps text-on-surface-variant items-center">
-            {event.startAt && (
-              <span className="flex items-center gap-1.5">
-                <CalendarDays size={14} aria-hidden="true" />{" "}
-                {new Date(event.startAt).toLocaleDateString(INTL_LOCALE[locale], { dateStyle: "full" })}
-              </span>
+            ) : (
+              <>
+                <Image
+                  src={qrDataUrl}
+                  alt={t("ticket.qrAlt", { title: event.title })}
+                  width={240}
+                  height={240}
+                  unoptimized
+                  className="mx-auto mb-4 rounded-lg"
+                />
+                {/* Data-URL download (same pattern as /console/links QR). Lets the
+                    attendee save the QR to their phone rather than screenshotting -
+                    useful when they'll scan in from a second device or offline. */}
+                <a
+                  href={qrDataUrl}
+                  download={`qr-checkin-${event.slug}.png`}
+                  className="inline-flex items-center justify-center gap-2 border border-outline-variant text-on-background text-label-caps uppercase tracking-wide px-4 py-2.5 rounded-md hover:bg-surface-container-low transition-colors mb-6 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-container focus-visible:ring-offset-2 focus-visible:ring-offset-surface-container-lowest"
+                >
+                  <Download size={16} aria-hidden="true" /> {t("ticket.downloadQr")}
+                </a>
+                <div className="flex flex-col items-center gap-2 mb-4">
+                  <p className="text-label-caps text-on-surface-variant">{t("ticket.checkinToken")}</p>
+                  <code className="bg-surface-container-low px-3 py-1.5 rounded-md text-body-sm break-all select-all">{token}</code>
+                  <CopyButton value={token} label={t("ticket.copyToken")} />
+                </div>
+              </>
             )}
-            {event.location && (
-              <span className="flex items-center gap-1.5">
-                <MapPin size={14} aria-hidden="true" />
-                {event.locationUrl ?? event.locationUrl2 ? (
-                  <a
-                    href={event.locationUrl ?? event.locationUrl2 ?? undefined}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="underline underline-offset-2"
-                  >
-                    {event.location}
-                  </a>
-                ) : (
-                  event.location
-                )}
-              </span>
+            <h2 className="text-headline-md text-on-background mb-3">{event.title}</h2>
+
+            {calUrl && !gated && (
+              <a
+                href={calUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center justify-center gap-2 border border-outline-variant text-on-background text-label-caps uppercase tracking-wide px-4 py-2.5 rounded-md hover:bg-surface-container-low transition-colors mb-5 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-container focus-visible:ring-offset-2 focus-visible:ring-offset-surface-container-lowest"
+              >
+                <CalendarPlus size={16} aria-hidden="true" /> {t("ticket.addCalendar")}
+              </a>
             )}
+
+            <div className="flex flex-col gap-1.5 text-label-caps text-on-surface-variant items-center">
+              {event.startAt && (
+                <span className="flex items-center gap-1.5">
+                  <CalendarDays size={14} aria-hidden="true" />{" "}
+                  {new Date(event.startAt).toLocaleDateString(INTL_LOCALE[locale], { dateStyle: "full" })}
+                </span>
+              )}
+              {event.location && (
+                <span className="flex items-center gap-1.5">
+                  <MapPin size={14} aria-hidden="true" />
+                  {event.locationUrl ?? event.locationUrl2 ? (
+                    <a
+                      href={event.locationUrl ?? event.locationUrl2 ?? undefined}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="underline underline-offset-2"
+                    >
+                      {event.location}
+                    </a>
+                  ) : (
+                    event.location
+                  )}
+                </span>
+              )}
+            </div>
           </div>
         </div>
 
@@ -301,32 +346,6 @@ export default async function EventTicketPage({ params }: { params: Promise<{ sl
                   {t("ticket.pay.submitProof")}
                 </button>
               </form>
-            )}
-          </div>
-        )}
-
-        {(event.confirmationInfo || event.confirmationContactQr1Url || event.confirmationContactQr2Url) && (
-          <div className="bg-surface-container-lowest border border-outline-variant rounded-xl p-6 mt-6 text-left">
-            <h2 className="text-headline-sm text-on-background mb-2">{t("ticket.nextSteps")}</h2>
-            {event.confirmationInfo && (
-              <p className="text-body-md text-on-surface-variant whitespace-pre-line">{event.confirmationInfo}</p>
-            )}
-            {(event.confirmationContactQr1Url || event.confirmationContactQr2Url) && (
-              <div className="flex flex-wrap justify-center gap-6 mt-4">
-                {[event.confirmationContactQr1Url, event.confirmationContactQr2Url]
-                  .filter((url): url is string => !!url)
-                  .map((url) => (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img
-                      key={url}
-                      src={url}
-                      alt={t("ticket.contactQrAlt")}
-                      width={180}
-                      height={180}
-                      className="rounded-lg border border-outline-variant bg-white p-1"
-                    />
-                  ))}
-              </div>
             )}
           </div>
         )}
