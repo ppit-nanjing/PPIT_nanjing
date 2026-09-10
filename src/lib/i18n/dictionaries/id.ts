@@ -270,6 +270,7 @@ export const id = {
   "ticket.addCalendar": "Tambah ke Kalender",
   "ticket.checkinToken": "Token check-in (cadangan jika QR tak terbaca)",
   "ticket.copyToken": "Salin Token",
+  "ticket.downloadQr": "Unduh QR",
   "ticket.calDetails": "Tunjukkan QR code ini saat check-in di lokasi acara.",
   "ticket.toDetail": "Ke Detail Kegiatan",
   "ticket.pay.heading": "Pembayaran",

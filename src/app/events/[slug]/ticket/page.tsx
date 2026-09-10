@@ -10,7 +10,7 @@ import { SiteFooter } from "@/components/site-footer";
 import { CopyButton } from "@/components/copy-button";
 import Image from "next/image";
 import Link from "next/link";
-import { CheckCircle2, CalendarDays, MapPin, ArrowLeft, CalendarPlus } from "lucide-react";
+import { CheckCircle2, CalendarDays, MapPin, ArrowLeft, CalendarPlus, Download } from "lucide-react";
 import { getT } from "@/lib/i18n/server";
 import type { TKey } from "@/lib/i18n/dictionaries/id";
 import { INTL_LOCALE } from "@/lib/i18n/config";
@@ -140,8 +140,18 @@ export default async function EventTicketPage({ params }: { params: Promise<{ sl
                 width={240}
                 height={240}
                 unoptimized
-                className="mx-auto mb-6 rounded-lg"
+                className="mx-auto mb-4 rounded-lg"
               />
+              {/* Data-URL download (same pattern as /console/links QR). Lets the
+                  attendee save the QR to their phone rather than screenshotting -
+                  useful when they'll scan in from a second device or offline. */}
+              <a
+                href={qrDataUrl}
+                download={`qr-checkin-${event.slug}.png`}
+                className="inline-flex items-center justify-center gap-2 border border-outline-variant text-on-background text-label-caps uppercase tracking-wide px-4 py-2.5 rounded-md hover:bg-surface-container-low transition-colors mb-6 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-container focus-visible:ring-offset-2 focus-visible:ring-offset-surface-container-lowest"
+              >
+                <Download size={16} aria-hidden="true" /> {t("ticket.downloadQr")}
+              </a>
               <div className="flex flex-col items-center gap-2 mb-4">
                 <p className="text-label-caps text-on-surface-variant">{t("ticket.checkinToken")}</p>
                 <code className="bg-surface-container-low px-3 py-1.5 rounded-md text-body-sm break-all select-all">{token}</code>
