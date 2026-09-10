@@ -1,10 +1,10 @@
 "use client";
 
-import { useEffect, useRef, useState, type ReactNode } from "react";
+import { useEffect, useRef, useState, type MouseEvent as ReactMouseEvent, type ReactNode } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { motion, useReducedMotion } from "motion/react";
-import { ArrowLeft, ArrowRight, Check, CalendarDays, MapPin } from "lucide-react";
+import { AlertCircle, ArrowLeft, ArrowRight, Check, CalendarDays, MapPin } from "lucide-react";
 import { useT } from "@/lib/i18n/client";
 
 export type FlowStep = { id: string; title: string; hint?: string; content: ReactNode };
@@ -32,17 +32,23 @@ export function EventRegisterFlow({
   submitLabel,
   event,
   backHref,
+  initialError = null,
 }: {
   action: (formData: FormData) => void | Promise<void>;
   steps: FlowStep[];
   submitLabel: string;
   event: { title: string; posterUrl: string | null; dateLabel: string | null; location: string | null };
   backHref: string;
+  // Pesan siap-tampil dari server bila registerForEvent memantulkan kembali ke
+  // sini (?err=...) — mis. bukti mahasiswa belum keunggah, pertanyaan wajib
+  // kosong. Dulu pantulannya senyap ke halaman acara.
+  initialError?: string | null;
 }) {
   const t = useT();
   const reduceMotion = useReducedMotion();
   const [step, setStep] = useState(0);
   const [dir, setDir] = useState<1 | -1>(1);
+  const [err, setErr] = useState<string | null>(initialError);
   const formRef = useRef<HTMLFormElement>(null);
   const topRef = useRef<HTMLDivElement>(null);
   const last = steps.length - 1;
@@ -104,9 +110,33 @@ export function EventRegisterFlow({
   }
 
   function go(next: number, direction: 1 | -1) {
+    setErr(null);
     setDir(direction);
     setStep(next);
     topRef.current?.scrollIntoView({ behavior: reduceMotion ? "auto" : "smooth", block: "start" });
+  }
+
+  // Dipasang di tombol Kirim SEBELUM submit sungguhan. Lucuti `required` di
+  // langkah tersembunyi (bisa ter-pasang balik oleh render ulang React), lalu
+  // kalau form MASIH tak valid: batalkan submit, lompat ke langkah yang
+  // bermasalah, dan panggil reportValidity() supaya browser memunculkan
+  // pesannya. Ini menutup mode gagal "klik Kirim, tak terjadi apa-apa"
+  // (browser menolak submit form dengan kontrol wajib non-focusable, senyap).
+  function handleSubmitClick(e: ReactMouseEvent<HTMLButtonElement>) {
+    stripHiddenRequired();
+    const form = formRef.current;
+    if (!form || form.checkValidity()) return;
+    e.preventDefault();
+    const invalid = form.querySelector<HTMLElement>(":invalid");
+    const stepEl = invalid?.closest<HTMLElement>("[data-flow-step]");
+    const idx = stepEl ? Number(stepEl.dataset.flowStep) : NaN;
+    if (Number.isInteger(idx) && idx !== step) {
+      go(idx, idx < step ? -1 : 1);
+      // Beri React sekejap untuk merender langkah itu sebelum bubble native.
+      window.setTimeout(() => formRef.current?.reportValidity(), 80);
+    } else {
+      form.reportValidity();
+    }
   }
 
   const pct = Math.round(((step + 1) / steps.length) * 100);
@@ -154,6 +184,16 @@ export function EventRegisterFlow({
               transition={{ duration: reduceMotion ? 0 : 0.35, ease: "easeOut" }}
             />
           </div>
+        </div>
+      )}
+
+      {err && (
+        <div
+          role="alert"
+          className="mt-4 flex items-start gap-2 rounded-r-lg border-l-4 border-error bg-error-container/40 p-3"
+        >
+          <AlertCircle className="mt-0.5 shrink-0 text-error" size={16} aria-hidden="true" />
+          <p className="text-body-sm text-on-background">{err}</p>
         </div>
       )}
 
@@ -218,10 +258,10 @@ export function EventRegisterFlow({
           ) : (
             <button
               type="submit"
-              // Jalan SEBELUM validasi bawaan browser: lucuti `required` yang
-              // mungkin ter-pasang balik di langkah tersembunyi, supaya submit
-              // tidak diam-diam ditolak ("invalid form control is not focusable").
-              onClick={stripHiddenRequired}
+              // Lucuti `required` di langkah tersembunyi lalu, kalau form masih
+              // tak valid, batalkan submit + lompat ke langkah bermasalah +
+              // reportValidity() — bukan gagal senyap.
+              onClick={handleSubmitClick}
               className="inline-flex flex-1 items-center justify-center gap-2 rounded-md bg-primary-container px-6 py-3.5 text-label-caps uppercase tracking-wide text-on-primary transition-colors hover:bg-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-container focus-visible:ring-offset-2 focus-visible:ring-offset-background"
             >
               <Check size={16} aria-hidden="true" /> {submitLabel}

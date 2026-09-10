@@ -28,11 +28,31 @@ import { registerForEvent } from "@/app/actions/events";
 import { getT } from "@/lib/i18n/server";
 import { INTL_LOCALE } from "@/lib/i18n/config";
 
-export default async function EventRegisterPage({ params }: { params: Promise<{ slug: string }> }) {
+export default async function EventRegisterPage({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ slug: string }>;
+  searchParams: Promise<{ err?: string }>;
+}) {
   const { slug } = await params;
+  const { err } = await searchParams;
   const { t, locale } = await getT();
   const eventHref = `/events/${slug}`;
   const registerHref = `${eventHref}/register`;
+  // Alasan pantulan dari registerForEvent (?err=...) -> pesan siap tampil.
+  // Nilai asing jatuh ke pesan generik, jadi query string yang diutak-atik aman.
+  const initialError = !err
+    ? null
+    : err === "question"
+      ? t("events.regErrQuestion")
+      : err === "fee"
+        ? t("events.regErrFee")
+        : err === "category_full"
+          ? t("events.regErrCategoryFull")
+          : err === "biodata"
+            ? t("events.regErrBiodata")
+            : t("events.regErrGeneric");
 
   const [event] = await db.select().from(events).where(eq(events.slug, slug));
   if (!event) notFound();
@@ -324,6 +344,7 @@ export default async function EventRegisterPage({ params }: { params: Promise<{ 
             action={registerForEvent.bind(null, event.id, slug)}
             submitLabel={t("events.registerSubmit")}
             backHref={eventHref}
+            initialError={initialError}
             event={{
               title: event.title,
               posterUrl: event.coverImageUrl ?? null,

@@ -150,7 +150,10 @@ export async function registerForEvent(eventId: string, slug: string, formData?:
       if (value) answers[q.id] = value;
     }
     for (const q of questions) {
-      if (q.required && !answers[q.id]) redirect(`/events/${slug}`);
+      // Kembali ke FORM (bukan halaman acara) dengan alasan, supaya peserta
+      // tahu apa yang kurang — dulu ini pantulan senyap yang terasa seperti
+      // "tombol kirim tidak berfungsi".
+      if (q.required && !answers[q.id]) redirect(`/events/${slug}/register?err=question`);
     }
 
     // Kategori tarif (event_fee_options). Kalau acara berbayar DAN punya
@@ -162,7 +165,7 @@ export async function registerForEvent(eventId: string, slug: string, formData?:
       .where(eq(eventFeeOptions.eventId, eventId));
     const pickedFeeOption = String(formData?.get("feeOptionId") ?? "").trim();
     const feeOptionId = feeOptions.some((o) => o.id === pickedFeeOption) ? pickedFeeOption : null;
-    if (event.isPaid && feeOptions.length > 0 && !feeOptionId) redirect(`/events/${slug}`);
+    if (event.isPaid && feeOptions.length > 0 && !feeOptionId) redirect(`/events/${slug}/register?err=fee`);
 
     // Pagu kapasitas: pagu total acara (events.capacity) DAN kuota per kategori
     // tarif (event_fee_options.quota, mis. WIF Freshmen 130 / Non-freshmen 20).
@@ -175,7 +178,9 @@ export async function registerForEvent(eventId: string, slug: string, formData?:
     if (seats.capacityFull) redirect(`/events/${slug}`);
     if (feeOptionId) {
       const picked = seats.feeOptions.find((o) => o.id === feeOptionId);
-      if (picked?.isFull) redirect(`/events/${slug}`);
+      // Kategori itu penuh persis di sela ini — balik ke form supaya peserta
+      // bisa pilih kategori lain yang masih ada kuotanya.
+      if (picked?.isFull) redirect(`/events/${slug}/register?err=category_full`);
     }
 
     // Biodata lengkap (acara requiresBiodata): snapshot dari sensus bila lengkap,
@@ -217,14 +222,14 @@ export async function registerForEvent(eventId: string, slug: string, formData?:
           studentProofUrl: isAllowedUploadUrl(studentProofUrl) ? studentProofUrl : "",
           source: "form",
         };
-        // Semua field biodata wajib di jalur form - kalau ada yang kosong,
-        // pantulkan balik ke halaman acara (form-nya sendiri sudah `required`,
-        // ini jaring pengaman kalau ada yang menembusnya). Nomor paspor juga
-        // dicek bentuknya di sini supaya "." / "-" / "123" tidak lolos ke
-        // sensus (form-nya sudah `pattern`, ini lapis servernya).
+        // Semua field biodata wajib di jalur form. Kalau ada yang kosong -
+        // paling sering bukti mahasiswa yang uploadnya gagal/belum kelar di
+        // koneksi lambat - balik ke FORM dengan pesan, bukan pantulan senyap.
+        // Nomor paspor juga dicek bentuknya di sini (form-nya sudah `pattern`,
+        // ini lapis servernya) supaya "." / "-" / "123" tidak lolos ke sensus.
         const biodataIncomplete = Object.entries(biodataJson).some(([k, v]) => k !== "source" && !v);
         if (biodataIncomplete || !isValidPassport(biodataJson.passportNumber)) {
-          redirect(`/events/${slug}`);
+          redirect(`/events/${slug}/register?err=biodata`);
         }
       }
     }
