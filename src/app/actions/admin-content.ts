@@ -262,6 +262,56 @@ export async function createGalleryAlbum(formData: FormData) {
   redirect(`/console/content/gallery/${album.id}`);
 }
 
+// Ubah judul & sampul album — sama seperti edit berita. Foto dikelola terpisah
+// lewat aksi foto di bawah.
+export async function updateGalleryAlbum(albumId: string, formData: FormData) {
+  await requireGalleryAlbumAccess(albumId);
+  const [album] = await db
+    .select({ id: galleryAlbums.id, eventId: galleryAlbums.eventId })
+    .from(galleryAlbums)
+    .where(eq(galleryAlbums.id, albumId));
+  if (!album) notFound();
+
+  const title = String(formData.get("title") ?? "").trim();
+  const coverImageUrl = String(formData.get("coverImageUrl") ?? "").trim();
+  if (!title) throw new Error("Judul album wajib diisi");
+  if (coverImageUrl && !isValidHttpUrl(coverImageUrl)) throw new Error("URL sampul tidak valid");
+
+  await db
+    .update(galleryAlbums)
+    .set({ title, coverImageUrl: coverImageUrl || null })
+    .where(eq(galleryAlbums.id, albumId));
+
+  revalidatePath("/console/content");
+  revalidatePath(`/console/content/gallery/${albumId}`);
+  revalidatePath("/gallery");
+  revalidatePath("/gallery/archive");
+  revalidatePath(`/gallery/${albumId}`);
+  if (album.eventId) revalidatePath(`/console/events/${album.eventId}`);
+}
+
+// Hard delete album + semua fotonya (galleryPhotos.albumId onDelete cascade).
+// Mirip deleteNewsArticle: untuk album keliru/duplikat. Tidak ada status arsip
+// untuk album, jadi ini satu-satunya cara membuangnya.
+export async function deleteGalleryAlbum(albumId: string) {
+  await requireGalleryAlbumAccess(albumId);
+  const [album] = await db
+    .select({ id: galleryAlbums.id, eventId: galleryAlbums.eventId })
+    .from(galleryAlbums)
+    .where(eq(galleryAlbums.id, albumId));
+  // Sudah terhapus (double-submit / tab basi) — tujuannya "tidak ada", jadi
+  // balik ke daftar saja.
+  if (!album) redirect("/console/content");
+
+  await db.delete(galleryAlbums).where(eq(galleryAlbums.id, albumId));
+
+  revalidatePath("/console/content");
+  revalidatePath("/gallery");
+  revalidatePath("/gallery/archive");
+  if (album.eventId) revalidatePath(`/console/events/${album.eventId}`);
+  redirect(album.eventId ? `/console/events/${album.eventId}` : "/console/content");
+}
+
 /**
  * Divisi Dokumentasi acara (grant "Galeri") membuat album foto untuk ACARANYA.
  * Album langsung tertaut ke acara; album lama yang menunjuk acara ini dilepas
