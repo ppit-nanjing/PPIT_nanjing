@@ -267,6 +267,7 @@ export const en = {
   "ticket.addCalendar": "Add to Calendar",
   "ticket.checkinToken": "Check-in token (backup if QR is unreadable)",
   "ticket.copyToken": "Copy Token",
+  "ticket.downloadQr": "Download QR",
   "ticket.calDetails": "Show this QR code when checking in at the venue.",
   "ticket.toDetail": "To Event Details",
   "ticket.pay.heading": "Payment",
