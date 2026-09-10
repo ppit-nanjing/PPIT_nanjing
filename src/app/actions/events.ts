@@ -1,7 +1,7 @@
 "use server";
 
 import { randomUUID } from "crypto";
-import { eq, and } from "drizzle-orm";
+import { eq, and, ne } from "drizzle-orm";
 import { redirect } from "next/navigation";
 import { auth } from "@/auth";
 import { db } from "@/db";
@@ -36,6 +36,67 @@ function isAllowedUploadUrl(value: string): boolean {
     /^https:\/\/[a-z0-9.-]*blob\.vercel-storage\.com\//i.test(value) ||
     value.startsWith("/api/")
   );
+}
+
+const blankStr = (v: unknown) => v === null || v === undefined || (typeof v === "string" && v.trim() === "");
+
+// Peserta yang sensusnya belum lengkap mengetik biodata (nama, paspor, WeChat,
+// telpon, kota, kampus, jurusan, angkatan, KTM) langsung di form pendaftaran.
+// Cerminkan field yang beririsan itu ke `sensus_profiles` orangnya supaya
+// mereka tidak mengetik ulang di /sensus - HANYA mengisi kolom yang masih
+// kosong, TIDAK pernah menyentuh completion_status (mereka tetap harus
+// menyelesaikan wizard sensus yang menanyakan ~10 field lain). Best-effort:
+// kegagalan di sini tidak boleh membatalkan pendaftaran yang sudah masuk.
+async function mirrorFormBiodataToSensus(userId: string, bio: EventBiodata): Promise<void> {
+  const [prof] = await db.select().from(sensusProfiles).where(eq(sensusProfiles.userId, userId));
+
+  const patch: Partial<typeof sensusProfiles.$inferInsert> = {};
+  const fill = (col: "fullName" | "wechatId" | "phoneActive" | "branch" | "university" | "major", current: unknown, incoming: string) => {
+    if (blankStr(current) && !blankStr(incoming)) patch[col] = incoming.trim();
+  };
+  fill("fullName", prof?.fullName, bio.fullName);
+  fill("wechatId", prof?.wechatId, bio.wechatId);
+  fill("phoneActive", prof?.phoneActive, bio.chinaPhone);
+  fill("branch", prof?.branch, bio.branch);
+  fill("university", prof?.university, bio.university);
+  fill("major", prof?.major, bio.major);
+
+  if (blankStr(prof?.entryYear) && !blankStr(bio.entryYear)) {
+    const y = parseInt(bio.entryYear, 10);
+    if (Number.isInteger(y) && y >= 2000 && y <= 2100) patch.entryYear = y;
+  }
+
+  // passport_number kolom UNIQUE - jangan set kalau nilainya sudah dipakai
+  // baris sensus lain (mis. dua orang salah ketik nomor yang sama).
+  if (blankStr(prof?.passportNumber) && !blankStr(bio.passportNumber)) {
+    const pp = bio.passportNumber.trim();
+    const [clash] = await db
+      .select({ id: sensusProfiles.id })
+      .from(sensusProfiles)
+      .where(and(eq(sensusProfiles.passportNumber, pp), ne(sensusProfiles.userId, userId)));
+    if (!clash) patch.passportNumber = pp;
+  }
+
+  // KTM: form ini mengunggah ke folder "sensus" (store privat) -> nilainya
+  // sudah berupa proxy path. Kalau bukan (data lama / fallback), lewati -
+  // biar mereka unggah ulang di /sensus.
+  if (blankStr(prof?.studentCardUrl) && bio.studentProofUrl.startsWith("/api/sensus/student-card/")) {
+    patch.studentCardUrl = bio.studentProofUrl;
+  }
+
+  if (Object.keys(patch).length === 0) return;
+
+  if (prof) {
+    await db
+      .update(sensusProfiles)
+      .set({ ...patch, updatedAt: new Date() })
+      .where(eq(sensusProfiles.userId, userId));
+  } else {
+    await db
+      .insert(sensusProfiles)
+      .values({ userId, completionStatus: "incomplete", updatedAt: new Date(), ...patch })
+      .onConflictDoNothing();
+  }
 }
 
 export async function registerForEvent(eventId: string, slug: string, formData?: FormData) {
@@ -198,6 +259,17 @@ export async function registerForEvent(eventId: string, slug: string, formData?:
       relatedEntityType: "event",
       relatedEntityId: eventId,
     });
+
+    // Biodata yang diketik di form (sensus belum lengkap) dicerminkan ke profil
+    // sensus orangnya - sekali tulis, tak perlu ketik ulang di /sensus.
+    // Best-effort: jangan sampai menggagalkan pendaftaran yang sudah masuk.
+    if (biodataJson?.source === "form") {
+      try {
+        await mirrorFormBiodataToSensus(session.user.id, biodataJson);
+      } catch (err) {
+        console.error("[registerForEvent] mirror biodata -> sensus failed:", err);
+      }
+    }
   }
 
   redirect(`/events/${slug}/ticket`);
