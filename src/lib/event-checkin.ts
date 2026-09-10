@@ -7,15 +7,23 @@
 // tadinya bisa menandai "hadir" tanpa peduli status bayar, padahal jalur QR
 // sudah rapat (QR baru terbit saat bendahara memverifikasi, lihat
 // updatePaymentStatus).
+//
+// "not_required" BUKAN "belum lunas": itu status untuk pendaftaran yang memang
+// tidak perlu bayar — acara gratis, ATAU kategori tarif ¥0 (mis. early bird
+// gratis WIF). Nominal efektif ¥0 → registerForEvent men-set langsung
+// `not_required` + menerbitkan QR (tanpa gerbang bendahara), jadi di sini pun
+// harus dianggap beres. Hanya "unpaid" / "submitted" / "rejected" yang blokir.
 
 export type CheckInBlock = "cancelled" | "unpaid";
+
+const PAYMENT_OK_TO_CHECK_IN = ["verified", "not_required"];
 
 export function checkInBlockReason(
   reg: { status: string; paymentStatus: string },
   eventIsPaid: boolean,
 ): CheckInBlock | null {
   if (reg.status === "cancelled") return "cancelled";
-  if (eventIsPaid && reg.paymentStatus !== "verified") return "unpaid";
+  if (eventIsPaid && !PAYMENT_OK_TO_CHECK_IN.includes(reg.paymentStatus)) return "unpaid";
   return null;
 }
 
