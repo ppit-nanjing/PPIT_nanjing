@@ -20,7 +20,12 @@
 // resolveAdminScope() for a "[INA]/[JIA] BPH Ranting" role (src/auth.ts). It
 // unlocks ONLY /console/ranting/sensus (own-campus census summary), never the
 // full /console/sensus.
-export type AdminModule = "users" | "organization" | "events" | "inventory" | "reports" | "sensus" | "sensus-ranting" | "content" | "feedback" | "membership" | "notifications" | "links" | "documents";
+// "sensus-verify" IS delegable (in ASSIGNABLE_SCOPE_KEYS, NOT sensitive): a
+// full admin can tick it for a division (e.g. Humas kabinet). It opens
+// /console/sensus in a LIMITED view — name, campus, completeness, student-card
+// photo only, no passport/contact/export/edit. A holder of full "sensus" is
+// unaffected (they see everything).
+export type AdminModule = "users" | "organization" | "events" | "inventory" | "reports" | "sensus" | "sensus-ranting" | "sensus-verify" | "content" | "feedback" | "membership" | "notifications" | "links" | "documents";
 
 const MODULE_ALIASES: Partial<Record<AdminModule, string[]>> = {
   content: ["content", "gallery"],
@@ -39,6 +44,7 @@ export const ASSIGNABLE_SCOPE_KEYS: { key: string; label: string }[] = [
   { key: "inventory", label: "Inventaris" },
   { key: "reports", label: "Laporan (termasuk ekspor data mahasiswa)" },
   { key: "sensus", label: "Sensus (data & bukti mahasiswa per orang — sensitif)" },
+  { key: "sensus-verify", label: "Verifikasi mahasiswa (sensus: nama + kampus + bukti KTM saja)" },
   { key: "content", label: "Konten (berita)" },
   { key: "gallery", label: "Galeri" },
   { key: "users", label: "Pengguna (sensitif — hanya BPH)" },

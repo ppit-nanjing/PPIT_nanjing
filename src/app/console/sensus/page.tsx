@@ -1,12 +1,15 @@
 import { desc, eq } from "drizzle-orm";
 import Link from "next/link";
+import { redirect } from "next/navigation";
+import { auth } from "@/auth";
 import { db } from "@/db";
 import { sensusProfiles, users } from "@/db/schema";
-import { requireModuleAccess } from "@/lib/admin-scope";
+import { hasModuleAccess } from "@/lib/admin-scope";
 import { MEMBERSHIP_LABEL, membershipStatus, type MembershipStatus } from "@/lib/membership-status";
 import { CollapsibleSection } from "@/components/console/collapsible-section";
 import { GuideButton } from "@/components/console/guide-button";
 import { getGuide } from "@/lib/guides";
+import { SensusVerifyList } from "@/components/console/sensus-verify-list";
 import { SelectField, TextField, primaryBtn } from "@/components/console/form";
 import { FileCheck2, FileX2, ChevronRight, Search, Download, History } from "lucide-react";
 
@@ -15,6 +18,10 @@ import { FileCheck2, FileX2, ChevronRight, Search, Download, History } from "luc
 // ke modul "sensus" (untuk sekarang: BPH + Divisi Teknologi) — lihat
 // src/lib/admin-scope-constants.ts. Ringkasan agregat tanpa PII tetap di
 // /console/reports untuk pemilik modul "reports".
+//
+// Pemegang modul "sensus-verify" (tanpa "sensus" penuh) — mis. Divisi Humas
+// kabinet — dialihkan ke <SensusVerifyList>: cuma nama + kampus + kelengkapan +
+// foto bukti KTM, tanpa paspor/kontak/ekspor/ubah.
 
 const STATUS_BADGE: Record<MembershipStatus, string> = {
   anggota: "bg-primary-container/40 text-on-primary-container",
@@ -29,7 +36,12 @@ function one(v: string | string[] | undefined): string {
 }
 
 export default async function ConsoleSensusPage({ searchParams }: { searchParams: SearchParams }) {
-  await requireModuleAccess("sensus");
+  const session = await auth();
+  if (!session) redirect("/login");
+  const full = hasModuleAccess(session.user.adminScope, "sensus");
+  const canVerify = hasModuleAccess(session.user.adminScope, "sensus-verify");
+  if (!full && !canVerify) redirect("/console");
+
   const sp = await searchParams;
   const q = one(sp.q).trim();
   const status = one(sp.status) || "all"; // all | complete | incomplete
@@ -45,6 +57,11 @@ export default async function ConsoleSensusPage({ searchParams }: { searchParams
       .orderBy(desc(sensusProfiles.updatedAt)),
     getGuide("sensus"),
   ]);
+
+  // Tanpa modul "sensus" penuh → tampilan terbatas (nama + kampus + KTM).
+  if (!full) {
+    return <SensusVerifyList rows={rows} q={q} status={status} university={university} />;
+  }
 
   const branches = [...new Set(rows.map((r) => r.sensus.branch).filter((b): b is string => Boolean(b)))].sort((a, b) =>
     a.localeCompare(b, "id"),

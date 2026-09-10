@@ -32,7 +32,9 @@ type NavItem = {
   href: string;
   label: string;
   icon: typeof LayoutDashboard;
-  module: AdminModule | null;
+  // Satu modul, atau beberapa (tampil kalau punya salah satu — mis. Sensus
+  // untuk pemegang "sensus" ATAU "sensus-verify").
+  module: AdminModule | AdminModule[] | null;
   // Juga tampil untuk panitia acara (non-admin) walau tidak punya modul-nya.
   committeeToo?: boolean;
 };
@@ -55,7 +57,7 @@ const GROUPS: { title: string; items: NavItem[] }[] = [
       { href: "/console/work-ledger", label: "Work Ledger", icon: ClipboardList, module: "events" },
       { href: "/console/inventory", label: "Inventaris", icon: Package, module: "inventory" },
       { href: "/console/membership", label: "Pendaftaran", icon: UserPlus, module: "membership" },
-      { href: "/console/sensus", label: "Sensus", icon: ClipboardCheck, module: "sensus" },
+      { href: "/console/sensus", label: "Sensus", icon: ClipboardCheck, module: ["sensus", "sensus-verify"] },
       { href: "/console/ranting/sensus", label: "Sensus Ranting", icon: ClipboardCheck, module: "sensus-ranting" },
       { href: "/console/content", label: "Konten", icon: Images, module: "content" },
       { href: "/console/katalog", label: "Kota & Katalog", icon: Store, module: "content" },
@@ -98,7 +100,9 @@ function NavContent({
         const items = group.items.filter(
           (i) =>
             i.module === null ||
-            hasModuleAccess(scope, i.module) ||
+            (Array.isArray(i.module)
+              ? i.module.some((m) => hasModuleAccess(scope, m))
+              : hasModuleAccess(scope, i.module)) ||
             (i.committeeToo && isCommittee),
         );
         if (items.length === 0) return null;
