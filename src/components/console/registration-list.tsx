@@ -1,8 +1,10 @@
 "use client";
 
 import { useMemo, useState, useTransition } from "react";
-import { CheckCircle2, TriangleAlert, Search } from "lucide-react";
-import { checkInRegistration } from "@/app/actions/admin-events";
+import { CheckCircle2, TriangleAlert, Search, Ban, Undo2 } from "lucide-react";
+import { checkInRegistration, setRegistrationCancelled } from "@/app/actions/admin-events";
+import { ConfirmButton } from "@/components/console/confirm-button";
+import { toast } from "sonner";
 import { ProofView } from "@/components/console/proof-view";
 import {
   CHECK_IN_BLOCK_LABEL,
@@ -141,6 +143,21 @@ export function RegistrationList({
         setCheckingId(null);
       }
     });
+  }
+
+  // Batalkan / pulihkan pendaftaran — hanya dirender kalau `detail` (BPH Kabinet
+  // + Divisi Teknologi). Server action mengecek lagi (isFullAdmin).
+  async function toggleCancelled(registrationId: string, cancelled: boolean) {
+    const res = await setRegistrationCancelled(registrationId, eventId, cancelled);
+    if (!res.ok) {
+      toast.error(
+        res.reason === "forbidden"
+          ? "Hanya BPH Kabinet & Divisi Teknologi yang bisa membatalkan pendaftaran."
+          : "Pendaftaran tidak ditemukan. Muat ulang halaman.",
+      );
+      return;
+    }
+    toast.success(cancelled ? "Pendaftaran dibatalkan." : "Pendaftaran dipulihkan.");
   }
 
   const CheckInButton = ({ r }: { r: Registration }) => {
@@ -291,8 +308,30 @@ export function RegistrationList({
                   </span>
                 ))}
               </div>
-              <div>
+              <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
                 <CheckInButton r={r} />
+                {detail && r.status !== "cancelled" && (
+                  <ConfirmButton
+                    onConfirm={() => toggleCancelled(r.id, true)}
+                    message={`Batalkan pendaftaran ${r.userName ?? "peserta ini"}? Status jadi "Dibatalkan", slot kuotanya kembali, dan QR check-in-nya berhenti berlaku. Bisa dipulihkan lagi.`}
+                    title="Batalkan pendaftaran"
+                    confirmLabel="Ya, batalkan"
+                    successMessage=""
+                    className="inline-flex items-center gap-1 text-label-caps text-error hover:opacity-70"
+                  >
+                    <Ban size={13} aria-hidden /> Batalkan pendaftaran
+                  </ConfirmButton>
+                )}
+                {detail && r.status === "cancelled" && (
+                  <button
+                    type="button"
+                    disabled={isPending}
+                    onClick={() => startTransition(() => toggleCancelled(r.id, false))}
+                    className="inline-flex items-center gap-1 text-label-caps text-primary-container hover:text-primary disabled:opacity-50"
+                  >
+                    <Undo2 size={13} aria-hidden /> Pulihkan pendaftaran
+                  </button>
+                )}
               </div>
             </>
           );

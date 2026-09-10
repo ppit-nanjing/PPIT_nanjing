@@ -7,7 +7,7 @@ import { auth } from "@/auth";
 import { db } from "@/db";
 import { events, eventRegistrations, eventQuestions, eventCommittee, eventFeeOptions, galleryAlbums } from "@/db/schema";
 import { hasModuleAccess } from "@/lib/admin-scope";
-import { requireEventCapability } from "@/lib/event-access";
+import { getEventAccess, requireEventCapability } from "@/lib/event-access";
 import { logEventAudit } from "@/lib/event-audit";
 import { UUID_RE } from "@/lib/uuid";
 import { createTemplatedNotification } from "@/lib/notifications";
@@ -532,6 +532,48 @@ export async function checkInRegistration(
 
   revalidatePath(`/console/events/${eventId}`);
   return { ok: true, already: false };
+}
+
+// Batalkan / pulihkan pendaftaran peserta — HANYA BPH Kabinet + Divisi Teknologi
+// (adminScope "full"). Untuk kasus "panitia keburu daftar sebagai peserta",
+// salah kategori, dsb. SOFT: status -> "cancelled" (baris tetap ada, tidak
+// dihitung ke kuota/kapasitas, QR check-in mati lewat checkInBlockReason).
+// Pulihkan mengembalikan ke "confirmed" (atau "pending" kalau bayarnya belum
+// beres) — status "attended" yang lama tidak bisa dipulihkan otomatis.
+export async function setRegistrationCancelled(
+  registrationId: string,
+  eventId: string,
+  cancelled: boolean,
+): Promise<{ ok: true } | { ok: false; reason: "forbidden" | "notfound" }> {
+  const access = await getEventAccess(eventId);
+  if (!access.isFullAdmin || !access.session) return { ok: false, reason: "forbidden" };
+
+  const [reg] = await db
+    .select({ status: eventRegistrations.status, paymentStatus: eventRegistrations.paymentStatus })
+    .from(eventRegistrations)
+    .where(and(eq(eventRegistrations.id, registrationId), eq(eventRegistrations.eventId, eventId)));
+  if (!reg) return { ok: false, reason: "notfound" };
+
+  const next = cancelled
+    ? "cancelled"
+    : reg.paymentStatus === "verified" || reg.paymentStatus === "not_required"
+      ? "confirmed"
+      : "pending";
+  if (next === reg.status) return { ok: true };
+
+  await db
+    .update(eventRegistrations)
+    .set({ status: next })
+    .where(and(eq(eventRegistrations.id, registrationId), eq(eventRegistrations.eventId, eventId)));
+
+  await logEventAudit(
+    access.session.user.id,
+    eventId,
+    cancelled ? "registration.cancelled" : "registration.restored",
+    { before: { status: reg.status }, after: { status: next } },
+  );
+  revalidatePath(`/console/events/${eventId}`);
+  return { ok: true };
 }
 
 // Check-in by the QR token scanned from a ticket. Separated from the scan page
