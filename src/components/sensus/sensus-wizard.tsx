@@ -515,6 +515,7 @@ export function SensusWizard({
               options: branchOptions,
               required: true,
               onChange: updateBranch,
+              hint: t("sensus.branchHint"),
             })}
             {field(t("sensus.studentStatus"), "studentStatus", { options: STUDENT_STATUS_OPTIONS, required: true })}
             {/* Universitas terkunci sampai cabang dipilih - daftar kampusnya

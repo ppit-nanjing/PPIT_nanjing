@@ -15,7 +15,7 @@ import { OnboardingCensusSection, type OnboardingCensus } from "@/components/onb
  * renders for someone who hasn't been asked yet. Optional: they can fill a few
  * census basics now (saved + continued later from /sensus) or skip entirely.
  */
-export function OnboardingModal() {
+export function OnboardingModal({ branchOptions }: { branchOptions: string[] }) {
   const t = useT();
   const { data: session, update } = useSession();
   const [pending, startTransition] = useTransition();
@@ -61,7 +61,7 @@ export function OnboardingModal() {
         </h2>
         <p className="text-body-md text-on-surface-variant mb-6">{t("onboarding.censusDesc")}</p>
 
-        <OnboardingCensusSection value={census} onChange={setCensus} />
+        <OnboardingCensusSection value={census} onChange={setCensus} branchOptions={branchOptions} />
 
         <CheckboxField
           checked={newsletter}
