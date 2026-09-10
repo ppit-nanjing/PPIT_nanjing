@@ -1,7 +1,7 @@
 "use client";
 
-import { useState, useTransition } from "react";
-import { CheckCircle2, TriangleAlert } from "lucide-react";
+import { useMemo, useState, useTransition } from "react";
+import { CheckCircle2, TriangleAlert, Search } from "lucide-react";
 import { checkInRegistration } from "@/app/actions/admin-events";
 import { ProofView } from "@/components/console/proof-view";
 import {
@@ -28,7 +28,11 @@ interface Registration {
   // Kategori tarif yang dipilih peserta, mis. "Freshmen (¥15)". null = acara
   // gratis / tarif tunggal / pendaftaran lama.
   feeLabel?: string | null;
+  // WeChat ID — bagian dari versi RINGKAS (Humas menghubungi peserta). Diambil
+  // dari biodataJson di server; null kalau acara tanpa biodata.
+  wechatId?: string | null;
   // Biodata lengkap yang di-snapshot saat mendaftar (acara requiresBiodata).
+  // Hanya dikirim ke versi LENGKAP (BPH Kabinet + Divisi Teknologi).
   biodata?: Record<string, string> | null;
   // Alasan peserta ini belum boleh di-check-in (dihitung di server dari status
   // pendaftaran + status bayar). null = boleh.
@@ -74,14 +78,47 @@ export function RegistrationList({
   eventId,
   registrations,
   questions = [],
+  detail = false,
 }: {
   eventId: string;
   registrations: Registration[];
   questions?: QuestionRef[];
+  // true = BPH Kabinet + Divisi Teknologi → biodata lengkap, email, jawaban,
+  // asal, tanggal. false (default) = panitia lain → nama + WeChat + tarif +
+  // status keanggotaan + check-in saja.
+  detail?: boolean;
 }) {
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
   const [checkingId, setCheckingId] = useState<string | null>(null);
+  const [query, setQuery] = useState("");
+  const [statusFilter, setStatusFilter] = useState<"all" | Registration["status"]>("all");
+  const [checkinFilter, setCheckinFilter] = useState<"all" | "in" | "out">("all");
+  const [feeFilter, setFeeFilter] = useState("all");
+
+  const feeLabels = useMemo(
+    () => [...new Set(registrations.map((r) => r.feeLabel).filter((f): f is string => Boolean(f)))].sort(),
+    [registrations],
+  );
+
+  const filtered = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    return registrations.filter((r) => {
+      if (statusFilter !== "all" && r.status !== statusFilter) return false;
+      if (checkinFilter === "in" && r.status !== "attended") return false;
+      if (checkinFilter === "out" && r.status === "attended") return false;
+      if (feeFilter !== "all" && r.feeLabel !== feeFilter) return false;
+      if (q) {
+        const hay = [r.userName, r.wechatId, r.feeLabel, detail ? r.userEmail : null]
+          .filter(Boolean)
+          .join(" ")
+          .toLowerCase();
+        if (!hay.includes(q)) return false;
+      }
+      return true;
+    });
+  }, [registrations, query, statusFilter, checkinFilter, feeFilter, detail]);
+  const isFiltered = query.trim() !== "" || statusFilter !== "all" || checkinFilter !== "all" || feeFilter !== "all";
 
   function checkIn(registrationId: string) {
     setError(null);
@@ -139,77 +176,128 @@ export function RegistrationList({
           .filter((b) => b.value)
       : [];
 
+  const selectCls =
+    "bg-soft-gray rounded-md p-2 text-body-sm pp-select focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-container";
+
   return (
-    <CollapsibleRecordList
-      records={registrations}
-      countLabel={(n) => `${n} pendaftar`}
-      emptyText="Belum ada yang mendaftar."
-      banner={
-        error ? (
-          <p role="alert" className="flex items-center gap-2 rounded-lg bg-error-container/40 px-4 py-3 text-body-md text-on-error-container">
-            <TriangleAlert size={16} aria-hidden /> {error}
-          </p>
-        ) : null
-      }
-      renderSummary={(r) => ({
-        title: r.userName ?? "(tanpa nama)",
-        subtitle: [r.branch, r.membership].filter(Boolean).join(" · "),
-        badge: { text: STATUS_LABEL[r.status], tone: STATUS_TONE[r.status] },
-      })}
-      renderDetail={(r) => {
-        const rows = [...biodataOf(r), ...answersOf(r).map((a) => ({ ...a, key: `q:${a.label}` }))];
-        return (
-          <>
-            <div className="flex flex-col gap-0.5 text-label-caps text-on-surface-variant">
-              {r.userEmail && (
-                <span className="break-all normal-case">{r.userEmail}</span>
-              )}
-              <span>
-                Asal:{" "}
-                <span className="text-on-background normal-case">
-                  {[r.branch, r.membership].filter(Boolean).join(" · ") || "—"}
-                </span>
-              </span>
-              {r.feeLabel && (
+    <div className="flex flex-col gap-3">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2">
+        <label className="relative sm:col-span-2 lg:col-span-1">
+          <Search size={14} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-on-surface-variant" aria-hidden />
+          <input
+            type="search"
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder={detail ? "Cari nama / WeChat / email" : "Cari nama / WeChat"}
+            aria-label="Cari pendaftar"
+            className="w-full bg-soft-gray rounded-md py-2 pl-8 pr-2 text-body-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-container"
+          />
+        </label>
+        <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value as typeof statusFilter)} aria-label="Filter status" className={selectCls}>
+          <option value="all">Semua status</option>
+          <option value="pending">Menunggu</option>
+          <option value="confirmed">Terkonfirmasi</option>
+          <option value="attended">Hadir</option>
+          <option value="cancelled">Dibatalkan</option>
+        </select>
+        <select value={checkinFilter} onChange={(e) => setCheckinFilter(e.target.value as typeof checkinFilter)} aria-label="Filter check-in" className={selectCls}>
+          <option value="all">Hadir & belum</option>
+          <option value="in">Sudah check-in</option>
+          <option value="out">Belum check-in</option>
+        </select>
+        {feeLabels.length > 0 && (
+          <select value={feeFilter} onChange={(e) => setFeeFilter(e.target.value)} aria-label="Filter kategori tarif" className={selectCls}>
+            <option value="all">Semua kategori</option>
+            {feeLabels.map((f) => (
+              <option key={f} value={f}>
+                {f}
+              </option>
+            ))}
+          </select>
+        )}
+      </div>
+
+      <CollapsibleRecordList
+        records={filtered}
+        countLabel={(n) => (isFiltered ? `${n} dari ${registrations.length} pendaftar` : `${n} pendaftar`)}
+        emptyText={isFiltered ? "Tidak ada pendaftar yang cocok dengan filter." : "Belum ada yang mendaftar."}
+        banner={
+          error ? (
+            <p role="alert" className="flex items-center gap-2 rounded-lg bg-error-container/40 px-4 py-3 text-body-md text-on-error-container">
+              <TriangleAlert size={16} aria-hidden /> {error}
+            </p>
+          ) : null
+        }
+        renderSummary={(r) => ({
+          title: r.userName ?? "(tanpa nama)",
+          subtitle: [detail ? r.branch : null, r.membership].filter(Boolean).join(" · "),
+          badge: { text: STATUS_LABEL[r.status], tone: STATUS_TONE[r.status] },
+        })}
+        renderDetail={(r) => {
+          // Biodata + jawaban kustom = versi LENGKAP saja.
+          const rows = detail
+            ? [...biodataOf(r), ...answersOf(r).map((a) => ({ ...a, key: `q:${a.label}` }))]
+            : [];
+          return (
+            <>
+              <div className="flex flex-col gap-0.5 text-label-caps text-on-surface-variant">
+                {detail && r.userEmail && (
+                  <span className="break-all normal-case">{r.userEmail}</span>
+                )}
+                {!detail && r.wechatId && (
+                  <span>
+                    WeChat ID: <span className="text-on-background normal-case">{r.wechatId}</span>
+                  </span>
+                )}
                 <span>
-                  Tarif: <span className="text-on-background normal-case">{r.feeLabel}</span>
-                </span>
-              )}
-              <span>
-                Daftar:{" "}
-                <span className="text-on-background normal-case">
-                  {new Date(r.registeredAt).toLocaleDateString("id-ID", { dateStyle: "medium" })}
-                </span>
-              </span>
-              {r.status === "attended" && r.checkedInAt && (
-                <span>
-                  Check-in:{" "}
+                  {detail ? "Asal: " : "Status: "}
                   <span className="text-on-background normal-case">
-                    {new Date(r.checkedInAt).toLocaleString("id-ID", { dateStyle: "medium", timeStyle: "short" })}
-                    {r.checkedInByName && ` · oleh ${r.checkedInByName}`}
+                    {[detail ? r.branch : null, r.membership].filter(Boolean).join(" · ") || "—"}
                   </span>
                 </span>
-              )}
-              {rows.map((b) => (
-                <span
-                  key={b.key}
-                  className={b.key === "studentProofUrl" ? "flex flex-wrap items-center gap-1.5" : undefined}
-                >
-                  {b.label}:{" "}
-                  {b.key === "studentProofUrl" ? (
-                    <ProofView url={b.value} label={b.label} />
-                  ) : (
-                    <span className="text-on-background normal-case">{b.value}</span>
-                  )}
-                </span>
-              ))}
-            </div>
-            <div>
-              <CheckInButton r={r} />
-            </div>
-          </>
-        );
-      }}
-    />
+                {r.feeLabel && (
+                  <span>
+                    Tarif: <span className="text-on-background normal-case">{r.feeLabel}</span>
+                  </span>
+                )}
+                {detail && (
+                  <span>
+                    Daftar:{" "}
+                    <span className="text-on-background normal-case">
+                      {new Date(r.registeredAt).toLocaleDateString("id-ID", { dateStyle: "medium" })}
+                    </span>
+                  </span>
+                )}
+                {r.status === "attended" && r.checkedInAt && (
+                  <span>
+                    Check-in:{" "}
+                    <span className="text-on-background normal-case">
+                      {new Date(r.checkedInAt).toLocaleString("id-ID", { dateStyle: "medium", timeStyle: "short" })}
+                      {r.checkedInByName && ` · oleh ${r.checkedInByName}`}
+                    </span>
+                  </span>
+                )}
+                {rows.map((b) => (
+                  <span
+                    key={b.key}
+                    className={b.key === "studentProofUrl" ? "flex flex-wrap items-center gap-1.5" : undefined}
+                  >
+                    {b.label}:{" "}
+                    {b.key === "studentProofUrl" ? (
+                      <ProofView url={b.value} label={b.label} />
+                    ) : (
+                      <span className="text-on-background normal-case">{b.value}</span>
+                    )}
+                  </span>
+                ))}
+              </div>
+              <div>
+                <CheckInButton r={r} />
+              </div>
+            </>
+          );
+        }}
+      />
+    </div>
   );
 }

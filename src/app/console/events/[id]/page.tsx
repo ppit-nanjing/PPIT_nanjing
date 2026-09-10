@@ -203,13 +203,12 @@ export default async function ConsoleEventDetailPage({ params }: { params: Promi
       ])
     : [[], []];
 
-  // Biodata lengkap pendaftar (paspor, KTM, universitas, telpon, jurusan) =
-  // sama isinya dengan ekspor CSV. Panitia biasa yang cuma pegang
-  // event.viewRegistrants (DASAR — semua panitia) lihat versi RINGKAS: nama,
-  // kota, status keanggotaan, tarif, tanggal, check-in. Blok biodata cuma untuk
-  // yang bisa mengekspor (BPH Panitia) atau pegang izin Keuangan (mereka
-  // mencocokkan bukti bayar ke identitas).
-  const canSeeRegistrantDetail = can("event.exportRegistrants") || can("event.manageFinance");
+  // Biodata lengkap pendaftar (paspor, KTM, universitas, telpon, jurusan, email,
+  // kota, jawaban kustom) = sama isinya dengan ekspor CSV. HANYA BPH Kabinet +
+  // Divisi Teknologi (adminScope "full") — sama seperti /console/sensus. Semua
+  // panitia lain (event.viewRegistrants, DASAR) lihat versi RINGKAS: nama +
+  // WeChat ID + kategori/nominal tarif + status keanggotaan + status check-in.
+  const canSeeRegistrantDetail = access.isFullAdmin;
 
   // Verifikasi pembayaran = data keuangan - digerbang event.manageFinance
   // (grant "Keuangan" per divisi + BPH Panitia + BPH Kabinet). Diturunkan dari
@@ -896,7 +895,7 @@ export default async function ConsoleEventDetailPage({ params }: { params: Promi
 
       {can("event.viewRegistrants") && (
       <CollapsibleSection title="Daftar Pendaftar" description={`${registrations.length} terdaftar · ${attended} hadir`}>
-        {registrations.length > 0 && can("event.exportRegistrants") && (
+        {registrations.length > 0 && canSeeRegistrantDetail && (
           <a
             href={`/api/console/events/${id}/registrations/export`}
             className="self-start inline-flex items-center gap-1.5 text-label-caps uppercase tracking-wide text-primary-container hover:text-primary transition-colors mb-3"
@@ -907,11 +906,13 @@ export default async function ConsoleEventDetailPage({ params }: { params: Promi
         )}
         {!canSeeRegistrantDetail && (
           <p className="text-xs text-on-surface-variant mb-3">
-            Biodata lengkap (paspor, KTM, kontak, jurusan) hanya untuk BPH Panitia &amp; pemegang izin Keuangan.
+            Kamu melihat versi ringkas (nama, WeChat, tarif, status). Biodata lengkap (paspor, KTM, kontak,
+            jurusan, email, jawaban) &amp; ekspor CSV hanya untuk BPH Kabinet &amp; Divisi Teknologi.
           </p>
         )}
         <RegistrationList
           eventId={id}
+          detail={canSeeRegistrantDetail}
           questions={questions.map((q) => ({ id: q.id, label: q.label }))}
           registrations={registrations.map((r) => ({
             id: r.reg.id,
@@ -921,8 +922,10 @@ export default async function ConsoleEventDetailPage({ params }: { params: Promi
             registeredAt: r.reg.registeredAt.toISOString(),
             answers: r.reg.answersJson ?? {},
             feeLabel: feeLabelFor(r.reg.feeOptionId, r.reg.registeredAt),
-            // Blok biodata (paspor, KTM, universitas, dst.) hanya untuk yang
-            // boleh ekspor / pegang Keuangan — lihat canSeeRegistrantDetail.
+            // WeChat ID = bagian dari versi ringkas (Humas menghubungi peserta).
+            wechatId: (r.reg.biodataJson as { wechatId?: string } | null)?.wechatId || null,
+            // Blok biodata (paspor, KTM, universitas, dst.) HANYA BPH Kabinet +
+            // Divisi Teknologi — lihat canSeeRegistrantDetail = access.isFullAdmin.
             biodata: canSeeRegistrantDetail ? r.reg.biodataJson ?? null : null,
             checkInBlocked: checkInBlockReason(
               { status: r.reg.status, paymentStatus: r.reg.paymentStatus },
