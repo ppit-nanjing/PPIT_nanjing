@@ -19,11 +19,10 @@ export function OnboardingModal() {
   const t = useT();
   const { data: session, update } = useSession();
   const [pending, startTransition] = useTransition();
-  // Email akun sudah pasti valid — pre-fill; nama Google sering cuma nama
-  // panggilan jadi biarkan kosong (form sensus butuh nama lengkap sesuai paspor).
-  const [census, setCensus] = useState<OnboardingCensus>(() => ({
-    activeEmail: session?.user.email ?? "",
-  }));
+  // Sengaja tidak pre-fill dari akun Google: nama-nya sering cuma nama panggilan
+  // (form sensus butuh nama lengkap sesuai paspor) dan "email aktif" di sensus
+  // boleh beda dari email login. Biar pengisi yang menentukan.
+  const [census, setCensus] = useState<OnboardingCensus>({});
   const [newsletter, setNewsletter] = useState(true);
 
   if (!session || session.user.emailSubscribed !== null) return null;
