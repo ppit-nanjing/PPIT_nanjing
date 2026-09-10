@@ -273,7 +273,13 @@ export function EventCommitteeStructure({
                 dicari - inilah yang diminta untuk divisi berisi banyak orang. */}
             <details className="mt-2">
               <summary className="text-label-caps uppercase tracking-wide text-primary-container hover:text-primary cursor-pointer w-fit">+ Tambah anggota (centang banyak)</summary>
-              <DivisionMemberPicker eventId={eventId} divisionId={dept.id} candidates={candidates} action={assignMembersToDivision} />
+              <DivisionMemberPicker
+                eventId={eventId}
+                divisionId={dept.id}
+                candidates={candidates}
+                assigned={membersOf(dept.id).flatMap((m) => (m.userId ? [{ id: m.userId, name: m.name }] : []))}
+                action={assignMembersToDivision}
+              />
             </details>
 
             {subs.length > 0 && (
@@ -304,7 +310,13 @@ export function EventCommitteeStructure({
                       <DivisionGrants divisionId={sub.id} granted={sub.grantedCapabilities} />
                       <details className="mt-2">
                         <summary className="text-label-caps uppercase tracking-wide text-primary-container hover:text-primary cursor-pointer w-fit">+ Tambah anggota (centang banyak)</summary>
-                        <DivisionMemberPicker eventId={eventId} divisionId={sub.id} candidates={candidates} action={assignMembersToDivision} />
+                        <DivisionMemberPicker
+                          eventId={eventId}
+                          divisionId={sub.id}
+                          candidates={candidates}
+                          assigned={membersOf(sub.id).flatMap((m) => (m.userId ? [{ id: m.userId, name: m.name }] : []))}
+                          action={assignMembersToDivision}
+                        />
                       </details>
                       <details className="mt-2">
                         <summary className="text-label-caps uppercase tracking-wide text-on-surface-variant hover:text-on-background cursor-pointer w-fit">Ubah sub-tim</summary>

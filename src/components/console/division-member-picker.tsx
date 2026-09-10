@@ -15,28 +15,41 @@ interface Candidate {
  * panjang kandidat, yang dicentang dikirim sekaligus sebagai anggota.
  * Client component cuma untuk filter ketikannya - pengirimannya tetap server
  * action biasa, tanpa state tambahan.
+ *
+ * Orang yang SUDAH di divisi ini (`assigned`) tidak muncul di daftar centang —
+ * mereka sudah terdaftar (lihat daftar anggota di atas picker); menampilkannya
+ * lagi tanpa tanda bikin bingung ("kok Jesica gak kecentang padahal udah masuk").
  */
 export function DivisionMemberPicker({
   eventId,
   divisionId,
   candidates,
+  assigned = [],
   action,
 }: {
   eventId: string;
   divisionId: string;
   candidates: Candidate[];
+  assigned?: { id: string; name: string | null }[];
   action: (formData: FormData) => void | Promise<void>;
 }) {
   const [query, setQuery] = useState("");
   const q = query.trim().toLowerCase();
+  const assignedIds = new Set(assigned.map((a) => a.id));
+  const pool = candidates.filter((c) => !assignedIds.has(c.id));
   const filtered = q
-    ? candidates.filter((c) => `${c.name ?? ""} ${c.email}`.toLowerCase().includes(q))
-    : candidates;
+    ? pool.filter((c) => `${c.name ?? ""} ${c.email}`.toLowerCase().includes(q))
+    : pool;
 
   return (
     <form action={action} className="mt-2 flex flex-col gap-2">
       <input type="hidden" name="eventId" value={eventId} />
       <input type="hidden" name="divisionId" value={divisionId} />
+      {assigned.length > 0 && (
+        <p className="text-label-caps text-on-surface-variant">
+          Sudah anggota: {assigned.map((a) => a.name ?? "(tanpa nama)").join(", ")}
+        </p>
+      )}
       <input
         type="search"
         value={query}
@@ -61,7 +74,9 @@ export function DivisionMemberPicker({
           />
         ))}
         {filtered.length === 0 && (
-          <p className="text-label-caps text-on-surface-variant py-2 text-center">Tidak ada yang cocok.</p>
+          <p className="text-label-caps text-on-surface-variant py-2 text-center">
+            {pool.length === 0 ? "Semua kandidat sudah jadi anggota divisi ini." : "Tidak ada yang cocok."}
+          </p>
         )}
       </div>
       <SubmitButton
