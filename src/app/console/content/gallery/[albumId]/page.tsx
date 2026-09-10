@@ -5,11 +5,13 @@ import { db } from "@/db";
 import { galleryAlbums, galleryPhotos } from "@/db/schema";
 import { hasModuleAccess } from "@/lib/admin-scope";
 import { getEventAccess } from "@/lib/event-access";
-import { setAlbumDriveUrl } from "@/app/actions/admin-content";
+import { setAlbumDriveUrl, updateGalleryAlbum, deleteGalleryAlbum } from "@/app/actions/admin-content";
 import { MultiPhotoUpload } from "@/components/console/multi-photo-upload";
 import { PhotoGrid } from "@/components/console/photo-grid";
 import { CollapsibleSection } from "@/components/console/collapsible-section";
 import { SubmitButton } from "@/components/console/submit-button";
+import { ConfirmButton } from "@/components/console/confirm-button";
+import { ImageUploadCropper } from "@/components/upload/image-upload-cropper";
 import { ArrowLeft } from "lucide-react";
 import Link from "next/link";
 
@@ -39,7 +41,46 @@ export default async function ConsoleAlbumDetailPage({ params }: { params: Promi
       >
         <ArrowLeft size={16} /> Kembali
       </Link>
-      <h1 className="text-headline-md sm:text-headline-lg text-on-background mb-8">{album.title}</h1>
+      <div className="flex flex-wrap items-center justify-between gap-3 mb-8">
+        <h1 className="text-headline-md sm:text-headline-lg text-on-background">{album.title}</h1>
+        <ConfirmButton
+          action={deleteGalleryAlbum.bind(null, albumId)}
+          title="Hapus album?"
+          message="Album beserta semua fotonya akan dihapus permanen. Tindakan ini tidak bisa dibatalkan."
+          confirmLabel="Ya, hapus album"
+          className="text-label-caps uppercase tracking-wide text-error hover:opacity-80 px-3 py-2 rounded-md hover:bg-error-container/30 transition-colors"
+        >
+          Hapus Album
+        </ConfirmButton>
+      </div>
+
+      <CollapsibleSection title="Detail Album" defaultOpen>
+        <form action={updateGalleryAlbum.bind(null, albumId)} className="flex flex-col gap-6 mb-10">
+          <label className="flex flex-col gap-1">
+            <span className="text-label-caps uppercase tracking-wide text-on-surface-variant">Judul Album</span>
+            <input
+              name="title"
+              required
+              defaultValue={album.title}
+              className="bg-soft-gray rounded-md p-3 text-body-md"
+            />
+          </label>
+          <ImageUploadCropper
+            name="coverImageUrl"
+            folder="album"
+            label="Foto Sampul (opsional)"
+            defaultValue={album.coverImageUrl ?? ""}
+            aspect={16 / 9}
+            hint="Ideal 1920 × 1080 px (16:9) — gambar di-crop & dikompres otomatis."
+          />
+          <button
+            type="submit"
+            className="self-start bg-primary-container text-on-primary text-label-caps uppercase tracking-wide px-6 py-3 rounded-md hover:bg-primary transition-colors"
+          >
+            Simpan Perubahan
+          </button>
+        </form>
+      </CollapsibleSection>
 
       <CollapsibleSection title="Link Google Drive Semua Foto" defaultOpen>
         <form action={setAlbumDriveUrl.bind(null, albumId)} className="flex flex-col gap-3 sm:flex-row sm:items-end mb-10">
