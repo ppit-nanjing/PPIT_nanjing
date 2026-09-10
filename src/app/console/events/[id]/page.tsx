@@ -27,6 +27,7 @@ import { checkInBlockReason } from "@/lib/event-checkin";
 import { feeTierAt, amountForTier } from "@/lib/event-fee";
 import { toDateLocalInput } from "@/lib/datetime";
 import { ConfirmButton } from "@/components/console/confirm-button";
+import { SubmitButton } from "@/components/console/submit-button";
 import { Download, Images } from "lucide-react";
 
 const QUESTION_TYPE_LABELS: Record<string, string> = {
@@ -255,12 +256,12 @@ export default async function ConsoleEventDetailPage({ params }: { params: Promi
         {can("event.takeOver") && access.role == null && (
           <form action={takeOverEvent} className="mt-3">
             <input type="hidden" name="eventId" value={id} />
-            <button
-              type="submit"
+            <SubmitButton
+              successMessage="Acara diambil alih."
               className="inline-flex items-center gap-2 rounded-md border border-outline-variant px-4 py-2 text-label-caps uppercase tracking-wide text-on-background hover:bg-surface-container-low transition-colors"
             >
               Ambil Alih Acara (BPH)
-            </button>
+            </SubmitButton>
           </form>
         )}
       </header>
@@ -319,12 +320,12 @@ export default async function ConsoleEventDetailPage({ params }: { params: Promi
               { id: "event-agenda", label: "Agenda" },
             ]}
           />
-          <button
-            type="submit"
+          <SubmitButton
+            successMessage="Deskripsi & agenda tersimpan."
             className="self-start bg-primary-container text-on-primary text-label-caps uppercase tracking-wide px-6 py-3 rounded-md hover:bg-primary transition-colors"
           >
             Simpan Deskripsi &amp; Agenda
-          </button>
+          </SubmitButton>
         </form>
       </CollapsibleSection>
       )}
@@ -447,12 +448,12 @@ export default async function ConsoleEventDetailPage({ params }: { params: Promi
               { id: "event-location", label: "Lokasi" },
             ]}
           />
-          <button
-            type="submit"
+          <SubmitButton
+            successMessage="Info & pengaturan tersimpan."
             className="self-start bg-primary-container text-on-primary text-label-caps uppercase tracking-wide px-6 py-3 rounded-md hover:bg-primary transition-colors"
           >
             Simpan Info &amp; Pengaturan
-          </button>
+          </SubmitButton>
         </form>
       </details>
       )}
@@ -480,23 +481,23 @@ export default async function ConsoleEventDetailPage({ params }: { params: Promi
                 ]}
               />
             </label>
-            <button
-              type="submit"
+            <SubmitButton
+              successMessage="Status acara diperbarui."
               className="bg-primary-container text-on-primary text-label-caps uppercase tracking-wide px-6 py-3 rounded-md hover:bg-primary transition-colors"
             >
               Ubah Status
-            </button>
+            </SubmitButton>
           </form>
         ) : (event.status === "published" || event.status === "registration_closed") ? (
           <form action={setEventStatus}>
             <input type="hidden" name="eventId" value={id} />
             <input type="hidden" name="status" value={event.status === "published" ? "registration_closed" : "published"} />
-            <button
-              type="submit"
+            <SubmitButton
+              successMessage={event.status === "published" ? "Pendaftaran ditutup." : "Pendaftaran dibuka."}
               className="bg-primary-container text-on-primary text-label-caps uppercase tracking-wide px-6 py-3 rounded-md hover:bg-primary transition-colors"
             >
               {event.status === "published" ? "Tutup Pendaftaran" : "Buka Pendaftaran"}
-            </button>
+            </SubmitButton>
           </form>
         ) : (
           <p className="text-body-md text-on-surface-variant">
@@ -556,12 +557,12 @@ export default async function ConsoleEventDetailPage({ params }: { params: Promi
               <div className="flex flex-wrap items-center justify-between gap-3">
                 <CheckboxField name="required" defaultChecked={q.required} label="Wajib diisi" />
                 <div className="flex items-center gap-2">
-                  <button
-                    type="submit"
+                  <SubmitButton
+                    successMessage="Pertanyaan tersimpan."
                     className="text-label-caps uppercase tracking-wide border border-outline-variant px-3 py-1.5 rounded-md hover:bg-surface-container-low transition-colors"
                   >
                     Simpan
-                  </button>
+                  </SubmitButton>
                   <ConfirmButton
                     title="Hapus pertanyaan?"
                     message={`"${q.label}" dihapus dari form pendaftaran. Jawaban yang sudah terkumpul tidak ikut terhapus.`}
@@ -595,12 +596,12 @@ export default async function ConsoleEventDetailPage({ params }: { params: Promi
           />
           <div className="flex flex-wrap items-center justify-between gap-3">
             <CheckboxField name="required" label="Wajib diisi" />
-            <button
-              type="submit"
+            <SubmitButton
+              successMessage="Pertanyaan ditambahkan."
               className="bg-primary-container text-on-primary text-label-caps uppercase tracking-wide px-4 py-2 rounded-md hover:bg-primary transition-colors"
             >
               Tambah
-            </button>
+            </SubmitButton>
           </div>
         </form>
       </CollapsibleSection>
@@ -673,12 +674,12 @@ export default async function ConsoleEventDetailPage({ params }: { params: Promi
                   className="bg-soft-gray rounded-md p-2.5 text-body-md"
                 />
               </label>
-              <button
-                type="submit"
+              <SubmitButton
+                successMessage="Kategori tarif tersimpan."
                 className="text-label-caps uppercase tracking-wide border border-outline-variant px-3 py-2 rounded-md hover:bg-surface-container-low transition-colors"
               >
                 Simpan
-              </button>
+              </SubmitButton>
               <ConfirmButton
                 title="Hapus kategori tarif?"
                 message={`"${o.label}" dihapus. Pendaftar yang sudah memilihnya kehilangan label kategori (riwayatnya tetap ada).`}
@@ -719,12 +720,12 @@ export default async function ConsoleEventDetailPage({ params }: { params: Promi
             <span className="text-label-caps uppercase tracking-wide text-on-surface-variant">Kuota</span>
             <input name="quota" type="number" min={0} placeholder="∞" className="bg-soft-gray rounded-md p-2.5 text-body-md" />
           </label>
-          <button
-            type="submit"
+          <SubmitButton
+            successMessage="Kategori tarif ditambahkan."
             className="bg-primary-container text-on-primary text-label-caps uppercase tracking-wide px-4 py-2 rounded-md hover:bg-primary transition-colors"
           >
             Tambah
-          </button>
+          </SubmitButton>
         </form>
       </CollapsibleSection>
       )}
@@ -758,12 +759,12 @@ export default async function ConsoleEventDetailPage({ params }: { params: Promi
             </p>
             <form action={issueParticipantCertificates}>
               <input type="hidden" name="eventId" value={id} />
-              <button
-                type="submit"
+              <SubmitButton
+                successMessage="Sertifikat peserta diterbitkan."
                 className="bg-primary-container text-on-primary text-label-caps uppercase tracking-wide px-6 py-3 rounded-md hover:bg-primary transition-colors"
               >
                 Terbitkan Sertifikat Peserta
-              </button>
+              </SubmitButton>
             </form>
           </>
         ) : (
@@ -837,12 +838,12 @@ export default async function ConsoleEventDetailPage({ params }: { params: Promi
               placeholder="Judul album *"
               className="bg-soft-gray rounded-md p-3 text-body-md"
             />
-            <button
-              type="submit"
+            <SubmitButton
+              successMessage="Album foto dibuat."
               className="self-start bg-primary-container text-on-primary text-label-caps uppercase tracking-wide px-5 py-2.5 rounded-md hover:bg-primary transition-colors"
             >
               <Images size={15} className="inline -mt-0.5 mr-1.5" aria-hidden /> Buat Album Foto
-            </button>
+            </SubmitButton>
           </form>
         )}
       </CollapsibleSection>
@@ -980,12 +981,12 @@ export default async function ConsoleEventDetailPage({ params }: { params: Promi
               </a>.
             </p>
           </div>
-          <button
-            type="submit"
+          <SubmitButton
+            successMessage="Laporan pasca-acara tersimpan."
             className="self-start bg-primary-container text-on-primary text-label-caps uppercase tracking-wide px-6 py-3 rounded-md hover:bg-primary transition-colors"
           >
             Simpan Laporan Pasca-Acara
-          </button>
+          </SubmitButton>
         </form>
       </CollapsibleSection>
       )}
@@ -1057,12 +1058,12 @@ export default async function ConsoleEventDetailPage({ params }: { params: Promi
               className="bg-soft-gray rounded-md p-3 text-body-md"
             />
           </div>
-          <button
-            type="submit"
+          <SubmitButton
+            successMessage="Ditambahkan ke kredit."
             className="bg-primary-container text-on-primary text-label-caps uppercase tracking-wide px-6 py-3 rounded-md hover:bg-primary transition-colors"
           >
             Tambah
-          </button>
+          </SubmitButton>
         </form>
       </CollapsibleSection>
       )}

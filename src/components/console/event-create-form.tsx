@@ -7,13 +7,15 @@ import { ImageUploadCropper } from "@/components/upload/image-upload-cropper";
 import { AIImproveButton } from "@/components/ai/ai-improve-button";
 import { AIReviewButton } from "@/components/ai/ai-review-popup";
 import { HtmFields } from "@/components/console/htm-fields";
+import { useActionToast } from "@/components/console/submit-button";
 
 // Client wrapper so validation errors from createEvent render inline
 // (useActionState) instead of crashing into the route error boundary and
 // wiping everything the admin typed. Markup mirrors the edit form in
 // /console/events/[id].
 export function EventCreateForm() {
-  const [state, formAction] = useActionState<EventFormState, FormData>(createEvent, {});
+  const [state, formAction, isPending] = useActionState<EventFormState, FormData>(createEvent, {});
+  useActionToast(isPending, state.error, "Acara dibuat.");
 
   return (
     <form action={formAction} className="px-4 pb-5 sm:px-6 sm:pb-6 flex flex-col gap-4">

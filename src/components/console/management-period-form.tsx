@@ -2,9 +2,11 @@
 
 import { useActionState } from "react";
 import { createManagementPeriod, type ShortLinkFormState } from "@/app/actions/short-links";
+import { useActionToast } from "@/components/console/submit-button";
 
 export function PeriodForm() {
-  const [state, formAction] = useActionState<ShortLinkFormState, FormData>(createManagementPeriod, {});
+  const [state, formAction, isPending] = useActionState<ShortLinkFormState, FormData>(createManagementPeriod, {});
+  useActionToast(isPending, state.error, "Periode ditambahkan.");
 
   return (
     <form action={formAction} className="flex flex-wrap items-end gap-3 mt-3">
