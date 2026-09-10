@@ -75,19 +75,33 @@ export async function signUpWithPassword(_prev: AuthFormState, formData: FormDat
     await db.insert(users).values({ email, name: deriveName(email), passwordHash });
   }
 
-  // Sign the new account in via the same credentials path (will redirect on success).
+  // Sign the new account in via the same credentials path.
   const returnTo = safeRedirect(String(formData.get("returnTo") ?? ""));
+  const result = await credentialsSignIn({ email, password });
+  if (result !== "ok") return { errorKey: "auth.errAutoSignIn" };
+  redirect(returnTo);
+}
+
+// signIn() with redirect:false sets the session cookie via cookies().set() and
+// returns the resolved URL string WITHOUT throwing NEXT_REDIRECT. That matters:
+// on Next.js 16, catching signIn()'s own redirect() in a try block and letting
+// it propagate (even via unstable_rethrow) drops the Set-Cookie it queued a
+// line earlier, so the browser lands on returnTo with no session and the navbar
+// still shows "Login". Here the redirect() happens in the CALLER, outside any
+// try, so the cookie survives. A failed credential sign-in comes back as a URL
+// carrying `error=` (the sign-in page + CredentialsSignin code).
+async function credentialsSignIn(
+  fields: Record<string, string>
+): Promise<"ok" | "bad-credentials"> {
   try {
-    await signIn("credentials", { email, password, redirectTo: returnTo });
+    const url = await signIn("credentials", { ...fields, redirect: false });
+    if (typeof url === "string" && /[?&]error=/.test(url)) return "bad-credentials";
+    return "ok";
   } catch (error) {
-    // See signInWithPassword for why this must come before the AuthError check.
     unstable_rethrow(error);
-    if (error instanceof AuthError) {
-      return { errorKey: "auth.errAutoSignIn" };
-    }
+    if (error instanceof AuthError) return "bad-credentials";
     throw error;
   }
-  return {};
 }
 
 // Email/password sign-IN: delegate to the Credentials provider (throws a
@@ -99,22 +113,11 @@ export async function signInWithPassword(_prev: AuthFormState, formData: FormDat
 
   const returnTo = safeRedirect(String(formData.get("returnTo") ?? ""));
   const remember = formData.get("remember") === "true" ? "true" : "false";
-  try {
-    await signIn("credentials", { email, password, remember, redirectTo: returnTo });
-  } catch (error) {
-    // signIn() sets the session cookie and then throws redirect() on success.
-    // On Next.js 16 a redirect caught in a try block is no longer recognised as
-    // a control-flow redirect once it is re-thrown, so the Set-Cookie Auth.js
-    // queued just before the throw is dropped from the response. The browser
-    // then navigates to returnTo with no session cookie, and the login appears
-    // to succeed while the navbar still shows "Login". unstable_rethrow hands
-    // redirect/notFound back to the framework untouched; real errors fall
-    // through to the AuthError check below.
-    unstable_rethrow(error);
-    if (error instanceof AuthError) return { errorKey: "auth.errCredentialsWrong" };
-    throw error;
-  }
-  return {};
+  // See credentialsSignIn(): redirect happens here, outside the try, so the
+  // session cookie signIn() just set is not dropped by Next 16.
+  const result = await credentialsSignIn({ email, password, remember });
+  if (result !== "ok") return { errorKey: "auth.errCredentialsWrong" };
+  redirect(returnTo);
 }
 
 export async function signInWithGoogle(formData: FormData) {

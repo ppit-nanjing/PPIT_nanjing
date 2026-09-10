@@ -24,19 +24,29 @@ export function OnboardingModal() {
   // boleh beda dari email login. Biar pengisi yang menentukan.
   const [census, setCensus] = useState<OnboardingCensus>({});
   const [newsletter, setNewsletter] = useState(true);
+  // Tutup di sisi klien begitu tombol diklik, tak peduli hasil server-nya. Kalau
+  // salah satu aksi gagal (mis. sesi belum ke-refresh setelah login), pengisi
+  // tetap tidak terjebak di modal — datanya bisa dilengkapi nanti di /sensus.
+  const [done, setDone] = useState(false);
 
-  if (!session || session.user.emailSubscribed !== null) return null;
+  if (done || !session || session.user.emailSubscribed !== null) return null;
 
   const userName = session.user.name ?? "";
   const userEmail = session.user.email ?? "";
 
   function finish(subscribed: boolean) {
+    setDone(true);
     startTransition(async () => {
-      await setEmailSubscription(subscribed);
-      // Merge whatever was typed - saveOnboardingSensus ignores empty fields and
-      // never blanks out existing /sensus progress. No-op if nothing was filled.
-      await saveOnboardingSensus(census);
-      await update();
+      try {
+        await setEmailSubscription(subscribed);
+        // Merge whatever was typed - saveOnboardingSensus ignores empty fields
+        // and never blanks out existing /sensus progress. No-op if nothing typed.
+        await saveOnboardingSensus(census);
+      } catch {
+        // Swallow: the modal is already closed. emailSubscribed stays null so it
+        // reappears on the next visit, which is the right nudge anyway.
+      }
+      await update().catch(() => {});
     });
   }
 
