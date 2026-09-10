@@ -6,6 +6,7 @@ import { ImageUploadCropper } from "@/components/upload/image-upload-cropper";
 import { AIImproveButton } from "@/components/ai/ai-improve-button";
 import { AIReviewButton } from "@/components/ai/ai-review-popup";
 import { CheckboxField } from "@/components/console/form";
+import { useActionToast } from "@/components/console/submit-button";
 
 // Shared create/edit form for console news. Client component so validation
 // errors from upsertNewsArticle render inline (useActionState) instead of
@@ -33,7 +34,8 @@ export function NewsArticleForm({
   // Kalau diset: artikel baru ditaut ke acara ini (jalur grant "Post artikel").
   eventId?: string;
 }) {
-  const [state, formAction] = useActionState<ContentFormState, FormData>(action, {});
+  const [state, formAction, isPending] = useActionState<ContentFormState, FormData>(action, {});
+  useActionToast(isPending, state.error, "Artikel tersimpan.");
   const alreadyPublished = !!initial?.published;
   const isArchived = !!initial?.archived;
 

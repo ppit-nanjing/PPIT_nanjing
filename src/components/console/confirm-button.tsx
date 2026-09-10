@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState, useTransition, type ReactNode } from "react";
 import { TriangleAlert } from "lucide-react";
+import { toast } from "sonner";
 
 type Props = {
   /** Client-side callback - use this from other CLIENT components. */
@@ -24,6 +25,8 @@ type Props = {
   "aria-label"?: string;
   /** Set false for a non-destructive confirmation (confirm button uses primary styling instead of error). */
   danger?: boolean;
+  /** Toast shown after a successful action. Defaults to "Berhasil dihapus."/"Berhasil disimpan." (follows `danger`). Pass "" to suppress. */
+  successMessage?: string;
 };
 
 // Next.js's redirect()/notFound() signal control flow by throwing a special
@@ -56,6 +59,7 @@ export function ConfirmButton({
   children,
   className,
   danger = true,
+  successMessage = danger ? "Berhasil dihapus." : "Berhasil disimpan.",
   ...rest
 }: Props) {
   const [open, setOpen] = useState(false);
@@ -76,6 +80,7 @@ export function ConfirmButton({
         } else if (onConfirm) {
           await onConfirm();
         }
+        if (successMessage) toast.success(successMessage);
         close();
       } catch (err) {
         if (isNextControlFlowSignal(err)) throw err;

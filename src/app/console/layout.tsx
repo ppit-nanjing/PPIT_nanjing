@@ -1,5 +1,6 @@
 import { eq } from "drizzle-orm";
 import { redirect } from "next/navigation";
+import { Toaster } from "sonner";
 import { auth } from "@/auth";
 import { db } from "@/db";
 import { eventCommittee } from "@/db/schema";
@@ -30,6 +31,9 @@ export default async function ConsoleLayout({ children }: { children: React.Reac
 
   return (
     <div className="min-h-screen bg-background flex flex-col md:flex-row">
+      {/* Toast global untuk seluruh /console/* - dipicu SubmitButton/ConfirmButton
+          setelah sebuah server action selesai (lihat komponen masing-masing). */}
+      <Toaster position="top-center" richColors closeButton />
       <ConsoleSidebar
         userName={session.user.name ?? "Admin"}
         scope={session.user.adminScope}

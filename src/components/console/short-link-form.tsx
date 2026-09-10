@@ -3,6 +3,7 @@
 import { useActionState, useMemo } from "react";
 import type { ShortLinkFormState } from "@/app/actions/short-links";
 import { Select, ToggleSwitch, fieldInput } from "@/components/console/form";
+import { useActionToast } from "@/components/console/submit-button";
 
 const CATEGORIES: { value: string; label: string }[] = [
   { value: "documentation", label: "Dokumentasi" },
@@ -44,7 +45,8 @@ export function ShortLinkForm({
   submitLabel: string;
   showActive?: boolean;
 }) {
-  const [state, formAction] = useActionState<ShortLinkFormState, FormData>(action, {});
+  const [state, formAction, isPending] = useActionState<ShortLinkFormState, FormData>(action, {});
+  useActionToast(isPending, state.error, "Tautan tersimpan.");
 
   const previewSlug = useMemo(() => {
     const raw = initial?.slug ?? "";
