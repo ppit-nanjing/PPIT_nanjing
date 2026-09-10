@@ -10,6 +10,8 @@ import type { EventBiodata } from "@/db/schema";
 import { hasCompletedSensus } from "@/lib/sensus-gate";
 import { NON_STUDENT_BRANCH } from "@/lib/membership-status";
 import { createTemplatedNotification } from "@/lib/notifications";
+import { getEventSeats } from "@/lib/event-capacity";
+import { feeTierAt, amountForTier } from "@/lib/event-fee";
 
 // Peserta yang sensusnya belum lengkap ditanyai asal cabangnya di form
 // pendaftaran (lihat komentar di event_registrations.branch). Nilainya
@@ -100,6 +102,20 @@ export async function registerForEvent(eventId: string, slug: string, formData?:
     const feeOptionId = feeOptions.some((o) => o.id === pickedFeeOption) ? pickedFeeOption : null;
     if (event.isPaid && feeOptions.length > 0 && !feeOptionId) redirect(`/events/${slug}`);
 
+    // Pagu kapasitas: pagu total acara (events.capacity) DAN kuota per kategori
+    // tarif (event_fee_options.quota, mis. WIF Freshmen 130 / Non-freshmen 20).
+    // Dihitung ulang di sini, tepat sebelum insert — halaman /register sudah
+    // memantulkan yang penuh, ini jaring pengaman untuk race + POST langsung.
+    // Sisa celah balapan antar dua pendaftaran serempak diterima apa adanya,
+    // sama seperti cek `isFull` di halaman acara; skalanya kecil dan verifikasi
+    // panitia jadi lapis terakhir.
+    const seats = await getEventSeats(event);
+    if (seats.capacityFull) redirect(`/events/${slug}`);
+    if (feeOptionId) {
+      const picked = seats.feeOptions.find((o) => o.id === feeOptionId);
+      if (picked?.isFull) redirect(`/events/${slug}`);
+    }
+
     // Biodata lengkap (acara requiresBiodata): snapshot dari sensus bila lengkap,
     // dari form bila belum. Dibekukan di baris pendaftaran supaya ekspor selalu
     // utuh dan tidak ikut berubah kalau sensus orangnya di-update belakangan.
@@ -152,7 +168,16 @@ export async function registerForEvent(eventId: string, slug: string, formData?:
     // TANPA QR. Bendahara yang mengunci verifikasi akan mengangkatnya jadi
     // "confirmed" + menerbitkan QR (lihat updatePaymentStatus). Gratis:
     // langsung terkonfirmasi seperti biasa.
-    const needsPayment = event.isPaid;
+    //
+    // Nominal EFEKTIF peserta ini (tahap early bird / normal saat mendaftar):
+    // ¥0 — mis. tarif early bird gratis — diperlakukan seperti acara gratis
+    // (tidak digerbang, QR langsung terbit). `null` = nominal acara belum
+    // ditentukan → tetap digerbang seperti sebelumnya.
+    const pickedSeat = feeOptionId ? seats.feeOptions.find((o) => o.id === feeOptionId) ?? null : null;
+    const effectiveAmount = pickedSeat
+      ? amountForTier(feeTierAt(event.earlyBirdUntil), pickedSeat.amountCny, pickedSeat.earlyBirdAmountCny)
+      : event.feeCny;
+    const needsPayment = event.isPaid && effectiveAmount !== 0;
 
     await db.insert(eventRegistrations).values({
       eventId,

@@ -33,12 +33,35 @@ import { events, eventDivisions, eventFeeOptions, eventQuestions } from "./schem
 const SLUG = "wif-2026";
 
 // Tarif masuk WIF: freshmen (S1 tahun pertama) vs bukan. Di-upsert lewat label
-// supaya menjalankan ulang tidak menggandakan; nominalnya di-update kalau
-// berubah, tapi kategori yang ditambah panitia lewat console tidak dihapus.
-const FEE_OPTIONS: { label: string; amountCny: number }[] = [
-  { label: "Freshmen", amountCny: 15 },
-  { label: "Non-freshmen", amountCny: 25 },
+// supaya menjalankan ulang tidak menggandakan; nominal, tarif early bird & kuota
+// di-update kalau berubah, tapi kategori yang ditambah panitia lewat console
+// tidak dihapus.
+//
+// `quota` = pagu pendaftaran per kategori. Freshmen 130 + Non-freshmen 20 = 150,
+// dan itulah kapasitas peserta penuh (events.capacity di bawah) — keputusan
+// rapat: TIDAK ada pendaftaran On The Spot. Begitu satu kategori penuh, hanya
+// kategori itu yang tertutup; yang lain jalan sampai total 150. Panitia (~32)
+// ditugaskan lewat Struktur Kepanitiaan, tidak lewat form ini, jadi tidak makan
+// jatah 150. Ruangan muat 200 kursi — sisanya buffer panitia.
+//
+// Tarif (keputusan user 2026-09-10): EARLY BIRD GRATIS (¥0) untuk semua yang
+// daftar s/d EARLY_BIRD_UNTIL; setelah itu NORMAL — Freshmen ¥5, Non-freshmen
+// ¥10. Pendaftar early bird (nominal ¥0) langsung terkonfirmasi + QR, tanpa
+// gerbang verifikasi pembayaran (lihat registerForEvent + halaman tiket).
+const PESERTA_CAPACITY = 150;
+const FEE_OPTIONS: { label: string; amountCny: number; earlyBirdAmountCny: number; quota: number }[] = [
+  { label: "Freshmen", amountCny: 5, earlyBirdAmountCny: 0, quota: 130 },
+  { label: "Non-freshmen", amountCny: 10, earlyBirdAmountCny: 0, quota: 20 },
 ];
+
+// Tahap pendaftaran (notula rapat perdana 24 Agu):
+//   Early bird : 5 - 12 Sep 2026   (tarif event_fee_options.earlyBirdAmountCny = ¥0)
+//   Normal     : 13 - 21 Sep 2026  (tarif amountCny — ¥5 / ¥10)
+//   Deadline   : 21 Sep (H-5)      → tombol daftar tutup
+// Kolom timestamp acara TANPA zona — Date.UTC dipakai supaya jam dindingnya
+// tetap sama di mesin mana pun (lihat catatan startAt di bawah).
+const EARLY_BIRD_UNTIL = new Date(Date.UTC(2026, 8, 12, 23, 59, 0)); // 12 Sep 2026, 23:59 CST
+const REGISTRATION_DEADLINE = new Date(Date.UTC(2026, 8, 21, 23, 59, 0)); // 21 Sep 2026, 23:59 CST
 
 // Pertanyaan tambahan di form pendaftaran (di luar blok biodata). Di-upsert
 // lewat label; pertanyaan lain yang ditambah panitia lewat console tidak
@@ -140,6 +163,15 @@ async function main() {
     // Form pendaftaran WIF: biodata lengkap peserta + entrance fee bertingkat.
     requiresBiodata: true,
     isPaid: true,
+    // Kapasitas peserta penuh = jumlah kuota kedua kategori (130 + 20). Keputusan
+    // rapat: tidak ada OTS, jadi 150 ini pagu keras. Bagian dari "bentuk form
+    // WIF" yang skrip ini definisikan, sama seperti kuota kategori — ikut ditimpa
+    // saat skrip dijalankan ulang.
+    capacity: PESERTA_CAPACITY,
+    // Tahap tarif + batas pendaftaran (notula). Nominal early bird per kategori
+    // diisi panitia lewat console; ini cuma batas tahapnya.
+    earlyBirdUntil: EARLY_BIRD_UNTIL,
+    registrationDeadline: REGISTRATION_DEADLINE,
     paymentInstructions: PAYMENT_INSTRUCTIONS,
     confirmationInfo: CONFIRMATION_INFO,
     // Sengaja draft. Pengurus yang memutuskan kapan tampil ke publik.
@@ -148,10 +180,10 @@ async function main() {
 
   let eventId: string;
   if (existing) {
-    // Deskripsi, kapasitas, sampul, dan status TIDAK ditimpa: kalau sudah
-    // disunting lewat console, menjalankan skrip ini lagi tidak boleh
-    // membatalkan suntingan itu. requiresBiodata/isPaid/instruksi bayar ikut
-    // di-set karena itu bagian dari "bentuk form WIF" yang skrip ini definisikan.
+    // Deskripsi, sampul, dan status TIDAK ditimpa: kalau sudah disunting lewat
+    // console, menjalankan skrip ini lagi tidak boleh membatalkan suntingan itu.
+    // requiresBiodata/isPaid/kapasitas/instruksi bayar ikut di-set karena itu
+    // bagian dari "bentuk form WIF" yang skrip ini definisikan.
     await db
       .update(events)
       .set({
@@ -161,6 +193,9 @@ async function main() {
         endAt,
         requiresBiodata: true,
         isPaid: true,
+        capacity: PESERTA_CAPACITY,
+        earlyBirdUntil: EARLY_BIRD_UNTIL,
+        registrationDeadline: REGISTRATION_DEADLINE,
         paymentInstructions: PAYMENT_INSTRUCTIONS,
         confirmationInfo: CONFIRMATION_INFO,
       })
@@ -183,14 +218,37 @@ async function main() {
     if (found) {
       await db
         .update(eventFeeOptions)
-        .set({ amountCny: opt.amountCny, orderIndex: i })
+        .set({
+          amountCny: opt.amountCny,
+          earlyBirdAmountCny: opt.earlyBirdAmountCny,
+          quota: opt.quota,
+          orderIndex: i,
+        })
         .where(eq(eventFeeOptions.id, found.id));
     } else {
-      await db.insert(eventFeeOptions).values({ eventId, label: opt.label, amountCny: opt.amountCny, orderIndex: i });
+      await db.insert(eventFeeOptions).values({
+        eventId,
+        label: opt.label,
+        amountCny: opt.amountCny,
+        earlyBirdAmountCny: opt.earlyBirdAmountCny,
+        quota: opt.quota,
+        orderIndex: i,
+      });
       tarifBaru++;
     }
   }
   console.log(`Kategori tarif: ${tarifBaru} dibuat, ${FEE_OPTIONS.length - tarifBaru} diperbarui.`);
+  const kuotaTotal = FEE_OPTIONS.reduce((s, o) => s + o.quota, 0);
+  console.log(
+    `Kuota peserta: ${FEE_OPTIONS.map((o) => `${o.label} ${o.quota}`).join(" · ")} ` +
+      `= ${kuotaTotal}${kuotaTotal === PESERTA_CAPACITY ? " (= kapasitas penuh, tanpa OTS)" : ` (⚠ ≠ kapasitas ${PESERTA_CAPACITY})`}. ` +
+      `Ubah lewat /console/events kalau angkanya berubah.`
+  );
+  console.log(
+    `Tahap tarif: early bird (GRATIS, ¥0) s/d ${EARLY_BIRD_UNTIL.toISOString().slice(0, 16).replace("T", " ")} CST · ` +
+      `normal ${FEE_OPTIONS.map((o) => `${o.label} ¥${o.amountCny}`).join(" / ")} s/d ` +
+      `${REGISTRATION_DEADLINE.toISOString().slice(0, 16).replace("T", " ")} CST (deadline daftar).`
+  );
 
   let qBaru = 0;
   for (const [i, q] of QUESTIONS.entries()) {

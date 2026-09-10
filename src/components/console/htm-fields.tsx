@@ -13,12 +13,15 @@ export function HtmFields({
   defaultInstructions,
   defaultQrUrl,
   defaultAlipayUid,
+  defaultEarlyBirdUntil,
 }: {
   defaultIsPaid?: boolean;
   defaultFeeCny?: number | null;
   defaultInstructions?: string | null;
   defaultQrUrl?: string | null;
   defaultAlipayUid?: string | null;
+  /** Nilai <input type="datetime-local"> (YYYY-MM-DDTHH:mm), sudah diformat server. */
+  defaultEarlyBirdUntil?: string;
 }) {
   const [paid, setPaid] = useState(defaultIsPaid ?? false);
 
@@ -44,6 +47,18 @@ export function HtmFields({
               step={1}
               defaultValue={defaultFeeCny ?? ""}
               placeholder="misal 20"
+              className={fieldInput}
+            />
+          </Field>
+
+          <Field
+            label="Batas harga early bird (opsional)"
+            hint="Peserta yang mendaftar sampai tanggal/jam ini kena tarif early bird tiap kategori (diisi per kategori di bagian 'Kategori Tarif' di bawah); setelahnya tarif normal. Kosongkan bila tidak ada tahap early bird."
+          >
+            <input
+              name="earlyBirdUntil"
+              type="datetime-local"
+              defaultValue={defaultEarlyBirdUntil ?? ""}
               className={fieldInput}
             />
           </Field>
@@ -89,6 +104,7 @@ export function HtmFields({
               event.isPaid, dan mencentang kotak lagi memunculkan form dengan
               nilai tersimpan ini untuk diedit/dibersihkan sadar. */}
           <input type="hidden" name="feeCny" value={defaultFeeCny ?? ""} />
+          <input type="hidden" name="earlyBirdUntil" value={defaultEarlyBirdUntil ?? ""} />
           <input type="hidden" name="paymentInstructions" value={defaultInstructions ?? ""} />
           <input type="hidden" name="paymentQrUrl" value={defaultQrUrl ?? ""} />
           <input type="hidden" name="alipayUid" value={defaultAlipayUid ?? ""} />

@@ -1,4 +1,4 @@
-import { eq, and, count } from "drizzle-orm";
+import { eq, and } from "drizzle-orm";
 import { notFound, redirect } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
@@ -8,7 +8,6 @@ import {
   events,
   eventRegistrations,
   eventQuestions,
-  eventFeeOptions,
   regionalBranches,
   sensusProfiles,
   coverageCities,
@@ -16,6 +15,8 @@ import {
 } from "@/db/schema";
 import { NON_STUDENT_BRANCH } from "@/lib/membership-status";
 import { hasCompletedSensus } from "@/lib/sensus-gate";
+import { getEventSeats } from "@/lib/event-capacity";
+import { feeTierAt, amountForTier, hasEarlyBirdDiscount } from "@/lib/event-fee";
 import { SiteNav } from "@/components/site-nav";
 import { SiteFooter } from "@/components/site-footer";
 import { Select } from "@/components/console/form";
@@ -52,15 +53,13 @@ export default async function EventRegisterPage({ params }: { params: Promise<{ 
     redirect(`/sensus?returnTo=${encodeURIComponent(registerHref)}`);
   }
 
-  const [{ value: registeredCount }] = await db
-    .select({ value: count() })
-    .from(eventRegistrations)
-    .where(eq(eventRegistrations.eventId, event.id));
+  const seats = await getEventSeats(event);
   const deadlinePassed = event.registrationDeadline ? new Date(event.registrationDeadline) < new Date() : false;
-  const isFull = event.capacity != null && registeredCount >= event.capacity;
   // Pendaftaran tidak dibuka / penuh / lewat tenggat: kembalikan ke halaman
   // acara — di sana pesannya (penuh / tenggat / belum dibuka) sudah tampil.
-  if (event.status !== "published" || isFull || deadlinePassed) redirect(eventHref);
+  // `seats.isFull` = pagu total acara tercapai ATAU setiap kategori tarif
+  // berkuota sudah penuh.
+  if (event.status !== "published" || seats.isFull || deadlinePassed) redirect(eventHref);
 
   // Cabang hanya ditanyakan ke peserta yang sensusnya belum lengkap dan hanya
   // bila biodata lengkap tidak dikumpulkan (di sana kota/ranting sudah ditanya).
@@ -99,13 +98,15 @@ export default async function EventRegisterPage({ params }: { params: Promise<{ 
     };
   }
 
-  const feeOptions = event.isPaid
-    ? await db
-        .select({ id: eventFeeOptions.id, label: eventFeeOptions.label, amountCny: eventFeeOptions.amountCny })
-        .from(eventFeeOptions)
-        .where(eq(eventFeeOptions.eventId, event.id))
-        .orderBy(eventFeeOptions.orderIndex, eventFeeOptions.id)
-    : [];
+  // Kategori tarif + status kuotanya (penuh / sisa berapa), dari getEventSeats.
+  const feeOptions = event.isPaid ? seats.feeOptions : [];
+  // Tahap tarif saat ini (early bird / normal / tidak ada tahap).
+  const feeTier = feeTierAt(event.earlyBirdUntil);
+  const earlyBirdActive =
+    feeTier === "early_bird" && feeOptions.some((o) => hasEarlyBirdDiscount(o.amountCny, o.earlyBirdAmountCny));
+  const earlyBirdUntilLabel = event.earlyBirdUntil
+    ? new Date(event.earlyBirdUntil).toLocaleDateString(INTL_LOCALE[locale], { day: "numeric", month: "long", year: "numeric" })
+    : null;
 
   const fieldClass =
     "bg-soft-gray rounded-md p-3 text-body-md focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-container";
@@ -215,21 +216,55 @@ export default async function EventRegisterPage({ params }: { params: Promise<{ 
             {t("events.feeOptionQuestion")}
             <span className="text-error" aria-hidden="true"> *</span>
           </legend>
-          {feeOptions.map((o) => (
-            <label
-              key={o.id}
-              className="flex items-center gap-2 bg-soft-gray rounded-md p-2.5 text-body-md cursor-pointer"
-            >
-              <input
-                type="radio"
-                name="feeOptionId"
-                value={o.id}
-                required
-                className="h-4 w-4 accent-[var(--color-primary-container)]"
-              />
-              {o.label} <span className="text-on-surface-variant">(¥{o.amountCny})</span>
-            </label>
-          ))}
+          {earlyBirdActive && earlyBirdUntilLabel && (
+            <p className="rounded-md bg-primary-container/10 px-3 py-2 text-body-sm text-on-background">
+              {t("events.earlyBirdActive", { date: earlyBirdUntilLabel })}
+            </p>
+          )}
+          {feeOptions.map((o) => {
+            const price = amountForTier(feeTier, o.amountCny, o.earlyBirdAmountCny);
+            const discounted = feeTier === "early_bird" && hasEarlyBirdDiscount(o.amountCny, o.earlyBirdAmountCny);
+            return (
+              <label
+                key={o.id}
+                className={`flex items-center gap-2 rounded-md p-2.5 text-body-md ${
+                  o.isFull
+                    ? "bg-soft-gray/50 cursor-not-allowed text-on-surface-variant"
+                    : "bg-soft-gray cursor-pointer"
+                }`}
+              >
+                <input
+                  type="radio"
+                  name="feeOptionId"
+                  value={o.id}
+                  required
+                  disabled={o.isFull}
+                  className="h-4 w-4 accent-[var(--color-primary-container)]"
+                />
+                <span className={o.isFull ? "line-through" : ""}>
+                  {o.label}{" "}
+                  <span className="text-on-surface-variant">
+                    (¥{price}
+                    {discounted && <span className="line-through opacity-70"> ¥{o.amountCny}</span>})
+                  </span>
+                  {discounted && (
+                    <span className="ml-1.5 text-label-caps uppercase tracking-wide text-primary-container">
+                      {t("events.earlyBird")}
+                    </span>
+                  )}
+                </span>
+                {o.isFull ? (
+                  <span className="ml-auto shrink-0 text-label-caps uppercase tracking-wide text-error">
+                    {t("events.quotaFull")}
+                  </span>
+                ) : o.remaining != null && o.remaining <= 15 ? (
+                  <span className="ml-auto shrink-0 text-label-caps uppercase tracking-wide text-on-surface-variant">
+                    {t("events.slotsLeft", { n: o.remaining })}
+                  </span>
+                ) : null}
+              </label>
+            );
+          })}
         </fieldset>
       ),
     });
