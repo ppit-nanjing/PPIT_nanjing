@@ -653,6 +653,7 @@ export const en = {
   "sensus.errWhatsapp": "The WhatsApp number must start with +62 or +86.",
   "sensus.errEmail": "That email address isn't valid. Example: name@gmail.com.",
   "sensus.errYear": "The year must be 4 digits, e.g. 2024.",
+  "sensus.errPassport": "Invalid passport number format — 1 letter followed by 7 digits, e.g. X1234567.",
   "sensus.errGradBeforeEntry": "Expected graduation year cannot be earlier than the entry year.",
   "sensus.errFixFields": "{{n}} field(s) still need to be completed or corrected before the census can be saved.",
   "sensus.errPassportTaken": "This passport number is already registered to another account. If that is your old account, contact the committee to merge it — do not fill in the census twice.",

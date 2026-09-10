@@ -102,6 +102,8 @@ function issueMessage(t: T, issue: SensusIssue): string {
       return t("sensus.errGradBeforeEntry");
     case "passportTaken":
       return t("sensus.errPassportTaken");
+    case "passport":
+      return t("sensus.errPassport");
     case "studentCard":
       return t("sensus.errStudentCard");
     case "required":
@@ -318,6 +320,18 @@ export function SensusWizard({
   }
 
   function goNext() {
+    // Validasi langkah SEKARANG sebelum maju. Dulu wizard membiarkan orang
+    // klik "Lanjut" melewati field wajib yang kosong (dan format salah, mis.
+    // paspor ".") - baru ketahuan di submit akhir lalu dilempar balik. Aturan
+    // yang sama persis dengan validateSensus (src/lib/sensus-form.ts), disaring
+    // ke langkah ini.
+    const stepIssues = validateSensus(form).filter((i) => i.step === step);
+    if (stepIssues.length > 0) {
+      setIssues(stepIssues);
+      stepRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+      return;
+    }
+
     setSaving(true);
     startTransition(async () => {
       const result = await saveSensusStep(form);
@@ -335,6 +349,7 @@ export function SensusWizard({
       } else {
         setLastSaved(new Date(result.savedAt));
       }
+      setIssues([]);
       setStep((s) => Math.min(STEP_KEYS.length - 1, s + 1));
     });
   }

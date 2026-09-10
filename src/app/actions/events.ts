@@ -12,6 +12,7 @@ import { NON_STUDENT_BRANCH } from "@/lib/membership-status";
 import { createTemplatedNotification } from "@/lib/notifications";
 import { getEventSeats } from "@/lib/event-capacity";
 import { feeTierAt, amountForTier } from "@/lib/event-fee";
+import { isValidPassport } from "@/lib/sensus-form";
 
 // Peserta yang sensusnya belum lengkap ditanyai asal cabangnya di form
 // pendaftaran (lihat komentar di event_registrations.branch). Nilainya
@@ -218,8 +219,11 @@ export async function registerForEvent(eventId: string, slug: string, formData?:
         };
         // Semua field biodata wajib di jalur form - kalau ada yang kosong,
         // pantulkan balik ke halaman acara (form-nya sendiri sudah `required`,
-        // ini jaring pengaman kalau ada yang menembusnya).
-        if (Object.entries(biodataJson).some(([k, v]) => k !== "source" && !v)) {
+        // ini jaring pengaman kalau ada yang menembusnya). Nomor paspor juga
+        // dicek bentuknya di sini supaya "." / "-" / "123" tidak lolos ke
+        // sensus (form-nya sudah `pattern`, ini lapis servernya).
+        const biodataIncomplete = Object.entries(biodataJson).some(([k, v]) => k !== "source" && !v);
+        if (biodataIncomplete || !isValidPassport(biodataJson.passportNumber)) {
           redirect(`/events/${slug}`);
         }
       }
