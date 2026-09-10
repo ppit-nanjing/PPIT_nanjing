@@ -167,7 +167,9 @@ function PhoneField({
             value={prefix}
             onChange={(e) => onChange(normalize(national, e.target.value))}
             aria-label={t("sensus.countryCodeAria")}
-            className="shrink-0 sm:w-auto w-full"
+            // Lebar mengikuti isinya ("+62"/"+86") — jangan w-full: di layar
+            // sempit itu memaksa 100% lalu mendorong kolom nomor keluar batas.
+            className="shrink-0 w-auto"
           >
             {prefixes.map((p) => (
               <option key={p} value={p}>
@@ -185,7 +187,7 @@ function PhoneField({
           aria-required={required || undefined}
           aria-invalid={error ? true : undefined}
           aria-describedby={error ? errorId : undefined}
-          className="bg-soft-gray rounded-md p-3 text-body-md flex-1 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-container"
+          className="min-w-0 flex-1 bg-soft-gray rounded-md p-3 text-body-md focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-container"
         />
       </div>
       <span className="text-xs text-on-surface-variant">{hint}</span>
@@ -687,8 +689,8 @@ export function SensusWizard({
         </div>
       )}
 
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-4">
+      <div className="flex flex-col-reverse gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex flex-wrap items-center gap-x-4 gap-y-1">
           <button
             onClick={() => setStep((s) => Math.max(0, s - 1))}
             disabled={step === 0 || pending}
@@ -713,7 +715,7 @@ export function SensusWizard({
           <button
             onClick={goNext}
             disabled={pending}
-            className="flex items-center gap-1 bg-primary-container text-on-primary text-label-caps uppercase tracking-wide px-6 py-3 rounded-md hover:bg-primary transition-colors disabled:opacity-60 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-container focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+            className="flex w-full items-center justify-center gap-1 bg-primary-container text-on-primary text-label-caps uppercase tracking-wide px-6 py-3 rounded-md hover:bg-primary transition-colors disabled:opacity-60 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-container focus-visible:ring-offset-2 focus-visible:ring-offset-background sm:w-auto"
           >
             {t("sensus.next")} <ChevronRight size={16} />
           </button>
@@ -721,7 +723,7 @@ export function SensusWizard({
           <button
             onClick={handleSubmit}
             disabled={pending}
-            className="bg-primary-container text-on-primary text-label-caps uppercase tracking-wide px-6 py-3 rounded-md hover:bg-primary transition-colors disabled:opacity-60 flex items-center justify-center gap-2 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-container focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+            className="flex w-full items-center justify-center gap-2 bg-primary-container text-on-primary text-label-caps uppercase tracking-wide px-6 py-3 rounded-md hover:bg-primary transition-colors disabled:opacity-60 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-container focus-visible:ring-offset-2 focus-visible:ring-offset-background sm:w-auto"
           >
             {pending && <Loader2 />}
             {pending ? t("sensus.saving") : t("sensus.saveSensus")}
