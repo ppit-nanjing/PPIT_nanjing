@@ -13,6 +13,7 @@ import {
   type CheckInBlock,
 } from "@/lib/event-checkin";
 import { CollapsibleRecordList, type BadgeTone } from "@/components/console/collapsible-record-list";
+import { RefreshButton } from "@/components/console/refresh-button";
 
 interface Registration {
   id: string;
@@ -198,6 +199,9 @@ export function RegistrationList({
 
   return (
     <div className="flex flex-col gap-3">
+      <div className="flex justify-end">
+        <RefreshButton />
+      </div>
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2">
         <label className="relative sm:col-span-2 lg:col-span-1">
           <Search size={14} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-on-surface-variant" aria-hidden />
