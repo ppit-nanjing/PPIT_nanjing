@@ -203,6 +203,14 @@ export default async function ConsoleEventDetailPage({ params }: { params: Promi
       ])
     : [[], []];
 
+  // Biodata lengkap pendaftar (paspor, KTM, universitas, telpon, jurusan) =
+  // sama isinya dengan ekspor CSV. Panitia biasa yang cuma pegang
+  // event.viewRegistrants (DASAR — semua panitia) lihat versi RINGKAS: nama,
+  // kota, status keanggotaan, tarif, tanggal, check-in. Blok biodata cuma untuk
+  // yang bisa mengekspor (BPH Panitia) atau pegang izin Keuangan (mereka
+  // mencocokkan bukti bayar ke identitas).
+  const canSeeRegistrantDetail = can("event.exportRegistrants") || can("event.manageFinance");
+
   // Verifikasi pembayaran = data keuangan - digerbang event.manageFinance
   // (grant "Keuangan" per divisi + BPH Panitia + BPH Kabinet). Diturunkan dari
   // `registrations` yang sudah diambil; hanya render-nya yang digerbang.
@@ -897,6 +905,11 @@ export default async function ConsoleEventDetailPage({ params }: { params: Promi
             <Download size={13} aria-hidden /> Export ke CSV
           </a>
         )}
+        {!canSeeRegistrantDetail && (
+          <p className="text-xs text-on-surface-variant mb-3">
+            Biodata lengkap (paspor, KTM, kontak, jurusan) hanya untuk BPH Panitia &amp; pemegang izin Keuangan.
+          </p>
+        )}
         <RegistrationList
           eventId={id}
           questions={questions.map((q) => ({ id: q.id, label: q.label }))}
@@ -908,7 +921,9 @@ export default async function ConsoleEventDetailPage({ params }: { params: Promi
             registeredAt: r.reg.registeredAt.toISOString(),
             answers: r.reg.answersJson ?? {},
             feeLabel: feeLabelFor(r.reg.feeOptionId, r.reg.registeredAt),
-            biodata: r.reg.biodataJson ?? null,
+            // Blok biodata (paspor, KTM, universitas, dst.) hanya untuk yang
+            // boleh ekspor / pegang Keuangan — lihat canSeeRegistrantDetail.
+            biodata: canSeeRegistrantDetail ? r.reg.biodataJson ?? null : null,
             checkInBlocked: checkInBlockReason(
               { status: r.reg.status, paymentStatus: r.reg.paymentStatus },
               event.isPaid,
