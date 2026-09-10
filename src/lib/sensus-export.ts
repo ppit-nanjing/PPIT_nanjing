@@ -20,7 +20,7 @@ export const SENSUS_EXPORT_COLUMNS_FULL: ReportColumn[] = [
   { header: "Tanggal Maksimal Berlaku Paspor", key: "passportExpiry" },
   { header: "Asal Provinsi", key: "province" },
   { header: "Tanggal Lahir", key: "birthDate" },
-  { header: "Asal Cabang", key: "branch" },
+  { header: "Asal Kota", key: "branch" },
   { header: "Status Mahasiswa", key: "studentStatus" },
   { header: "Nama Universitas", key: "university" },
   { header: "Jenjang Pendidikan", key: "degreeLevel" },

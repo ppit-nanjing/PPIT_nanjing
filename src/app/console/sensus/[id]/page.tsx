@@ -137,7 +137,7 @@ export default async function ConsoleSensusDetailPage({ params }: { params: Prom
 
         <CollapsibleSection title="Data Mahasiswa">
           <Group>
-            <Field label="Asal Cabang">{v(s.branch)}</Field>
+            <Field label="Asal Kota">{v(s.branch)}</Field>
             <Field label="Status Mahasiswa">{v(s.studentStatus)}</Field>
             <Field label="Nama Universitas">{v(s.university)}</Field>
             <Field label="Jenjang Pendidikan">{v(s.degreeLevel)}</Field>

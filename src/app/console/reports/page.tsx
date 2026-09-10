@@ -112,12 +112,12 @@ export default async function ConsoleReportsPage() {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
               <SelectField
                 name="sensusBranch"
-                label="Cabang (Ringkasan Sensus)"
+                label="Kota (Ringkasan Sensus)"
                 defaultValue={HOME_BRANCH}
                 hint={`Default ${HOME_BRANCH} + hanya lengkap = baris siap setor ke pusat.`}
                 options={[
-                  { value: HOME_BRANCH, label: `${HOME_BRANCH} (cabang kita)` },
-                  { value: "", label: "Semua cabang" },
+                  { value: HOME_BRANCH, label: `${HOME_BRANCH} (kota kita)` },
+                  { value: "", label: "Semua kota" },
                   ...allBranches.filter((b) => b !== HOME_BRANCH).map((b) => ({ value: b, label: b })),
                 ]}
               />
@@ -207,7 +207,7 @@ export default async function ConsoleReportsPage() {
             <div className="bg-surface-container-low border border-outline-variant rounded-lg p-6">
               <MapPin className="text-primary-container mb-2" size={20} />
               <p className="text-display-hero-mobile text-on-background">{byBranch.length}</p>
-              <p className="text-label-caps text-on-surface-variant uppercase">Cabang Tercatat</p>
+              <p className="text-label-caps text-on-surface-variant uppercase">Kota Tercatat</p>
             </div>
           </div>
         </CollapsibleSection>
@@ -215,8 +215,8 @@ export default async function ConsoleReportsPage() {
         <CollapsibleSection title="Status Keanggotaan">
           <SummaryList items={byMembership} />
           <p className="text-label-caps text-on-surface-variant mt-3">
-            Diturunkan dari sensus + cabang, bukan kolom tersendiri. &ldquo;Tamu&rdquo; = sensusnya belum lengkap, jadi
-            belum bisa dibedakan antara warga Nanjing yang belum sempat mengisi dan tamu dari luar — jawaban cabang di
+            Diturunkan dari sensus + kota, bukan kolom tersendiri. &ldquo;Tamu&rdquo; = sensusnya belum lengkap, jadi
+            belum bisa dibedakan antara warga Nanjing yang belum sempat mengisi dan tamu dari luar — jawaban kota di
             form pendaftaran acara yang memisahkan keduanya.
           </p>
         </CollapsibleSection>
@@ -227,7 +227,7 @@ export default async function ConsoleReportsPage() {
         <CollapsibleSection title="Jenjang">
           <SummaryList items={byDegree} />
         </CollapsibleSection>
-        <CollapsibleSection title="Cabang">
+        <CollapsibleSection title="Kota">
           <SummaryList items={byBranch} />
         </CollapsibleSection>
       </div>

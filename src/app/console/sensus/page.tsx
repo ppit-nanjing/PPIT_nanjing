@@ -143,9 +143,9 @@ export default async function ConsoleSensusPage({ searchParams }: { searchParams
           />
           <SelectField
             name="branch"
-            label="Cabang"
+            label="Kota"
             defaultValue={branch}
-            options={[{ value: "all", label: "Semua cabang" }, ...branches.map((b) => ({ value: b, label: b }))]}
+            options={[{ value: "all", label: "Semua kota" }, ...branches.map((b) => ({ value: b, label: b }))]}
           />
           <SelectField
             name="status"
