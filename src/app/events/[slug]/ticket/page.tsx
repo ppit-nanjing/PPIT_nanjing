@@ -171,7 +171,19 @@ export default async function EventTicketPage({ params }: { params: Promise<{ sl
             )}
             {event.location && (
               <span className="flex items-center gap-1.5">
-                <MapPin size={14} aria-hidden="true" /> {event.location}
+                <MapPin size={14} aria-hidden="true" />
+                {event.locationUrl ?? event.locationUrl2 ? (
+                  <a
+                    href={event.locationUrl ?? event.locationUrl2 ?? undefined}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="underline underline-offset-2"
+                  >
+                    {event.location}
+                  </a>
+                ) : (
+                  event.location
+                )}
               </span>
             )}
           </div>
