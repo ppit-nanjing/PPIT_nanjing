@@ -129,6 +129,53 @@ export async function saveSensusStep(input: SensusInput): Promise<{ savedAt: str
   return { savedAt: values.updatedAt.toISOString() };
 }
 
+// ---------- Onboarding / first-login partial census save ----------
+// Menyimpan sebagian field dari modal onboarding supaya baris sensus sudah ada
+// dan bisa dilanjutkan dari /sensus. MERGE, bukan replace: hanya field yang
+// benar-benar diisi yang ditulis — tidak pernah mengosongkan progres /sensus
+// yang mungkin sudah ada. Tidak menyentuh completionStatus (baris baru =
+// "incomplete" lewat default kolom; baris lama biarkan apa adanya).
+const ONBOARDING_SENSUS_FIELDS = [
+  "fullName",
+  "branch",
+  "activeEmail",
+  "wechatId",
+  "whatsappNumber",
+] as const satisfies readonly (keyof SensusInput)[];
+
+export async function saveOnboardingSensus(
+  input: Partial<SensusInput>
+): Promise<{ savedAt: string } | { error: string }> {
+  const session = await auth();
+  if (!session?.user?.id) return { error: "unauthenticated" };
+
+  const patch: Partial<Record<(typeof ONBOARDING_SENSUS_FIELDS)[number], string>> = {};
+  for (const field of ONBOARDING_SENSUS_FIELDS) {
+    const value = String(input[field] ?? "").trim();
+    if (value) patch[field] = value;
+  }
+  const now = new Date();
+  if (Object.keys(patch).length === 0) return { savedAt: now.toISOString() };
+
+  const [existing] = await db
+    .select({ id: sensusProfiles.id })
+    .from(sensusProfiles)
+    .where(eq(sensusProfiles.userId, session.user.id));
+
+  if (existing) {
+    await db
+      .update(sensusProfiles)
+      .set({ ...patch, updatedAt: now })
+      .where(eq(sensusProfiles.userId, session.user.id));
+  } else {
+    await db
+      .insert(sensusProfiles)
+      .values({ userId: session.user.id, ...patch, completionStatus: "incomplete", updatedAt: now });
+  }
+
+  return { savedAt: now.toISOString() };
+}
+
 // ---------- Admin edit / delete (dari /console/sensus) ----------
 // Sensus tetap milik mahasiswa (diisi lewat /sensus). Ini untuk pengurus
 // pemegang modul "sensus" membetulkan typo / menghapus baris spam-duplikat.

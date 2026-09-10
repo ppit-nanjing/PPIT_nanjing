@@ -937,9 +937,12 @@ export const en = {
   "onboarding.desc": "Want to keep hearing from PPIT Nanjing? We can send news and event updates straight to your inbox.",
   "onboarding.optIn": "Yes, send PPIT Nanjing news & event updates to {{email}}",
   "onboarding.saving": "Saving…",
-  "onboarding.continue": "Continue",
+  "onboarding.continue": "Save & Continue",
   "onboarding.skip": "Skip",
-  "onboarding.changeLater": "You can change this any time from your Profile page",
+  "onboarding.changeLater": "You can change this any time from your Profile / Census page",
+  "onboarding.censusHeading": "Census Data (optional)",
+  "onboarding.censusDesc": "Fill in a few basics now so they're saved, or skip and finish later on the Census page. Anything you enter here carries over to your census.",
+  "onboarding.censusNote": "Partial is fine — you can fill the rest anytime from the Census page.",
 
   // 404
   "notFound.title": "Page not found",

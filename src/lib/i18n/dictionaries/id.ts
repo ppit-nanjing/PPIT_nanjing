@@ -940,9 +940,12 @@ export const id = {
   "onboarding.desc": "Mau tetap dapat kabar dari PPIT Nanjing? Kami bisa kirim info berita dan kegiatan (event) langsung ke email kamu.",
   "onboarding.optIn": "Ya, kirimkan saya berita & info kegiatan PPIT Nanjing ke {{email}}",
   "onboarding.saving": "Menyimpan…",
-  "onboarding.continue": "Lanjutkan",
+  "onboarding.continue": "Simpan & Lanjut",
   "onboarding.skip": "Lewati",
-  "onboarding.changeLater": "Bisa diubah kapan saja lewat halaman Profil",
+  "onboarding.changeLater": "Bisa diubah kapan saja lewat halaman Profil / Sensus",
+  "onboarding.censusHeading": "Data Sensus (opsional)",
+  "onboarding.censusDesc": "Isi data dasar sekarang biar tersimpan, atau lewati dan lengkapi nanti di halaman Sensus. Yang kamu isi di sini otomatis tersambung ke sensus kamu.",
+  "onboarding.censusNote": "Belum lengkap tidak apa-apa — sisanya bisa diisi kapan saja lewat halaman Sensus.",
 
   // 404
   "notFound.title": "Halaman tidak ditemukan",
