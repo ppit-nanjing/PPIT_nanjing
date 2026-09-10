@@ -29,12 +29,16 @@ export async function GET(
     return Response.json({ error: "Not found" }, { status: 404 });
   }
   const ownsCard = pathname.startsWith(`sensus/${session.user.id}/`);
-  const canReviewCards = hasModuleAccess(session.user.adminScope, "sensus");
+  // `sensus` = akses sensus penuh; `sensus-verify` = Divisi Humas kabinet yang
+  // cuma boleh melihat nama + kampus + bukti KTM (lihat SensusVerifyList).
+  const canReviewCards =
+    hasModuleAccess(session.user.adminScope, "sensus") ||
+    hasModuleAccess(session.user.adminScope, "sensus-verify");
   if (!ownsCard && !canReviewCards) {
     return Response.json({ error: "Forbidden" }, { status: 403 });
   }
 
-  const blob = await get(pathname, { access: "private" });
+  const blob = await get(pathname, { access: "private", token: process.env.PRIVATE_READ_WRITE_TOKEN });
   if (!blob?.stream) return Response.json({ error: "Not found" }, { status: 404 });
 
   return new Response(blob.stream, {
