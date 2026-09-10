@@ -89,6 +89,14 @@ export async function createEvent(_prev: EventFormState, formData: FormData): Pr
   if (rawFee && (!Number.isFinite(Number(rawFee)) || Number(rawFee) < 0)) {
     return { error: "Biaya harus berupa angka >= 0" };
   }
+  const locationUrlRaw = String(formData.get("locationUrl") ?? "").trim();
+  const locationUrl2Raw = String(formData.get("locationUrl2") ?? "").trim();
+  if (locationUrlRaw && !isValidHttpUrl(locationUrlRaw)) {
+    return { error: "Link lokasi harus diawali http:// atau https://" };
+  }
+  if (locationUrl2Raw && !isValidHttpUrl(locationUrl2Raw)) {
+    return { error: "Link lokasi (2) harus diawali http:// atau https://" };
+  }
 
   const scheduledPublishAt = formData.get("scheduledPublishAt")
     ? new Date(String(formData.get("scheduledPublishAt")))
@@ -107,6 +115,8 @@ export async function createEvent(_prev: EventFormState, formData: FormData): Pr
       description: String(formData.get("description") ?? "").trim() || null,
       category: String(formData.get("category") ?? "").trim() || null,
       location: String(formData.get("location") ?? "").trim() || null,
+      locationUrl: locationUrlRaw || null,
+      locationUrl2: locationUrl2Raw || null,
       coverImageUrl: String(formData.get("coverImageUrl") ?? "").trim() || null,
       startAt: formData.get("startAt") ? new Date(String(formData.get("startAt"))) : null,
       registrationDeadline: formData.get("registrationDeadline")
@@ -154,6 +164,14 @@ export async function updateEventInfo(id: string, formData: FormData) {
   await requireEventCapability(id, "event.editInfo");
   const title = String(formData.get("title") ?? "").trim();
   if (!title) throw new Error("Judul wajib diisi");
+  const locationUrlRaw = String(formData.get("locationUrl") ?? "").trim();
+  const locationUrl2Raw = String(formData.get("locationUrl2") ?? "").trim();
+  if (locationUrlRaw && !isValidHttpUrl(locationUrlRaw)) {
+    throw new Error("Link lokasi harus diawali http:// atau https://");
+  }
+  if (locationUrl2Raw && !isValidHttpUrl(locationUrl2Raw)) {
+    throw new Error("Link lokasi (2) harus diawali http:// atau https://");
+  }
 
   const [before] = await db
     .select({ status: events.status, slug: events.slug })
@@ -171,6 +189,8 @@ export async function updateEventInfo(id: string, formData: FormData) {
       title,
       category: String(formData.get("category") ?? "").trim() || null,
       location: String(formData.get("location") ?? "").trim() || null,
+      locationUrl: locationUrlRaw || null,
+      locationUrl2: locationUrl2Raw || null,
       coverImageUrl: String(formData.get("coverImageUrl") ?? "").trim() || null,
       startAt: formData.get("startAt") ? new Date(String(formData.get("startAt"))) : null,
       registrationDeadline: formData.get("registrationDeadline")

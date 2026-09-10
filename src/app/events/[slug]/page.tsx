@@ -243,7 +243,19 @@ export default async function EventDetailPage({ params, searchParams }: { params
                     )}
                     {event.location && (
                       <span className="flex items-center gap-1.5">
-                        <MapPin size={15} aria-hidden="true" /> {event.location}
+                        <MapPin size={15} aria-hidden="true" />
+                        {event.locationUrl ?? event.locationUrl2 ? (
+                          <a
+                            href={event.locationUrl ?? event.locationUrl2 ?? undefined}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="underline underline-offset-2 hover:text-white"
+                          >
+                            {event.location}
+                          </a>
+                        ) : (
+                          event.location
+                        )}
                       </span>
                     )}
                     {isPast ? (
@@ -474,6 +486,33 @@ export default async function EventDetailPage({ params, searchParams }: { params
                     <div>
                       <p className="text-label-caps uppercase text-on-surface-variant mb-0.5">{t("events.location")}</p>
                       <p className="text-body-md text-on-background font-semibold">{event.location}</p>
+                      {(event.locationUrl || event.locationUrl2) && (
+                        <div className="flex flex-wrap gap-x-3 gap-y-1 mt-1">
+                          {/* Label-nya nama app, bukan "Peta 1/2" - link Amap perlu dibuka
+                              lewat app Amap dkk, jadi pembaca perlu tahu app mana yang cocok
+                              (form admin juga menaruh field ini dengan placeholder yang sama). */}
+                          {event.locationUrl && (
+                            <a
+                              href={event.locationUrl}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="text-body-sm text-primary-container underline underline-offset-2 hover:text-primary"
+                            >
+                              Amap
+                            </a>
+                          )}
+                          {event.locationUrl2 && (
+                            <a
+                              href={event.locationUrl2}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="text-body-sm text-primary-container underline underline-offset-2 hover:text-primary"
+                            >
+                              Baidu Maps
+                            </a>
+                          )}
+                        </div>
+                      )}
                     </div>
                   </div>
                 )}

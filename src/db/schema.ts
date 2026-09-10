@@ -396,6 +396,13 @@ export const events = pgTable("events", {
   coverImageUrl: text("cover_image_url"),
   category: text("category"),
   location: text("location"),
+  // Link peta untuk `location` di atas - opsional, dipakai buat bikin teks
+  // lokasi bisa diklik langsung ke petunjuk arah. Dua slot karena lokasi di
+  // China lazimnya dibagikan lewat DUA app peta sekaligus (mis. Amap +
+  // Baidu Maps - orang biasanya cuma pasang salah satu). NULL keduanya =
+  // location tampil sebagai teks biasa seperti sebelumnya.
+  locationUrl: text("location_url"),
+  locationUrl2: text("location_url_2"),
   startAt: timestamp("start_at"),
   endAt: timestamp("end_at"),
   registrationDeadline: timestamp("registration_deadline"),

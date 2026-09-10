@@ -349,6 +349,23 @@ export default async function ConsoleEventDetailPage({ params }: { params: Promi
                 <input id="event-location" name="location" defaultValue={event.location ?? ""} placeholder="Lokasi" className="bg-soft-gray rounded-md p-3 text-body-md" />
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <input
+                  name="locationUrl"
+                  type="url"
+                  defaultValue={event.locationUrl ?? ""}
+                  placeholder="Link peta 1 (mis. Amap) — opsional"
+                  className="bg-soft-gray rounded-md p-3 text-body-md"
+                />
+                <input
+                  name="locationUrl2"
+                  type="url"
+                  defaultValue={event.locationUrl2 ?? ""}
+                  placeholder="Link peta 2 (mis. Baidu Maps) — opsional"
+                  className="bg-soft-gray rounded-md p-3 text-body-md"
+                />
+              </div>
+              <p className="text-xs text-on-surface-variant -mt-2">Kalau diisi, teks Lokasi di halaman publik jadi tombol langsung ke petunjuk arah (dua tombol kalau dua-duanya diisi).</p>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="flex flex-col gap-1">
                   <input
                     name="startAt"

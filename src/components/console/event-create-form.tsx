@@ -37,6 +37,10 @@ export function EventCreateForm() {
             <TextField name="location" label="Lokasi" placeholder="mis. Novotel" id="event-location" />
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <TextField name="locationUrl" label="Link peta 1 (opsional)" type="url" placeholder="mis. Amap" />
+            <TextField name="locationUrl2" label="Link peta 2 (opsional)" type="url" placeholder="mis. Baidu Maps" />
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <TextField name="startAt" label="Tanggal & jam mulai" type="datetime-local" hint="Kapan acara berlangsung." />
             <TextField name="capacity" label="Kapasitas" type="number" min={1} />
           </div>
