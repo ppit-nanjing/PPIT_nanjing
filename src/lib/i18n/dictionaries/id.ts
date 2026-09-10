@@ -656,6 +656,7 @@ export const id = {
   "sensus.errWhatsapp": "Nomor WhatsApp harus diawali +62 atau +86.",
   "sensus.errEmail": "Alamat email tidak valid. Contoh: nama@gmail.com.",
   "sensus.errYear": "Tahun harus 4 digit, contoh: 2024.",
+  "sensus.errPassport": "Format nomor paspor tidak valid — 1 huruf diikuti 7 angka, contoh: X1234567.",
   "sensus.errGradBeforeEntry": "Perkiraan tahun kelulusan tidak boleh lebih awal dari tahun masuk.",
   "sensus.errFixFields": "Ada {{n}} isian yang perlu dilengkapi atau diperbaiki sebelum sensus bisa disimpan.",
   "sensus.errPassportTaken": "Nomor paspor ini sudah terdaftar atas akun lain. Kalau itu akunmu yang lama, hubungi pengurus untuk menggabungkannya — jangan mengisi sensus dua kali.",

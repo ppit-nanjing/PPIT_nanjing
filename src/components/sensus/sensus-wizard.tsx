@@ -102,6 +102,8 @@ function issueMessage(t: T, issue: SensusIssue): string {
       return t("sensus.errGradBeforeEntry");
     case "passportTaken":
       return t("sensus.errPassportTaken");
+    case "passport":
+      return t("sensus.errPassport");
     case "studentCard":
       return t("sensus.errStudentCard");
     case "required":

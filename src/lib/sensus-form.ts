@@ -107,6 +107,15 @@ export function isValidYear(value: string): boolean {
   return /^\d{4}$/.test(value.trim()) && n >= 1950 && n <= 2100;
 }
 
+// Nomor paspor Indonesia: 1 huruf diikuti angka (standar sekarang X1234567 = 1
+// huruf + 7 angka; paspor hijau lama 1 huruf + 6 angka). Rentang 6-8 angka
+// memberi sedikit kelonggaran tanpa meloloskan ".", "-", "123", "asdf".
+export const PASSPORT_PATTERN = /^[A-Za-z][0-9]{6,8}$/;
+
+export function isValidPassport(value: string): boolean {
+  return PASSPORT_PATTERN.test(value.trim());
+}
+
 // Field wajib per langkah wizard. Dipakai dua arah: wizard melompat ke langkah
 // pertama yang belum lengkap, server action menolak submit yang masih bolong.
 //
@@ -143,7 +152,7 @@ export interface SensusIssue {
   // "required" = kosong; sisanya = terisi tapi bentuknya salah.
   // "passportTaken" hanya bisa ditentukan server (perlu lihat baris lain di
   // database), jadi tidak pernah muncul dari validateSensus() di klien.
-  kind: "required" | "wechat" | "phone" | "whatsapp" | "email" | "year" | "gradBeforeEntry" | "passportTaken" | "studentCard";
+  kind: "required" | "wechat" | "phone" | "whatsapp" | "email" | "year" | "gradBeforeEntry" | "passportTaken" | "passport" | "studentCard";
 }
 
 // Semua masalah sekaligus, bukan berhenti di yang pertama, supaya pengisi form
@@ -167,6 +176,10 @@ export function validateSensus(input: SensusInput): SensusIssue[] {
   // rekap ke pusat.
   if (filled("studentCardUrl") && !/^(https:\/\/|\/api\/)/i.test(input.studentCardUrl.trim())) {
     issues.push({ field: "studentCardUrl", step: 1, kind: "studentCard" });
+  }
+
+  if (filled("passportNumber") && !isValidPassport(input.passportNumber)) {
+    issues.push({ field: "passportNumber", step: 0, kind: "passport" });
   }
 
   if (filled("activeEmail") && !isValidEmail(input.activeEmail)) {

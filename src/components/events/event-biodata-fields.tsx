@@ -83,7 +83,15 @@ export function EventBiodataFields({
       </label>
       <label className="flex flex-col gap-1">
         <span className="text-label-caps uppercase tracking-wide text-on-surface-variant">Nomor Paspor *</span>
-        <input name="bio_passportNumber" required defaultValue={defaults.passportNumber ?? ""} className={fieldClass} />
+        <input
+          name="bio_passportNumber"
+          required
+          pattern="[A-Za-z][0-9]{6,8}"
+          title="1 huruf diikuti 7 angka, mis. X1234567"
+          placeholder="mis. X1234567"
+          defaultValue={defaults.passportNumber ?? ""}
+          className={fieldClass}
+        />
       </label>
       <label className="flex flex-col gap-1">
         <span className="text-label-caps uppercase tracking-wide text-on-surface-variant">WeChat ID *</span>
