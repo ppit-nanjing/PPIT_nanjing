@@ -1,7 +1,7 @@
 import { desc, eq } from "drizzle-orm";
 import { db } from "@/db";
 import { events, eventRegistrations, eventQuestions, eventFeeOptions, users } from "@/db/schema";
-import { hasEventCapabilityFor } from "@/lib/event-access";
+import { getEventAccess } from "@/lib/event-access";
 import { feeTierAt, amountForTier } from "@/lib/event-fee";
 
 // Same hardening as the membership export: quote/escape CSV specials and
@@ -27,7 +27,10 @@ const STATUS_LABEL: Record<string, string> = {
 
 export async function GET(_req: Request, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  if (!(await hasEventCapabilityFor(id, "event.exportRegistrants"))) {
+  // Ekspor ini memuat nomor paspor + bukti KTM + kontak → HANYA BPH Kabinet +
+  // Divisi Teknologi (adminScope "full"), sama seperti /console/sensus dan blok
+  // biodata di daftar pendaftar. BPH Panitia lihat versi ringkas di layar.
+  if (!(await getEventAccess(id)).isFullAdmin) {
     return new Response("Forbidden", { status: 403 });
   }
 
