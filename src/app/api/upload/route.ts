@@ -50,6 +50,13 @@ const FOLDER_MODULE: Record<string, AdminModule | null> = {
   donation: "organization",
 };
 
+// Folder yang isinya dokumen pribadi -> store Blob PRIVATE
+// (PRIVATE_READ_WRITE_TOKEN), dilayani hanya lewat proxy ter-auth. Untuk
+// sekarang cuma "sensus" (kartu mahasiswa / LOA di alur sensus). "event-doc"
+// (bukti mahasiswa peserta acara) masih publik - butuh proxy ber-scope acara,
+// digarap terpisah.
+const PRIVATE_FOLDERS = new Set(["sensus"]);
+
 // Folder yang boleh diunggah TANPA login. Cuma "borrow-doc": Pernyataan Peminjam
 // bertanda tangan di form peminjaman aset harus bisa diunggah peminjam PIHAK
 // LUAR yang memang tidak punya akun PPIT (SOP Peminjaman Aset). Semua pengaman
@@ -99,17 +106,25 @@ export async function POST(req: NextRequest) {
   const allowedTypes = FOLDER_TYPES[folder] ?? ALLOWED_TYPES;
   if (!allowedTypes.includes(file.type)) return NextResponse.json({ errorKey: "upload.errType" }, { status: 415 });
 
-  if (!process.env.BLOB_READ_WRITE_TOKEN) {
-    // The Vercel Blob store + BLOB_READ_WRITE_TOKEN aren't provisioned yet
-    // (owner/dashboard access required). Fail loudly rather than silently
-    // storing nothing - see docs/Progress & Handoff.md Known gaps #3.
+  // Folder yang isinya dokumen pribadi (kartu mahasiswa / bukti dari alur
+  // sensus) disimpan di store Blob PRIVATE terpisah - hanya bisa dibaca lewat
+  // proxy ter-auth /api/sensus/student-card, tidak lewat URL blob langsung.
+  // Sisanya (berita, galeri, katalog, inventaris) tetap di store publik default.
+  const wantsPrivate = PRIVATE_FOLDERS.has(folder); // sensus wajib login, jadi sesi pasti ada
+  const blobToken = wantsPrivate
+    ? process.env.PRIVATE_READ_WRITE_TOKEN
+    : process.env.BLOB_READ_WRITE_TOKEN;
+
+  if (!blobToken) {
+    // Store Blob yang relevan belum dikonfigurasi (PRIVATE_READ_WRITE_TOKEN
+    // untuk folder pribadi, BLOB_READ_WRITE_TOKEN untuk sisanya). Gagal keras
+    // daripada diam-diam menyimpan entah ke mana.
     return NextResponse.json({ errorKey: "upload.errNotConfigured" }, { status: 503 });
   }
 
   // Strip path separators / control chars so a malicious filename can't
   // traverse out of its folder in the blob key (addRandomSuffix also helps).
   const safeName = (file.name || "file").replace(/[^\w.\-]+/g, "_").slice(0, 100);
-  const wantsPrivate = folder === "sensus"; // sensus wajib login, jadi sesi pasti ada
   const ownerPath = wantsPrivate && session?.user?.id ? `${session.user.id}/` : "";
   const key = `${folder}/${ownerPath}${Date.now()}-${safeName}`;
 
@@ -119,17 +134,16 @@ export async function POST(req: NextRequest) {
   let blob: Awaited<ReturnType<typeof put>>;
   let storedPrivate = wantsPrivate;
   try {
-    blob = await put(key, file, { access: wantsPrivate ? "private" : "public", addRandomSuffix: true });
+    blob = await put(key, file, { access: wantsPrivate ? "private" : "public", addRandomSuffix: true, token: blobToken });
   } catch (err) {
-    if (wantsPrivate) {
-      // Private blobs need a store that supports them. Rather than block a
-      // student from submitting their card, fall back to a public blob - the
-      // key still carries addRandomSuffix so the URL stays unguessable, same
-      // as before private storage existed - and log so it can be fixed in the
-      // Blob dashboard.
+    if (wantsPrivate && process.env.BLOB_READ_WRITE_TOKEN) {
+      // Private gagal (token salah, store bermasalah). Daripada memblokir
+      // mahasiswa mengirim kartunya, simpan ke store publik - key tetap pakai
+      // addRandomSuffix jadi URL tak bisa ditebak, sama seperti sebelum ada
+      // store private - dan log supaya bisa dibetulkan di dashboard Blob.
       console.error("[upload] private blob put failed, falling back to public:", err);
       try {
-        blob = await put(key, file, { access: "public", addRandomSuffix: true });
+        blob = await put(key, file, { access: "public", addRandomSuffix: true, token: process.env.BLOB_READ_WRITE_TOKEN });
         storedPrivate = false;
       } catch (err2) {
         console.error("[upload] public fallback also failed:", err2);
