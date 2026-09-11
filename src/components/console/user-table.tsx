@@ -9,6 +9,7 @@ import {
   updateUserStatus,
   updateUserDetails,
   deleteUser,
+  sendPasswordResetLink,
 } from "@/app/actions/admin-users";
 import { ConfirmButton } from "@/components/console/confirm-button";
 import { Select, selectInput } from "@/components/console/form";
@@ -22,6 +23,7 @@ interface Row {
   roleId: string | null;
   departmentId: string | null;
   position: string;
+  hasPassword: boolean;
 }
 interface Role {
   id: string;
@@ -336,6 +338,19 @@ function UserRow({
           >
             Edit
           </button>
+          {user.hasPassword && (
+            <ConfirmButton
+              onConfirm={() => sendPasswordResetLink(user.id)}
+              title="Kirim link reset password?"
+              message={`Email berisi tautan reset password (berlaku 1 jam) akan dikirim ke ${user.email}.`}
+              confirmLabel="Ya, kirim"
+              danger={false}
+              successMessage="Link reset password terkirim."
+              className="flex-1 text-label-caps uppercase tracking-wide px-3 py-1.5 rounded-md border border-outline-variant text-on-surface-variant hover:text-on-background transition-colors"
+            >
+              Reset Sandi
+            </ConfirmButton>
+          )}
           <ConfirmButton
             onConfirm={async () => {
               await deleteUser(user.id);
@@ -407,6 +422,19 @@ function UserRow({
           >
             Edit
           </button>
+          {user.hasPassword && (
+            <ConfirmButton
+              onConfirm={() => sendPasswordResetLink(user.id)}
+              title="Kirim link reset password?"
+              message={`Email berisi tautan reset password (berlaku 1 jam) akan dikirim ke ${user.email}.`}
+              confirmLabel="Ya, kirim"
+              danger={false}
+              successMessage="Link reset password terkirim."
+              className="text-label-caps uppercase tracking-wide px-3 py-1.5 rounded-md border border-outline-variant text-on-surface-variant hover:text-on-background transition-colors"
+            >
+              Reset Sandi
+            </ConfirmButton>
+          )}
           <ConfirmButton
             onConfirm={async () => {
               await deleteUser(user.id);

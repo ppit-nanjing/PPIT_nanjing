@@ -6,6 +6,10 @@ import { auth } from "@/auth";
 import { db } from "@/db";
 import { users, departmentMembers, departments, membershipApplications, feedback, externalLoans } from "@/db/schema";
 import { hasModuleAccess } from "@/lib/admin-scope";
+import { sendEmail } from "@/lib/email";
+import { renderMembershipEmail, renderMembershipEmailText } from "@/lib/membership-email";
+import { createResetToken, purgeExpiredResetTokens } from "@/lib/password-reset";
+import { getSiteUrl } from "@/lib/site-url";
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
@@ -61,6 +65,50 @@ export async function updateUserDetails(userId: string, name: string, email: str
   if (existing && existing.id !== userId) throw new Error("Email sudah digunakan oleh akun lain");
   await db.update(users).set({ name: n, email: e }).where(eq(users.id, userId));
   revalidatePath("/console/users");
+}
+
+/**
+ * Admin memicu email reset password ATAS NAMA pengguna lain - untuk kasus
+ * mereka gagal login berulang dan tidak menyadari/menemukan link "Lupa
+ * password?" di /login sendiri (lihat requestPasswordReset di actions/auth.ts,
+ * jalur self-service yang sudah ada). Sengaja TANPA cooldown - beda dari jalur
+ * publik itu, aksi ini sudah di balik login admin + per-pengguna eksplisit,
+ * jadi tidak butuh pengaman anti-enumerasi/anti-spam yang sama.
+ */
+export async function sendPasswordResetLink(userId: string): Promise<void> {
+  await assertAdmin();
+  const [user] = await db
+    .select({ id: users.id, name: users.name, email: users.email, passwordHash: users.passwordHash })
+    .from(users)
+    .where(eq(users.id, userId));
+  if (!user) throw new Error("Pengguna tidak ditemukan.");
+  // Akun Google-only tidak punya kata sandi untuk direset - tombolnya sendiri
+  // sudah disembunyikan untuk baris begini, ini jaga-jaga kalau dipanggil lewat
+  // jalur lain.
+  if (!user.passwordHash) throw new Error("Akun ini masuk lewat Google, tidak punya kata sandi untuk direset.");
+
+  await purgeExpiredResetTokens();
+  const token = await createResetToken(user.id);
+  const link = `${getSiteUrl()}/reset-password?token=${encodeURIComponent(token)}`;
+  const heading = "Reset password akun PPIT Nanjing";
+  const body = [
+    `Halo ${user.name ?? "Anggota"},`,
+    "Admin PPIT Nanjing mengirimkan tautan ini karena kamu mengalami kendala masuk ke akun. Klik tombol di bawah untuk membuat password baru. Tautan ini berlaku 1 jam.",
+    "Kalau kamu merasa tidak butuh ini, abaikan saja - password kamu tidak berubah sampai tautan ini dibuka.",
+  ].join("\n\n");
+  const res = await sendEmail({
+    to: user.email,
+    subject: heading,
+    html: renderMembershipEmail({
+      heading,
+      body,
+      ctaLabel: "Buat password baru",
+      ctaUrl: link,
+      footerNote: "Email ini dikirim otomatis oleh sistem akun PPIT Nanjing. Jangan teruskan tautan di atas ke siapa pun.",
+    }),
+    text: renderMembershipEmailText({ heading, body, ctaLabel: "Buat password baru", ctaUrl: link }),
+  });
+  if (!res.ok) throw new Error(`Gagal mengirim email: ${res.reason}`);
 }
 
 export async function deleteUser(userId: string) {

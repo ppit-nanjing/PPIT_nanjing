@@ -33,6 +33,7 @@ export default async function ConsoleUsersPage() {
       roleId: u.roleId,
       departmentId: membership?.departmentId ?? null,
       position: membership?.position ?? "",
+      hasPassword: !!u.passwordHash,
     };
   });
 
