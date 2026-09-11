@@ -905,6 +905,7 @@ export const en = {
   // Upload widgets (src/components/upload/*)
   "upload.choose": "Choose file",
   "upload.uploading": "Uploading…",
+  "upload.uploaded": "Uploaded successfully",
   "upload.remove": "Remove file",
   "upload.required": "A file is required.",
   "upload.submit": "Upload",

@@ -908,6 +908,7 @@ export const id = {
   // Upload widgets (src/components/upload/*)
   "upload.choose": "Pilih berkas",
   "upload.uploading": "Mengunggah…",
+  "upload.uploaded": "Berhasil diunggah",
   "upload.remove": "Hapus berkas",
   "upload.required": "Berkas wajib diunggah.",
   "upload.submit": "Unggah",
