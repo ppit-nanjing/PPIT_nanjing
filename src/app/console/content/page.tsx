@@ -8,6 +8,7 @@ import { CollapsibleSection } from "@/components/console/collapsible-section";
 import { ConfirmButton } from "@/components/console/confirm-button";
 import { DeleteNewsButton } from "@/components/console/delete-news-button";
 import { GuideButton } from "@/components/console/guide-button";
+import { FlashToast } from "@/components/console/flash-toast";
 import { getGuide } from "@/lib/guides";
 import Link from "next/link";
 
@@ -78,6 +79,7 @@ export default async function ConsoleContentPage() {
 
   return (
     <div className="px-4 py-6 sm:px-6 lg:px-8 lg:py-10">
+      <FlashToast />
       <div className="flex flex-wrap items-start justify-between gap-3 mb-8">
         <h1 className="text-headline-md sm:text-headline-lg text-on-background">Konten</h1>
         {guide && <GuideButton title={guide.title} content={guide.content} docSlug="konten" />}
