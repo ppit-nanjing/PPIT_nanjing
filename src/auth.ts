@@ -240,21 +240,56 @@ const { handlers, auth: uncachedAuth, signIn, signOut } = NextAuth({
       session.user.id = userId;
       // Single round trip for everything the session needs about the user.
       const ctx = await loadSessionContext(userId);
-      const scope = ctx ? resolveAdminScope(ctx) : null;
+      if (!ctx) {
+        // Baris `users` untuk id ini tidak ada: akun sudah dihapus tapi JWT-nya
+        // masih hidup di browser (umur cookie 30 hari). Tanpa penanganan ini
+        // `session.user.id` tetap terisi id hantu, dan setiap penulisan DB yang
+        // memakainya kena FK violation -> 500 ("ghost session"). Kosongkan id
+        // supaya SEMUA gerbang `if (!session?.user?.id)` di app memperlakukan
+        // sesi ini sebagai logout. Cookie-nya tidak dibersihkan dari sini (RSC
+        // tak bisa set cookie) — sesi kosong ini tidak berbahaya, dan hilang
+        // begitu orangnya login ulang.
+        session.user.id = "";
+        session.user.name = null;
+        session.user.email = "";
+        session.user.image = null;
+        session.user.adminScope = null;
+        session.user.isAdmin = false;
+        session.user.rantingCode = null;
+        session.user.emailSubscribed = null;
+        session.user.locale = null;
+        return session;
+      }
+      const scope = resolveAdminScope(ctx);
       session.user.adminScope = scope;
       session.user.isAdmin = scope === "full" || (Array.isArray(scope) && scope.length > 0);
       // Which ranting a ranting-role user belongs to; null for everyone else.
       // Drives the campus filter on /console/ranting/sensus.
-      session.user.rantingCode = (rantingCodeFromRoleName(ctx?.roleName) as RantingCode | null) ?? null;
-      session.user.emailSubscribed = ctx?.emailSubscribed ?? null;
+      session.user.rantingCode = (rantingCodeFromRoleName(ctx.roleName) as RantingCode | null) ?? null;
+      session.user.emailSubscribed = ctx.emailSubscribed ?? null;
       // Locale fallback only - see the cookie-wins-over-session note in
       // src/lib/i18n/server.ts.
-      session.user.locale = ctx?.locale ?? null;
+      session.user.locale = ctx.locale ?? null;
       return session;
     },
   },
   pages: {
     signIn: "/login",
+  },
+  logger: {
+    // Sesi JWT kadaluarsa itu RUTIN, bukan error: token non-remember mati dalam
+    // 12 jam sementara cookie pembawanya hidup 30 hari, jadi browser terus
+    // mengirim token mati itu tiap navigasi RSC sampai orangnya login lagi.
+    // Auth.js mencatatnya sebagai `[auth][error] JWTSessionError` + membuang
+    // identitas user (nama + email) ke `[auth][details]` — membanjiri panel
+    // error dan membocorkan PII ke log. Telan yang ini; kegagalan decode lain
+    // (secret berganti, token cacat) tetap tampil, dan kegagalan sign-in
+    // (CredentialsSignin, OAuth) tak lewat sini.
+    error(err) {
+      const kind = (err as { type?: string }).type ?? err.name;
+      if (kind === "JWTSessionError") return;
+      console.error(`[auth][error] ${kind}: ${err.message}`, err.stack ?? "");
+    },
   },
 });
 
