@@ -94,7 +94,7 @@ export async function sendPasswordResetLink(userId: string): Promise<void> {
   const body = [
     `Halo ${user.name ?? "Anggota"},`,
     "Admin PPIT Nanjing mengirimkan tautan ini karena kamu mengalami kendala masuk ke akun. Klik tombol di bawah untuk membuat password baru. Tautan ini berlaku 1 jam.",
-    "Kalau kamu merasa tidak butuh ini, abaikan saja - password kamu tidak berubah sampai tautan ini dibuka.",
+    "Kalau kamu merasa tidak butuh ini, abaikan saja. Password kamu tidak berubah sampai tautan ini dibuka.",
   ].join("\n\n");
   const res = await sendEmail({
     to: user.email,

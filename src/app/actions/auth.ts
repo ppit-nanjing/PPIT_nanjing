@@ -177,9 +177,7 @@ export async function requestPasswordReset(_prev: AuthFormState, formData: FormD
       const body = [
         `Halo ${user.name ?? "Anggota"},`,
         "Kami menerima permintaan untuk mengganti password akun kamu. Klik tombol di bawah untuk membuat password baru. Tautan ini berlaku 1 jam.",
-        "Kalau kamu tidak meminta ini, abaikan saja email ini — password kamu tidak berubah.",
-        "---",
-        `Hi ${user.name ?? "there"}, we received a request to reset your PPIT Nanjing account password. Use the button below to set a new one; the link expires in 1 hour. If you didn't request this, ignore this email.`,
+        "Kalau kamu tidak meminta ini, abaikan saja email ini. Password kamu tidak berubah.",
       ].join("\n\n");
       await sendEmail({
         to: email,
@@ -194,7 +192,7 @@ export async function requestPasswordReset(_prev: AuthFormState, formData: FormD
         text: renderMembershipEmailText({
           heading,
           body,
-          ctaLabel: "Buat password baru / Set a new password",
+          ctaLabel: "Buat password baru",
           ctaUrl: link,
           footerNote: "Email ini dikirim otomatis oleh sistem akun PPIT Nanjing. Jangan teruskan tautan di atas ke siapa pun.",
         }),
