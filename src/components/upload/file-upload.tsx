@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useRef, type DragEvent } from "react";
-import { Upload, Loader2, ImageIcon, X } from "lucide-react";
+import { Upload, Loader2, ImageIcon, X, CheckCircle2 } from "lucide-react";
 import { useT } from "@/lib/i18n/client";
 import { readUploadResult } from "./upload-error";
 import { compressImage } from "@/lib/image-compress";
@@ -180,6 +180,20 @@ export function FileUpload({
             <X size={14} /> {t("common.cancel")}
           </button>
         </div>
+      )}
+      {/* Umpan balik status unggah - terutama untuk alur autoUpload (mis. KTM
+          di form WIF) yang tak punya tombol Unggah manual: tanpa ini pengguna
+          tak tahu apakah unggahannya benar-benar selesai atau masih diam saja
+          (kasus yang dilaporkan Pia - tak yakin KTM-nya kepasang atau tidak). */}
+      {uploading && (
+        <p className="flex items-center gap-1.5 text-body-sm text-on-surface-variant">
+          <Loader2 size={14} className="animate-spin" /> {t("upload.uploading")}
+        </p>
+      )}
+      {!uploading && value && !error && (
+        <p className="flex items-center gap-1.5 text-body-sm text-primary-container">
+          <CheckCircle2 size={14} /> {t("upload.uploaded")}
+        </p>
       )}
       {error && <p className="text-body-sm text-error">{error}</p>}
     </div>

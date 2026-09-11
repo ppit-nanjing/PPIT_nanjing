@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState, type MouseEvent as ReactMouseEvent, type ReactNode } from "react";
 import Image from "next/image";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import { motion, useReducedMotion } from "motion/react";
 import { AlertCircle, ArrowLeft, ArrowRight, Check, CalendarDays, MapPin } from "lucide-react";
 import { useT } from "@/lib/i18n/client";
@@ -46,13 +47,44 @@ export function EventRegisterFlow({
 }) {
   const t = useT();
   const reduceMotion = useReducedMotion();
+  const searchParams = useSearchParams();
   const [step, setStep] = useState(0);
   const [dir, setDir] = useState<1 | -1>(1);
   const [err, setErr] = useState<string | null>(initialError);
   const formRef = useRef<HTMLFormElement>(null);
   const topRef = useRef<HTMLDivElement>(null);
+  const stepRef = useRef(step);
   const last = steps.length - 1;
   const single = steps.length <= 1;
+
+  useEffect(() => {
+    stepRef.current = step;
+  }, [step]);
+
+  // registerForEvent redirects back to this SAME route with a new `?err=...`
+  // on a recoverable validation failure (mis. paspor belum diisi, KTM belum
+  // keunggah). Next.js melakukan navigasi klien halus ke rute yang sama tanpa
+  // me-remount pohon ini, jadi `useState(initialError)` di atas cuma berlaku
+  // sekali saat mount pertama dan TIDAK bereaksi saat `initialError` berubah
+  // pada percobaan submit berikutnya - banner tak pernah muncul, pengguna
+  // hanya melihat "klik Kirim, tak terjadi apa-apa" (kasus Pia). `searchParams`
+  // dari useSearchParams() berganti identitas di SETIAP navigasi (termasuk
+  // saat kode error-nya sama seperti percobaan sebelumnya), jadi efek ini
+  // dipasangkan padanya, bukan pada string pesannya, supaya tetap ter-picu
+  // walau pengguna gagal berulang dengan alasan yang sama persis.
+  useEffect(() => {
+    if (!initialError) return;
+    const code = searchParams.get("err");
+    const stepId =
+      code === "biodata" ? "biodata" : code === "question" ? "questions" : code === "fee" || code === "category_full" ? "fee" : null;
+    const idx = stepId ? steps.findIndex((s) => s.id === stepId) : -1;
+    if (idx > -1 && idx !== stepRef.current) {
+      setDir(idx < stepRef.current ? -1 : 1);
+      setStep(idx);
+    }
+    setErr(initialError);
+    topRef.current?.scrollIntoView({ behavior: reduceMotion ? "auto" : "smooth", block: "start" });
+  }, [searchParams, initialError, steps, reduceMotion]);
 
   useEffect(() => {
     const form = formRef.current;
