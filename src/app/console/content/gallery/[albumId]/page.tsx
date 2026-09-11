@@ -11,6 +11,7 @@ import { PhotoGrid } from "@/components/console/photo-grid";
 import { CollapsibleSection } from "@/components/console/collapsible-section";
 import { SubmitButton } from "@/components/console/submit-button";
 import { ConfirmButton } from "@/components/console/confirm-button";
+import { FlashToast } from "@/components/console/flash-toast";
 import { ImageUploadCropper } from "@/components/upload/image-upload-cropper";
 import { ArrowLeft } from "lucide-react";
 import Link from "next/link";
@@ -35,6 +36,7 @@ export default async function ConsoleAlbumDetailPage({ params }: { params: Promi
 
   return (
     <div className="px-4 py-6 sm:px-6 lg:px-8 lg:py-10 max-w-3xl">
+      <FlashToast />
       <Link
         href={backHref}
         className="inline-flex items-center gap-2 text-label-caps uppercase tracking-wide text-on-surface-variant hover:text-on-background mb-4"
@@ -73,12 +75,12 @@ export default async function ConsoleAlbumDetailPage({ params }: { params: Promi
             aspect={16 / 9}
             hint="Ideal 1920 × 1080 px (16:9) — gambar di-crop & dikompres otomatis."
           />
-          <button
-            type="submit"
+          <SubmitButton
+            successMessage="Detail album tersimpan."
             className="self-start bg-primary-container text-on-primary text-label-caps uppercase tracking-wide px-6 py-3 rounded-md hover:bg-primary transition-colors"
           >
             Simpan Perubahan
-          </button>
+          </SubmitButton>
         </form>
       </CollapsibleSection>
 

@@ -27,6 +27,7 @@ import { checkInBlockReason } from "@/lib/event-checkin";
 import { feeTierAt, amountForTier } from "@/lib/event-fee";
 import { toDateLocalInput } from "@/lib/datetime";
 import { ConfirmButton } from "@/components/console/confirm-button";
+import { FlashToast } from "@/components/console/flash-toast";
 import { SubmitButton } from "@/components/console/submit-button";
 import { Download, Images } from "lucide-react";
 
@@ -248,6 +249,7 @@ export default async function ConsoleEventDetailPage({ params }: { params: Promi
 
   return (
     <div className="py-2">
+      <FlashToast />
       <header className="mb-8">
         <h1 className="text-headline-md sm:text-headline-lg text-on-background mb-2">{event.title}</h1>
         <p className="text-body-md text-on-surface-variant">

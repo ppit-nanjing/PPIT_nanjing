@@ -11,6 +11,7 @@ import { getEventAccess } from "@/lib/event-access";
 import { sendEmail } from "@/lib/email";
 import { renderMembershipEmail, renderMembershipEmailText } from "@/lib/membership-email";
 import { getSiteUrl } from "@/lib/site-url";
+import { withFlash } from "@/lib/flash";
 
 async function requireContentAccess() {
   const session = await auth();
@@ -146,7 +147,7 @@ export async function upsertNewsArticle(
   revalidatePath("/news");
   revalidatePath(`/news/${article.slug}`);
   if (eventId) revalidatePath(`/console/events/${eventId}`);
-  redirect(scoped && eventId ? `/console/events/${eventId}` : "/console/content");
+  redirect(withFlash(scoped && eventId ? `/console/events/${eventId}` : "/console/content", "Artikel tersimpan."));
 }
 
 // Hard delete - mirrors deleteEvent. For genuine mistakes / duplicates / spam;
@@ -259,7 +260,7 @@ export async function createGalleryAlbum(formData: FormData) {
 
   revalidatePath("/console/content");
   revalidatePath("/gallery");
-  redirect(`/console/content/gallery/${album.id}`);
+  redirect(withFlash(`/console/content/gallery/${album.id}`, "Album dibuat."));
 }
 
 // Ubah judul & sampul album — sama seperti edit berita. Foto dikelola terpisah
@@ -330,7 +331,7 @@ export async function createEventGalleryAlbum(formData: FormData) {
   revalidatePath("/console/content");
   revalidatePath("/gallery");
   revalidatePath(`/console/events/${eventId}`);
-  redirect(`/console/content/gallery/${album.id}`);
+  redirect(withFlash(`/console/content/gallery/${album.id}`, "Album dibuat."));
 }
 
 function isValidHttpUrl(value: string): boolean {
