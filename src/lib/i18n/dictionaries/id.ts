@@ -706,6 +706,7 @@ export const id = {
   "org.explorer.divisions": "Divisi",
   "org.explorer.memberCount": "{{n}} orang",
   "org.explorer.noMembers": "Belum ada anggota terdaftar.",
+  "org.explorer.viewPhoto": "Lihat foto {{name}}",
   "org.structure.term": "Kepengurusan 2026/2027",
   "org.structure.title": "Struktur PPIT Nanjing",
   "org.structure.intro": "Kabinet Maju PPIT Nanjing terdiri dari Badan Pengurus Harian (BPH) dan tiga departemen, masing-masing menaungi tiga divisi. Pilih tampilan yang kamu suka di bawah.",

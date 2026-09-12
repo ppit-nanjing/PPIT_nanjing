@@ -703,6 +703,7 @@ export const en = {
   "org.explorer.divisions": "Divisions",
   "org.explorer.memberCount": "{{n}} members",
   "org.explorer.noMembers": "No members registered yet.",
+  "org.explorer.viewPhoto": "View {{name}}'s photo",
   "org.structure.term": "2026/2027 Board",
   "org.structure.title": "PPIT Nanjing Structure",
   "org.structure.intro": "Kabinet Maju PPIT Nanjing has a Daily Board (BPH) and three departments, and each department runs three divisions. Pick a view below.",

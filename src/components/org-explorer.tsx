@@ -73,6 +73,113 @@ function SocialIcons({ member }: { member: OrgMember }) {
   );
 }
 
+// Klik avatar buka pratinjau foto lebih besar - berguna terutama di bagan
+// interaktif, tempat avatarnya cuma 24-28px di dalam kartu unit. `stopPropagation`
+// wajib: MemberRow ini juga dipakai di dalam UnitFlowNode (org-flow.tsx), yang
+// area anggotanya sengaja `pointer-events-none` supaya klik di situ tetap
+// membuka modal divisi - `pointer-events-auto` di tombol ini menembus itu
+// khusus buat avatarnya, dan stopPropagation mencegah klik itu ikut kebaca
+// sebagai klik node oleh React Flow.
+function MemberAvatar({
+  member,
+  className,
+  size,
+  onOpenPreview,
+}: {
+  member: OrgMember;
+  className: string;
+  size: number;
+  onOpenPreview: () => void;
+}) {
+  const t = useT();
+  const src = member.avatarUrl || member.image;
+  return (
+    <button
+      type="button"
+      onClick={(e) => {
+        e.stopPropagation();
+        onOpenPreview();
+      }}
+      aria-label={t("org.explorer.viewPhoto", { name: member.name ?? t("org.explorer.member") })}
+      className={`pointer-events-auto rounded-full shrink-0 transition-opacity hover:opacity-80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-container focus-visible:ring-offset-2 focus-visible:ring-offset-background motion-reduce:transition-none`}
+    >
+      {src ? (
+        <Image
+          src={src}
+          alt={member.name ?? ""}
+          width={size}
+          height={size}
+          className={`${className} rounded-full object-cover border border-outline-variant`}
+        />
+      ) : (
+        <div className={`${className} rounded-full bg-surface-container flex items-center justify-center text-on-surface-variant`}>
+          <UserRound size={size < 28 ? 12 : 14} />
+        </div>
+      )}
+    </button>
+  );
+}
+
+// Overlay pratinjau satu anggota - foto lebih besar + nama/jabatan/sosmed.
+// Bertumpuk di atas ProfileModal (z lebih tinggi) kalau dibuka dari dalam
+// modal divisi, dan berdiri sendiri kalau dibuka dari CardsView/TreeView.
+function MemberPreviewOverlay({ member, onClose }: { member: OrgMember; onClose: () => void }) {
+  const t = useT();
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onClose();
+    };
+    document.addEventListener("keydown", onKey);
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.removeEventListener("keydown", onKey);
+      document.body.style.overflow = prev;
+    };
+  }, [onClose]);
+
+  const src = member.avatarUrl || member.image;
+
+  return (
+    <div
+      className="fixed inset-0 z-[70] bg-black/60 flex items-center justify-center p-4"
+      onClick={onClose}
+    >
+      <div
+        className="relative bg-surface-container-lowest border border-outline-variant rounded-xl max-w-xs w-full p-6 text-center"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <button
+          type="button"
+          onClick={onClose}
+          aria-label={t("cities.close")}
+          className="absolute top-3 right-3 text-on-surface-variant hover:text-on-background rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-container focus-visible:ring-offset-2 focus-visible:ring-offset-background motion-reduce:transition-none"
+        >
+          <X size={20} />
+        </button>
+        {src ? (
+          <Image
+            src={src}
+            alt={member.name ?? ""}
+            width={240}
+            height={240}
+            className="w-40 h-40 sm:w-48 sm:h-48 mx-auto rounded-full object-cover border border-outline-variant"
+          />
+        ) : (
+          <div className="w-40 h-40 sm:w-48 sm:h-48 mx-auto rounded-full bg-surface-container flex items-center justify-center text-on-surface-variant">
+            <UserRound size={56} />
+          </div>
+        )}
+        <p className="text-headline-sm text-on-background mt-4">{member.name ?? t("org.explorer.member")}</p>
+        {member.position && <p className="text-body-sm text-on-surface-variant mt-1">{member.position}</p>}
+        <div className="flex items-center justify-center gap-3 mt-3">
+          <SocialIcons member={member} />
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export function MemberRow({
   member,
   compact,
@@ -83,23 +190,12 @@ export function MemberRow({
   showSocials?: boolean;
 }) {
   const t = useT();
+  const [preview, setPreview] = useState(false);
   const avatar = compact ? "w-6 h-6" : "w-7 h-7";
   const avatarSize = compact ? 24 : 28;
   return (
     <div className="flex items-center gap-2">
-      {member.avatarUrl || member.image ? (
-          <Image
-            src={(member.avatarUrl || member.image) as string}
-            alt={member.name ?? ""}
-          width={avatarSize}
-          height={avatarSize}
-          className={`${avatar} rounded-full object-cover border border-outline-variant shrink-0`}
-        />
-      ) : (
-        <div className={`${avatar} rounded-full bg-surface-container flex items-center justify-center text-on-surface-variant shrink-0`}>
-          <UserRound size={12} />
-        </div>
-      )}
+      <MemberAvatar member={member} className={avatar} size={avatarSize} onOpenPreview={() => setPreview(true)} />
       <div className="min-w-0">
           <p className="text-label-caps font-semibold text-on-background leading-tight truncate">
             {member.name ?? t("org.explorer.member")}
@@ -109,6 +205,7 @@ export function MemberRow({
         )}
       </div>
       {showSocials && <SocialIcons member={member} />}
+      {preview && <MemberPreviewOverlay member={member} onClose={() => setPreview(false)} />}
     </div>
   );
 }
