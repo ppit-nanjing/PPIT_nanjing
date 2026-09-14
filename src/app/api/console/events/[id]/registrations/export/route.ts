@@ -135,6 +135,12 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
     headers: {
       "Content-Type": "text/csv; charset=utf-8",
       "Content-Disposition": `attachment; filename="pendaftar-${safeTitle}-${new Date().toISOString().slice(0, 10)}.csv"`,
+      // Tanpa ini, klik berulang di link download yang sama (URL identik,
+      // tanpa query string) bisa kena cache HTTP browser dan menyajikan
+      // snapshot lama - pendaftar yang baru masuk hilang dari CSV padahal
+      // sudah tercatat di database (dan sudah kelihatan di angka "N terdaftar"
+      // di halaman, yang tidak lewat link yang sama).
+      "Cache-Control": "no-store",
     },
   });
 }

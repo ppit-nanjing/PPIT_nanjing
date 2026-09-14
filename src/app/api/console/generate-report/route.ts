@@ -269,6 +269,10 @@ export async function GET(request: Request) {
         "Content-Type":
           "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
         "Content-Disposition": disposition,
+        // Without this, re-downloading via the same identical URL (no query
+        // string to bust it) can be served from the browser's HTTP cache
+        // instead of hitting the server, silently returning stale data.
+        "Cache-Control": "no-store",
       },
     });
   }
@@ -278,6 +282,7 @@ export async function GET(request: Request) {
     headers: {
       "Content-Type": "text/csv; charset=utf-8",
       "Content-Disposition": disposition,
+      "Cache-Control": "no-store",
     },
   });
 }
