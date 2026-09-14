@@ -73,10 +73,14 @@ export function UserTable({
 
   return (
     <>
-      {/* Tablet / desktop: tabel biasa */}
-      <div className="hidden sm:block bg-surface-container-lowest border border-outline-variant rounded-xl overflow-x-auto">
+      {/* Tablet / desktop: tabel biasa. max-h + overflow-auto + thead sticky:
+          dengan 149+ pengguna, tabel biasa berarti admin scroll jauh di
+          seluruh halaman sampai kehilangan header kolom. Sekarang tabel
+          sendiri yang scroll (vertikal & horizontal), header kolom tetap
+          menempel di atas kotak scroll-nya. */}
+      <div className="hidden sm:block bg-surface-container-lowest border border-outline-variant rounded-xl overflow-auto max-h-[32rem]">
         <table className="w-full text-body-md">
-          <thead className="bg-surface-container-low text-label-caps uppercase tracking-wide text-on-surface-variant">
+          <thead className="sticky top-0 z-10 bg-surface-container-low text-label-caps uppercase tracking-wide text-on-surface-variant">
             <tr>
               <th className="text-left px-5 py-3">Pengguna</th>
               <th className="text-left px-5 py-3">Role / Ruang Lingkup</th>
