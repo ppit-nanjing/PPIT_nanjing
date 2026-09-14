@@ -80,7 +80,16 @@ export function CollapsibleRecordList<T extends { id: string }>({
         </button>
       </div>
 
-      <ul className="overflow-hidden rounded-xl border border-outline-variant bg-surface-container-lowest">
+      {/* Long lists (WIF-scale registrants, etc.) get a capped-height scroll
+          box instead of pushing the admin to scroll the whole console page
+          past this panel to reach whatever comes after it. Short lists (a
+          handful of pending requests) render exactly as before - no scroll
+          affordance for content that already fits. */}
+      <ul
+        className={`rounded-xl border border-outline-variant bg-surface-container-lowest ${
+          records.length > 8 ? "max-h-[28rem] overflow-y-auto overflow-x-hidden" : "overflow-hidden"
+        }`}
+      >
         {records.map((r) => {
           const isOpen = open.has(r.id);
           const s = renderSummary(r);
