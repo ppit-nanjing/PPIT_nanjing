@@ -99,10 +99,13 @@ export async function GET(request: Request) {
       headers: {
         "Content-Type": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
         "Content-Disposition": disposition,
+        // Same identical-URL cache risk as the event registrations export -
+        // a re-download without this could silently omit the most recent rows.
+        "Cache-Control": "no-store",
       },
     });
   }
   return new NextResponse(datasetToCsv(dataset), {
-    headers: { "Content-Type": "text/csv; charset=utf-8", "Content-Disposition": disposition },
+    headers: { "Content-Type": "text/csv; charset=utf-8", "Content-Disposition": disposition, "Cache-Control": "no-store" },
   });
 }
