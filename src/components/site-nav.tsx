@@ -162,8 +162,15 @@ export function SiteNav() {
             </Link>
 
             {/* Inline links: desktop (lg) and up only - narrower viewports use
-                the burger menu below. */}
-            <div className="hidden lg:flex items-center gap-3 xl:gap-7 text-body-md shrink-0">
+                the burger menu below. Deliberately NOT shrink-0 (unlike the
+                logo and the right-side icon cluster either side of it): this
+                row is revealed at exactly the same 1024px width the icon
+                cluster needs to coexist with the logo, and with all three
+                shrink-0 there was nowhere for the extra width to go but
+                overflow - measured 58px of real horizontal scroll at 1024px,
+                gone by ~1120px. min-w-0 lets this row's gap (not the link
+                text itself) absorb the squeeze instead. */}
+            <div className="hidden lg:flex items-center gap-2 xl:gap-7 text-body-md min-w-0">
               {NAV_LINKS.map((link) => {
                 const active = pathname === link.href;
                 return (
@@ -195,7 +202,14 @@ export function SiteNav() {
             <div className="flex items-center gap-1 sm:gap-2 shrink-0">
               <div className="relative">
                 {/* Desktop, expanded: labeled search pill that advertises the
-                    shortcut. Collapses to icon-only when the navbar shrinks. */}
+                    shortcut. Collapses to icon-only when the navbar shrinks -
+                    and also below xl even at rest: at 1024-1280px the inline
+                    links row (revealed at the same lg breakpoint) already
+                    needs every spare pixel, and this pill alone measured
+                    ~152px of the icon cluster's ~305px, which is what was
+                    actually spilling "Explore" into the search area (not
+                    fixed by the links row's own min-w-0, since its shrink-0
+                    children don't shrink - they just paint past it). */}
                 <button
                   aria-label={t("nav.searchAria")}
                   type="button"
@@ -203,19 +217,20 @@ export function SiteNav() {
                     setPaletteOpen(true);
                     dismissHint();
                   }}
-                  className={`${compact ? "hidden" : "hidden lg:flex"} items-center gap-2 bg-surface-container-low text-on-surface-variant rounded-full pl-3 pr-2 py-1.5 text-body-md hover:bg-surface-container transition-colors`}
+                  className={`${compact ? "hidden" : "hidden xl:flex"} items-center gap-2 bg-surface-container-low text-on-surface-variant rounded-full pl-3 pr-2 py-1.5 text-body-md hover:bg-surface-container transition-colors`}
                 >
                   <Search size={16} />
                   <span>{t("nav.searchPlaceholder")}</span>
                   <kbd className="text-label-caps border border-outline-variant rounded px-1.5 py-0.5">⌘K</kbd>
                 </button>
-                {/* Icon-only trigger: mobile/tablet, and also desktop once the
-                    navbar has shrunk (no keyboard shortcut hint needed then). */}
+                {/* Icon-only trigger: mobile/tablet, the 1024-1280px band
+                    (see above), and also desktop once the navbar has shrunk
+                    (no keyboard shortcut hint needed then). */}
                 <button
                   aria-label={t("nav.search")}
                   type="button"
                   onClick={() => setPaletteOpen(true)}
-                  className={`${compact ? "lg:flex" : "lg:hidden"} text-on-background p-1 shrink-0`}
+                  className={`${compact ? "lg:flex" : "xl:hidden"} text-on-background p-1 shrink-0`}
                 >
                   <Search size={20} />
                 </button>
@@ -268,7 +283,15 @@ export function SiteNav() {
         }`}
         aria-hidden={!menuOpen}
       >
-        <nav className="h-full flex flex-col items-stretch justify-center gap-1 pt-20 px-5 overflow-y-auto">
+        {/* justify-start, not -center: with every NAV_LINKS + DISCOVER_LINKS
+            row plus the account header and language toggle, this content
+            (~750px) already exceeds most phone viewports - centering pushed
+            the top (the account/login row) above the fold with no way to
+            scroll to it, since scrollTop clamps at 0 when content starts
+            above the visible area. Starting from just under the header pill
+            keeps everything reachable; on tall viewports where content
+            genuinely fits, this just means a gap below instead of centered. */}
+        <nav className="h-full flex flex-col items-stretch justify-start gap-1 pt-20 px-5 overflow-y-auto">
           {/* Self-contained account header so login / profile / logout are
               reachable from the drawer without relying on the top pill. */}
           <div className="px-1 mb-3">

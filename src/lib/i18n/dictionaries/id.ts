@@ -117,6 +117,7 @@ export const id = {
     "Wadah resmi Perhimpunan Pelajar Indonesia Tiongkok (PPIT) Cabang Nanjing untuk bersinergi, berkarya, dan berkontribusi bagi bangsa — sejak 2008.",
   "home.hero.cta": "Jelajahi Kegiatan",
   "home.hero.ctaSecondary": "Tentang PPIT Nanjing",
+  "home.hero.ctaCensus": "Lengkapi Sensus",
   "home.quote.text":
     "PPIT Nanjing adalah rumah bagi ribuan mimpi anak bangsa di kota bersejarah ini. Melalui kolaborasi dan semangat gotong royong, kita pastikan setiap pelajar Indonesia di sini memiliki support system terbaik untuk berkarya dan berkontribusi.",
   "home.quote.author": "Ketua Umum PPIT Nanjing",

@@ -114,6 +114,7 @@ export const en = {
     "The Nanjing branch of the Indonesia Student Association in China. Since 2008, a home for Indonesian students here to synergize, create, and contribute to the nation.",
   "home.hero.cta": "Explore Events",
   "home.hero.ctaSecondary": "About PPIT Nanjing",
+  "home.hero.ctaCensus": "Complete Your Census",
   "home.quote.text":
     "Thousands of young Indonesians study in this historic city, far from home. PPIT Nanjing exists so no one has to do that alone. The committee, the events, and the student network are here to help you settle in, create, and contribute.",
   "home.quote.author": "Chairman of PPIT Nanjing",
