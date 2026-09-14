@@ -1,5 +1,7 @@
 import { eq, desc, asc, count } from "drizzle-orm";
 import Link from "next/link";
+import { auth } from "@/auth";
+import { hasCompletedSensus } from "@/lib/sensus-gate";
 import { MovingArrow } from "@/components/icons/moving-arrow";
 import { AnimatedHeroHeading } from "@/components/animated-hero-heading";
 import { AnimatedRevealText } from "@/components/animated-reveal-text";
@@ -38,6 +40,16 @@ const CITIES = [
 export default async function Home() {
   await publishDueEvents();
   const { t, locale } = await getT();
+
+  // The hero otherwise only ever addresses a first-time visitor - PRODUCT.md
+  // calls the newcomer and the returning member "equal weight" and names
+  // census completeness as one of only two term-level success metrics, so a
+  // signed-in member with an incomplete census gets that as their secondary
+  // CTA instead of "About PPIT Nanjing" (which they've already seen). Signed
+  // out visitors and members who've already finished their census see the
+  // page exactly as before - this only swaps one link's target+label.
+  const session = await auth();
+  const needsCensus = session?.user?.id ? !(await hasCompletedSensus(session.user.id)) : false;
 
   const latestEvents = await db
     .select()
@@ -81,10 +93,19 @@ export default async function Home() {
         </div>
         <div className="pointer-events-none absolute inset-x-0 bottom-0 h-px bg-muted-gold/50" aria-hidden="true" />
 
-        <div className="relative z-10 max-w-[var(--container-max)] mx-auto px-[var(--spacing-container-padding)] py-24 md:py-36 flex flex-col items-center text-center">
+        {/* The global Help & Feedback launcher is fixed at bottom-24 (+ ~54px)
+            on narrow viewports, which lands right on top of this hero's own
+            subtext on SHORT narrow phones (confirmed at 360x640: subtext
+            bottom sat at y518, launcher top at y490 - a real ~28px overlap,
+            not a screenshot artifact). It only reproduces when width AND
+            height are both small (a 375x812 "mobile" phone has the same
+            width tier but is tall enough to clear it), so the tighter top
+            rhythm below is gated on both, not just the mobile width tier -
+            taller-but-narrow phones keep the normal py-24 spacing. */}
+        <div className="relative z-10 max-w-[var(--container-max)] mx-auto px-[var(--spacing-container-padding)] py-24 md:py-36 [@media(max-width:639px)_and_(max-height:700px)]:pt-10 flex flex-col items-center text-center">
           <AnimatedHeroHeading
             words={t("home.hero.words").split("|")}
-            className="text-display-hero-mobile md:text-display-hero text-on-background text-balance mb-6 max-w-4xl"
+            className="text-display-hero-mobile md:text-display-hero text-on-background text-balance mb-6 [@media(max-width:639px)_and_(max-height:700px)]:mb-3 max-w-4xl"
           />
           <AnimatedRevealText
             text={t("home.hero.subtext")}
@@ -98,10 +119,10 @@ export default async function Home() {
               {t("home.hero.cta")} <MovingArrow size={18} />
             </Link>
             <Link
-              href="/about"
+              href={needsCensus ? "/sensus" : "/about"}
               className="group inline-flex items-center gap-1.5 px-4 py-4 rounded-md text-label-caps uppercase tracking-wide text-primary-container hover:text-primary transition-colors motion-reduce:transition-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-container focus-visible:ring-offset-2 focus-visible:ring-offset-background"
             >
-              {t("home.hero.ctaSecondary")} <MovingArrow size={16} />
+              {needsCensus ? t("home.hero.ctaCensus") : t("home.hero.ctaSecondary")} <MovingArrow size={16} />
             </Link>
           </div>
         </div>

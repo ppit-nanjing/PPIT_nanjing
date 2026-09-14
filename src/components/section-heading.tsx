@@ -35,7 +35,7 @@ export async function SectionHeading({
       {href && (
         <a
           href={href}
-          className="group mt-2 md:mt-0 md:ml-auto inline-flex items-center gap-1 text-label-caps text-primary-container hover:text-primary transition-colors shrink-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+          className="group mt-2 md:mt-0 md:ml-auto inline-flex items-center gap-1 text-label-caps text-primary-container hover:text-primary transition-colors shrink-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-container focus-visible:ring-offset-2 focus-visible:ring-offset-background"
         >
           {resolvedLinkLabel} <MovingArrow size={16} />
         </a>
