@@ -677,6 +677,8 @@ export const en = {
   "sensus.wechatJoinTitle": "Join the PPIT Nanjing WeChat Group",
   "sensus.wechatIdLabel": "WeChat ID",
   "sensus.wechatJoinNote": "Scan the QR to add the PPIT Nanjing account. When you add, include your full name + campus so the team can verify you and add you to the student group.",
+  "sensus.rantingWechatJoinTitle": "Join the {{label}} Ranting WeChat Group",
+  "sensus.rantingWechatJoinNote": "Add this account too to join your campus's student group. Include your full name when you add it.",
   "sensus.viewData": "View/Edit Data",
   "sensus.backHome": "Back to Home",
   "sensus.genderMale": "Male",

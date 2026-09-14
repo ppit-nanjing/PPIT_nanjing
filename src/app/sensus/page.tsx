@@ -1,8 +1,8 @@
-import { asc, eq } from "drizzle-orm";
+import { and, asc, eq } from "drizzle-orm";
 import { redirect } from "next/navigation";
 import { auth } from "@/auth";
 import { db } from "@/db";
-import { branchUniversities, regionalBranches, sensusProfiles } from "@/db/schema";
+import { coverageCities, sensusProfiles, universities } from "@/db/schema";
 import { SiteNav } from "@/components/site-nav";
 import { SiteFooter } from "@/components/site-footer";
 import { SensusWizard } from "@/components/sensus/sensus-wizard";
@@ -19,19 +19,24 @@ export default async function SensusPage({
   if (!session?.user?.id) redirect(`/login?returnTo=${encodeURIComponent("/sensus")}`);
 
   const [existing] = await db.select().from(sensusProfiles).where(eq(sensusProfiles.userId, session.user.id));
-  // Satu query untuk cabang + kampusnya: dropdown Universitas difilter di
-  // klien berdasarkan cabang yang dipilih (form pusat pun begitu — "Pilih
-  // Cabang terlebih dahulu"), jadi tidak perlu bolak-balik ke server tiap kali
-  // cabangnya diganti. Seluruh daftarnya hanya beberapa ratus baris teks.
+  // Cabang di sini SENGAJA memakai coverageCities (9 kota naungan PPIT
+  // Nanjing) + universities (direktori kampus per kota), bukan
+  // regionalBranches/branchUniversities (skema nasional PPI Tiongkok, ~32
+  // cabang). Yang nasional itu ternyata cuma punya "Nanjing" untuk seluruh
+  // wilayah ini - 8 kota lain (Xuzhou, Jurong, dst.) tidak ada padanan cabang
+  // pusatnya sendiri, jadi member di luar kota Nanjing tidak punya opsi kota
+  // aslinya sama sekali di dropdown lama. Siapa pun yang mengisi sensus INI
+  // sudah pasti anggota PPIT Nanjing (chapter lain punya sensus sendiri-
+  // sendiri), jadi granularitas 9-kota justru yang relevan di sini.
   const rows = await db
     .select({
-      cityName: regionalBranches.cityName,
-      universityName: branchUniversities.name,
-      orderIndex: branchUniversities.orderIndex,
+      cityName: coverageCities.label,
+      universityName: universities.name,
+      orderIndex: universities.orderIndex,
     })
-    .from(regionalBranches)
-    .leftJoin(branchUniversities, eq(branchUniversities.branchId, regionalBranches.id))
-    .orderBy(asc(regionalBranches.cityName), asc(branchUniversities.orderIndex));
+    .from(coverageCities)
+    .leftJoin(universities, and(eq(universities.city, coverageCities.label), eq(universities.published, true)))
+    .orderBy(asc(coverageCities.label), asc(universities.orderIndex));
 
   const universitiesByBranch: Record<string, string[]> = {};
   for (const row of rows) {

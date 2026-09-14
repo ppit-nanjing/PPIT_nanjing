@@ -15,12 +15,17 @@ export const RANTINGS = {
     label: "INA · NUIST",
     // src/db/seed-branch-universities.ts:276
     universities: ["Nanjing University of Information Science and Technology"],
+    // Grup WeChat ranting sendiri, ditampilkan di /sensus/success di samping
+    // kartu grup utama PPIT Nanjing - belum ada gambar QR untuk ranting ini,
+    // jadi cukup ID-nya saja (bukan pola "hilang", ini yang diminta).
+    wechatId: "cal08ou_",
   },
   JIA: {
     label: "JIA · JSAHVC",
     // TODO: isi string `university` persis yang dipakai mahasiswa JSAHVC di
     // form sensus. Sampai diisi, halaman ranting JIA tampil kosong.
     universities: [] as string[],
+    wechatId: undefined as string | undefined,
   },
 } as const;
 
@@ -46,4 +51,14 @@ export function universityInRanting(university: string | null | undefined, code:
   const u = (university ?? "").trim().toLowerCase();
   if (!u) return false;
   return RANTINGS[code].universities.some((name) => name.toLowerCase() === u);
+}
+
+// Kebalikan dari universityInRanting: dari kampus, cari kode rantingnya (kalau
+// ada). Dipakai di /sensus/success untuk menampilkan kartu grup WeChat
+// ranting tambahan, di samping kartu grup utama PPIT Nanjing yang sudah ada.
+export function rantingCodeFromUniversity(university: string | null | undefined): RantingCode | null {
+  for (const code of Object.keys(RANTINGS) as RantingCode[]) {
+    if (universityInRanting(university, code)) return code;
+  }
+  return null;
 }

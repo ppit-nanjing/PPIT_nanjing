@@ -680,6 +680,8 @@ export const id = {
   "sensus.wechatJoinTitle": "Gabung Grup WeChat PPIT Nanjing",
   "sensus.wechatIdLabel": "WeChat ID",
   "sensus.wechatJoinNote": "Scan QR untuk menambahkan akun PPIT Nanjing. Saat menambahkan, cantumkan nama lengkap + nama kampus kamu supaya pengurus bisa memverifikasi dan memasukkanmu ke grup mahasiswa.",
+  "sensus.rantingWechatJoinTitle": "Gabung Grup WeChat Ranting {{label}}",
+  "sensus.rantingWechatJoinNote": "Tambahkan akun ini juga untuk masuk grup mahasiswa kampusmu. Cantumkan nama lengkap saat menambahkan.",
   "sensus.viewData": "Lihat/Ubah Data",
   "sensus.backHome": "Kembali ke Beranda",
   "sensus.genderMale": "Laki-Laki",
