@@ -3,6 +3,7 @@
 import { useState, useTransition } from "react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
+import { Pencil, KeyRound, Trash2 } from "lucide-react";
 import {
   updateUserRole,
   assignUserDepartment,
@@ -40,6 +41,36 @@ type Layout = "table" | "card";
 const selectCls = selectInput;
 const selectClsFull = `${selectInput} w-full`;
 const labelCls = "text-label-caps text-on-surface-variant";
+// Compact variant for the desktop TABLE row only (not mobile cards, which
+// already get selectClsFull). Written standalone rather than
+// `${selectInput} ...` - appending classes that override the SAME property
+// (padding, font size) as selectInput would tie the outcome to Tailwind's
+// internal stylesheet ordering rather than source order, since both sides
+// have equal selector specificity. Kept the "pp-select" hook for the shared
+// chevron background (positioned at a fixed `right 0.65rem`, independent of
+// padding, so pr-7 here is still safe) and dropped selectInput's own
+// pl-3/pr-9/py-2.5/text-body-md instead of layering a conflicting override.
+const selectClsTableBase =
+  "pp-select bg-soft-gray rounded-md pl-2.5 pr-7 py-1.5 text-body-sm cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-container w-full truncate";
+// Department/scope labels can be long ("Keuangan · Usaha Dana") but already
+// tolerate truncation fine - the full value re-appears via the "Akses: X"
+// line or by opening the dropdown. Status can't: "Ditangguhkan" measures
+// ~93px at text-body-sm, so anything much narrower than ~8.5rem visibly
+// clips it mid-word even though it's the shortest-valued column - narrower
+// here would look broken, not just compact.
+const selectClsTableDept = `${selectClsTableBase} max-w-[6rem]`;
+const selectClsTableStatus = `${selectClsTableBase} max-w-[8.5rem]`;
+// A `title` tooltip on the department/status selects covers the narrowest
+// realistic console widths (~464px content, an expanded sidebar on a
+// ~768px window), where "Ditangguhkan" still doesn't fully fit even at
+// max-w-8.5rem - hovering reveals the full value rather than leaving it
+// silently clipped.
+const STATUS_LABEL: Record<Row["status"], string> = {
+  invited: "Diundang",
+  active: "Aktif",
+  inactive: "Nonaktif",
+  suspended: "Ditangguhkan",
+};
 
 function isAssignable(dept: Department, all: Department[]): boolean {
   // Leaf divisions (have a parent) plus top-level nodes without children
@@ -82,10 +113,10 @@ export function UserTable({
         <table className="w-full text-body-md">
           <thead className="sticky top-0 z-10 bg-surface-container-low text-label-caps uppercase tracking-wide text-on-surface-variant">
             <tr>
-              <th className="text-left px-5 py-3">Pengguna</th>
-              <th className="text-left px-5 py-3">Role / Ruang Lingkup</th>
-              <th className="text-left px-5 py-3">Status</th>
-              <th className="text-right px-5 py-3">Aksi</th>
+              <th className="text-left px-3 py-2">Pengguna</th>
+              <th className="text-left px-3 py-2">Role / Ruang Lingkup</th>
+              <th className="text-left px-3 py-2">Status</th>
+              <th className="text-right px-3 py-2">Aksi</th>
             </tr>
           </thead>
           <tbody>
@@ -227,7 +258,7 @@ function UserRow({
     }
     return (
       <tr className="border-t border-outline-variant">
-        <td className="px-5 py-3">
+        <td className="px-3 py-2 max-w-[14rem]">
           <div className="flex flex-col gap-2">
             <input value={name} onChange={(e) => setName(e.target.value)} placeholder="Nama" className={selectCls} />
             <input
@@ -247,10 +278,10 @@ function UserRow({
             </Select>
           </div>
         </td>
-        <td className="px-5 py-3 text-on-surface-variant">{scopeLabel(byId.get(user.departmentId ?? ""), byId)}</td>
-        <td className="px-5 py-3 text-on-surface-variant">{status}</td>
-        <td className="px-5 py-3 text-right">
-          <div className="flex justify-end gap-2">
+        <td className="px-3 py-2 max-w-[9rem] truncate text-on-surface-variant">{scopeLabel(byId.get(user.departmentId ?? ""), byId)}</td>
+        <td className="px-3 py-2 text-on-surface-variant">{status}</td>
+        <td className="px-3 py-2 text-right">
+          <div className="flex justify-end gap-1.5">
             <button
               type="button"
               disabled={!name.trim() || !email.trim()}
@@ -262,7 +293,7 @@ function UserRow({
                   router.refresh();
                 })
               }
-              className="text-label-caps uppercase tracking-wide px-3 py-1.5 rounded-md bg-primary-container text-on-primary hover:bg-primary transition-colors disabled:opacity-50"
+              className="text-label-caps uppercase tracking-wide px-2 py-1 rounded-md bg-primary-container text-on-primary hover:bg-primary transition-colors disabled:opacity-50"
             >
               Simpan
             </button>
@@ -274,7 +305,7 @@ function UserRow({
                 setRoleId(user.roleId ?? "");
                 setEditing(false);
               }}
-              className="text-label-caps uppercase tracking-wide px-3 py-1.5 rounded-md border border-outline-variant text-on-surface-variant hover:text-on-background transition-colors"
+              className="text-label-caps uppercase tracking-wide px-2 py-1 rounded-md border border-outline-variant text-on-surface-variant hover:text-on-background transition-colors"
             >
               Batal
             </button>
@@ -373,24 +404,25 @@ function UserRow({
 
   return (
     <tr className="border-t border-outline-variant">
-      <td className="px-5 py-3">
-        <div className="flex items-center gap-3">
+      <td className="px-3 py-2 max-w-[7.5rem]">
+        <div className="flex items-center gap-2 min-w-0" title={`${user.name ?? "(tanpa nama)"} · ${user.email}`}>
           {avatar}
-          <div>
-            <p className="font-medium text-on-background">{user.name ?? "(tanpa nama)"}</p>
-            <p className="text-label-caps text-on-surface-variant">{user.email}</p>
+          <div className="min-w-0">
+            <p className="font-medium text-on-background truncate">{user.name ?? "(tanpa nama)"}</p>
+            <p className="text-label-caps text-on-surface-variant truncate">{user.email}</p>
           </div>
         </div>
       </td>
-      <td className="px-5 py-3">
+      <td className="px-3 py-2 max-w-[7rem]">
         <Select
           value={departmentId}
           onChange={(e) => {
             setDepartmentId(e.target.value);
             startTransition(() => assignUserDepartment(user.id, e.target.value, user.position));
           }}
-          className={selectCls}
+          className={selectClsTableDept}
           aria-label="Divisi"
+          title={scopeLabel(options.find((d) => d.id === departmentId), byId)}
         >
           <option value="">— Belum ada —</option>
           {options.map((d) => (
@@ -399,9 +431,13 @@ function UserRow({
             </option>
           ))}
         </Select>
-        {roleName && <p className="text-label-caps text-on-surface-variant mt-1">Akses: {roleName}</p>}
+        {roleName && (
+          <p className="text-label-caps text-on-surface-variant mt-1 truncate" title={`Akses: ${roleName}`}>
+            Akses: {roleName}
+          </p>
+        )}
       </td>
-      <td className="px-5 py-3">
+      <td className="px-3 py-2 max-w-[10rem]">
         <Select
           value={status}
           onChange={(e) => {
@@ -409,22 +445,31 @@ function UserRow({
             setStatus(next);
             startTransition(() => updateUserStatus(user.id, next));
           }}
-          className={selectCls}
+          className={selectClsTableStatus}
           aria-label="Status pengguna"
+          title={STATUS_LABEL[status]}
         >
           <option value="active">Aktif</option>
           <option value="inactive">Nonaktif</option>
           <option value="suspended">Ditangguhkan</option>
         </Select>
       </td>
-      <td className="px-5 py-3 text-right">
-        <div className="flex justify-end gap-2">
+      <td className="px-3 py-2 text-right">
+        {/* Icon-only in the table row (unlike the mobile card layout below,
+            which keeps full text - plenty of vertical room there): the text
+            pill version of these 3 actions was the single biggest
+            contributor to the table's horizontal width. aria-label keeps
+            them accessible; native `title` on the plain Edit button and
+            ConfirmButton's own confirmation dialog cover the rest. */}
+        <div className="flex flex-wrap justify-end gap-1">
           <button
             type="button"
             onClick={() => setEditing(true)}
-            className="text-label-caps uppercase tracking-wide px-3 py-1.5 rounded-md border border-outline-variant text-on-surface-variant hover:text-on-background transition-colors"
+            title="Edit"
+            aria-label="Edit"
+            className="p-1.5 rounded-md border border-outline-variant text-on-surface-variant hover:text-on-background transition-colors"
           >
-            Edit
+            <Pencil size={15} aria-hidden />
           </button>
           {user.hasPassword && (
             <ConfirmButton
@@ -434,9 +479,10 @@ function UserRow({
               confirmLabel="Ya, kirim"
               danger={false}
               successMessage="Link reset password terkirim."
-              className="text-label-caps uppercase tracking-wide px-3 py-1.5 rounded-md border border-outline-variant text-on-surface-variant hover:text-on-background transition-colors"
+              aria-label="Reset Sandi"
+              className="p-1.5 rounded-md border border-outline-variant text-on-surface-variant hover:text-on-background transition-colors"
             >
-              Reset Sandi
+              <KeyRound size={15} aria-hidden />
             </ConfirmButton>
           )}
           <ConfirmButton
@@ -446,9 +492,10 @@ function UserRow({
             }}
             title="Hapus pengguna?"
             message="Tindakan ini tidak dapat dibatalkan."
-            className="text-label-caps uppercase tracking-wide px-3 py-1.5 rounded-md border border-error/40 text-error hover:bg-error/10 transition-colors"
+            aria-label="Hapus"
+            className="p-1.5 rounded-md border border-error/40 text-error hover:bg-error/10 transition-colors"
           >
-            Hapus
+            <Trash2 size={15} aria-hidden />
           </ConfirmButton>
         </div>
       </td>
