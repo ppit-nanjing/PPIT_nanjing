@@ -1,9 +1,9 @@
-import { desc, eq } from "drizzle-orm";
+import { asc, desc, eq } from "drizzle-orm";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { auth } from "@/auth";
 import { db } from "@/db";
-import { sensusProfiles, users } from "@/db/schema";
+import { coverageCities, sensusProfiles, users } from "@/db/schema";
 import { hasModuleAccess } from "@/lib/admin-scope";
 import { MEMBERSHIP_LABEL, membershipStatus, type MembershipStatus } from "@/lib/membership-status";
 import { CollapsibleSection } from "@/components/console/collapsible-section";
@@ -49,12 +49,13 @@ export default async function ConsoleSensusPage({ searchParams }: { searchParams
   const proof = one(sp.proof) || "all"; // all | has | missing
   const university = one(sp.university) || "all";
 
-  const [rows, guide] = await Promise.all([
+  const [rows, cities, guide] = await Promise.all([
     db
       .select({ sensus: sensusProfiles, userName: users.name, userEmail: users.email })
       .from(sensusProfiles)
       .leftJoin(users, eq(sensusProfiles.userId, users.id))
       .orderBy(desc(sensusProfiles.updatedAt)),
+    db.select({ label: coverageCities.label }).from(coverageCities).orderBy(asc(coverageCities.label)),
     getGuide("sensus"),
   ]);
 
@@ -63,9 +64,15 @@ export default async function ConsoleSensusPage({ searchParams }: { searchParams
     return <SensusVerifyList rows={rows} q={q} status={status} university={university} />;
   }
 
-  const branches = [...new Set(rows.map((r) => r.sensus.branch).filter((b): b is string => Boolean(b)))].sort((a, b) =>
-    a.localeCompare(b, "id"),
-  );
+  // Filter kota memakai 9 kota naungan PPIT Nanjing (coverageCities) sebagai
+  // sumbernya, BUKAN nilai `branch` yang benar-benar tersimpan - dulu dari
+  // situ, tapi beberapa baris masih menyimpan data lama sebelum field ini
+  // jadi dropdown (nama kota Indonesia seperti "Karawang"/"Surabaya", lihat
+  // sesi pembersihan data sebelumnya), dan diurutkan campur aduk dengan yang
+  // benar - itu yang terlihat "ngacak". Filter yang benar juga tidak hilang
+  // begitu satu kota belum punya siapa pun yang mengisi sensus (mis. Yancheng
+  // saat ini) - tetap muncul sebagai pilihan dengan hasil kosong.
+  const branches = cities.map((c) => c.label);
   const universities = [
     ...new Set(rows.map((r) => r.sensus.university).filter((u): u is string => Boolean(u))),
   ].sort((a, b) => a.localeCompare(b, "id"));
