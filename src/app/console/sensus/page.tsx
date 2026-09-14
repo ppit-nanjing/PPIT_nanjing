@@ -216,7 +216,11 @@ export default async function ConsoleSensusPage({ searchParams }: { searchParams
         {filtered.length === 0 ? (
           <p className="text-body-md text-on-surface-variant">Tidak ada sensus yang cocok dengan filter.</p>
         ) : (
-          <div className="flex flex-col divide-y divide-outline-variant">
+          <div
+            className={`flex flex-col divide-y divide-outline-variant ${
+              filtered.length > 8 ? "max-h-[32rem] overflow-y-auto" : ""
+            }`}
+          >
             {filtered.map(({ sensus: s, userName, userEmail }) => {
               const who = s.fullName || userName || userEmail || "Tanpa nama";
               const ms = membershipStatus(s);

@@ -79,13 +79,18 @@ function isAssignable(dept: Department, all: Department[]): boolean {
   return !all.some((c) => c.parentDepartmentId === dept.id);
 }
 
+// Divisi first, Departemen second - the divisi name is what actually tells
+// two rows apart (3 divisi share the same "Program & Acara" parent, for
+// example), so it's the part that should survive when this gets truncated
+// in the compact table select. The full string is unchanged either way,
+// just reordered - `title` tooltips and the open dropdown always show both.
 function scopeLabel(dept: Department | undefined, byId: Map<string, Department>): string {
   if (!dept) return "— Belum ada —";
   if (dept.parentDepartmentId) {
     const parent = byId.get(dept.parentDepartmentId);
     const parentShort = parent ? parent.name.replace(/^Departemen\s+/i, "") : "";
     const childShort = dept.name.replace(/^Divisi\s+/i, "");
-    return parentShort ? `${parentShort} · ${childShort}` : dept.name;
+    return parentShort ? `${childShort} · ${parentShort}` : dept.name;
   }
   return dept.name.replace(/^Departemen\s+/i, "") || dept.name;
 }
@@ -414,7 +419,14 @@ function UserRow({
         </div>
       </td>
       <td className="px-3 py-2 max-w-[7rem]">
-        <Select
+        {/* Plain <select>, not the shared <Select> - that wrapper always
+            prepends its own `selectInput` classes (pl-3/pr-9/py-2.5/
+            text-body-md) ahead of whatever className is passed, so the
+            compact classes below ended up appended after them instead of
+            replacing them (visible as a literal doubled class list in the
+            rendered DOM: both padding/font-size sets present at once,
+            outcome dependent on Tailwind's internal stylesheet order). */}
+        <select
           value={departmentId}
           onChange={(e) => {
             setDepartmentId(e.target.value);
@@ -430,7 +442,7 @@ function UserRow({
               {scopeLabel(d, byId)}
             </option>
           ))}
-        </Select>
+        </select>
         {roleName && (
           <p className="text-label-caps text-on-surface-variant mt-1 truncate" title={`Akses: ${roleName}`}>
             Akses: {roleName}
@@ -438,7 +450,7 @@ function UserRow({
         )}
       </td>
       <td className="px-3 py-2 max-w-[10rem]">
-        <Select
+        <select
           value={status}
           onChange={(e) => {
             const next = e.target.value as Row["status"];
@@ -452,7 +464,7 @@ function UserRow({
           <option value="active">Aktif</option>
           <option value="inactive">Nonaktif</option>
           <option value="suspended">Ditangguhkan</option>
-        </Select>
+        </select>
       </td>
       <td className="px-3 py-2 text-right">
         {/* Icon-only in the table row (unlike the mobile card layout below,
