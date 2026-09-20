@@ -12,6 +12,9 @@ import { getGuide } from "@/lib/guides";
 import { SensusVerifyList } from "@/components/console/sensus-verify-list";
 import { SelectField, TextField, primaryBtn } from "@/components/console/form";
 import { FileCheck2, FileX2, ChevronRight, Search, Download, History } from "lucide-react";
+import { SensusTabs } from "@/components/console/sensus-tabs";
+import { SensusAnalyticsView } from "@/components/console/sensus-analytics-view";
+import { buildSensusAnalytics } from "@/lib/sensus-analytics";
 
 // Halaman ini menampilkan data sensus yang diisi anggota lewat /sensus,
 // LENGKAP per orang termasuk nomor paspor + bukti mahasiswa. Sengaja terkunci
@@ -123,6 +126,11 @@ export default async function ConsoleSensusPage({ searchParams }: { searchParams
     { label: MEMBERSHIP_LABEL.tamu, value: counts.tamu },
   ];
 
+  // Ringkasan per pertanyaan (seperti Gform) selalu dari SELURUH data yang
+  // pernah mengisi, bukan `filtered` - filter di tab Daftar untuk mencari
+  // orang tertentu, bukan untuk mempersempit gambaran analitiknya.
+  const analytics = buildSensusAnalytics(rows.map((r) => r.sensus));
+
   return (
     <div className="px-4 py-6 sm:px-6 lg:px-8 lg:py-10">
       <div className="flex flex-wrap items-start justify-between gap-3 mb-6">
@@ -156,122 +164,129 @@ export default async function ConsoleSensusPage({ searchParams }: { searchParams
         ))}
       </div>
 
-      <form method="get" className="bg-surface-container-lowest border border-outline-variant rounded-xl p-4 sm:p-6 mb-6">
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-          <TextField name="q" label="Cari pengguna" defaultValue={q} placeholder="Nama, paspor, universitas, email" />
-          <SelectField
-            name="university"
-            label="Universitas / Kampus"
-            defaultValue={university}
-            options={[{ value: "all", label: "Semua kampus" }, ...universities.map((u) => ({ value: u, label: u }))]}
-          />
-          <SelectField
-            name="branch"
-            label="Kota"
-            defaultValue={branch}
-            options={[{ value: "all", label: "Semua kota" }, ...branches.map((b) => ({ value: b, label: b }))]}
-          />
-          <SelectField
-            name="status"
-            label="Kelengkapan"
-            defaultValue={status}
-            options={[
-              { value: "all", label: "Semua" },
-              { value: "complete", label: "Lengkap" },
-              { value: "incomplete", label: "Belum lengkap" },
-            ]}
-          />
-          <SelectField
-            name="proof"
-            label="Bukti mahasiswa"
-            defaultValue={proof}
-            options={[
-              { value: "all", label: "Semua" },
-              { value: "has", label: "Ada kartu / LOA" },
-              { value: "missing", label: "Belum ada" },
-            ]}
-          />
-        </div>
-        <div className="flex flex-wrap items-center gap-3 mt-4">
-          <button type="submit" className={`${primaryBtn} inline-flex items-center gap-2`}>
-            <Search size={16} /> Cari
-          </button>
-          {(q || status !== "all" || branch !== "all" || proof !== "all" || university !== "all") && (
-            <Link href="/console/sensus" className="text-label-caps uppercase tracking-wide text-on-surface-variant hover:text-on-background">
-              Reset
-            </Link>
-          )}
-          <span className="ml-auto flex items-center gap-3 text-label-caps uppercase tracking-wide">
-            <span className="text-on-surface-variant">Ekspor {filtered.length} baris</span>
-            <a
-              href={`/api/console/sensus/export?${exportQs}&format=csv`}
-              className="inline-flex items-center gap-1.5 text-primary-container hover:text-primary transition-colors"
-            >
-              <Download size={14} aria-hidden /> CSV
-            </a>
-            <a
-              href={`/api/console/sensus/export?${exportQs}&format=xlsx`}
-              className="inline-flex items-center gap-1.5 text-primary-container hover:text-primary transition-colors"
-            >
-              <Download size={14} aria-hidden /> XLSX
-            </a>
-          </span>
-        </div>
-      </form>
+      <SensusTabs
+        daftar={
+          <>
+            <form method="get" className="bg-surface-container-lowest border border-outline-variant rounded-xl p-4 sm:p-6 mb-6">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                <TextField name="q" label="Cari pengguna" defaultValue={q} placeholder="Nama, paspor, universitas, email" />
+                <SelectField
+                  name="university"
+                  label="Universitas / Kampus"
+                  defaultValue={university}
+                  options={[{ value: "all", label: "Semua kampus" }, ...universities.map((u) => ({ value: u, label: u }))]}
+                />
+                <SelectField
+                  name="branch"
+                  label="Kota"
+                  defaultValue={branch}
+                  options={[{ value: "all", label: "Semua kota" }, ...branches.map((b) => ({ value: b, label: b }))]}
+                />
+                <SelectField
+                  name="status"
+                  label="Kelengkapan"
+                  defaultValue={status}
+                  options={[
+                    { value: "all", label: "Semua" },
+                    { value: "complete", label: "Lengkap" },
+                    { value: "incomplete", label: "Belum lengkap" },
+                  ]}
+                />
+                <SelectField
+                  name="proof"
+                  label="Bukti mahasiswa"
+                  defaultValue={proof}
+                  options={[
+                    { value: "all", label: "Semua" },
+                    { value: "has", label: "Ada kartu / LOA" },
+                    { value: "missing", label: "Belum ada" },
+                  ]}
+                />
+              </div>
+              <div className="flex flex-wrap items-center gap-3 mt-4">
+                <button type="submit" className={`${primaryBtn} inline-flex items-center gap-2`}>
+                  <Search size={16} /> Cari
+                </button>
+                {(q || status !== "all" || branch !== "all" || proof !== "all" || university !== "all") && (
+                  <Link href="/console/sensus" className="text-label-caps uppercase tracking-wide text-on-surface-variant hover:text-on-background">
+                    Reset
+                  </Link>
+                )}
+                <span className="ml-auto flex items-center gap-3 text-label-caps uppercase tracking-wide">
+                  <span className="text-on-surface-variant">Ekspor {filtered.length} baris</span>
+                  <a
+                    href={`/api/console/sensus/export?${exportQs}&format=csv`}
+                    className="inline-flex items-center gap-1.5 text-primary-container hover:text-primary transition-colors"
+                  >
+                    <Download size={14} aria-hidden /> CSV
+                  </a>
+                  <a
+                    href={`/api/console/sensus/export?${exportQs}&format=xlsx`}
+                    className="inline-flex items-center gap-1.5 text-primary-container hover:text-primary transition-colors"
+                  >
+                    <Download size={14} aria-hidden /> XLSX
+                  </a>
+                </span>
+              </div>
+            </form>
 
-      <CollapsibleSection title={`Daftar (${filtered.length})`}>
-        {filtered.length === 0 ? (
-          <p className="text-body-md text-on-surface-variant">Tidak ada sensus yang cocok dengan filter.</p>
-        ) : (
-          <div
-            className={`flex flex-col divide-y divide-outline-variant ${
-              filtered.length > 8 ? "max-h-[32rem] overflow-y-auto" : ""
-            }`}
-          >
-            {filtered.map(({ sensus: s, userName, userEmail }) => {
-              const who = s.fullName || userName || userEmail || "Tanpa nama";
-              const ms = membershipStatus(s);
-              return (
-                <Link
-                  key={s.id}
-                  href={`/console/sensus/${s.id}`}
-                  className="flex items-center gap-4 py-3 hover:bg-surface-container-low/60 transition-colors -mx-2 px-2 rounded-md"
+            <CollapsibleSection title={`Daftar (${filtered.length})`}>
+              {filtered.length === 0 ? (
+                <p className="text-body-md text-on-surface-variant">Tidak ada sensus yang cocok dengan filter.</p>
+              ) : (
+                <div
+                  className={`flex flex-col divide-y divide-outline-variant ${
+                    filtered.length > 8 ? "max-h-[32rem] overflow-y-auto" : ""
+                  }`}
                 >
-                  <div className="min-w-0 flex-1">
-                    <p className="text-body-md text-on-background truncate">{who}</p>
-                    <p className="text-label-caps text-on-surface-variant truncate">
-                      {[s.university, s.branch, s.degreeLevel].filter(Boolean).join(" · ") || "Data belum lengkap"}
-                    </p>
-                  </div>
-                  <span
-                    className="shrink-0 text-on-surface-variant"
-                    title={s.studentCardUrl ? "Ada bukti kartu mahasiswa / LOA" : "Belum ada bukti kartu mahasiswa"}
-                  >
-                    {s.studentCardUrl ? (
-                      <FileCheck2 size={18} className="text-primary-container" />
-                    ) : (
-                      <FileX2 size={18} className="text-outline" />
-                    )}
-                  </span>
-                  <span className={`shrink-0 text-label-caps px-2.5 py-1 rounded-full ${STATUS_BADGE[ms]}`}>
-                    {MEMBERSHIP_LABEL[ms]}
-                  </span>
-                  <span
-                    className={`shrink-0 text-label-caps px-2.5 py-1 rounded-full ${
-                      s.completionStatus === "complete"
-                        ? "bg-primary-container/20 text-on-primary-container"
-                        : "bg-error-container/30 text-on-error-container"
-                    }`}
-                  >
-                    {s.completionStatus === "complete" ? "Lengkap" : "Belum lengkap"}
-                  </span>
-                  <ChevronRight size={16} className="shrink-0 text-on-surface-variant" />
-                </Link>
-              );
-            })}
-          </div>
-        )}
-      </CollapsibleSection>
+                  {filtered.map(({ sensus: s, userName, userEmail }) => {
+                    const who = s.fullName || userName || userEmail || "Tanpa nama";
+                    const ms = membershipStatus(s);
+                    return (
+                      <Link
+                        key={s.id}
+                        href={`/console/sensus/${s.id}`}
+                        className="flex items-center gap-4 py-3 hover:bg-surface-container-low/60 transition-colors -mx-2 px-2 rounded-md"
+                      >
+                        <div className="min-w-0 flex-1">
+                          <p className="text-body-md text-on-background truncate">{who}</p>
+                          <p className="text-label-caps text-on-surface-variant truncate">
+                            {[s.university, s.branch, s.degreeLevel].filter(Boolean).join(" · ") || "Data belum lengkap"}
+                          </p>
+                        </div>
+                        <span
+                          className="shrink-0 text-on-surface-variant"
+                          title={s.studentCardUrl ? "Ada bukti kartu mahasiswa / LOA" : "Belum ada bukti kartu mahasiswa"}
+                        >
+                          {s.studentCardUrl ? (
+                            <FileCheck2 size={18} className="text-primary-container" />
+                          ) : (
+                            <FileX2 size={18} className="text-outline" />
+                          )}
+                        </span>
+                        <span className={`shrink-0 text-label-caps px-2.5 py-1 rounded-full ${STATUS_BADGE[ms]}`}>
+                          {MEMBERSHIP_LABEL[ms]}
+                        </span>
+                        <span
+                          className={`shrink-0 text-label-caps px-2.5 py-1 rounded-full ${
+                            s.completionStatus === "complete"
+                              ? "bg-primary-container/20 text-on-primary-container"
+                              : "bg-error-container/30 text-on-error-container"
+                          }`}
+                        >
+                          {s.completionStatus === "complete" ? "Lengkap" : "Belum lengkap"}
+                        </span>
+                        <ChevronRight size={16} className="shrink-0 text-on-surface-variant" />
+                      </Link>
+                    );
+                  })}
+                </div>
+              )}
+            </CollapsibleSection>
+          </>
+        }
+        analitik={<SensusAnalyticsView questions={analytics} />}
+      />
     </div>
   );
 }
