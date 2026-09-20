@@ -9,6 +9,7 @@ import { getGuide } from "@/lib/guides";
 import { Download, Users as UsersIcon, GraduationCap, MapPin, RotateCcw, ArrowRight } from "lucide-react";
 import Link from "next/link";
 import { TextField, SelectField, FormActions, primaryBtn } from "@/components/console/form";
+import { SummaryList, tally } from "@/components/console/summary-list";
 
 const REPORT_TYPE_LABEL: Record<string, string> = {
   event_attendance: "Kehadiran Acara",
@@ -17,15 +18,6 @@ const REPORT_TYPE_LABEL: Record<string, string> = {
   student_export: "Ekspor Data Mahasiswa",
   custom: "Kustom",
 };
-
-function tally(values: (string | null)[]): { label: string; count: number }[] {
-  const counts = new Map<string, number>();
-  for (const v of values) {
-    const key = v?.trim() || "Tidak diisi";
-    counts.set(key, (counts.get(key) ?? 0) + 1);
-  }
-  return [...counts.entries()].map(([label, count]) => ({ label, count })).sort((a, b) => b.count - a.count);
-}
 
 export default async function ConsoleReportsPage() {
   const session = await requireModuleAccess("reports");
@@ -234,35 +226,6 @@ export default async function ConsoleReportsPage() {
           <SummaryList items={byBranch} />
         </CollapsibleSection>
       </div>
-    </div>
-  );
-}
-
-function SummaryList({ items }: { items: { label: string; count: number }[] }) {
-  if (items.length === 0) return <p className="text-body-md text-on-surface-variant">Belum ada data.</p>;
-  const max = Math.max(...items.map((i) => i.count), 1);
-  return (
-    // Dependency-free bar chart: a proportional fill behind each row reads
-    // instantly without pulling in Recharts (docs recommend it, but the
-    // tallies here are simple enough that CSS does the job).
-    <div className="flex flex-col gap-2">
-      {items.map((item) => (
-        <div key={item.label}>
-          <div className="flex items-center justify-between text-body-md">
-            <span className="text-on-background">{item.label}</span>
-            <span className="text-on-surface-variant">{item.count}</span>
-          </div>
-          <div
-            className="h-1.5 mt-1 rounded-full bg-primary-container/25"
-            role="presentation"
-          >
-            <div
-              className="h-full rounded-full bg-primary-container"
-              style={{ width: `${Math.max(4, Math.round((item.count / max) * 100))}%` }}
-            />
-          </div>
-        </div>
-      ))}
     </div>
   );
 }
