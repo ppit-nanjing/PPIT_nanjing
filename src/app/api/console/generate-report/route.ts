@@ -1,4 +1,4 @@
-import { and, desc, eq, gte, lte } from "drizzle-orm";
+import { and, desc, eq, gte, inArray, lte } from "drizzle-orm";
 import { NextResponse } from "next/server";
 import { auth } from "@/auth";
 import { db } from "@/db";
@@ -14,7 +14,7 @@ import {
   users,
 } from "@/db/schema";
 import { hasModuleAccess } from "@/lib/admin-scope";
-import { HOME_BRANCH, MEMBERSHIP_LABEL, membershipStatus } from "@/lib/membership-status";
+import { HOME_BRANCH_FILTER, HOME_BRANCHES, MEMBERSHIP_LABEL, membershipStatus } from "@/lib/membership-status";
 import { datasetToCsv, datasetToXlsx, type ReportDataset } from "@/lib/report-export";
 import { SENSUS_EXPORT_COLUMNS_FULL, sensusExportRowFull } from "@/lib/sensus-export";
 
@@ -55,15 +55,19 @@ export async function GET(request: Request) {
   const dateFrom = url.searchParams.get("dateFrom") || null;
   const dateTo = url.searchParams.get("dateTo") || null;
   const note = url.searchParams.get("note") || null;
-  // Filter khusus sensus_summary. Default sengaja SEMPIT — cabang Nanjing +
-  // hanya yang lengkap — karena itulah baris yang siap disetor ke PPI Tiongkok
-  // pusat: baris `incomplete` field wajibnya bolong dan ditolak di sana, dan
-  // baris cabang lain jatah rekap cabang mereka (kalau ikut terkirim, jumlah
-  // anggota Nanjing di pusat jadi kembung). "" = semua, untuk yang mau melihat
-  // gambaran penuh.
+  // Filter khusus sensus_summary. Default sengaja SEMPIT — 9 kota naungan kita
+  // + hanya yang lengkap — karena itulah baris yang siap disetor ke PPI
+  // Tiongkok pusat: baris `incomplete` field wajibnya bolong dan ditolak di
+  // sana, dan baris cabang lain jatah rekap cabang mereka (kalau ikut
+  // terkirim, jumlah anggota Nanjing di pusat jadi kembung). "" = semua,
+  // untuk yang mau melihat gambaran penuh. HOME_BRANCH_FILTER ("__home__") =
+  // sentinel untuk "salah satu dari 9 kota kita", bukan satu kota tertentu -
+  // sensus.branch sudah tidak selalu "Nanjing" sejak field itu memakai 9 kota
+  // sendiri (lihat src/lib/membership-status.ts), jadi exact-match ke satu
+  // string dulu akan diam-diam membuang anggota kita di 8 kota lainnya.
   const sensusBranch = url.searchParams.has("sensusBranch")
     ? url.searchParams.get("sensusBranch") || null
-    : HOME_BRANCH;
+    : HOME_BRANCH_FILTER;
   const sensusCompletion = url.searchParams.has("sensusCompletion")
     ? url.searchParams.get("sensusCompletion") || null
     : "complete";
@@ -76,7 +80,7 @@ export async function GET(request: Request) {
     Catatan: note,
   };
   if (type === "sensus_summary") {
-    filters["Cabang"] = sensusBranch ?? "Semua cabang";
+    filters["Cabang"] = sensusBranch === HOME_BRANCH_FILTER ? "Kota kita (9 kota PPIT Nanjing)" : sensusBranch ?? "Semua cabang";
     filters["Kelengkapan"] = sensusCompletion === "complete" ? "Hanya yang lengkap" : "Semua";
   }
 
@@ -173,8 +177,14 @@ export async function GET(request: Request) {
       break;
     }
     case "sensus_summary": {
+      const branchCondition =
+        sensusBranch === HOME_BRANCH_FILTER
+          ? inArray(sensusProfiles.branch, [...HOME_BRANCHES])
+          : sensusBranch
+            ? eq(sensusProfiles.branch, sensusBranch)
+            : null;
       const conditions = [
-        sensusBranch ? eq(sensusProfiles.branch, sensusBranch) : null,
+        branchCondition,
         sensusCompletion === "complete" ? eq(sensusProfiles.completionStatus, "complete") : null,
       ].filter((c) => c !== null);
       const rows = conditions.length

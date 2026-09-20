@@ -1,8 +1,8 @@
-import { desc, eq } from "drizzle-orm";
+import { asc, desc, eq } from "drizzle-orm";
 import { db } from "@/db";
-import { departments, regionalBranches, reports, sensusProfiles, users } from "@/db/schema";
+import { coverageCities, departments, reports, sensusProfiles, users } from "@/db/schema";
 import { hasModuleAccess, requireModuleAccess } from "@/lib/admin-scope";
-import { HOME_BRANCH, MEMBERSHIP_LABEL, membershipStatus } from "@/lib/membership-status";
+import { HOME_BRANCH_FILTER, MEMBERSHIP_LABEL, membershipStatus } from "@/lib/membership-status";
 import { CollapsibleSection } from "@/components/console/collapsible-section";
 import { GuideButton } from "@/components/console/guide-button";
 import { getGuide } from "@/lib/guides";
@@ -35,11 +35,14 @@ export default async function ConsoleReportsPage() {
   const canSensus = hasModuleAccess(session.user.adminScope, "sensus");
   // Perf: all five reads are independent - run them concurrently instead of
   // adding up five serial round trips to the Neon proxy.
-  const [allUsers, allSensus, allDepartments, branchRows, recentReports, guide] = await Promise.all([
+  const [allUsers, allSensus, allDepartments, cityRows, recentReports, guide] = await Promise.all([
     db.select().from(users),
     db.select().from(sensusProfiles),
     db.select().from(departments),
-    db.select({ cityName: regionalBranches.cityName }).from(regionalBranches),
+    // 9 kota naungan PPIT Nanjing (coverage_cities), bukan lagi regionalBranches
+    // (skala cabang nasional PPI Tiongkok) - sensus.branch berhenti memakai
+    // skala itu sejak 2026-09-14, lihat src/lib/membership-status.ts.
+    db.select({ label: coverageCities.label }).from(coverageCities).orderBy(asc(coverageCities.label)),
     db
       .select({ report: reports, generatedByName: users.name })
       .from(reports)
@@ -48,7 +51,7 @@ export default async function ConsoleReportsPage() {
       .limit(20),
     getGuide("laporan"),
   ]);
-  const allBranches = branchRows.map((b) => b.cityName).sort((a, b) => a.localeCompare(b));
+  const allBranches = cityRows.map((c) => c.label);
 
   const completedCount = allSensus.filter((s) => s.completionStatus === "complete").length;
   const byUniversity = tally(allSensus.map((s) => s.university));
@@ -113,12 +116,12 @@ export default async function ConsoleReportsPage() {
               <SelectField
                 name="sensusBranch"
                 label="Kota (Ringkasan Sensus)"
-                defaultValue={HOME_BRANCH}
-                hint={`Default ${HOME_BRANCH} + hanya lengkap = baris siap setor ke pusat.`}
+                defaultValue={HOME_BRANCH_FILTER}
+                hint="Default 9 kota naungan kita + hanya lengkap = baris siap setor ke pusat."
                 options={[
-                  { value: HOME_BRANCH, label: `${HOME_BRANCH} (kota kita)` },
+                  { value: HOME_BRANCH_FILTER, label: "Kota kita (9 kota PPIT Nanjing)" },
                   { value: "", label: "Semua kota" },
-                  ...allBranches.filter((b) => b !== HOME_BRANCH).map((b) => ({ value: b, label: b })),
+                  ...allBranches.map((b) => ({ value: b, label: b })),
                 ]}
               />
               <SelectField
