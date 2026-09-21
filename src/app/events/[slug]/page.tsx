@@ -39,7 +39,23 @@ export default async function EventDetailPage({ params, searchParams }: { params
   const { t, locale } = await getT();
   const [event] = await db.select().from(events).where(eq(events.slug, slug));
   if (!event) notFound();
-  // Belum dirilis = tidak bisa dijangkau dari sisi publik.
+
+  const session = await auth();
+  // Akses panitia untuk acara ini (scanner + tautan ke konsol). getEventAccess
+  // memakai auth() yang sudah di-cache; satu lookup peran+grant tambahan.
+  const eventAccess = session?.user?.id ? await getEventAccess(event.id) : null;
+  // "Kelola di Konsol" untuk siapa pun yang bisa masuk /console/events/[id]:
+  // BPH Kabinet, pemegang modul "events", atau panitia acara ini (mana pun
+  // perannya — console/layout.tsx sudah dilonggarkan untuk kepanitiaan). Orang
+  // yang sama juga dipakai sebagai gerbang PREVIEW acara belum dirilis di bawah.
+  const hasEventConsoleAccess =
+    !!eventAccess &&
+    (eventAccess.isFullAdmin || eventAccess.moduleBridge || eventAccess.role != null);
+
+  // Belum dirilis = tidak bisa dijangkau dari sisi publik, KECUALI BPH Kabinet
+  // atau panitia acara ini sendiri (preview sebelum publish - juga dipakai
+  // untuk acara uji coba yang sengaja dibiarkan draft supaya cuma panitia yang
+  // bisa membukanya).
   //
   // `draft` ikut ditambahkan 2026-08-21. Sebelumnya hanya `scheduled` yang
   // diblokir, padahal draft justru yang belum pernah siap tampil: acara draft
@@ -48,12 +64,11 @@ export default async function EventDetailPage({ params, searchParams }: { params
   // yang tahu URL-nya, lengkap dengan judul, tanggal, dan lokasi. Slug-nya
   // berakhiran acak jadi praktis tak tertebak, tapi itu ketidakcocokan, bukan
   // penjagaan.
-  if (event.status === "scheduled" || event.status === "draft") notFound();
+  if ((event.status === "scheduled" || event.status === "draft") && !hasEventConsoleAccess) notFound();
 
   const seats = await getEventSeats(event);
   const registeredCount = seats.registered;
 
-  const session = await auth();
   let alreadyRegistered = false;
   // Penugasan panitia pengunjung ini pada acara yang sama - kalau ada, form
   // volunteer diganti pemberitahuan + tautan tiket kepanitiaan (QR absensi).
@@ -73,23 +88,16 @@ export default async function EventDetailPage({ params, searchParams }: { params
     if (committee) myCommitteeRole = { divisionName: committee.divisionName, role: committee.role };
   }
 
-  // Akses panitia untuk acara ini (scanner + tautan ke konsol). getEventAccess
-  // memakai auth() yang sudah di-cache; satu lookup peran+grant tambahan.
-  const eventAccess = session?.user?.id ? await getEventAccess(event.id) : null;
   const canScan = eventAccess?.can("event.scanAttendance") ?? false;
-  // "Kelola di Konsol" untuk siapa pun yang bisa masuk /console/events/[id]:
-  // BPH Kabinet, pemegang modul "events", atau panitia acara ini (mana pun
-  // perannya — console/layout.tsx sudah dilonggarkan untuk kepanitiaan).
-  const hasEventConsoleAccess =
-    !!eventAccess &&
-    (eventAccess.isFullAdmin || eventAccess.moduleBridge || eventAccess.role != null);
 
   const now = new Date();
   const deadlinePassed = event.registrationDeadline ? new Date(event.registrationDeadline) < now : false;
   // Penuh = pagu total acara tercapai ATAU setiap kategori tarif berkuota
   // sudah penuh (mis. WIF: Freshmen 130 + Non-freshmen 20).
   const isFull = seats.isFull;
-  const canRegister = event.status === "published" && !isFull && !deadlinePassed;
+  // Draft/scheduled + akses konsol = mode preview: tombol daftar tetap aktif
+  // supaya panitia bisa menguji alur pendaftaran sebelum acaranya tayang.
+  const canRegister = (event.status === "published" || hasEventConsoleAccess) && !isFull && !deadlinePassed;
 
   // Wajah pasca-acara: dipicu status "completed" ATAU tanggal mulai sudah lewat
   // (halaman daftar acara juga pakai startAt < now, jadi kartu "lampau" tidak

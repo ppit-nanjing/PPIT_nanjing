@@ -28,9 +28,11 @@ export default async function EventScanPage({
 
   const [event] = await db.select().from(events).where(eq(events.slug, slug));
   if (!event) notFound();
-  // Belum dirilis = tidak terjangkau, sama seperti halaman acara publik.
-  if (event.status === "scheduled" || event.status === "draft") notFound();
 
+  // requireEventCapability sudah menggerbangi ini lebih ketat daripada gerbang
+  // draft/scheduled halaman publik (butuh capability event.scanAttendance
+  // eksplisit, bukan cuma "sudah login") - jadi panitia acara ini tetap bisa
+  // scan absensi walau acaranya masih draft (mis. uji coba pendaftaran).
   const access = await requireEventCapability(event.id, "event.scanAttendance");
 
   // Read-only lookup only - the actual check-in mutation happens in the

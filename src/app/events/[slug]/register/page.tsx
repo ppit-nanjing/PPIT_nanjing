@@ -15,6 +15,7 @@ import {
 } from "@/db/schema";
 import { NON_STUDENT_BRANCH } from "@/lib/membership-status";
 import { hasCompletedSensus } from "@/lib/sensus-gate";
+import { getEventAccess } from "@/lib/event-access";
 import { getEventSeats } from "@/lib/event-capacity";
 import { feeTierAt, amountForTier, hasEarlyBirdDiscount } from "@/lib/event-fee";
 import { SiteNav } from "@/components/site-nav";
@@ -56,9 +57,15 @@ export default async function EventRegisterPage({
 
   const [event] = await db.select().from(events).where(eq(events.slug, slug));
   if (!event) notFound();
-  if (event.status === "scheduled" || event.status === "draft") notFound();
 
   const session = await auth();
+  // Sama seperti halaman detail publik: draft/scheduled hanya bisa dijangkau
+  // BPH Kabinet atau panitia acara ini sendiri (mode preview).
+  const eventAccess = session?.user?.id ? await getEventAccess(event.id) : null;
+  const hasEventConsoleAccess =
+    !!eventAccess && (eventAccess.isFullAdmin || eventAccess.moduleBridge || eventAccess.role != null);
+  if ((event.status === "scheduled" || event.status === "draft") && !hasEventConsoleAccess) notFound();
+
   if (!session?.user?.id) redirect(`/login?returnTo=${encodeURIComponent(registerHref)}`);
   const userId = session.user.id;
 
@@ -78,8 +85,9 @@ export default async function EventRegisterPage({
   // Pendaftaran tidak dibuka / penuh / lewat tenggat: kembalikan ke halaman
   // acara — di sana pesannya (penuh / tenggat / belum dibuka) sudah tampil.
   // `seats.isFull` = pagu total acara tercapai ATAU setiap kategori tarif
-  // berkuota sudah penuh.
-  if (event.status !== "published" || seats.isFull || deadlinePassed) redirect(eventHref);
+  // berkuota sudah penuh. Draft/scheduled + akses konsol tetap boleh lewat
+  // (mode preview - sama seperti canRegister di halaman detail publik).
+  if ((event.status !== "published" && !hasEventConsoleAccess) || seats.isFull || deadlinePassed) redirect(eventHref);
 
   // Cabang hanya ditanyakan ke peserta yang sensusnya belum lengkap dan hanya
   // bila biodata lengkap tidak dikumpulkan (di sana kota/ranting sudah ditanya).

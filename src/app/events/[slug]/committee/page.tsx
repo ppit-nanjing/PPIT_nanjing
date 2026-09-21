@@ -36,8 +36,6 @@ export default async function CommitteeTicketPage({ params }: { params: Promise<
 
   const [event] = await db.select().from(events).where(eq(events.slug, slug));
   if (!event) notFound();
-  // Sama dengan halaman detail publik: yang belum dirilis tidak terjangkau.
-  if (event.status === "scheduled" || event.status === "draft") notFound();
 
   const [assignment] = await db
     .select({
@@ -51,6 +49,10 @@ export default async function CommitteeTicketPage({ params }: { params: Promise<
     .leftJoin(eventDivisions, eq(eventCommittee.divisionId, eventDivisions.id))
     .where(and(eq(eventCommittee.eventId, event.id), eq(eventCommittee.userId, session.user.id)))
     .limit(1);
+
+  // Sama dengan halaman detail publik: yang belum dirilis tidak terjangkau -
+  // KECUALI panitia acara ini sendiri (mode preview, mis. acara uji coba).
+  if ((event.status === "scheduled" || event.status === "draft") && !assignment) notFound();
 
   // Bukan panitia acara ini - bukan urusannya di sini.
   if (!assignment) redirect(`/events/${slug}`);
