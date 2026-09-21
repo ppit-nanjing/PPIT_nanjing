@@ -111,11 +111,11 @@ async function seed() {
   if (existing) {
     await db.update(events).set(values).where(eq(events.id, existing.id));
     eventId = existing.id;
-    console.log(`Acara uji diperbarui & dipublikasikan: ${values.title}`);
+    console.log(`Acara uji diperbarui (draft, preview only): ${values.title}`);
   } else {
     const [created] = await db.insert(events).values(values).returning({ id: events.id });
     eventId = created.id;
-    console.log(`Acara uji dibuat & dipublikasikan: ${values.title}`);
+    console.log(`Acara uji dibuat (draft, preview only): ${values.title}`);
   }
 
   let qBaru = 0;
