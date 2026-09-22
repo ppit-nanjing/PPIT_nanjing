@@ -104,6 +104,14 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
 - `CRON_SECRET` must protect scheduled publishing in production. External integrations should fail clearly and without corrupting local state when credentials are missing.
 - Treat uploads and external URLs as untrusted input. Keep authorization, same-origin checks, allowlists, size limits, sanitized names, and safe redirects at the server boundary.
 
+## Documenting a shipped feature
+
+Every feature that changes what a pengurus does or what a member sees needs documentation as part of being "done". This project already has two documentation systems — do not create a third.
+
+1. Write/update `docs/<Nama Fitur>.md` (same pattern as `docs/Event Flow.md`) — for the next Divisi Teknologi. Add it to `docs/README.md` in the same commit.
+2. Write/update an article in the Help Center (`/console/docs/new`) — for the next pengurus. Turn on "Tampilkan di halaman publik" if it's relevant to anggota.
+3. For complex/risky operational processes (e.g. equipment lending, payment verification) — download that article as Word and hand it to BPH/pusat as the official SOP. Do not maintain a separate Word document by hand.
+
 ## Validation and completion
 
 - There is currently no automated test runner or test suite. Do not claim tests passed when only lint or type checking ran, and do not introduce a test framework for an unrelated task.

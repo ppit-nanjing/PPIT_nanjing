@@ -1,6 +1,6 @@
 import { upsertHelpArticle } from "@/app/actions/admin-docs";
 import { CollapsibleSection } from "@/components/console/collapsible-section";
-import { TextField, SelectField, TextAreaField, FormActions, primaryBtn } from "@/components/console/form";
+import { TextField, SelectField, TextAreaField, ToggleSwitch, FormActions, primaryBtn } from "@/components/console/form";
 import { SubmitButton } from "@/components/console/submit-button";
 
 const SECTIONS = ["Sering Dipakai", "Sering Membingungkan"];
@@ -19,6 +19,11 @@ export default function NewHelpArticlePage() {
             options={SECTIONS.map((s) => ({ value: s, label: s }))}
           />
           <TextAreaField name="content" label="Isi Panduan" rows={10} />
+          <ToggleSwitch
+            name="isPublic"
+            label="Tampilkan di halaman publik (/help)"
+            hint="Nyalakan kalau panduan ini relevan buat anggota/pengguna umum, bukan cuma pengurus."
+          />
           <FormActions>
             <SubmitButton successMessage="Panduan dipublikasikan." className={primaryBtn}>Publikasikan</SubmitButton>
           </FormActions>

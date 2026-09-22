@@ -46,6 +46,7 @@ export const id = {
   "footer.about": "Tentang",
   "footer.aboutLinks.structure": "Struktur Organisasi",
   "footer.aboutLinks.sensus": "Isi Sensus",
+  "footer.aboutLinks.help": "Pusat Bantuan",
   "footer.aboutLinks.terms": "Ketentuan",
   "footer.aboutLinks.privacy": "Privasi",
   "footer.aboutLinks.adart": "AD/ART",
@@ -322,6 +323,15 @@ export const id = {
   "news.readAlso": "Baca Juga",
   "news.srCount": "{{n}} berita{{cat}}",
   "news.cardRead": "Baca",
+
+  // Help (panduan publik - subset artikel Help Center /console/docs)
+  "help.title": "Pusat Bantuan",
+  "help.intro": "Panduan singkat seputar fitur-fitur PPIT Nanjing untuk anggota dan pengguna umum.",
+  "help.emptyTitle": "Belum ada panduan publik",
+  "help.emptyDesc": "Panduan untuk anggota/pengguna umum akan muncul di sini setelah pengurus mempublikasikannya.",
+  "help.back": "Kembali ke Pusat Bantuan",
+  "help.updated": "Diperbarui {{date}}",
+  "help.noContent": "Isi panduan ini belum ditulis.",
 
   // Gallery
   "gallery.title": "Galeri",

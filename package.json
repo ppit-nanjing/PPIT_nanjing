@@ -20,6 +20,7 @@
     "@vercel/blob": "^2.8.0",
     "@xyflow/react": "^12.11.3",
     "bcryptjs": "^3.0.3",
+    "docx": "^9.7.1",
     "drizzle-orm": "^0.45.2",
     "exceljs": "^4.4.0",
     "googleapis": "^176.0.0",
