@@ -5,6 +5,9 @@
 ## 📍 Overview
 
 - [Overview](./Overview.md) — ringkasan proyek, status, langkah selanjutnya
+- [Goal.md](./Goal.md) — working checklist prototype-parity, durable memory lintas context reset
+- [Progress & Handoff.md](./Progress%20&%20Handoff.md) — living status doc, mulai di sini kalau ambil alih sesi/dev baru
+- [Perbandingan dengan PPIT Chongqing.md](./Perbandingan%20dengan%20PPIT%20Chongqing.md) — audit fitur dibanding cabang lain
 - [PRODUCT.md](../PRODUCT.md) — product truth (users, purpose, positioning, constraints, locked brand) — for the impeccable skill
 - [DESIGN.md](../DESIGN.md) — the **real** visual system extracted from `globals.css` + components (via `/impeccable document`, 2026-09-09). The `Design System/*` notes below are pre-2026-08 and describe a superseded palette
 
@@ -32,6 +35,12 @@
 
 - [Tech Stack](./Tech%20Stack.md) — Next.js + Neon Postgres + Vercel, termasuk catatan reachability Tiongkok
 
+## 🔧 Operations & Migration
+
+- [Setup Env & Migrasi Akun.md](./Setup%20Env%20&%20Migrasi%20Akun.md) — daftar lengkap environment variable + urutan migrasi layanan (GitHub, Vercel, Neon, Google Cloud) ke akun Gmail organisasi
+- [Migrasi Akun ke PPIT Nanjing.md](./Migrasi%20Akun%20ke%20PPIT%20Nanjing.md) — kondisi tiap layanan sebelum dipindah dari akun pribadi
+- [Migrasi Subdomain ppitiongkok.md](./Migrasi%20Subdomain%20ppitiongkok.md) — status migrasi ke `nanjing.ppitiongkok.com`, menunggu DNS dari pusat
+
 ## 🖥️ Screens — Public Website
 
 - [Homepage & Login](./Homepage%20&%20Login.md)
@@ -47,6 +56,7 @@
 
 - [Admin Dashboard](./Admin%20Dashboard.md)
 - [User & Role Management](./User%20&%20Role%20Management.md)
+- [Konfirmasi Akses Admin.md](./Konfirmasi%20Akses%20Admin.md) — tabel `adminModuleScope` per divisi, dikonfirmasi langsung dari database produksi
 - [Organization Management](./Organization%20Management.md)
 - [Event Management](./Event%20Management.md)
 - [Inventory Management](./Inventory%20Management.md)

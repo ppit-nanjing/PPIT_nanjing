@@ -34,15 +34,19 @@ export default async function ConsoleLayout({ children }: { children: React.Reac
       {/* Toast global untuk seluruh /console/* - dipicu SubmitButton/ConfirmButton
           setelah sebuah server action selesai (lihat komponen masing-masing). */}
       <Toaster position="top-center" richColors closeButton />
-      <ConsoleSidebar
-        userName={session.user.name ?? "Admin"}
-        scope={session.user.adminScope}
-        isCommittee={onCommittee}
-      />
+      {/* print:hidden - halaman console dicetak (mis. panduan Help Center jadi
+          PDF) seharusnya cuma menampilkan konten, bukan navigasi admin. */}
+      <div className="print:hidden">
+        <ConsoleSidebar
+          userName={session.user.name ?? "Admin"}
+          scope={session.user.adminScope}
+          isCommittee={onCommittee}
+        />
+      </div>
       {/* Fluid, bukan max-width terpusat: begitu sidebar dilipat, konten ikut
           memakai ruangnya - bukan menyisakan kosong kiri-kanan. */}
       <main className="flex-1 min-w-0">
-        <div className="w-full px-4 sm:px-6 lg:px-10 py-6 lg:py-8">{children}</div>
+        <div className="w-full px-4 sm:px-6 lg:px-10 py-6 lg:py-8 print:p-0">{children}</div>
       </main>
     </div>
   );

@@ -1017,6 +1017,11 @@ export const helpArticles = pgTable("help_articles", {
   content: text("content"),
   authorId: uuid("author_id").references(() => users.id),
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
+  // Artikel Help Center defaultnya internal (cuma kebaca pengurus di
+  // /console/docs). Nyalakan ini untuk yang relevan buat anggota/pengguna
+  // umum - baru muncul di halaman publik /help. Default false = semua artikel
+  // lama (panduan operasional console) tetap tertutup, tanpa migrasi data.
+  isPublic: boolean("is_public").notNull().default(false),
 });
 
 export const releaseNotes = pgTable("release_notes", {

@@ -43,6 +43,7 @@ export const en = {
   "footer.about": "About",
   "footer.aboutLinks.structure": "Organization Structure",
   "footer.aboutLinks.sensus": "Fill Census",
+  "footer.aboutLinks.help": "Help Center",
   "footer.aboutLinks.terms": "Terms",
   "footer.aboutLinks.privacy": "Privacy",
   "footer.aboutLinks.adart": "AD/ART",
@@ -319,6 +320,15 @@ export const en = {
   "news.readAlso": "Read Also",
   "news.srCount": "{{n}} articles{{cat}}",
   "news.cardRead": "Read",
+
+  // Help (public guides - subset of the /console/docs Help Center articles)
+  "help.title": "Help Center",
+  "help.intro": "Short guides for PPIT Nanjing's features, for members and general visitors.",
+  "help.emptyTitle": "No public guides yet",
+  "help.emptyDesc": "Guides for members and general visitors will appear here once an admin publishes one.",
+  "help.back": "Back to Help Center",
+  "help.updated": "Updated {{date}}",
+  "help.noContent": "This guide has no content yet.",
 
   // Gallery
   "gallery.title": "Gallery",
