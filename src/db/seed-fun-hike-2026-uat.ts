@@ -1,6 +1,6 @@
 /**
  * Salinan UJI COBA acara "Fun Hike with PINYX" (`fun-hike-pinyx-2026`, tetap
- * draft) khusus buat admin menguji alur pendaftaran end-to-end (login + 6
+ * draft) khusus buat admin menguji alur pendaftaran end-to-end (login + 10
  * pertanyaan kustom + halaman tiket) TANPA menyentuh acara aslinya atau data
  * pendaftarnya. Sama seperti seed-wif-uat.ts.
  *
@@ -8,7 +8,9 @@
  * Hapus lagi: npx tsx --env-file=.env src/db/seed-fun-hike-2026-uat.ts --remove
  *
  * IDEMPOTEN — dijalankan ulang tidak menggandakan; acara dicocokkan lewat slug
- * tetap `fun-hike-pinyx-2026-uat`.
+ * tetap `fun-hike-pinyx-2026-uat`. Label pertanyaan lama (lihat
+ * OBSOLETE_LABELS) dihapus eksplisit supaya form uji tidak menampilkan
+ * pertanyaan ganda peninggalan draf sebelumnya.
  *
  * Bedanya dengan acara asli:
  *  - status `draft` — BUKAN dipublikasikan ke publik. Sengaja dibiarkan draft
@@ -25,7 +27,13 @@
  *
  * requiresBiodata & requiresSensus SENGAJA disamakan dengan acara asli (false
  * keduanya) — justru itu yang mau diverifikasi: pendaftar TIDAK diminta isi
- * biodata/sensus dulu, cukup login + jawab 6 pertanyaan di bawah.
+ * biodata/sensus dulu, cukup login + jawab 10 pertanyaan di bawah (termasuk
+ * "Nama Lengkap" sebagai pertanyaan kustom sendiri, BUKAN otomatis dari nama
+ * akun - lihat catatan panjang di seed-fun-hike-2026.ts perihal tiga
+ * pernyataan tanggung jawab yang wajib disetujui satu-satu).
+ *
+ * QUESTIONS di bawah WAJIB disamakan persis dengan seed-fun-hike-2026.ts -
+ * tujuan UAT ini justru menguji form yang akan dipakai peserta sungguhan.
  *
  * Setelah admin selesai menguji: jalankan dengan `--remove`.
  */
@@ -36,23 +44,51 @@ import { events, eventQuestions } from "./schema";
 const SLUG = "fun-hike-pinyx-2026-uat";
 
 const QUESTIONS: { label: string; type: "text" | "radio"; options?: string; required: boolean }[] = [
-  { label: "Asal kota (di China)", type: "text", required: true },
-  { label: "Asal kampus", type: "text", required: true },
+  { label: "Nama Lengkap", type: "text", required: true },
+  { label: "Asal Kota di Tiongkok", type: "text", required: true },
+  { label: "Asal Universitas/Kampus", type: "text", required: true },
   { label: "WeChat ID", type: "text", required: true },
-  { label: "Any medical conditions?", type: "radio", options: "Yes\nNo", required: true },
-  { label: "Emergency contact", type: "text", required: true },
+  {
+    label: "Apakah Anda memiliki kondisi medis yang perlu kami ketahui?",
+    type: "radio",
+    options: "Ya\nTidak",
+    required: true,
+  },
+  { label: "Jika Ya, mohon jelaskan", type: "text", required: false },
+  { label: "Kontak Darurat (Nama - Hubungan - Nomor Telepon)", type: "text", required: true },
+  {
+    label: "Saya bersedia membawa air minum atau minuman pribadi yang cukup selama kegiatan berlangsung.",
+    type: "radio",
+    options: "Saya setuju",
+    required: true,
+  },
   {
     label:
-      "I understand that I am responsible for bringing my own drinking water, taking care of my personal belongings, and ensuring my own safety by staying cautious throughout the hike.",
+      "Saya bersedia menjaga barang-barang pribadi saya. Segala bentuk kehilangan atau kerusakan barang pribadi bukan merupakan tanggung jawab PPIT Nanjing.",
     type: "radio",
-    options: "I understand and agree",
+    options: "Saya setuju",
+    required: true,
+  },
+  {
+    label:
+      "Saya bertanggung jawab atas keselamatan diri sendiri dengan selalu berhati-hati, mengikuti arahan panitia, dan menghindari tindakan atau bercanda yang dapat membahayakan diri sendiri maupun peserta lainnya selama kegiatan hiking berlangsung.",
+    type: "radio",
+    options: "Saya setuju",
     required: true,
   },
 ];
 
+const OBSOLETE_LABELS = [
+  "Asal kota (di China)",
+  "Asal kampus",
+  "Any medical conditions?",
+  "Emergency contact",
+  "I understand that I am responsible for bringing my own drinking water, taking care of my personal belongings, and ensuring my own safety by staying cautious throughout the hike.",
+];
+
 const DESCRIPTION = [
   "⚠️ INI HALAMAN UJI COBA — bukan pendaftaran Fun Hike yang sebenarnya. Dibuat",
-  "untuk admin menguji alur pendaftaran (6 pertanyaan kustom, tanpa gerbang",
+  "untuk admin menguji alur pendaftaran (10 pertanyaan kustom, tanpa gerbang",
   "sensus/biodata). Kalau kamu bukan admin yang sedang diminta menguji,",
   "abaikan halaman ini.",
   "",
@@ -138,6 +174,16 @@ async function seed() {
   }
   console.log(`Pertanyaan: ${qBaru} dibuat, ${QUESTIONS.length - qBaru} diperbarui.`);
 
+  let qHapus = 0;
+  for (const label of OBSOLETE_LABELS) {
+    const deleted = await db
+      .delete(eventQuestions)
+      .where(and(eq(eventQuestions.eventId, eventId), eq(eventQuestions.label, label)))
+      .returning({ id: eventQuestions.id });
+    qHapus += deleted.length;
+  }
+  if (qHapus > 0) console.log(`Pertanyaan draf lama dihapus: ${qHapus}.`);
+
   console.log("");
   console.log(`URL (preview only, draft) : /events/${SLUG}`);
   console.log(`Konsol acara              : /console/events/${eventId}  (roster + export CSV + ubah status)`);
@@ -145,7 +191,7 @@ async function seed() {
   console.log("Catatan buat penguji:");
   console.log("  - Cuma BPH Kabinet & panitia acara aslinya yang bisa membuka link di atas (draft + gerbang preview).");
   console.log("  - Butuh login akun portal dulu (event ini tidak requiresSensus/requiresBiodata).");
-  console.log("  - Isi 6 pertanyaan, submit, lalu cek halaman tiket muncul benar.");
+  console.log("  - Isi 10 pertanyaan (termasuk 3 pernyataan tanggung jawab terpisah), submit, lalu cek halaman tiket muncul benar.");
   console.log("  - Selesai uji: jalankan skrip ini dengan --remove.");
 }
 

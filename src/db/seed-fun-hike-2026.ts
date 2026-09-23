@@ -6,7 +6,9 @@
  *
  * IDEMPOTEN — dijalankan ulang tidak menggandakan apa pun; acara dicari lewat
  * slug tetap `fun-hike-pinyx-2026`, pertanyaan kustom dicocokkan lewat label
- * lalu di-update, bukan disisipkan lagi.
+ * lalu di-update, bukan disisipkan lagi. Label lama yang sudah tidak dipakai
+ * (lihat OBSOLETE_LABELS) dihapus eksplisit supaya form tidak menampilkan
+ * pertanyaan ganda peninggalan draf sebelumnya.
  *
  * YANG TIDAK DILAKUKAN SKRIP INI:
  * 1. TIDAK mempublikasikan acaranya — statusnya `draft`, jadi tidak muncul di
@@ -15,16 +17,26 @@
  * 2. TIDAK mengunggah gambar sampul (cover_image_url) atau QR apa pun — poster
  *    yang dibagikan panitia belum berupa file gambar, jadi kosong dulu.
  *
- * Catatan bentuk form:
- * - requiresBiodata = false (bukan requiresBiodata seperti WIF): poster tidak
- *   minta paspor / bukti mahasiswa, cuma nama (otomatis dari akun yang login),
- *   asal kota, asal kampus, WeChat ID, kondisi medis, kontak darurat, dan
- *   pernyataan tanggung jawab pribadi — jadi lima yang terakhir dipasang
- *   sebagai event_questions kustom, bukan blok biodata penuh.
- * - Tidak ada tipe "checkbox" di event_question_type (schema.ts) — pernyataan
- *   tanggung jawab pribadi dibuat sebagai radio wajib dengan SATU opsi
- *   ("I understand and agree"), yang secara fungsional memaksa persetujuan
- *   sebelum pendaftaran valid, sama seperti checkbox wajib centang.
+ * Catatan bentuk form (disamakan persis dengan mockup form pendaftaran yang
+ * dibagikan panitia 2026-09-23):
+ * - requiresBiodata = false (bukan requiresBiodata seperti WIF): tidak minta
+ *   paspor / bukti mahasiswa. Semua pertanyaan di QUESTIONS, termasuk "Nama
+ *   Lengkap" sendiri, dipasang sebagai event_questions kustom - BUKAN diambil
+ *   otomatis dari nama akun, karena beberapa akun terdaftar dengan
+ *   nama/username yang bukan nama panjang (mis. "Dustinwijaya2").
+ * - Tidak ada tipe "checkbox" di event_question_type (schema.ts). Mockup
+ *   punya TIGA pernyataan tanggung jawab terpisah yang WAJIB disetujui semua
+ *   (bukan cuma satu dari tiga) - eventQuestionType "multiselect" hanya
+ *   memvalidasi "minimal satu terisi" (lihat answersJson check di
+ *   src/app/actions/events.ts), tidak "semua opsi terpilih", jadi tiap
+ *   pernyataan dipasang sebagai radio wajib TERSENDIRI dengan SATU opsi
+ *   ("Saya setuju") - orang harus mengklik ketiganya satu-satu, fungsinya
+ *   sama seperti tiga checkbox wajib centang.
+ * - Pertanyaan kondisi medis + kontak darurat sekarang dalam Bahasa Indonesia
+ *   (mockup panitia), plus satu pertanyaan lanjutan opsional "Jika Ya, mohon
+ *   jelaskan" yang cuma relevan kalau jawaban kondisi medisnya "Ya" - form
+ *   tidak punya logika show/hide bersyarat, jadi field ini selalu tampil tapi
+ *   TIDAK wajib.
  * - requiresSensus = false: acara sosial terbuka untuk "teman-teman Indonesia
  *   di Nanjing", bukan cuma yang sensusnya sudah lengkap.
  * - Gratis (isPaid = false), tanpa kategori tarif / struktur kepanitiaan.
@@ -36,18 +48,48 @@ import { events, eventQuestions } from "./schema";
 const SLUG = "fun-hike-pinyx-2026";
 
 const QUESTIONS: { label: string; type: "text" | "radio"; options?: string; required: boolean }[] = [
-  { label: "Asal kota (di China)", type: "text", required: true },
-  { label: "Asal kampus", type: "text", required: true },
+  { label: "Nama Lengkap", type: "text", required: true },
+  { label: "Asal Kota di Tiongkok", type: "text", required: true },
+  { label: "Asal Universitas/Kampus", type: "text", required: true },
   { label: "WeChat ID", type: "text", required: true },
-  { label: "Any medical conditions?", type: "radio", options: "Yes\nNo", required: true },
-  { label: "Emergency contact", type: "text", required: true },
   {
-    label:
-      "I understand that I am responsible for bringing my own drinking water, taking care of my personal belongings, and ensuring my own safety by staying cautious throughout the hike.",
+    label: "Apakah Anda memiliki kondisi medis yang perlu kami ketahui?",
     type: "radio",
-    options: "I understand and agree",
+    options: "Ya\nTidak",
     required: true,
   },
+  { label: "Jika Ya, mohon jelaskan", type: "text", required: false },
+  { label: "Kontak Darurat (Nama - Hubungan - Nomor Telepon)", type: "text", required: true },
+  {
+    label: "Saya bersedia membawa air minum atau minuman pribadi yang cukup selama kegiatan berlangsung.",
+    type: "radio",
+    options: "Saya setuju",
+    required: true,
+  },
+  {
+    label:
+      "Saya bersedia menjaga barang-barang pribadi saya. Segala bentuk kehilangan atau kerusakan barang pribadi bukan merupakan tanggung jawab PPIT Nanjing.",
+    type: "radio",
+    options: "Saya setuju",
+    required: true,
+  },
+  {
+    label:
+      "Saya bertanggung jawab atas keselamatan diri sendiri dengan selalu berhati-hati, mengikuti arahan panitia, dan menghindari tindakan atau bercanda yang dapat membahayakan diri sendiri maupun peserta lainnya selama kegiatan hiking berlangsung.",
+    type: "radio",
+    options: "Saya setuju",
+    required: true,
+  },
+];
+
+// Label draf lama (versi sebelum mockup resmi 2026-09-23) yang digantikan oleh
+// QUESTIONS di atas - dihapus supaya tidak menggandakan pertanyaan di form.
+const OBSOLETE_LABELS = [
+  "Asal kota (di China)",
+  "Asal kampus",
+  "Any medical conditions?",
+  "Emergency contact",
+  "I understand that I am responsible for bringing my own drinking water, taking care of my personal belongings, and ensuring my own safety by staying cautious throughout the hike.",
 ];
 
 const DESCRIPTION = [
@@ -138,6 +180,16 @@ async function main() {
     }
   }
   console.log(`Pertanyaan: ${qBaru} dibuat, ${QUESTIONS.length - qBaru} diperbarui.`);
+
+  let qHapus = 0;
+  for (const label of OBSOLETE_LABELS) {
+    const deleted = await db
+      .delete(eventQuestions)
+      .where(and(eq(eventQuestions.eventId, eventId), eq(eventQuestions.label, label)))
+      .returning({ id: eventQuestions.id });
+    qHapus += deleted.length;
+  }
+  if (qHapus > 0) console.log(`Pertanyaan draf lama dihapus: ${qHapus}.`);
 
   console.log("");
   console.log("Langkah berikutnya, lewat /console/events:");
