@@ -235,6 +235,8 @@ export const en = {
   "events.regErrCategoryFull": "The fee category you picked just filled up — choose another one.",
   "events.regErrGeneric": "Registration couldn't be processed. Check your entries and submit again.",
   "events.back": "Back to Events",
+  "events.share": "Share",
+  "events.shareCopied": "Link copied",
   "events.sensusOnly": "Sensus participants only",
   "events.agenda": "Event Agenda",
   "events.gallery": "Gallery",
