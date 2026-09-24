@@ -211,6 +211,11 @@ export default async function ConsoleEventDetailPage({ params }: { params: Promi
   // WeChat ID + kategori/nominal tarif + status keanggotaan + status check-in.
   const canSeeRegistrantDetail = access.isFullAdmin;
 
+  // Batalkan/pulihkan pendaftaran — DIPISAH dari canSeeRegistrantDetail di
+  // atas: BPH Panitia acara ini (ketua/wakil/sekretaris/supervisor) boleh
+  // membatalkan pendaftaran tanpa ikut melihat biodata lengkap/ekspor CSV.
+  const canManageRegistrants = can("event.manageRegistrants");
+
   // Verifikasi pembayaran = data keuangan - digerbang event.manageFinance
   // (grant "Keuangan" per divisi + BPH Panitia + BPH Kabinet). Diturunkan dari
   // `registrations` yang sudah diambil; hanya render-nya yang digerbang.
@@ -240,6 +245,12 @@ export default async function ConsoleEventDetailPage({ params }: { params: Promi
     : [];
 
   const attended = registrations.filter((r) => r.reg.status === "attended").length;
+  // "Terdaftar" di ringkasan section HARUS senada dengan getEventSeats() yang
+  // dipakai halaman publik (notCancelled() di event-capacity.ts) - batalkan
+  // satu pendaftaran seharusnya langsung mengurangi angka ini juga, bukan
+  // cuma yang di halaman publik. registrations.length mentah dulu dipakai
+  // langsung di sini dan diam-diam tidak ikut turun.
+  const activeRegistrationCount = registrations.filter((r) => r.reg.status !== "cancelled").length;
   // Berhak sertifikat kehadiran = pendaftar yang diterima: confirmed maupun
   // attended (pending belum diterima, cancelled batal). Harus sinkron dengan
   // aturan di issueParticipantCertificates supaya angkanya tidak menipu.
@@ -896,7 +907,7 @@ export default async function ConsoleEventDetailPage({ params }: { params: Promi
       )}
 
       {can("event.viewRegistrants") && (
-      <CollapsibleSection title="Daftar Pendaftar" description={`${registrations.length} terdaftar · ${attended} hadir`}>
+      <CollapsibleSection title="Daftar Pendaftar" description={`${activeRegistrationCount} terdaftar · ${attended} hadir`}>
         {registrations.length > 0 && canSeeRegistrantDetail && (
           <a
             href={`/api/console/events/${id}/registrations/export`}
@@ -915,6 +926,7 @@ export default async function ConsoleEventDetailPage({ params }: { params: Promi
         <RegistrationList
           eventId={id}
           detail={canSeeRegistrantDetail}
+          canCancel={canManageRegistrants}
           questions={questions.map((q) => ({ id: q.id, label: q.label }))}
           registrations={registrations.map((r) => ({
             id: r.reg.id,

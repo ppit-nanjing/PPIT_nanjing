@@ -82,6 +82,7 @@ export function RegistrationList({
   registrations,
   questions = [],
   detail = false,
+  canCancel = false,
 }: {
   eventId: string;
   registrations: Registration[];
@@ -90,6 +91,10 @@ export function RegistrationList({
   // asal, tanggal. false (default) = panitia lain → nama + WeChat + tarif +
   // status keanggotaan + check-in saja.
   detail?: boolean;
+  // Batalkan/pulihkan pendaftaran - SENGAJA independen dari `detail`: BPH
+  // Panitia acara ini boleh membatalkan pendaftaran walau cuma lihat versi
+  // ringkas (lihat event.manageRegistrants di event-capabilities.ts).
+  canCancel?: boolean;
 }) {
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
@@ -146,14 +151,15 @@ export function RegistrationList({
     });
   }
 
-  // Batalkan / pulihkan pendaftaran — hanya dirender kalau `detail` (BPH Kabinet
-  // + Divisi Teknologi). Server action mengecek lagi (isFullAdmin).
+  // Batalkan / pulihkan pendaftaran — hanya dirender kalau `canCancel` (BPH
+  // Kabinet + Divisi Teknologi, atau BPH Panitia acara ini). Server action
+  // mengecek lagi (event.manageRegistrants).
   async function toggleCancelled(registrationId: string, cancelled: boolean) {
     const res = await setRegistrationCancelled(registrationId, eventId, cancelled);
     if (!res.ok) {
       toast.error(
         res.reason === "forbidden"
-          ? "Hanya BPH Kabinet & Divisi Teknologi yang bisa membatalkan pendaftaran."
+          ? "Kamu tidak punya akses untuk membatalkan pendaftaran acara ini."
           : "Pendaftaran tidak ditemukan. Muat ulang halaman.",
       );
       return;
@@ -314,7 +320,7 @@ export function RegistrationList({
               </div>
               <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
                 <CheckInButton r={r} />
-                {detail && r.status !== "cancelled" && (
+                {canCancel && r.status !== "cancelled" && (
                   <ConfirmButton
                     onConfirm={() => toggleCancelled(r.id, true)}
                     message={`Batalkan pendaftaran ${r.userName ?? "peserta ini"}? Status jadi "Dibatalkan", slot kuotanya kembali, dan QR check-in-nya berhenti berlaku. Bisa dipulihkan lagi.`}
@@ -326,7 +332,7 @@ export function RegistrationList({
                     <Ban size={13} aria-hidden /> Batalkan pendaftaran
                   </ConfirmButton>
                 )}
-                {detail && r.status === "cancelled" && (
+                {canCancel && r.status === "cancelled" && (
                   <button
                     type="button"
                     disabled={isPending}
