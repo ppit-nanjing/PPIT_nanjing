@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Plus_Jakarta_Sans, Spectral } from "next/font/google";
+import { Plus_Jakarta_Sans, Spectral, Poppins, Fredoka, Bebas_Neue, Caveat } from "next/font/google";
 import { Providers } from "@/components/providers";
 import { OnboardingModal } from "@/components/onboarding-modal";
 import { HelpCenter } from "@/components/ai/help-center";
@@ -31,6 +31,19 @@ const spectral = Spectral({
   subsets: ["latin"],
   weight: ["400", "600", "800"],
 });
+
+// Optional per-event description typography (src/lib/event-description-style.ts)
+// - admins can match an event's card to its poster's mood. Same self-hosting
+// reasoning as above; weights kept to 2 per font (regular + a bold-ish step)
+// since each is only ever downloaded by a visitor whose event actually uses
+// it, but there's no reason to ship more than the picker needs. Suffixed "-g"
+// (raw next/font var) because globals.css wraps each with CJK/generic
+// fallbacks into the final --font-poppins etc. used by the font-* utilities -
+// same two-step pattern as --font-jakarta -> --font-sans above.
+const poppins = Poppins({ variable: "--font-poppins-g", subsets: ["latin"], weight: ["400", "700"] });
+const fredoka = Fredoka({ variable: "--font-fredoka-g", subsets: ["latin"], weight: ["400", "600"] });
+const bebasNeue = Bebas_Neue({ variable: "--font-bebas-g", subsets: ["latin"], weight: ["400"] });
+const caveat = Caveat({ variable: "--font-caveat-g", subsets: ["latin"], weight: ["400", "700"] });
 
 // generateMetadata, not a static object, so the tab title follows the reader's
 // language. Crawlers carry no locale cookie, so they always see the id default
@@ -68,7 +81,7 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
     <html
       lang={locale}
       suppressHydrationWarning
-      className={`${jakarta.variable} ${spectral.variable} scroll-smooth`}
+      className={`${jakarta.variable} ${spectral.variable} ${poppins.variable} ${fredoka.variable} ${bebasNeue.variable} ${caveat.variable} scroll-smooth`}
     >
       <body className="antialiased">
         {/* Applies the saved city theme + colour mode before anything paints.

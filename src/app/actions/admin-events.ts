@@ -12,6 +12,12 @@ import { logEventAudit } from "@/lib/event-audit";
 import { UUID_RE } from "@/lib/uuid";
 import { createTemplatedNotification } from "@/lib/notifications";
 import { checkInBlockReason, checkInClosedReason } from "@/lib/event-checkin";
+import {
+  DESCRIPTION_FONT_OPTIONS,
+  DESCRIPTION_SIZE_OPTIONS,
+  DESCRIPTION_WEIGHT_OPTIONS,
+  normalizeDescriptionStyleValue,
+} from "@/lib/event-description-style";
 import { issueParticipantCertificatesCore } from "@/app/actions/committee";
 
 async function requireAdmin() {
@@ -248,6 +254,11 @@ export async function updateEventContent(id: string, formData: FormData) {
     .update(events)
     .set({
       description: String(formData.get("description") ?? "").trim() || null,
+      // Nilai di luar daftar (manipulasi form/klien lama) jatuh ke null -> baku
+      // situs, bukan error - lihat normalizeDescriptionStyleValue().
+      descriptionFont: normalizeDescriptionStyleValue(DESCRIPTION_FONT_OPTIONS, formData.get("descriptionFont")),
+      descriptionFontSize: normalizeDescriptionStyleValue(DESCRIPTION_SIZE_OPTIONS, formData.get("descriptionFontSize")),
+      descriptionFontWeight: normalizeDescriptionStyleValue(DESCRIPTION_WEIGHT_OPTIONS, formData.get("descriptionFontWeight")),
       agenda: String(formData.get("agenda") ?? "").trim() || null,
       confirmationInfo: String(formData.get("confirmationInfo") ?? "").trim() || null,
       confirmationContactQr1Url: String(formData.get("confirmationContactQr1Url") ?? "").trim() || null,
