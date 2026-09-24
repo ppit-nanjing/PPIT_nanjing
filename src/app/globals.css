@@ -87,6 +87,11 @@
   --font-caveat: var(--font-caveat-g), "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "Noto Sans CJK SC", cursive;
   --font-pacifico: var(--font-pacifico-g), "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "Noto Sans CJK SC", cursive;
   --font-dancing: var(--font-dancing-g), "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "Noto Sans CJK SC", cursive;
+  --font-kalam: var(--font-kalam-g), "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "Noto Sans CJK SC", cursive;
+  --font-indieflower: var(--font-indieflower-g), "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "Noto Sans CJK SC", cursive;
+  --font-permanentmarker: var(--font-permanentmarker-g), "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "Noto Sans CJK SC", cursive;
+  --font-greatvibes: var(--font-greatvibes-g), "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "Noto Sans CJK SC", cursive;
+  --font-shadows: var(--font-shadows-g), "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "Noto Sans CJK SC", cursive;
   --font-jetbrains: var(--font-jetbrains-g), "Noto Sans Mono CJK SC", monospace;
   --font-spacemono: var(--font-spacemono-g), "Noto Sans Mono CJK SC", monospace;
   --font-plexmono: var(--font-plexmono-g), "Noto Sans Mono CJK SC", monospace;

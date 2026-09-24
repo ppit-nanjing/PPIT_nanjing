@@ -17,6 +17,11 @@ import {
   Quicksand,
   Pacifico,
   Dancing_Script,
+  Kalam,
+  Indie_Flower,
+  Permanent_Marker,
+  Great_Vibes,
+  Shadows_Into_Light,
   JetBrains_Mono,
   Space_Mono,
   IBM_Plex_Mono,
@@ -83,6 +88,11 @@ const quicksand = Quicksand({ variable: "--font-quicksand-g", subsets: ["latin"]
 const caveat = Caveat({ variable: "--font-caveat-g", subsets: ["latin"], weight: ["400", "700"] });
 const pacifico = Pacifico({ variable: "--font-pacifico-g", subsets: ["latin"], weight: ["400"] });
 const dancingScript = Dancing_Script({ variable: "--font-dancing-g", subsets: ["latin"], weight: ["400", "700"] });
+const kalam = Kalam({ variable: "--font-kalam-g", subsets: ["latin"], weight: ["400", "700"] });
+const indieFlower = Indie_Flower({ variable: "--font-indieflower-g", subsets: ["latin"], weight: ["400"] });
+const permanentMarker = Permanent_Marker({ variable: "--font-permanentmarker-g", subsets: ["latin"], weight: ["400"] });
+const greatVibes = Great_Vibes({ variable: "--font-greatvibes-g", subsets: ["latin"], weight: ["400"] });
+const shadowsIntoLight = Shadows_Into_Light({ variable: "--font-shadows-g", subsets: ["latin"], weight: ["400"] });
 // Monospace & Teknis
 const jetbrainsMono = JetBrains_Mono({ variable: "--font-jetbrains-g", subsets: ["latin"], weight: ["400", "700"] });
 const spaceMono = Space_Mono({ variable: "--font-spacemono-g", subsets: ["latin"], weight: ["400", "700"] });
@@ -124,7 +134,7 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
     <html
       lang={locale}
       suppressHydrationWarning
-      className={`${jakarta.variable} ${spectral.variable} ${poppins.variable} ${inter.variable} ${manrope.variable} ${playfair.variable} ${lora.variable} ${merriweather.variable} ${bebasNeue.variable} ${anton.variable} ${oswald.variable} ${fredoka.variable} ${baloo.variable} ${quicksand.variable} ${caveat.variable} ${pacifico.variable} ${dancingScript.variable} ${jetbrainsMono.variable} ${spaceMono.variable} ${plexMono.variable} scroll-smooth`}
+      className={`${jakarta.variable} ${spectral.variable} ${poppins.variable} ${inter.variable} ${manrope.variable} ${playfair.variable} ${lora.variable} ${merriweather.variable} ${bebasNeue.variable} ${anton.variable} ${oswald.variable} ${fredoka.variable} ${baloo.variable} ${quicksand.variable} ${caveat.variable} ${pacifico.variable} ${dancingScript.variable} ${kalam.variable} ${indieFlower.variable} ${permanentMarker.variable} ${greatVibes.variable} ${shadowsIntoLight.variable} ${jetbrainsMono.variable} ${spaceMono.variable} ${plexMono.variable} scroll-smooth`}
     >
       <body className="antialiased">
         {/* Applies the saved city theme + colour mode before anything paints.
