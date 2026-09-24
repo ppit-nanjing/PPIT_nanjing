@@ -66,15 +66,35 @@
      covers Han glyphs. Order: iOS/macOS, older macOS, Windows, Linux/Android. */
   --font-sans: var(--font-jakarta), "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "Noto Sans CJK SC", sans-serif;
   --font-serif: var(--font-spectral), Georgia, "Songti SC", "SimSun", serif;
-  /* Optional per-event description typography (src/lib/event-description-style.ts).
-     Each wraps its raw next/font variable (declared in layout.tsx) with the
-     same CJK fallback chain as font-sans/font-serif above - these values
-     generate the font-poppins/font-fredoka/font-bebas/font-caveat utilities
-     Tailwind v4 derives automatically from any --font-* theme key. */
+  /* Optional per-event description typography (src/lib/event-description-style.ts,
+     grouped into 6 categories there). Each wraps its raw next/font variable
+     (declared in layout.tsx) with a CJK fallback chain matching its category's
+     generic family, same pattern as font-sans/font-serif above - these values
+     generate the font-poppins/font-inter/etc. utilities Tailwind v4 derives
+     automatically from any --font-* theme key. */
   --font-poppins: var(--font-poppins-g), "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "Noto Sans CJK SC", sans-serif;
-  --font-fredoka: var(--font-fredoka-g), "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "Noto Sans CJK SC", sans-serif;
+  --font-inter: var(--font-inter-g), "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "Noto Sans CJK SC", sans-serif;
+  --font-manrope: var(--font-manrope-g), "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "Noto Sans CJK SC", sans-serif;
+  --font-playfair: var(--font-playfair-g), Georgia, "Songti SC", "SimSun", serif;
+  --font-lora: var(--font-lora-g), Georgia, "Songti SC", "SimSun", serif;
+  --font-merriweather: var(--font-merriweather-g), Georgia, "Songti SC", "SimSun", serif;
   --font-bebas: var(--font-bebas-g), "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "Noto Sans CJK SC", sans-serif;
+  --font-anton: var(--font-anton-g), "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "Noto Sans CJK SC", sans-serif;
+  --font-oswald: var(--font-oswald-g), "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "Noto Sans CJK SC", sans-serif;
+  --font-fredoka: var(--font-fredoka-g), "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "Noto Sans CJK SC", sans-serif;
+  --font-baloo: var(--font-baloo-g), "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "Noto Sans CJK SC", sans-serif;
+  --font-quicksand: var(--font-quicksand-g), "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "Noto Sans CJK SC", sans-serif;
   --font-caveat: var(--font-caveat-g), "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "Noto Sans CJK SC", cursive;
+  --font-pacifico: var(--font-pacifico-g), "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "Noto Sans CJK SC", cursive;
+  --font-dancing: var(--font-dancing-g), "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "Noto Sans CJK SC", cursive;
+  --font-kalam: var(--font-kalam-g), "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "Noto Sans CJK SC", cursive;
+  --font-indieflower: var(--font-indieflower-g), "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "Noto Sans CJK SC", cursive;
+  --font-permanentmarker: var(--font-permanentmarker-g), "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "Noto Sans CJK SC", cursive;
+  --font-greatvibes: var(--font-greatvibes-g), "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "Noto Sans CJK SC", cursive;
+  --font-shadows: var(--font-shadows-g), "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "Noto Sans CJK SC", cursive;
+  --font-jetbrains: var(--font-jetbrains-g), "Noto Sans Mono CJK SC", monospace;
+  --font-spacemono: var(--font-spacemono-g), "Noto Sans Mono CJK SC", monospace;
+  --font-plexmono: var(--font-plexmono-g), "Noto Sans Mono CJK SC", monospace;
   --text-display-hero: 56px;
   --text-display-hero--line-height: 1.1;
   --text-display-hero--letter-spacing: -0.03em;

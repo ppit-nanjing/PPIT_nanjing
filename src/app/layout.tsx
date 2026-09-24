@@ -1,5 +1,31 @@
 import type { Metadata } from "next";
-import { Plus_Jakarta_Sans, Spectral, Poppins, Fredoka, Bebas_Neue, Caveat } from "next/font/google";
+import {
+  Plus_Jakarta_Sans,
+  Spectral,
+  Poppins,
+  Fredoka,
+  Bebas_Neue,
+  Caveat,
+  Inter,
+  Manrope,
+  Playfair_Display,
+  Lora,
+  Merriweather,
+  Anton,
+  Oswald,
+  Baloo_2,
+  Quicksand,
+  Pacifico,
+  Dancing_Script,
+  Kalam,
+  Indie_Flower,
+  Permanent_Marker,
+  Great_Vibes,
+  Shadows_Into_Light,
+  JetBrains_Mono,
+  Space_Mono,
+  IBM_Plex_Mono,
+} from "next/font/google";
 import { Providers } from "@/components/providers";
 import { OnboardingModal } from "@/components/onboarding-modal";
 import { HelpCenter } from "@/components/ai/help-center";
@@ -33,17 +59,44 @@ const spectral = Spectral({
 });
 
 // Optional per-event description typography (src/lib/event-description-style.ts)
-// - admins can match an event's card to its poster's mood. Same self-hosting
-// reasoning as above; weights kept to 2 per font (regular + a bold-ish step)
-// since each is only ever downloaded by a visitor whose event actually uses
-// it, but there's no reason to ship more than the picker needs. Suffixed "-g"
-// (raw next/font var) because globals.css wraps each with CJK/generic
-// fallbacks into the final --font-poppins etc. used by the font-* utilities -
-// same two-step pattern as --font-jakarta -> --font-sans above.
+// - admins can match an event's card to its poster's mood, grouped into 6
+// categories in the picker. Same self-hosting reasoning as above; weights
+// kept to 2 per font (regular + a bold-ish step, or just the 1 available
+// weight for single-weight display/script faces) since each is only ever
+// downloaded by a visitor whose event actually uses it, but there's no
+// reason to ship more than the picker needs. Suffixed "-g" (raw next/font
+// var) because globals.css wraps each with CJK/generic fallbacks into the
+// final --font-poppins etc. used by the font-* utilities - same two-step
+// pattern as --font-jakarta -> --font-sans above.
+// Bersih & Modern
 const poppins = Poppins({ variable: "--font-poppins-g", subsets: ["latin"], weight: ["400", "700"] });
-const fredoka = Fredoka({ variable: "--font-fredoka-g", subsets: ["latin"], weight: ["400", "600"] });
+const inter = Inter({ variable: "--font-inter-g", subsets: ["latin"], weight: ["400", "700"] });
+const manrope = Manrope({ variable: "--font-manrope-g", subsets: ["latin"], weight: ["400", "700"] });
+// Serif & Elegan
+const playfair = Playfair_Display({ variable: "--font-playfair-g", subsets: ["latin"], weight: ["400", "700"] });
+const lora = Lora({ variable: "--font-lora-g", subsets: ["latin"], weight: ["400", "700"] });
+const merriweather = Merriweather({ variable: "--font-merriweather-g", subsets: ["latin"], weight: ["400", "700"] });
+// Tegas & Poster
 const bebasNeue = Bebas_Neue({ variable: "--font-bebas-g", subsets: ["latin"], weight: ["400"] });
+const anton = Anton({ variable: "--font-anton-g", subsets: ["latin"], weight: ["400"] });
+const oswald = Oswald({ variable: "--font-oswald-g", subsets: ["latin"], weight: ["400", "700"] });
+// Playful & Santai
+const fredoka = Fredoka({ variable: "--font-fredoka-g", subsets: ["latin"], weight: ["400", "600"] });
+const baloo = Baloo_2({ variable: "--font-baloo-g", subsets: ["latin"], weight: ["400", "700"] });
+const quicksand = Quicksand({ variable: "--font-quicksand-g", subsets: ["latin"], weight: ["400", "700"] });
+// Tulisan Tangan
 const caveat = Caveat({ variable: "--font-caveat-g", subsets: ["latin"], weight: ["400", "700"] });
+const pacifico = Pacifico({ variable: "--font-pacifico-g", subsets: ["latin"], weight: ["400"] });
+const dancingScript = Dancing_Script({ variable: "--font-dancing-g", subsets: ["latin"], weight: ["400", "700"] });
+const kalam = Kalam({ variable: "--font-kalam-g", subsets: ["latin"], weight: ["400", "700"] });
+const indieFlower = Indie_Flower({ variable: "--font-indieflower-g", subsets: ["latin"], weight: ["400"] });
+const permanentMarker = Permanent_Marker({ variable: "--font-permanentmarker-g", subsets: ["latin"], weight: ["400"] });
+const greatVibes = Great_Vibes({ variable: "--font-greatvibes-g", subsets: ["latin"], weight: ["400"] });
+const shadowsIntoLight = Shadows_Into_Light({ variable: "--font-shadows-g", subsets: ["latin"], weight: ["400"] });
+// Monospace & Teknis
+const jetbrainsMono = JetBrains_Mono({ variable: "--font-jetbrains-g", subsets: ["latin"], weight: ["400", "700"] });
+const spaceMono = Space_Mono({ variable: "--font-spacemono-g", subsets: ["latin"], weight: ["400", "700"] });
+const plexMono = IBM_Plex_Mono({ variable: "--font-plexmono-g", subsets: ["latin"], weight: ["400", "700"] });
 
 // generateMetadata, not a static object, so the tab title follows the reader's
 // language. Crawlers carry no locale cookie, so they always see the id default
@@ -81,7 +134,7 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
     <html
       lang={locale}
       suppressHydrationWarning
-      className={`${jakarta.variable} ${spectral.variable} ${poppins.variable} ${fredoka.variable} ${bebasNeue.variable} ${caveat.variable} scroll-smooth`}
+      className={`${jakarta.variable} ${spectral.variable} ${poppins.variable} ${inter.variable} ${manrope.variable} ${playfair.variable} ${lora.variable} ${merriweather.variable} ${bebasNeue.variable} ${anton.variable} ${oswald.variable} ${fredoka.variable} ${baloo.variable} ${quicksand.variable} ${caveat.variable} ${pacifico.variable} ${dancingScript.variable} ${kalam.variable} ${indieFlower.variable} ${permanentMarker.variable} ${greatVibes.variable} ${shadowsIntoLight.variable} ${jetbrainsMono.variable} ${spaceMono.variable} ${plexMono.variable} scroll-smooth`}
     >
       <body className="antialiased">
         {/* Applies the saved city theme + colour mode before anything paints.
