@@ -3,6 +3,7 @@
 import { useState, type ReactNode } from "react";
 import { AIImproveButton } from "@/components/ai/ai-improve-button";
 import {
+  DESCRIPTION_FONT_CATEGORIES,
   DESCRIPTION_FONT_OPTIONS,
   DESCRIPTION_SIZE_OPTIONS,
   DESCRIPTION_WEIGHT_OPTIONS,
@@ -98,12 +99,22 @@ export function EventDescriptionStyleFields({
 
         <div className="flex flex-col gap-1.5">
           <span className="text-label-caps uppercase tracking-wide text-on-surface-variant">Font</span>
-          <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-            {DESCRIPTION_FONT_OPTIONS.map((o) => (
-              <Chip key={o.key} active={font === o.key} onClick={() => setFont(o.key)}>
-                <span className={`block text-body-md text-on-background ${o.className}`}>{o.label}</span>
-                <span className="block text-xs text-on-surface-variant">{o.hint}</span>
-              </Chip>
+          {/* Dibatasi tinggi + scroll internal (bukan dorong seluruh form ke
+              bawah) - pola sama dengan daftar panjang lain di console, lihat
+              CollapsibleRecordList. 20 font terlalu banyak buat digelar datar. */}
+          <div className="flex flex-col gap-3 max-h-80 overflow-y-auto rounded-md border border-outline-variant p-3">
+            {DESCRIPTION_FONT_CATEGORIES.map((cat) => (
+              <div key={cat.key} className="flex flex-col gap-1.5">
+                <span className="text-xs font-semibold text-on-surface-variant">{cat.label}</span>
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                  {cat.fonts.map((o) => (
+                    <Chip key={o.key} active={font === o.key} onClick={() => setFont(o.key)}>
+                      <span className={`block text-body-md text-on-background ${o.className}`}>{o.label}</span>
+                      <span className="block text-xs text-on-surface-variant">{o.hint}</span>
+                    </Chip>
+                  ))}
+                </div>
+              </div>
             ))}
           </div>
         </div>
