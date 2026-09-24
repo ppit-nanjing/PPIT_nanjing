@@ -66,6 +66,15 @@
      covers Han glyphs. Order: iOS/macOS, older macOS, Windows, Linux/Android. */
   --font-sans: var(--font-jakarta), "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "Noto Sans CJK SC", sans-serif;
   --font-serif: var(--font-spectral), Georgia, "Songti SC", "SimSun", serif;
+  /* Optional per-event description typography (src/lib/event-description-style.ts).
+     Each wraps its raw next/font variable (declared in layout.tsx) with the
+     same CJK fallback chain as font-sans/font-serif above - these values
+     generate the font-poppins/font-fredoka/font-bebas/font-caveat utilities
+     Tailwind v4 derives automatically from any --font-* theme key. */
+  --font-poppins: var(--font-poppins-g), "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "Noto Sans CJK SC", sans-serif;
+  --font-fredoka: var(--font-fredoka-g), "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "Noto Sans CJK SC", sans-serif;
+  --font-bebas: var(--font-bebas-g), "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "Noto Sans CJK SC", sans-serif;
+  --font-caveat: var(--font-caveat-g), "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "Noto Sans CJK SC", cursive;
   --text-display-hero: 56px;
   --text-display-hero--line-height: 1.1;
   --text-display-hero--letter-spacing: -0.03em;

@@ -16,7 +16,7 @@ import { EVENT_STATUS_LABEL as STATUS_LABEL } from "@/lib/event-status-labels";
 import { EVENT_AUDIT_ACTION_LABEL, type EventAuditAction } from "@/lib/event-audit";
 import { ImageUploadCropper } from "@/components/upload/image-upload-cropper";
 import { EventThemeFields } from "@/components/console/event-theme-fields";
-import { AIImproveButton } from "@/components/ai/ai-improve-button";
+import { EventDescriptionStyleFields } from "@/components/console/event-description-style-fields";
 import { AIReviewButton } from "@/components/ai/ai-review-popup";
 import { CollapsibleSection } from "@/components/console/collapsible-section";
 import { HtmFields } from "@/components/console/htm-fields";
@@ -294,10 +294,14 @@ export default async function ConsoleEventDetailPage({ params }: { params: Promi
       {can("event.editContent") && (
       <CollapsibleSection title="Deskripsi & Agenda" description="Teks yang tampil di halaman acara publik.">
         <form action={updateEventContent.bind(null, id)} className="flex flex-col gap-4">
-          <div>
-            <textarea id="event-description" name="description" defaultValue={event.description ?? ""} rows={3} className="bg-soft-gray rounded-md p-3 text-body-md resize-none w-full" />
-            <AIImproveButton context="event" targetId="event-description" className="mt-1" />
-          </div>
+          <EventDescriptionStyleFields
+            defaults={{
+              description: event.description ?? "",
+              descriptionFont: event.descriptionFont,
+              descriptionFontSize: event.descriptionFontSize,
+              descriptionFontWeight: event.descriptionFontWeight,
+            }}
+          />
           <textarea
             id="event-agenda"
             name="agenda"

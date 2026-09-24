@@ -393,6 +393,16 @@ export const events = pgTable("events", {
   title: text("title").notNull(),
   slug: text("slug").notNull().unique(),
   description: text("description"),
+  // Typography untuk kartu deskripsi di halaman acara publik - opsional, biar
+  // admin bisa menyamakan nuansa dengan poster acaranya (mis. "Fun Hike" pakai
+  // font playful, acara formal pakai serif). null = tampilan baku situs
+  // (font-sans, text-body-lg, font-normal) - lihat DESCRIPTION_FONT_OPTIONS
+  // dkk. di src/lib/event-description-style.ts untuk daftar nilai valid;
+  // server action menolak nilai di luar situ. Cuma untuk font-KELUARGA/
+  // ukuran/ketebalan SATU gaya untuk seluruh teks, bukan rich text per-kata.
+  descriptionFont: text("description_font"),
+  descriptionFontSize: text("description_font_size"),
+  descriptionFontWeight: text("description_font_weight"),
   coverImageUrl: text("cover_image_url"),
   category: text("category"),
   location: text("location"),

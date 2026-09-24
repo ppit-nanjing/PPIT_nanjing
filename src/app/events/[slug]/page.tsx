@@ -14,6 +14,7 @@ import Image from "next/image";
 import { Select } from "@/components/console/form";
 import { EventThemeStyle } from "@/components/events/event-theme-style";
 import { ShareEventButton } from "@/components/events/share-event-button";
+import { descriptionStyleClassName } from "@/lib/event-description-style";
 import Link from "next/link";
 import { applyAsVolunteer } from "@/app/actions/volunteers";
 import { getEventAccess } from "@/lib/event-access";
@@ -309,7 +310,7 @@ export default async function EventDetailPage({ params, searchParams }: { params
               {event.description && (
                 <Reveal>
                   <div className="evt-surface rounded-lg border border-outline-variant bg-surface-container-lowest/70 p-6 sm:p-8">
-                    <p className="whitespace-pre-wrap text-body-lg leading-relaxed text-on-surface-variant">
+                    <p className={`whitespace-pre-wrap leading-relaxed text-on-surface-variant ${descriptionStyleClassName(event)}`}>
                       {event.description}
                     </p>
                   </div>
