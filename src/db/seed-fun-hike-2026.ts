@@ -37,8 +37,11 @@
  *   jelaskan" yang cuma relevan kalau jawaban kondisi medisnya "Ya" - form
  *   tidak punya logika show/hide bersyarat, jadi field ini selalu tampil tapi
  *   TIDAK wajib.
- * - requiresSensus = false: acara sosial terbuka untuk "teman-teman Indonesia
- *   di Nanjing", bukan cuma yang sensusnya sudah lengkap.
+ * - requiresSensus = true (sejak 2026-09-24, diputuskan panitia): hanya yang
+ *   sensusnya lengkap boleh mendaftar. Konsekuensinya, "Asal Kota di
+ *   Tiongkok", "Asal Universitas/Kampus", dan "WeChat ID" dihapus dari
+ *   QUESTIONS (masuk OBSOLETE_LABELS) - itu semua sudah tersedia dari sensus
+ *   (branch/university/wechatId), tidak perlu ditanya ulang di form.
  * - Gratis (isPaid = false), tanpa kategori tarif / struktur kepanitiaan.
  */
 import { and, eq } from "drizzle-orm";
@@ -49,9 +52,6 @@ const SLUG = "fun-hike-pinyx-2026";
 
 const QUESTIONS: { label: string; type: "text" | "radio"; options?: string; required: boolean }[] = [
   { label: "Nama Lengkap", type: "text", required: true },
-  { label: "Asal Kota di Tiongkok", type: "text", required: true },
-  { label: "Asal Universitas/Kampus", type: "text", required: true },
-  { label: "WeChat ID", type: "text", required: true },
   {
     label: "Apakah Anda memiliki kondisi medis yang perlu kami ketahui?",
     type: "radio",
@@ -82,14 +82,20 @@ const QUESTIONS: { label: string; type: "text" | "radio"; options?: string; requ
   },
 ];
 
-// Label draf lama (versi sebelum mockup resmi 2026-09-23) yang digantikan oleh
-// QUESTIONS di atas - dihapus supaya tidak menggandakan pertanyaan di form.
+// Label lama yang digantikan/dihapus dari QUESTIONS - dihapus eksplisit
+// supaya tidak menggandakan/meninggalkan pertanyaan di form.
 const OBSOLETE_LABELS = [
+  // Versi draf sebelum mockup resmi 2026-09-23.
   "Asal kota (di China)",
   "Asal kampus",
   "Any medical conditions?",
   "Emergency contact",
   "I understand that I am responsible for bringing my own drinking water, taking care of my personal belongings, and ensuring my own safety by staying cautious throughout the hike.",
+  // requiresSensus diaktifkan 2026-09-24 - sudah tersedia dari sensus, tidak
+  // perlu ditanya ulang di form pendaftaran.
+  "Asal Kota di Tiongkok",
+  "Asal Universitas/Kampus",
+  "WeChat ID",
 ];
 
 const DESCRIPTION = [
@@ -128,7 +134,7 @@ async function main() {
     capacity: 50,
     isPaid: false,
     requiresBiodata: false,
-    requiresSensus: false,
+    requiresSensus: true,
     status: "draft" as const,
   };
 
