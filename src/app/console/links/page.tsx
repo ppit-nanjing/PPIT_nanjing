@@ -1,10 +1,13 @@
 import { and, desc, eq, ilike, type SQL } from "drizzle-orm";
 import Link from "next/link";
+import QRCode from "qrcode";
 import { db } from "@/db";
 import { managementPeriods, shortLinks } from "@/db/schema";
 import { requireModuleAccess } from "@/lib/admin-scope";
 import { deleteShortLink, toggleShortLink, setActivePeriod } from "@/app/actions/short-links";
+import { getSiteOrigin } from "@/lib/site";
 import { CopyLinkButton } from "@/components/console/copy-link-button";
+import { LinkQrDisclosure } from "@/components/console/link-qr-disclosure";
 import { ShortLinkDeleteButton } from "@/components/console/short-link-delete-button";
 import { PeriodForm } from "@/components/console/management-period-form";
 import { GuideButton } from "@/components/console/guide-button";
@@ -62,6 +65,17 @@ export default async function ConsoleLinksPage({
     .from(managementPeriods)
     .orderBy(managementPeriods.label);
 
+  // Generated once here (server-side, same lib as the edit page's QR) rather
+  // than per-row on demand - keeps LinkQrDisclosure a plain prop-in component
+  // with no client JS/fetch of its own.
+  const origin = await getSiteOrigin();
+  const qrByLinkId = new Map(
+    await Promise.all(
+      links.map(
+        async (l) => [l.id, await QRCode.toDataURL(`${origin}/l/${l.slug}`, { width: 160, margin: 1 })] as const,
+      ),
+    ),
+  );
 
   const exportParams = new URLSearchParams();
   if (period) exportParams.set("period", period);
@@ -205,6 +219,7 @@ export default async function ConsoleLinksPage({
                   </td>
                   <td className="px-5 py-3">
                     <CopyLinkButton slug={l.slug} />
+                    <LinkQrDisclosure slug={l.slug} qrDataUrl={qrByLinkId.get(l.id)!} />
                   </td>
                   <td className="px-5 py-3 text-on-surface-variant">{CATEGORY_LABEL[l.category] ?? l.category}</td>
                   <td className="px-5 py-3 text-on-surface-variant">{l.periodLabel ?? "-"}</td>
@@ -256,6 +271,7 @@ export default async function ConsoleLinksPage({
                   <code className="text-on-background">{l.slug}</code>
                   <CopyLinkButton slug={l.slug} />
                 </div>
+                <LinkQrDisclosure slug={l.slug} qrDataUrl={qrByLinkId.get(l.id)!} />
                   <dl className="grid grid-cols-2 gap-x-4 gap-y-2 text-body-md">
                   <div>
                     <dt className="text-label-caps text-on-surface-variant">Kategori</dt>
