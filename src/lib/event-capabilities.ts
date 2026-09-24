@@ -25,6 +25,7 @@ export type EventCapability =
   // --- P: peserta ---
   | "event.viewRegistrants" // lihat daftar pendaftar
   | "event.exportRegistrants" // ekspor daftar pendaftar
+  | "event.manageRegistrants" // batalkan/pulihkan pendaftaran peserta
   | "event.scanAttendance" // check-in / scan kehadiran
   | "event.manageVolunteers" // approve/reject pendaftar volunteer
   // --- K: kepanitiaan ---
@@ -143,12 +144,17 @@ export function isCommitteeLocked(ev: EventTiming, now: Date = new Date()): bool
 // "content"), pinjam aset (dulu scope "inventory") BUKAN termasuk, jadi
 // jembatan tidak boleh membukanya diam-diam. BPH Panitia & divisi ber-grant
 // tetap dapat lewat jalur peran.
+// event.manageRegistrants juga dikecualikan: sebelum ada kapabilitas ini,
+// pembatalan pendaftaran digerbang langsung ke isFullAdmin (bukan lewat
+// event-access.ts sama sekali) - pemegang jembatan modul "events" tidak
+// pernah bisa membatalkan pendaftaran sebelumnya, jadi tetap begitu sekarang.
 export const BRIDGE_EXCLUDED_CAPABILITIES: EventCapability[] = [
   ...FULL_ADMIN_ONLY_CAPABILITIES,
   "event.manageFinance",
   "event.manageGallery",
   "event.borrowAssets",
   "event.postArticle",
+  "event.manageRegistrants",
 ];
 
 /**

@@ -534,19 +534,25 @@ export async function checkInRegistration(
   return { ok: true, already: false };
 }
 
-// Batalkan / pulihkan pendaftaran peserta — HANYA BPH Kabinet + Divisi Teknologi
-// (adminScope "full"). Untuk kasus "panitia keburu daftar sebagai peserta",
-// salah kategori, dsb. SOFT: status -> "cancelled" (baris tetap ada, tidak
-// dihitung ke kuota/kapasitas, QR check-in mati lewat checkInBlockReason).
-// Pulihkan mengembalikan ke "confirmed" (atau "pending" kalau bayarnya belum
-// beres) — status "attended" yang lama tidak bisa dipulihkan otomatis.
+// Batalkan / pulihkan pendaftaran peserta — BPH Kabinet + Divisi Teknologi
+// (isFullAdmin) DAN BPH Panitia acara ini sendiri (ketua/wakil/sekretaris/
+// supervisor - lihat event.manageRegistrants di event-capabilities.ts).
+// Panitia biasa (Divisi Acara/Logistik/dst, tanpa jabatan BPH) tetap TIDAK
+// bisa, sama seperti mereka tidak lihat biodata lengkap pendaftar - lihat
+// canSeeRegistrantDetail di console/events/[id]/page.tsx, gerbang yang
+// SENGAJA terpisah dari ini. Untuk kasus "panitia keburu daftar sebagai
+// peserta", salah kategori, dsb. SOFT: status -> "cancelled" (baris tetap
+// ada, tidak dihitung ke kuota/kapasitas, QR check-in mati lewat
+// checkInBlockReason). Pulihkan mengembalikan ke "confirmed" (atau "pending"
+// kalau bayarnya belum beres) — status "attended" yang lama tidak bisa
+// dipulihkan otomatis.
 export async function setRegistrationCancelled(
   registrationId: string,
   eventId: string,
   cancelled: boolean,
 ): Promise<{ ok: true } | { ok: false; reason: "forbidden" | "notfound" }> {
   const access = await getEventAccess(eventId);
-  if (!access.isFullAdmin || !access.session) return { ok: false, reason: "forbidden" };
+  if (!access.session || !access.can("event.manageRegistrants")) return { ok: false, reason: "forbidden" };
 
   const [reg] = await db
     .select({ status: eventRegistrations.status, paymentStatus: eventRegistrations.paymentStatus })
