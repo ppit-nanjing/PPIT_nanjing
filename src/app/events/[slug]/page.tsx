@@ -13,6 +13,7 @@ import { CalendarDays, MapPin, Users, Ticket, ArrowLeft, ListChecks, Images, Arr
 import Image from "next/image";
 import { Select } from "@/components/console/form";
 import { EventThemeStyle } from "@/components/events/event-theme-style";
+import { ShareEventButton } from "@/components/events/share-event-button";
 import Link from "next/link";
 import { applyAsVolunteer } from "@/app/actions/volunteers";
 import { getEventAccess } from "@/lib/event-access";
@@ -197,12 +198,15 @@ export default async function EventDetailPage({ params, searchParams }: { params
         <SiteNav />
 
         <main className="mx-auto max-w-[var(--container-max)] px-[var(--spacing-container-padding)] py-10">
-          <Link
-            href="/events"
-            className="mb-6 inline-flex items-center gap-2 rounded text-label-caps uppercase tracking-wide text-primary-container transition-colors hover:text-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-container focus-visible:ring-offset-2 focus-visible:ring-offset-background"
-          >
-            <ArrowLeft size={16} aria-hidden="true" /> {t("events.back")}
-          </Link>
+          <div className="mb-6 flex items-center justify-between gap-3">
+            <Link
+              href="/events"
+              className="inline-flex items-center gap-2 rounded text-label-caps uppercase tracking-wide text-primary-container transition-colors hover:text-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-container focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+            >
+              <ArrowLeft size={16} aria-hidden="true" /> {t("events.back")}
+            </Link>
+            <ShareEventButton title={event.title} text={event.description} />
+          </div>
 
           {event.coverImageUrl ? (
             <Reveal>

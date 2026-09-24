@@ -238,6 +238,8 @@ export const id = {
   "events.regErrCategoryFull": "Kuota kategori tarif yang kamu pilih baru saja penuh — pilih kategori lain.",
   "events.regErrGeneric": "Pendaftaran belum bisa diproses. Periksa lagi isianmu, lalu kirim ulang.",
   "events.back": "Kembali ke Kegiatan",
+  "events.share": "Bagikan",
+  "events.shareCopied": "Tautan tersalin",
   "events.sensusOnly": "Khusus peserta tersensus",
   "events.agenda": "Agenda Acara",
   "events.gallery": "Galeri",
