@@ -39,9 +39,15 @@
  */
 import { and, eq } from "drizzle-orm";
 import { db } from "./index";
-import { events, eventQuestions } from "./schema";
+import { events, eventQuestions, eventCommittee } from "./schema";
 
 const SLUG = "fun-hike-pinyx-2026-uat";
+// event_committee ada di per-acara (eventId), BUKAN per-orang lintas acara -
+// panitia acara ASLI tidak otomatis punya akses ke acara UJI COBA ini walau
+// keduanya "terasa" seperti satu acara. Tanpa langkah copy di bawah, siapa pun
+// yang cuma jadi panitia acara asli (bukan BPH Kabinet) akan 404 di link UAT
+// ini - lihat getEventAccess() di src/lib/event-access.ts.
+const REAL_EVENT_SLUG = "fun-hike-pinyx-2026";
 
 const QUESTIONS: { label: string; type: "text" | "radio"; options?: string; required: boolean }[] = [
   { label: "Nama Lengkap", type: "text", required: true },
@@ -183,6 +189,34 @@ async function seed() {
     qHapus += deleted.length;
   }
   if (qHapus > 0) console.log(`Pertanyaan draf lama dihapus: ${qHapus}.`);
+
+  // Salin akses panitia dari acara asli - divisionId sengaja TIDAK disalin
+  // (null): UAT ini tidak punya struktur eventDivisions sendiri, dan
+  // divisionId cuma dipakai untuk grantedCapabilities/organisasi, bukan untuk
+  // gerbang akses dasar (yang cukup lewat role != null).
+  const [realEvent] = await db.select({ id: events.id }).from(events).where(eq(events.slug, REAL_EVENT_SLUG));
+  let committeeBaru = 0;
+  if (realEvent) {
+    const realCommittee = await db
+      .select({ userId: eventCommittee.userId, role: eventCommittee.role })
+      .from(eventCommittee)
+      .where(eq(eventCommittee.eventId, realEvent.id));
+    for (const m of realCommittee) {
+      const [found] = await db
+        .select({ id: eventCommittee.id })
+        .from(eventCommittee)
+        .where(and(eq(eventCommittee.eventId, eventId), eq(eventCommittee.userId, m.userId)));
+      if (found) {
+        await db.update(eventCommittee).set({ role: m.role }).where(eq(eventCommittee.id, found.id));
+      } else {
+        await db.insert(eventCommittee).values({ eventId, userId: m.userId, role: m.role });
+        committeeBaru++;
+      }
+    }
+    console.log(`event_committee (disalin dari acara asli): ${committeeBaru} dibuat, ${realCommittee.length - committeeBaru} diperbarui.`);
+  } else {
+    console.log(`Acara asli "${REAL_EVENT_SLUG}" tidak ditemukan - lewati salin panitia.`);
+  }
 
   console.log("");
   console.log(`URL (preview only, draft) : /events/${SLUG}`);
