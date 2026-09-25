@@ -71,7 +71,13 @@ const spectral = Spectral({
 // Bersih & Modern
 const poppins = Poppins({ variable: "--font-poppins-g", subsets: ["latin"], weight: ["400", "700"] });
 const inter = Inter({ variable: "--font-inter-g", subsets: ["latin"], weight: ["400", "700"] });
-const manrope = Manrope({ variable: "--font-manrope-g", subsets: ["latin"], weight: ["400", "700"] });
+// Manrope is variable-only on Google Fonts (no static per-weight files) -
+// requesting discrete weight: ["400","700"] worked in local dev/build but
+// broke Turbopack's font resolver on Vercel's build ("next/font/google
+// queries have exactly one entry", 12 failures - one per unicode-range
+// subset block Google splits it into). weight: "variable" requests the
+// actual variable axis in one clean query instead of two colliding ones.
+const manrope = Manrope({ variable: "--font-manrope-g", subsets: ["latin"], weight: "variable" });
 // Serif & Elegan
 const playfair = Playfair_Display({ variable: "--font-playfair-g", subsets: ["latin"], weight: ["400", "700"] });
 const lora = Lora({ variable: "--font-lora-g", subsets: ["latin"], weight: ["400", "700"] });
