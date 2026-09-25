@@ -56,7 +56,7 @@ function buildCsp() {
 }
 
 // cameraPolicy is "(self)" only on the check-in scanner route and "()" everywhere
-// else - the QR attendance scanner (/console/events/[id]/scan) is the single
+// else - the QR attendance scanner (/events/[slug]/scan) is the single
 // feature that opens a camera, and a blanket camera=() makes getUserMedia fail
 // there with "[Violation] Permissions policy violation: camera is not allowed".
 function securityHeaders(cameraPolicy: string) {
@@ -110,13 +110,23 @@ const nextConfig: NextConfig = {
         // rule below - overlapping rules would emit two conflicting
         // Permissions-Policy headers and browsers intersect them, which would
         // re-block the camera.
-        source: "/console/events/:id/scan",
+        //
+        // This MUST track the actual scanner page's route (currently
+        // /events/[slug]/scan). It used to be /console/events/[id]/scan -
+        // when the scanner moved out of /console (see "move the attendance
+        // scanner off /console"), this rule was never updated to match,
+        // which silently re-blocked the camera on the real scanner page for
+        // EVERY visitor on EVERY device (this header overrides whatever the
+        // browser/OS camera permission says - the browser never even shows a
+        // prompt). The old /console/events/[id]/scan path is now just a
+        // redirect stub with no camera code, so it doesn't need this rule.
+        source: "/events/:slug/scan",
         headers: [{ key: "Content-Security-Policy", value: buildCsp() }, ...securityHeaders("(self)")],
       },
       {
         // Everything else: camera fully blocked (negative lookahead keeps the
         // scanner route out of this rule).
-        source: "/((?!console/events/[^/]+/scan).*)",
+        source: "/((?!events/[^/]+/scan).*)",
         headers: [{ key: "Content-Security-Policy", value: buildCsp() }, ...securityHeaders("()")],
       },
     ];
