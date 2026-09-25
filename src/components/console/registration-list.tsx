@@ -31,6 +31,11 @@ interface Registration {
   // Kategori tarif yang dipilih peserta, mis. "Freshmen (¥15)". null = acara
   // gratis / tarif tunggal / pendaftaran lama.
   feeLabel?: string | null;
+  // Nama kategori tarif MENTAH (mis. "Freshmen"), tanpa nominal/tahap harga -
+  // dipakai untuk filter, supaya "Freshmen" tetap satu grup walau nominalnya
+  // berubah antar waktu (early bird / normal / digratiskan sponsor). feeLabel
+  // di atas tidak stabil untuk ini karena beda nominal = beda string.
+  feeCategory?: string | null;
   // WeChat ID — bagian dari versi RINGKAS (Humas menghubungi peserta). Diambil
   // dari biodataJson di server; null kalau acara tanpa biodata.
   wechatId?: string | null;
@@ -104,8 +109,8 @@ export function RegistrationList({
   const [checkinFilter, setCheckinFilter] = useState<"all" | "in" | "out">("all");
   const [feeFilter, setFeeFilter] = useState("all");
 
-  const feeLabels = useMemo(
-    () => [...new Set(registrations.map((r) => r.feeLabel).filter((f): f is string => Boolean(f)))].sort(),
+  const feeCategories = useMemo(
+    () => [...new Set(registrations.map((r) => r.feeCategory).filter((f): f is string => Boolean(f)))].sort(),
     [registrations],
   );
 
@@ -115,7 +120,7 @@ export function RegistrationList({
       if (statusFilter !== "all" && r.status !== statusFilter) return false;
       if (checkinFilter === "in" && r.status !== "attended") return false;
       if (checkinFilter === "out" && r.status === "attended") return false;
-      if (feeFilter !== "all" && r.feeLabel !== feeFilter) return false;
+      if (feeFilter !== "all" && r.feeCategory !== feeFilter) return false;
       if (q) {
         const hay = [r.userName, r.wechatId, r.feeLabel, detail ? r.userEmail : null]
           .filter(Boolean)
@@ -232,10 +237,10 @@ export function RegistrationList({
           <option value="in">Sudah check-in</option>
           <option value="out">Belum check-in</option>
         </select>
-        {feeLabels.length > 0 && (
+        {feeCategories.length > 0 && (
           <select value={feeFilter} onChange={(e) => setFeeFilter(e.target.value)} aria-label="Filter kategori tarif" className={selectCls}>
             <option value="all">Semua kategori</option>
-            {feeLabels.map((f) => (
+            {feeCategories.map((f) => (
               <option key={f} value={f}>
                 {f}
               </option>

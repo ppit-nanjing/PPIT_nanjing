@@ -938,6 +938,7 @@ export default async function ConsoleEventDetailPage({ params }: { params: Promi
             registeredAt: r.reg.registeredAt.toISOString(),
             answers: r.reg.answersJson ?? {},
             feeLabel: feeLabelFor(r.reg.feeOptionId, r.reg.registeredAt),
+            feeCategory: r.reg.feeOptionId ? feeOptionById.get(r.reg.feeOptionId)?.label ?? null : null,
             // WeChat ID = bagian dari versi ringkas (Humas menghubungi peserta).
             wechatId: (r.reg.biodataJson as { wechatId?: string } | null)?.wechatId || null,
             // Blok biodata (paspor, KTM, universitas, dst.) HANYA BPH Kabinet +
