@@ -19,6 +19,7 @@ import Link from "next/link";
 import { applyAsVolunteer } from "@/app/actions/volunteers";
 import { getEventAccess } from "@/lib/event-access";
 import { getEventSeats } from "@/lib/event-capacity";
+import { hasCompletedSensus } from "@/lib/sensus-gate";
 import { getT } from "@/lib/i18n/server";
 import { INTL_LOCALE } from "@/lib/i18n/config";
 
@@ -100,6 +101,14 @@ export default async function EventDetailPage({ params, searchParams }: { params
   // Draft/scheduled + akses konsol = mode preview: tombol daftar tetap aktif
   // supaya panitia bisa menguji alur pendaftaran sebelum acaranya tayang.
   const canRegister = (event.status === "published" || hasEventConsoleAccess) && !isFull && !deadlinePassed;
+
+  // Acara ini butuh sensus lengkap - cek status pengunjung yang sedang login
+  // (bukan cuma flag acaranya). Sebelumnya prompt "Isi Sensus" tampil untuk
+  // SEMUA pengunjung yang belum terdaftar, termasuk yang sensusnya sudah
+  // lengkap, sekaligus dengan tombol "Daftar Sekarang" di bawahnya - dua CTA
+  // yang membingungkan padahal salah satunya tidak relevan buat orang itu.
+  const sensusComplete = event.requiresSensus && session?.user?.id ? await hasCompletedSensus(session.user.id) : true;
+  const needsSensusFirst = event.requiresSensus && !!session?.user?.id && !sensusComplete && !alreadyRegistered;
 
   // Wajah pasca-acara: dipicu status "completed" ATAU tanggal mulai sudah lewat
   // (halaman daftar acara juga pakai startAt < now, jadi kartu "lampau" tidak
@@ -637,7 +646,7 @@ export default async function EventDetailPage({ params, searchParams }: { params
                     </div>
                   ) : (
                    <>
-                  {event.requiresSensus && !alreadyRegistered && (
+                  {needsSensusFirst ? (
                     <>
                       <p className="text-label-caps text-on-surface-variant mb-3 text-center">
                         {t("events.sensusRequiredNote")}
@@ -652,8 +661,7 @@ export default async function EventDetailPage({ params, searchParams }: { params
                         <ListChecks size={18} aria-hidden="true" /> {t("events.fillSensus")}
                       </Link>
                     </>
-                  )}
-                  {alreadyRegistered ? (
+                  ) : alreadyRegistered ? (
                     <a
                       href={`/events/${slug}/ticket`}
                       className="w-full inline-flex items-center justify-center gap-2 bg-primary-container text-on-primary text-label-caps uppercase tracking-wide px-6 py-4 rounded-md hover:bg-primary transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-container focus-visible:ring-offset-2 focus-visible:ring-offset-surface-container-low"
