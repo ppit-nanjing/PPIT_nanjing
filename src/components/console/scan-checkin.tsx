@@ -20,6 +20,7 @@ export function ScanCheckIn({
   email,
   label,
   scanPath,
+  practice = false,
 }: {
   token: string;
   eventId: string;
@@ -29,6 +30,8 @@ export function ScanCheckIn({
   label: string | null;
   // Rute halaman scanner ini, untuk tombol "Scan Berikutnya".
   scanPath: string;
+  // "Mode Latihan" - jalankan validasi asli tapi jangan tulis ke database.
+  practice?: boolean;
 }) {
   const [status, setStatus] = useState<Status>("pending");
   const [already, setAlready] = useState(false);
@@ -36,7 +39,8 @@ export function ScanCheckIn({
 
   useEffect(() => {
     let cancelled = false;
-    const action = kind === "committee" ? checkInCommitteeByToken(token, eventId) : checkInByToken(token, eventId);
+    const action =
+      kind === "committee" ? checkInCommitteeByToken(token, eventId, practice) : checkInByToken(token, eventId, practice);
     action
       .then((res) => {
         if (cancelled) return;
@@ -54,7 +58,7 @@ export function ScanCheckIn({
     return () => {
       cancelled = true;
     };
-  }, [token, eventId, kind]);
+  }, [token, eventId, kind, practice]);
 
   if (status === "invalid") {
     return (
@@ -72,23 +76,39 @@ export function ScanCheckIn({
 
   if (status === "pending") {
     return (
-      <div className="mb-8 flex flex-col items-center justify-center bg-surface-container-lowest border border-outline-variant rounded-xl p-10 text-center">
-        <ScanLine className="text-outline-variant mb-3 animate-pulse" size={40} />
-        <p className="text-body-md text-on-surface-variant">Memproses check-in…</p>
+      <div
+        className={`mb-8 flex flex-col items-center justify-center border rounded-xl p-10 text-center ${
+          practice ? "bg-amber-50 border-amber-300" : "bg-surface-container-lowest border-outline-variant"
+        }`}
+      >
+        <ScanLine className={`mb-3 animate-pulse ${practice ? "text-amber-500" : "text-outline-variant"}`} size={40} />
+        <p className="text-body-md text-on-surface-variant">
+          {practice ? "Memeriksa QR (mode latihan)…" : "Memproses check-in…"}
+        </p>
       </div>
     );
   }
 
   return (
-    <div className="mb-8 rounded-xl border border-outline-variant bg-surface-container-lowest p-6 flex flex-col items-center text-center">
+    <div
+      className={`mb-8 rounded-xl border p-6 flex flex-col items-center text-center ${
+        practice ? "bg-amber-50 border-amber-300" : "border-outline-variant bg-surface-container-lowest"
+      }`}
+    >
       {kind === "committee" ? (
-        <BadgeCheck className="text-primary-container mb-3" size={40} />
+        <BadgeCheck className={`mb-3 ${practice ? "text-amber-600" : "text-primary-container"}`} size={40} />
       ) : (
-        <CheckCircle2 className="text-primary-container mb-3" size={40} />
+        <CheckCircle2 className={`mb-3 ${practice ? "text-amber-600" : "text-primary-container"}`} size={40} />
       )}
       <p className="text-body-lg text-on-background font-semibold mb-1">
         {kind === "committee" ? "Kepanitiaan" : ""}{" "}
-        {already ? "sudah check-in sebelumnya" : "check-in berhasil"}
+        {practice
+          ? already
+            ? "QR valid (sudah check-in sungguhan sebelumnya)"
+            : "QR valid — mode latihan, TIDAK dicatat"
+          : already
+            ? "sudah check-in sebelumnya"
+            : "check-in berhasil"}
       </p>
       {label && <p className="text-label-caps uppercase tracking-wide text-primary-container">{label}</p>}
       <div className="flex items-center gap-2 text-on-surface-variant mt-2">

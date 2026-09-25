@@ -600,7 +600,14 @@ export async function setRegistrationCancelled(
 // render so the db write happens in a server action (triggered client-side
 // after the page loads) rather than during the Server Component render - doing
 // a mutation inside a render breaks RSC streaming in production.
-export async function checkInByToken(token: string, eventId: string) {
+//
+// dryRun ("Mode Latihan" on the scan page): runs every real lookup/validation
+// check below on a REAL ticket, but stops right before the write + notification.
+// Lets panitia (and, by extension, worried peserta who ask them to try it)
+// confirm a real QR actually scans without touching real attendance data -
+// added after a real ticket-vs-form deploy scare made people nervous the
+// scanner itself might not work on the day. Per-event, not tied to one event.
+export async function checkInByToken(token: string, eventId: string, dryRun = false) {
   const { session, isFullAdmin } = await requireEventCapability(eventId, "event.scanAttendance");
 
   const [registration] = await db
@@ -634,6 +641,8 @@ export async function checkInByToken(token: string, eventId: string) {
   const blocked = checkInBlockReason(registration, event?.isPaid ?? false);
   if (blocked) return { ok: false as const, reason: blocked };
 
+  if (dryRun) return { ok: true as const, already: false as const, dryRun: true as const };
+
   await db
     .update(eventRegistrations)
     .set({ status: "attended", checkedInAt: new Date(), checkedInBy: session.user.id })
@@ -653,8 +662,9 @@ export async function checkInByToken(token: string, eventId: string) {
 
 // Check-in PANITIA lewat QR tiket kepanitiaan (token di event_committee.
 // attendance_token, dibuat lazily oleh halaman /events/[slug]/committee).
-// Pola persis checkInByToken - hanya tabel dan kolom waktunya yang beda.
-export async function checkInCommitteeByToken(token: string, eventId: string) {
+// Pola persis checkInByToken (termasuk dryRun) - hanya tabel dan kolom
+// waktunya yang beda.
+export async function checkInCommitteeByToken(token: string, eventId: string, dryRun = false) {
   const { session, isFullAdmin } = await requireEventCapability(eventId, "event.scanAttendance");
 
   const [assignment] = await db
@@ -673,6 +683,8 @@ export async function checkInCommitteeByToken(token: string, eventId: string) {
   // Pintu check-in menutup otomatis setelah acara berakhir (BPH Kabinet / Divisi
   // Teknologi tetap bisa mengoreksi kapan pun).
   if (!isFullAdmin && event && checkInClosedReason(event)) return { ok: false as const, reason: "closed" as const };
+
+  if (dryRun) return { ok: true as const, already: false as const, dryRun: true as const };
 
   await db
     .update(eventCommittee)
