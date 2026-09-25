@@ -14,7 +14,7 @@ import Image from "next/image";
 import { Select } from "@/components/console/form";
 import { EventThemeStyle } from "@/components/events/event-theme-style";
 import { ShareEventButton } from "@/components/events/share-event-button";
-import { descriptionStyleClassName } from "@/lib/event-description-style";
+import { sanitizeDescriptionHtml } from "@/lib/sanitize-description-html";
 import Link from "next/link";
 import { applyAsVolunteer } from "@/app/actions/volunteers";
 import { getEventAccess } from "@/lib/event-access";
@@ -307,12 +307,24 @@ export default async function EventDetailPage({ params, searchParams }: { params
 
           <div className="grid grid-cols-1 gap-10 lg:grid-cols-12">
             <div className="flex flex-col gap-12 lg:col-span-8">
-              {event.description && (
+              {(event.descriptionHtml || event.description) && (
                 <Reveal>
                   <div className="evt-surface rounded-lg border border-outline-variant bg-surface-container-lowest/70 p-6 sm:p-8">
-                    <p className={`whitespace-pre-wrap leading-relaxed text-on-surface-variant ${descriptionStyleClassName(event)}`}>
-                      {event.description}
-                    </p>
+                    {event.descriptionHtml ? (
+                      // Disanitasi lagi di sini (server action juga sudah
+                      // menyanitasi sebelum simpan) - tidak pernah percaya
+                      // "sudah bersih waktu disimpan" tepat sebelum
+                      // dangerouslySetInnerHTML. Lihat sanitize-description-html.ts.
+                      <div
+                        className="leading-relaxed text-on-surface-variant [&_p]:mb-4 last:[&_p]:mb-0"
+                        dangerouslySetInnerHTML={{ __html: sanitizeDescriptionHtml(event.descriptionHtml) }}
+                      />
+                    ) : (
+                      // Acara lama, belum pernah disentuh editor rich text.
+                      <p className="whitespace-pre-wrap leading-relaxed text-on-surface-variant text-body-lg">
+                        {event.description}
+                      </p>
+                    )}
                   </div>
                 </Reveal>
               )}
