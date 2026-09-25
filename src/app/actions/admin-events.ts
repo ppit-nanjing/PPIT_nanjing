@@ -12,12 +12,7 @@ import { logEventAudit } from "@/lib/event-audit";
 import { UUID_RE } from "@/lib/uuid";
 import { createTemplatedNotification } from "@/lib/notifications";
 import { checkInBlockReason, checkInClosedReason } from "@/lib/event-checkin";
-import {
-  DESCRIPTION_FONT_OPTIONS,
-  DESCRIPTION_SIZE_OPTIONS,
-  DESCRIPTION_WEIGHT_OPTIONS,
-  normalizeDescriptionStyleValue,
-} from "@/lib/event-description-style";
+import { sanitizeDescriptionHtml } from "@/lib/sanitize-description-html";
 import { issueParticipantCertificatesCore } from "@/app/actions/committee";
 
 async function requireAdmin() {
@@ -254,11 +249,19 @@ export async function updateEventContent(id: string, formData: FormData) {
     .update(events)
     .set({
       description: String(formData.get("description") ?? "").trim() || null,
-      // Nilai di luar daftar (manipulasi form/klien lama) jatuh ke null -> baku
-      // situs, bukan error - lihat normalizeDescriptionStyleValue().
-      descriptionFont: normalizeDescriptionStyleValue(DESCRIPTION_FONT_OPTIONS, formData.get("descriptionFont")),
-      descriptionFontSize: normalizeDescriptionStyleValue(DESCRIPTION_SIZE_OPTIONS, formData.get("descriptionFontSize")),
-      descriptionFontWeight: normalizeDescriptionStyleValue(DESCRIPTION_WEIGHT_OPTIONS, formData.get("descriptionFontWeight")),
+      // Disanitasi lagi di sini walau EventDescriptionEditor cuma pernah
+      // mengirim HTML dari toolbarnya sendiri - server action tidak boleh
+      // percaya begitu saja formData datang dari UI yang dia kira dipakai.
+      // Sanitasi KEDUA (defense in depth) ada tepat sebelum render di halaman
+      // publik - lihat descriptionHtml di events/[slug]/page.tsx.
+      descriptionHtml: (() => {
+        const raw = String(formData.get("descriptionHtml") ?? "").trim();
+        if (!raw) return null;
+        const clean = sanitizeDescriptionHtml(raw);
+        // TipTap prints an empty doc as "<p></p>" - treat that the same as
+        // no content, matching how a blank plain description saves as null.
+        return /^(<p><\/p>\s*)+$/.test(clean) ? null : clean;
+      })(),
       agenda: String(formData.get("agenda") ?? "").trim() || null,
       confirmationInfo: String(formData.get("confirmationInfo") ?? "").trim() || null,
       confirmationContactQr1Url: String(formData.get("confirmationContactQr1Url") ?? "").trim() || null,
