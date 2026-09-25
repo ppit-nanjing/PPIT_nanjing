@@ -18,7 +18,7 @@ function extractToken(raw: string): string | null {
   return text || null;
 }
 
-export function QrScanner() {
+export function QrScanner({ practiceMode = false }: { practiceMode?: boolean }) {
   const router = useRouter();
   const pathname = usePathname();
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -100,7 +100,9 @@ export function QrScanner() {
       if (token) {
         stopCamera();
         setStatus("idle");
-        router.push(`${pathname}?t=${encodeURIComponent(token)}`);
+        router.push(
+          `${pathname}?t=${encodeURIComponent(token)}${practiceMode ? "&practice=1" : ""}`,
+        );
         return;
       }
     }

@@ -264,7 +264,7 @@ export default async function ConsoleEventDetailPage({ params }: { params: Promi
       <header className="mb-8">
         <h1 className="text-headline-md sm:text-headline-lg text-on-background mb-2">{event.title}</h1>
         <p className="text-body-md text-on-surface-variant">
-          {registrations.length} terdaftar &middot; {attended} hadir
+          {activeRegistrationCount} terdaftar &middot; {attended} hadir
           {event.capacity ? ` &middot; kapasitas ${event.capacity}` : ""}
         </p>
         {access.locked && !access.isFullAdmin && (
@@ -1150,7 +1150,7 @@ export default async function ConsoleEventDetailPage({ params }: { params: Promi
             <p className="text-label-caps uppercase tracking-wide text-on-surface-variant">Ringkasan</p>
             <div className="grid grid-cols-3 gap-2 text-center">
               <div className="bg-surface-container-low rounded-lg py-3">
-                <p className="text-headline-sm text-on-background font-semibold">{registrations.length}</p>
+                <p className="text-headline-sm text-on-background font-semibold">{activeRegistrationCount}</p>
                 <p className="text-label-caps text-on-surface-variant">Terdaftar</p>
               </div>
               <div className="bg-surface-container-low rounded-lg py-3">

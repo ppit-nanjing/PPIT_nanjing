@@ -10,7 +10,7 @@ import { SiteNav } from "@/components/site-nav";
 import { SiteFooter } from "@/components/site-footer";
 import { ScanCheckIn } from "@/components/console/scan-checkin";
 import { QrScanner } from "@/components/console/qr-scanner";
-import { XCircle, ArrowLeft, CalendarX } from "lucide-react";
+import { XCircle, ArrowLeft, CalendarX, FlaskConical } from "lucide-react";
 
 // Scanner kehadiran — pindah keluar dari /console supaya Petugas Pendataan yang
 // hanya panitia acara (bukan admin kabinet) bisa membukanya. Gerbangnya di sini
@@ -21,10 +21,16 @@ export default async function EventScanPage({
   searchParams,
 }: {
   params: Promise<{ slug: string }>;
-  searchParams: Promise<{ t?: string }>;
+  searchParams: Promise<{ t?: string; practice?: string }>;
 }) {
   const { slug } = await params;
-  const { t } = await searchParams;
+  const { t, practice } = await searchParams;
+  // "Mode Latihan" - scan tiket ASLI (QR peserta/panitia sungguhan) lewat
+  // validasi asli yang sama, tapi tidak menulis kehadiran/notifikasi. Per
+  // acara lewat query param, bukan flag global - supaya panitia bisa
+  // meyakinkan diri (dan peserta yang khawatir) QR mereka memang bisa
+  // discan, tanpa risiko ke data kehadiran/kapasitas sungguhan.
+  const practiceMode = practice === "1";
 
   const [event] = await db.select().from(events).where(eq(events.slug, slug));
   if (!event) notFound();
@@ -85,7 +91,10 @@ export default async function EventScanPage({
     .select({ status: eventRegistrations.status })
     .from(eventRegistrations)
     .where(eq(eventRegistrations.eventId, event.id));
-  const registeredCount = registeredRows.length;
+  // Kecualikan yang dibatalkan - sama seperti getEventSeats() (halaman publik)
+  // dan activeRegistrationCount (console/events/[id]) - baris cancelled tidak
+  // boleh ikut dihitung "terdaftar".
+  const registeredCount = registeredRows.filter((r) => r.status !== "cancelled").length;
   const attendedCount = registeredRows.filter((r) => r.status === "attended").length;
 
   const committeeRows = await db
@@ -95,7 +104,8 @@ export default async function EventScanPage({
   const committeeTotal = committeeRows.length;
   const committeeAttended = committeeRows.filter((c) => c.checkedInAt).length;
 
-  const scanPath = `/events/${slug}/scan`;
+  const scanPath = `/events/${slug}/scan${practiceMode ? "?practice=1" : ""}`;
+  const toggleHref = practiceMode ? `/events/${slug}/scan` : `/events/${slug}/scan?practice=1`;
   // Pintu check-in menutup otomatis setelah acara berakhir (Spesifikasi §11).
   // BPH Kabinet / Divisi Teknologi (isFullAdmin) dikecualikan — tetap bisa
   // mengoreksi kehadiran kapan pun, konsisten dengan kunci 2-minggu.
@@ -113,9 +123,37 @@ export default async function EventScanPage({
         </Link>
 
         <h1 className="text-headline-md sm:text-headline-lg text-on-background mb-1">{event.title}</h1>
-        <p className="text-body-md text-on-surface-variant mb-8">
+        <p className="text-body-md text-on-surface-variant mb-4">
           Scan QR tiket peserta atau tiket kepanitiaan untuk mencatat kehadiran.
         </p>
+
+        {!closed && practiceMode && (
+          <div className="mb-6 flex items-start gap-3 rounded-xl border-2 border-amber-400 bg-amber-50 p-4">
+            <FlaskConical className="text-amber-600 shrink-0 mt-0.5" size={20} aria-hidden="true" />
+            <div>
+              <p className="text-body-md font-semibold text-amber-900">
+                Mode Latihan aktif — scan TIDAK akan tercatat sebagai kehadiran sungguhan
+              </p>
+              <p className="text-body-sm text-amber-800 mt-0.5">
+                Aman dipakai untuk mencoba QR tiket asli (punya panitia atau peserta) supaya yakin bisa discan saat
+                acara berlangsung.
+              </p>
+              <Link href={toggleHref} className="inline-block mt-2 text-label-caps uppercase tracking-wide text-amber-900 underline">
+                Matikan Mode Latihan
+              </Link>
+            </div>
+          </div>
+        )}
+        {!closed && !practiceMode && (
+          <div className="mb-6">
+            <Link
+              href={toggleHref}
+              className="inline-flex items-center gap-2 text-label-caps uppercase tracking-wide text-on-surface-variant hover:text-on-background border border-outline-variant rounded-md px-3 py-2 transition-colors"
+            >
+              <FlaskConical size={14} aria-hidden="true" /> Aktifkan Mode Latihan
+            </Link>
+          </div>
+        )}
 
         {closed ? (
           <div className="mb-8 rounded-xl border border-outline-variant bg-surface-container-lowest p-6 flex flex-col items-center text-center">
@@ -136,6 +174,7 @@ export default async function EventScanPage({
                 email={lookup.email}
                 label={lookup.label}
                 scanPath={scanPath}
+                practice={practiceMode}
               />
             )}
 
@@ -146,9 +185,10 @@ export default async function EventScanPage({
               </div>
             )}
 
-            {!t && <QrScanner />}
+            {!t && <QrScanner practiceMode={practiceMode} />}
 
             <form method="get" className="flex flex-col gap-3 sm:flex-row">
+              {practiceMode && <input type="hidden" name="practice" value="1" />}
               <input
                 name="t"
                 placeholder="Tempel/salin token QR manual"
