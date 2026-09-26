@@ -15,12 +15,27 @@ type Candidate = Awaited<ReturnType<typeof searchCheckInCandidates>>[number];
 // QR, atau QR belum sempat terbit. Validasi persis sama dengan jalur scan QR
 // (lihat checkInByUserId/checkInCommitteeByUserId di admin-events.ts) - cuma
 // jalur pencariannya beda, bukan jalur aksesnya.
+type KindFilter = "all" | "participant" | "committee";
+type StatusFilter = "all" | "in" | "out";
+
+const selectCls =
+  "bg-soft-gray rounded-md px-3 py-2 text-body-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-container";
+
 export function ManualCheckIn({ eventId, practice = false }: { eventId: string; practice?: boolean }) {
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<Candidate[]>([]);
+  const [kindFilter, setKindFilter] = useState<KindFilter>("all");
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
   const [checkingKey, setCheckingKey] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const filteredResults = results.filter((r) => {
+    if (kindFilter !== "all" && r.kind !== kindFilter) return false;
+    if (statusFilter === "in" && !r.alreadyAttended) return false;
+    if (statusFilter === "out" && r.alreadyAttended) return false;
+    return true;
+  });
 
   function handleQueryChange(value: string) {
     setQuery(value);
@@ -82,11 +97,34 @@ export function ManualCheckIn({ eventId, practice = false }: { eventId: string; 
       </label>
 
       {query.trim().length >= 2 && (
-        <ul className="flex flex-col gap-1.5 max-h-80 overflow-y-auto">
-          {results.length === 0 && !isPending && (
+        <>
+          <div className="flex gap-2">
+            <select
+              value={kindFilter}
+              onChange={(e) => setKindFilter(e.target.value as KindFilter)}
+              aria-label="Filter peserta/panitia"
+              className={selectCls}
+            >
+              <option value="all">Semua</option>
+              <option value="participant">Peserta</option>
+              <option value="committee">Panitia</option>
+            </select>
+            <select
+              value={statusFilter}
+              onChange={(e) => setStatusFilter(e.target.value as StatusFilter)}
+              aria-label="Filter status hadir"
+              className={selectCls}
+            >
+              <option value="all">Hadir & belum</option>
+              <option value="out">Belum hadir</option>
+              <option value="in">Sudah hadir</option>
+            </select>
+          </div>
+          <ul className="flex flex-col gap-1.5 max-h-80 overflow-y-auto">
+          {filteredResults.length === 0 && !isPending && (
             <li className="text-body-sm text-on-surface-variant px-1 py-2">Tidak ada yang cocok.</li>
           )}
-          {results.map((c) => {
+          {filteredResults.map((c) => {
             const key = `${c.kind}:${c.userId}`;
             return (
               <li
@@ -121,7 +159,8 @@ export function ManualCheckIn({ eventId, practice = false }: { eventId: string; 
               </li>
             );
           })}
-        </ul>
+          </ul>
+        </>
       )}
     </div>
   );
