@@ -134,7 +134,6 @@ export const WIF_2026_KELOMPOK: Record<string, { kelompok: number; warna: string
   "vanessa areliano wijaya": { kelompok: 11, warna: "Coklat Kopi", koordinator: "Haikal" },
   "vedrick melvern wijaya": { kelompok: 7, warna: "Orange", koordinator: "Eifellia" },
   "verolin laura": { kelompok: 11, warna: "Coklat Kopi", koordinator: "Haikal" },
-  "vincent marvellino": { kelompok: 9, warna: "Putih", koordinator: "Sharon" },
   "vivian lauren viriyadi": { kelompok: 6, warna: "Royal Blue", koordinator: "Merry" },
   "wilhan guslie": { kelompok: 11, warna: "Coklat Kopi", koordinator: "Haikal" },
   "yuriko alwi": { kelompok: 13, warna: "Dark Red", koordinator: "Grace" },
