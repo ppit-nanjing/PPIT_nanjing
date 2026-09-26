@@ -1,17 +1,18 @@
 "use server";
 
-import { eq, and, or, isNull, sql } from "drizzle-orm";
+import { eq, and, or, ilike, isNull, sql } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { auth } from "@/auth";
 import { db } from "@/db";
-import { events, eventRegistrations, eventQuestions, eventCommittee, eventFeeOptions, galleryAlbums } from "@/db/schema";
+import { events, eventRegistrations, eventQuestions, eventCommittee, eventFeeOptions, eventDivisions, galleryAlbums, users, sensusProfiles } from "@/db/schema";
 import { hasModuleAccess } from "@/lib/admin-scope";
 import { getEventAccess, requireEventCapability } from "@/lib/event-access";
 import { logEventAudit } from "@/lib/event-audit";
 import { UUID_RE } from "@/lib/uuid";
 import { createTemplatedNotification } from "@/lib/notifications";
 import { checkInBlockReason, checkInClosedReason } from "@/lib/event-checkin";
+import { WIF_2026_KELOMPOK, normalizeNameForKelompok } from "@/lib/wif-2026-kelompok";
 import { sanitizeDescriptionHtml } from "@/lib/sanitize-description-html";
 import { issueParticipantCertificatesCore } from "@/app/actions/committee";
 
@@ -703,6 +704,169 @@ export async function checkInCommitteeByToken(token: string, eventId: string, dr
 
   revalidatePath(`/console/events/${eventId}`);
   return { ok: true as const, already: false as const };
+}
+
+// Check-in manual (cari-nama) — untuk peserta/panitia yang HP-nya mati, tidak
+// bawa QR, atau QR-nya belum sempat dibuat. Sama persis validasinya dengan
+// checkInByToken, hanya jalur pencariannya beda: (eventId, userId) langsung,
+// bukan lewat token QR. dryRun tetap didukung supaya konsisten dengan Mode
+// Latihan di jalur scan.
+export async function checkInByUserId(eventId: string, userId: string, dryRun = false) {
+  const { session, isFullAdmin } = await requireEventCapability(eventId, "event.scanAttendance");
+
+  const [registration] = await db
+    .select({
+      id: eventRegistrations.id,
+      userId: eventRegistrations.userId,
+      status: eventRegistrations.status,
+      paymentStatus: eventRegistrations.paymentStatus,
+    })
+    .from(eventRegistrations)
+    .where(and(eq(eventRegistrations.userId, userId), eq(eventRegistrations.eventId, eventId)));
+
+  if (!registration) return { ok: false as const };
+  if (registration.status === "attended") return { ok: true as const, already: true as const };
+
+  const [event] = await db
+    .select({ title: events.title, isPaid: events.isPaid, status: events.status, startAt: events.startAt, endAt: events.endAt })
+    .from(events)
+    .where(eq(events.id, eventId));
+
+  if (!isFullAdmin && event && checkInClosedReason(event)) return { ok: false as const, reason: "closed" as const };
+
+  const blocked = checkInBlockReason(registration, event?.isPaid ?? false);
+  if (blocked) return { ok: false as const, reason: blocked };
+
+  if (dryRun) return { ok: true as const, already: false as const, dryRun: true as const };
+
+  await db
+    .update(eventRegistrations)
+    .set({ status: "attended", checkedInAt: new Date(), checkedInBy: session.user.id })
+    .where(eq(eventRegistrations.id, registration.id));
+  await createTemplatedNotification({
+    userId: registration.userId!,
+    templateKey: "event_checkin",
+    variables: { eventTitle: event?.title ?? "acara" },
+    relatedEntityType: "event_registration",
+    relatedEntityId: registration.id,
+  });
+
+  revalidatePath(`/events/${eventId}/scan`);
+  return { ok: true as const, already: false as const };
+}
+
+// Pola persis checkInByUserId, tabel event_committee.
+export async function checkInCommitteeByUserId(eventId: string, userId: string, dryRun = false) {
+  const { session, isFullAdmin } = await requireEventCapability(eventId, "event.scanAttendance");
+
+  const [assignment] = await db
+    .select({ id: eventCommittee.id, userId: eventCommittee.userId, checkedInAt: eventCommittee.checkedInAt })
+    .from(eventCommittee)
+    .where(and(eq(eventCommittee.userId, userId), eq(eventCommittee.eventId, eventId)));
+
+  if (!assignment) return { ok: false as const };
+  if (assignment.checkedInAt) return { ok: true as const, already: true as const };
+
+  const [event] = await db
+    .select({ title: events.title, status: events.status, startAt: events.startAt, endAt: events.endAt })
+    .from(events)
+    .where(eq(events.id, eventId));
+
+  if (!isFullAdmin && event && checkInClosedReason(event)) return { ok: false as const, reason: "closed" as const };
+
+  if (dryRun) return { ok: true as const, already: false as const, dryRun: true as const };
+
+  await db
+    .update(eventCommittee)
+    .set({ checkedInAt: new Date(), checkedInBy: session.user.id })
+    .where(eq(eventCommittee.id, assignment.id));
+  await createTemplatedNotification({
+    userId: assignment.userId!,
+    templateKey: "event_checkin",
+    variables: { eventTitle: event?.title ?? "acara" },
+    relatedEntityType: "event_committee",
+    relatedEntityId: assignment.id,
+  });
+
+  revalidatePath(`/events/${eventId}/scan`);
+  return { ok: true as const, already: false as const };
+}
+
+// Cari nama untuk check-in manual — cocokkan ke nama akun ATAU nama sensus
+// (banyak yang akunnya nickname, bukan nama asli) di peserta DAN panitia acara
+// ini sekaligus. Minimal 2 karakter supaya tidak query tiap ketikan huruf
+// pertama.
+export async function searchCheckInCandidates(eventId: string, query: string) {
+  await requireEventCapability(eventId, "event.scanAttendance");
+  const q = query.trim();
+  if (q.length < 2) return [];
+  const pattern = `%${q}%`;
+
+  // Kelompok/warna WIF 2026 - lookup statis, khusus acara ini.
+  const [eventRow] = await db.select({ slug: events.slug }).from(events).where(eq(events.id, eventId));
+  const isWif2026 = eventRow?.slug === "wif-2026";
+
+  const participants = await db
+    .select({
+      userId: eventRegistrations.userId,
+      status: eventRegistrations.status,
+      accountName: users.name,
+      sensusFullName: sensusProfiles.fullName,
+    })
+    .from(eventRegistrations)
+    .leftJoin(users, eq(eventRegistrations.userId, users.id))
+    .leftJoin(sensusProfiles, eq(eventRegistrations.userId, sensusProfiles.userId))
+    .where(
+      and(
+        eq(eventRegistrations.eventId, eventId),
+        or(ilike(users.name, pattern), ilike(sensusProfiles.fullName, pattern))
+      )
+    )
+    .limit(15);
+
+  const committee = await db
+    .select({
+      userId: eventCommittee.userId,
+      checkedInAt: eventCommittee.checkedInAt,
+      divisionName: eventDivisions.name,
+      role: eventCommittee.role,
+      accountName: users.name,
+      sensusFullName: sensusProfiles.fullName,
+    })
+    .from(eventCommittee)
+    .leftJoin(eventDivisions, eq(eventCommittee.divisionId, eventDivisions.id))
+    .leftJoin(users, eq(eventCommittee.userId, users.id))
+    .leftJoin(sensusProfiles, eq(eventCommittee.userId, sensusProfiles.userId))
+    .where(
+      and(
+        eq(eventCommittee.eventId, eventId),
+        or(ilike(users.name, pattern), ilike(sensusProfiles.fullName, pattern))
+      )
+    )
+    .limit(15);
+
+  return [
+    ...participants.map((p) => {
+      const name = p.sensusFullName ?? p.accountName ?? "(tanpa nama)";
+      const entry = isWif2026 ? WIF_2026_KELOMPOK[normalizeNameForKelompok(name)] ?? null : null;
+      return {
+        kind: "participant" as const,
+        userId: p.userId!,
+        name,
+        label: null as string | null,
+        alreadyAttended: p.status === "attended",
+        kelompok: entry ? { kelompok: entry.kelompok, warna: entry.warna } : null,
+      };
+    }),
+    ...committee.map((c) => ({
+      kind: "committee" as const,
+      userId: c.userId!,
+      name: c.sensusFullName ?? c.accountName ?? "(tanpa nama)",
+      label: c.divisionName ? `${c.divisionName} · ${c.role}` : c.role,
+      alreadyAttended: !!c.checkedInAt,
+      kelompok: null as { kelompok: number; warna: string } | null,
+    })),
+  ];
 }
 
 export async function deleteEvent(eventId: string) {

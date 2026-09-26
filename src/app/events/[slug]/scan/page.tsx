@@ -2,14 +2,16 @@ import { eq, and } from "drizzle-orm";
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import { db } from "@/db";
-import { events, eventRegistrations, eventCommittee, eventDivisions, users } from "@/db/schema";
+import { events, eventRegistrations, eventCommittee, eventDivisions, users, sensusProfiles } from "@/db/schema";
 import { requireEventCapability } from "@/lib/event-access";
 import { EVENT_COMMITTEE_ROLE_LABEL, type EventCommitteeRole } from "@/lib/event-capabilities";
 import { checkInClosedReason, CHECK_IN_CLOSED_MESSAGE } from "@/lib/event-checkin";
+import { WIF_2026_KELOMPOK, normalizeNameForKelompok } from "@/lib/wif-2026-kelompok";
 import { SiteNav } from "@/components/site-nav";
 import { SiteFooter } from "@/components/site-footer";
 import { ScanCheckIn } from "@/components/console/scan-checkin";
 import { QrScanner } from "@/components/console/qr-scanner";
+import { ManualCheckIn } from "@/components/console/manual-checkin";
 import { XCircle, ArrowLeft, CalendarX, FlaskConical } from "lucide-react";
 
 // Scanner kehadiran — pindah keluar dari /console supaya Petugas Pendataan yang
@@ -47,19 +49,33 @@ export default async function EventScanPage({
   // KEPANITIAAN (event_committee.attendance_token) - peserta dicoba lebih dulu,
   // karena jauh lebih sering discan.
   let lookup:
-    | { kind: "participant"; name: string | null; email: string | null; alreadyAttended: boolean; label: null }
-    | { kind: "committee"; name: string | null; email: string | null; alreadyAttended: boolean; label: string | null }
+    | { kind: "participant"; name: string | null; email: string | null; alreadyAttended: boolean; label: null; kelompok: { kelompok: number; warna: string } | null }
+    | { kind: "committee"; name: string | null; email: string | null; alreadyAttended: boolean; label: string | null; kelompok: null }
     | null = null;
+
+  // Kelompok/warna WIF 2026 - lookup statis, khusus acara ini (lihat
+  // src/lib/wif-2026-kelompok.ts), jangan ikut acara lain.
+  const isWif2026 = event.slug === "wif-2026";
 
   if (t) {
     const [row] = await db
-      .select({ name: users.name, email: users.email, status: eventRegistrations.status })
+      .select({ name: users.name, email: users.email, status: eventRegistrations.status, sensusFullName: sensusProfiles.fullName })
       .from(eventRegistrations)
       .leftJoin(users, eq(eventRegistrations.userId, users.id))
+      .leftJoin(sensusProfiles, eq(eventRegistrations.userId, sensusProfiles.userId))
       .where(and(eq(eventRegistrations.eventId, event.id), eq(eventRegistrations.qrCodeToken, t)));
 
     if (row) {
-      lookup = { kind: "participant", name: row.name, email: row.email, alreadyAttended: row.status === "attended", label: null };
+      const nameForKelompok = row.sensusFullName ?? row.name ?? "";
+      const kelompokEntry = isWif2026 ? WIF_2026_KELOMPOK[normalizeNameForKelompok(nameForKelompok)] ?? null : null;
+      lookup = {
+        kind: "participant",
+        name: row.name,
+        email: row.email,
+        alreadyAttended: row.status === "attended",
+        label: null,
+        kelompok: kelompokEntry ? { kelompok: kelompokEntry.kelompok, warna: kelompokEntry.warna } : null,
+      };
     } else {
       const [committee] = await db
         .select({
@@ -82,6 +98,7 @@ export default async function EventScanPage({
           email: committee.email,
           alreadyAttended: !!committee.checkedInAt,
           label: `${committee.divisionName ? `${committee.divisionName} · ` : ""}${roleLabel}`,
+          kelompok: null,
         };
       }
     }
@@ -175,6 +192,7 @@ export default async function EventScanPage({
                 label={lookup.label}
                 scanPath={scanPath}
                 practice={practiceMode}
+                kelompok={lookup.kelompok}
               />
             )}
 
@@ -201,6 +219,8 @@ export default async function EventScanPage({
                 Cek Token
               </button>
             </form>
+
+            {!t && <ManualCheckIn eventId={event.id} practice={practiceMode} />}
           </>
         )}
 

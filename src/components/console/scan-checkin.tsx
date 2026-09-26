@@ -12,6 +12,27 @@ const BLOCK_MESSAGE: Record<string, string> = {
   closed: "Acara sudah berakhir — pintu check-in ditutup otomatis.",
 };
 
+// Swatch visual untuk nama warna kelompok WIF 2026 (teks bebas dari panitia,
+// bukan token desain) - supaya panitia lihat kotak warnanya, bukan cuma baca
+// namanya.
+const KELOMPOK_SWATCH: Record<string, string> = {
+  merah: "#dc2626",
+  hitam: "#1f2937",
+  "biru langit (muda)": "#7dd3fc",
+  "dark green": "#166534",
+  pink: "#f472b6",
+  "royal blue": "#2563eb",
+  orange: "#f97316",
+  kuning: "#facc15",
+  putih: "#f8fafc",
+  ungu: "#9333ea",
+  "coklat kopi": "#6f4e37",
+  "abu-abu": "#9ca3af",
+  "dark red": "#7f1d1d",
+  "ijo muda": "#86efac",
+  "kuning muda": "#fef08a",
+};
+
 export function ScanCheckIn({
   token,
   eventId,
@@ -21,6 +42,7 @@ export function ScanCheckIn({
   label,
   scanPath,
   practice = false,
+  kelompok = null,
 }: {
   token: string;
   eventId: string;
@@ -32,6 +54,9 @@ export function ScanCheckIn({
   scanPath: string;
   // "Mode Latihan" - jalankan validasi asli tapi jangan tulis ke database.
   practice?: boolean;
+  // Kelompok/warna WIF 2026 (lihat src/lib/wif-2026-kelompok.ts) - null kalau
+  // acara lain atau nama tidak cocok di daftar.
+  kelompok?: { kelompok: number; warna: string } | null;
 }) {
   const [status, setStatus] = useState<Status>("pending");
   const [already, setAlready] = useState(false);
@@ -116,6 +141,18 @@ export function ScanCheckIn({
         <span className="text-body-md">{name ?? "(tanpa nama)"}</span>
       </div>
       {email && <p className="text-label-caps text-on-surface-variant">{email}</p>}
+      {kelompok && (
+        <div className="mt-3 inline-flex items-center gap-2 rounded-full border border-outline-variant bg-background px-4 py-2">
+          <span
+            className="inline-block w-5 h-5 rounded-full border border-outline-variant shrink-0"
+            style={{ backgroundColor: KELOMPOK_SWATCH[kelompok.warna.toLowerCase()] ?? "#cbd5e1" }}
+            aria-hidden="true"
+          />
+          <span className="text-body-md font-semibold text-on-background">
+            Kelompok {kelompok.kelompok} · {kelompok.warna}
+          </span>
+        </div>
+      )}
       <a
         href={scanPath}
         className="mt-5 inline-flex items-center gap-2 bg-primary-container text-on-primary text-label-caps uppercase tracking-wide px-6 py-3 rounded-md hover:bg-primary transition-colors"
