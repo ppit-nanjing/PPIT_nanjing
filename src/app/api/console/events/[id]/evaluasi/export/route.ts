@@ -3,7 +3,8 @@ import { NextResponse } from "next/server";
 import { db } from "@/db";
 import { eventEvaluations, events } from "@/db/schema";
 import { getEventAccess } from "@/lib/event-access";
-import { datasetToCsv, datasetToXlsx, type ReportDataset } from "@/lib/report-export";
+import { evaluationTemplateForSlug, ratingQuestions, textQuestions } from "@/lib/event-evaluation-template";
+import { datasetToCsv, datasetToXlsx, type ReportColumn, type ReportDataset } from "@/lib/report-export";
 
 export async function GET(request: Request, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -18,7 +19,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
     return NextResponse.json({ error: "Format tidak didukung (csv|xlsx)" }, { status: 400 });
   }
 
-  const [event] = await db.select({ title: events.title }).from(events).where(eq(events.id, id));
+  const [event] = await db.select({ title: events.title, slug: events.slug }).from(events).where(eq(events.id, id));
   if (!event) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
   const rows = await db
@@ -27,27 +28,22 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
     .where(eq(eventEvaluations.eventId, id))
     .orderBy(desc(eventEvaluations.createdAt));
 
+  const template = evaluationTemplateForSlug(event.slug);
+  const columns: ReportColumn[] = [
+    { header: "Waktu", key: "createdAt", type: "date" },
+    { header: "Nama", key: "respondentName" },
+    { header: "Kota", key: "respondentCity" },
+    { header: "Anonim", key: "anonymousLabel" },
+    ...ratingQuestions(template.sections).map((q) => ({ header: `${q.label} (1-10)`, key: q.name, type: "number" as const })),
+    ...textQuestions(template.sections).map((q) => ({ header: q.label, key: q.name })),
+  ];
+
   const dataset: ReportDataset = {
     title: `Evaluasi ${event.title}`,
     type: "event_evaluation",
     generatedAt: new Date(),
     filters: {},
-    columns: [
-      { header: "Waktu", key: "createdAt", type: "date" },
-      { header: "Nama", key: "respondentName" },
-      { header: "Kota", key: "respondentCity" },
-      { header: "Anonim", key: "anonymousLabel" },
-      { header: "Registrasi (1-10)", key: "ratingRegistration", type: "number" },
-      { header: "Fasilitas (1-10)", key: "ratingFacilities", type: "number" },
-      { header: "Sharing CGT (1-10)", key: "ratingCgt", type: "number" },
-      { header: "Keseluruhan (1-10)", key: "ratingOverall", type: "number" },
-      { header: "Improve registrasi (2027)", key: "improveRegistration" },
-      { header: "Improve fasilitas (2027)", key: "improveFacilities" },
-      { header: "Kesan & pesan sharing CGT", key: "cgtMessage" },
-      { header: "Improve pelayanan & games", key: "improveService" },
-      { header: "Kesan, pesan & saran", key: "overallMessage" },
-      { header: "Heartwarming untuk panitia", key: "heartwarming" },
-    ],
+    columns,
     rows: rows.map((r) => ({
       createdAt: r.createdAt,
       respondentName: r.anonymous || !r.respondentName ? "" : r.respondentName,

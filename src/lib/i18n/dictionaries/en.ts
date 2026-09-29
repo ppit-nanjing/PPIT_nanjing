@@ -1298,4 +1298,18 @@ export const en = {
   "eval.errorGeneric": "Failed to submit the evaluation. Please try again shortly.",
   "eval.footer": "Evaluation for {{event}} — only read by PPIT Nanjing committee.",
 
+  // Generic template (events other than WIF): no event-specific session names
+  "eval.sectionSession": "Session & Materials",
+  "eval.g1": "How effective was the event registration system?",
+  "eval.g2": "What can be improved in the registration system going forward?",
+  "eval.g3": "How satisfied were you with the event facilities, from venue to food?",
+  "eval.g4": "What can be improved in facilities and infrastructure going forward?",
+  "eval.g5": "How useful was the sharing/materials session?",
+  "eval.g5Hint": "The sharing session, materials, or speakers.",
+  "eval.g6": "Impressions and messages for the sharing/materials session.",
+  "eval.g7": "How satisfied were you with this event overall?",
+  "eval.g7Hint": "From committee service to the event lineup.",
+  "eval.g8": "What can be improved from committee service to the event lineup?",
+  "eval.g9": "Impressions, messages, and suggestions for this event.",
+
 } satisfies Dictionary;

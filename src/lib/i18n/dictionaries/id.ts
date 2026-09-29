@@ -1301,6 +1301,20 @@ export const id = {
   "eval.errorGeneric": "Gagal mengirim evaluasi. Coba lagi sebentar lagi.",
   "eval.footer": "Evaluasi untuk {{event}} — hanya dibaca pengurus PPIT Nanjing.",
 
+  // Template umum (acara selain WIF): pertanyaan generik tanpa nama sesi khusus
+  "eval.sectionSession": "Sesi & Materi",
+  "eval.g1": "Seberapa efektif sistem registrasi acara?",
+  "eval.g2": "Apa yang bisa di-improve dari sistem registrasi ke depannya?",
+  "eval.g3": "Seberapa memuaskan fasilitas acara, mulai dari venue sampai konsumsi?",
+  "eval.g4": "Apa yang bisa di-improve dari fasilitas dan sarana prasarana ke depannya?",
+  "eval.g5": "Seberapa bermanfaat sesi sharing/materi acara?",
+  "eval.g5Hint": "Sesi sharing, materi, atau narasumber acara.",
+  "eval.g6": "Kesan dan pesan untuk sesi sharing/materi acara.",
+  "eval.g7": "Seberapa memuaskan acara ini secara keseluruhan?",
+  "eval.g7Hint": "Dari pelayanan panitia sampai rangkaian acara.",
+  "eval.g8": "Apa yang bisa di-improve dari pelayanan panitia sampai rangkaian acara?",
+  "eval.g9": "Kesan, pesan, dan saran untuk acara ini.",
+
 };
 
 // No `as const` - that would make every VALUE a string literal too, and then

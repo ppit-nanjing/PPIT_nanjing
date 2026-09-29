@@ -1,26 +1,22 @@
-import { Download, Trash2 } from "lucide-react";
+"use client";
+
+import { useState, type ReactNode } from "react";
+import { BarChart3, Download, ListChecks, Trash2, Users } from "lucide-react";
 import type { InferSelectModel } from "drizzle-orm";
 import type { eventEvaluations } from "@/db/schema";
 import { ConfirmButton } from "@/components/console/confirm-button";
 import { deleteEventEvaluation } from "@/app/actions/event-evaluations";
+import { ratingQuestions, textQuestions, type EvaluationSection } from "@/lib/event-evaluation-template";
 
 type Evaluation = InferSelectModel<typeof eventEvaluations>;
 
-const RATING_ROWS: { key: string; label: string; pick: (e: Evaluation) => number }[] = [
-  { key: "registration", label: "Registrasi", pick: (e) => e.ratingRegistration },
-  { key: "facilities", label: "Fasilitas", pick: (e) => e.ratingFacilities },
-  { key: "cgt", label: "Sharing CGT", pick: (e) => e.ratingCgt },
-  { key: "overall", label: "Keseluruhan", pick: (e) => e.ratingOverall },
-];
+function formatWhen(date: Date | string): string {
+  return new Date(date).toLocaleString("id-ID", { dateStyle: "medium", timeStyle: "short" });
+}
 
-const TEXT_ROWS: { key: string; label: string; pick: (e: Evaluation) => string | null }[] = [
-  { key: "improveRegistration", label: "Improve registrasi (2027)", pick: (e) => e.improveRegistration },
-  { key: "improveFacilities", label: "Improve fasilitas & sarpras (2027)", pick: (e) => e.improveFacilities },
-  { key: "cgtMessage", label: "Kesan & pesan sharing CGT", pick: (e) => e.cgtMessage },
-  { key: "improveService", label: "Improve pelayanan panitia & games", pick: (e) => e.improveService },
-  { key: "overallMessage", label: "Kesan, pesan & saran keseluruhan", pick: (e) => e.overallMessage },
-  { key: "heartwarming", label: "Heartwarming untuk panitia", pick: (e) => e.heartwarming },
-];
+function respondentLabel(e: Evaluation): string {
+  return e.anonymous || !e.respondentName ? "Anonim" : e.respondentName;
+}
 
 function ExportLinks({ eventId }: { eventId: string }) {
   const base = `/api/console/events/${eventId}/evaluasi/export`;
@@ -38,11 +34,51 @@ function ExportLinks({ eventId }: { eventId: string }) {
   );
 }
 
-function formatWhen(date: Date): string {
-  return new Date(date).toLocaleString("id-ID", { dateStyle: "medium", timeStyle: "short" });
+function Distribution({ values, tall }: { values: number[]; tall?: boolean }) {
+  const counts = Array.from({ length: 10 }, (_, i) => values.filter((v) => v === i + 1).length);
+  const max = Math.max(...counts, 1);
+  const h = tall ? 56 : 32;
+  return (
+    <div className="flex items-end gap-1" aria-hidden="true">
+      {counts.map((c, i) => (
+        <span key={i} title={`${i + 1}: ${c} respons`} className="w-full rounded-sm bg-primary-container/70" style={{ height: `${Math.max(2, Math.round((c / max) * h))}px` }} />
+      ))}
+    </div>
+  );
 }
 
-export function EvaluationResults({ eventId, evaluations }: { eventId: string; evaluations: Evaluation[] }) {
+function Tabs({ tabs, active, onChange }: { tabs: { id: string; label: string; icon: ReactNode }[]; active: string; onChange: (id: string) => void }) {
+  return (
+    <div className="flex flex-wrap gap-1 rounded-lg border border-outline-variant bg-surface-container-low p-1 w-fit" role="tablist">
+      {tabs.map((tab) => (
+        <button
+          key={tab.id}
+          type="button"
+          role="tab"
+          aria-selected={active === tab.id}
+          onClick={() => onChange(tab.id)}
+          className={`inline-flex items-center gap-1.5 rounded-md px-4 py-2 text-label-caps uppercase tracking-wide transition-colors ${
+            active === tab.id ? "bg-primary-container text-on-primary" : "text-on-surface-variant hover:text-on-background"
+          }`}
+        >
+          {tab.icon} {tab.label}
+        </button>
+      ))}
+    </div>
+  );
+}
+
+export function EvaluationResults({
+  eventId,
+  evaluations,
+  sections,
+}: {
+  eventId: string;
+  evaluations: Evaluation[];
+  sections: EvaluationSection[];
+}) {
+  const [tab, setTab] = useState<"grafik" | "jawaban" | "respons">("grafik");
+
   if (evaluations.length === 0) {
     return (
       <div className="flex flex-col gap-3">
@@ -55,94 +91,171 @@ export function EvaluationResults({ eventId, evaluations }: { eventId: string; e
     );
   }
 
+  const ratingQs = ratingQuestions(sections);
+  const textQs = textQuestions(sections);
+  const anonymousCount = evaluations.filter((e) => e.anonymous).length;
+  const allRatings = ratingQs.flatMap((q) => evaluations.map((e) => e[q.name]));
+  const overallAvg = allRatings.reduce((s, v) => s + v, 0) / allRatings.length;
+
   return (
-    <div className="flex flex-col gap-6">
+    <div className="flex flex-col gap-5">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <p className="text-body-md text-on-surface-variant">
-          <span className="text-on-background font-semibold">{evaluations.length}</span> respons · skala 1–10
-        </p>
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="rounded-md bg-surface-container-low px-3 py-1.5 text-label-caps text-on-surface-variant">
+            <b className="text-on-background">{evaluations.length}</b> respons
+          </span>
+          <span className="rounded-md bg-surface-container-low px-3 py-1.5 text-label-caps text-on-surface-variant">
+            rata-rata <b className="text-on-background">{overallAvg.toFixed(1)}</b>/10
+          </span>
+          <span className="rounded-md bg-surface-container-low px-3 py-1.5 text-label-caps text-on-surface-variant">
+            <b className="text-on-background">{anonymousCount}</b> anonim
+          </span>
+        </div>
         <ExportLinks eventId={eventId} />
       </div>
 
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
-        {RATING_ROWS.map((row) => {
-          const values = evaluations.map(row.pick);
-          const avg = values.reduce((s, v) => s + v, 0) / values.length;
-          const counts = Array.from({ length: 10 }, (_, i) => values.filter((v) => v === i + 1).length);
-          const max = Math.max(...counts, 1);
-          return (
-            <div key={row.key} className="rounded-lg border border-outline-variant bg-surface-container-low p-4">
-              <p className="text-label-caps uppercase tracking-wide text-on-surface-variant">{row.label}</p>
-              <p className="text-headline-lg text-on-background leading-none mt-1">{avg.toFixed(1)}</p>
-              <div className="mt-3 flex items-end gap-1" aria-hidden="true">
-                {counts.map((c, i) => (
-                  <span
-                    key={i}
-                    className="w-full rounded-sm bg-primary-container/70"
-                    style={{ height: `${Math.max(2, Math.round((c / max) * 32))}px` }}
-                  />
-                ))}
-              </div>
-              <div className="mt-1 flex justify-between text-[10px] text-on-surface-variant">
-                <span>1</span>
-                <span>10</span>
-              </div>
-            </div>
-          );
-        })}
-      </div>
+      <Tabs
+        active={tab}
+        onChange={(id) => setTab(id as typeof tab)}
+        tabs={[
+          { id: "grafik", label: "Grafik", icon: <BarChart3 size={14} aria-hidden="true" /> },
+          { id: "jawaban", label: "Jawaban", icon: <ListChecks size={14} aria-hidden="true" /> },
+          { id: "respons", label: "Respons", icon: <Users size={14} aria-hidden="true" /> },
+        ]}
+      />
 
-      <ul className="flex flex-col gap-3">
-        {evaluations.map((e) => {
-          const texts = TEXT_ROWS.filter((row) => row.pick(e));
-          return (
-            <li key={e.id} className="rounded-lg border border-outline-variant p-4 flex flex-col gap-3">
-              <div className="flex items-start justify-between gap-3">
-                <div>
-                  <p className="text-body-md font-semibold text-on-background">
-                    {e.anonymous || !e.respondentName ? "Anonim" : e.respondentName}
-                    {e.respondentCity && !e.anonymous ? (
-                      <span className="ml-2 text-body-sm font-normal text-on-surface-variant">{e.respondentCity}</span>
-                    ) : null}
-                  </p>
-                  <p className="text-label-caps text-on-surface-variant">
-                    {formatWhen(e.createdAt)}
-                    {e.anonymous ? " · anonim" : ""}
-                  </p>
+      {tab === "grafik" && (
+        <div className="grid grid-cols-1 gap-3 pb-1 sm:grid-cols-2">
+          {ratingQs.map((q) => {
+            const values = evaluations.map((e) => e[q.name]);
+            const avg = values.reduce((s, v) => s + v, 0) / values.length;
+            return (
+              <div key={q.name} className="rounded-lg border border-outline-variant bg-surface-container-low p-4">
+                <div className="flex items-baseline justify-between gap-3">
+                  <p className="text-label-caps uppercase tracking-wide text-on-surface-variant">{q.label}</p>
+                  <p className="text-headline-lg text-on-background leading-none">{avg.toFixed(1)}</p>
                 </div>
-                <ConfirmButton
-                  action={deleteEventEvaluation}
-                  payload={{ id: e.id, eventId }}
-                  message="Hapus respons evaluasi ini? Tindakan ini tidak bisa dibatalkan."
-                  aria-label="Hapus respons"
-                  className="rounded-md border border-outline-variant p-2 text-error hover:bg-error-container/30 transition-colors"
-                >
-                  <Trash2 size={16} aria-hidden="true" />
-                </ConfirmButton>
+                <div className="mt-4">
+                  <Distribution values={values} tall />
+                </div>
+                <div className="mt-1 flex justify-between text-[10px] text-on-surface-variant">
+                  <span>1</span>
+                  <span>10</span>
+                </div>
               </div>
+            );
+          })}
+        </div>
+      )}
 
-              <div className="flex flex-wrap gap-2">
-                {RATING_ROWS.map((row) => (
-                  <span key={row.key} className="rounded-md bg-surface-container-low px-2.5 py-1 text-label-caps text-on-surface-variant">
-                    {row.label}: <b className="text-on-background">{row.pick(e)}</b>
-                  </span>
-                ))}
+      {tab === "jawaban" && (
+        <div className="flex flex-col gap-4 pb-1">
+          {[...ratingQs, ...textQs].map((q) =>
+            q.kind === "rating" ? (
+              <div key={q.name} className="rounded-lg border border-outline-variant p-4">
+                <p className="text-label-caps uppercase tracking-wide text-on-surface-variant">{q.label} — penilaian 1–10</p>
+                <div className="mt-3 flex flex-wrap items-center gap-4">
+                  <p className="text-body-md text-on-background">
+                    rata-rata{" "}
+                    <b>{(
+                      evaluations.map((e) => e[q.name]).reduce((s, v) => s + v, 0) / evaluations.length
+                    ).toFixed(1)}</b>{" "}
+                    dari {evaluations.length} respons
+                  </p>
+                  <div className="min-w-[220px] max-w-xs flex-1">
+                    <Distribution values={evaluations.map((e) => e[q.name])} />
+                  </div>
+                </div>
+                <p className="mt-3 text-body-sm text-on-surface-variant">
+                  {Array.from({ length: 10 }, (_, i) => {
+                    const n = valuesCount(evaluations, q.name, i + 1);
+                    return n > 0 ? `${i + 1}×${n}` : null;
+                  })
+                    .filter(Boolean)
+                    .join(" · ")}
+                </p>
               </div>
+            ) : (
+              <div key={q.name} className="rounded-lg border border-outline-variant p-4">
+                <p className="text-label-caps uppercase tracking-wide text-on-surface-variant">{q.label}</p>
+                {(() => {
+                  const answers = evaluations.filter((e) => e[q.name]);
+                  if (answers.length === 0) {
+                    return <p className="mt-3 text-body-sm text-on-surface-variant">— belum ada jawaban —</p>;
+                  }
+                  return (
+                    <ul className="mt-3 flex flex-col gap-2">
+                      {answers.map((e) => (
+                        <li key={e.id} className="rounded-md bg-surface-container-low px-3 py-2">
+                          <p className="text-body-md text-on-background whitespace-pre-wrap">{e[q.name]}</p>
+                          <p className="mt-1 text-label-caps text-on-surface-variant">
+                            {respondentLabel(e)} · {formatWhen(e.createdAt)}
+                          </p>
+                        </li>
+                      ))}
+                    </ul>
+                  );
+                })()}
+              </div>
+            ),
+          )}
+        </div>
+      )}
 
-              {texts.length > 0 && (
-                <div className="flex flex-col gap-2 border-t border-outline-variant/60 pt-3">
-                  {texts.map((row) => (
-                    <div key={row.key}>
-                      <p className="text-label-caps uppercase tracking-wide text-on-surface-variant">{row.label}</p>
-                      <p className="text-body-md text-on-background whitespace-pre-wrap">{row.pick(e)}</p>
-                    </div>
+      {tab === "respons" && (
+        <ul className="flex flex-col gap-3 pb-1">
+          {evaluations.map((e) => {
+            const texts = textQs.filter((q) => e[q.name]);
+            return (
+              <li key={e.id} className="rounded-lg border border-outline-variant p-4 flex flex-col gap-3">
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <p className="text-body-md font-semibold text-on-background">
+                      {respondentLabel(e)}
+                      {e.respondentCity && !e.anonymous ? (
+                        <span className="ml-2 text-body-sm font-normal text-on-surface-variant">{e.respondentCity}</span>
+                      ) : null}
+                    </p>
+                    <p className="text-label-caps text-on-surface-variant">{formatWhen(e.createdAt)}</p>
+                  </div>
+                  <ConfirmButton
+                    action={deleteEventEvaluation}
+                    payload={{ id: e.id, eventId }}
+                    message="Hapus respons evaluasi ini? Tindakan ini tidak bisa dibatalkan."
+                    aria-label="Hapus respons"
+                    className="rounded-md border border-outline-variant p-2 text-error hover:bg-error-container/30 transition-colors"
+                  >
+                    <Trash2 size={16} aria-hidden="true" />
+                  </ConfirmButton>
+                </div>
+
+                <div className="flex flex-wrap gap-2">
+                  {ratingQs.map((q) => (
+                    <span key={q.name} className="rounded-md bg-surface-container-low px-2.5 py-1 text-label-caps text-on-surface-variant">
+                      {q.label}: <b className="text-on-background">{e[q.name]}</b>
+                    </span>
                   ))}
                 </div>
-              )}
-            </li>
-          );
-        })}
-      </ul>
+
+                {texts.length > 0 && (
+                  <div className="flex flex-col gap-2 border-t border-outline-variant/60 pt-3">
+                    {texts.map((q) => (
+                      <div key={q.name}>
+                        <p className="text-label-caps uppercase tracking-wide text-on-surface-variant">{q.label}</p>
+                        <p className="text-body-md text-on-background whitespace-pre-wrap">{e[q.name]}</p>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </li>
+            );
+          })}
+        </ul>
+      )}
     </div>
   );
+}
+
+function valuesCount(evaluations: Evaluation[], name: keyof Evaluation, value: number): number {
+  return evaluations.filter((e) => e[name] === value).length;
 }

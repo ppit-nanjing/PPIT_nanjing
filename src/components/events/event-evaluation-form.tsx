@@ -5,6 +5,7 @@ import Link from "next/link";
 import { ArrowLeft, CheckCircle2 } from "lucide-react";
 import { submitEventEvaluation, type EventEvaluationFormState } from "@/app/actions/event-evaluations";
 import { useT } from "@/lib/i18n/client";
+import type { EvaluationSection } from "@/lib/event-evaluation-template";
 
 const CARD = "bg-surface-container-lowest border border-outline-variant rounded-xl p-5 sm:p-6 flex flex-col gap-5";
 const LABEL = "text-label-caps uppercase tracking-wide text-on-surface-variant";
@@ -20,7 +21,6 @@ function RatingScale({
   hint,
   lowLabel,
   highLabel,
-  optional,
   optionalLabel,
 }: {
   name: string;
@@ -28,15 +28,11 @@ function RatingScale({
   hint?: string;
   lowLabel: string;
   highLabel: string;
-  optional?: boolean;
   optionalLabel: string;
 }) {
   return (
     <fieldset className="flex flex-col gap-3">
-      <legend className="text-body-md font-semibold text-on-background">
-        {legend}
-        {optional && <span className="ml-2 text-body-sm font-normal text-on-surface-variant">{optionalLabel}</span>}
-      </legend>
+      <legend className="text-body-md font-semibold text-on-background">{legend}</legend>
       {hint && <p className="text-body-sm text-on-surface-variant -mt-2">{hint}</p>}
       <div className="flex flex-wrap gap-1.5">
         {Array.from({ length: 10 }, (_, i) => i + 1).map((n) => (
@@ -52,6 +48,7 @@ function RatingScale({
         <span>{lowLabel}</span>
         <span>{highLabel}</span>
       </div>
+      <span className="sr-only">{optionalLabel}</span>
     </fieldset>
   );
 }
@@ -60,10 +57,12 @@ export function EventEvaluationForm({
   slug,
   eventTitle,
   cityOptions,
+  sections,
 }: {
   slug: string;
   eventTitle: string;
   cityOptions: string[];
+  sections: EvaluationSection[];
 }) {
   const t = useT();
   const [state, formAction, isPending] = useActionState<EventEvaluationFormState, FormData>(submitEventEvaluation, {});
@@ -163,78 +162,32 @@ export function EventEvaluationForm({
         </label>
       </section>
 
-      <section className={CARD}>
-        <h2 className="text-headline-sm text-on-background">{t("eval.sectionRegistration")}</h2>
-        <RatingScale
-          name="ratingRegistration"
-          legend={t("eval.q1")}
-          hint={t("eval.q1Hint")}
-          lowLabel={t("eval.scaleLow")}
-          highLabel={t("eval.scaleHigh")}
-          optionalLabel={`(${t("eval.optional")})`}
-        />
-        <label className="flex flex-col gap-1.5">
-          <span className="text-body-md font-semibold text-on-background">{t("eval.q2")}</span>
-          <textarea name="improveRegistration" maxLength={2000} rows={3} className={TEXTAREA} />
-        </label>
-      </section>
-
-      <section className={CARD}>
-        <h2 className="text-headline-sm text-on-background">{t("eval.sectionFacilities")}</h2>
-        <RatingScale
-          name="ratingFacilities"
-          legend={t("eval.q3")}
-          lowLabel={t("eval.scaleLow")}
-          highLabel={t("eval.scaleHigh")}
-          optionalLabel={`(${t("eval.optional")})`}
-        />
-        <label className="flex flex-col gap-1.5">
-          <span className="text-body-md font-semibold text-on-background">{t("eval.q4")}</span>
-          <textarea name="improveFacilities" maxLength={2000} rows={3} className={TEXTAREA} />
-        </label>
-      </section>
-
-      <section className={CARD}>
-        <h2 className="text-headline-sm text-on-background">{t("eval.sectionCgt")}</h2>
-        <RatingScale
-          name="ratingCgt"
-          legend={t("eval.q5")}
-          hint={t("eval.q5Hint")}
-          lowLabel={t("eval.scaleLow")}
-          highLabel={t("eval.scaleHigh")}
-          optionalLabel={`(${t("eval.optional")})`}
-        />
-        <label className="flex flex-col gap-1.5">
-          <span className="text-body-md font-semibold text-on-background">{t("eval.q6")}</span>
-          <textarea name="cgtMessage" maxLength={2000} rows={3} className={TEXTAREA} />
-        </label>
-      </section>
-
-      <section className={CARD}>
-        <h2 className="text-headline-sm text-on-background">{t("eval.sectionEvent")}</h2>
-        <RatingScale
-          name="ratingOverall"
-          legend={t("eval.q7")}
-          hint={t("eval.q7Hint")}
-          lowLabel={t("eval.scaleLow")}
-          highLabel={t("eval.scaleHigh")}
-          optionalLabel={`(${t("eval.optional")})`}
-        />
-        <label className="flex flex-col gap-1.5">
-          <span className="text-body-md font-semibold text-on-background">{t("eval.q8")}</span>
-          <textarea name="improveService" maxLength={2000} rows={3} className={TEXTAREA} />
-        </label>
-        <label className="flex flex-col gap-1.5">
-          <span className="text-body-md font-semibold text-on-background">{t("eval.q9")}</span>
-          <textarea name="overallMessage" maxLength={2000} rows={3} className={TEXTAREA} />
-        </label>
-        <label className="flex flex-col gap-1.5">
-          <span className="text-body-md font-semibold text-on-background">
-            {t("eval.q10")} <span className="text-body-sm font-normal text-on-surface-variant">({t("eval.optional")})</span>
-          </span>
-          <textarea name="heartwarming" maxLength={2000} rows={3} className={TEXTAREA} />
-        </label>
-      </section>
+      {sections.map((section) => (
+        <section key={section.titleKey} className={CARD}>
+          <h2 className="text-headline-sm text-on-background">{t(section.titleKey)}</h2>
+          {section.questions.map((q) =>
+            q.kind === "rating" ? (
+              <RatingScale
+                key={q.name}
+                name={q.name}
+                legend={t(q.labelKey)}
+                hint={q.hintKey ? t(q.hintKey) : undefined}
+                lowLabel={t("eval.scaleLow")}
+                highLabel={t("eval.scaleHigh")}
+                optionalLabel={t("eval.optional")}
+              />
+            ) : (
+              <label key={q.name} className="flex flex-col gap-1.5">
+                <span className="text-body-md font-semibold text-on-background">
+                  {t(q.labelKey)}{" "}
+                  {q.optional && <span className="text-body-sm font-normal text-on-surface-variant">({t("eval.optional")})</span>}
+                </span>
+                <textarea name={q.name} maxLength={2000} rows={3} className={TEXTAREA} />
+              </label>
+            ),
+          )}
+        </section>
+      ))}
 
       <button type="submit" disabled={isPending || !token} className={`${BTN} self-start bg-primary-container text-on-primary hover:bg-primary disabled:opacity-60`}>
         {isPending ? t("eval.submitting") : t("eval.submit")}

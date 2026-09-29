@@ -24,7 +24,7 @@ flowchart TD
 | Rute | Isi |
 |---|---|
 | `/events/:slug/evaluasi` | Form publik. `draft`/`scheduled` → 404. Tanpa login; identitas opsional; satu perangkat satu respons (token `localStorage` + unique `(event_id, responder_token)`). |
-| `/console/events/:id` | Section **Evaluasi Acara** (CollapsibleSection): rata-rata + distribusi 4 rating, daftar semua respons (nama/kota atau "Anonim"), hapus per respons. |
+| `/console/events/:id` | Section **Evaluasi Acara** (CollapsibleSection): ringkasan (jumlah respons, rata-rata, anonim) + **3 tab** — *Grafik* (rata-rata & distribusi tiap rating), *Jawaban* (preview jawaban per pertanyaan: distribusi nilai + semua teks), *Respons* (daftar per orang + hapus). |
 | `/api/console/events/:id/evaluasi/export?format=csv\|xlsx` | Ekspor lengkap 14 kolom. Akses: sesi dengan akses console acara ini (sama seperti halaman console-nya). |
 
 ## Pertanyaan (skema tetap)
@@ -43,6 +43,15 @@ flowchart TD
 | `heartwarming` | Heartwarming message for panitia (opsional) | teks |
 
 Identitas: `respondent_name` + `respondent_city` (opsional) dan flag `anonymous` — kalau anonim dicentang, server **tidak menyimpan** nama/kota sama sekali.
+
+## Template pertanyaan (berlaku untuk semua acara)
+
+Setiap acara otomatis punya halaman evaluasi (tombol "Isi Evaluasi" muncul di halaman acara begitu acaranya lewat). Pertanyaannya dipilih otomatis dari **template** di `src/lib/event-evaluation-template.ts`:
+
+- **`wif`** — dipakai untuk slug yang berawalan `wif` (mis. `wif-2026`): 10 pertanyaan persis versi WIF 2026 X CGT (termasuk sesi sharing CGT).
+- **`umum`** — default untuk semua acara lain: struktur sama (Registrasi, Fasilitas, Sesi & Materi, Acara & Panitia) dengan kalimat generik tanpa nama acara/sesi tertentu.
+
+Skema DB tetap sama untuk kedua template (4 kolom rating + 6 kolom teks); yang berbeda hanya label yang ditampilkan. Menambah template acara baru = tambah satu objek di file itu dan daftarkan di `evaluationTemplateForSlug()` — tidak perlu migrasi.
 
 ## Operasional panitia
 

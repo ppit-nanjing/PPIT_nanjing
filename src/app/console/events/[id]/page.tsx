@@ -23,6 +23,7 @@ import { HtmFields } from "@/components/console/htm-fields";
 import { Select, CheckboxField, CheckField } from "@/components/console/form";
 import { PaymentVerificationList } from "@/components/console/payment-verification-list";
 import { EvaluationResults } from "@/components/console/evaluation-results";
+import { evaluationTemplateForSlug } from "@/lib/event-evaluation-template";
 import { ReservationManager } from "@/components/console/reservation-manager";
 import { checkInBlockReason } from "@/lib/event-checkin";
 import { feeTierAt, amountForTier } from "@/lib/event-fee";
@@ -1154,7 +1155,7 @@ export default async function ConsoleEventDetailPage({ params }: { params: Promi
         title="Evaluasi Acara"
         description={evaluations.length > 0 ? `${evaluations.length} respons` : "belum ada respons"}
       >
-        <EvaluationResults eventId={id} evaluations={evaluations} />
+        <EvaluationResults eventId={id} evaluations={evaluations} sections={evaluationTemplateForSlug(event.slug).sections} />
       </CollapsibleSection>
         </div>
 
