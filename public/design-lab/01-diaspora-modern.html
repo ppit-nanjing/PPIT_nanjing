@@ -1,0 +1,595 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>PPIT Nanjing — Arah Desain 01: Diaspora Modern</title>
+<meta name="description" content="Contoh landing page PPIT Nanjing dengan arah desain Diaspora Modern.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:ital,wght@0,400;0,500;0,600;0,700;0,800;1,400&display=swap" rel="stylesheet">
+<style>
+:root{
+  --ink:#15171b;
+  --slate:#5b6572;
+  --paper:#fafaf7;
+  --mist:#eceded;
+  --line:#e2e3df;
+  --merah:#d62828;
+  --merah-dark:#b31f1f;
+  --radius:18px;
+  --max:1160px;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth}
+body{
+  font-family:"Plus Jakarta Sans",system-ui,-apple-system,"Segoe UI",sans-serif;
+  background:var(--paper);
+  color:var(--ink);
+  line-height:1.6;
+  overflow-x:hidden;
+}
+a{color:inherit}
+.wrap{max-width:var(--max);margin:0 auto;padding:0 clamp(20px,4vw,32px)}
+.eyebrow{
+  font-size:12px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;
+  color:var(--merah);display:flex;align-items:center;gap:10px;
+}
+.eyebrow::before{content:"";width:26px;height:2px;background:var(--merah)}
+h1,h2,h3{line-height:1.12;letter-spacing:-.025em;font-weight:800}
+.h2{font-size:clamp(28px,4vw,40px);margin-bottom:14px}
+.lead{color:var(--slate);font-size:17px;max-width:62ch}
+section{position:relative}
+
+[data-reveal]{opacity:0;transform:translateY(26px);transition:opacity .7s cubic-bezier(.2,.65,.3,1),transform .7s cubic-bezier(.2,.65,.3,1)}
+[data-reveal].in{opacity:1;transform:none}
+[data-reveal][data-delay="1"]{transition-delay:.08s}
+[data-reveal][data-delay="2"]{transition-delay:.16s}
+[data-reveal][data-delay="3"]{transition-delay:.24s}
+[data-reveal][data-delay="4"]{transition-delay:.32s}
+
+.nav{
+  position:sticky;top:0;z-index:50;background:rgba(250,250,247,.88);
+  backdrop-filter:blur(10px);border-bottom:1px solid var(--line);
+}
+.nav-inner{display:flex;align-items:center;justify-content:space-between;gap:20px;height:68px}
+.brand{display:flex;align-items:center;gap:11px;text-decoration:none;font-weight:800;letter-spacing:-.02em}
+.brand-mark{width:30px;height:30px;border-radius:9px;background:var(--ink);color:#fff;display:grid;place-items:center;font-size:12px;font-weight:800;position:relative;overflow:hidden}
+.brand-mark::after{content:"";position:absolute;right:0;bottom:0;width:11px;height:11px;background:var(--merah);border-radius:50% 0 0 0}
+.brand small{display:block;font-size:10.5px;font-weight:600;color:var(--slate);letter-spacing:.08em;text-transform:uppercase;line-height:1.2}
+.nav-links{display:flex;gap:26px;font-size:14.5px;font-weight:600}
+.nav-links a{text-decoration:none;color:var(--slate);transition:color .2s}
+.nav-links a:hover{color:var(--ink)}
+.nav-cta{display:flex;align-items:center;gap:12px}
+.lang{font-size:12.5px;font-weight:700;color:var(--slate);border:1px solid var(--line);border-radius:999px;padding:6px 12px;text-decoration:none;background:#fff}
+.btn{
+  display:inline-flex;align-items:center;gap:8px;font-weight:700;font-size:15px;
+  padding:13px 24px;border-radius:999px;text-decoration:none;border:1px solid transparent;
+  transition:transform .22s cubic-bezier(.2,.65,.3,1),background .22s,color .22s,border-color .22s;
+}
+.btn:active{transform:scale(.97)}
+.btn-red{background:var(--merah);color:#fff;box-shadow:0 10px 24px rgba(214,40,40,.22)}
+.btn-red:hover{background:var(--merah-dark);transform:translateY(-2px)}
+.btn-ghost{border-color:var(--line);color:var(--ink);background:#fff}
+.btn-ghost:hover{border-color:var(--ink)}
+.btn .arr{transition:transform .22s}
+.btn:hover .arr{transform:translateX(3px)}
+
+.hero{padding:clamp(56px,9vw,110px) 0 clamp(40px,6vw,80px);overflow:hidden}
+.hero-grid{display:grid;grid-template-columns:1.05fr .95fr;gap:clamp(32px,5vw,72px);align-items:center}
+.hero h1{font-size:clamp(38px,5.6vw,64px);margin:18px 0 20px}
+.hero h1 .accent{color:var(--merah)}
+.hero-ctas{display:flex;flex-wrap:wrap;gap:12px;margin-top:30px}
+.hero-note{margin-top:18px;font-size:13.5px;color:var(--slate)}
+.hero-note strong{color:var(--ink);font-weight:700}
+.motto{margin-top:26px;display:flex;gap:10px;flex-wrap:wrap}
+.motto span{
+  font-size:11.5px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;
+  color:var(--slate);border:1px dashed var(--line);border-radius:999px;padding:6px 13px;background:#fff;
+}
+
+.hero-stage{position:relative;height:520px}
+.hero-stage::before{
+  content:"";position:absolute;inset:-4% -6% auto auto;width:74%;height:88%;
+  background:repeating-linear-gradient(135deg,rgba(214,40,40,.09) 0 10px,transparent 10px 26px);
+  border-radius:28px;transform:rotate(-3deg);
+}
+.float-card{
+  position:absolute;background:#fff;border:1px solid var(--line);border-radius:var(--radius);
+  box-shadow:0 18px 44px rgba(21,23,27,.10);padding:18px 20px;width:250px;
+  will-change:transform;transition:box-shadow .3s;
+}
+.float-card:hover{box-shadow:0 24px 54px rgba(21,23,27,.16)}
+.fc-lab{font-size:11px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--slate);margin-bottom:8px}
+.fc-title{font-weight:800;font-size:16px;line-height:1.3}
+.fc-meta{font-size:12.5px;color:var(--slate);margin-top:6px}
+.fc-1{top:6%;left:2%;animation:bob 7s ease-in-out infinite}
+.fc-2{top:30%;right:0;animation:bob 8.5s ease-in-out -.8s infinite}
+.fc-3{bottom:16%;left:10%;width:280px;animation:bob 9.5s ease-in-out -1.6s infinite}
+.fc-4{bottom:2%;right:8%;width:220px;animation:bob 7.8s ease-in-out -2.2s infinite}
+.fc-bar{height:7px;border-radius:99px;background:var(--mist);margin-top:12px;overflow:hidden}
+.fc-bar i{display:block;height:100%;width:72%;background:var(--merah);border-radius:99px}
+.fc-row{display:flex;align-items:center;gap:10px}
+.fc-dot{width:34px;height:34px;border-radius:11px;background:var(--mist);display:grid;place-items:center;font-weight:800;font-size:13px;flex:none}
+@keyframes bob{0%,100%{translate:0 0}50%{translate:0 -13px}}
+
+.marquee{border-top:1px solid var(--line);border-bottom:1px solid var(--line);background:#fff;overflow:hidden;padding:16px 0}
+.marquee-track{display:flex;gap:0;width:max-content;animation:slide 34s linear infinite}
+.marquee:hover .marquee-track{animation-play-state:paused}
+.marquee-track span{font-size:13px;font-weight:700;letter-spacing:.16em;text-transform:uppercase;color:var(--slate);padding:0 22px;display:flex;align-items:center;gap:22px;white-space:nowrap}
+.marquee-track span::after{content:"";width:6px;height:6px;border-radius:50%;background:var(--merah);display:inline-block}
+@keyframes slide{to{transform:translateX(-50%)}}
+
+.stats{padding:clamp(56px,8vw,96px) 0}
+.stats-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:18px}
+.stat{background:#fff;border:1px solid var(--line);border-radius:var(--radius);padding:30px 28px;position:relative;overflow:hidden}
+.stat::before{content:"";position:absolute;left:0;top:0;width:100%;height:3px;background:var(--merah);transform:scaleX(0);transform-origin:left;transition:transform .8s cubic-bezier(.2,.65,.3,1) .2s}
+.stat.in::before{transform:scaleX(1)}
+.stat .num{font-size:clamp(38px,4.6vw,54px);font-weight:800;letter-spacing:-.03em;line-height:1}
+.stat .lab{font-size:13px;font-weight:600;color:var(--slate);margin-top:8px;text-transform:uppercase;letter-spacing:.1em}
+.stat .note{font-size:13px;color:var(--slate);margin-top:12px;border-top:1px solid var(--line);padding-top:12px}
+
+.about{padding:clamp(48px,7vw,84px) 0;background:#fff;border-top:1px solid var(--line);border-bottom:1px solid var(--line)}
+.about-grid{display:grid;grid-template-columns:1fr 1fr;gap:clamp(32px,5vw,72px);align-items:start}
+.about p{color:var(--slate);margin-top:16px}
+.quote{border-left:3px solid var(--merah);padding-left:24px;margin-top:26px}
+.quote p{font-size:17.5px;color:var(--ink);font-style:italic;margin:0}
+.quote cite{display:block;margin-top:14px;font-size:13px;font-style:normal;font-weight:700;color:var(--slate)}
+.facts{display:grid;gap:12px}
+.fact{display:flex;gap:14px;align-items:flex-start;background:var(--paper);border:1px solid var(--line);border-radius:14px;padding:16px 18px}
+.fact b{font-size:14px}
+.fact p{font-size:13.5px;color:var(--slate);margin:2px 0 0}
+.fact-ico{width:34px;height:34px;border-radius:10px;background:#fff;border:1px solid var(--line);display:grid;place-items:center;flex:none;color:var(--merah)}
+.fact-ico svg{width:17px;height:17px}
+
+.section{padding:clamp(56px,8vw,104px) 0}
+.sec-head{display:flex;align-items:flex-end;justify-content:space-between;gap:24px;margin-bottom:40px;flex-wrap:wrap}
+.sec-link{font-size:14px;font-weight:700;color:var(--merah);text-decoration:none;display:inline-flex;gap:6px;align-items:center}
+.sec-link:hover .arr{transform:translateX(3px)}
+.sec-link .arr{transition:transform .2s}
+
+.cities{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}
+.city{
+  background:#fff;border:1px solid var(--line);border-radius:14px;padding:20px;
+  transition:transform .25s cubic-bezier(.2,.65,.3,1),border-color .25s,box-shadow .25s;
+}
+.city:hover{transform:translateY(-4px);border-color:#cfd1cd;box-shadow:0 16px 36px rgba(21,23,27,.08)}
+.city-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}
+.city h3{font-size:16.5px}
+.city .pin{width:8px;height:8px;border-radius:50%;background:var(--merah)}
+.city p{font-size:13.5px;color:var(--slate)}
+.city .tag{font-size:11px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--slate)}
+.city.is-hq{background:var(--ink);border-color:var(--ink);color:#fff}
+.city.is-hq p{color:#b9bec6}
+.city.is-hq .tag{color:#8f97a2}
+.city.is-hq .pin{background:#fff}
+
+.cards3{display:grid;grid-template-columns:repeat(3,1fr);gap:18px}
+.ecard{background:#fff;border:1px solid var(--line);border-radius:var(--radius);overflow:hidden;display:flex;flex-direction:column;transition:transform .25s cubic-bezier(.2,.65,.3,1),box-shadow .25s;text-decoration:none}
+.ecard:hover{transform:translateY(-4px);box-shadow:0 18px 40px rgba(21,23,27,.09)}
+.ecard-cover{height:150px;position:relative;overflow:hidden}
+.ecard-cover .ph{position:absolute;inset:0;transition:transform .6s cubic-bezier(.2,.65,.3,1)}
+.ecard:hover .ecard-cover .ph{transform:scale(1.05)}
+.ph-a{background:linear-gradient(135deg,#20242c,#3a4250)}
+.ph-b{background:linear-gradient(135deg,#d62828,#8f1d1d)}
+.ph-c{background:linear-gradient(135deg,#5b6572,#39404b)}
+.ph::after{content:"";position:absolute;inset:0;background:repeating-linear-gradient(45deg,rgba(255,255,255,.07) 0 2px,transparent 2px 14px)}
+.ecard-body{padding:20px 22px 24px;display:flex;flex-direction:column;gap:8px;flex:1}
+.ecard .cat{font-size:11px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--merah)}
+.ecard h3{font-size:17.5px}
+.ecard p{font-size:13.5px;color:var(--slate);flex:1}
+.ecard .meta{font-size:12.5px;color:var(--slate);display:flex;gap:8px;align-items:center}
+
+.cta{padding:0 0 clamp(56px,8vw,104px)}
+.cta-panel{
+  background:var(--ink);color:#fff;border-radius:26px;padding:clamp(34px,5vw,64px);
+  display:grid;grid-template-columns:1.2fr .8fr;gap:36px;align-items:center;position:relative;overflow:hidden;
+}
+.cta-panel::before{
+  content:"";position:absolute;right:-70px;top:-70px;width:300px;height:300px;border-radius:50%;
+  background:radial-gradient(circle,rgba(214,40,40,.5),transparent 65%);
+}
+.cta-panel h2{font-size:clamp(26px,3.6vw,38px);margin-bottom:12px;position:relative}
+.cta-panel p{color:#b9bec6;position:relative;max-width:52ch}
+.cta-actions{display:flex;gap:12px;flex-wrap:wrap;position:relative;justify-content:flex-end}
+.btn-white{background:#fff;color:var(--ink)}
+.btn-white:hover{background:var(--merah);color:#fff;transform:translateY(-2px)}
+.btn-outline{border-color:rgba(255,255,255,.3);color:#fff}
+.btn-outline:hover{border-color:#fff}
+
+.footer{background:#fff;border-top:1px solid var(--line);padding:56px 0 34px}
+.footer-grid{display:grid;grid-template-columns:1.4fr 1fr 1fr 1fr;gap:32px;margin-bottom:40px}
+.footer h4{font-size:12px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--slate);margin-bottom:14px}
+.footer ul{list-style:none;display:grid;gap:9px}
+.footer li a{font-size:14px;color:var(--slate);text-decoration:none;transition:color .2s}
+.footer li a:hover{color:var(--merah)}
+.footer .motto-line{font-size:13.5px;color:var(--slate);margin-top:14px;max-width:34ch}
+.footer-bottom{border-top:1px solid var(--line);padding-top:22px;display:flex;justify-content:space-between;gap:16px;flex-wrap:wrap;font-size:13px;color:var(--slate)}
+
+.badge-style{
+  position:fixed;left:16px;bottom:16px;z-index:90;text-decoration:none;
+  background:var(--ink);color:#fff;font-size:12px;font-weight:700;letter-spacing:.04em;
+  padding:9px 15px;border-radius:999px;box-shadow:0 10px 26px rgba(0,0,0,.25);
+  display:inline-flex;align-items:center;gap:8px;transition:transform .2s;
+}
+.badge-style:hover{transform:translateY(-2px)}
+.badge-style i{width:7px;height:7px;border-radius:50%;background:var(--merah);font-style:normal}
+
+@media(max-width:1020px){
+  .hero-grid{grid-template-columns:1fr}
+  .hero-stage{height:460px;max-width:560px;margin:0 auto;width:100%}
+  .about-grid{grid-template-columns:1fr}
+  .cities{grid-template-columns:repeat(2,1fr)}
+  .cards3{grid-template-columns:1fr 1fr}
+  .cta-panel{grid-template-columns:1fr}
+  .cta-actions{justify-content:flex-start}
+  .footer-grid{grid-template-columns:1fr 1fr}
+  .nav-links{display:none}
+}
+@media(max-width:640px){
+  .stats-grid{grid-template-columns:1fr}
+  .cities{grid-template-columns:1fr}
+  .cards3{grid-template-columns:1fr}
+  .hero-stage{height:430px}
+  .float-card{width:215px;padding:15px 16px}
+  .fc-3{width:235px}
+  .footer-grid{grid-template-columns:1fr}
+}
+@media (prefers-reduced-motion: reduce){
+  *,*::before,*::after{animation-duration:.01ms !important;animation-iteration-count:1 !important;transition-duration:.01ms !important}
+  html{scroll-behavior:auto}
+  [data-reveal]{opacity:1;transform:none}
+  .float-card{animation:none}
+  .marquee-track{animation:none}
+}
+:focus-visible{outline:3px solid var(--merah);outline-offset:3px;border-radius:6px}
+</style>
+</head>
+<body>
+
+<nav class="nav">
+  <div class="wrap nav-inner">
+    <a class="brand" href="#">
+      <span class="brand-mark">PI</span>
+      <span>PPIT Nanjing<small>PPI Tiongkok · Cabang Nanjing</small></span>
+    </a>
+    <div class="nav-links">
+      <a href="#tentang">Tentang</a>
+      <a href="#kota">Kota</a>
+      <a href="#kegiatan">Kegiatan</a>
+      <a href="#kabar">Kabar</a>
+      <a href="#karier">Karier</a>
+    </div>
+    <div class="nav-cta">
+      <a class="lang" href="#">ID / EN</a>
+      <a class="btn btn-red" href="#sensus">Lengkapi Sensus</a>
+    </div>
+  </div>
+</nav>
+
+<header class="hero">
+  <div class="wrap hero-grid">
+    <div>
+      <p class="eyebrow" data-reveal>Perhimpunan Pelajar Indonesia Tiongkok</p>
+      <h1 data-reveal data-delay="1">Menghubungkan Mahasiswa Indonesia di <span class="accent">Nanjing</span></h1>
+      <p class="lead" data-reveal data-delay="2">Wadah resmi Perhimpunan Pelajar Indonesia Tiongkok (PPIT) Cabang Nanjing untuk bersinergi, berkarya, dan berkontribusi bagi bangsa — sejak 2008.</p>
+      <div class="hero-ctas" data-reveal data-delay="3">
+        <a class="btn btn-red" href="#kegiatan">Jelajahi Kegiatan <span class="arr">→</span></a>
+        <a class="btn btn-ghost" href="#tentang">Tentang PPIT Nanjing</a>
+      </div>
+      <p class="hero-note" data-reveal data-delay="4"><strong>9 kota naungan</strong> di Jiangsu &amp; Anhui · <strong>66 kampus</strong> · berdiri sejak 28 Oktober 2008</p>
+      <div class="motto" data-reveal data-delay="4">
+        <span>Bersinergi</span><span>Berkarya</span><span>Berkontribusi</span>
+      </div>
+    </div>
+    <div class="hero-stage" aria-hidden="true">
+      <div class="float-card fc-1" data-depth="1.6">
+        <p class="fc-lab">Agenda Terdekat</p>
+        <p class="fc-title">WIF 2026 — Welcoming Indonesian Freshman</p>
+        <p class="fc-meta">10 Okt 2026 · Nanjing</p>
+      </div>
+      <div class="float-card fc-2" data-depth="2.4">
+        <p class="fc-lab">Kota Naungan</p>
+        <div class="fc-row"><span class="fc-dot">南</span><div><p class="fc-title" style="font-size:14.5px">Nanjing</p><p class="fc-meta">Markas utama cabang</p></div></div>
+        <div class="fc-row" style="margin-top:10px"><span class="fc-dot">徐</span><div><p class="fc-title" style="font-size:14.5px">Xuzhou</p><p class="fc-meta">Komunitas pelajar aktif</p></div></div>
+      </div>
+      <div class="float-card fc-3" data-depth="1.1">
+        <p class="fc-lab">Sensus Anggota</p>
+        <p class="fc-title">Profilmu sudah lengkap?</p>
+        <div class="fc-bar"><i></i></div>
+        <p class="fc-meta">3 langkah · data langsung ke PPI Tiongkok</p>
+      </div>
+      <div class="float-card fc-4" data-depth="3">
+        <p class="fc-lab">Kutipan</p>
+        <p class="fc-title" style="font-size:14.5px">“Rumah bagi ribuan mimpi anak bangsa.”</p>
+      </div>
+    </div>
+  </div>
+</header>
+
+<div class="marquee" aria-hidden="true">
+  <div class="marquee-track">
+    <span>Nanjing</span><span>Xuzhou</span><span>Jurong</span><span>Ma'anshan</span><span>Zhenjiang</span><span>Huai'an</span><span>Lianyungang</span><span>Taizhou</span><span>Yancheng</span>
+    <span>Nanjing</span><span>Xuzhou</span><span>Jurong</span><span>Ma'anshan</span><span>Zhenjiang</span><span>Huai'an</span><span>Lianyungang</span><span>Taizhou</span><span>Yancheng</span>
+  </div>
+</div>
+
+<section class="stats">
+  <div class="wrap stats-grid">
+    <div class="stat" data-reveal>
+      <p class="num" data-count="9">0</p>
+      <p class="lab">Kota Naungan</p>
+      <p class="note">Tersebar di Provinsi Jiangsu dan Ma'anshan, Anhui.</p>
+    </div>
+    <div class="stat" data-reveal data-delay="1">
+      <p class="num" data-count="66" data-suffix="+">0</p>
+      <p class="lab">Kampus</p>
+      <p class="note">Jaringan mahasiswa Indonesia lintas kampus dan kota.</p>
+    </div>
+    <div class="stat" data-reveal data-delay="2">
+      <p class="num" data-count="2008">0</p>
+      <p class="lab">Berdiri Sejak</p>
+      <p class="note">Dibentuk 28 Oktober 2008, bertepatan Hari Sumpah Pemuda.</p>
+    </div>
+  </div>
+</section>
+
+<section class="about" id="tentang">
+  <div class="wrap about-grid">
+    <div data-reveal>
+      <p class="eyebrow">Tentang Kami</p>
+      <h2 class="h2">Satu rumah untuk pelajar Indonesia di Jiangsu</h2>
+      <p>PPIT Cabang Nanjing adalah organisasi kemahasiswaan di Kota Nanjing yang mewadahi pelajar dan mahasiswa Indonesia serta organisasi-organisasi pelajar Indonesia di Tiongkok, khususnya Kota Nanjing.</p>
+      <p>Organisasi ini dibentuk pada 28 Oktober 2008, bertepatan dengan Hari Sumpah Pemuda — dan sejak itu tumbuh bersama ranting-ranting kampus dan kota naungannya.</p>
+      <div class="quote">
+        <p>“PPIT Nanjing adalah rumah bagi ribuan mimpi anak bangsa di kota bersejarah ini. Melalui kolaborasi dan semangat gotong royong, kita pastikan setiap pelajar Indonesia di sini memiliki support system terbaik.”</p>
+        <cite>Ketua Umum PPIT Nanjing · Periode 2026–2027</cite>
+      </div>
+    </div>
+    <div class="facts" data-reveal data-delay="1">
+      <div class="fact">
+        <span class="fact-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg></span>
+        <div><b>Markas di Nanjing, naungan luas</b><p>Sembilan kota: Nanjing, Xuzhou, Jurong, Ma'anshan, Zhenjiang, Huai'an, Lianyungang, Taizhou, dan Yancheng.</p></div>
+      </div>
+      <div class="fact">
+        <span class="fact-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg></span>
+        <div><b>Dua ranting kampus aktif</b><p>INA di NUIST dan JIA di JSAHVC, plus jaringan koordinator di tiap kota naungan.</p></div>
+      </div>
+      <div class="fact">
+        <span class="fact-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20"/><path d="M2 12h20"/></svg></span>
+        <div><b>Terhubung ke PPI Tiongkok</b><p>Data sensus anggota mengalir langsung ke sistem pusat PPI Tiongkok — satu profil lengkap, satu identitas resmi.</p></div>
+      </div>
+      <div class="fact">
+        <span class="fact-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 10v6M2 10l10-5 10 5-10 5z"/><path d="M6 12v5c3 3 9 3 12 0v-5"/></svg></span>
+        <div><b>Bukan cuma organisasi</b><p>Kegiatan sosial, karier, mentorship, inventaris pinjam-pakai, sampai festival — semua jalan lewat satu portal.</p></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="section" id="kota">
+  <div class="wrap">
+    <div class="sec-head" data-reveal>
+      <div>
+        <p class="eyebrow">Jangkauan Wilayah</p>
+        <h2 class="h2">Kota di bawah naungan PPIT Nanjing</h2>
+        <p class="lead">Selain Kota Nanjing, PPIT Nanjing menaungi pelajar dan mahasiswa Indonesia di kota-kota sekitarnya.</p>
+      </div>
+      <a class="sec-link" href="#kota">Lihat peta sebaran <span class="arr">→</span></a>
+    </div>
+    <div class="cities">
+      <article class="city is-hq" data-reveal><div class="city-top"><h3>Nanjing</h3><span class="pin"></span></div><p>Ibu kota provinsi Jiangsu sekaligus markas utama PPIT Nanjing.</p><p class="tag" style="margin-top:10px">Markas Cabang</p></article>
+      <article class="city" data-reveal data-delay="1"><div class="city-top"><h3>Xuzhou</h3><span class="pin"></span></div><p>Kota industri &amp; transportasi di utara Jiangsu dengan komunitas pelajar aktif.</p><p class="tag" style="margin-top:10px">Ranting Aktif</p></article>
+      <article class="city" data-reveal data-delay="2"><div class="city-top"><h3>Jurong</h3><span class="pin"></span></div><p>Kawasan kampus yang menghimpun pelajar Indonesia di sekitarnya.</p><p class="tag" style="margin-top:10px">Kawasan Kampus</p></article>
+      <article class="city" data-reveal><div class="city-top"><h3>Ma'anshan</h3><span class="pin"></span></div><p>Kota di Anhui yang berbatasan dekat dengan Nanjing.</p><p class="tag" style="margin-top:10px">Lintas Provinsi</p></article>
+      <article class="city" data-reveal data-delay="1"><div class="city-top"><h3>Zhenjiang</h3><span class="pin"></span></div><p>Kota tepi Sungai Yangtze dengan cukup banyak mahasiswa Indonesia.</p><p class="tag" style="margin-top:10px">Ranting Aktif</p></article>
+      <article class="city" data-reveal data-delay="2"><div class="city-top"><h3>Huai'an</h3><span class="pin"></span></div><p>Kota historis di utara Jiangsu, salah satu ranting aktif PPIT.</p><p class="tag" style="margin-top:10px">Ranting Aktif</p></article>
+      <article class="city" data-reveal><div class="city-top"><h3>Lianyungang</h3><span class="pin"></span></div><p>Kota pelabuhan pesisir di ujung timur laut Jiangsu.</p><p class="tag" style="margin-top:10px">Komunitas</p></article>
+      <article class="city" data-reveal data-delay="1"><div class="city-top"><h3>Taizhou</h3><span class="pin"></span></div><p>Kota di Jiangsu tengah, di tepi utara Sungai Yangtze.</p><p class="tag" style="margin-top:10px">Komunitas</p></article>
+      <article class="city" data-reveal data-delay="2"><div class="city-top"><h3>Yancheng</h3><span class="pin"></span></div><p>Kota pesisir di Jiangsu tengah dengan wilayah terluas di provinsi.</p><p class="tag" style="margin-top:10px">Komunitas</p></article>
+    </div>
+  </div>
+</section>
+
+<section class="section" id="kegiatan" style="padding-top:0">
+  <div class="wrap">
+    <div class="sec-head" data-reveal>
+      <div>
+        <p class="eyebrow">Agenda</p>
+        <h2 class="h2">Kegiatan terbaru</h2>
+      </div>
+      <a class="sec-link" href="#kegiatan">Semua kegiatan <span class="arr">→</span></a>
+    </div>
+    <div class="cards3">
+      <a class="ecard" href="#kegiatan" data-reveal>
+        <div class="ecard-cover"><div class="ph ph-a"></div></div>
+        <div class="ecard-body">
+          <p class="cat">Sosial</p>
+          <h3>WIF 2026 — Welcoming Indonesian Freshman</h3>
+          <p>Malam penyambutan mahasiswa baru Indonesia se-Nanjing. Makan bersama, perkenalan kota, dan jaringan baru.</p>
+          <p class="meta">10 Okt 2026 · Nanjing · Tiket QR</p>
+        </div>
+      </a>
+      <a class="ecard" href="#kegiatan" data-reveal data-delay="1">
+        <div class="ecard-cover"><div class="ph ph-b"></div></div>
+        <div class="ecard-body">
+          <p class="cat">Sosial</p>
+          <h3>Fun Hike with PINYX</h3>
+          <p>Jalan sehat menyusuri rute favorit warga Nanjing, ditemani komunitas dan camilan hangat di titik akhir.</p>
+          <p class="meta">24 Okt 2026 · Zijin Shan · Gratis</p>
+        </div>
+      </a>
+      <a class="ecard" href="#kegiatan" data-reveal data-delay="2">
+        <div class="ecard-cover"><div class="ph ph-c"></div></div>
+        <div class="ecard-body">
+          <p class="cat">Organisasi</p>
+          <h3>Rekrutmen Kabinet Maju 2026/2027</h3>
+          <p>Bergabung dengan kepengurusan PPIT Nanjing — buka kesempatan untuk berkarya dan berkontribusi langsung.</p>
+          <p class="meta">Agustus 2026 · Formulir Online</p>
+        </div>
+      </a>
+    </div>
+  </div>
+</section>
+
+<section class="section" id="kabar" style="padding-top:0">
+  <div class="wrap">
+    <div class="sec-head" data-reveal>
+      <div>
+        <p class="eyebrow">Publikasi</p>
+        <h2 class="h2">Kabar terbaru</h2>
+      </div>
+      <a class="sec-link" href="#kabar">Semua berita <span class="arr">→</span></a>
+    </div>
+    <div class="cards3">
+      <a class="ecard" href="#kabar" data-reveal>
+        <div class="ecard-cover"><div class="ph ph-c"></div></div>
+        <div class="ecard-body">
+          <p class="cat">Pengumuman</p>
+          <h3>Pendaftaran WIF 2026 dibuka — early bird gratis</h3>
+          <p>Kuota terbatas 150 peserta, dibagi kategori freshmen dan non-freshmen. Daftar lewat portal dan simpan tiket QR-mu.</p>
+          <p class="meta">2 Sep 2026 · 3 menit baca</p>
+        </div>
+      </a>
+      <a class="ecard" href="#kabar" data-reveal data-delay="1">
+        <div class="ecard-cover"><div class="ph ph-a"></div></div>
+        <div class="ecard-body">
+          <p class="cat">Organisasi</p>
+          <h3>Rekrutmen pengurus Kabinet Maju telah dibuka</h3>
+          <p>Sembilan divisi membuka pendaftaran. Baca panduan, siapkan berkas, dan pilih divisi yang paling cocok untukmu.</p>
+          <p class="meta">1 Agu 2026 · 5 menit baca</p>
+        </div>
+      </a>
+      <a class="ecard" href="#kabar" data-reveal data-delay="2">
+        <div class="ecard-cover"><div class="ph ph-b"></div></div>
+        <div class="ecard-body">
+          <p class="cat">Komunitas</p>
+          <h3>Galeri: keseruan Fun Hike with PINYX</h3>
+          <p>Lebih dari seratus pelajar Indonesia ikut serta. Foto-foto lengkapnya sudah tayang di galeri PPIT Nanjing.</p>
+          <p class="meta">20 Apr 2026 · 2 menit baca</p>
+        </div>
+      </a>
+    </div>
+  </div>
+</section>
+
+<section class="cta" id="sensus">
+  <div class="wrap">
+    <div class="cta-panel" data-reveal>
+      <div>
+        <h2>Sudah lengkapi sensus keanggotaanmu?</h2>
+        <p>Data sensus mengalir langsung ke sistem pusat PPI Tiongkok. Satu profil lengkap berarti satu identitas resmi — dan akses penuh ke seluruh kegiatan PPIT Nanjing.</p>
+      </div>
+      <div class="cta-actions">
+        <a class="btn btn-white" href="#sensus">Lengkapi Sensus <span class="arr">→</span></a>
+        <a class="btn btn-outline" href="#tentang">Gabung PPIT Nanjing</a>
+      </div>
+    </div>
+  </div>
+</section>
+
+<footer class="footer">
+  <div class="wrap">
+    <div class="footer-grid">
+      <div>
+        <a class="brand" href="#"><span class="brand-mark">PI</span><span>PPIT Nanjing<small>PPI Tiongkok · Cabang Nanjing</small></span></a>
+        <p class="motto-line">Wadah resmi perhimpunan pelajar Indonesia di Tiongkok untuk bersinergi, berkarya, dan berkontribusi bagi bangsa.</p>
+      </div>
+      <div>
+        <h4>Jelajahi</h4>
+        <ul>
+          <li><a href="#kota">Kota Naungan</a></li>
+          <li><a href="#kegiatan">Kegiatan</a></li>
+          <li><a href="#kabar">Berita</a></li>
+          <li><a href="#karier">Karier &amp; Mentorship</a></li>
+        </ul>
+      </div>
+      <div>
+        <h4>Organisasi</h4>
+        <ul>
+          <li><a href="#tentang">Tentang</a></li>
+          <li><a href="#tentang">Struktur Pengurus</a></li>
+          <li><a href="#tentang">AD/ART</a></li>
+          <li><a href="#sensus">Sensus Anggota</a></li>
+        </ul>
+      </div>
+      <div>
+        <h4>Terhubung</h4>
+        <ul>
+          <li><a href="#">Instagram @ppit.nanjing</a></li>
+          <li><a href="#">Grup WeChat</a></li>
+          <li><a href="#">Surel Pengurus</a></li>
+          <li><a href="#">Pusat Bantuan</a></li>
+        </ul>
+      </div>
+    </div>
+    <div class="footer-bottom">
+      <span>© 2026 PPIT Nanjing · PPI Tiongkok. Contoh arah desain — bukan situs resmi.</span>
+      <span>Bersinergi · Berkarya · Berkontribusi</span>
+    </div>
+  </div>
+</footer>
+
+<a class="badge-style" href="index.html"><i></i> 01 · Diaspora Modern — semua gaya</a>
+
+<script>
+(function(){
+  var reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  var reveals = document.querySelectorAll("[data-reveal]");
+  if (reduce || !("IntersectionObserver" in window)) {
+    reveals.forEach(function(el){ el.classList.add("in"); });
+  } else {
+    var io = new IntersectionObserver(function(entries){
+      entries.forEach(function(en){
+        if (en.isIntersecting) { en.target.classList.add("in"); io.unobserve(en.target); }
+      });
+    }, { threshold: 0.12, rootMargin: "0px 0px -6% 0px" });
+    reveals.forEach(function(el){ io.observe(el); });
+  }
+
+  var counters = document.querySelectorAll("[data-count]");
+  function runCount(el){
+    var target = parseInt(el.getAttribute("data-count"), 10);
+    var suffix = el.getAttribute("data-suffix") || "";
+    if (reduce) { el.textContent = target + suffix; return; }
+    var t0 = null, dur = 1200;
+    function step(ts){
+      if (!t0) t0 = ts;
+      var p = Math.min((ts - t0) / dur, 1);
+      var eased = 1 - Math.pow(1 - p, 3);
+      el.textContent = Math.round(target * eased) + suffix;
+      if (p < 1) requestAnimationFrame(step);
+    }
+    requestAnimationFrame(step);
+  }
+  if ("IntersectionObserver" in window) {
+    var cio = new IntersectionObserver(function(entries){
+      entries.forEach(function(en){
+        if (en.isIntersecting) { runCount(en.target); cio.unobserve(en.target); }
+      });
+    }, { threshold: 0.4 });
+    counters.forEach(function(el){ cio.observe(el); });
+  } else {
+    counters.forEach(runCount);
+  }
+
+  var stage = document.querySelector(".hero-stage");
+  if (stage && !reduce && window.matchMedia("(pointer: fine)").matches) {
+    var cards = stage.querySelectorAll("[data-depth]");
+    stage.addEventListener("mousemove", function(e){
+      var r = stage.getBoundingClientRect();
+      var x = (e.clientX - r.left - r.width / 2) / r.width;
+      var y = (e.clientY - r.top - r.height / 2) / r.height;
+      cards.forEach(function(c){
+        var d = parseFloat(c.getAttribute("data-depth")) || 1;
+        c.style.translate = (x * d * 14).toFixed(1) + "px " + (y * d * 14).toFixed(1) + "px";
+      });
+    });
+    stage.addEventListener("mouseleave", function(){
+      cards.forEach(function(c){ c.style.translate = "0px 0px"; });
+    });
+  }
+})();
+</script>
+</body>
+</html>

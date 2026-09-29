@@ -1,0 +1,481 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>Vote Arah Desain — PPIT Nanjing</title>
+<meta name="description" content="Voting internal kabinet: pilih 3 arah desain favorit dari 20 kandidat.">
+<style>
+:root{
+  --bg:#0e0f11;
+  --panel:#16181c;
+  --panel-2:#1c1f24;
+  --line:rgba(255,255,255,.09);
+  --line-2:rgba(255,255,255,.2);
+  --text:#eceef1;
+  --muted:#9aa1ab;
+  --lime:#c8f135;
+  --amber:#f2b705;
+  --red:#ff5a4f;
+  --mono:ui-monospace,"Cascadia Mono","SF Mono",Consolas,monospace;
+  --max:1240px;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth}
+body{background:var(--bg);color:var(--text);font-family:system-ui,-apple-system,"Segoe UI",sans-serif;line-height:1.6;font-size:15.5px;padding-bottom:110px}
+a{color:inherit}
+.wrap{max-width:var(--max);margin:0 auto;padding:0 clamp(18px,3.6vw,32px)}
+.top{padding:clamp(30px,5vw,56px) 0 26px;border-bottom:1px solid var(--line)}
+.kicker{font-family:var(--mono);font-size:11.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted)}
+.top h1{font-size:clamp(26px,4vw,40px);font-weight:800;letter-spacing:-.02em;line-height:1.15;margin:14px 0 14px;max-width:26ch}
+.top p{color:var(--muted);max-width:72ch}
+.steps{display:flex;gap:10px;flex-wrap:wrap;margin-top:20px}
+.step{font-family:var(--mono);font-size:11.5px;color:var(--muted);border:1px solid var(--line);border-radius:999px;padding:7px 14px;background:var(--panel)}
+.step b{color:var(--text)}
+.notice{margin-top:20px;display:none;border:1px solid rgba(242,183,5,.4);background:rgba(242,183,5,.08);color:#f6d97a;border-radius:12px;padding:14px 18px;font-size:13.5px}
+.notice.on{display:block}
+
+.form-row{display:grid;grid-template-columns:1fr 1fr;gap:14px;padding:24px 0 6px}
+.field{display:grid;gap:7px}
+.field label{font-family:var(--mono);font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted)}
+.field input,.field select,.field textarea{
+  background:var(--panel);border:1px solid var(--line);border-radius:10px;color:var(--text);
+  font-family:inherit;font-size:14.5px;padding:12px 14px;outline:none;transition:border-color .2s
+}
+.field input:focus,.field select:focus,.field textarea:focus{border-color:var(--lime)}
+.field.full{grid-column:1/-1}
+.field textarea{resize:vertical;min-height:74px}
+
+.grid{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;padding:22px 0 40px}
+.dcard{
+  position:relative;text-align:left;background:var(--panel);border:1px solid var(--line);border-radius:14px;
+  padding:16px;cursor:pointer;color:inherit;font:inherit;transition:transform .18s,border-color .18s,background .18s;
+}
+.dcard:hover{transform:translateY(-2px);border-color:var(--line-2)}
+.dcard.selected{border-color:var(--lime);background:rgba(200,241,53,.07)}
+.dcard .rank{
+  position:absolute;right:12px;top:12px;width:28px;height:28px;border-radius:50%;
+  display:grid;place-items:center;font-family:var(--mono);font-size:13px;font-weight:700;
+  border:1px solid var(--line-2);color:var(--muted);transition:background .18s,color .18s,border-color .18s
+}
+.dcard.selected .rank{background:var(--lime);border-color:var(--lime);color:#0b0c0e}
+.dcard .no{font-family:var(--mono);font-size:11px;color:var(--muted)}
+.dcard h3{font-size:15.5px;font-weight:700;letter-spacing:-.01em;margin:6px 0 10px;line-height:1.3}
+.dcard .sw{display:flex;gap:6px;margin-bottom:12px}
+.dcard .sw i{width:18px;height:18px;border-radius:6px;border:1px solid rgba(255,255,255,.14)}
+.dcard .pv{
+  font-family:var(--mono);font-size:11px;color:var(--lime);background:transparent;border:0;padding:0;cursor:pointer;
+  text-decoration:underline;text-underline-offset:3px
+}
+.dcard .pv:hover{color:#e4ff7a}
+
+.bar{
+  position:fixed;left:0;right:0;bottom:0;z-index:70;background:rgba(14,15,17,.94);backdrop-filter:blur(10px);
+  border-top:1px solid var(--line)
+}
+.bar .inner{max-width:var(--max);margin:0 auto;padding:14px clamp(18px,3.6vw,32px);display:flex;align-items:center;gap:16px;flex-wrap:wrap}
+.picks{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.pick{
+  font-family:var(--mono);font-size:12px;border:1px solid var(--line-2);border-radius:999px;padding:7px 12px;color:var(--muted);
+  display:inline-flex;align-items:center;gap:8px
+}
+.pick.filled{border-color:var(--lime);color:var(--text)}
+.pick b{color:var(--lime)}
+.bar .spacer{flex:1}
+.submit{
+  border:0;border-radius:12px;background:var(--lime);color:#0b0c0e;font-weight:800;font-size:14.5px;padding:13px 26px;cursor:pointer;
+  transition:transform .18s,background .18s,opacity .18s
+}
+.submit:hover{transform:translateY(-1px);background:#e4ff7a}
+.submit:disabled{opacity:.4;cursor:not-allowed;transform:none}
+.hint{font-family:var(--mono);font-size:11.5px;color:var(--muted)}
+
+.status{margin:0 0 26px;border-radius:12px;padding:14px 18px;font-size:14px;display:none}
+.status.on{display:block}
+.status.ok{border:1px solid rgba(200,241,53,.4);background:rgba(200,241,53,.08);color:#dff58f}
+.status.err{border:1px solid rgba(255,90,79,.45);background:rgba(255,90,79,.08);color:#ffb0aa}
+
+.result-preview{display:none;padding:8px 0 40px}
+.result-preview.on{display:block}
+.result-preview h2{font-size:22px;font-weight:800;margin-bottom:6px}
+.result-preview p{color:var(--muted);font-size:13.5px;margin-bottom:18px}
+.rrow{display:grid;grid-template-columns:44px 1fr 90px;gap:14px;align-items:center;padding:9px 0}
+.rrow .rno{font-family:var(--mono);font-size:13px;color:var(--muted)}
+.rrow .rname{font-size:14.5px;font-weight:600}
+.rrow .rbar{height:8px;border-radius:99px;background:var(--panel-2);overflow:hidden;margin-top:6px}
+.rrow .rbar i{display:block;height:100%;background:linear-gradient(90deg,#3f8f5f,var(--lime));border-radius:99px;transition:width .8s cubic-bezier(.2,.65,.3,1)}
+.rrow .rpts{font-family:var(--mono);font-size:13px;text-align:right;color:var(--lime)}
+
+.overlay{
+  position:fixed;inset:0;z-index:100;background:rgba(6,7,8,.9);display:none;flex-direction:column
+}
+.overlay.open{display:flex}
+.overlay .ov-head{display:flex;align-items:center;justify-content:space-between;gap:14px;padding:12px 18px;border-bottom:1px solid var(--line)}
+.overlay .ov-head b{font-size:14.5px}
+.overlay .ov-head .mono{font-family:var(--mono);font-size:11.5px;color:var(--muted)}
+.overlay .ov-actions{display:flex;gap:10px;align-items:center}
+.ov-btn{background:var(--panel);border:1px solid var(--line-2);color:var(--text);border-radius:10px;padding:8px 14px;font-size:13px;cursor:pointer;text-decoration:none}
+.ov-btn:hover{border-color:var(--lime)}
+.overlay iframe{flex:1;width:100%;border:0;background:#fff}
+
+.done-panel{display:none;border:1px solid rgba(200,241,53,.35);background:rgba(200,241,53,.06);border-radius:16px;padding:26px;margin:0 0 30px}
+.done-panel.on{display:block}
+.done-panel h2{font-size:21px;font-weight:800}
+.done-panel p{color:var(--muted);margin-top:8px;font-size:14px}
+.done-panel .actions{display:flex;gap:12px;flex-wrap:wrap;margin-top:18px}
+.btn-lime{display:inline-flex;align-items:center;gap:8px;background:var(--lime);color:#0b0c0e;text-decoration:none;font-weight:800;font-size:14px;border-radius:12px;padding:12px 22px}
+.btn-line{display:inline-flex;align-items:center;gap:8px;border:1px solid var(--line-2);color:var(--text);text-decoration:none;font-weight:600;font-size:14px;border-radius:12px;padding:12px 22px}
+.btn-line:hover{border-color:var(--lime)}
+
+.footer{padding:24px 0 20px;color:var(--muted);font-size:12.5px;border-top:1px solid var(--line);margin-top:20px}
+.badge-style{position:fixed;left:16px;top:16px;z-index:90;text-decoration:none;background:var(--panel);color:var(--text);
+  font-family:var(--mono);font-size:11.5px;padding:9px 14px;border-radius:10px;border:1px solid var(--line-2);
+  display:inline-flex;align-items:center;gap:8px;box-shadow:0 10px 24px rgba(0,0,0,.45)}
+.badge-style:hover{border-color:var(--lime)}
+.badge-style i{width:7px;height:7px;border-radius:50%;background:var(--lime)}
+
+@media(max-width:1080px){.grid{grid-template-columns:repeat(3,1fr)}}
+@media(max-width:760px){
+  .grid{grid-template-columns:repeat(2,1fr)}
+  .form-row{grid-template-columns:1fr}
+  body{padding-bottom:150px}
+}
+@media(max-width:420px){.grid{grid-template-columns:1fr}}
+@media (prefers-reduced-motion: reduce){
+  *,*::before,*::after{animation-duration:.01ms !important;transition-duration:.01ms !important}
+}
+:focus-visible{outline:3px solid var(--lime);outline-offset:3px;border-radius:8px}
+</style>
+</head>
+<body>
+
+<a class="badge-style" href="index.html"><i></i> ← Kembali ke galeri 20 desain</a>
+
+<header class="top">
+  <div class="wrap">
+    <p class="kicker">Voting internal · Kabinet PPIT Nanjing</p>
+    <h1>Pilih 3 arah desain favoritmu, urutkan dari yang paling kamu suka</h1>
+    <p>Lihat kesan pertama tiap desain, buka pratinjau kalau perlu, lalu klik kartu: klik pertama jadi <b>favorit 1</b>, kedua <b>favorit 2</b>, ketiga <b>favorit 3</b>. Klik lagi kartu terpilih untuk melepas. Setelah submit, hasil langsung masuk ke rekap.</p>
+    <div class="steps">
+      <span class="step"><b>1.</b> Isi nama</span>
+      <span class="step"><b>2.</b> Pilih &amp; urutkan 3 desain</span>
+      <span class="step"><b>3.</b> Submit — selesai</span>
+    </div>
+    <div class="notice" id="fileNotice">Mode lokal (file://) terdeteksi. UI bisa dicoba, tapi <b>submit dan hasil hanya aktif di versi deploy</b> (butuh API).</div>
+    <div class="status" id="status" role="status"></div>
+  </div>
+</header>
+
+<main class="wrap">
+  <div id="formArea">
+    <div class="form-row">
+      <div class="field">
+        <label for="vname">Nama kamu *</label>
+        <input id="vname" type="text" maxlength="80" placeholder="Nama lengkap" autocomplete="name">
+      </div>
+      <div class="field">
+        <label for="vcity">Kota (opsional)</label>
+        <select id="vcity">
+          <option value="">— pilih kota —</option>
+          <option>Nanjing</option>
+          <option>Xuzhou</option>
+          <option>Jurong</option>
+          <option>Ma'anshan</option>
+          <option>Zhenjiang</option>
+          <option>Huai'an</option>
+          <option>Lianyungang</option>
+          <option>Taizhou</option>
+          <option>Yancheng</option>
+          <option>Lainnya</option>
+        </select>
+      </div>
+      <div class="field full">
+        <label for="vnote">Catatan (opsional)</label>
+        <textarea id="vnote" maxlength="400" placeholder="Alasan singkat, kekhawatiran, atau gabungan yang kamu bayangkan..."></textarea>
+      </div>
+    </div>
+  </div>
+
+  <div class="done-panel" id="donePanel">
+    <h2>Vote kamu sudah masuk. Terima kasih!</h2>
+    <p>Hasil sementara bisa dilihat kapan saja di halaman rekap. Satu perangkat hanya bisa vote sekali.</p>
+    <div class="actions">
+      <a class="btn-lime" href="hasil.html">Lihat rekap hasil →</a>
+      <a class="btn-line" href="index.html">Balik ke galeri</a>
+    </div>
+  </div>
+
+  <section class="grid" id="grid" aria-label="20 kandidat desain"></section>
+
+  <div class="result-preview" id="previewResults">
+    <h2>Hasil sementara</h2>
+    <p id="previewMeta"></p>
+    <div id="previewRows"></div>
+    <p style="margin-top:18px"><a class="btn-line" href="hasil.html">Buka halaman rekap lengkap →</a></p>
+  </div>
+
+  <footer class="footer">
+    <div>Voting ini internal — jangan sebarkan tautannya ke luar kabinet. Data yang disimpan: nama, kota (opsional), 3 pilihan, catatan (opsional), waktu.</div>
+  </footer>
+</main>
+
+<div class="bar" role="region" aria-label="Pilihan dan submit">
+  <div class="inner">
+    <div class="picks" id="picks">
+      <span class="pick" data-slot="1">1 <b>—</b></span>
+      <span class="pick" data-slot="2">2 <b>—</b></span>
+      <span class="pick" data-slot="3">3 <b>—</b></span>
+    </div>
+    <span class="hint" id="hint">0/3 dipilih</span>
+    <span class="spacer"></span>
+    <button class="submit" id="submitBtn" disabled>Kirim Vote</button>
+  </div>
+</div>
+
+<div class="overlay" id="overlay" aria-hidden="true">
+  <div class="ov-head">
+    <b id="ovTitle">Pratinjau</b>
+    <div class="ov-actions">
+      <span class="mono">desktop dianjurkan</span>
+      <a class="ov-btn" id="ovOpen" href="#" target="_blank" rel="noopener">Buka tab baru</a>
+      <button class="ov-btn" id="ovClose" type="button">Tutup</button>
+    </div>
+  </div>
+  <iframe id="ovFrame" title="Pratinjau desain" loading="lazy"></iframe>
+</div>
+
+<script>
+(function(){
+  var DESIGNS = [
+    { id:'01', name:'Diaspora Modern', sw:['#15171b','#fafaf7','#d62828','#eceded'] },
+    { id:'02', name:'Cultural Heritage Motif', sw:['#f7f1e3','#1f2a44','#8a5a2b','#c9a227'] },
+    { id:'03', name:'Trust-first Corporate', sw:['#12315b','#0c2342','#eef3f8','#c8102e'] },
+    { id:'04', name:'Gov-style', sw:['#0b0c0c','#ffffff','#1d70b8','#00703c'] },
+    { id:'05', name:'Editorial UI', sw:['#f6f3ec','#15120d','#b23a2e','#6b6357'] },
+    { id:'06', name:'Bento Grid', sw:['#f1f0eb','#121316','#ff5a36','#cfe8d8'] },
+    { id:'07', name:'Swiss Design', sw:['#ffffff','#0a0a0a','#e30613','#8a8a8a'] },
+    { id:'08', name:'Modern Dark SaaS', sw:['#0b0c0e','#131519','#3ddc97','#9aa0ab'] },
+    { id:'09', name:'Kinetic Hero Typography', sw:['#f2f2ef','#0d0d0c','#c8f135','#6f6f6a'] },
+    { id:'10', name:'Art Deco', sw:['#f4efe3','#0e3b32','#c6a052','#1d1b14'] },
+    { id:'11', name:'Bauhaus UI', sw:['#f5f1e8','#111111','#e23a2e','#1f4e9c'] },
+    { id:'12', name:'Op Art', sw:['#0c0c0c','#f2f2ee','#5c5c58'] },
+    { id:'13', name:'Risograph Print', sw:['#faf7ef','#ff48b0','#0078bf','#ffd400'] },
+    { id:'14', name:'Luxury Editorial', sw:['#0c0b09','#f5f1e7','#c1a15f','#857f6f'] },
+    { id:'15', name:'Broadsheet', sw:['#f2eee2','#16130d','#a92c20','#6b6557'] },
+    { id:'16', name:'Art Nouveau', sw:['#f7f1e5','#46523a','#b98a3e','#c99696'] },
+    { id:'17', name:'Blueprint', sw:['#0f2c52','#7fd4ff','#eaf1f9'] },
+    { id:'18', name:'Solarpunk', sw:['#f6f9ee','#0f3d2e','#b7e26b','#f5c542'] },
+    { id:'19', name:'De Stijl', sw:['#f7f6f1','#101010','#d3202a','#1d4f9c'] },
+    { id:'20', name:'Constructivism', sw:['#efe9db','#101010','#d21f26','#57534a'] }
+  ];
+
+  var FILES = {
+    '01':'01-diaspora-modern.html',
+    '02':'02-cultural-heritage.html',
+    '03':'03-trust-corporate.html',
+    '04':'04-gov-style.html',
+    '05':'05-editorial.html',
+    '06':'06-bento-grid.html',
+    '07':'07-swiss.html',
+    '08':'08-dark-saas.html',
+    '09':'09-kinetic-type.html',
+    '10':'10-art-deco.html',
+    '11':'11-bauhaus.html',
+    '12':'12-op-art.html',
+    '13':'13-risograph.html',
+    '14':'14-luxury-editorial.html',
+    '15':'15-broadsheet.html',
+    '16':'16-art-nouveau.html',
+    '17':'17-blueprint.html',
+    '18':'18-solarpunk.html',
+    '19':'19-de-stijl.html',
+    '20':'20-constructivism.html'
+  };
+
+  var isFile = location.protocol === 'file:';
+  var reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  var ranks = [];
+  var grid = document.getElementById('grid');
+  var picks = document.getElementById('picks');
+  var hint = document.getElementById('hint');
+  var submitBtn = document.getElementById('submitBtn');
+  var status = document.getElementById('status');
+  var donePanel = document.getElementById('donePanel');
+  var formArea = document.getElementById('formArea');
+  var overlay = document.getElementById('overlay');
+  var ovFrame = document.getElementById('ovFrame');
+  var ovTitle = document.getElementById('ovTitle');
+  var ovOpen = document.getElementById('ovOpen');
+
+  function token(){
+    try {
+      var t = localStorage.getItem('ppit_vote_token');
+      if (!t) {
+        t = (window.crypto && crypto.randomUUID) ? crypto.randomUUID() : 'tok-' + Date.now() + '-' + Math.random().toString(36).slice(2);
+        localStorage.setItem('ppit_vote_token', t);
+      }
+      return t;
+    } catch (e) { return 'tok-' + Date.now(); }
+  }
+
+  function alreadyVoted(){
+    try { return localStorage.getItem('ppit_vote_done') === '1'; } catch (e) { return false; }
+  }
+
+  function showStatus(kind, msg){
+    status.className = 'status on ' + kind;
+    status.textContent = msg;
+  }
+
+  function renderGrid(){
+    grid.innerHTML = '';
+    DESIGNS.forEach(function(d){
+      var btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'dcard';
+      btn.setAttribute('data-id', d.id);
+      var sw = d.sw.map(function(c){ return '<i style="background:' + c + '"></i>'; }).join('');
+      btn.innerHTML =
+        '<span class="rank" data-rank></span>' +
+        '<span class="no">' + d.id + '</span>' +
+        '<h3>' + d.name + '</h3>' +
+        '<span class="sw">' + sw + '</span>' +
+        '<span class="pv" data-pv="' + d.id + '" role="button" tabindex="0">Pratinjau ↗</span>';
+      btn.addEventListener('click', function(e){
+        if (e.target.closest('[data-pv]')) return;
+        toggle(d.id);
+      });
+      btn.querySelector('[data-pv]').addEventListener('click', function(e){
+        e.stopPropagation();
+        openPreview(d);
+      });
+      btn.querySelector('[data-pv]').addEventListener('keydown', function(e){
+        if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); e.stopPropagation(); openPreview(d); }
+      });
+      grid.appendChild(btn);
+    });
+  }
+
+  function toggle(id){
+    var i = ranks.indexOf(id);
+    if (i >= 0) { ranks.splice(i, 1); }
+    else if (ranks.length < 3) { ranks.push(id); }
+    else { ranks[2] = id; showStatus('ok', 'Favorit ke-3 diganti dengan ' + nameOf(id) + '.'); }
+    sync();
+  }
+
+  function nameOf(id){
+    for (var i = 0; i < DESIGNS.length; i++) if (DESIGNS[i].id === id) return DESIGNS[i].name;
+    return id;
+  }
+
+  function sync(){
+    var cards = grid.querySelectorAll('.dcard');
+    cards.forEach(function(c){
+      var id = c.getAttribute('data-id');
+      var idx = ranks.indexOf(id);
+      c.classList.toggle('selected', idx >= 0);
+      var badge = c.querySelector('[data-rank]');
+      badge.textContent = idx >= 0 ? String(idx + 1) : '';
+      c.setAttribute('aria-pressed', idx >= 0 ? 'true' : 'false');
+    });
+    picks.querySelectorAll('.pick').forEach(function(p){
+      var slot = parseInt(p.getAttribute('data-slot'), 10) - 1;
+      var val = ranks[slot];
+      p.classList.toggle('filled', !!val);
+      p.querySelector('b').textContent = val ? nameOf(val) : '—';
+    });
+    hint.textContent = ranks.length + '/3 dipilih' + (ranks.length === 3 ? ' — siap dikirim' : '');
+    submitBtn.disabled = ranks.length !== 3 || alreadyVoted();
+  }
+
+  function openPreview(d){
+    var file = FILES[d.id] || (d.id + '.html');
+    ovTitle.textContent = d.id + ' · ' + d.name;
+    ovOpen.setAttribute('href', file);
+    ovFrame.setAttribute('src', file);
+    overlay.classList.add('open');
+    overlay.setAttribute('aria-hidden', 'false');
+  }
+
+  function closePreview(){
+    overlay.classList.remove('open');
+    overlay.setAttribute('aria-hidden', 'true');
+    ovFrame.removeAttribute('src');
+  }
+
+  document.getElementById('ovClose').addEventListener('click', closePreview);
+  overlay.addEventListener('click', function(e){ if (e.target === overlay) closePreview(); });
+  document.addEventListener('keydown', function(e){ if (e.key === 'Escape' && overlay.classList.contains('open')) closePreview(); });
+
+  function renderResults(data){
+    document.getElementById('previewResults').classList.add('on');
+    document.getElementById('previewMeta').textContent = data.total + ' voter sudah mengirim. Poin: favorit 1 = 3, favorit 2 = 2, favorit 3 = 1.';
+    var rows = document.getElementById('previewRows');
+    rows.innerHTML = '';
+    var max = 1;
+    data.ranking.forEach(function(r){ if (r.points > max) max = r.points; });
+    data.ranking.slice(0, 8).forEach(function(r, i){
+      var row = document.createElement('div');
+      row.className = 'rrow';
+      row.innerHTML =
+        '<span class="rno">' + String(i + 1).padStart(2, '0') + '</span>' +
+        '<span><span class="rname">' + r.id + ' · ' + r.name + '</span><span class="rbar"><i style="width:' + Math.round((r.points / max) * 100) + '%"></i></span></span>' +
+        '<span class="rpts">' + r.points + ' poin</span>';
+      rows.appendChild(row);
+    });
+  }
+
+  function fetchResults(){
+    if (isFile) return;
+    fetch('/api/design-vote/results', { headers: { 'Accept': 'application/json' } })
+      .then(function(r){ return r.json(); })
+      .then(function(data){ if (data && data.ok) renderResults(data); })
+      .catch(function(){});
+  }
+
+  function markDone(){
+    try { localStorage.setItem('ppit_vote_done', '1'); } catch (e) {}
+    formArea.style.display = 'none';
+    donePanel.classList.add('on');
+    document.getElementById('grid').style.display = 'none';
+    submitBtn.disabled = true;
+    fetchResults();
+  }
+
+  submitBtn.addEventListener('click', function(){
+    var name = document.getElementById('vname').value.trim();
+    var city = document.getElementById('vcity').value;
+    var note = document.getElementById('vnote').value.trim();
+    if (name.length < 2) { showStatus('err', 'Isi namamu dulu ya.'); document.getElementById('vname').focus(); return; }
+    if (ranks.length !== 3) { showStatus('err', 'Pilih tepat 3 desain favorit.'); return; }
+    if (isFile) { showStatus('err', 'Mode lokal: submit hanya aktif di versi deploy. Buka lewat domain situs, bukan file.'); return; }
+    submitBtn.disabled = true;
+    submitBtn.textContent = 'Mengirim...';
+    fetch('/api/design-vote', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name: name, city: city, note: note, ranks: ranks, token: token() })
+    })
+    .then(function(r){ return r.json().then(function(j){ return { status: r.status, body: j }; }); })
+    .then(function(res){
+      if (res.status === 200 && res.body.ok) { markDone(); showStatus('ok', 'Vote terkirim. Terima kasih!'); }
+      else if (res.status === 409) { markDone(); showStatus('ok', 'Perangkat ini sudah pernah vote.'); }
+      else { submitBtn.textContent = 'Kirim Vote'; submitBtn.disabled = false; showStatus('err', res.body && res.body.error ? res.body.error : 'Gagal mengirim. Coba lagi.'); }
+    })
+    .catch(function(){
+      submitBtn.textContent = 'Kirim Vote';
+      submitBtn.disabled = false;
+      showStatus('err', 'Tidak bisa menghubungi server. Cek koneksi lalu coba lagi.');
+    });
+  });
+
+  renderGrid();
+  sync();
+  if (isFile) document.getElementById('fileNotice').classList.add('on');
+  if (alreadyVoted()) { markDone(); showStatus('ok', 'Perangkat ini sudah pernah vote. Hasil sementara di bawah.'); }
+})();
+</script>
+</body>
+</html>

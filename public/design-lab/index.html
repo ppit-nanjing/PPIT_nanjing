@@ -1,0 +1,593 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Galeri Arah Desain — PPIT Nanjing</title>
+<meta name="description" content="10 eksplorasi arah desain landing page PPIT Nanjing berdasarkan UI Design Styles Reference.">
+<style>
+:root{
+  --bg:#0e0f11;
+  --panel:#16181c;
+  --panel-2:#1c1f24;
+  --line:rgba(255,255,255,.09);
+  --text:#eceef1;
+  --muted:#9aa1ab;
+  --max:1240px;
+  --mono:ui-monospace,"Cascadia Mono","SF Mono",Consolas,monospace;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth}
+body{background:var(--bg);color:var(--text);font-family:system-ui,-apple-system,"Segoe UI",sans-serif;line-height:1.6;font-size:15.5px}
+a{color:inherit}
+.wrap{max-width:var(--max);margin:0 auto;padding:0 clamp(18px,3.6vw,32px)}
+
+.top{padding:clamp(36px,6vw,72px) 0 30px;border-bottom:1px solid var(--line)}
+.top .tagline{font-family:var(--mono);font-size:11.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted)}
+.top h1{font-size:clamp(28px,4.4vw,46px);font-weight:800;letter-spacing:-.02em;line-height:1.15;margin:16px 0 16px;max-width:24ch}
+.top p{color:var(--muted);max-width:72ch}
+.top .meta{display:flex;gap:20px;flex-wrap:wrap;margin-top:24px;font-family:var(--mono);font-size:11.5px;color:var(--muted)}
+.top .meta b{color:var(--text);font-weight:600}
+.top-actions{display:flex;gap:12px;flex-wrap:wrap;margin-top:28px}
+.btn-hub{display:inline-flex;align-items:center;gap:9px;text-decoration:none;font-weight:700;font-size:13.5px;padding:13px 22px;border-radius:12px;border:1px solid var(--line);color:var(--text);background:var(--panel);transition:transform .2s,border-color .2s,background .2s,color .2s}
+.btn-hub:hover{transform:translateY(-1px);border-color:rgba(255,255,255,.3)}
+.btn-hub.primary{background:#c8f135;border-color:#c8f135;color:#0b0c0e}
+.btn-hub.primary:hover{background:#e4ff7a}
+.batch-head{padding:60px 0 4px;border-top:1px solid var(--line);margin-top:34px}
+.batch-kicker{font-family:var(--mono);font-size:11.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted)}
+.batch-head h2{font-size:clamp(24px,3.4vw,36px);font-weight:800;letter-spacing:-.02em;margin:12px 0 10px}
+.batch-dek{color:var(--muted);max-width:72ch}
+
+.notes{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;padding:26px 0 10px}
+.note{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:18px 20px}
+.note h3{font-size:13px;letter-spacing:.06em;text-transform:uppercase;font-family:var(--mono);color:var(--muted);font-weight:600;margin-bottom:8px}
+.note p{font-size:13.5px;color:var(--muted)}
+.note p b{color:var(--text);font-weight:600}
+
+.grid{display:grid;grid-template-columns:repeat(2,1fr);gap:18px;padding:26px 0 60px}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:16px;overflow:hidden;display:flex;flex-direction:column;position:relative;transition:transform .3s cubic-bezier(.2,.65,.3,1),border-color .3s,box-shadow .3s}
+.card::before{content:"";position:absolute;top:0;left:0;right:0;height:3px;background:var(--accent)}
+.card:hover{transform:translateY(-4px);border-color:rgba(255,255,255,.2);box-shadow:0 24px 54px rgba(0,0,0,.45)}
+.card-body{padding:24px 24px 20px;flex:1;display:flex;flex-direction:column;gap:12px}
+.card-head{display:flex;justify-content:space-between;align-items:flex-start;gap:16px}
+.card-num{font-family:var(--mono);font-size:34px;font-weight:600;line-height:1;color:var(--accent)}
+.card h2{font-size:19.5px;font-weight:700;letter-spacing:-.01em;line-height:1.25;text-align:right}
+.card h2 small{display:block;font-family:var(--mono);font-size:10.5px;font-weight:400;color:var(--muted);letter-spacing:.06em;margin-top:4px;text-align:right}
+.card .why{font-size:13.5px;color:var(--muted);flex:1}
+.swatches{display:flex;gap:8px;align-items:center}
+.sw{width:26px;height:26px;border-radius:8px;border:1px solid rgba(255,255,255,.16)}
+.type-row{display:flex;gap:8px;flex-wrap:wrap;font-family:var(--mono);font-size:10.5px;color:var(--muted)}
+.type-row span{border:1px solid var(--line);border-radius:6px;padding:4px 8px}
+.motion{display:flex;gap:8px;align-items:baseline;font-size:12.5px;color:var(--muted);border-top:1px dashed var(--line);padding-top:12px}
+.motion b{font-family:var(--mono);font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--accent);flex:none}
+.card-foot{border-top:1px solid var(--line);padding:14px 24px;display:flex;justify-content:space-between;align-items:center;gap:12px}
+.file{font-family:var(--mono);font-size:11px;color:var(--muted)}
+.open{display:inline-flex;align-items:center;gap:8px;text-decoration:none;font-weight:700;font-size:13.5px;color:var(--text);background:var(--panel-2);border:1px solid var(--line);border-radius:10px;padding:9px 16px;transition:background .25s,border-color .25s,color .25s}
+.open:hover{background:var(--accent);border-color:var(--accent);color:#0b0c0e}
+.open .arr{transition:transform .2s}
+.open:hover .arr{transform:translateX(3px)}
+
+.footer{border-top:1px solid var(--line);padding:30px 0 40px;color:var(--muted);font-size:13px}
+.footer .wrap{display:flex;justify-content:space-between;gap:16px;flex-wrap:wrap}
+.footer b{color:var(--text);font-weight:600}
+.footer .mono{font-family:var(--mono);font-size:11.5px}
+
+@media(max-width:900px){
+  .grid{grid-template-columns:1fr}
+  .notes{grid-template-columns:1fr}
+  .card h2{text-align:left}
+  .card h2 small{text-align:left}
+}
+@media (prefers-reduced-motion: reduce){
+  *,*::before,*::after{animation-duration:.01ms !important;transition-duration:.01ms !important}
+}
+:focus-visible{outline:3px solid #c8f135;outline-offset:3px;border-radius:8px}
+</style>
+</head>
+<body>
+
+<header class="top">
+  <div class="wrap">
+    <p class="tagline">Design Lab · PPIT Nanjing · 20 arah dari UI Design Styles Reference</p>
+    <h1>Sepuluh kemungkinan arah desain landing page</h1>
+    <p>Setiap halaman di bawah adalah landing page utuh yang berdiri sendiri — konten, navigasi, statistik, kota, agenda, berita, CTA sensus, dan footer yang sama, dirender ulang dengan bahasa visual dan animasi khas masing-masing gaya. Bandingkan berdampingan, lalu pilih satu arah utama.</p>
+    <div class="meta">
+      <span>20 GAYA</span>
+      <span>1 SKELETON KONTEN</span>
+      <span>HTML MANDIRI</span>
+      <span>REDUCED-MOTION SIAP</span>
+    </div>
+    <div class="top-actions">
+      <a class="btn-hub primary" href="vote.html">Vote 3 Favoritmu →</a>
+      <a class="btn-hub" href="#batch-1">Lihat Batch 1 (01–10)</a>
+      <a class="btn-hub" href="#batch-2">Lihat Batch 2 (11–20)</a>
+    </div>
+  </div>
+</header>
+
+<div class="wrap">
+  <section class="notes" aria-label="Catatan">
+    <div class="note">
+      <h3>Cara menilai</h3>
+      <p>Nilai dari <b>kesan 5 detik pertama</b>, lalu <b>keterbacaan teks panjang</b>, lalu apakah animasinya membantu atau mengganggu. Buka di HP juga — audiens utama pakai perangkat mid-range.</p>
+    </div>
+    <div class="note">
+      <h3>Konten contoh</h3>
+      <p>Motto dan copy inti diambil dari kamus asli proyek. Nama acara/berita memakai data seed (<b>WIF 2026</b>, <b>Fun Hike with PINYX</b>). Angka <b>9 / 66 / 2008</b> adalah contoh — nanti diambil live dari database.</p>
+    </div>
+    <div class="note">
+      <h3>Teknis</h3>
+      <p>Semua halaman: satu file HTML, tanpa gambar (visual SVG/CSS), tanpa build. Font eksternal hanya Google Fonts; Gov-style sengaja memakai font sistem. Setiap animasi punya jalur <b>prefers-reduced-motion</b>.</p>
+    </div>
+  </section>
+
+  <div class="batch-head" id="batch-1">
+    <p class="batch-kicker">Batch 1 · 01–10</p>
+    <h2>Arah pertama: institusional, kultural, dan satu pameran animasi</h2>
+    <p class="batch-dek">Kandidat awal — dari Diaspora Modern sampai Art Deco. Yang kamu tandai suka (02, 03, 05, 07, 09, 10) semuanya di sini.</p>
+  </div>
+
+  <section class="grid" aria-label="10 arah desain batch 1">
+
+    <article class="card" style="--accent:#ff6a5e">
+      <div class="card-body">
+        <div class="card-head">
+          <span class="card-num">01</span>
+          <h2>Diaspora Modern<small>Budaya × kontemporer</small></h2>
+        </div>
+        <p class="why">Identitas Indonesia jadi jangkar (merah + motif diagonal), sisanya netral dan modern. Paling literal cocok untuk organisasi diaspora: hangat, tapi tidak folkloric.</p>
+        <div class="swatches">
+          <span class="sw" style="background:#15171b"></span>
+          <span class="sw" style="background:#fafaf7"></span>
+          <span class="sw" style="background:#d62828"></span>
+          <span class="sw" style="background:#eceded"></span>
+        </div>
+        <div class="type-row"><span>Plus Jakarta Sans</span><span>satu keluarga</span></div>
+        <p class="motion"><b>Animasi</b> Kartu hero melayang + parallax kursor, marquee 9 kota, count-up.</p>
+      </div>
+      <div class="card-foot">
+        <span class="file">01-diaspora-modern.html</span>
+        <a class="open" href="01-diaspora-modern.html">Buka <span class="arr">→</span></a>
+      </div>
+    </article>
+
+    <article class="card" style="--accent:#e2b64d">
+      <div class="card-body">
+        <div class="card-head">
+          <span class="card-num">02</span>
+          <h2>Cultural Heritage Motif<small>Motif disuling, bukan ditempel</small></h2>
+        </div>
+        <p class="why">Pola batik (mega mendung/parang) dan aksen Nanjing disaring jadi garis, pola, dan segel — bukan tempelan dekoratif. Kotanya tampil sebagai cap/stempel.</p>
+        <div class="swatches">
+          <span class="sw" style="background:#f7f1e3"></span>
+          <span class="sw" style="background:#1f2a44"></span>
+          <span class="sw" style="background:#8a5a2b"></span>
+          <span class="sw" style="background:#c9a227"></span>
+        </div>
+        <div class="type-row"><span>Cormorant Garamond</span><span>Plus Jakarta Sans</span></div>
+        <p class="motion"><b>Animasi</b> Ornamen menggambar sendiri (stroke draw), shimmer emas, stempel miring masuk.</p>
+      </div>
+      <div class="card-foot">
+        <span class="file">02-cultural-heritage.html</span>
+        <a class="open" href="02-cultural-heritage.html">Buka <span class="arr">→</span></a>
+      </div>
+    </article>
+
+    <article class="card" style="--accent:#5b8fd6">
+      <div class="card-body">
+        <div class="card-head">
+          <span class="card-num">03</span>
+          <h2>Trust-first Corporate<small>Institusi yang bisa dipercaya</small></h2>
+        </div>
+        <p class="why">Bahasa visual universitas/lembaga resmi: navy, simetris, tabel data, dan slot foto asli. Paling cepat membangun kepercayaan untuk sponsor dan badan pusat.</p>
+        <div class="swatches">
+          <span class="sw" style="background:#12315b"></span>
+          <span class="sw" style="background:#0c2342"></span>
+          <span class="sw" style="background:#eef3f8"></span>
+          <span class="sw" style="background:#c8102e"></span>
+        </div>
+        <div class="type-row"><span>Source Serif 4</span><span>Source Sans 3</span></div>
+        <p class="motion"><b>Animasi</b> Ken-burns lembut pada slot foto, count-up, fade-up tenang.</p>
+      </div>
+      <div class="card-foot">
+        <span class="file">03-trust-corporate.html</span>
+        <a class="open" href="03-trust-corporate.html">Buka <span class="arr">→</span></a>
+      </div>
+    </article>
+
+    <article class="card" style="--accent:#4f9ce0">
+      <div class="card-body">
+        <div class="card-head">
+          <span class="card-num">04</span>
+          <h2>Gov-style<small>Plain, aksesibel, tanpa dekorasi</small></h2>
+        </div>
+        <p class="why">Pendekatan gov.uk: kontras tinggi, font sistem, tautan jelas. Sengaja nyaris tanpa animasi — pembanding jujur untuk semua gaya lain, sekaligus opsi paling ringan.</p>
+        <div class="swatches">
+          <span class="sw" style="background:#0b0c0c"></span>
+          <span class="sw" style="background:#ffffff"></span>
+          <span class="sw" style="background:#1d70b8"></span>
+          <span class="sw" style="background:#00703c"></span>
+        </div>
+        <div class="type-row"><span>Arial / system</span><span>tanpa webfont</span></div>
+        <p class="motion"><b>Animasi</b> Nyaris tidak ada — hanya fokus keyboard & hover tautan.</p>
+      </div>
+      <div class="card-foot">
+        <span class="file">04-gov-style.html</span>
+        <a class="open" href="04-gov-style.html">Buka <span class="arr">→</span></a>
+      </div>
+    </article>
+
+    <article class="card" style="--accent:#e0705f">
+      <div class="card-body">
+        <div class="card-head">
+          <span class="card-num">05</span>
+          <h2>Editorial UI<small>Majalah "Kabar Nanjing"</small></h2>
+        </div>
+        <p class="why">Tipografi besar sebagai elemen utama, kolom asimetris, drop cap, pull quote. Situs ini memang menerbitkan berita dan AD/ART — layout majalah membuat konten terasa curated.</p>
+        <div class="swatches">
+          <span class="sw" style="background:#f6f3ec"></span>
+          <span class="sw" style="background:#15120d"></span>
+          <span class="sw" style="background:#b23a2e"></span>
+          <span class="sw" style="background:#6b6357"></span>
+        </div>
+        <div class="type-row"><span>Fraunces</span><span>Lora</span></div>
+        <p class="motion"><b>Animasi</b> Headline muncul baris demi baris (masked), garis menggambar, parallax kutipan.</p>
+      </div>
+      <div class="card-foot">
+        <span class="file">05-editorial.html</span>
+        <a class="open" href="05-editorial.html">Buka <span class="arr">→</span></a>
+      </div>
+    </article>
+
+    <article class="card" style="--accent:#ff7a56">
+      <div class="card-body">
+        <div class="card-head">
+          <span class="card-num">06</span>
+          <h2>Bento Grid<small>Modular, playful, rapi</small></h2>
+        </div>
+        <p class="why">Portal ini punya banyak modul (sensus, acara, inventaris, karier, galeri) — bento menampilkannya sebagai kartu-kartu dengan ukuran berbeda. Modern, ringan, ramah generasi mahasiswa.</p>
+        <div class="swatches">
+          <span class="sw" style="background:#f1f0eb"></span>
+          <span class="sw" style="background:#121316"></span>
+          <span class="sw" style="background:#fa5a36"></span>
+          <span class="sw" style="background:#cfe8d8"></span>
+        </div>
+        <div class="type-row"><span>Bricolage Grotesque</span><span>Plus Jakarta Sans</span></div>
+        <p class="motion"><b>Animasi</b> Tile masuk dengan spring, tilt 3D ikut kursor, ring progres sensus.</p>
+      </div>
+      <div class="card-foot">
+        <span class="file">06-bento-grid.html</span>
+        <a class="open" href="06-bento-grid.html">Buka <span class="arr">→</span></a>
+      </div>
+    </article>
+
+    <article class="card" style="--accent:#ff4d56">
+      <div class="card-body">
+        <div class="card-head">
+          <span class="card-num">07</span>
+          <h2>Swiss Design<small>Grid matematis, tanpa basa-basi</small></h2>
+        </div>
+        <p class="why">Hierarki lewat kontras ukuran dan garis grid yang terlihat. Kesan "catatan resmi yang dijaga rapi" — tegas, netral, dan sangat berbeda dari estetika template.</p>
+        <div class="swatches">
+          <span class="sw" style="background:#ffffff"></span>
+          <span class="sw" style="background:#0a0a0a"></span>
+          <span class="sw" style="background:#e30613"></span>
+          <span class="sw" style="background:#8a8a8a"></span>
+        </div>
+        <div class="type-row"><span>Archivo</span><span>Archivo Narrow</span></div>
+        <p class="motion"><b>Animasi</b> Mekanis &amp; linear: headline turun kaku, ticker berjalan, hover blok merah.</p>
+      </div>
+      <div class="card-foot">
+        <span class="file">07-swiss.html</span>
+        <a class="open" href="07-swiss.html">Buka <span class="arr">→</span></a>
+      </div>
+    </article>
+
+    <article class="card" style="--accent:#3ddc97">
+      <div class="card-body">
+        <div class="card-head">
+          <span class="card-num">08</span>
+          <h2>Modern Dark SaaS<small>Portal sebagai produk software</small></h2>
+        </div>
+        <p class="why">Portal ini memang aplikasi (sensus, QR tiket, console admin). Estetika dark + command palette membuatnya terasa produk serius — dengan aksen hijau pinus yang menyambung ke brand sekarang.</p>
+        <div class="swatches">
+          <span class="sw" style="background:#0b0c0e"></span>
+          <span class="sw" style="background:#131519"></span>
+          <span class="sw" style="background:#3ddc97"></span>
+          <span class="sw" style="background:#9aa0ab"></span>
+        </div>
+        <div class="type-row"><span>Space Grotesk</span><span>JetBrains Mono</span></div>
+        <p class="motion"><b>Animasi</b> Spotlight mengikuti kursor, typewriter command palette, progress bar gulir.</p>
+      </div>
+      <div class="card-foot">
+        <span class="file">08-dark-saas.html</span>
+        <a class="open" href="08-dark-saas.html">Buka <span class="arr">→</span></a>
+      </div>
+    </article>
+
+    <article class="card" style="--accent:#c8f135">
+      <div class="card-body">
+        <div class="card-head">
+          <span class="card-num">09</span>
+          <h2>Kinetic Hero Typography<small>Tipe huruf sebagai panggung</small></h2>
+        </div>
+        <p class="why">Eksperimen paling berani: headline raksasa ikut bergerak sesuai posisi kursor dan kecepatan gulir. Untuk brand yang mau terasa hidup dan muda — dengan catatan berat di perangkat lama.</p>
+        <div class="swatches">
+          <span class="sw" style="background:#f2f2ef"></span>
+          <span class="sw" style="background:#0d0d0c"></span>
+          <span class="sw" style="background:#c8f135"></span>
+          <span class="sw" style="background:#6f6f6a"></span>
+        </div>
+        <div class="type-row"><span>Roboto Flex (variable)</span><span>IBM Plex Mono</span></div>
+        <p class="motion"><b>Animasi</b> Weight &amp; width huruf reaktif kursor, marquee miring ikut kecepatan gulir.</p>
+      </div>
+      <div class="card-foot">
+        <span class="file">09-kinetic-type.html</span>
+        <a class="open" href="09-kinetic-type.html">Buka <span class="arr">→</span></a>
+      </div>
+    </article>
+
+    <article class="card" style="--accent:#e2c27a">
+      <div class="card-body">
+        <div class="card-head">
+          <span class="card-num">10</span>
+          <h2>Art Deco<small>Warisan 民国 Nanjing</small></h2>
+        </div>
+        <p class="why">Nanjing adalah ibu kota era Republik — jade, gading, dan emas dengan komposisi simetris. Mewah dan bersejarah, sengaja menghindari maroon agar tidak menyerupai Chongqing.</p>
+        <div class="swatches">
+          <span class="sw" style="background:#f4efe3"></span>
+          <span class="sw" style="background:#0e3b32"></span>
+          <span class="sw" style="background:#c6a052"></span>
+          <span class="sw" style="background:#1d1b14"></span>
+        </div>
+        <div class="type-row"><span>Cinzel</span><span>Josefin Sans</span><span>Cormorant</span></div>
+        <p class="motion"><b>Animasi</b> Curtain reveal saat load, sunburst berputar lambat, garis emas menggambar.</p>
+      </div>
+      <div class="card-foot">
+        <span class="file">10-art-deco.html</span>
+        <a class="open" href="10-art-deco.html">Buka <span class="arr">→</span></a>
+      </div>
+    </article>
+
+  </section>
+
+  <div class="batch-head" id="batch-2">
+    <p class="batch-kicker">Batch 2 · 11–20</p>
+    <h2>Arah kedua: memperkuat selera 02 · 03 · 05 · 07 · 09 · 10</h2>
+    <p class="batch-dek">Sepuluh kandidat baru — tipografi kuat, struktural, berakar budaya, ditutup satu wildcard teaterikal. Sembilan di antaranya lolos saringan yang sama seperti batch 1.</p>
+  </div>
+
+  <section class="grid" aria-label="10 arah desain batch 2">
+
+    <article class="card" style="--accent:#ff8a75">
+      <div class="card-body">
+        <div class="card-head">
+          <span class="card-num">11</span>
+          <h2>Bauhaus UI<small>Geometri dasar, warna primer</small></h2>
+        </div>
+        <p class="why">Lingkaran, kotak, segitiga, tiga warna primer — fungsi di atas dekorasi. Sepupu dekat Swiss (07) dan Art Deco (10), tapi lebih ceria dan ekspresif.</p>
+        <div class="swatches">
+          <span class="sw" style="background:#f5f1e8"></span>
+          <span class="sw" style="background:#111111"></span>
+          <span class="sw" style="background:#e23a2e"></span>
+          <span class="sw" style="background:#1f4e9c"></span>
+          <span class="sw" style="background:#f2b705"></span>
+        </div>
+        <div class="type-row"><span>Jost</span><span>satu keluarga</span></div>
+        <p class="motion"><b>Animasi</b> Bentuk geometris merakit diri saat load, ring berputar perlahan.</p>
+      </div>
+      <div class="card-foot">
+        <span class="file">11-bauhaus.html</span>
+        <a class="open" href="11-bauhaus.html">Buka <span class="arr">→</span></a>
+      </div>
+    </article>
+
+    <article class="card" style="--accent:#d8d8d0">
+      <div class="card-body">
+        <div class="card-head">
+          <span class="card-num">12</span>
+          <h2>Op Art<small>Ilusi optik hitam-putih</small></h2>
+        </div>
+        <p class="why">Pola garis dan titik yang seolah bergerak — energi Kinetic (09) dijalankan dengan disiplin grid ala Swiss (07). Paling "wow" tanpa perlu foto.</p>
+        <div class="swatches">
+          <span class="sw" style="background:#0c0c0c"></span>
+          <span class="sw" style="background:#f2f2ee"></span>
+          <span class="sw" style="background:#5c5c58"></span>
+        </div>
+        <div class="type-row"><span>Archivo Black</span><span>Work Sans</span></div>
+        <p class="motion"><b>Animasi</b> Pola bergeser perlahan ikut scroll; kartu kota membalik saat hover.</p>
+      </div>
+      <div class="card-foot">
+        <span class="file">12-op-art.html</span>
+        <a class="open" href="12-op-art.html">Buka <span class="arr">→</span></a>
+      </div>
+    </article>
+
+    <article class="card" style="--accent:#ff6fc2">
+      <div class="card-body">
+        <div class="card-head">
+          <span class="card-num">13</span>
+          <h2>Risograph Print<small>Tiga tinta, grain, misregistrasi</small></h2>
+        </div>
+        <p class="why">Estetika cetak Riso: pink fluor + biru + kuning di atas kertas, lengkap dengan grain dan salah register. Tekstur Cultural Heritage (02) bertemu editorial (05).</p>
+        <div class="swatches">
+          <span class="sw" style="background:#faf7ef"></span>
+          <span class="sw" style="background:#ff48b0"></span>
+          <span class="sw" style="background:#0078bf"></span>
+          <span class="sw" style="background:#ffd400"></span>
+        </div>
+        <div class="type-row"><span>Chivo</span><span>Space Mono</span></div>
+        <p class="motion"><b>Animasi</b> Tinta bergeser saat hover (misregistrasi), grain bergetar halus.</p>
+      </div>
+      <div class="card-foot">
+        <span class="file">13-risograph.html</span>
+        <a class="open" href="13-risograph.html">Buka <span class="arr">→</span></a>
+      </div>
+    </article>
+
+    <article class="card" style="--accent:#e2c98f">
+      <div class="card-body">
+        <div class="card-head">
+          <span class="card-num">14</span>
+          <h2>Luxury Editorial<small>Serif Didot, emas tipis</small></h2>
+        </div>
+        <p class="why">Versi paling tenang dan mahal dari Editorial (05) + Art Deco (10): hitam, gading, emas champagne, whitespace luas. Cocok kalau mau kesan premium, bukan ramai.</p>
+        <div class="swatches">
+          <span class="sw" style="background:#0c0b09"></span>
+          <span class="sw" style="background:#f5f1e7"></span>
+          <span class="sw" style="background:#c1a15f"></span>
+          <span class="sw" style="background:#857f6f"></span>
+        </div>
+        <div class="type-row"><span>Prata</span><span>Jost</span></div>
+        <p class="motion"><b>Animasi</b> Reveal lambat, garis emas menggambar, huruf meregang saat hover.</p>
+      </div>
+      <div class="card-foot">
+        <span class="file">14-luxury-editorial.html</span>
+        <a class="open" href="14-luxury-editorial.html">Buka <span class="arr">→</span></a>
+      </div>
+    </article>
+
+    <article class="card" style="--accent:#d96a5f">
+      <div class="card-body">
+        <div class="card-head">
+          <span class="card-num">15</span>
+          <h2>Broadsheet<small>Halaman depan surat kabar</small></h2>
+        </div>
+        <p class="why">Masthead, kolom, garis ganda, drop cap, iklan layanan masyarakat — saudara "berita" dari Editorial (05) dan Swiss (07). Sangat cocok dengan konten kabar/AD/ART.</p>
+        <div class="swatches">
+          <span class="sw" style="background:#f2eee2"></span>
+          <span class="sw" style="background:#16130d"></span>
+          <span class="sw" style="background:#a92c20"></span>
+          <span class="sw" style="background:#6b6557"></span>
+        </div>
+        <div class="type-row"><span>Old Standard TT</span><span>PT Serif</span></div>
+        <p class="motion"><b>Animasi</b> Ticker berita berjalan, kolom masuk seperti keluar dari mesin cetak.</p>
+      </div>
+      <div class="card-foot">
+        <span class="file">15-broadsheet.html</span>
+        <a class="open" href="15-broadsheet.html">Buka <span class="arr">→</span></a>
+      </div>
+    </article>
+
+    <article class="card" style="--accent:#d8b06a">
+      <div class="card-body">
+        <div class="card-head">
+          <span class="card-num">16</span>
+          <h2>Art Nouveau<small>Lengkung organik, ornamen bunga</small></h2>
+        </div>
+        <p class="why">Garis whiplash dan lengkung arch ala poster Mucha — kerabat dekoratif Cultural Heritage (02) dan Art Deco (10), dengan palet sage-rose yang lebih lembut.</p>
+        <div class="swatches">
+          <span class="sw" style="background:#f7f1e5"></span>
+          <span class="sw" style="background:#46523a"></span>
+          <span class="sw" style="background:#b98a3e"></span>
+          <span class="sw" style="background:#c99696"></span>
+        </div>
+        <div class="type-row"><span>Italiana</span><span>Cormorant Garamond</span></div>
+        <p class="motion"><b>Animasi</b> Sulur menggambar sendiri, arch muncul, kelopak melayang pelan.</p>
+      </div>
+      <div class="card-foot">
+        <span class="file">16-art-nouveau.html</span>
+        <a class="open" href="16-art-nouveau.html">Buka <span class="arr">→</span></a>
+      </div>
+    </article>
+
+    <article class="card" style="--accent:#7fd4ff">
+      <div class="card-body">
+        <div class="card-head">
+          <span class="card-num">17</span>
+          <h2>Blueprint<small>Garis teknik di atas biru</small></h2>
+        </div>
+        <p class="why">Lembar gambar kerja: grid, dimensi, koordinat kota, title block. Sisi institusional (03) dengan disiplin teknikal (07) — pas untuk organisasi kampus.</p>
+        <div class="swatches">
+          <span class="sw" style="background:#0f2c52"></span>
+          <span class="sw" style="background:#7fd4ff"></span>
+          <span class="sw" style="background:#eaf1f9"></span>
+        </div>
+        <div class="type-row"><span>Archivo</span><span>Architects Daughter</span></div>
+        <p class="motion"><b>Animasi</b> Garis denah menggambar saat scroll, catatan tangan muncul.</p>
+      </div>
+      <div class="card-foot">
+        <span class="file">17-blueprint.html</span>
+        <a class="open" href="17-blueprint.html">Buka <span class="arr">→</span></a>
+      </div>
+    </article>
+
+    <article class="card" style="--accent:#b7e26b">
+      <div class="card-body">
+        <div class="card-head">
+          <span class="card-num">18</span>
+          <h2>Solarpunk<small>Hijau optimis masa depan</small></h2>
+        </div>
+        <p class="why">Futuristik tapi hangat dan bersih — dan warna hijau menyambung ke brand pine green yang sekarang. Paling "ramah generasi baru" dari batch ini.</p>
+        <div class="swatches">
+          <span class="sw" style="background:#f6f9ee"></span>
+          <span class="sw" style="background:#0f3d2e"></span>
+          <span class="sw" style="background:#b7e26b"></span>
+          <span class="sw" style="background:#f5c542"></span>
+        </div>
+        <div class="type-row"><span>Sora</span><span>Plus Jakarta Sans</span></div>
+        <p class="motion"><b>Animasi</b> Matahari terbit, tanaman tumbuh (draw-on), spora melayang.</p>
+      </div>
+      <div class="card-foot">
+        <span class="file">18-solarpunk.html</span>
+        <a class="open" href="18-solarpunk.html">Buka <span class="arr">→</span></a>
+      </div>
+    </article>
+
+    <article class="card" style="--accent:#ff5b4a">
+      <div class="card-body">
+        <div class="card-head">
+          <span class="card-num">19</span>
+          <h2>De Stijl<small>Mondrian: blok primer, garis hitam</small></h2>
+        </div>
+        <p class="why">Disiplin Swiss (07) dengan suhu teatrikal: merah, kuning, biru, dipisah garis hitam tebal. Kotak-kotaknya persis seperti struktur cabang: sembilan sel, satu komposisi.</p>
+        <div class="swatches">
+          <span class="sw" style="background:#f7f6f1"></span>
+          <span class="sw" style="background:#101010"></span>
+          <span class="sw" style="background:#d3202a"></span>
+          <span class="sw" style="background:#1d4f9c"></span>
+          <span class="sw" style="background:#f2c11d"></span>
+        </div>
+        <div class="type-row"><span>Archivo</span><span>satu keluarga</span></div>
+        <p class="motion"><b>Animasi</b> Blok warna meluncur masuk dari tepi, hitungan angka polos.</p>
+      </div>
+      <div class="card-foot">
+        <span class="file">19-de-stijl.html</span>
+        <a class="open" href="19-de-stijl.html">Buka <span class="arr">→</span></a>
+      </div>
+    </article>
+
+    <article class="card" style="--accent:#ff5147">
+      <div class="card-body">
+        <div class="card-head">
+          <span class="card-num">20</span>
+          <h2>Constructivism<small>Poster diagonal, tipe tebal</small></h2>
+        </div>
+        <p class="why">Wildcard batch ini — komposisi diagonal merah-hitam-krem ala poster konstruktivis era 1920-an. Paling teaterikal; buat yang mau landing page langsung "menampar".</p>
+        <div class="swatches">
+          <span class="sw" style="background:#efe9db"></span>
+          <span class="sw" style="background:#101010"></span>
+          <span class="sw" style="background:#d21f26"></span>
+          <span class="sw" style="background:#57534a"></span>
+        </div>
+        <div class="type-row"><span>Oswald</span><span>PT Sans</span></div>
+        <p class="motion"><b>Animasi</b> Pita diagonal menyapu masuk, ring lingkaran berputar, hover blok merah.</p>
+      </div>
+      <div class="card-foot">
+        <span class="file">20-constructivism.html</span>
+        <a class="open" href="20-constructivism.html">Buka <span class="arr">→</span></a>
+      </div>
+    </article>
+
+  </section>
+</div>
+
+<footer class="footer">
+  <div class="wrap">
+    <span>Dibuat sebagai bahan eksplorasi — <b>bukan situs resmi</b>. Arah terpilih nanti harus tetap memegang motto verbatim, tiga tema kota, dan disiplin payload untuk pembaca di Tiongkok.</span>
+    <span class="mono">design-lab · 20 arah · <a href="vote.html" style="color:inherit">vote</a> · PPIT Nanjing · 2026</span>
+  </div>
+</footer>
+
+</body>
+</html>

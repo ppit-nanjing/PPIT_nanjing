@@ -1,0 +1,480 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>PPIT Nanjing — Arah Desain 02: Cultural Heritage Motif</title>
+<meta name="description" content="Contoh landing page PPIT Nanjing dengan arah desain Cultural Heritage Motif.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;0,700;1,400&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --paper:#f7f1e3;
+  --paper-2:#efe6d1;
+  --ink:#2b2118;
+  --indigo:#1f2a44;
+  --indigo-2:#182136;
+  --sogan:#8a5a2b;
+  --gold:#c9a227;
+  --gold-soft:#e4cf8f;
+  --line:rgba(43,33,24,.16);
+  --max:1150px;
+  --batik:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='84' height='84' viewBox='0 0 84 84'><g fill='none' stroke='%231f2a44' stroke-width='1.1' opacity='0.16'><path d='M-6 42 C18 16 66 16 90 42'/><path d='M-6 62 C18 36 66 36 90 62'/><path d='M42 -6 C16 18 16 66 42 90'/><circle cx='42' cy='42' r='2.4'/><circle cx='0' cy='0' r='2.4'/><circle cx='84' cy='0' r='2.4'/><circle cx='0' cy='84' r='2.4'/><circle cx='84' cy='84' r='2.4'/></g></svg>");
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth}
+body{
+  font-family:"Plus Jakarta Sans",system-ui,sans-serif;
+  background:var(--paper);color:var(--ink);line-height:1.65;overflow-x:hidden;
+}
+body::before{
+  content:"";position:fixed;inset:-10% 0;background-image:var(--batik);background-size:120px 120px;
+  opacity:.5;pointer-events:none;z-index:0;
+}
+.wrap{max-width:var(--max);margin:0 auto;padding:0 clamp(20px,4vw,32px);position:relative;z-index:1}
+.serif{font-family:"Cormorant Garamond",Georgia,"Songti SC",serif}
+.eyebrow{font-size:12.5px;letter-spacing:.28em;text-transform:uppercase;color:var(--sogan);font-weight:600}
+.eyebrow::after{content:"";display:block;width:44px;height:1px;background:var(--gold);margin-top:8px}
+h1,h2,h3{font-family:"Cormorant Garamond",Georgia,serif;font-weight:600;line-height:1.12;letter-spacing:.005em}
+.h2{font-size:clamp(32px,4.4vw,46px);margin:12px 0 16px}
+.lead{color:rgba(43,33,24,.72);max-width:62ch;font-size:16.5px}
+[data-reveal]{opacity:0;transform:translateY(30px);transition:opacity .9s ease,transform .9s cubic-bezier(.2,.65,.3,1)}
+[data-reveal].in{opacity:1;transform:none}
+[data-reveal][data-delay="1"]{transition-delay:.12s}
+[data-reveal][data-delay="2"]{transition-delay:.24s}
+[data-reveal][data-delay="3"]{transition-delay:.36s}
+
+.nav{position:sticky;top:0;z-index:60;background:rgba(247,241,227,.92);backdrop-filter:blur(8px);border-bottom:1px solid var(--line)}
+.nav::after{content:"";display:block;height:4px;background:
+  repeating-linear-gradient(90deg,var(--gold) 0 18px,transparent 18px 26px);opacity:.55}
+.nav-inner{display:flex;align-items:center;justify-content:space-between;gap:18px;height:70px}
+.brand{display:flex;align-items:center;gap:12px;text-decoration:none}
+.seal{width:38px;height:38px;border-radius:50%;border:1.6px solid var(--indigo);display:grid;place-items:center;
+  font-family:"Cormorant Garamond",serif;font-weight:700;font-size:15px;color:var(--indigo);position:relative;background:rgba(255,255,255,.35)}
+.seal::after{content:"";position:absolute;inset:3px;border-radius:50%;border:1px dashed rgba(31,42,68,.4)}
+.brand b{font-family:"Cormorant Garamond",serif;font-size:20px;letter-spacing:.04em;display:block;line-height:1.1}
+.brand small{font-size:10.5px;letter-spacing:.24em;text-transform:uppercase;color:var(--sogan)}
+.nav-links{display:flex;gap:26px;font-size:14px}
+.nav-links a{text-decoration:none;color:rgba(43,33,24,.75);padding-bottom:4px;border-bottom:1px solid transparent;transition:color .25s,border-color .25s}
+.nav-links a:hover{color:var(--indigo);border-color:var(--gold)}
+.btn{display:inline-flex;align-items:center;gap:10px;text-decoration:none;font-weight:600;font-size:14.5px;
+  padding:13px 26px;border:1.4px solid var(--indigo);color:var(--indigo);background:transparent;
+  transition:background .3s,color .3s,transform .3s,box-shadow .3s;border-radius:2px}
+.btn:hover{background:var(--indigo);color:var(--paper);transform:translateY(-2px);box-shadow:0 14px 30px rgba(31,42,68,.18)}
+.btn-gold{border-color:var(--sogan);background:var(--sogan);color:var(--paper)}
+.btn-gold:hover{background:var(--gold);border-color:var(--gold);color:var(--indigo-2)}
+
+.hero{padding:clamp(60px,9vw,120px) 0 clamp(48px,7vw,90px);position:relative}
+.hero-strip{position:absolute;left:0;top:0;bottom:0;width:44px;z-index:1;
+  background:repeating-linear-gradient(135deg,var(--indigo) 0 5px,transparent 5px 14px),var(--paper-2);
+  border-right:1px solid var(--line);opacity:.9}
+.cloud{position:absolute;right:-40px;top:6%;width:min(620px,58vw);color:var(--indigo);opacity:.30;z-index:0;pointer-events:none}
+.cloud path{stroke:currentColor;fill:none;stroke-width:1.6;stroke-dasharray:1;stroke-dashoffset:1;animation:draw 3s ease forwards .4s}
+.cloud path:nth-child(2){animation-delay:.9s;opacity:.7}
+.cloud path:nth-child(3){animation-delay:1.4s;opacity:.5}
+@keyframes draw{to{stroke-dashoffset:0}}
+.hero-inner{padding-left:clamp(24px,6vw,80px)}
+.hero h1{font-size:clamp(44px,6.6vw,78px);font-weight:600;line-height:1.02;margin:20px 0 24px;max-width:15ch}
+.hero h1 em{font-style:italic;color:var(--sogan)}
+.hero-ctas{display:flex;gap:14px;flex-wrap:wrap;margin-top:34px}
+.shimmer{
+  background:linear-gradient(100deg,var(--gold) 8%,#f6e6b4 32%,var(--gold) 52%,var(--sogan) 78%,var(--gold) 96%);
+  background-size:220% 100%;-webkit-background-clip:text;background-clip:text;color:transparent;
+  animation:shimmer 6s ease-in-out infinite;
+}
+@keyframes shimmer{0%,100%{background-position:0% 0}50%{background-position:100% 0}}
+.motto{margin-top:40px;display:flex;align-items:center;gap:16px;flex-wrap:wrap}
+.motto .m-word{font-family:"Cormorant Garamond",serif;font-size:21px;letter-spacing:.14em;text-transform:uppercase;color:var(--indigo)}
+.motto .dot{width:5px;height:5px;background:var(--gold);transform:rotate(45deg)}
+
+.orna{display:flex;align-items:center;gap:14px;max-width:var(--max);margin:0 auto;padding:0 clamp(20px,4vw,32px)}
+.orna i{flex:1;height:1px;background:linear-gradient(90deg,transparent,var(--sogan));opacity:.5}
+.orna i:last-child{background:linear-gradient(90deg,var(--sogan),transparent)}
+.orna span{width:9px;height:9px;border:1.4px solid var(--sogan);transform:rotate(45deg);position:relative}
+.orna span::after{content:"";position:absolute;inset:2px;background:var(--gold)}
+
+.prasasti{margin:clamp(56px,8vw,100px) 0;background:var(--indigo);color:var(--paper);position:relative;overflow:hidden}
+.prasasti::before{content:"";position:absolute;inset:0;background-image:var(--batik);background-size:110px;opacity:.16}
+.prasasti-inner{position:relative;display:grid;grid-template-columns:repeat(3,1fr);gap:1px;background:rgba(201,162,39,.35)}
+.prasasti .cell{background:var(--indigo);padding:clamp(30px,5vw,56px);text-align:center}
+.prasasti .num{font-family:"Cormorant Garamond",serif;font-size:clamp(46px,6vw,68px);color:var(--gold-soft);line-height:1;font-weight:600}
+.prasasti .lab{font-size:12.5px;letter-spacing:.26em;text-transform:uppercase;margin-top:10px;color:rgba(247,241,227,.85)}
+.prasasti .sub{font-size:13.5px;color:rgba(247,241,227,.65);margin-top:10px;max-width:30ch;margin-left:auto;margin-right:auto}
+
+.section{padding:clamp(56px,8vw,104px) 0}
+.sec-head{margin-bottom:46px}
+.grid-about{display:grid;grid-template-columns:1.05fr .95fr;gap:clamp(34px,5vw,70px);align-items:start}
+.grid-about p{color:rgba(43,33,24,.72);margin-top:14px}
+.quote-block{border:1px solid var(--line);border-top:3px solid var(--gold);background:rgba(255,255,255,.5);padding:30px 32px;margin-top:30px;position:relative}
+.quote-block::before{content:"“";font-family:"Cormorant Garamond",serif;font-size:70px;color:var(--gold);position:absolute;top:-6px;left:18px;line-height:1;opacity:.6}
+.quote-block p{font-family:"Cormorant Garamond",serif;font-size:21px;font-style:italic;line-height:1.5;color:var(--ink);padding-top:22px}
+.quote-block cite{display:block;margin-top:16px;font-style:normal;font-size:13px;letter-spacing:.08em;text-transform:uppercase;color:var(--sogan)}
+.fact-list{display:grid;gap:16px}
+.fact{border:1px solid var(--line);background:rgba(255,255,255,.5);padding:20px 22px;position:relative}
+.fact::after{content:"";position:absolute;right:-5px;top:-5px;width:10px;height:10px;background:var(--gold);transform:rotate(45deg)}
+.fact b{font-family:"Cormorant Garamond",serif;font-size:19px;font-weight:700}
+.fact p{font-size:13.8px;color:rgba(43,33,24,.7);margin-top:6px}
+
+.cities{display:grid;grid-template-columns:repeat(3,1fr);gap:20px}
+.stamp{
+  background:rgba(255,255,255,.55);border:1.6px solid var(--indigo);padding:22px;position:relative;
+  transform:rotate(-1.4deg) translateY(20px);opacity:0;
+  transition:opacity .8s ease,transform .8s cubic-bezier(.2,.65,.3,1);
+}
+.stamp.in{opacity:1;transform:rotate(var(--tilt,0deg))}
+.stamp:hover{transform:rotate(0deg) translateY(-4px);box-shadow:0 18px 38px rgba(31,42,68,.14)}
+.stamp::before{content:"";position:absolute;inset:5px;border:1px dashed rgba(31,42,68,.35);pointer-events:none}
+.stamp h3{font-size:24px;font-weight:700}
+.stamp .zh{font-size:12px;letter-spacing:.3em;color:var(--sogan);text-transform:uppercase;margin-top:2px}
+.stamp p{font-size:13.6px;color:rgba(43,33,24,.72);margin-top:10px}
+.stamp .seal-mini{position:absolute;right:14px;bottom:12px;width:30px;height:30px;border-radius:50%;border:1.4px solid var(--sogan);
+  display:grid;place-items:center;font-family:"Cormorant Garamond",serif;color:var(--sogan);font-size:12px;transform:rotate(8deg)}
+.stamp.is-hq{background:var(--indigo);border-color:var(--indigo);color:var(--paper)}
+.stamp.is-hq p{color:rgba(247,241,227,.75)}
+.stamp.is-hq .zh{color:var(--gold-soft)}
+.stamp.is-hq .seal-mini{border-color:var(--gold-soft);color:var(--gold-soft)}
+.stamp.is-hq::before{border-color:rgba(247,241,227,.35)}
+
+.list-scroll{display:grid;gap:0;border-top:1px solid var(--line)}
+.scroll-item{display:grid;grid-template-columns:150px 1fr auto;gap:26px;align-items:center;padding:26px 6px;border-bottom:1px solid var(--line);text-decoration:none;color:inherit;transition:background .3s,padding .3s}
+.scroll-item:hover{background:rgba(255,255,255,.55);padding-left:16px;padding-right:16px}
+.scroll-item .when{font-family:"Cormorant Garamond",serif;font-size:19px;color:var(--sogan)}
+.scroll-item h3{font-size:24px;font-weight:600}
+.scroll-item p{font-size:13.6px;color:rgba(43,33,24,.65);margin-top:4px}
+.scroll-item .kind{font-size:11.5px;letter-spacing:.22em;text-transform:uppercase;color:var(--indigo);border:1px solid var(--line);padding:7px 12px;white-space:nowrap}
+
+.cards3{display:grid;grid-template-columns:repeat(3,1fr);gap:20px}
+.ncard{background:rgba(255,255,255,.55);border:1px solid var(--line);padding:26px 24px;text-decoration:none;color:inherit;
+  transition:transform .35s,box-shadow .35s,border-color .35s;position:relative}
+.ncard:hover{transform:translateY(-5px);box-shadow:0 20px 40px rgba(31,42,68,.12);border-color:rgba(31,42,68,.4)}
+.ncard .kind{font-size:11px;letter-spacing:.24em;text-transform:uppercase;color:var(--sogan)}
+.ncard h3{font-size:23px;line-height:1.25;margin:12px 0 10px;font-weight:600}
+.ncard p{font-size:13.8px;color:rgba(43,33,24,.68)}
+.ncard .meta{margin-top:16px;font-size:12.5px;color:rgba(43,33,24,.55);display:flex;gap:8px;align-items:center}
+.ncard .meta::before{content:"";width:22px;height:1px;background:var(--gold)}
+
+.cta{padding:clamp(56px,8vw,104px) 0}
+.cta-panel{background:var(--indigo-2);color:var(--paper);padding:clamp(38px,6vw,70px);position:relative;overflow:hidden;text-align:center;border:1px solid rgba(201,162,39,.5)}
+.cta-panel::before,.cta-panel::after{content:"";position:absolute;width:190px;height:190px;border:1px solid rgba(201,162,39,.4);transform:rotate(45deg)}
+.cta-panel::before{left:-95px;top:-95px}
+.cta-panel::after{right:-95px;bottom:-95px}
+.cta-panel h2{font-size:clamp(32px,4.4vw,50px);position:relative}
+.cta-panel p{color:rgba(247,241,227,.75);max-width:56ch;margin:16px auto 30px;position:relative}
+.cta-actions{display:flex;gap:14px;justify-content:center;flex-wrap:wrap;position:relative}
+.btn-cream{border-color:var(--gold-soft);background:var(--gold-soft);color:var(--indigo-2)}
+.btn-cream:hover{background:transparent;color:var(--gold-soft)}
+.btn-ghost-cream{border-color:rgba(247,241,227,.4);color:var(--paper)}
+.btn-ghost-cream:hover{background:rgba(247,241,227,.1);color:var(--paper);box-shadow:none}
+
+.footer{background:var(--indigo);color:var(--paper);padding:64px 0 34px;position:relative;overflow:hidden}
+.footer::before{content:"";position:absolute;inset:0;background-image:var(--batik);background-size:130px;opacity:.12}
+.footer .wrap{position:relative}
+.footer-grid{display:grid;grid-template-columns:1.5fr 1fr 1fr 1fr;gap:34px;margin-bottom:44px}
+.footer h4{font-size:12px;letter-spacing:.26em;text-transform:uppercase;color:var(--gold-soft);margin-bottom:16px;font-weight:600}
+.footer ul{list-style:none;display:grid;gap:10px}
+.footer li a{color:rgba(247,241,227,.72);text-decoration:none;font-size:14px;transition:color .25s}
+.footer li a:hover{color:var(--gold-soft)}
+.footer .motto-line{font-size:13.8px;color:rgba(247,241,227,.6);max-width:36ch;margin-top:14px}
+.footer-bottom{border-top:1px solid rgba(247,241,227,.2);padding-top:22px;display:flex;justify-content:space-between;gap:14px;flex-wrap:wrap;font-size:12.8px;color:rgba(247,241,227,.6)}
+
+.badge-style{position:fixed;left:16px;bottom:16px;z-index:90;text-decoration:none;background:var(--indigo);color:var(--gold-soft);
+  font-size:12px;font-weight:600;letter-spacing:.05em;padding:9px 16px;border:1px solid rgba(201,162,39,.6);border-radius:2px;
+  display:inline-flex;align-items:center;gap:9px;box-shadow:0 12px 28px rgba(24,33,54,.35);transition:transform .2s}
+.badge-style:hover{transform:translateY(-2px)}
+.badge-style i{width:7px;height:7px;background:var(--gold);transform:rotate(45deg);font-style:normal}
+
+@media(max-width:1020px){
+  .grid-about{grid-template-columns:1fr}
+  .cities{grid-template-columns:repeat(2,1fr)}
+  .cards3{grid-template-columns:1fr 1fr}
+  .footer-grid{grid-template-columns:1fr 1fr}
+  .nav-links{display:none}
+  .cloud{opacity:.16}
+}
+@media(max-width:640px){
+  .prasasti-inner{grid-template-columns:1fr}
+  .cities{grid-template-columns:1fr}
+  .cards3{grid-template-columns:1fr}
+  .footer-grid{grid-template-columns:1fr}
+  .scroll-item{grid-template-columns:1fr;gap:8px}
+  .hero-strip{width:26px}
+}
+@media (prefers-reduced-motion: reduce){
+  *,*::before,*::after{animation-duration:.01ms !important;animation-iteration-count:1 !important;transition-duration:.01ms !important}
+  html{scroll-behavior:auto}
+  [data-reveal],.stamp{opacity:1;transform:none}
+  .cloud path{stroke-dashoffset:0}
+}
+:focus-visible{outline:3px solid var(--gold);outline-offset:3px}
+</style>
+</head>
+<body>
+
+<nav class="nav">
+  <div class="wrap nav-inner">
+    <a class="brand" href="#">
+      <span class="seal">南</span>
+      <span><b>PPIT Nanjing</b><small>PPI Tiongkok · Cabang Nanjing</small></span>
+    </a>
+    <div class="nav-links">
+      <a href="#tentang">Tentang</a>
+      <a href="#kota">Kota</a>
+      <a href="#kegiatan">Kegiatan</a>
+      <a href="#kabar">Kabar</a>
+      <a href="#karier">Karier</a>
+    </div>
+    <a class="btn btn-gold" href="#sensus">Lengkapi Sensus</a>
+  </div>
+</nav>
+
+<header class="hero">
+  <div class="hero-strip" aria-hidden="true"></div>
+  <svg class="cloud" viewBox="0 0 620 340" aria-hidden="true">
+    <path pathLength="1" d="M62 268 C40 268 28 246 40 228 C20 210 32 178 60 174 C58 140 96 120 124 134 C136 102 182 92 208 114 C226 84 276 82 298 108 C324 86 366 96 378 128 C412 118 444 140 444 172 C478 172 496 198 484 226 C506 238 500 266 474 270 Z"/>
+    <path pathLength="1" d="M120 268 C110 244 128 226 150 230 C152 206 186 198 202 214 C214 194 250 196 260 216 C284 208 306 224 306 246 C324 246 336 262 330 276"/>
+    <path pathLength="1" d="M330 276 C342 252 372 244 392 258 C404 240 436 240 448 258 C472 252 494 268 490 288"/>
+  </svg>
+  <div class="wrap hero-inner">
+    <p class="eyebrow" data-reveal>Perhimpunan Pelajar Indonesia Tiongkok</p>
+    <h1 data-reveal data-delay="1">Menghubungkan Mahasiswa Indonesia di <em>Nanjing</em></h1>
+    <p class="lead" data-reveal data-delay="2">Wadah resmi Perhimpunan Pelajar Indonesia Tiongkok (PPIT) Cabang Nanjing untuk bersinergi, berkarya, dan berkontribusi bagi bangsa — sejak 2008.</p>
+    <div class="hero-ctas" data-reveal data-delay="3">
+      <a class="btn btn-gold" href="#kegiatan">Jelajahi Kegiatan</a>
+      <a class="btn" href="#tentang">Tentang PPIT Nanjing</a>
+    </div>
+    <div class="motto" data-reveal data-delay="4">
+      <span class="m-word shimmer">Bersinergi</span><span class="dot"></span>
+      <span class="m-word shimmer">Berkarya</span><span class="dot"></span>
+      <span class="m-word shimmer">Berkontribusi</span>
+    </div>
+  </div>
+</header>
+
+<div class="orna" aria-hidden="true"><i></i><span></span><i></i></div>
+
+<section class="prasasti" aria-label="Angka PPIT Nanjing">
+  <div class="prasasti-inner">
+    <div class="cell" data-reveal>
+      <p class="num" data-count="9">0</p>
+      <p class="lab">Kota Naungan</p>
+      <p class="sub">Jiangsu dan Ma'anshan, Anhui</p>
+    </div>
+    <div class="cell" data-reveal data-delay="1">
+      <p class="num" data-count="66" data-suffix="+">0</p>
+      <p class="lab">Kampus</p>
+      <p class="sub">Jaringan mahasiswa lintas kota</p>
+    </div>
+    <div class="cell" data-reveal data-delay="2">
+      <p class="num" data-count="2008">0</p>
+      <p class="lab">Berdiri Sejak</p>
+      <p class="sub">28 Oktober 2008, Hari Sumpah Pemuda</p>
+    </div>
+  </div>
+</section>
+
+<section class="section" id="tentang">
+  <div class="wrap grid-about">
+    <div data-reveal>
+      <p class="eyebrow">Tentang Kami</p>
+      <h2 class="h2">Satu rumah untuk pelajar Indonesia di Jiangsu</h2>
+      <p>PPIT Cabang Nanjing adalah organisasi kemahasiswaan di Kota Nanjing yang mewadahi pelajar dan mahasiswa Indonesia serta organisasi-organisasi pelajar Indonesia di Tiongkok, khususnya Kota Nanjing.</p>
+      <p>Dibentuk pada 28 Oktober 2008 — bertepatan dengan Hari Sumpah Pemuda — dan tumbuh bersama ranting-ranting kampus dan kota naungannya. Sembilan kota, satu ikatan.</p>
+      <div class="quote-block">
+        <p>PPIT Nanjing adalah rumah bagi ribuan mimpi anak bangsa di kota bersejarah ini. Melalui kolaborasi dan semangat gotong royong, kita pastikan setiap pelajar Indonesia di sini memiliki support system terbaik.</p>
+        <cite>Ketua Umum PPIT Nanjing · Periode 2026–2027</cite>
+      </div>
+    </div>
+    <div class="fact-list" data-reveal data-delay="1">
+      <div class="fact"><b>Markas di Nanjing, naungan luas</b><p>Sembilan kota dari Nanjing hingga Yancheng, membentang di dua provinsi.</p></div>
+      <div class="fact"><b>Dua ranting kampus aktif</b><p>INA di NUIST dan JIA di JSAHVC, plus koordinator di tiap kota naungan.</p></div>
+      <div class="fact"><b>Terhubung ke PPI Tiongkok</b><p>Data sensus anggota mengalir langsung ke sistem pusat — satu profil lengkap, satu identitas resmi.</p></div>
+      <div class="fact"><b>Bukan sekadar organisasi</b><p>Kegiatan sosial, karier, mentorship, inventaris, sampai festival — berjalan lewat satu portal.</p></div>
+    </div>
+  </div>
+</section>
+
+<div class="orna" aria-hidden="true"><i></i><span></span><i></i></div>
+
+<section class="section" id="kota">
+  <div class="wrap">
+    <div class="sec-head" data-reveal>
+      <p class="eyebrow">Jangkauan Wilayah</p>
+      <h2 class="h2">Kota di bawah naungan PPIT Nanjing</h2>
+      <p class="lead">Selain Kota Nanjing, PPIT Nanjing menaungi pelajar dan mahasiswa Indonesia di kota-kota sekitarnya.</p>
+    </div>
+    <div class="cities">
+      <article class="stamp is-hq" style="--tilt:-1.2deg" data-reveal><h3>Nanjing</h3><p class="zh">南京</p><p>Ibu kota provinsi Jiangsu sekaligus markas utama PPIT Nanjing.</p><span class="seal-mini">主</span></article>
+      <article class="stamp" style="--tilt:1.4deg" data-reveal data-delay="1"><h3>Xuzhou</h3><p class="zh">徐州</p><p>Kota industri &amp; transportasi di utara Jiangsu dengan komunitas pelajar aktif.</p><span class="seal-mini">徐</span></article>
+      <article class="stamp" style="--tilt:-0.9deg" data-reveal data-delay="2"><h3>Jurong</h3><p class="zh">句容</p><p>Kawasan kampus yang menghimpun pelajar Indonesia di sekitarnya.</p><span class="seal-mini">句</span></article>
+      <article class="stamp" style="--tilt:1.1deg" data-reveal><h3>Ma'anshan</h3><p class="zh">马鞍山</p><p>Kota di Anhui yang berbatasan dekat dengan Nanjing.</p><span class="seal-mini">马</span></article>
+      <article class="stamp" style="--tilt:-1.5deg" data-reveal data-delay="1"><h3>Zhenjiang</h3><p class="zh">镇江</p><p>Kota tepi Sungai Yangtze dengan cukup banyak mahasiswa Indonesia.</p><span class="seal-mini">镇</span></article>
+      <article class="stamp" style="--tilt:1deg" data-reveal data-delay="2"><h3>Huai'an</h3><p class="zh">淮安</p><p>Kota historis di utara Jiangsu, salah satu ranting aktif PPIT.</p><span class="seal-mini">淮</span></article>
+      <article class="stamp" style="--tilt:-1.1deg" data-reveal><h3>Lianyungang</h3><p class="zh">连云港</p><p>Kota pelabuhan pesisir di ujung timur laut Jiangsu.</p><span class="seal-mini">连</span></article>
+      <article class="stamp" style="--tilt:1.3deg" data-reveal data-delay="1"><h3>Taizhou</h3><p class="zh">泰州</p><p>Kota di Jiangsu tengah, di tepi utara Sungai Yangtze.</p><span class="seal-mini">泰</span></article>
+      <article class="stamp" style="--tilt:-1deg" data-reveal data-delay="2"><h3>Yancheng</h3><p class="zh">盐城</p><p>Kota pesisir di Jiangsu tengah dengan wilayah terluas di provinsi.</p><span class="seal-mini">盐</span></article>
+    </div>
+  </div>
+</section>
+
+<div class="orna" aria-hidden="true"><i></i><span></span><i></i></div>
+
+<section class="section" id="kegiatan">
+  <div class="wrap">
+    <div class="sec-head" data-reveal>
+      <p class="eyebrow">Agenda</p>
+      <h2 class="h2">Kegiatan terbaru</h2>
+    </div>
+    <div class="list-scroll" data-reveal>
+      <a class="scroll-item" href="#kegiatan">
+        <span class="when serif">10 Okt 2026</span>
+        <span><h3>WIF 2026 — Welcoming Indonesian Freshman</h3><p>Malam penyambutan mahasiswa baru Indonesia se-Nanjing. Makan bersama, perkenalan kota, jaringan baru.</p></span>
+        <span class="kind">Sosial</span>
+      </a>
+      <a class="scroll-item" href="#kegiatan">
+        <span class="when serif">24 Okt 2026</span>
+        <span><h3>Fun Hike with PINYX</h3><p>Jalan sehat menyusuri rute favorit warga Nanjing, ditemani komunitas dan camilan hangat.</p></span>
+        <span class="kind">Sosial</span>
+      </a>
+      <a class="scroll-item" href="#kegiatan">
+        <span class="when serif">Agu 2026</span>
+        <span><h3>Rekrutmen Kabinet Maju 2026/2027</h3><p>Bergabung dengan kepengurusan PPIT Nanjing — berkarya dan berkontribusi langsung.</p></span>
+        <span class="kind">Organisasi</span>
+      </a>
+    </div>
+  </div>
+</section>
+
+<section class="section" id="kabar" style="padding-top:0">
+  <div class="wrap">
+    <div class="sec-head" data-reveal>
+      <p class="eyebrow">Publikasi</p>
+      <h2 class="h2">Kabar terbaru</h2>
+    </div>
+    <div class="cards3">
+      <a class="ncard" href="#kabar" data-reveal>
+        <p class="kind">Pengumuman</p>
+        <h3>Pendaftaran WIF 2026 dibuka — early bird gratis</h3>
+        <p>Kuota 150 peserta, kategori freshmen dan non-freshmen. Daftar lewat portal dan simpan tiket QR-mu.</p>
+        <p class="meta">2 Sep 2026 · 3 menit baca</p>
+      </a>
+      <a class="ncard" href="#kabar" data-reveal data-delay="1">
+        <p class="kind">Organisasi</p>
+        <h3>Rekrutmen pengurus Kabinet Maju telah dibuka</h3>
+        <p>Sembilan divisi membuka pendaftaran. Baca panduan, siapkan berkas, pilih divisi yang cocok untukmu.</p>
+        <p class="meta">1 Agu 2026 · 5 menit baca</p>
+      </a>
+      <a class="ncard" href="#kabar" data-reveal data-delay="2">
+        <p class="kind">Komunitas</p>
+        <h3>Galeri: keseruan Fun Hike with PINYX</h3>
+        <p>Lebih dari seratus pelajar Indonesia ikut serta. Foto lengkapnya tayang di galeri PPIT Nanjing.</p>
+        <p class="meta">20 Apr 2026 · 2 menit baca</p>
+      </a>
+    </div>
+  </div>
+</section>
+
+<section class="cta" id="sensus">
+  <div class="wrap">
+    <div class="cta-panel" data-reveal>
+      <h2 class="serif">Sudah lengkapi sensus keanggotaanmu?</h2>
+      <p>Data sensus mengalir langsung ke sistem pusat PPI Tiongkok. Satu profil lengkap berarti satu identitas resmi — dan akses penuh ke seluruh kegiatan PPIT Nanjing.</p>
+      <div class="cta-actions">
+        <a class="btn btn-cream" href="#sensus">Lengkapi Sensus</a>
+        <a class="btn btn-ghost-cream" href="#tentang">Gabung PPIT Nanjing</a>
+      </div>
+    </div>
+  </div>
+</section>
+
+<footer class="footer">
+  <div class="wrap">
+    <div class="footer-grid">
+      <div>
+        <a class="brand" href="#" style="color:inherit">
+          <span class="seal" style="border-color:var(--gold-soft);color:var(--gold-soft)">南</span>
+          <span><b>PPIT Nanjing</b><small style="color:var(--gold-soft)">PPI Tiongkok · Cabang Nanjing</small></span>
+        </a>
+        <p class="motto-line">Wadah resmi perhimpunan pelajar Indonesia di Tiongkok untuk bersinergi, berkarya, dan berkontribusi bagi bangsa.</p>
+      </div>
+      <div>
+        <h4>Jelajahi</h4>
+        <ul>
+          <li><a href="#kota">Kota Naungan</a></li>
+          <li><a href="#kegiatan">Kegiatan</a></li>
+          <li><a href="#kabar">Berita</a></li>
+          <li><a href="#karier">Karier &amp; Mentorship</a></li>
+        </ul>
+      </div>
+      <div>
+        <h4>Organisasi</h4>
+        <ul>
+          <li><a href="#tentang">Tentang</a></li>
+          <li><a href="#tentang">Struktur Pengurus</a></li>
+          <li><a href="#tentang">AD/ART</a></li>
+          <li><a href="#sensus">Sensus Anggota</a></li>
+        </ul>
+      </div>
+      <div>
+        <h4>Terhubung</h4>
+        <ul>
+          <li><a href="#">Instagram @ppit.nanjing</a></li>
+          <li><a href="#">Grup WeChat</a></li>
+          <li><a href="#">Surel Pengurus</a></li>
+          <li><a href="#">Pusat Bantuan</a></li>
+        </ul>
+      </div>
+    </div>
+    <div class="footer-bottom">
+      <span>© 2026 PPIT Nanjing · PPI Tiongkok. Contoh arah desain — bukan situs resmi.</span>
+      <span>Bersinergi · Berkarya · Berkontribusi</span>
+    </div>
+  </div>
+</footer>
+
+<a class="badge-style" href="index.html"><i></i> 02 · Cultural Heritage Motif — semua gaya</a>
+
+<script>
+(function(){
+  var reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  var reveals = document.querySelectorAll("[data-reveal]");
+  if (reduce || !("IntersectionObserver" in window)) {
+    reveals.forEach(function(el){ el.classList.add("in"); });
+  } else {
+    var io = new IntersectionObserver(function(entries){
+      entries.forEach(function(en){
+        if (en.isIntersecting) { en.target.classList.add("in"); io.unobserve(en.target); }
+      });
+    }, { threshold: 0.12, rootMargin: "0px 0px -6% 0px" });
+    reveals.forEach(function(el){ io.observe(el); });
+  }
+
+  var counters = document.querySelectorAll("[data-count]");
+  function runCount(el){
+    var target = parseInt(el.getAttribute("data-count"), 10);
+    var suffix = el.getAttribute("data-suffix") || "";
+    if (reduce) { el.textContent = target + suffix; return; }
+    var t0 = null;
+    function step(ts){
+      if (!t0) t0 = ts;
+      var p = Math.min((ts - t0) / 1300, 1);
+      var eased = 1 - Math.pow(1 - p, 3);
+      el.textContent = Math.round(target * eased) + suffix;
+      if (p < 1) requestAnimationFrame(step);
+    }
+    requestAnimationFrame(step);
+  }
+  if ("IntersectionObserver" in window) {
+    var cio = new IntersectionObserver(function(entries){
+      entries.forEach(function(en){
+        if (en.isIntersecting) { runCount(en.target); cio.unobserve(en.target); }
+      });
+    }, { threshold: 0.5 });
+    counters.forEach(function(el){ cio.observe(el); });
+  } else {
+    counters.forEach(runCount);
+  }
+})();
+</script>
+</body>
+</html>

@@ -1541,3 +1541,16 @@ export const driveFolders = pgTable(
       .where(sql`${t.departmentId} IS NULL`),
   ],
 );
+
+// ---------- Design lab vote (temporary) ----------
+export const designVotes = pgTable("design_votes", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  voterName: text("voter_name").notNull(),
+  voterCity: text("voter_city"),
+  voterToken: text("voter_token").notNull().unique(),
+  rank1: text("rank_1").notNull(),
+  rank2: text("rank_2").notNull(),
+  rank3: text("rank_3").notNull(),
+  note: text("note"),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});

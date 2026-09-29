@@ -1,0 +1,487 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>PPIT Nanjing — Arah Desain 16: Art Nouveau</title>
+<meta name="description" content="Contoh landing page PPIT Nanjing dengan arah desain Art Nouveau: garis organik, ornamen bunga, lengkung ala Mucha.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Italiana&family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;1,400;1,500&family=Jost:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+:root{
+  --cream:#f7f1e5;
+  --cream-2:#efe6d2;
+  --olive:#46523a;
+  --sage:#8a9a7b;
+  --gold:#b98a3e;
+  --gold-soft:#dcc08a;
+  --rose:#c99696;
+  --ink:#2f2a1f;
+  --muted:#7a7260;
+  --line:rgba(47,42,31,.2);
+  --max:1140px;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth}
+body{font-family:"Jost",system-ui,sans-serif;background:var(--cream);color:var(--ink);line-height:1.7;font-size:15.5px;font-weight:300;overflow-x:hidden}
+a{color:inherit}
+.wrap{max-width:var(--max);margin:0 auto;padding:0 clamp(18px,4vw,36px);position:relative;z-index:2}
+.display{font-family:"Italiana",Georgia,serif;font-weight:400;line-height:1.15;letter-spacing:.02em}
+.script{font-family:"Cormorant Garamond",Georgia,serif;font-style:italic}
+.label{font-size:10.5px;font-weight:400;letter-spacing:.34em;text-transform:uppercase}
+[data-reveal]{opacity:0;transform:translateY(26px);transition:opacity 1s ease,transform 1s cubic-bezier(.25,.6,.3,1)}
+[data-reveal].in{opacity:1;transform:none}
+[data-reveal][data-delay="1"]{transition-delay:.15s}
+[data-reveal][data-delay="2"]{transition-delay:.3s}
+.flourish path{stroke:currentColor;fill:none;stroke-width:1.4;stroke-dasharray:1;stroke-dashoffset:1}
+.flourish.in path{animation:draw 2.2s ease forwards}
+.flourish.in path:nth-child(2){animation-delay:.5s}
+.flourish.in path:nth-child(3){animation-delay:1s}
+@keyframes draw{to{stroke-dashoffset:0}}
+
+.nav{position:sticky;top:0;z-index:50;background:rgba(247,241,229,.92);backdrop-filter:blur(8px);border-bottom:1px solid var(--line)}
+.nav .wrap{display:flex;align-items:center;justify-content:space-between;gap:18px;height:76px}
+.brand{display:flex;align-items:center;gap:13px;text-decoration:none}
+.brand-mark{width:42px;height:42px;position:relative;flex:none}
+.brand-mark svg{width:100%;height:100%;color:var(--gold)}
+.brand .name{font-family:"Italiana",serif;font-size:18px;letter-spacing:.2em;text-transform:uppercase;display:block;line-height:1.2}
+.brand .sub{display:block;font-size:9px;letter-spacing:.3em;text-transform:uppercase;color:var(--muted)}
+.nav-links{display:flex;gap:26px}
+.nav-links a{font-size:12.5px;font-weight:400;letter-spacing:.18em;text-transform:uppercase;text-decoration:none;color:var(--muted);position:relative;padding-bottom:5px;transition:color .35s}
+.nav-links a::after{content:"";position:absolute;left:50%;bottom:0;height:1px;width:0;background:var(--gold);transition:width .35s,left .35s}
+.nav-links a:hover{color:var(--ink)}
+.nav-links a:hover::after{width:100%;left:0}
+.btn{display:inline-flex;align-items:center;gap:10px;font-family:"Jost",sans-serif;font-size:11.5px;font-weight:400;letter-spacing:.26em;text-transform:uppercase;
+  text-decoration:none;padding:14px 26px;border:1px solid var(--gold);color:var(--ink);position:relative;transition:background .35s,color .35s,box-shadow .35s}
+.btn:hover{background:var(--gold);color:var(--cream);box-shadow:0 12px 26px rgba(185,138,62,.28)}
+.btn-solid{background:var(--olive);border-color:var(--olive);color:var(--cream)}
+.btn-solid:hover{background:var(--gold);border-color:var(--gold)}
+
+.hero{position:relative;text-align:center;padding:clamp(56px,9vw,120px) 0 clamp(48px,7vw,96px);overflow:hidden}
+.petals{position:absolute;inset:0;pointer-events:none;z-index:1}
+.petal{position:absolute;width:22px;color:var(--rose);opacity:.5;animation:drift 16s linear infinite}
+.petal:nth-child(2){left:16%;top:10%;animation-delay:-4s;width:16px;color:var(--sage)}
+.petal:nth-child(3){right:14%;top:16%;animation-delay:-8s;width:26px}
+.petal:nth-child(4){left:8%;bottom:22%;animation-delay:-12s;width:18px;color:var(--gold-soft)}
+.petal:nth-child(5){right:9%;bottom:14%;animation-delay:-6s;width:20px;color:var(--sage)}
+@keyframes drift{0%{transform:translateY(-14px) rotate(0)}25%{transform:translate(10px,10px) rotate(80deg)}50%{transform:translate(-8px,22px) rotate(160deg)}75%{transform:translate(12px,34px) rotate(240deg)}100%{transform:translateY(-14px) rotate(360deg)}}
+.hero .frame{position:relative;display:inline-block;max-width:900px}
+.arch-frame{position:absolute;inset:-34px -30px -20px;border:1px solid var(--gold);border-radius:340px 340px 6px 6px;opacity:.75;pointer-events:none}
+.arch-frame::after{content:"";position:absolute;inset:7px;border:1px solid rgba(185,138,62,.45);border-radius:334px 334px 4px 4px}
+.hero h1{font-family:"Italiana",serif;font-size:clamp(36px,5.8vw,72px);line-height:1.12;max-width:17ch;margin:22px auto 26px}
+.hero h1 em{font-family:"Cormorant Garamond",serif;font-style:italic;color:var(--gold)}
+.hero .lead{color:var(--muted);max-width:56ch;margin:0 auto;font-size:16px}
+.hero-ctas{display:flex;gap:16px;justify-content:center;flex-wrap:wrap;margin-top:38px}
+.flourish{color:var(--gold);display:block;margin:26px auto 0;width:min(420px,80%)}
+.flourish path{stroke-dasharray:1}
+.flourish svg{display:block;width:100%}
+
+.divider{display:flex;align-items:center;justify-content:center;gap:16px;color:var(--gold)}
+.divider i{width:90px;height:1px;background:linear-gradient(90deg,transparent,var(--gold))}
+.divider i:last-child{background:linear-gradient(90deg,var(--gold),transparent)}
+.divider svg{width:26px;height:26px}
+
+.section{padding:clamp(52px,8vw,104px) 0}
+.sec-head{text-align:center;margin-bottom:44px}
+.sec-head h2{font-family:"Italiana",serif;font-size:clamp(28px,4vw,48px);margin:14px 0 12px}
+.sec-head p{color:var(--muted);max-width:62ch;margin:0 auto}
+
+.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:26px}
+.medal{text-align:center;padding:32px 20px;border:1px solid var(--line);border-radius:180px 180px 10px 10px;background:var(--cream-2);position:relative}
+.medal::before{content:"";position:absolute;inset:6px;border:1px solid rgba(185,138,62,.4);border-radius:174px 174px 8px 8px;pointer-events:none}
+.medal .ring{width:84px;height:84px;margin:0 auto 16px;border-radius:50%;border:1px solid var(--gold);display:grid;place-items:center;position:relative}
+.medal .ring svg{width:30px;height:30px;color:var(--sage)}
+.medal .num{font-family:"Italiana",serif;font-size:clamp(30px,3.6vw,44px);line-height:1}
+.medal .lab{margin-top:10px;color:var(--gold)}
+.medal .sub{font-size:13px;color:var(--muted);margin-top:8px}
+
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:clamp(32px,5vw,70px);align-items:start}
+p.body{color:var(--muted);margin-bottom:16px}
+.quote-nouveau{border:1px solid var(--gold);padding:28px 30px;position:relative;margin-top:24px;background:var(--cream)}
+.quote-nouveau::before,.quote-nouveau::after{content:"";position:absolute;width:34px;height:34px;border:1px solid var(--gold)}
+.quote-nouveau::before{left:-8px;top:-8px;border-right:0;border-bottom:0;border-radius:34px 0 0 0}
+.quote-nouveau::after{right:-8px;bottom:-8px;border-left:0;border-top:0;border-radius:0 0 34px 0}
+.quote-nouveau blockquote{font-family:"Cormorant Garamond",serif;font-style:italic;font-size:19.5px;line-height:1.6}
+.quote-nouveau cite{display:block;font-style:normal;font-size:10.5px;letter-spacing:.26em;text-transform:uppercase;color:var(--muted);margin-top:16px}
+.garden{display:grid;gap:14px}
+.garden div{border-left:2px solid var(--sage);padding:6px 0 6px 18px}
+.garden b{font-family:"Italiana",serif;font-size:17px;font-weight:400;display:block;letter-spacing:.04em}
+.garden p{font-size:13.5px;color:var(--muted);margin-top:4px}
+
+.cities{display:grid;grid-template-columns:repeat(3,1fr);gap:22px}
+.city{text-decoration:none;display:flex;flex-direction:column;border:1px solid var(--line);border-radius:150px 150px 8px 8px;background:var(--cream-2);
+  padding:0 18px 20px;text-align:center;transition:transform .35s,border-color .35s,box-shadow .35s;position:relative;overflow:hidden}
+.city::before{content:"";position:absolute;inset:5px;border:1px solid rgba(185,138,62,.35);border-radius:146px 146px 6px 6px;pointer-events:none;z-index:2}
+.city .top{height:64px;display:grid;place-items:center;color:var(--gold);position:relative;z-index:3}
+.city .top svg{width:34px;height:34px}
+.city h3{font-family:"Italiana",serif;font-size:19px;position:relative;z-index:3}
+.city .zh{font-size:10.5px;letter-spacing:.28em;color:var(--muted);margin-top:5px;position:relative;z-index:3}
+.city p{font-size:12.5px;color:var(--muted);margin-top:12px;position:relative;z-index:3}
+.city:hover{transform:translateY(-5px);border-color:var(--gold);box-shadow:0 20px 44px rgba(70,82,58,.16)}
+
+.agenda{max-width:880px;margin:0 auto;display:grid;gap:16px}
+.invite{display:grid;grid-template-columns:170px 1fr auto;gap:24px;align-items:center;border:1px solid var(--line);border-radius:14px;background:var(--cream-2);
+  padding:22px 24px;text-decoration:none;transition:border-color .3s,transform .3s}
+.invite:hover{border-color:var(--gold);transform:translateY(-3px)}
+.invite .date{font-size:11px;letter-spacing:.24em;text-transform:uppercase;color:var(--gold)}
+.invite .date span{display:block;color:var(--muted);letter-spacing:.14em;margin-top:6px}
+.invite h3{font-family:"Italiana",serif;font-size:20px;font-weight:400}
+.invite p{font-size:13.5px;color:var(--muted);margin-top:5px}
+.invite .cat{font-size:10px;letter-spacing:.26em;text-transform:uppercase;color:var(--olive);border:1px solid var(--line);padding:6px 12px;white-space:nowrap}
+
+.news{display:grid;grid-template-columns:repeat(3,1fr);gap:24px}
+.entry{border:1px solid var(--line);background:var(--cream-2);padding:26px 24px;text-decoration:none;position:relative;border-radius:8px 8px 150px 150px;transition:border-color .3s,transform .3s}
+.entry::after{content:"";position:absolute;left:14px;right:14px;bottom:10px;height:1px;background:var(--gold);opacity:.4;border-radius:999px}
+.entry:hover{border-color:var(--gold);transform:translateY(-4px)}
+.entry .kind{font-size:10px;letter-spacing:.3em;text-transform:uppercase;color:var(--gold)}
+.entry h3{font-family:"Italiana",serif;font-size:19px;font-weight:400;line-height:1.3;margin:12px 0 10px}
+.entry p{font-size:13.5px;color:var(--muted)}
+.entry .meta{display:block;margin-top:16px;font-size:10.5px;letter-spacing:.24em;text-transform:uppercase;color:var(--muted)}
+
+.cta{background:var(--olive);color:var(--cream);text-align:center;position:relative;overflow:hidden}
+.cta::before{content:"";position:absolute;inset:0;background-image:radial-gradient(rgba(220,192,138,.16) 1.5px,transparent 2px);background-size:22px 22px}
+.cta .wrap{position:relative}
+.cta .arch{display:inline-block;border:1px solid rgba(220,192,138,.6);border-radius:260px 260px 0 0;padding:clamp(40px,6vw,80px) clamp(26px,6vw,84px) clamp(30px,5vw,60px);position:relative}
+.cta .arch::after{content:"";position:absolute;inset:8px;border:1px solid rgba(220,192,138,.35);border-radius:252px 252px 0 0;pointer-events:none}
+.cta h2{font-family:"Italiana",serif;font-size:clamp(28px,4.2vw,52px);max-width:20ch;margin:0 auto 18px}
+.cta h2 em{font-family:"Cormorant Garamond",serif;color:var(--gold-soft)}
+.cta p{color:rgba(247,241,229,.78);max-width:56ch;margin:0 auto 32px}
+.cta-actions{display:flex;gap:16px;justify-content:center;flex-wrap:wrap}
+.btn-cream{background:var(--cream);border-color:var(--cream);color:var(--olive)}
+.btn-cream:hover{background:var(--gold-soft);border-color:var(--gold-soft);color:var(--olive);box-shadow:none}
+.btn-line-cream{border-color:rgba(247,241,229,.5);color:var(--cream)}
+.btn-line-cream:hover{background:rgba(247,241,229,.12);color:var(--cream);box-shadow:none}
+
+.footer{background:var(--olive);color:rgba(247,241,229,.75);padding:56px 0 30px;border-top:1px solid rgba(185,138,62,.5)}
+.footer-grid{display:grid;grid-template-columns:1.5fr 1fr 1fr 1fr;gap:32px;margin-bottom:40px}
+.footer .name{font-family:"Italiana",serif;font-size:20px;letter-spacing:.2em;text-transform:uppercase;color:var(--cream)}
+.footer .sub{font-size:9px;letter-spacing:.3em;text-transform:uppercase;color:var(--gold-soft);margin-top:6px}
+.footer h4{font-size:10.5px;letter-spacing:.3em;text-transform:uppercase;color:var(--gold-soft);margin-bottom:16px;font-weight:400}
+.footer ul{list-style:none;display:grid;gap:10px}
+.footer a{text-decoration:none;font-size:13.5px;color:rgba(247,241,229,.75);transition:color .3s}
+.footer a:hover{color:var(--gold-soft)}
+.footer .motto-line{font-size:13.5px;max-width:36ch;margin-top:16px}
+.footer-bottom{border-top:1px solid rgba(185,138,62,.35);padding-top:22px;display:flex;justify-content:space-between;gap:14px;flex-wrap:wrap;font-size:10.5px;letter-spacing:.24em;text-transform:uppercase;color:rgba(247,241,229,.55)}
+
+.badge-style{position:fixed;left:16px;bottom:16px;z-index:90;text-decoration:none;background:var(--olive);color:var(--gold-soft);
+  font-size:11px;letter-spacing:.22em;text-transform:uppercase;padding:12px 18px;border:1px solid var(--gold);display:inline-flex;align-items:center;gap:9px;
+  border-radius:999px;transition:background .3s,color .3s}
+.badge-style:hover{background:var(--gold);color:var(--olive)}
+.badge-style i{width:7px;height:7px;border-radius:50%;background:var(--gold-soft)}
+.badge-style:hover i{background:var(--olive)}
+
+@media(max-width:1020px){
+  .grid2{grid-template-columns:1fr}
+  .cities{grid-template-columns:repeat(2,1fr)}
+  .news{grid-template-columns:1fr 1fr}
+  .footer-grid{grid-template-columns:1fr 1fr}
+  .nav-links{display:none}
+}
+@media(max-width:660px){
+  .stats{grid-template-columns:1fr}
+  .cities{grid-template-columns:1fr}
+  .news{grid-template-columns:1fr}
+  .invite{grid-template-columns:1fr;gap:10px}
+  .footer-grid{grid-template-columns:1fr}
+  .arch-frame{inset:-20px -12px -12px;border-radius:180px 180px 6px 6px}
+  .arch-frame::after{border-radius:176px 176px 4px 4px}
+}
+@media (prefers-reduced-motion: reduce){
+  *,*::before,*::after{animation-duration:.01ms !important;animation-iteration-count:1 !important;transition-duration:.01ms !important}
+  html{scroll-behavior:auto}
+  [data-reveal]{opacity:1;transform:none}
+  .flourish path{stroke-dashoffset:0;animation:none}
+  .petal{display:none}
+}
+:focus-visible{outline:2px solid var(--gold);outline-offset:4px}
+</style>
+</head>
+<body>
+
+<header class="nav">
+  <div class="wrap">
+    <a class="brand" href="#">
+      <span class="brand-mark">
+        <svg viewBox="0 0 40 40" fill="none" stroke="currentColor" stroke-width="1.4">
+          <circle cx="20" cy="20" r="13"/>
+          <path d="M20 7 C 12 14, 12 26, 20 33 C 28 26, 28 14, 20 7 Z"/>
+          <path d="M20 13 C 16 16, 16 24, 20 27 C 24 24, 24 16, 20 13 Z"/>
+        </svg>
+      </span>
+      <span><span class="name">PPIT Nanjing</span><span class="sub">PPI Tiongkok · Cabang Nanjing</span></span>
+    </a>
+    <nav class="nav-links" aria-label="Navigasi">
+      <a href="#tentang">Tentang</a>
+      <a href="#kota">Kota</a>
+      <a href="#kegiatan">Kegiatan</a>
+      <a href="#kabar">Kabar</a>
+      <a href="#karier">Karier</a>
+    </nav>
+    <a class="btn" href="#sensus">Sensus</a>
+  </div>
+</header>
+
+<header class="hero">
+  <div class="petals" aria-hidden="true">
+    <svg class="petal" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2 C 18 8, 18 16, 12 22 C 6 16, 6 8, 12 2 Z"/></svg>
+    <svg class="petal" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2 C 18 8, 18 16, 12 22 C 6 16, 6 8, 12 2 Z"/></svg>
+    <svg class="petal" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2 C 18 8, 18 16, 12 22 C 6 16, 6 8, 12 2 Z"/></svg>
+    <svg class="petal" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2 C 18 8, 18 16, 12 22 C 6 16, 6 8, 12 2 Z"/></svg>
+    <svg class="petal" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2 C 18 8, 18 16, 12 22 C 6 16, 6 8, 12 2 Z"/></svg>
+  </div>
+  <div class="wrap">
+    <div class="frame" data-reveal>
+      <span class="arch-frame" aria-hidden="true"></span>
+      <p class="label" style="color:var(--gold)">Perhimpunan Pelajar Indonesia Tiongkok</p>
+      <h1>Menghubungkan Mahasiswa Indonesia di <em>Nanjing</em></h1>
+      <p class="lead">Wadah resmi Perhimpunan Pelajar Indonesia Tiongkok (PPIT) Cabang Nanjing untuk bersinergi, berkarya, dan berkontribusi bagi bangsa — sejak 2008.</p>
+      <div class="hero-ctas">
+        <a class="btn btn-solid" href="#kegiatan">Jelajahi Kegiatan</a>
+        <a class="btn" href="#tentang">Tentang PPIT Nanjing</a>
+      </div>
+    </div>
+    <div class="flourish" data-reveal data-delay="1">
+      <svg viewBox="0 0 420 46" fill="none">
+        <path pathLength="1" d="M10 24 C 70 -6, 130 50, 205 22 C 280 -6, 340 50, 410 20"/>
+        <path pathLength="1" d="M150 24 C 170 10, 195 10, 210 24 C 225 38, 250 38, 270 24"/>
+        <path pathLength="1" d="M205 6 C 197 14, 199 24, 210 30 C 221 24, 223 14, 215 6 Z"/>
+      </svg>
+    </div>
+  </div>
+</header>
+
+<main>
+<section class="section" aria-label="Angka PPIT Nanjing">
+  <div class="wrap stats">
+    <div class="medal" data-reveal>
+      <span class="ring"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M12 21s-7-5.6-7-11a7 7 0 0 1 14 0c0 5.4-7 11-7 11Z"/><circle cx="12" cy="10" r="2.6"/></svg></span>
+      <p class="num" data-count="9">0</p>
+      <p class="label lab">Kota Naungan</p>
+      <p class="sub">Jiangsu &amp; Ma'anshan, Anhui</p>
+    </div>
+    <div class="medal" data-reveal data-delay="1">
+      <span class="ring"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M3 21h18M5 21V8l7-5 7 5v13"/><path d="M9 21v-6h6v6"/></svg></span>
+      <p class="num" data-count="66" data-suffix="+">0</p>
+      <p class="label lab">Kampus</p>
+      <p class="sub">Jaringan mahasiswa lintas kota</p>
+    </div>
+    <div class="medal" data-reveal data-delay="2">
+      <span class="ring"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg></span>
+      <p class="num" data-count="2008">0</p>
+      <p class="label lab">Berdiri Sejak</p>
+      <p class="sub">28 Oktober 2008</p>
+    </div>
+  </div>
+</section>
+
+<section class="section" id="tentang" style="padding-top:0">
+  <div class="wrap">
+    <div class="sec-head" data-reveal>
+      <p class="label" style="color:var(--gold)">Tentang Kami</p>
+      <h2 class="display">Taman yang tumbuh dari gotong royong</h2>
+      <p>PPIT Cabang Nanjing adalah organisasi kemahasiswaan di Kota Nanjing yang mewadahi pelajar dan mahasiswa Indonesia serta organisasi-organisasi pelajar Indonesia di Tiongkok, khususnya Kota Nanjing.</p>
+    </div>
+    <div class="grid2">
+      <div data-reveal>
+        <p class="body">Dibentuk pada 28 Oktober 2008, bertepatan dengan Hari Sumpah Pemuda. Dari satu titik di Nanjing, jaringan ini tumbuh menjalar ke sembilan kota di Provinsi Jiangsu dan Ma'anshan (Anhui).</p>
+        <p class="body">Dua ranting kampus aktif — INA di NUIST dan JIA di JSAHVC — menjadi akar yang menopang kegiatan lintas kota: sosial, karier, mentorship, inventaris, hingga galeri.</p>
+        <div class="quote-nouveau">
+          <blockquote>“PPIT Nanjing adalah rumah bagi ribuan mimpi anak bangsa di kota bersejarah ini. Melalui kolaborasi dan semangat gotong royong, kita pastikan setiap pelajar Indonesia di sini memiliki support system terbaik.”</blockquote>
+          <cite>Ketua Umum PPIT Nanjing · Periode 2026–2027</cite>
+        </div>
+      </div>
+      <div class="garden" data-reveal data-delay="1">
+        <div><b>Bersinergi</b><p>Memperluas program kerja agar setiap mahasiswa punya ruang berinteraksi dan saling connect.</p></div>
+        <div><b>Berkarya</b><p>Struktur organisasi yang efisien dan jelas, supaya karya dan kegiatan berjalan tanpa hambatan.</p></div>
+        <div><b>Berkontribusi</b><p>Koordinasi erat dengan ranting dan PPI Tiongkok — satu data, satu identitas, satu bangsa.</p></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<div class="divider" data-reveal><i></i>
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.3"><circle cx="12" cy="12" r="4"/><path d="M12 2 C 9 7, 9 17, 12 22 M12 2 C 15 7, 15 17, 12 22 M2 12 C 7 9, 17 9, 22 12 M2 12 C 7 15, 17 15, 22 12"/></svg>
+<i></i></div>
+
+<section class="section" id="kota">
+  <div class="wrap">
+    <div class="sec-head" data-reveal>
+      <p class="label" style="color:var(--gold)">Jangkauan Wilayah</p>
+      <h2 class="display">Sembilan jendela lengkung</h2>
+      <p>Tiap kota adalah satu jendela — dari Nanjing yang menjadi markas, sampai komunitas kecil di pesisir Yancheng.</p>
+    </div>
+    <div class="cities">
+      <a class="city" href="#kota" data-reveal><span class="top"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4"><path d="M12 2 C 16 8, 16 16, 12 22 C 8 16, 8 8, 12 2 Z"/><path d="M12 22 V 8"/></svg></span><h3>Nanjing</h3><p class="zh">南京</p><p>Ibu kota provinsi Jiangsu sekaligus markas utama PPIT Nanjing.</p></a>
+      <a class="city" href="#kota" data-reveal data-delay="1"><span class="top"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4"><path d="M3 12 C 8 6, 16 6, 21 12 C 16 18, 8 18, 3 12 Z"/><circle cx="12" cy="12" r="2"/></svg></span><h3>Xuzhou</h3><p class="zh">徐州</p><p>Kota industri &amp; transportasi di utara Jiangsu dengan komunitas pelajar aktif.</p></a>
+      <a class="city" href="#kota" data-reveal data-delay="2"><span class="top"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4"><path d="M4 20 C 4 10, 20 10, 20 20"/><path d="M8 20 C 8 14, 16 14, 16 20"/></svg></span><h3>Jurong</h3><p class="zh">句容</p><p>Kawasan kampus yang menghimpun pelajar Indonesia di sekitarnya.</p></a>
+      <a class="city" href="#kota" data-reveal><span class="top"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4"><circle cx="12" cy="12" r="7"/><path d="M12 5 C 9 9, 9 15, 12 19 C 15 15, 15 9, 12 5 Z"/></svg></span><h3>Ma'anshan</h3><p class="zh">马鞍山</p><p>Kota di Anhui yang berbatasan dekat dengan Nanjing.</p></a>
+      <a class="city" href="#kota" data-reveal data-delay="1"><span class="top"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4"><path d="M2 16 C 8 12, 16 12, 22 16 M2 20 C 8 16, 16 16, 22 20"/></svg></span><h3>Zhenjiang</h3><p class="zh">镇江</p><p>Kota tepi Sungai Yangtze dengan cukup banyak mahasiswa Indonesia.</p></a>
+      <a class="city" href="#kota" data-reveal data-delay="2"><span class="top"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4"><path d="M12 3 V 21 M5 8 C 9 12, 15 12, 19 8"/></svg></span><h3>Huai'an</h3><p class="zh">淮安</p><p>Kota historis di utara Jiangsu, salah satu ranting aktif PPIT.</p></a>
+      <a class="city" href="#kota" data-reveal><span class="top"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4"><path d="M4 18 C 10 14, 14 14, 20 18 M8 14 V 6 M16 14 V 6 M8 6 H 16"/></svg></span><h3>Lianyungang</h3><p class="zh">连云港</p><p>Kota pelabuhan pesisir di ujung timur laut Jiangsu.</p></a>
+      <a class="city" href="#kota" data-reveal data-delay="1"><span class="top"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4"><path d="M12 21 C 6 16, 6 8, 12 3 C 18 8, 18 16, 12 21 Z"/></svg></span><h3>Taizhou</h3><p class="zh">泰州</p><p>Kota di Jiangsu tengah, di tepi utara Sungai Yangtze.</p></a>
+      <a class="city" href="#kota" data-reveal data-delay="2"><span class="top"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4"><path d="M3 17 C 9 13, 15 13, 21 17 M6 13 C 10 10, 14 10, 18 13"/></svg></span><h3>Yancheng</h3><p class="zh">盐城</p><p>Kota pesisir di Jiangsu tengah dengan wilayah terluas di provinsi.</p></a>
+    </div>
+  </div>
+</section>
+
+<section class="section" id="kegiatan" style="padding-top:0">
+  <div class="wrap">
+    <div class="sec-head" data-reveal>
+      <p class="label" style="color:var(--gold)">Agenda</p>
+      <h2 class="display">Undangan yang sedang bermekaran</h2>
+    </div>
+    <div class="agenda">
+      <a class="invite" href="#kegiatan" data-reveal>
+        <span class="date">10 Oktober 2026<span>Nanjing · Tiket QR</span></span>
+        <span><h3>WIF 2026 — Welcoming Indonesian Freshman</h3><p>Malam penyambutan mahasiswa baru Indonesia se-Nanjing, kapasitas 150 peserta.</p></span>
+        <span class="cat">Sosial</span>
+      </a>
+      <a class="invite" href="#kegiatan" data-reveal data-delay="1">
+        <span class="date">24 Oktober 2026<span>Zijin Shan · Gratis</span></span>
+        <span><h3>Fun Hike with PINYX</h3><p>Jalan sehat menyusuri rute favorit warga Nanjing, terbuka untuk umum.</p></span>
+        <span class="cat">Sosial</span>
+      </a>
+      <a class="invite" href="#kegiatan" data-reveal data-delay="2">
+        <span class="date">Agustus 2026<span>Daring · 9 divisi</span></span>
+        <span><h3>Rekrutmen Kabinet Maju 2026/2027</h3><p>Pendaftaran pengurus. Baca panduan dan pilih divisi yang cocok untukmu.</p></span>
+        <span class="cat">Organisasi</span>
+      </a>
+    </div>
+  </div>
+</section>
+
+<section class="section" id="kabar" style="padding-top:0">
+  <div class="wrap">
+    <div class="sec-head" data-reveal>
+      <p class="label" style="color:var(--gold)">Publikasi</p>
+      <h2 class="display">Kabar terbaru</h2>
+    </div>
+    <div class="news">
+      <a class="entry" href="#kabar" data-reveal>
+        <span class="kind">Pengumuman</span>
+        <h3>Pendaftaran WIF 2026 dibuka — early bird gratis</h3>
+        <p>Kuota 150 peserta, kategori freshmen dan non-freshmen. Daftar lewat portal dan simpan tiket QR-mu.</p>
+        <span class="meta">2 September 2026</span>
+      </a>
+      <a class="entry" href="#kabar" data-reveal data-delay="1">
+        <span class="kind">Organisasi</span>
+        <h3>Rekrutmen pengurus Kabinet Maju telah dibuka</h3>
+        <p>Sembilan divisi membuka pendaftaran. Baca panduan, siapkan berkas, pilih divisi yang cocok.</p>
+        <span class="meta">1 Agustus 2026</span>
+      </a>
+      <a class="entry" href="#kabar" data-reveal data-delay="2">
+        <span class="kind">Komunitas</span>
+        <h3>Galeri: keseruan Fun Hike with PINYX</h3>
+        <p>Lebih dari seratus pelajar Indonesia ikut serta. Foto lengkapnya tayang di galeri.</p>
+        <span class="meta">20 April 2026</span>
+      </a>
+    </div>
+  </div>
+</section>
+</main>
+
+<section class="cta" id="sensus">
+  <div class="wrap">
+    <div class="arch" data-reveal>
+      <h2>Sudah lengkapi <em>sensus</em> keanggotaanmu?</h2>
+      <p>Data sensus mengalir langsung ke sistem pusat PPI Tiongkok. Satu profil lengkap berarti satu identitas resmi — dan akses penuh ke seluruh kegiatan PPIT Nanjing.</p>
+      <div class="cta-actions">
+        <a class="btn btn-cream" href="#sensus">Lengkapi Sensus</a>
+        <a class="btn btn-line-cream" href="#tentang">Gabung PPIT Nanjing</a>
+      </div>
+    </div>
+  </div>
+</section>
+
+<footer class="footer" id="karier">
+  <div class="wrap">
+    <div class="footer-grid">
+      <div>
+        <p class="name">PPIT Nanjing</p>
+        <p class="sub">PPI Tiongkok · Cabang Nanjing</p>
+        <p class="motto-line">Wadah resmi perhimpunan pelajar Indonesia di Tiongkok untuk bersinergi, berkarya, dan berkontribusi bagi bangsa.</p>
+      </div>
+      <div>
+        <h4>Jelajahi</h4>
+        <ul>
+          <li><a href="#kota">Kota Naungan</a></li>
+          <li><a href="#kegiatan">Kegiatan</a></li>
+          <li><a href="#kabar">Berita</a></li>
+          <li><a href="#karier">Karier</a></li>
+        </ul>
+      </div>
+      <div>
+        <h4>Organisasi</h4>
+        <ul>
+          <li><a href="#tentang">Tentang</a></li>
+          <li><a href="#tentang">Struktur</a></li>
+          <li><a href="#tentang">AD/ART</a></li>
+          <li><a href="#sensus">Sensus</a></li>
+        </ul>
+      </div>
+      <div>
+        <h4>Terhubung</h4>
+        <ul>
+          <li><a href="#">Instagram</a></li>
+          <li><a href="#">WeChat</a></li>
+          <li><a href="#">Surel</a></li>
+          <li><a href="#">Bantuan</a></li>
+        </ul>
+      </div>
+    </div>
+    <div class="footer-bottom">
+      <span>© 2026 PPIT Nanjing · Contoh arah desain</span>
+      <span>Bersinergi · Berkarya · Berkontribusi</span>
+    </div>
+  </div>
+</footer>
+
+<a class="badge-style" href="index.html"><i></i> 16 · Art Nouveau — semua gaya</a>
+
+<script>
+(function(){
+  var reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  var reveals = document.querySelectorAll("[data-reveal]");
+  var flourishes = document.querySelectorAll(".flourish");
+  if (reduce || !("IntersectionObserver" in window)) {
+    reveals.forEach(function(el){ el.classList.add("in"); });
+    flourishes.forEach(function(el){ el.classList.add("in"); });
+  } else {
+    var io = new IntersectionObserver(function(entries){
+      entries.forEach(function(en){
+        if (en.isIntersecting) { en.target.classList.add("in"); io.unobserve(en.target); }
+      });
+    }, { threshold: 0.12, rootMargin: "0px 0px -5% 0px" });
+    reveals.forEach(function(el){ io.observe(el); });
+    flourishes.forEach(function(el){ io.observe(el); });
+  }
+
+  var counters = document.querySelectorAll("[data-count]");
+  function runCount(el){
+    var target = parseInt(el.getAttribute("data-count"), 10);
+    var suffix = el.getAttribute("data-suffix") || "";
+    if (reduce) { el.textContent = target + suffix; return; }
+    var t0 = null;
+    function step(ts){
+      if (!t0) t0 = ts;
+      var p = Math.min((ts - t0) / 1400, 1);
+      el.textContent = Math.round(target * (1 - Math.pow(1 - p, 3))) + suffix;
+      if (p < 1) requestAnimationFrame(step);
+    }
+    requestAnimationFrame(step);
+  }
+  if ("IntersectionObserver" in window) {
+    var cio = new IntersectionObserver(function(entries){
+      entries.forEach(function(en){
+        if (en.isIntersecting) { runCount(en.target); cio.unobserve(en.target); }
+      });
+    }, { threshold: 0.5 });
+    counters.forEach(function(el){ cio.observe(el); });
+  } else {
+    counters.forEach(runCount);
+  }
+})();
+</script>
+</body>
+</html>

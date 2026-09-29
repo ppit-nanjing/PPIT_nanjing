@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>Hasil Vote Arah Desain — PPIT Nanjing</title>
+<meta name="description" content="Rekap hasil voting internal arah desain PPIT Nanjing.">
+<style>
+:root{
+  --bg:#0e0f11;
+  --panel:#16181c;
+  --panel-2:#1c1f24;
+  --line:rgba(255,255,255,.09);
+  --line-2:rgba(255,255,255,.2);
+  --text:#eceef1;
+  --muted:#9aa1ab;
+  --lime:#c8f135;
+  --gold:#f2c11d;
+  --silver:#c9ced6;
+  --bronze:#d09a6a;
+  --mono:ui-monospace,"Cascadia Mono","SF Mono",Consolas,monospace;
+  --max:1080px;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--text);font-family:system-ui,-apple-system,"Segoe UI",sans-serif;line-height:1.6;font-size:15.5px}
+a{color:inherit}
+.wrap{max-width:var(--max);margin:0 auto;padding:0 clamp(18px,3.6vw,32px)}
+.top{padding:clamp(34px,6vw,64px) 0 24px;border-bottom:1px solid var(--line)}
+.kicker{font-family:var(--mono);font-size:11.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted)}
+.top h1{font-size:clamp(26px,4vw,40px);font-weight:800;letter-spacing:-.02em;margin:14px 0 12px}
+.top p{color:var(--muted);max-width:70ch}
+.meta-row{display:flex;gap:18px;flex-wrap:wrap;align-items:center;margin-top:22px}
+.stat-chip{font-family:var(--mono);font-size:12px;color:var(--muted);border:1px solid var(--line);border-radius:999px;padding:8px 14px;background:var(--panel)}
+.stat-chip b{color:var(--text)}
+.spacer{flex:1}
+.refresh{
+  border:1px solid var(--line-2);background:var(--panel);color:var(--text);border-radius:10px;padding:10px 18px;
+  font-size:13.5px;font-weight:600;cursor:pointer;transition:border-color .2s
+}
+.refresh:hover{border-color:var(--lime)}
+
+.notice{margin:22px 0 0;display:none;border:1px solid rgba(242,183,5,.4);background:rgba(242,183,5,.08);color:#f6d97a;border-radius:12px;padding:14px 18px;font-size:13.5px}
+.notice.on{display:block}
+.error{margin:22px 0 0;display:none;border:1px solid rgba(255,90,79,.45);background:rgba(255,90,79,.08);color:#ffb0aa;border-radius:12px;padding:14px 18px;font-size:13.5px}
+.error.on{display:block}
+
+.grid-note{font-family:var(--mono);font-size:12px;color:var(--muted);padding:20px 0 6px}
+.ranking{padding:8px 0 44px}
+.row{display:grid;grid-template-columns:52px 1fr 170px;gap:18px;align-items:center;padding:13px 0;border-bottom:1px solid var(--line)}
+.row:last-child{border-bottom:0}
+.rank-no{font-family:var(--mono);font-size:15px;color:var(--muted);display:grid;place-items:center;width:34px;height:34px;border-radius:10px;border:1px solid var(--line)}
+.row.p1 .rank-no{background:var(--gold);border-color:var(--gold);color:#0b0c0e;font-weight:700}
+.row.p2 .rank-no{background:var(--silver);border-color:var(--silver);color:#0b0c0e;font-weight:700}
+.row.p3 .rank-no{background:var(--bronze);border-color:var(--bronze);color:#0b0c0e;font-weight:700}
+.row .name{font-size:15.5px;font-weight:700;display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.row .name a{text-decoration:none}
+.row .name a:hover{color:var(--lime)}
+.row .name .id{font-family:var(--mono);font-size:12px;color:var(--muted);font-weight:400}
+.bar{height:9px;border-radius:99px;background:var(--panel-2);overflow:hidden;margin-top:8px}
+.bar i{display:block;height:100%;border-radius:99px;background:linear-gradient(90deg,#3f8f5f,var(--lime));transition:width .9s cubic-bezier(.2,.65,.3,1)}
+.row.p1 .bar i{background:linear-gradient(90deg,#b98a3e,var(--gold))}
+.row.p2 .bar i{background:linear-gradient(90deg,#8f959e,var(--silver))}
+.row.p3 .bar i{background:linear-gradient(90deg,#9c6a3f,var(--bronze))}
+.pts{text-align:right}
+.pts .p{font-family:var(--mono);font-size:16px;color:var(--lime)}
+.row.p1 .pts .p{color:var(--gold)}
+.row.p2 .pts .p{color:var(--silver)}
+.row.p3 .pts .p{color:var(--bronze)}
+.pts .d{font-family:var(--mono);font-size:11px;color:var(--muted);margin-top:3px}
+
+.voters{padding:10px 0 46px}
+.voters h2{font-size:20px;font-weight:800;margin-bottom:14px}
+.voter-chips{display:flex;gap:9px;flex-wrap:wrap}
+.vchip{font-family:var(--mono);font-size:12px;border:1px solid var(--line);border-radius:999px;padding:7px 13px;color:var(--muted);background:var(--panel)}
+.vchip b{color:var(--text)}
+
+.footer{border-top:1px solid var(--line);padding:26px 0 34px;color:var(--muted);font-size:12.5px}
+.footer .actions{display:flex;gap:12px;flex-wrap:wrap;margin-top:14px}
+.btn-line{display:inline-flex;align-items:center;gap:8px;border:1px solid var(--line-2);color:var(--text);text-decoration:none;font-weight:600;font-size:13.5px;border-radius:10px;padding:11px 20px}
+.btn-line:hover{border-color:var(--lime)}
+.badge-style{position:fixed;left:16px;top:16px;z-index:90;text-decoration:none;background:var(--panel);color:var(--text);
+  font-family:var(--mono);font-size:11.5px;padding:9px 14px;border-radius:10px;border:1px solid var(--line-2);
+  display:inline-flex;align-items:center;gap:8px;box-shadow:0 10px 24px rgba(0,0,0,.45)}
+.badge-style:hover{border-color:var(--lime)}
+.badge-style i{width:7px;height:7px;border-radius:50%;background:var(--lime)}
+
+@media(max-width:680px){
+  .row{grid-template-columns:44px 1fr;gap:12px}
+  .pts{grid-column:2;text-align:left;display:flex;gap:12px;align-items:baseline}
+  .pts .d{margin-top:0}
+}
+@media (prefers-reduced-motion: reduce){*{transition-duration:.01ms !important}}
+:focus-visible{outline:3px solid var(--lime);outline-offset:3px;border-radius:8px}
+</style>
+</head>
+<body>
+
+<a class="badge-style" href="index.html"><i></i> ← Galeri 20 desain</a>
+
+<header class="top">
+  <div class="wrap">
+    <p class="kicker">Rekap voting internal · Kabinet PPIT Nanjing</p>
+    <h1>Hasil sementara arah desain</h1>
+    <p>Poin: favorit 1 = <b>3 poin</b>, favorit 2 = <b>2 poin</b>, favorit 3 = <b>1 poin</b>. Halaman ini hanya berisi agregat — tanpa data pribadi voter. Jangan sebarkan tautannya ke luar kabinet.</p>
+    <div class="meta-row">
+      <span class="stat-chip"><b id="totalVoters">–</b> voter</span>
+      <span class="stat-chip">diperbarui <b id="updatedAt">–</b></span>
+      <span class="spacer"></span>
+      <button class="refresh" id="refreshBtn" type="button">Muat ulang</button>
+    </div>
+    <div class="notice" id="fileNotice">Mode lokal (file://) terdeteksi. Hasil hanya bisa dimuat di versi deploy (butuh API).</div>
+    <div class="error" id="errorBox">Gagal memuat hasil. Coba muat ulang sebentar lagi.</div>
+  </div>
+</header>
+
+<main class="wrap">
+  <p class="grid-note" id="rankNote">Menunggu data…</p>
+  <section class="ranking" id="ranking" aria-label="Ranking desain"></section>
+  <section class="voters" id="voters" aria-label="Daftar voter" style="display:none"></section>
+  <footer class="footer">
+    <div>Voting internal design-lab PPIT Nanjing. Satu perangkat = satu vote. Voting bisa ditutup kapan saja oleh pengurus — setelah itu halaman ini tetap menyimpan rekap terakhir.</div>
+    <div class="actions">
+      <a class="btn-line" href="vote.html">Buka halaman vote</a>
+      <a class="btn-line" href="index.html">Lihat semua desain</a>
+    </div>
+  </footer>
+</main>
+
+<script>
+(function(){
+  var isFile = location.protocol === 'file:';
+  var rankingEl = document.getElementById('ranking');
+  var rankNote = document.getElementById('rankNote');
+  var totalEl = document.getElementById('totalVoters');
+  var updatedEl = document.getElementById('updatedAt');
+  var errorBox = document.getElementById('errorBox');
+  var reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  function linkFor(r){
+    return (r.file || (r.id + '.html'));
+  }
+
+  function render(data){
+    errorBox.classList.remove('on');
+    totalEl.textContent = data.total;
+    updatedEl.textContent = new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }) + ' WIB';
+    rankNote.textContent = data.total === 0
+      ? 'Belum ada vote masuk.'
+      : 'Peringkat ' + data.ranking.length + ' desain berdasarkan poin.';
+    var max = 1;
+    data.ranking.forEach(function(r){ if (r.points > max) max = r.points; });
+    rankingEl.innerHTML = '';
+    data.ranking.forEach(function(r, i){
+      var row = document.createElement('div');
+      row.className = 'row' + (i < 3 ? ' p' + (i + 1) : '');
+      var width = Math.max(2, Math.round((r.points / max) * 100));
+      row.innerHTML =
+        '<span class="rank-no">' + (i + 1) + '</span>' +
+        '<span>' +
+          '<span class="name"><a href="' + linkFor(r) + '">' + r.name + '</a> <span class="id">' + r.id + '</span></span>' +
+          '<span class="bar"><i style="width:' + (reduce ? width : 0) + '%" data-w="' + width + '"></i></span>' +
+        '</span>' +
+        '<span class="pts"><span class="p">' + r.points + ' poin</span><span class="d">1st×' + r.r1 + ' · 2nd×' + r.r2 + ' · 3rd×' + r.r3 + '</span></span>';
+      rankingEl.appendChild(row);
+    });
+    requestAnimationFrame(function(){
+      rankingEl.querySelectorAll('.bar i').forEach(function(b){
+        setTimeout(function(){ b.style.width = b.getAttribute('data-w') + '%'; }, 60);
+      });
+    });
+  }
+
+  function load(){
+    if (isFile) { document.getElementById('fileNotice').classList.add('on'); return; }
+    errorBox.classList.remove('on');
+    fetch('/api/design-vote/results', { headers: { 'Accept': 'application/json' } })
+      .then(function(r){ if (!r.ok) throw new Error('http ' + r.status); return r.json(); })
+      .then(function(data){
+        if (!data || !data.ok) throw new Error('bad payload');
+        render(data);
+      })
+      .catch(function(){ errorBox.classList.add('on'); });
+  }
+
+  document.getElementById('refreshBtn').addEventListener('click', load);
+  load();
+})();
+</script>
+</body>
+</html>

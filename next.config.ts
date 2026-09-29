@@ -32,15 +32,21 @@ const VERCEL_TOOLBAR_HOSTS = " https://vercel.live https://*.vercel.live";
 // React sendiri tidak pernah memakai eval() di mode produksi.
 const DEV_EVAL = process.env.NODE_ENV === "development" ? " 'unsafe-eval'" : "";
 
-function buildCsp() {
+function buildCsp(designLab = false) {
   const v = VERCEL_TOOLBAR_HOSTS;
+  // The temporary /design-lab mockups load Google Fonts (their audience is the
+  // internal committee reviewing designs, not the mainland-China public), so
+  // that one path gets the two Google Fonts hosts; everything else keeps
+  // font-src 'self'. The rule is removed together with the design-lab folder.
+  const googleStyle = designLab ? " https://fonts.googleapis.com" : "";
+  const googleFont = designLab ? " https://fonts.gstatic.com" : "";
   return [
     "default-src 'self'",
     `script-src 'self' 'unsafe-inline' 'wasm-unsafe-eval'${DEV_EVAL}${v}`,
     "worker-src 'self'",
-    "style-src 'self' 'unsafe-inline'",
+    `style-src 'self' 'unsafe-inline'${googleStyle}`,
     `img-src 'self' data: blob: https://*.public.blob.vercel-storage.com https://*.googleusercontent.com${v}`,
-    "font-src 'self'",
+    `font-src 'self'${googleFont}`,
     `connect-src 'self'${v}`,
     // /organization/ad-art previews the admin-uploaded AD/ART PDF in an iframe
     // served from Blob storage. Without this, frame-src falls back through
@@ -107,7 +113,7 @@ const nextConfig: NextConfig = {
     return [
       {
         // Only route where the camera is allowed. Must stay disjoint from the
-        // rule below - overlapping rules would emit two conflicting
+        // rules below - overlapping rules would emit two conflicting
         // Permissions-Policy headers and browsers intersect them, which would
         // re-block the camera.
         //
@@ -124,9 +130,20 @@ const nextConfig: NextConfig = {
         headers: [{ key: "Content-Security-Policy", value: buildCsp() }, ...securityHeaders("(self)")],
       },
       {
+        // Temporary design-lab mockups + internal vote. Needs the Google Fonts
+        // exception above and must never be indexed; disjoint from the scanner
+        // and catch-all rules, which both exclude this prefix.
+        source: "/design-lab/:path*",
+        headers: [
+          { key: "Content-Security-Policy", value: buildCsp(true) },
+          ...securityHeaders("()"),
+          { key: "X-Robots-Tag", value: "noindex, nofollow" },
+        ],
+      },
+      {
         // Everything else: camera fully blocked (negative lookahead keeps the
-        // scanner route out of this rule).
-        source: "/((?!events/[^/]+/scan).*)",
+        // scanner and design-lab routes out of this rule).
+        source: "/((?!events/[^/]+/scan|design-lab/).*)",
         headers: [{ key: "Content-Security-Policy", value: buildCsp() }, ...securityHeaders("()")],
       },
     ];
