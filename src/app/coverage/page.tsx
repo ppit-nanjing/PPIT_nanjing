@@ -6,6 +6,7 @@ import { SiteFooter } from "@/components/site-footer";
 import { AnimatedHeroHeading } from "@/components/animated-hero-heading";
 import { CoverageMap } from "@/components/coverage-map";
 import geo from "@/data/nanjing-coverage.geo.json";
+import { sortByCoverageOrder } from "@/lib/coverage-cities";
 import { getT } from "@/lib/i18n/server";
 
 export async function generateMetadata() {
@@ -24,7 +25,10 @@ export default async function CoveragePage() {
   const rows = await db.select().from(coverageCities).orderBy(asc(coverageCities.label));
   const bySlug = new Map(rows.map((r) => [r.slug, r]));
 
-  const features = (geo as unknown as { features: CoverageFeature[] }).features;
+  const features = sortByCoverageOrder(
+    (geo as unknown as { features: CoverageFeature[] }).features,
+    (feature) => feature.properties.id,
+  );
   const counted = rows.filter((r) => r.memberCount != null);
   const total = counted.reduce((sum, r) => sum + (r.memberCount ?? 0), 0);
 

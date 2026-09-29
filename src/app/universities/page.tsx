@@ -7,6 +7,7 @@ import { SiteNav } from "@/components/site-nav";
 import { SiteFooter } from "@/components/site-footer";
 import { AnimatedHeroHeading } from "@/components/animated-hero-heading";
 import { getT } from "@/lib/i18n/server";
+import { sortByCoverageOrder } from "@/lib/coverage-cities";
 
 export async function generateMetadata() {
   const { t } = await getT();
@@ -38,8 +39,8 @@ export default async function UniversitiesPage() {
     const key = u.city?.trim() || UNASSIGNED;
     byCity.set(key, [...(byCity.get(key) ?? []), u]);
   }
-  // Kota terbanyak dulu; Nanjing hampir pasti di atas.
-  const ordered = [...byCity.keys()].sort((a, b) => (byCity.get(b)?.length ?? 0) - (byCity.get(a)?.length ?? 0));
+  // Urutan kanonik: Nanjing dulu, sisanya alfabetis (src/lib/coverage-cities.ts).
+  const ordered = sortByCoverageOrder([...byCity.keys()], (name) => name);
   const infoByName = new Map(cityInfo.map((c) => [c.label, c]));
   const partnerCount = rows.filter((u) => u.isPartner).length;
 

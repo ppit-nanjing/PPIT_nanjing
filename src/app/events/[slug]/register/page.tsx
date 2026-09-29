@@ -28,6 +28,7 @@ import { EventThemeStyle } from "@/components/events/event-theme-style";
 import { registerForEvent } from "@/app/actions/events";
 import { getT } from "@/lib/i18n/server";
 import { INTL_LOCALE } from "@/lib/i18n/config";
+import { sortByCoverageOrder } from "@/lib/coverage-cities";
 
 export default async function EventRegisterPage({
   params,
@@ -111,7 +112,7 @@ export default async function EventRegisterPage({
     const cities = await db.select({ label: coverageCities.label }).from(coverageCities);
     biodata = {
       sensusComplete: profile?.completionStatus === "complete",
-      cityOptions: cities.map((c) => c.label).sort((a, b) => a.localeCompare(b)),
+      cityOptions: sortByCoverageOrder(cities, (c) => c.label).map((c) => c.label),
       defaults: {
         fullName: profile?.fullName ?? account?.name ?? "",
         passportNumber: profile?.passportNumber ?? "",

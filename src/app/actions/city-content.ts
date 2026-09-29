@@ -6,6 +6,7 @@ import { db } from "@/db";
 import { places, universities, districts, merchandise, sponsors, coverageCities } from "@/db/schema";
 import { requireModuleAccess } from "@/lib/admin-scope";
 import { translateFields } from "@/lib/groq";
+import { sortByCoverageOrder } from "@/lib/coverage-cities";
 
 // Places, universities, merchandise and sponsors are all editorial content, so
 // they sit behind the existing "content" scope rather than inventing a new
@@ -351,7 +352,8 @@ export async function updateSponsor(formData: FormData) {
 // dan kontak, tidak menambah/menghapus kota.
 export async function listCoverageCities() {
   await requireModuleAccess(CONTENT);
-  return db.select().from(coverageCities).orderBy(asc(coverageCities.label));
+  const rows = await db.select().from(coverageCities);
+  return sortByCoverageOrder(rows, (row) => row.slug);
 }
 
 export async function updateCoverageCity(formData: FormData) {

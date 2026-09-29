@@ -15,6 +15,7 @@ import { FileCheck2, FileX2, ChevronRight, Search, Download, History } from "luc
 import { SensusTabs } from "@/components/console/sensus-tabs";
 import { SensusAnalyticsView } from "@/components/console/sensus-analytics-view";
 import { buildSensusAnalytics } from "@/lib/sensus-analytics";
+import { sortByCoverageOrder } from "@/lib/coverage-cities";
 
 // Halaman ini menampilkan data sensus yang diisi anggota lewat /sensus,
 // LENGKAP per orang termasuk nomor paspor + bukti mahasiswa. Sengaja terkunci
@@ -75,7 +76,7 @@ export default async function ConsoleSensusPage({ searchParams }: { searchParams
   // benar - itu yang terlihat "ngacak". Filter yang benar juga tidak hilang
   // begitu satu kota belum punya siapa pun yang mengisi sensus (mis. Yancheng
   // saat ini) - tetap muncul sebagai pilihan dengan hasil kosong.
-  const branches = cities.map((c) => c.label);
+  const branches = sortByCoverageOrder(cities, (c) => c.label).map((c) => c.label);
   const universities = [
     ...new Set(rows.map((r) => r.sensus.university).filter((u): u is string => Boolean(u))),
   ].sort((a, b) => a.localeCompare(b, "id"));

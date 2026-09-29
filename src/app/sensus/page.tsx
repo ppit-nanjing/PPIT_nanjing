@@ -8,6 +8,7 @@ import { SiteFooter } from "@/components/site-footer";
 import { SensusWizard } from "@/components/sensus/sensus-wizard";
 import { AlertTriangle, ShieldCheck } from "lucide-react";
 import { getT } from "@/lib/i18n/server";
+import { sortByCoverageOrder } from "@/lib/coverage-cities";
 
 export default async function SensusPage({
   searchParams,
@@ -45,7 +46,7 @@ export default async function SensusPage({
     universitiesByBranch[row.cityName] ??= [];
     if (row.universityName) universitiesByBranch[row.cityName].push(row.universityName);
   }
-  const branches = Object.keys(universitiesByBranch).sort((a, b) => a.localeCompare(b));
+  const branches = sortByCoverageOrder(Object.keys(universitiesByBranch), (name) => name);
   const { t } = await getT();
 
   return (

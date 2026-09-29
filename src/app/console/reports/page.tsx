@@ -10,6 +10,7 @@ import { Download, Users as UsersIcon, GraduationCap, MapPin, RotateCcw, ArrowRi
 import Link from "next/link";
 import { TextField, SelectField, FormActions, primaryBtn } from "@/components/console/form";
 import { SummaryList, tally } from "@/components/console/summary-list";
+import { sortByCoverageOrder } from "@/lib/coverage-cities";
 
 const REPORT_TYPE_LABEL: Record<string, string> = {
   event_attendance: "Kehadiran Acara",
@@ -43,7 +44,7 @@ export default async function ConsoleReportsPage() {
       .limit(20),
     getGuide("laporan"),
   ]);
-  const allBranches = cityRows.map((c) => c.label);
+  const allBranches = sortByCoverageOrder(cityRows, (c) => c.label).map((c) => c.label);
 
   const completedCount = allSensus.filter((s) => s.completionStatus === "complete").length;
   const byUniversity = tally(allSensus.map((s) => s.university));

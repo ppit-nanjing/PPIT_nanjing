@@ -21,20 +21,33 @@ import { getT } from "@/lib/i18n/server";
 import { INTL_LOCALE } from "@/lib/i18n/config";
 
 // The nine cities PPIT Nanjing covers, for the home-page cities section. Copy
-// for each lives under `home.city.<slug>.*`. Editorial order: Nanjing (the
-// chapter seat) first, then the established branches, then the three smaller
-// student groups (Lianyungang, Taizhou, Yancheng). The canonical list is the
-// `coverage_cities` table; /coverage renders it alphabetically.
+// for each lives under `home.city.<slug>.*`. Display order: Nanjing (the
+// chapter seat) first, then the rest alphabetically - the same order as
+// src/lib/coverage-cities.ts, shared by the sensus dropdown, /coverage, and
+// the console filters. The canonical list itself is the `coverage_cities`
+// table. (`manshan` below is the i18n key for Ma'anshan; the DB/geo slug is
+// `maanshan`.)
+// A fixed 3-column grid leaves a bare empty cell whenever fewer than 3 items
+// are published (a near-certainty early on, and visible right now with only
+// 2 live events) - reads as an unfinished template rather than a deliberate
+// layout. Capping columns to the actual count and centering keeps a short
+// row looking intentional.
+function cardGridClass(count: number) {
+  if (count === 1) return "grid grid-cols-1 gap-8 max-w-md mx-auto";
+  if (count === 2) return "grid grid-cols-1 sm:grid-cols-2 gap-8 max-w-3xl mx-auto";
+  return "grid grid-cols-1 md:grid-cols-3 gap-8";
+}
+
 const CITIES = [
   { name: "Nanjing", slug: "nanjing" },
-  { name: "Xuzhou", slug: "xuzhou" },
-  { name: "Jurong", slug: "jurong" },
-  { name: "Ma'anshan", slug: "manshan" },
-  { name: "Zhenjiang", slug: "zhenjiang" },
   { name: "Huai'an", slug: "huaian" },
+  { name: "Jurong", slug: "jurong" },
   { name: "Lianyungang", slug: "lianyungang" },
+  { name: "Ma'anshan", slug: "manshan" },
   { name: "Taizhou", slug: "taizhou" },
+  { name: "Xuzhou", slug: "xuzhou" },
   { name: "Yancheng", slug: "yancheng" },
+  { name: "Zhenjiang", slug: "zhenjiang" },
 ] as const;
 
 export default async function Home() {
@@ -159,6 +172,7 @@ export default async function Home() {
                 name: c.name,
                 blurb: t(`home.city.${c.slug}.blurb`),
                 detail: t(`home.city.${c.slug}.detail`),
+                isHq: c.slug === "nanjing",
               }))}
             />
           </section>
@@ -168,7 +182,7 @@ export default async function Home() {
         <Reveal>
           <section className="flex flex-col gap-8">
             <SectionHeading kicker={t("home.events.kicker")} title={t("home.events.title")} href="/events" />
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+            <div className={latestEvents.length > 0 ? cardGridClass(latestEvents.length) : "grid grid-cols-1 md:grid-cols-3 gap-8"}>
               {latestEvents.length > 0 ? (
                 latestEvents.map((e) => (
                   <ContentCard
@@ -198,7 +212,7 @@ export default async function Home() {
         <Reveal>
           <section className="flex flex-col gap-8">
             <SectionHeading kicker={t("home.news.kicker")} title={t("home.news.title")} href="/news" />
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+            <div className={latestNews.length > 0 ? cardGridClass(latestNews.length) : "grid grid-cols-1 md:grid-cols-3 gap-8"}>
               {latestNews.length > 0 ? (
                 latestNews.map((a) => (
                   <ContentCard

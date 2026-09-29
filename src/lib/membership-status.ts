@@ -24,17 +24,18 @@ export const HOME_BRANCH = "Nanjing";
 // fungsi di berkas ini dipakai sinkron di banyak tempat (tally, map loop),
 // dan daftarnya sudah dianggap stabil/jarang berubah di tempat lain juga
 // (mis. CITIES di src/app/page.tsx). Update bersamaan kalau coverage_cities
-// berubah.
+// berubah. Urutan = display order kanonik: Nanjing dulu, sisanya alfabetis
+// (src/lib/coverage-cities.ts).
 export const HOME_BRANCHES = [
   "Nanjing",
-  "Xuzhou",
-  "Jurong",
-  "Ma’anshan",
-  "Zhenjiang",
   "Huai’an",
+  "Jurong",
   "Lianyungang",
+  "Ma’anshan",
   "Taizhou",
+  "Xuzhou",
   "Yancheng",
+  "Zhenjiang",
 ] as const;
 
 export function isHomeBranch(branch: string | null | undefined): boolean {
