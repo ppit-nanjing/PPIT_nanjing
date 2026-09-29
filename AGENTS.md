@@ -43,6 +43,11 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
 - `drizzle/`: reviewed SQL migrations. Do not infer deployed state solely from `drizzle/meta/_journal.json`.
 - `docs/`: product, flow, data-model, and design references. Update relevant docs when behavior or operational setup changes.
 
+## Architecture graph
+
+- `graphify-out/` (gitignored, local only) holds a knowledge graph of this repo: `graph.html` (interactive), `GRAPH_REPORT.md` (audit), `graph.json` (raw). For architecture, dependency, or "what connects to what" questions, query it first via `python -m graphify query "<question>"` from `web/` — fall back to grep only when the graph is stale.
+- Rebuild only after major changes: run the graphify skill on `web/`. On this Windows machine the AST extractor must run with `parallel=False` (process-pool spawn crashes otherwise), so prefer the documented runbook over a bare `graphify update`.
+
 ## Next.js and React conventions
 
 - Read the relevant versioned guide in `node_modules/next/dist/docs/` before changing Next.js code. Do not rely on remembered APIs from older releases.

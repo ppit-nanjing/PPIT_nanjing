@@ -47,3 +47,6 @@ next-env.d.ts
 
 # impeccable skill working archive (critique snapshots, ignore rules) - local only
 .impeccable/
+
+# graphify architecture graph (local build artifact)
+graphify-out/
