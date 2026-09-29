@@ -96,16 +96,39 @@ a{color:inherit}
 .status.ok{border:1px solid rgba(200,241,53,.4);background:rgba(200,241,53,.08);color:#dff58f}
 .status.err{border:1px solid rgba(255,90,79,.45);background:rgba(255,90,79,.08);color:#ffb0aa}
 
-.result-preview{display:none;padding:8px 0 40px}
-.result-preview.on{display:block}
-.result-preview h2{font-size:22px;font-weight:800;margin-bottom:6px}
-.result-preview p{color:var(--muted);font-size:13.5px;margin-bottom:18px}
-.rrow{display:grid;grid-template-columns:44px 1fr 90px;gap:14px;align-items:center;padding:9px 0}
-.rrow .rno{font-family:var(--mono);font-size:13px;color:var(--muted)}
-.rrow .rname{font-size:14.5px;font-weight:600}
-.rrow .rbar{height:8px;border-radius:99px;background:var(--panel-2);overflow:hidden;margin-top:6px}
+.tabs{display:flex;gap:6px;margin:26px 0 6px;background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:6px;width:fit-content;max-width:100%}
+.tab{border:0;background:transparent;color:var(--muted);font:inherit;font-weight:700;font-size:14px;padding:10px 20px;border-radius:10px;cursor:pointer;transition:background .18s,color .18s;display:inline-flex;align-items:center}
+.tab:hover{color:var(--text)}
+.tab[aria-selected="true"]{background:var(--lime);color:#0b0c0e}
+.tab .cnt{font-family:var(--mono);font-size:11px;margin-left:8px;color:inherit;opacity:.7}
+.ranking-panel{padding:4px 0 40px}
+.rank-head{display:flex;align-items:center;gap:14px;flex-wrap:wrap;margin:20px 0 10px}
+.rank-head h2{font-size:22px;font-weight:800}
+.rank-meta{font-family:var(--mono);font-size:12px;color:var(--muted)}
+.rank-actions{margin-left:auto;display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.rank-note{color:var(--muted);font-size:13.5px;margin-bottom:14px;max-width:74ch}
+.rank-note b{color:var(--text)}
+button.btn-lime{font:inherit;cursor:pointer;border:0}
+.rrow{display:grid;grid-template-columns:44px 1fr 90px;gap:14px;align-items:center;padding:10px 0;border-bottom:1px solid var(--line)}
+.rrow:last-child{border-bottom:0}
+.rrow .rno{display:grid;place-items:center;width:32px;height:32px;border-radius:10px;border:1px solid var(--line);font-family:var(--mono);font-size:13px;color:var(--muted)}
+.rrow.p1 .rno{background:var(--lime);border-color:var(--lime);color:#0b0c0e;font-weight:700}
+.rrow.p2 .rno{background:#c9ced6;border-color:#c9ced6;color:#0b0c0e;font-weight:700}
+.rrow.p3 .rno{background:#d09a6a;border-color:#d09a6a;color:#0b0c0e;font-weight:700}
+.rrow .rname{font-size:14.5px;font-weight:600;color:var(--text);text-decoration:none}
+.rrow .rname:hover{color:var(--lime)}
+.rrow .rdet{display:block;font-family:var(--mono);font-size:10.5px;color:var(--muted);margin-top:3px}
+.rrow .rbar{height:8px;border-radius:99px;background:var(--panel-2);overflow:hidden;margin-top:7px}
 .rrow .rbar i{display:block;height:100%;background:linear-gradient(90deg,#3f8f5f,var(--lime));border-radius:99px;transition:width .8s cubic-bezier(.2,.65,.3,1)}
+.rrow.p1 .rbar i{background:linear-gradient(90deg,#93b51a,var(--lime))}
+.rrow.p2 .rbar i{background:linear-gradient(90deg,#8f959e,#c9ced6)}
+.rrow.p3 .rbar i{background:linear-gradient(90deg,#9c6a3f,#d09a6a)}
 .rrow .rpts{font-family:var(--mono);font-size:13px;text-align:right;color:var(--lime)}
+@media(max-width:680px){
+  .rank-actions{margin-left:0}
+  .rrow{grid-template-columns:40px 1fr}
+  .rrow .rpts{grid-column:2;text-align:left}
+}
 
 .overlay{
   position:fixed;inset:0;z-index:100;background:rgba(6,7,8,.9);display:none;flex-direction:column
@@ -156,7 +179,7 @@ a{color:inherit}
   <div class="wrap">
     <p class="kicker">Voting internal · Kabinet PPIT Nanjing</p>
     <h1>Pilih 3 arah desain favoritmu, urutkan dari yang paling kamu suka</h1>
-    <p>Lihat kesan pertama tiap desain, buka pratinjau kalau perlu, lalu klik kartu: klik pertama jadi <b>favorit 1</b>, kedua <b>favorit 2</b>, ketiga <b>favorit 3</b>. Klik lagi kartu terpilih untuk melepas. Setelah submit, hasil langsung masuk ke rekap.</p>
+    <p>Lihat kesan pertama tiap desain, buka pratinjau kalau perlu, lalu klik kartu: klik pertama jadi <b>favorit 1</b>, kedua <b>favorit 2</b>, ketiga <b>favorit 3</b>. Klik lagi kartu terpilih untuk melepas. Tab <b>Ranking</b> bisa dibuka kapan saja untuk melihat posisi sementara.</p>
     <div class="steps">
       <span class="step"><b>1.</b> Isi nama</span>
       <span class="step"><b>2.</b> Pilih &amp; urutkan 3 desain</span>
@@ -168,6 +191,12 @@ a{color:inherit}
 </header>
 
 <main class="wrap">
+  <div class="tabs" role="tablist" aria-label="Navigasi vote dan ranking">
+    <button class="tab" id="tab-vote" role="tab" aria-selected="true" aria-controls="panel-vote" type="button">Vote</button>
+    <button class="tab" id="tab-ranking" role="tab" aria-selected="false" aria-controls="panel-ranking" type="button">Ranking<span class="cnt" id="tabCount"></span></button>
+  </div>
+
+  <div id="panel-vote" role="tabpanel" aria-labelledby="tab-vote">
   <div id="formArea">
     <div class="form-row">
       <div class="field">
@@ -199,20 +228,27 @@ a{color:inherit}
 
   <div class="done-panel" id="donePanel">
     <h2>Vote kamu sudah masuk. Terima kasih!</h2>
-    <p>Hasil sementara bisa dilihat kapan saja di halaman rekap. Satu perangkat hanya bisa vote sekali.</p>
+    <p>Ranking sementara bisa dilihat kapan saja di tab Ranking; rekap lengkap ada di halaman hasil. Satu perangkat hanya bisa vote sekali.</p>
     <div class="actions">
-      <a class="btn-lime" href="hasil.html">Lihat rekap hasil →</a>
+      <button class="btn-lime" id="seeRanking" type="button">Lihat ranking →</button>
       <a class="btn-line" href="index.html">Balik ke galeri</a>
     </div>
   </div>
 
   <section class="grid" id="grid" aria-label="20 kandidat desain"></section>
+  </div>
 
-  <div class="result-preview" id="previewResults">
-    <h2>Hasil sementara</h2>
-    <p id="previewMeta"></p>
-    <div id="previewRows"></div>
-    <p style="margin-top:18px"><a class="btn-line" href="hasil.html">Buka halaman rekap lengkap →</a></p>
+  <div class="ranking-panel" id="panel-ranking" role="tabpanel" aria-labelledby="tab-ranking" hidden>
+    <div class="rank-head">
+      <h2>Ranking sementara</h2>
+      <span class="rank-meta" id="rankMeta">memuat…</span>
+      <span class="rank-actions">
+        <button class="ov-btn" id="rankRefresh" type="button">Muat ulang</button>
+        <a class="btn-line" href="hasil.html">Rekap lengkap →</a>
+      </span>
+    </div>
+    <p class="rank-note">Poin: favorit 1 = <b>3</b>, favorit 2 = <b>2</b>, favorit 3 = <b>1</b> — hanya agregat, tanpa data pribadi voter. Klik nama desain untuk membuka mockup-nya.</p>
+    <div id="rankRows"></div>
   </div>
 
   <footer class="footer">
@@ -307,6 +343,15 @@ a{color:inherit}
   var ovFrame = document.getElementById('ovFrame');
   var ovTitle = document.getElementById('ovTitle');
   var ovOpen = document.getElementById('ovOpen');
+  var tabVote = document.getElementById('tab-vote');
+  var tabRanking = document.getElementById('tab-ranking');
+  var panelVote = document.getElementById('panel-vote');
+  var panelRanking = document.getElementById('panel-ranking');
+  var rankRows = document.getElementById('rankRows');
+  var rankMeta = document.getElementById('rankMeta');
+  var rankRefresh = document.getElementById('rankRefresh');
+  var tabCount = document.getElementById('tabCount');
+  var bar = document.querySelector('.bar');
 
   function token(){
     try {
@@ -409,39 +454,63 @@ a{color:inherit}
   overlay.addEventListener('click', function(e){ if (e.target === overlay) closePreview(); });
   document.addEventListener('keydown', function(e){ if (e.key === 'Escape' && overlay.classList.contains('open')) closePreview(); });
 
+  function setTab(name, updateHash){
+    var isRank = name === 'ranking';
+    tabVote.setAttribute('aria-selected', isRank ? 'false' : 'true');
+    tabRanking.setAttribute('aria-selected', isRank ? 'true' : 'false');
+    panelVote.hidden = isRank;
+    panelRanking.hidden = !isRank;
+    bar.style.display = isRank ? 'none' : '';
+    if (isRank) fetchResults();
+    if (updateHash) {
+      try { history.replaceState(null, '', isRank ? '#ranking' : location.pathname + location.search); } catch (e) {}
+    }
+  }
+
   function renderResults(data){
-    document.getElementById('previewResults').classList.add('on');
-    document.getElementById('previewMeta').textContent = data.total + ' voter sudah mengirim. Poin: favorit 1 = 3, favorit 2 = 2, favorit 3 = 1.';
-    var rows = document.getElementById('previewRows');
-    rows.innerHTML = '';
+    tabCount.textContent = data.total ? String(data.total) : '';
+    rankMeta.textContent = data.total + ' voter sudah mengirim';
+    rankRows.innerHTML = '';
+    if (!data.total) {
+      var empty = document.createElement('p');
+      empty.className = 'rank-note';
+      empty.textContent = 'Belum ada vote masuk — jadilah yang pertama.';
+      rankRows.appendChild(empty);
+      return;
+    }
     var max = 1;
     data.ranking.forEach(function(r){ if (r.points > max) max = r.points; });
-    data.ranking.slice(0, 8).forEach(function(r, i){
+    data.ranking.forEach(function(r, i){
       var row = document.createElement('div');
-      row.className = 'rrow';
+      row.className = 'rrow' + (i < 3 ? ' p' + (i + 1) : '');
       row.innerHTML =
-        '<span class="rno">' + String(i + 1).padStart(2, '0') + '</span>' +
-        '<span><span class="rname">' + r.id + ' · ' + r.name + '</span><span class="rbar"><i style="width:' + Math.round((r.points / max) * 100) + '%"></i></span></span>' +
+        '<span class="rno">' + (i + 1) + '</span>' +
+        '<span>' +
+          '<a class="rname" href="' + (FILES[r.id] || r.file || '#') + '">' + r.id + ' · ' + r.name + '</a>' +
+          '<span class="rdet">1st×' + r.r1 + ' · 2nd×' + r.r2 + ' · 3rd×' + r.r3 + '</span>' +
+          '<span class="rbar"><i style="width:' + Math.round((r.points / max) * 100) + '%"></i></span>' +
+        '</span>' +
         '<span class="rpts">' + r.points + ' poin</span>';
-      rows.appendChild(row);
+      rankRows.appendChild(row);
     });
   }
 
   function fetchResults(){
-    if (isFile) return;
+    if (isFile) { rankMeta.textContent = 'mode lokal — ranking aktif di versi deploy'; return; }
+    rankMeta.textContent = 'memuat…';
     fetch('/api/design-vote/results', { headers: { 'Accept': 'application/json' } })
       .then(function(r){ return r.json(); })
-      .then(function(data){ if (data && data.ok) renderResults(data); })
-      .catch(function(){});
+      .then(function(data){ if (data && data.ok) renderResults(data); else rankMeta.textContent = 'gagal memuat — klik Muat ulang'; })
+      .catch(function(){ rankMeta.textContent = 'gagal memuat — klik Muat ulang'; });
   }
 
   function markDone(){
     try { localStorage.setItem('ppit_vote_done', '1'); } catch (e) {}
     formArea.style.display = 'none';
     donePanel.classList.add('on');
-    document.getElementById('grid').style.display = 'none';
+    grid.style.display = 'none';
     submitBtn.disabled = true;
-    fetchResults();
+    setTab('ranking', false);
   }
 
   submitBtn.addEventListener('click', function(){
@@ -471,10 +540,26 @@ a{color:inherit}
     });
   });
 
+  tabVote.addEventListener('click', function(){ setTab('vote', true); });
+  tabRanking.addEventListener('click', function(){ setTab('ranking', true); });
+  rankRefresh.addEventListener('click', fetchResults);
+  document.getElementById('seeRanking').addEventListener('click', function(){ setTab('ranking', true); });
+  document.querySelector('.tabs').addEventListener('keydown', function(e){
+    if (e.key === 'ArrowRight' || e.key === 'ArrowLeft') {
+      var next = document.activeElement === tabVote ? tabRanking : tabVote;
+      next.focus();
+    }
+  });
+
   renderGrid();
   sync();
   if (isFile) document.getElementById('fileNotice').classList.add('on');
-  if (alreadyVoted()) { markDone(); showStatus('ok', 'Perangkat ini sudah pernah vote. Hasil sementara di bawah.'); }
+  if (alreadyVoted()) {
+    markDone();
+    showStatus('ok', 'Perangkat ini sudah pernah vote. Ranking ada di tab Ranking.');
+  } else if (location.hash === '#ranking') {
+    setTab('ranking', false);
+  }
 })();
 </script>
 </body>
