@@ -140,7 +140,6 @@ async function main() {
     userId: m.userId,
   }));
 
-  let divisiBaru = 0;
   let creditNoBintang = 0;
   for (const [i, dept] of STRUCTURE.entries()) {
     const deptId = await upsertDivision(event.id, dept.name, null, i);

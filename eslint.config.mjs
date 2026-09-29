@@ -30,6 +30,10 @@ const eslintConfig = defineConfig([
     "build/**",
     "public/ocr/**",
     "next-env.d.ts",
+    // Local-only build artifacts (see .gitignore)
+    "graphify-out/**",
+    // Claude Code local worktrees - full repo copies, not part of the app (see .gitignore)
+    ".claude/**",
   ]),
 ]);
 

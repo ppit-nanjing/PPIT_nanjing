@@ -73,7 +73,7 @@ export function CoverageMap({
   // off-screen. Fixed also escapes the container's overflow-x clipping.
   const [pointer, setPointer] = useState<{ left: number; top: number; maxW: number } | null>(null);
 
-  const { paths, height, labelled } = useMemo(() => {
+  const { paths, height } = useMemo(() => {
     let minLng = Infinity, maxLng = -Infinity, minLat = Infinity, maxLat = -Infinity;
     for (const f of features) {
       for (const ring of ringsOf(f)) {
@@ -121,14 +121,8 @@ export function CoverageMap({
       };
     });
 
-    // No city name labels on the map — names already appear in the
-    // tooltip on hover/click and in the readout below.
-    const labelled = new Set<string>();
-
-    return { paths, height: h, labelled, fontSize };
+    return { paths, height: h, fontSize };
   }, [features]);
-
-  const fontSize = 13 * (height / 620);
 
   const q = norm(query.trim());
   const matches = q ? paths.filter((p) => norm(p.label).includes(q) || p.zh.includes(query.trim())) : [];
