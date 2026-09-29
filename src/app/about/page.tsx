@@ -1,4 +1,4 @@
-import { asc, ne } from "drizzle-orm";
+import { ne } from "drizzle-orm";
 import { db } from "@/db";
 import { coverageCities } from "@/db/schema";
 import { SiteNav } from "@/components/site-nav";
@@ -10,6 +10,7 @@ import { Reveal } from "@/components/reveal";
 import { Compass, MapPinned, GraduationCap, CalendarDays, MapPin } from "lucide-react";
 import Link from "next/link";
 import { getT } from "@/lib/i18n/server";
+import { sortByCoverageOrder } from "@/lib/coverage-cities";
 
 // The two campus-level ranting are real, committee-authored facts with no table
 // of their own - they live in `about.coverageText` too. The city list, by
@@ -22,11 +23,13 @@ const RANTING = [
 
 export default async function AboutPage() {
   const { t } = await getT();
-  const nearbyCities = await db
-    .select({ label: coverageCities.label })
-    .from(coverageCities)
-    .where(ne(coverageCities.slug, "nanjing"))
-    .orderBy(asc(coverageCities.label));
+  const nearbyCities = sortByCoverageOrder(
+    await db
+      .select({ label: coverageCities.label })
+      .from(coverageCities)
+      .where(ne(coverageCities.slug, "nanjing")),
+    (row) => row.label,
+  );
   return (
     <div className="min-h-screen bg-background text-on-background">
       <SiteNav />
