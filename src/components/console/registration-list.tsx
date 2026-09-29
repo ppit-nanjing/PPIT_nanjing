@@ -37,8 +37,12 @@ interface Registration {
   // di atas tidak stabil untuk ini karena beda nominal = beda string.
   feeCategory?: string | null;
   // WeChat ID — bagian dari versi RINGKAS (Humas menghubungi peserta). Diambil
-  // dari biodataJson di server; null kalau acara tanpa biodata.
+  // dari snapshot biodata atau fallback sensus di server; null kalau dua-duanya
+  // kosong.
   wechatId?: string | null;
+  // Asal kampus — snapshot biodata atau fallback sensus (acara requiresSensus
+  // seperti Fun Hike). Ditampilkan di versi LENGKAP.
+  university?: string | null;
   // Biodata lengkap yang di-snapshot saat mendaftar (acara requiresBiodata).
   // Hanya dikirim ke versi LENGKAP (BPH Kabinet + Divisi Teknologi + BPH
   // Panitia acara ini).
@@ -123,7 +127,7 @@ export function RegistrationList({
       if (checkinFilter === "out" && r.status === "attended") return false;
       if (feeFilter !== "all" && r.feeCategory !== feeFilter) return false;
       if (q) {
-        const hay = [r.userName, r.wechatId, r.feeLabel, detail ? r.userEmail : null]
+        const hay = [r.userName, r.wechatId, r.feeLabel, detail ? r.userEmail : null, detail ? r.university : null]
           .filter(Boolean)
           .join(" ")
           .toLowerCase();
@@ -288,6 +292,19 @@ export function RegistrationList({
                     {[detail ? r.branch : null, r.membership].filter(Boolean).join(" · ") || "—"}
                   </span>
                 </span>
+                {/* Kampus & WeChat dari sensus untuk acara tanpa blok biodata
+                    (mis. Fun Hike requiresSensus); kalau blok biodata sudah
+                    memuatnya, jangan tampil dua kali. */}
+                {detail && r.university && !rows.some((b) => b.key === "university") && (
+                  <span>
+                    Kampus: <span className="text-on-background normal-case">{r.university}</span>
+                  </span>
+                )}
+                {detail && r.wechatId && !rows.some((b) => b.key === "wechatId") && (
+                  <span>
+                    WeChat ID: <span className="text-on-background normal-case">{r.wechatId}</span>
+                  </span>
+                )}
                 {r.feeLabel && (
                   <span>
                     Tarif: <span className="text-on-background normal-case">{r.feeLabel}</span>

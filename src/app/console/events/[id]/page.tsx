@@ -56,9 +56,14 @@ export default async function ConsoleEventDetailPage({ params }: { params: Promi
       userName: users.name,
       userEmail: users.email,
       // Sensus di-join supaya roster bisa menjawab "siapa saja yang hadir":
-      // anggota Nanjing, mahasiswa dari cabang lain, atau tamu luar.
+      // anggota Nanjing, mahasiswa dari cabang lain, atau tamu luar. Kota,
+      // kampus, dan WeChat ID juga diambil dari sini untuk acara tanpa biodata
+      // (mis. Fun Hike requiresSensus — pertanyaan itu sengaja tidak ditanya
+      // ulang di form pendaftaran).
       sensusBranch: sensusProfiles.branch,
       sensusCompletion: sensusProfiles.completionStatus,
+      sensusUniversity: sensusProfiles.university,
+      sensusWechat: sensusProfiles.wechatId,
     })
     .from(eventRegistrations)
     .leftJoin(users, eq(eventRegistrations.userId, users.id))
@@ -952,7 +957,12 @@ export default async function ConsoleEventDetailPage({ params }: { params: Promi
             feeLabel: feeLabelFor(r.reg.feeOptionId, r.reg.registeredAt),
             feeCategory: r.reg.feeOptionId ? feeOptionById.get(r.reg.feeOptionId)?.label ?? null : null,
             // WeChat ID = bagian dari versi ringkas (Humas menghubungi peserta).
-            wechatId: (r.reg.biodataJson as { wechatId?: string } | null)?.wechatId || null,
+            // Snapshot biodata (acara requiresBiodata) menang; acara lain
+            // (requiresSensus) mengambil dari sensus.
+            wechatId: (r.reg.biodataJson as { wechatId?: string } | null)?.wechatId || r.sensusWechat || null,
+            // Asal kampus — snapshot biodata dulu, fallback sensus. Ditampilkan
+            // di versi LENGKAP.
+            university: (r.reg.biodataJson as { university?: string } | null)?.university || r.sensusUniversity || null,
             // Blok biodata (paspor, KTM, universitas, dst.) HANYA BPH Kabinet +
             // Divisi Teknologi — lihat canSeeRegistrantDetail = access.isFullAdmin.
             biodata: canSeeRegistrantDetail ? r.reg.biodataJson ?? null : null,

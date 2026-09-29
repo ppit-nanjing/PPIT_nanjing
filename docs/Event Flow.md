@@ -59,6 +59,10 @@ Pembayaran **perorangan** — satu pendaftaran satu tanggungan. Tidak ada paymen
 
 Acara seperti WIF perlu menyetor daftar peserta lengkap ke sistem pusat. Peserta yang sensusnya sudah lengkap **tidak mengetik ulang** — biodatanya di-snapshot dari `sensus_profiles` (`source:"sensus"`). Yang lain isi `EventBiodataFields` inline (`source:"form"`), di-prefill dari sensus/akun sebagian. Dibekukan di `event_registrations.biodata_json` supaya ekspor selalu utuh.
 
+## Wajib sensus lengkap (`requires_sensus`)
+
+Acara seperti Fun Hike hanya menerima pendaftar yang sensusnya lengkap. Karena datanya sudah ada, pertanyaan "Asal Kota di Tiongkok", "Asal Universitas/Kampus", dan "WeChat ID" **tidak ditanya ulang** di form — roster console dan ekspor CSV mengisi kota, kampus, serta WeChat dari `sensus_profiles` (kota fallback ke jawaban satu-kali di pendaftaran bila sensus tidak lengkap).
+
 ## Pertanyaan kustom
 
 Admin bisa menambah pertanyaan per acara (`event_questions`): teks, textarea, select, radio, multiselect, `file` (unggah satu berkas). Jawaban di `event_registrations.answers_json`, tampil ke admin di daftar pendaftar & ekspor.

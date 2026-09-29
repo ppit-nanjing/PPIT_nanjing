@@ -21,7 +21,7 @@
 - CRUD event penuh (`draft` → `published` → `registration_closed` → `completed`).
 - Publikasi terjadwal: acara disiapkan penuh lebih dulu, lalu otomatis tayang pada waktu yang ditentukan (`scheduled_publish_at`).
 - **Manage Registrations** — lihat & kelola pendaftar, ubah status (`pending`/`confirmed`/`cancelled`), lakukan check-in manual.
-- **Akses data pendaftar** — semua panitia acara (`event.viewRegistrants`, fitur dasar) melihat daftar **ringkas**: nama, WeChat, tarif, status. **Biodata lengkap + jawaban kustom + ekspor CSV** tampil untuk BPH Kabinet, Divisi Teknologi, dan **BPH Panitia acara ini** (ketua/wakil/sekretaris/SC).
+- **Akses data pendaftar** — semua panitia acara (`event.viewRegistrants`, fitur dasar) melihat daftar **ringkas**: nama, WeChat, tarif, status. **Biodata lengkap + jawaban kustom + ekspor CSV** tampil untuk BPH Kabinet, Divisi Teknologi, dan **BPH Panitia acara ini** (ketua/wakil/sekretaris/SC). Untuk acara `requiresSensus` (mis. Fun Hike), kota/kampus/WeChat diisi otomatis dari sensus.
 - **Pertanyaan Pendaftaran** — opsional per acara: tambah pertanyaan kustom (teks pendek/panjang, dropdown, pilihan, pilih banyak) yang muncul di form publik; kosong = form standar. Jawaban tampil di Daftar Pendaftar.
 - **Volunteer publik** — toggle *"Buka pendaftaran volunteer"*: orang luar PPIT melamar sendiri dari halaman acara (tanpa akun). Seksi *Pendaftar Volunteer* di konsol untuk menerima/menolak — diterima = akun undangan dibuatkan otomatis + langsung ditugaskan ke divisi pilihannya.
 - **QR Check-in** — scan `EVENT_REGISTRATION.qr_code_token` di lokasi acara (`/console/events/[id]/scan`), bukan sekadar dekorasi tiket.

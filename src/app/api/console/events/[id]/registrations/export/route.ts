@@ -1,8 +1,9 @@
 import { desc, eq } from "drizzle-orm";
 import { db } from "@/db";
-import { events, eventRegistrations, eventQuestions, eventFeeOptions, users } from "@/db/schema";
+import { events, eventRegistrations, eventQuestions, eventFeeOptions, sensusProfiles, users } from "@/db/schema";
 import { getEventAccess } from "@/lib/event-access";
 import { feeTierAt, amountForTier } from "@/lib/event-fee";
+import { effectiveBranch } from "@/lib/membership-status";
 
 // Same hardening as the membership export: quote/escape CSV specials and
 // neutralize Excel formula injection ("=HYPERLINK(...)" typed into a form
@@ -53,9 +54,16 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
         answersJson: eventRegistrations.answersJson,
         feeOptionId: eventRegistrations.feeOptionId,
         biodataJson: eventRegistrations.biodataJson,
+        // Kota/kampus/WeChat untuk acara tanpa blok biodata (mis. Fun Hike
+        // requiresSensus — pertanyaan itu tidak ditanya ulang di form).
+        sensusBranch: sensusProfiles.branch,
+        sensusCompletion: sensusProfiles.completionStatus,
+        sensusUniversity: sensusProfiles.university,
+        sensusWechat: sensusProfiles.wechatId,
       })
       .from(eventRegistrations)
       .leftJoin(users, eq(eventRegistrations.userId, users.id))
+      .leftJoin(sensusProfiles, eq(sensusProfiles.userId, eventRegistrations.userId))
       .where(eq(eventRegistrations.eventId, id))
       .orderBy(desc(eventRegistrations.registeredAt)),
     db.select({ id: eventQuestions.id, label: eventQuestions.label }).from(eventQuestions).where(eq(eventQuestions.eventId, id)),
@@ -102,6 +110,8 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
     "Status",
     "Tanggal Daftar",
     "Cabang",
+    // Acara tanpa blok biodata tetap punya kampus & WeChat dari sensus.
+    ...(anyBiodata ? [] : ["Kampus", "WeChat ID"]),
     ...(anyFee ? ["Kategori Tarif"] : []),
     ...(anyBiodata ? BIODATA_COLS.map((c) => c.label) : []),
     ...questions.map((q) => q.label),
@@ -117,7 +127,8 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
         STATUS_LABEL[r.status] ?? r.status,
         // ISO date - locale-formatted dates ("10 Agu 2026") break Excel parsing.
         new Date(r.registeredAt).toISOString().slice(0, 10),
-        r.branch ?? "",
+        effectiveBranch(r.sensusCompletion === "complete" ? r.sensusBranch : null, r.branch) ?? "",
+        ...(anyBiodata ? [] : [r.sensusUniversity ?? "", r.sensusWechat ?? ""]),
         ...(anyFee ? [feeLabelFor(r.feeOptionId, r.registeredAt)] : []),
         ...(anyBiodata ? BIODATA_COLS.map((c) => bio?.[c.key] ?? "") : []),
         ...questions.map((q) => {
