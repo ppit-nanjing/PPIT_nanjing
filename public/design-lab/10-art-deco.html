@@ -188,6 +188,16 @@ h1,h2,h3{font-family:"Cinzel",Georgia,serif;font-weight:600;line-height:1.18;let
   .nav-links{display:none}
 }
 @media(max-width:680px){
+  .nav .wrap{height:auto;padding-top:12px;padding-bottom:12px;flex-wrap:wrap;row-gap:10px}
+  .brand-name{font-size:15px;letter-spacing:.12em}
+  .brand-sub{letter-spacing:.2em}
+  .nav .btn{padding:11px 16px}
+  .eyebrow{letter-spacing:.22em}
+  .hero .frame{display:block;max-width:100%}
+  .hero h1{font-size:28px;max-width:100%}
+  .hero .lead{font-size:15px}
+  .cartouche{padding:12px 18px}
+  .cartouche p{font-size:11.5px;letter-spacing:.18em}
   .stats{grid-template-columns:1fr}
   .cities{grid-template-columns:1fr}
   .news{grid-template-columns:1fr}
@@ -488,6 +498,11 @@ h1,h2,h3{font-family:"Cinzel",Georgia,serif;font-weight:600;line-height:1.18;let
 <script>
 (function(){
   var reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  var curtain = document.querySelector('.curtain');
+  if (curtain) {
+    if (reduce) { curtain.style.display = 'none'; }
+    else { setTimeout(function(){ curtain.style.display = 'none'; }, 2000); }
+  }
   var reveals = document.querySelectorAll("[data-reveal], [data-line]");
   if (reduce || !("IntersectionObserver" in window)) {
     reveals.forEach(function(el){ el.classList.add("in"); });
