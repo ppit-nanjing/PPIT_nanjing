@@ -1290,6 +1290,7 @@ export const id = {
   "eval.scaleLow": "Kurang",
   "eval.scaleHigh": "Sangat baik",
   "eval.optional": "opsional",
+  "eval.requiredNote": "Pertanyaan bertanda * wajib diisi.",
   "eval.submit": "Kirim Evaluasi",
   "eval.submitting": "Mengirim…",
   "eval.thanksTitle": "Terima kasih!",

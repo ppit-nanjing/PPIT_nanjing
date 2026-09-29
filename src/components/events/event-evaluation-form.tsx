@@ -21,18 +21,18 @@ function RatingScale({
   hint,
   lowLabel,
   highLabel,
-  optionalLabel,
 }: {
   name: string;
   legend: string;
   hint?: string;
   lowLabel: string;
   highLabel: string;
-  optionalLabel: string;
 }) {
   return (
     <fieldset className="flex flex-col gap-3">
-      <legend className="text-body-md font-semibold text-on-background">{legend}</legend>
+      <legend className="text-body-md font-semibold text-on-background">
+        {legend} <span className="text-primary-container" aria-hidden="true">*</span>
+      </legend>
       {hint && <p className="text-body-sm text-on-surface-variant -mt-2">{hint}</p>}
       <div className="flex flex-wrap gap-1.5">
         {Array.from({ length: 10 }, (_, i) => i + 1).map((n) => (
@@ -48,7 +48,6 @@ function RatingScale({
         <span>{lowLabel}</span>
         <span>{highLabel}</span>
       </div>
-      <span className="sr-only">{optionalLabel}</span>
     </fieldset>
   );
 }
@@ -128,6 +127,10 @@ export function EventEvaluationForm({
         </p>
       )}
 
+      <p className="text-body-sm text-on-surface-variant">
+        <span className="text-primary-container" aria-hidden="true">*</span> {t("eval.requiredNote")}
+      </p>
+
       <section className={CARD}>
         <h2 className="text-headline-sm text-on-background">{t("eval.identity")}</h2>
         {!anonymous && (
@@ -178,13 +181,16 @@ export function EventEvaluationForm({
                 hint={q.hintKey ? t(q.hintKey) : undefined}
                 lowLabel={t("eval.scaleLow")}
                 highLabel={t("eval.scaleHigh")}
-                optionalLabel={t("eval.optional")}
               />
             ) : (
               <label key={q.name} className="flex flex-col gap-1.5">
                 <span className="text-body-md font-semibold text-on-background">
                   {t(q.labelKey)}{" "}
-                  {q.optional && <span className="text-body-sm font-normal text-on-surface-variant">({t("eval.optional")})</span>}
+                  {q.optional ? (
+                    <span className="text-body-sm font-normal text-on-surface-variant">({t("eval.optional")})</span>
+                  ) : (
+                    <span className="text-primary-container" aria-hidden="true">*</span>
+                  )}
                 </span>
                 <textarea name={q.name} maxLength={2000} rows={3} required={!q.optional} aria-required={!q.optional} className={TEXTAREA} />
               </label>

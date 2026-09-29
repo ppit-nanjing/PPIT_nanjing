@@ -1287,6 +1287,7 @@ export const en = {
   "eval.scaleLow": "Poor",
   "eval.scaleHigh": "Excellent",
   "eval.optional": "optional",
+  "eval.requiredNote": "Questions marked * are required.",
   "eval.submit": "Submit Evaluation",
   "eval.submitting": "Submitting…",
   "eval.thanksTitle": "Thank you!",
