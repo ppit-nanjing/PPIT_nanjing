@@ -1554,3 +1554,33 @@ export const designVotes = pgTable("design_votes", {
   note: text("note"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
+
+// ---------- Evaluasi acara (pasca-acara) ----------
+// Satu baris = satu respons evaluasi dari satu perangkat. Identitas boleh
+// kosong; `anonymous` menyembunyikan nama/kota di laporan. Token perangkat +
+// unique (event, token) mencegah isi dobel, tanpa perlu akun.
+export const eventEvaluations = pgTable(
+  "event_evaluations",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    eventId: uuid("event_id")
+      .notNull()
+      .references(() => events.id, { onDelete: "cascade" }),
+    ratingRegistration: integer("rating_registration").notNull(),
+    ratingFacilities: integer("rating_facilities").notNull(),
+    ratingCgt: integer("rating_cgt").notNull(),
+    ratingOverall: integer("rating_overall").notNull(),
+    improveRegistration: text("improve_registration"),
+    improveFacilities: text("improve_facilities"),
+    cgtMessage: text("cgt_message"),
+    improveService: text("improve_service"),
+    overallMessage: text("overall_message"),
+    heartwarming: text("heartwarming"),
+    respondentName: text("respondent_name"),
+    respondentCity: text("respondent_city"),
+    anonymous: boolean("anonymous").notNull().default(false),
+    responderToken: text("responder_token").notNull(),
+    createdAt: timestamp("created_at").notNull().defaultNow(),
+  },
+  (t) => [uniqueIndex("event_evaluations_event_token_idx").on(t.eventId, t.responderToken)],
+);

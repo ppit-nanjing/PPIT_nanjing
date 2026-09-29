@@ -1,7 +1,7 @@
 import { eq, and, desc, sql, inArray } from "drizzle-orm";
 import { notFound } from "next/navigation";
 import { db } from "@/db";
-import { auditLogs, certificates, events, eventCredits, eventDivisions, eventFeeOptions, eventQuestions, eventRegistrations, eventVolunteers, galleryAlbums, galleryPhotos, inventoryItems, itemReservations, newsArticles, sensusProfiles, users } from "@/db/schema";
+import { auditLogs, certificates, events, eventCredits, eventDivisions, eventEvaluations, eventFeeOptions, eventQuestions, eventRegistrations, eventVolunteers, galleryAlbums, galleryPhotos, inventoryItems, itemReservations, newsArticles, sensusProfiles, users } from "@/db/schema";
 import { MEMBERSHIP_LABEL, effectiveBranch, membershipStatus } from "@/lib/membership-status";
 import { updateEventInfo, updateEventContent, updateEventPostReport, setEventStatus, saveEventQuestion, deleteEventQuestion, saveFeeOption, deleteFeeOption } from "@/app/actions/admin-events";
 import { createEventGalleryAlbum } from "@/app/actions/admin-content";
@@ -22,6 +22,7 @@ import { CollapsibleSection } from "@/components/console/collapsible-section";
 import { HtmFields } from "@/components/console/htm-fields";
 import { Select, CheckboxField, CheckField } from "@/components/console/form";
 import { PaymentVerificationList } from "@/components/console/payment-verification-list";
+import { EvaluationResults } from "@/components/console/evaluation-results";
 import { ReservationManager } from "@/components/console/reservation-manager";
 import { checkInBlockReason } from "@/lib/event-checkin";
 import { feeTierAt, amountForTier } from "@/lib/event-fee";
@@ -94,6 +95,11 @@ export default async function ConsoleEventDetailPage({ params }: { params: Promi
     .from(eventFeeOptions)
     .where(eq(eventFeeOptions.eventId, id))
     .orderBy(eventFeeOptions.orderIndex, eventFeeOptions.id);
+  const evaluations = await db
+    .select()
+    .from(eventEvaluations)
+    .where(eq(eventEvaluations.eventId, id))
+    .orderBy(desc(eventEvaluations.createdAt));
   const feeOptionById = new Map(feeOptions.map((o) => [o.id, o]));
   // Label kategori tarif untuk satu pendaftaran: pakai NOMINAL EFEKTIF-nya —
   // tergantung tahap (early bird / normal) yang berlaku saat dia mendaftar.
@@ -1143,6 +1149,13 @@ export default async function ConsoleEventDetailPage({ params }: { params: Promi
         )}
       </CollapsibleSection>
       )}
+
+      <CollapsibleSection
+        title="Evaluasi Acara"
+        description={evaluations.length > 0 ? `${evaluations.length} respons` : "belum ada respons"}
+      >
+        <EvaluationResults eventId={id} evaluations={evaluations} />
+      </CollapsibleSection>
         </div>
 
         {/* Kolom samping: ringkasan + antrean tindakan */}

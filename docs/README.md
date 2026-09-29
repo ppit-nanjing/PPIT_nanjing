@@ -46,6 +46,7 @@
 - [Homepage & Login](./Homepage%20&%20Login.md)
 - [Organization & Regional Branches](./Organization%20&%20Regional%20Branches.md)
 - [Event Flow](./Event%20Flow.md)
+- [Evaluasi Acara](./Evaluasi%20Acara.md) — kuesioner pasca-acara (`/events/:slug/evaluasi`) + rekap & ekspor di console
 - [Content Pages](./Content%20Pages.md) (News, Gallery, Legal)
 - [Career Flow](./Career%20Flow.md) (Jobs, Career Center, Mentorship)
 - [Join Us Flow](./Join%20Us%20Flow.md)

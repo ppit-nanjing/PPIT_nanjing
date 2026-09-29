@@ -9,7 +9,7 @@ import { AnimatedHeroHeading } from "@/components/animated-hero-heading";
 import { Reveal } from "@/components/reveal";
 import { EventCard } from "@/components/event-card";
 import { GalleryLightbox } from "@/components/gallery-lightbox";
-import { CalendarDays, MapPin, Users, Ticket, ArrowLeft, ListChecks, Images, ArrowRight, CalendarX, PartyPopper, BadgeCheck, PlayCircle, FolderOpen, ScanLine, SlidersHorizontal } from "lucide-react";
+import { CalendarDays, MapPin, Users, Ticket, ArrowLeft, ListChecks, Images, ArrowRight, CalendarX, PartyPopper, BadgeCheck, PlayCircle, FolderOpen, ScanLine, SlidersHorizontal, ClipboardList } from "lucide-react";
 import Image from "next/image";
 import { Select } from "@/components/console/form";
 import { EventThemeStyle } from "@/components/events/event-theme-style";
@@ -433,6 +433,27 @@ export default async function EventDetailPage({ params, searchParams }: { params
                   </Reveal>
                 );
               })()}
+
+              {isPast && (
+                <Reveal>
+                  <section>
+                    <div className="evt-tintcard flex flex-col gap-4 rounded-lg border border-outline-variant bg-surface-container-low p-6 sm:flex-row sm:items-center sm:justify-between">
+                      <div>
+                        <h2 className="mb-1 flex items-center gap-2 text-headline-md text-on-background">
+                          <ClipboardList className="text-primary-container" size={20} /> {t("events.evaluationCta")}
+                        </h2>
+                        <p className="text-body-md text-on-surface-variant">{t("events.evaluationNote")}</p>
+                      </div>
+                      <Link
+                        href={`/events/${slug}/evaluasi`}
+                        className="inline-flex items-center justify-center gap-2 rounded-md bg-primary-container px-5 py-3 text-label-caps uppercase tracking-wide text-on-primary transition-colors hover:bg-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-container focus-visible:ring-offset-2 focus-visible:ring-offset-surface-container-low"
+                      >
+                        {t("events.evaluationCta")} <ArrowRight size={16} aria-hidden="true" />
+                      </Link>
+                    </div>
+                  </section>
+                </Reveal>
+              )}
 
               {credits.length > 0 && (
                 <Reveal>

@@ -283,6 +283,25 @@ Setiap file yang di-upload otomatis: (1) dibuatkan izin "siapa saja yang punya l
 
 Menghapus (Hapus) sebuah file memindahkannya ke sampah Drive dan menonaktifkan short link-nya otomatis.`,
   },
+  {
+    slug: "evaluasi-acara",
+    section: SERING_DIPAKAI,
+    title: "Evaluasi Acara — Kuesioner Pasca-Acara",
+    content: `Setelah acara selesai, peserta bisa mengisi evaluasi lewat tautan publik /events/<slug>/evaluasi (tanpa perlu akun). Tombol "Isi Evaluasi" juga otomatis muncul di halaman acara begitu tanggal acara sudah lewat.
+
+Menyebarkan
+- Bikin short link dulu di menu Tautan (contoh slug: eval-wif26, target /events/wif-2026/evaluasi), unduh QR-nya, tempel di grup WeChat.
+- Satu perangkat hanya bisa mengisi SEKALI. Kalau ada yang salah isi dan mau mengulang dari perangkat yang sama, hapus dulu barisnya di console (lihat di bawah), baru orang itu bisa isi lagi.
+
+Identitas
+- Nama & kota opsional. Kalau peserta mencentang "Kirim sebagai anonim", nama dan kota TIDAK disimpan sama sekali.
+
+Melihat hasil
+- Buka /console/events/<id> → section "Evaluasi Acara".
+- Ada ringkasan rata-rata + grafik kecil distribusi nilai 1-10 untuk tiap pertanyaan, plus semua jawaban teks.
+- Tombol CSV / Excel untuk mengunduh rekap (buat LPJ).
+- Tombol hapus (ikon tempat sampah) di tiap respons untuk membuang jawaban spam/uji coba.`,
+  },
 ];
 
 async function main() {
