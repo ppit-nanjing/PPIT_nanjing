@@ -2,7 +2,7 @@
 
 > Living status doc — updated as the project moves. If you're picking this up in a new AI session or as a new dev, start here, then [README.md](./README.md) for full documentation.
 
-**Last updated:** 2026-08-27
+**Last updated:** 2026-09-29
 **Repo:** https://github.com/Fx-4/PPIT_nanjing (branch `master`, repo root = the app)
 **Live:** deployed on Vercel by the project owner (project `ppit-nanjing`). Auto-deploy on push **is** connected (every commit → READY production deploy in ~2 min). ⚠️ Watch the commit-author email: Vercel rejects deploys whose tip-commit author isn't verified on the GitHub account — local `git config user.email` must stay `Haikalhelmy13@Gmail.com`.
 
@@ -47,6 +47,8 @@ Layout gates on "any admin access"; each page + its server actions additionally 
 **Events + kepanitiaan** — per-event division tree (Departemen → sub-tim, quota + jobdesc), committee console section with gap counts, one-click + bulk staffing, participant e-certificates (auto on completion) + committee attendance QR tickets, public volunteer signup with one-click approval, manual HTM verification (paid registrations stay QR-less until verified), treasurer Alipay QR upload, per-event custom registration questions, committee structure templates, event branch question (only when sensus incomplete), roster "Asal" column. **WIF 2026 registration (2026-08-27):** `requiresBiodata` mode with sensus reuse, `event_fee_options` tiered pricing (Freshmen ¥15 / Non-freshmen ¥25), `file` registration-question type, `events.confirmationInfo` post-registration panel, and a **stepped (Google-Forms-style) registration wizard** (`EventRegisterWizard`). Migrations 0015–0021. (An Alipay-bill CSV auto-match tool was built then removed — payment verification stays 100% manual.)
 
 **Documents & links** — Google Drive module with per-division RBAC + auto short-link generation; short-link / custom-redirect module with QR + CSV export + public directory. IDOR + RSC-crash + folder/race fixes followed.
+
+**Evaluasi acara pasca-acara (2026-09-29)** — kuesioner pertama untuk WIF 2026 X CGT: halaman publik `/events/:slug/evaluasi` (tanpa akun, identitas opsional + toggle anonim, satu respons per perangkat via token dengan unique `(event_id, responder_token)`), tombol "Isi Evaluasi" otomatis muncul di halaman acara setelah acara lewat, template pertanyaan otomatis per acara (`wif` vs `umum` — `src/lib/event-evaluation-template.ts`, tanpa kolom DB / konfigurasi console), rekap di `/console/events/:id` dengan tiga tab (**Grafik / Jawaban / Respons**) + hapus respons + ekspor CSV/xlsx yang labelnya mengikuti template. Migrasi **0040** (`event_evaluations`). Docs: [Evaluasi Acara](./Evaluasi%20Acara.md); artikel Help Center slug `evaluasi-acara` (masuk `seed-help-articles.ts`).
 
 **Membership** — recruitment period activation controls, auto-provisioning of an account when an application is accepted (survives provisioning races), the "field inti over-locked" fix, decision emails.
 

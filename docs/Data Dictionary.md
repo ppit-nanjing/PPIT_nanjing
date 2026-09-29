@@ -122,6 +122,9 @@ Penugasan panitia **per acara** — sengaja terpisah dari DEPARTMENT_MEMBER kare
 ### CERTIFICATE
 `id`, `user_id` FK (pemilik), `event_id` FK nullable (`set null` saat event dihapus), `kind` enum (`peserta`/`panitia`/`pemateri`/`lainnya` — sertifikat juara dicatat lewat judul bebas), `title`, `file_url` (file dibuat/diunggah di luar aplikasi, boleh tautan Drive), `issued_at`, `issued_by` FK → USER. Penerbitan **manual oleh admin**, bukan otomatis untuk semua peserta.
 
+### EVENT_EVALUATION
+Kuesioner pasca-acara yang diisi **tanpa akun** dari halaman publik `/events/:slug/evaluasi`. `id`, `event_id` FK (cascade), empat rating 1–10 (`rating_registration`, `rating_facilities`, `rating_cgt`, `rating_overall`) + enam jawaban teks opsional (`improve_registration`, `improve_facilities`, `cgt_message`, `improve_service`, `overall_message`, `heartwarming`), `respondent_name`/`respondent_city` nullable, `anonymous` boolean (`true` = nama/kota tidak disimpan sama sekali), `responder_token` — **unik per `(event_id, responder_token)`**, mencegah satu perangkat mengisi dobel tanpa perlu akun, `created_at`. Kolom `rating_cgt`/`cgt_message` dipakai generik sebagai "sesi & materi" untuk acara non-WIF — template pertanyaan (WIF vs umum) dipilih di kode `src/lib/event-evaluation-template.ts`, bukan kolom DB. Rekap + ekspor CSV/xlsx di `/console/events/:id` (tab Grafik/Jawaban/Respons). Detail: [Evaluasi Acara](./Evaluasi%20Acara.md).
+
 ---
 
 ## 4. Konten

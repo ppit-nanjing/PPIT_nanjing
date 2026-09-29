@@ -31,7 +31,7 @@
 Halaman `/events/[slug]` punya dua wajah. Pemicunya: status `completed` **atau** tanggal mulai sudah lewat (`start_at < now`) — disamakan dengan penanda "lampau" di daftar acara, supaya kartu lampau tidak lagi mendarat di halaman yang masih "Daftar Sekarang".
 
 - **Pra-acara**: kapasitas `X / Y` + bar + sisa slot, tombol daftar, agenda di sidebar, form volunteer.
-- **Pasca-acara**: bar kapasitas & tombol daftar hilang, diganti "Acara ini sudah selesai."; agenda sidebar disembunyikan (timeline di kolom kiri tetap sebagai arsip); muncul bagian **Dokumentasi & Materi**.
+- **Pasca-acara**: bar kapasitas & tombol daftar hilang, diganti "Acara ini sudah selesai."; agenda sidebar disembunyikan (timeline di kolom kiri tetap sebagai arsip); muncul bagian **Dokumentasi & Materi**; dan kotak **Isi Evaluasi** menuju kuesioner pasca-acara.
 
 Yang diisi panitia lewat form Edit acara → seksi **"4 · Setelah Acara"** (scope `events`, jadi humas bisa mengisi):
 
@@ -39,6 +39,14 @@ Yang diisi panitia lewat form Edit acara → seksi **"4 · Setelah Acara"** (sco
 - **Rincian Kehadiran** (`events.attendance_note`) — teks bebas mis. "80 online · 40 offline".
 - **Link Video Recap / Rekaman** (`events.recap_video_url`) — tombol keluar "Tonton Recap", tidak di-embed (CSP + audiens daratan Tiongkok).
 - **Album Dokumentasi** — memilih di sini mengisi `gallery_albums.event_id`. Foto highlight album tampil di halaman acara + tautan album lengkap + tombol "Unduh Semua Foto" (drive album). Foto tetap diunggah tim konten di Konten › Galeri.
+
+### Evaluasi acara (pasca-acara)
+
+Kuesioner pasca-acara untuk peserta di `/events/[slug]/evaluasi` — publik, **tanpa akun**, identitas opsional + toggle anonim, satu perangkat satu respons (token + unique `(event_id, responder_token)`). Tombol "Isi Evaluasi" muncul di halaman acara begitu acaranya lewat (`isPast`); detail alur di [Evaluasi Acara](./Evaluasi%20Acara.md).
+
+- **Pertanyaan otomatis per acara**: template WIF (slug berawalan `wif`, termasuk sesi CGT) vs template umum (Registrasi, Fasilitas, Sesi & Materi, Acara & Panitia). Resolver di `src/lib/event-evaluation-template.ts` — tidak ada konfigurasi per acara di console; menambah template baru = tambah objek di file itu.
+- **Rekap di console**: section *Evaluasi Acara* di `/console/events/[id]` — ringkasan (jumlah respons, rata-rata, anonim) + tiga tab: **Grafik** (rata-rata & distribusi 1–10 tiap rating), **Jawaban** (preview per pertanyaan: distribusi nilai + semua jawaban teks), **Respons** (per orang + hapus respons spam). Ekspor **CSV / Excel** (kolom mengikuti template).
+- **Distribusi tautan**: tombol di halaman acara + short link/QR dari modul Tautan. Tidak ada flag buka/tutup — panitia berhenti membagikan tautannya saat periode evaluasi selesai.
 
 ### Kepanitiaan per-acara
 
@@ -73,7 +81,7 @@ Aturan bawaannya **semua peserta dapat e-certificate**: tiap acara punya checkbo
 
 ## Entitas terkait
 
-[EVENT](./Data%20Dictionary.md), [EVENT_REGISTRATION](./Data%20Dictionary.md), [EVENT_DIVISION](./Data%20Dictionary.md), [EVENT_COMMITTEE](./Data%20Dictionary.md), [CERTIFICATE](./Data%20Dictionary.md)
+[EVENT](./Data%20Dictionary.md), [EVENT_REGISTRATION](./Data%20Dictionary.md), [EVENT_DIVISION](./Data%20Dictionary.md), [EVENT_COMMITTEE](./Data%20Dictionary.md), [EVENT_EVALUATION](./Data%20Dictionary.md), [CERTIFICATE](./Data%20Dictionary.md)
 
 ## Terkait publik
 

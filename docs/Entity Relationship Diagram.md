@@ -1,8 +1,8 @@
 # Entity Relationship Diagram — PPIT Nanjing
 
-> Bagian dari [PPIT Nanjing MOC](./README.md). Kolom lengkap tiap entitas ada di [Data Dictionary](./Data%20Dictionary.md). **Sumber kebenaran = `src/db/schema.ts`** (58 tabel). Diagram dipecah per domain karena satu ERD utuh sudah tidak terbaca.
+> Bagian dari [PPIT Nanjing MOC](./README.md). Kolom lengkap tiap entitas ada di [Data Dictionary](./Data%20Dictionary.md). **Sumber kebenaran = `src/db/schema.ts`** (61 tabel). Diagram dipecah per domain karena satu ERD utuh sudah tidak terbaca.
 
-Audit terakhir terhadap `schema.ts`: **2026-09-09.**
+Audit terakhir terhadap `schema.ts`: **2026-09-29.**
 
 ## Peta domain
 
@@ -10,12 +10,14 @@ Audit terakhir terhadap `schema.ts`: **2026-09-09.**
 |---|---|---|---|
 | 1 | **Identitas & Akses** | `users`, `roles`, `sensus_profiles`, `accounts`, `sessions`, `password_reset_tokens` | [Homepage & Login](./Homepage%20&%20Login.md), [Sensus Profile Flow](./Sensus%20Profile%20Flow.md), [User & Role Management](./User%20&%20Role%20Management.md) |
 | 2 | **Organisasi** | `departments`, `department_members`, `audit_logs`, `organization_documents`, `regional_branches`, `branch_universities`, `coverage_cities` | [Organization Management](./Organization%20Management.md), [Organization & Regional Branches](./Organization%20&%20Regional%20Branches.md) |
-| 3 | **Events** | `events`, `event_registrations`, `event_fee_options`, `event_questions`, `event_divisions`, `event_committee`, `event_volunteers`, `certificates` | [Event Flow](./Event%20Flow.md), [Event Management](./Event%20Management.md) |
+| 3 | **Events** | `events`, `event_registrations`, `event_fee_options`, `event_questions`, `event_divisions`, `event_committee`, `event_volunteers`, `event_evaluations`, `certificates` | [Event Flow](./Event%20Flow.md), [Event Management](./Event%20Management.md), [Evaluasi Acara](./Evaluasi%20Acara.md) |
 | 4 | **Konten, Karir & Keanggotaan** | `news_articles`, `gallery_albums`, `gallery_photos`, `job_postings`, `job_applications`, `career_guide_articles`, `mentorship_applications`, `recruitment_periods`, `membership_applications`, `membership_form_fields`, `membership_form_meta` | [Content Pages](./Content%20Pages.md), [Career Flow](./Career%20Flow.md), [Join Us Flow](./Join%20Us%20Flow.md) |
 | 5 | **Inventaris & Peminjaman** | `inventory_items`, `borrow_requests`, `item_reservations`, `item_contributions`, `procurement_requests`, `external_loans`, `inventory_audit_logs` | [Equipment Lending Flow](./Equipment%20Lending%20Flow.md), [Inventory Management](./Inventory%20Management.md) |
 | 6 | **Platform, Katalog & Konten Kota** | `notifications`, `notification_templates`, `reports`, `help_articles`, `release_notes`, `feedback`, `short_links`, `management_periods`, `drive_folders`, `merchandise`, `sponsors`, `donations`, `donation_channels`, `places`, `universities`, `districts` | [Reports & Analytics](./Reports%20&%20Analytics.md), [Documentation & Help Center](./Documentation%20&%20Help%20Center.md), Catalogue |
 
 ⚠️ **Tabel mati:** `permissions` + `role_permissions` ada di schema tapi **tidak pernah di-query**. Otorisasi admin memakai `roles.access_tier` + `departments.grants_full_admin_access` + `departments.admin_module_scope`. Jangan bangun fitur baru di atasnya tanpa memutuskan ulang. `verification_tokens` = milik adapter Auth.js, bukan aplikasi.
+
+🧪 **Tabel sementara:** `design_votes` — voting design-lab internal (bukan fitur produk), akan dihapus setelah voting selesai; sengaja tidak digambarkan di diagram domain.
 
 ---
 
@@ -120,6 +122,7 @@ erDiagram
     EVENTS ||--o{ EVENT_COMMITTEE : staffed
     EVENTS ||--o{ EVENT_VOLUNTEERS : recruits
     EVENTS |o--o{ CERTIFICATES : issues
+    EVENTS ||--o{ EVENT_EVALUATIONS : "evaluasi pasca-acara"
     USERS ||--o{ EVENT_REGISTRATIONS : registers
     EVENT_FEE_OPTIONS |o--o{ EVENT_REGISTRATIONS : "kategori dipilih"
     EVENT_DIVISIONS ||--o{ EVENT_DIVISIONS : "parent of"
@@ -181,11 +184,30 @@ erDiagram
         enum kind "peserta / panitia / pemateri / lainnya"
         string file_url "boleh tautan Google Drive"
     }
+    EVENT_EVALUATIONS {
+        uuid id PK
+        uuid event_id FK
+        int rating_registration "1-10"
+        int rating_facilities "1-10"
+        int rating_cgt "1-10; 'sesi & materi' utk acara non-WIF"
+        int rating_overall "1-10"
+        text improve_registration
+        text improve_facilities
+        text cgt_message
+        text improve_service
+        text overall_message
+        text heartwarming
+        text respondent_name "nullable"
+        text respondent_city "nullable"
+        bool anonymous "true = identitas tidak disimpan"
+        text responder_token "unik per (event_id, token)"
+    }
 ```
 
 - **`EVENT_COMMITTEE` terpisah dari `DEPARTMENT_MEMBER`**: kepanitiaan per-acara, bukan per-kabinet (bendahara acara ≠ bendahara kabinet). `EVENT_DIVISIONS` bernama teks bebas — tiap acara punya susunan sendiri.
 - **Tarif dibaca live, tidak di-snapshot.** Tier early-bird diturunkan dari `event_registrations.registered_at` vs `events.early_bird_until` — memundurkan tanggal ikut menggeser harga pendaftar lama (sengaja).
 - `EVENT_VOLUNTEERS` = lamaran dari orang yang **belum tentu punya akun**; saat diterima, dibuatkan akun undangan lalu ditugaskan ke `EVENT_COMMITTEE`.
+- **`EVENT_EVALUATIONS`** = kuesioner pasca-acara dari halaman publik (tanpa akun, identitas opsional). Empat rating + enam teks dengan skema tetap; template pertanyaan (WIF vs umum) dipilih di kode (`src/lib/event-evaluation-template.ts`), bukan kolom DB. Unique `(event_id, responder_token)` mencegah isi dobel per perangkat — [Evaluasi Acara](./Evaluasi%20Acara.md).
 - `GALLERY_ALBUMS` dan `ITEM_RESERVATIONS` juga menunjuk ke `events` — lihat domain 4 & 5.
 
 ## 4. Konten, Karir & Keanggotaan

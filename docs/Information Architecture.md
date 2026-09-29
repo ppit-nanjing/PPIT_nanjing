@@ -1,6 +1,6 @@
 # Information Architecture — PPIT Nanjing
 
-> Bagian dari [PPIT Nanjing MOC](./README.md). **Sumber kebenaran = `src/app/**/page.tsx`.** Audit terakhir: **2026-09-09** — **53 rute publik + 32 rute `/console`**. Rute dinamis (`[slug]`, `[id]`) dihitung satu.
+> Bagian dari [PPIT Nanjing MOC](./README.md). **Sumber kebenaran = `src/app/**/page.tsx`.** Audit terakhir: **2026-09-29** — **54 rute publik + 32 rute `/console`**. Rute dinamis (`[slug]`, `[id]`) dihitung satu.
 
 Tidak ada prefix locale di URL (i18n lewat cookie/sesi, lihat [AGENTS.md](../AGENTS.md) § Internationalization). Pemisahan Publik / Member / Console ditegakkan di server (`src/proxy.ts` untuk maintenance mode; `requireModuleAccess()` per modul console), bukan sembunyi-tampil di UI.
 
@@ -39,6 +39,7 @@ flowchart TD
         EvReg["/events/:slug/register"]
         EvTicket["/events/:slug/ticket — QR"]
         EvCommittee["/events/:slug/committee — QR absensi panitia"]
+        EvEval["/events/:slug/evaluasi — kuesioner pasca-acara"]
     end
 
     subgraph Career["Karir"]
@@ -82,10 +83,11 @@ flowchart TD
     Auth --> Member
     EvDetail --> EvReg
     EvReg --> EvTicket
+    EvDetail --> EvEval
     Member -->|akses admin| Console
 ```
 
-## A. Rute publik (53)
+## A. Rute publik (54)
 
 | Grup | Rute |
 |---|---|
@@ -97,7 +99,7 @@ flowchart TD
 | **Organisasi** | `/organization` · `/organization/branches` · `/organization/map` · `/organization/ad-art` · `/organization/ad-art/review` |
 | **Jelajahi** | `/coverage` · `/map` · `/places` · `/universities` · `/catalogue` · `/catalogue/donasi` · `/catalogue/sponsorship` |
 | **Berita & galeri** | `/news` · `/news/:slug` · `/gallery` · `/gallery/archive` · `/gallery/:albumId` |
-| **Events** | `/events` · `/events/:slug` · `/events/:slug/register` · `/events/:slug/ticket` · `/events/:slug/committee` |
+| **Events** | `/events` · `/events/:slug` · `/events/:slug/register` · `/events/:slug/ticket` · `/events/:slug/committee` · `/events/:slug/evaluasi` |
 | **Karir** | `/jobs` · `/jobs/:id` · `/jobs/:id/apply` · `/jobs/:id/applied` · `/career` · `/career/guide/:slug` · `/career/mentorship` · `/career/mentorship/success` |
 | **Inventaris** | `/inventory` · `/inventory/:id/borrow` · `/inventory/borrow/success` · `/inventory/contribute` · `/inventory/request-new` |
 | **Lain** | `/search` · `/l` (redirect short-link) |
