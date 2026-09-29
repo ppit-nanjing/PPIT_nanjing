@@ -32,8 +32,9 @@ const VERCEL_TOOLBAR_HOSTS = " https://vercel.live https://*.vercel.live";
 // React sendiri tidak pernah memakai eval() di mode produksi.
 const DEV_EVAL = process.env.NODE_ENV === "development" ? " 'unsafe-eval'" : "";
 
-function buildCsp(designLab = false) {
+function buildCsp(options: { designLab?: boolean; frameAncestors?: string } = {}) {
   const v = VERCEL_TOOLBAR_HOSTS;
+  const designLab = options.designLab === true;
   // The temporary /design-lab mockups load Google Fonts (their audience is the
   // internal committee reviewing designs, not the mainland-China public), so
   // that one path gets the two Google Fonts hosts; everything else keeps
@@ -53,7 +54,7 @@ function buildCsp(designLab = false) {
     // child-src to default-src 'self' and the browser silently blocks the
     // preview - which would only show up once a real PDF is finally uploaded.
     `frame-src 'self' https://*.public.blob.vercel-storage.com${v}`,
-    "frame-ancestors 'none'",
+    `frame-ancestors ${options.frameAncestors ?? "'none'"}`,
     "base-uri 'self'",
     "form-action 'self'",
     "object-src 'none'",
@@ -65,10 +66,10 @@ function buildCsp(designLab = false) {
 // else - the QR attendance scanner (/events/[slug]/scan) is the single
 // feature that opens a camera, and a blanket camera=() makes getUserMedia fail
 // there with "[Violation] Permissions policy violation: camera is not allowed".
-function securityHeaders(cameraPolicy: string) {
+function securityHeaders(cameraPolicy: string, frameOptions: "DENY" | "SAMEORIGIN" = "DENY") {
   return [
     { key: "Strict-Transport-Security", value: "max-age=63072000; includeSubDomains; preload" },
-    { key: "X-Frame-Options", value: "DENY" },
+    { key: "X-Frame-Options", value: frameOptions },
     { key: "X-Content-Type-Options", value: "nosniff" },
     {
       key: "Referrer-Policy",
@@ -131,12 +132,13 @@ const nextConfig: NextConfig = {
       },
       {
         // Temporary design-lab mockups + internal vote. Needs the Google Fonts
-        // exception above and must never be indexed; disjoint from the scanner
-        // and catch-all rules, which both exclude this prefix.
+        // exception above, same-origin iframe framing (the vote page previews
+        // mockups in an <iframe>), and must never be indexed; disjoint from the
+        // scanner and catch-all rules, which both exclude this prefix.
         source: "/design-lab/:path*",
         headers: [
-          { key: "Content-Security-Policy", value: buildCsp(true) },
-          ...securityHeaders("()"),
+          { key: "Content-Security-Policy", value: buildCsp({ designLab: true, frameAncestors: "'self'" }) },
+          ...securityHeaders("()", "SAMEORIGIN"),
           { key: "X-Robots-Tag", value: "noindex, nofollow" },
         ],
       },
