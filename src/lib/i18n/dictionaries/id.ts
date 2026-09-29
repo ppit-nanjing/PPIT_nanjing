@@ -1298,6 +1298,7 @@ export const id = {
   "eval.alreadyBody": "Satu perangkat hanya bisa mengisi sekali. Terima kasih!",
   "eval.backToEvent": "Kembali ke halaman acara",
   "eval.requiredRatings": "Isi semua penilaian (1–10) dulu ya.",
+  "eval.requiredTexts": "Isi juga semua pertanyaan wajib dulu ya — yang opsional boleh dikosongkan.",
   "eval.errorGeneric": "Gagal mengirim evaluasi. Coba lagi sebentar lagi.",
   "eval.footer": "Evaluasi untuk {{event}} — hanya dibaca pengurus PPIT Nanjing.",
 

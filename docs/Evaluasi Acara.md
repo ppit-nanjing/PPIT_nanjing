@@ -12,7 +12,7 @@ flowchart TD
     CTA --> Form["/events/:slug/evaluasi"]
     Share["Panitia: short link + QR di /console/links"] --> Form
     Form --> Submit["Server Action submitEventEvaluation()"]
-    Submit -->|rating 1-10 lengkap & token baru| DB[("event_evaluations")]
+    Submit -->|semua wajib terisi (kecuali opsional) & token baru| DB[("event_evaluations")]
     Submit -->|token sudah pernah| Already["Layar 'sudah mengisi'"]
     DB --> Console["/console/events/:id → section 'Evaluasi Acara'"]
     Console --> Export["Ekspor CSV / Excel"]
@@ -32,14 +32,14 @@ flowchart TD
 | Kolom | Pertanyaan | Tipe |
 |---|---|---|
 | `rating_registration` | Efektivitas sistem registrasi (daftar, tiket QR, informasi) | 1–10, wajib |
-| `improve_registration` | Improve registrasi untuk tahun berikutnya | teks |
+| `improve_registration` | Improve registrasi untuk tahun berikutnya | teks, wajib |
 | `rating_facilities` | Kepuasan fasilitas — venue s.d. snacks | 1–10, wajib |
-| `improve_facilities` | Improve fasilitas & sarpras | teks |
+| `improve_facilities` | Improve fasilitas & sarpras | teks, wajib |
 | `rating_cgt` | Manfaat sesi sharing CGT | 1–10, wajib |
-| `cgt_message` | Kesan & pesan untuk sharing CGT | teks |
+| `cgt_message` | Kesan & pesan untuk sharing CGT | teks, wajib |
 | `rating_overall` | Kepuasan keseluruhan (pelayanan panit s.d. games) | 1–10, wajib |
-| `improve_service` | Improve pelayanan panitia s.d. games | teks |
-| `overall_message` | Kesan, pesan & saran keseluruhan | teks |
+| `improve_service` | Improve pelayanan panitia s.d. games | teks, wajib |
+| `overall_message` | Kesan, pesan & saran keseluruhan | teks, wajib |
 | `heartwarming` | Heartwarming message for panitia (opsional) | teks |
 
 Identitas: `respondent_name` + `respondent_city` (opsional) dan flag `anonymous` — kalau anonim dicentang, server **tidak menyimpan** nama/kota sama sekali.
@@ -63,7 +63,7 @@ Skema DB tetap sama untuk kedua template (4 kolom rating + 6 kolom teks); yang b
 ## Catatan teknis
 
 - Migrasi: `drizzle/0040_event_evaluations.sql` (tabel `event_evaluations`, FK ke `events` ON DELETE CASCADE, unique `(event_id, responder_token)`).
-- Server Action: `src/app/actions/event-evaluations.ts` (`submitEventEvaluation`, `deleteEventEvaluation`). Validasi: rating 1–10 wajib, teks ≤ 2000 char, token 8–100 char; error duplikat Postgres `23505` → state `already`.
+- Server Action: `src/app/actions/event-evaluations.ts` (`submitEventEvaluation`, `deleteEventEvaluation`). Validasi: rating 1–10 wajib, pertanyaan teks wajib kecuali `heartwarming` (opsional), teks ≤ 2000 char, token 8–100 char; error duplikat Postgres `23505` → state `already`.
 - Form: `src/components/events/event-evaluation-form.tsx` (client, `useActionState`; radio 1–10 native `required`; token perangkat `ppit_eval_token`; flag selesai `ppit_eval_done_<slug>`).
 - Halaman: `src/app/events/[slug]/evaluasi/page.tsx` (i18n `id`/`en`, kota memakai urutan kanonik `src/lib/coverage-cities.ts`).
 - Ekspor memakai `src/lib/report-export.ts` yang sama dengan ekspor sensus.

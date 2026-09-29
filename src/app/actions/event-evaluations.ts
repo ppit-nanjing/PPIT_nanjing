@@ -9,7 +9,7 @@ import { requireEventConsoleAccess } from "@/lib/event-access";
 export type EventEvaluationFormState = {
   ok?: boolean;
   already?: boolean;
-  error?: "ratings" | "invalid" | "generic";
+  error?: "ratings" | "required" | "invalid" | "generic";
 };
 
 const TEXT_MAX = 2000;
@@ -18,7 +18,7 @@ const CITY_MAX = 40;
 const TOKEN_MIN = 8;
 const TOKEN_MAX = 100;
 
-function optionalText(formData: FormData, key: string, max: number): string | null {
+function trimmedText(formData: FormData, key: string, max: number): string | null {
   const raw = formData.get(key);
   if (typeof raw !== "string") return null;
   const value = raw.trim();
@@ -90,17 +90,23 @@ export async function submitEventEvaluation(
 
   try {
     if (!anonymous) {
-      name = optionalText(formData, "name", NAME_MAX);
-      city = optionalText(formData, "city", CITY_MAX);
+      name = trimmedText(formData, "name", NAME_MAX);
+      city = trimmedText(formData, "city", CITY_MAX);
     }
-    improveRegistration = optionalText(formData, "improveRegistration", TEXT_MAX);
-    improveFacilities = optionalText(formData, "improveFacilities", TEXT_MAX);
-    cgtMessage = optionalText(formData, "cgtMessage", TEXT_MAX);
-    improveService = optionalText(formData, "improveService", TEXT_MAX);
-    overallMessage = optionalText(formData, "overallMessage", TEXT_MAX);
-    heartwarming = optionalText(formData, "heartwarming", TEXT_MAX);
+    improveRegistration = trimmedText(formData, "improveRegistration", TEXT_MAX);
+    improveFacilities = trimmedText(formData, "improveFacilities", TEXT_MAX);
+    cgtMessage = trimmedText(formData, "cgtMessage", TEXT_MAX);
+    improveService = trimmedText(formData, "improveService", TEXT_MAX);
+    overallMessage = trimmedText(formData, "overallMessage", TEXT_MAX);
+    heartwarming = trimmedText(formData, "heartwarming", TEXT_MAX);
   } catch {
     return { error: "invalid" };
+  }
+
+  // Pertanyaan teks wajib (non-optional) mengikuti template: hanya `heartwarming`
+  // yang opsional. Kalau template berubah, samakan daftar ini.
+  if (!improveRegistration || !improveFacilities || !cgtMessage || !improveService || !overallMessage) {
+    return { error: "required" };
   }
 
   try {

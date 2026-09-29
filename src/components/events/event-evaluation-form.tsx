@@ -120,7 +120,11 @@ export function EventEvaluationForm({
 
       {state.error && (
         <p className="rounded-lg bg-error-container/40 px-4 py-3 text-body-md text-on-error-container">
-          {state.error === "ratings" ? t("eval.requiredRatings") : t("eval.errorGeneric")}
+          {state.error === "ratings"
+            ? t("eval.requiredRatings")
+            : state.error === "required"
+              ? t("eval.requiredTexts")
+              : t("eval.errorGeneric")}
         </p>
       )}
 
@@ -182,7 +186,7 @@ export function EventEvaluationForm({
                   {t(q.labelKey)}{" "}
                   {q.optional && <span className="text-body-sm font-normal text-on-surface-variant">({t("eval.optional")})</span>}
                 </span>
-                <textarea name={q.name} maxLength={2000} rows={3} className={TEXTAREA} />
+                <textarea name={q.name} maxLength={2000} rows={3} required={!q.optional} aria-required={!q.optional} className={TEXTAREA} />
               </label>
             ),
           )}

@@ -1295,6 +1295,7 @@ export const en = {
   "eval.alreadyBody": "One device can only submit once. Thank you!",
   "eval.backToEvent": "Back to the event page",
   "eval.requiredRatings": "Please fill in every rating (1–10) first.",
+  "eval.requiredTexts": "Please answer all required questions too — optional ones may be left empty.",
   "eval.errorGeneric": "Failed to submit the evaluation. Please try again shortly.",
   "eval.footer": "Evaluation for {{event}} — only read by PPIT Nanjing committee.",
 

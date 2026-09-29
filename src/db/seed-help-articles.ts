@@ -296,6 +296,9 @@ Menyebarkan
 Identitas
 - Nama & kota opsional. Kalau peserta mencentang "Kirim sebagai anonim", nama dan kota TIDAK disimpan sama sekali.
 
+Aturan pengisian
+- Semua pertanyaan wajib diisi — rating 1-10 maupun pertanyaan teks — kecuali "Heartwarming message for panitia" yang opsional.
+
 Melihat hasil
 - Buka /console/events/<id> → section "Evaluasi Acara".
 - Ada ringkasan rata-rata + grafik kecil distribusi nilai 1-10 untuk tiap pertanyaan, plus semua jawaban teks.
