@@ -40,7 +40,8 @@ interface Registration {
   // dari biodataJson di server; null kalau acara tanpa biodata.
   wechatId?: string | null;
   // Biodata lengkap yang di-snapshot saat mendaftar (acara requiresBiodata).
-  // Hanya dikirim ke versi LENGKAP (BPH Kabinet + Divisi Teknologi).
+  // Hanya dikirim ke versi LENGKAP (BPH Kabinet + Divisi Teknologi + BPH
+  // Panitia acara ini).
   biodata?: Record<string, string> | null;
   // Alasan peserta ini belum boleh di-check-in (dihitung di server dari status
   // pendaftaran + status bayar). null = boleh.
@@ -92,9 +93,9 @@ export function RegistrationList({
   eventId: string;
   registrations: Registration[];
   questions?: QuestionRef[];
-  // true = BPH Kabinet + Divisi Teknologi → biodata lengkap, email, jawaban,
-  // asal, tanggal. false (default) = panitia lain → nama + WeChat + tarif +
-  // status keanggotaan + check-in saja.
+  // true = BPH Kabinet + Divisi Teknologi + BPH Panitia acara ini → biodata
+  // lengkap, email, jawaban, asal, tanggal. false (default) = panitia lain →
+  // nama + WeChat + tarif + status keanggotaan + check-in saja.
   detail?: boolean;
   // Batalkan/pulihkan pendaftaran - SENGAJA independen dari `detail`: BPH
   // Panitia acara ini boleh membatalkan pendaftaran walau cuma lihat versi

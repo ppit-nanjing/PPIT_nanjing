@@ -212,11 +212,15 @@ export default async function ConsoleEventDetailPage({ params }: { params: Promi
     : [[], []];
 
   // Biodata lengkap pendaftar (paspor, KTM, universitas, telpon, jurusan, email,
-  // kota, jawaban kustom) = sama isinya dengan ekspor CSV. HANYA BPH Kabinet +
-  // Divisi Teknologi (adminScope "full") — sama seperti /console/sensus. Semua
-  // panitia lain (event.viewRegistrants, DASAR) lihat versi RINGKAS: nama +
-  // WeChat ID + kategori/nominal tarif + status keanggotaan + status check-in.
-  const canSeeRegistrantDetail = access.isFullAdmin;
+  // kota, jawaban kustom) tampil untuk BPH Kabinet + Divisi Teknologi
+  // (adminScope "full") DAN BPH Panitia acara ini (ketua/wakil/sekretaris/SC) -
+  // pengurus inti pelaksana butuh datanya untuk operasional acara. Panitia lain
+  // (event.viewRegistrants, DASAR) lihat versi RINGKAS: nama + WeChat ID +
+  // kategori/nominal tarif + status keanggotaan + status check-in.
+  const canSeeRegistrantDetail = access.isFullAdmin || access.isBphPanitia;
+  // Ekspor CSV = unduhan massal (paspor, bukti KTM, kontak) - BPH Kabinet +
+  // Divisi Teknologi DAN BPH Panitia acara ini (pengurus inti pelaksana).
+  const canExportRegistrants = access.isFullAdmin || access.isBphPanitia;
 
   // Batalkan/pulihkan pendaftaran — DIPISAH dari canSeeRegistrantDetail di
   // atas: BPH Panitia acara ini (ketua/wakil/sekretaris/supervisor) boleh
@@ -917,7 +921,7 @@ export default async function ConsoleEventDetailPage({ params }: { params: Promi
 
       {can("event.viewRegistrants") && (
       <CollapsibleSection title="Daftar Pendaftar" description={`${activeRegistrationCount} terdaftar · ${attended} hadir`}>
-        {registrations.length > 0 && canSeeRegistrantDetail && (
+        {registrations.length > 0 && canExportRegistrants && (
           <a
             href={`/api/console/events/${id}/registrations/export`}
             className="self-start inline-flex items-center gap-1.5 text-label-caps uppercase tracking-wide text-primary-container hover:text-primary transition-colors mb-3"
@@ -929,7 +933,8 @@ export default async function ConsoleEventDetailPage({ params }: { params: Promi
         {!canSeeRegistrantDetail && (
           <p className="text-xs text-on-surface-variant mb-3">
             Kamu melihat versi ringkas (nama, WeChat, tarif, status). Biodata lengkap (paspor, KTM, kontak,
-            jurusan, email, jawaban) &amp; ekspor CSV hanya untuk BPH Kabinet &amp; Divisi Teknologi.
+            jurusan, email, jawaban) &amp; ekspor CSV tampil untuk BPH Kabinet, Divisi Teknologi, dan BPH
+            Panitia acara ini.
           </p>
         )}
         <RegistrationList

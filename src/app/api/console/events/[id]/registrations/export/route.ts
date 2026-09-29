@@ -27,10 +27,11 @@ const STATUS_LABEL: Record<string, string> = {
 
 export async function GET(_req: Request, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  // Ekspor ini memuat nomor paspor + bukti KTM + kontak → HANYA BPH Kabinet +
-  // Divisi Teknologi (adminScope "full"), sama seperti /console/sensus dan blok
-  // biodata di daftar pendaftar. BPH Panitia lihat versi ringkas di layar.
-  if (!(await getEventAccess(id)).isFullAdmin) {
+  // Ekspor ini memuat nomor paspor + bukti KTM + kontak → BPH Kabinet +
+  // Divisi Teknologi (adminScope "full") DAN BPH Panitia acara ini
+  // (ketua/wakil/sekretaris/SC) yang butuh rekap untuk operasional & LPJ.
+  const access = await getEventAccess(id);
+  if (!access.isFullAdmin && !access.isBphPanitia) {
     return new Response("Forbidden", { status: 403 });
   }
 
