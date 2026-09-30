@@ -11,9 +11,8 @@ import { getGuide } from "@/lib/guides";
 
 export default async function ConsoleJobsPage() {
   await requireModuleAccess("career");
-  const guide = await getGuide("karier");
 
-  const rows = await db
+  const rowsQuery = db
     .select({
       id: jobPostings.id,
       title: jobPostings.title,
@@ -28,6 +27,8 @@ export default async function ConsoleJobsPage() {
     .leftJoin(jobApplications, eq(jobApplications.jobId, jobPostings.id))
     .groupBy(jobPostings.id)
     .orderBy(desc(jobPostings.createdAt));
+
+  const [guide, rows] = await Promise.all([getGuide("karier"), rowsQuery]);
 
   return (
     <div className="px-4 py-6 sm:px-6 lg:px-8 lg:py-10">

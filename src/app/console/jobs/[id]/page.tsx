@@ -17,6 +17,7 @@ import { CollapsibleSection } from "@/components/console/collapsible-section";
 import { ConfirmButton } from "@/components/console/confirm-button";
 import { FlashToast } from "@/components/console/flash-toast";
 import { getSiteUrl } from "@/lib/site-url";
+import { UUID_RE } from "@/lib/uuid";
 
 const GHOST_BTN =
   "text-label-caps uppercase tracking-wide px-3 py-2 rounded-md border border-outline-variant text-on-surface-variant hover:bg-surface-container-low transition-colors";
@@ -24,11 +25,10 @@ const GHOST_BTN =
 export default async function EditJobPostingPage({ params }: { params: Promise<{ id: string }> }) {
   await requireModuleAccess("career");
   const { id } = await params;
+  if (!UUID_RE.test(id)) notFound();
 
-  const [job] = await db.select().from(jobPostings).where(eq(jobPostings.id, id));
-  if (!job) notFound();
-
-  const applicants = await db
+  const jobQuery = db.select().from(jobPostings).where(eq(jobPostings.id, id));
+  const applicantsQuery = db
     .select({
       id: jobApplications.id,
       status: jobApplications.status,
@@ -42,6 +42,9 @@ export default async function EditJobPostingPage({ params }: { params: Promise<{
     .leftJoin(sensusProfiles, eq(sensusProfiles.userId, jobApplications.userId))
     .where(eq(jobApplications.jobId, id))
     .orderBy(desc(jobApplications.appliedAt));
+
+  const [[job], applicants] = await Promise.all([jobQuery, applicantsQuery]);
+  if (!job) notFound();
 
   const isOpen = job.status === "open";
 
@@ -92,7 +95,7 @@ export default async function EditJobPostingPage({ params }: { params: Promise<{
           </ConfirmButton>
           <ConfirmButton
             title="Hapus lowongan?"
-            message={`"${job.title}" dan ${applicants.length} lamarannya dihapus permanen. Untuk lowongan yang sekadar sudah selesai, pakai Tutup.`}
+            message={`"${job.title}" dan ${applicants.length} lamarannya dihapus permanen. Berkas CV yang sudah diunggah pelamar tidak ikut terhapus dari penyimpanan. Untuk lowongan yang sekadar sudah selesai, pakai Tutup.`}
             action={deleteJobPosting}
             payload={{ id: job.id }}
             className="text-label-caps uppercase tracking-wide text-error hover:opacity-80 px-3 py-2 rounded-md hover:bg-error-container/30 transition-colors"

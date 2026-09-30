@@ -1,6 +1,6 @@
 "use server";
 
-import { eq, and } from "drizzle-orm";
+import { and, count, eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { db } from "@/db";
@@ -9,7 +9,9 @@ import { requireModuleAccess } from "@/lib/admin-scope";
 import { requireCompletedSensus } from "@/lib/sensus-gate";
 import { createTemplatedNotification } from "@/lib/notifications";
 import { withFlash } from "@/lib/flash";
+import { UUID_RE } from "@/lib/uuid";
 import {
+  isHttpUrl,
   isJobApplicationStatus,
   isJobType,
   JOB_APPLICATION_STATUS_LABEL,
@@ -21,6 +23,9 @@ export async function applyToJob(jobId: string, formData: FormData) {
   const resumeUrl = String(formData.get("resumeUrl") ?? "").trim();
   const coverLetter = String(formData.get("coverLetter") ?? "").trim();
   if (!resumeUrl) throw new Error("Tautan resume/CV wajib diisi");
+  // Tautan ini kini dirender sebagai link klik di console pengurus, jadi hanya
+  // http(s) yang diterima (unggahan Blob dan tautan Drive lolos).
+  if (!isHttpUrl(resumeUrl)) throw new Error("Tautan resume/CV harus berupa alamat http(s) yang valid");
 
   const [existing] = await db
     .select()
@@ -68,6 +73,23 @@ function isValidIsoDate(value: string): boolean {
   return !Number.isNaN(d.getTime()) && d.toISOString().slice(0, 10) === value;
 }
 
+// id dari FormData masuk ke kolom uuid; nilai sembarang akan membuat Postgres
+// melempar error (500) alih-alih penolakan yang rapi.
+function readId(formData: FormData): string {
+  const id = String(formData.get("id") ?? "");
+  if (!UUID_RE.test(id)) throw new Error("Permintaan tidak valid.");
+  return id;
+}
+
+// Semua halaman publik yang memuat lowongan. /sitemap.xml di-prerender statis
+// dan memuat lowongan open, jadi ikut di-revalidate.
+function revalidatePublicJobs(jobId: string) {
+  revalidatePath("/jobs");
+  revalidatePath(`/jobs/${jobId}`);
+  revalidatePath("/career");
+  revalidatePath("/sitemap.xml");
+}
+
 // Inline error, bukan throw: error yang dilempar membuang pengurus ke error
 // boundary dan formulir yang sudah panjang hilang.
 export async function upsertJobPosting(
@@ -76,6 +98,7 @@ export async function upsertJobPosting(
   formData: FormData,
 ): Promise<JobFormState> {
   const session = await requireModuleAccess("career");
+  if (existingId && !UUID_RE.test(existingId)) return { error: "Lowongan tidak ditemukan." };
 
   const title = String(formData.get("title") ?? "").trim();
   const company = String(formData.get("company") ?? "").trim();
@@ -110,8 +133,9 @@ export async function upsertJobPosting(
     if (!updated) return { error: "Lowongan tidak ditemukan (mungkin sudah dihapus)." };
     jobId = updated.id;
   } else {
-    // Lowongan baru langsung dibuka kecuali kotaknya sengaja dikosongkan
-    // (status "closed" berfungsi sebagai draf karena enumnya hanya open/closed).
+    // Lowongan baru langsung dibuka kecuali kotaknya sengaja dikosongkan.
+    // Enumnya hanya open/closed, jadi "closed" berarti tidak tampil di daftar,
+    // BUKAN rahasia: halaman /jobs/:id tetap bisa dibaca siapa pun yang punya tautannya.
     const [created] = await db
       .insert(jobPostings)
       .values({
@@ -124,8 +148,7 @@ export async function upsertJobPosting(
   }
 
   revalidatePath("/console/jobs");
-  revalidatePath("/jobs");
-  revalidatePath(`/jobs/${jobId}`);
+  revalidatePublicJobs(jobId);
   redirect(withFlash("/console/jobs", "Lowongan tersimpan."));
 }
 
@@ -133,9 +156,9 @@ export async function upsertJobPosting(
 // server component, jadi menerima FormData.
 export async function setJobPostingStatus(formData: FormData) {
   await requireModuleAccess("career");
-  const id = String(formData.get("id") ?? "");
+  const id = readId(formData);
   const status = String(formData.get("status") ?? "");
-  if (!id || (status !== "open" && status !== "closed")) throw new Error("Permintaan tidak valid.");
+  if (status !== "open" && status !== "closed") throw new Error("Permintaan tidak valid.");
 
   const [updated] = await db
     .update(jobPostings)
@@ -146,30 +169,52 @@ export async function setJobPostingStatus(formData: FormData) {
 
   revalidatePath("/console/jobs");
   revalidatePath(`/console/jobs/${id}`);
-  revalidatePath("/jobs");
-  revalidatePath(`/jobs/${id}`);
+  revalidatePublicJobs(id);
 }
 
 // Hapus permanen, termasuk semua lamarannya (FK cascade). Untuk lowongan salah
 // input atau spam; untuk lowongan yang sekadar sudah selesai, pakai Tutup.
 export async function deleteJobPosting(formData: FormData) {
-  await requireModuleAccess("career");
-  const id = String(formData.get("id") ?? "");
-  if (!id) throw new Error("Permintaan tidak valid.");
+  const session = await requireModuleAccess("career");
+  const id = readId(formData);
+
+  const [posting] = await db
+    .select({ title: jobPostings.title, company: jobPostings.company })
+    .from(jobPostings)
+    .where(eq(jobPostings.id, id));
+  // Sudah hilang (klik ganda, tab lama): tujuannya tercapai, kembali ke daftar.
+  if (!posting) redirect("/console/jobs");
+
+  const [{ value: applicants }] = await db
+    .select({ value: count() })
+    .from(jobApplications)
+    .where(eq(jobApplications.jobId, id));
 
   await db.delete(jobPostings).where(eq(jobPostings.id, id));
 
+  // Cascade ikut membuang data pelamar, jadi catat siapa, apa, dan berapa banyak.
+  await db.insert(auditLogs).values({
+    actorUserId: session.user.id,
+    entityType: "job_posting",
+    entityId: id,
+    action: "deleted",
+    beforeJson: { title: posting.title, company: posting.company, applicants },
+    afterJson: null,
+  });
+
   revalidatePath("/console/jobs");
-  revalidatePath("/jobs");
-  revalidatePath(`/jobs/${id}`);
+  revalidatePublicJobs(id);
   redirect(withFlash("/console/jobs", "Lowongan dihapus."));
 }
 
 export async function updateJobApplicationStatus(formData: FormData) {
   const session = await requireModuleAccess("career");
-  const id = String(formData.get("id") ?? "");
+  const id = readId(formData);
   const status = String(formData.get("status") ?? "");
-  if (!id || !isJobApplicationStatus(status)) throw new Error("Status tidak valid.");
+  if (!isJobApplicationStatus(status)) throw new Error("Status tidak valid.");
+  // Notifikasi ke pelamar tidak bisa ditarik, jadi bisa dimatikan per simpan
+  // (pola yang sama dengan notifyApplicant di updateMembershipStatus).
+  const notifyApplicant = formData.get("notifyApplicant") !== null;
 
   const [before] = await db
     .select({
@@ -183,41 +228,40 @@ export async function updateJobApplicationStatus(formData: FormData) {
 
   await db.update(jobApplications).set({ status }).where(eq(jobApplications.id, id));
 
-  const statusChanged = before.status !== status;
-
   // Hanya saat status benar-benar berubah; menyimpan ulang status yang sama
-  // tidak boleh mengirim notifikasi lagi. Kegagalan notifikasi tidak boleh
-  // membatalkan perubahan status yang sudah tersimpan.
-  if (statusChanged) {
-    try {
-      const [job] = await db
-        .select({ title: jobPostings.title })
-        .from(jobPostings)
-        .where(eq(jobPostings.id, before.jobId));
-      await createTemplatedNotification({
-        userId: before.userId,
-        templateKey: "job_application_status_changed",
-        variables: {
-          jobTitle: job?.title ?? "lowongan",
-          statusLabel: JOB_APPLICATION_STATUS_LABEL[status],
-        },
-        relatedEntityType: "job",
-        relatedEntityId: before.jobId,
-      });
-    } catch (err) {
-      console.error("[jobs] failed to notify applicant of status change:", err);
-    }
-  }
-
-  if (statusChanged) {
+  // tidak boleh mencatat atau mengirim apa pun lagi.
+  if (before.status !== status) {
     await db.insert(auditLogs).values({
       actorUserId: session.user.id,
       entityType: "job_application",
       entityId: id,
       action: "status_changed",
       beforeJson: { status: before.status },
-      afterJson: { status },
+      afterJson: { status, notified: notifyApplicant },
     });
+
+    // Kegagalan notifikasi tidak boleh membatalkan perubahan status yang
+    // sudah tersimpan.
+    if (notifyApplicant) {
+      try {
+        const [job] = await db
+          .select({ title: jobPostings.title })
+          .from(jobPostings)
+          .where(eq(jobPostings.id, before.jobId));
+        await createTemplatedNotification({
+          userId: before.userId,
+          templateKey: "job_application_status_changed",
+          variables: {
+            jobTitle: job?.title ?? "lowongan",
+            statusLabel: JOB_APPLICATION_STATUS_LABEL[status],
+          },
+          relatedEntityType: "job",
+          relatedEntityId: before.jobId,
+        });
+      } catch (err) {
+        console.error("[jobs] failed to notify applicant of status change:", err);
+      }
+    }
   }
 
   revalidatePath(`/console/jobs/${before.jobId}`);
@@ -227,10 +271,12 @@ export async function updateJobApplicationStatus(formData: FormData) {
 
 // Hapus satu lamaran (mis. pelamar meminta datanya dibuang). Jangan diganti
 // dengan menghapus seluruh lowongan, karena itu membuang lamaran orang lain juga.
+// Berkas CV yang diunggah (Blob publik) TIDAK ikut terhapus: repo belum punya
+// penghapusan Blob, dan resumeUrl berasal dari input pelamar sehingga
+// menghapusnya otomatis bisa mengenai berkas lain. Lihat SOP "karier".
 export async function deleteJobApplication(formData: FormData) {
   const session = await requireModuleAccess("career");
-  const id = String(formData.get("id") ?? "");
-  if (!id) throw new Error("Permintaan tidak valid.");
+  const id = readId(formData);
 
   const [removed] = await db
     .delete(jobApplications)
@@ -248,7 +294,9 @@ export async function deleteJobApplication(formData: FormData) {
     afterJson: null,
   });
 
+  revalidatePath("/console/jobs");
   revalidatePath(`/console/jobs/${removed.jobId}`);
+  revalidatePath(`/jobs/${removed.jobId}/applied`);
   redirect(withFlash(`/console/jobs/${removed.jobId}`, "Lamaran dihapus."));
 }
 
@@ -256,9 +304,8 @@ export async function deleteJobApplication(formData: FormData) {
 // mungkin baru diubah pengurus lain dari tab lain.
 export async function updateJobApplicationNote(formData: FormData) {
   await requireModuleAccess("career");
-  const id = String(formData.get("id") ?? "");
+  const id = readId(formData);
   const note = String(formData.get("reviewNote") ?? "").trim();
-  if (!id) throw new Error("Permintaan tidak valid.");
 
   const [updated] = await db
     .update(jobApplications)

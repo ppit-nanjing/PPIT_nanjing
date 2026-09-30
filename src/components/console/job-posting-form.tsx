@@ -7,8 +7,10 @@ import { CheckboxField, SelectField, TextAreaField, TextField } from "@/componen
 import { useActionToast } from "@/components/console/submit-button";
 
 // Form buat/ubah lowongan. Client component supaya error validasi dari
-// upsertJobPosting tampil inline (useActionState), bukan membuang isian ke
-// error boundary.
+// upsertJobPosting tampil inline (useActionState) tanpa memicu error boundary.
+// Catatan: React 19 mereset kolom uncontrolled begitu aksi form selesai, jadi
+// isian ikut terkosongkan saat aksi mengembalikan error (sama seperti
+// NewsArticleForm). Field wajib sudah dijaga browser, jadi jarang terjadi.
 export function JobPostingForm({
   action,
   initial,
@@ -68,7 +70,8 @@ export function JobPostingForm({
         <CheckboxField
           name="open"
           defaultChecked
-          label="Langsung buka untuk pelamar (kosongkan untuk menyimpan sebagai draf tertutup)"
+          label="Langsung buka untuk pelamar"
+          hint="Kalau dikosongkan, lowongan tersimpan tertutup: tidak tampil di daftar Karir, tapi halamannya tetap bisa dibaca lewat tautannya. Jangan bagikan tautannya sebelum dibuka."
           className="text-on-background"
         />
       )}

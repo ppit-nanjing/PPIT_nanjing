@@ -6,19 +6,34 @@ import { db } from "@/db";
 import { auditLogs, jobApplications, jobPostings, sensusProfiles, users } from "@/db/schema";
 import { requireModuleAccess } from "@/lib/admin-scope";
 import {
+  isHttpUrl,
   JOB_APPLICATION_STATUSES,
   JOB_APPLICATION_STATUS_LABEL,
   type JobApplicationStatus,
 } from "@/lib/job-application";
+import { UUID_RE } from "@/lib/uuid";
 import {
   deleteJobApplication,
   updateJobApplicationNote,
   updateJobApplicationStatus,
 } from "@/app/actions/jobs";
 import { ConfirmButton } from "@/components/console/confirm-button";
-import { Select } from "@/components/console/form";
+import { CheckboxField, Select } from "@/components/console/form";
 import { SubmitButton } from "@/components/console/submit-button";
 import { CollapsibleSection } from "@/components/console/collapsible-section";
+
+// Nama berkas untuk teks tautan. resumeUrl berasal dari input pelamar, jadi
+// decodeURIComponent bisa melempar (mis. "%" menggantung) dan segmen terakhir
+// bisa kosong (URL berakhiran "/"); keduanya jatuh ke URL utuh.
+function resumeLabel(url: string): string {
+  try {
+    const last = new URL(url).pathname.split("/").filter(Boolean).pop();
+    if (last) return decodeURIComponent(last);
+  } catch {
+    // jatuh ke URL apa adanya
+  }
+  return url;
+}
 
 export default async function JobApplicantPage({
   params,
@@ -27,8 +42,23 @@ export default async function JobApplicantPage({
 }) {
   await requireModuleAccess("career");
   const { id, applicationId } = await params;
+  if (!UUID_RE.test(id) || !UUID_RE.test(applicationId)) notFound();
 
-  const [app] = await db
+  // Riwayat hanya butuh applicationId, jadi tidak perlu menunggu query pelamar.
+  const history = db
+    .select({
+      action: auditLogs.action,
+      afterJson: auditLogs.afterJson,
+      createdAt: auditLogs.createdAt,
+      actorName: users.name,
+    })
+    .from(auditLogs)
+    .leftJoin(users, eq(auditLogs.actorUserId, users.id))
+    .where(and(eq(auditLogs.entityType, "job_application"), eq(auditLogs.entityId, applicationId)))
+    .orderBy(desc(auditLogs.createdAt))
+    .limit(10);
+
+  const applicant = db
     .select({
       id: jobApplications.id,
       jobId: jobApplications.jobId,
@@ -49,20 +79,9 @@ export default async function JobApplicantPage({
     .leftJoin(sensusProfiles, eq(sensusProfiles.userId, jobApplications.userId))
     .where(and(eq(jobApplications.id, applicationId), eq(jobApplications.jobId, id)))
     .limit(1);
-  if (!app) notFound();
 
-  const history = await db
-    .select({
-      action: auditLogs.action,
-      afterJson: auditLogs.afterJson,
-      createdAt: auditLogs.createdAt,
-      actorName: users.name,
-    })
-    .from(auditLogs)
-    .leftJoin(users, eq(auditLogs.actorUserId, users.id))
-    .where(and(eq(auditLogs.entityType, "job_application"), eq(auditLogs.entityId, applicationId)))
-    .orderBy(desc(auditLogs.createdAt))
-    .limit(10);
+  const [[app], historyRows] = await Promise.all([applicant, history]);
+  if (!app) notFound();
 
   const applicantName = app.fullName ?? app.accountName ?? app.email;
 
@@ -88,16 +107,19 @@ export default async function JobApplicantPage({
           </div>
           <div className="px-6 py-4">
             <p className="text-label-caps uppercase tracking-wide text-on-surface-variant">CV / Resume</p>
-            {app.resumeUrl ? (
+            {app.resumeUrl && isHttpUrl(app.resumeUrl) ? (
               <a
                 href={app.resumeUrl}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="inline-flex items-center gap-1.5 text-body-md text-primary-container underline mt-1 break-all"
               >
-                {decodeURIComponent(app.resumeUrl.split("/").pop() ?? app.resumeUrl)}
+                {resumeLabel(app.resumeUrl)}
                 <ExternalLink size={13} aria-hidden />
               </a>
+            ) : app.resumeUrl ? (
+              // Bukan http(s): tampilkan sebagai teks saja, jangan jadikan tautan.
+              <p className="text-body-md text-on-background mt-1 break-all">{app.resumeUrl}</p>
             ) : (
               <p className="text-body-md text-on-background mt-1">-</p>
             )}
@@ -128,8 +150,15 @@ export default async function JobApplicantPage({
               }))}
             />
             <p className="text-label-caps text-on-surface-variant mt-3">
-              Setiap perubahan status mengirim notifikasi ke pelamar. Menyimpan ulang status yang sama tidak.
+              Notifikasi ke pelamar hanya dikirim saat status benar-benar berubah, dan tidak bisa ditarik.
+              Menyimpan ulang status yang sama tidak mengirim apa pun.
             </p>
+            <CheckboxField
+              name="notifyApplicant"
+              defaultChecked
+              label="Kirim notifikasi ke pelamar saat status berubah"
+              className="mt-3 text-on-background"
+            />
             <SubmitButton
               successMessage="Status lamaran tersimpan."
               className="mt-4 bg-primary-container text-on-primary text-label-caps uppercase tracking-wide px-6 py-3 rounded-md hover:bg-primary transition-colors"
@@ -162,11 +191,11 @@ export default async function JobApplicantPage({
         </div>
       </CollapsibleSection>
 
-      {history.length > 0 && (
+      {historyRows.length > 0 && (
         <CollapsibleSection title="Riwayat Status" className="mt-8">
           <ul className="flex flex-col gap-2">
-            {history.map((log, i) => {
-              const after = (log.afterJson as { status?: string } | null) ?? {};
+            {historyRows.map((log, i) => {
+              const after = (log.afterJson as { status?: string; notified?: boolean } | null) ?? {};
               return (
                 <li key={`${log.createdAt.toISOString()}-${i}`} className="text-body-md text-on-surface-variant">
                   <span className="text-on-background">{log.actorName ?? "Pengurus"}</span> mengubah status
@@ -176,6 +205,7 @@ export default async function JobApplicantPage({
                   </span>
                   {" · "}
                   {new Date(log.createdAt).toLocaleString("id-ID", { dateStyle: "medium", timeStyle: "short" })}
+                  {after.notified === false && <span className="text-label-caps"> · pelamar tidak diberi notifikasi</span>}
                 </li>
               );
             })}
@@ -186,7 +216,7 @@ export default async function JobApplicantPage({
       <div className="mt-8">
         <ConfirmButton
           title="Hapus lamaran ini?"
-          message={`Lamaran ${applicantName} untuk ${app.jobTitle} dihapus permanen, termasuk catatan pengurus. Lamaran lain tidak terpengaruh.`}
+          message={`Lamaran ${applicantName} untuk ${app.jobTitle} dihapus permanen, termasuk catatan pengurus. Lamaran lain tidak terpengaruh. Berkas CV yang diunggah TIDAK ikut terhapus dari penyimpanan; kalau pelamar meminta datanya dibuang, hapus juga berkasnya (lihat SOP Karier).`}
           action={deleteJobApplication}
           payload={{ id: app.id }}
           className="text-label-caps uppercase tracking-wide text-error hover:opacity-80 px-3 py-2 rounded-md hover:bg-error-container/30 transition-colors"

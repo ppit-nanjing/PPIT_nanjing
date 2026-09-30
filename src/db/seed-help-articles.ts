@@ -325,17 +325,17 @@ SOP: perusahaan menghubungi PPIT untuk memasang lowongan
 Memasang lowongan (/console/jobs → Tambah Lowongan)
 - Judul, Perusahaan, Jenis pekerjaan: wajib.
 - Lokasi, Batas lamaran, Deskripsi, Persyaratan: opsional.
-- Kotak "Langsung buka untuk pelamar": kalau dicentang, lowongan langsung tampil di halaman Karir publik. Kalau dikosongkan, tersimpan sebagai draf tertutup dan bisa dibuka belakangan.
+- Kotak "Langsung buka untuk pelamar": kalau dicentang, lowongan langsung tampil di halaman Karir publik. Kalau dikosongkan, lowongan tersimpan tertutup: tidak tampil di daftar dan tidak bisa dilamar, tapi halamannya TETAP bisa dibaca siapa pun yang punya tautannya. Jadi bukan draf rahasia, dan jangan bagikan tautannya sebelum dibuka.
 - Batas lamaran hanya label yang tampil ke pelamar, lowongan TIDAK tertutup sendiri setelah tanggalnya lewat. Tutup manual.
 
 Menutup, membuka, menghapus lowongan
 - Tutup: hilang dari halaman publik dan tidak bisa dilamar lagi, termasuk lewat tautan lama. Lamaran yang sudah masuk tetap ada. Ini pilihan normal kalau lowongan sudah selesai.
 - Buka lagi: tampil dan bisa dilamar lagi.
-- Hapus: permanen, dan ikut menghapus SEMUA lamarannya. Hanya untuk lowongan salah input atau spam.
+- Hapus: permanen, dan ikut menghapus SEMUA lamarannya (tercatat di log audit: siapa, lowongan apa, berapa pelamar). Hanya untuk lowongan salah input atau spam. Berkas CV yang sudah diunggah pelamar tidak ikut terhapus dari penyimpanan.
 
 Memproses lamaran (klik lowongan → Pelamar → klik nama)
 - Kamu melihat email pelamar, tautan CV, dan cover letter.
-- Status berjalan: Terkirim → Sedang direview → Tahap wawancara → Diterima / Ditolak. Setiap perubahan status otomatis mengirim notifikasi ke pelamar (muncul di lonceng), tapi hanya sekali: menyimpan status yang sama tidak mengirim ulang. Notifikasi tidak bisa ditarik, jadi pilih status dengan hati-hati.
+- Status berjalan: Terkirim → Sedang direview → Tahap wawancara → Diterima / Ditolak. Saat status berubah, pelamar otomatis dapat notifikasi (muncul di lonceng), tapi hanya sekali: menyimpan status yang sama tidak mengirim ulang. Notifikasi tidak bisa ditarik. Kalau kamu hanya mau mencatat status tanpa memberi tahu pelamar (misalnya salah pilih dan mau dibetulkan dulu), kosongkan kotak "Kirim notifikasi ke pelamar" sebelum Simpan Status.
 - "Diterima" artinya pelamar lolos atau mendapat tawaran, belum tentu sudah resmi bekerja.
 - Catatan Pengurus: internal, TIDAK terlihat pelamar. Disimpan terpisah dari status, jadi menyimpan catatan tidak mengubah status.
 - Riwayat Status mencatat siapa mengubah apa dan kapan.
@@ -343,7 +343,11 @@ Memproses lamaran (klik lowongan → Pelamar → klik nama)
 Aturan data pelamar
 - CV dan email pelamar hanya untuk proses lowongan itu. Jangan dibagikan ke grup atau pihak lain tanpa persetujuan pelamar.
 - Meneruskan CV ke perusahaan dilakukan lewat email resmi PPIT setelah pelamar tahu dan setuju, bukan lewat chat grup.
-- Pelamar minta datanya dihapus: buka lamarannya → Hapus Lamaran. Jangan hapus lowongannya, karena itu membuang lamaran orang lain juga.`,
+- Tautan CV harus berupa alamat http(s) (unggahan atau tautan Drive); yang lain ditolak saat melamar. Klik tautan CV hanya kalau kamu mengenali asalnya.
+- Pelamar minta datanya dihapus, langkahnya berurutan:
+  1. Buka lamarannya dan salin tautan CV-nya dulu.
+  2. Klik Hapus Lamaran. Jangan hapus lowongannya, karena itu membuang lamaran orang lain juga.
+  3. Berkas CV-nya TIDAK ikut terhapus, karena disimpan terpisah di Vercel Blob (folder "resume"). Minta Divisi Teknologi menghapus berkas dari tautan yang tadi disalin. Kalau CV-nya tautan Drive milik pelamar sendiri, tidak ada yang perlu dihapus.`,
   },
 ];
 

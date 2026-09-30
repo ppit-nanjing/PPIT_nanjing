@@ -47,7 +47,7 @@ flowchart TD
 | `/career/mentorship` | Form "Alumni Network Mentorship" — bidang minat, latar belakang, motivasi. Terpisah dari lamaran kerja. |
 | `/career/mentorship/success` | Konfirmasi; matching mentor & tindak lanjut lewat email |
 | `/console/jobs` | Daftar semua lowongan (open + closed) dengan jumlah pelamar |
-| `/console/jobs/new` | Form lowongan baru. Kotak "Langsung buka" mati = tersimpan sebagai draf tertutup |
+| `/console/jobs/new` | Form lowongan baru. Kotak "Langsung buka" mati = tersimpan `closed` (tidak tampil di daftar, tidak bisa dilamar, tapi halaman `/jobs/:id`-nya tetap terbaca lewat tautan) |
 | `/console/jobs/:id` | Ubah lowongan, Tutup/Buka lagi, Hapus, dan daftar pelamar |
 | `/console/jobs/:id/applicants/:applicationId` | Tinjau satu pelamar: email, CV, cover letter, ubah status, catatan, riwayat status, hapus lamaran |
 
@@ -60,10 +60,13 @@ flowchart TD
 ## Keputusan desain
 
 - **Status dan catatan disimpan lewat dua aksi terpisah** (`updateJobApplicationStatus`, `updateJobApplicationNote`). Kalau digabung, menyimpan catatan dari tab lama diam-diam mengembalikan status yang baru diubah pengurus lain. Pola yang sama dipakai modul Pendaftaran.
-- **Notifikasi hanya saat status benar-benar berubah** dan dibungkus try/catch, sehingga menyimpan ulang status yang sama tidak mengirim ulang, dan notifikasi yang gagal tidak membatalkan perubahan status. Satu template generik `job_application_status_changed` (variabel `jobTitle`, `statusLabel`), bukan satu per status, karena kelimanya langkah satu pipeline. Bisa diedit di `/console/notifications`.
+- **Notifikasi hanya saat status benar-benar berubah**, bisa dimatikan per simpan lewat kotak "Kirim notifikasi ke pelamar" (pola `notifyApplicant` di Pendaftaran, karena notifikasi tidak bisa ditarik), dan dibungkus try/catch sehingga notifikasi yang gagal tidak membatalkan perubahan status. Riwayat mencatat apakah pelamar diberi tahu. Satu template generik `job_application_status_changed` (variabel `jobTitle`, `statusLabel`), bukan satu per status, karena kelimanya langkah satu pipeline. Bisa diedit di `/console/notifications`.
 - **"Tutup" ditegakkan di server**, bukan hanya menyembunyikan tombol: `applyToJob` dan halaman apply sama-sama menolak lowongan yang bukan `open`.
 - **Label status** (`src/lib/job-application.ts`) memakai kata yang sama dengan kamus i18n `jobs.status.*`. Halaman `/jobs/:id/applied` memetakan enum DB (`under_review`, `offered`) ke kunci kamus lama (`reviewed`, `accepted`) — sebelumnya pemetaan ini tidak cocok dan akan menampilkan teks enum mentah begitu ada yang mengubah status.
-- **Hapus lowongan = hapus semua lamarannya** (FK cascade). Untuk permintaan hapus data satu pelamar ada aksi terpisah `deleteJobApplication`; keduanya tercatat/diperingatkan di UI.
+- **Hapus lowongan = hapus semua lamarannya** (FK cascade). Untuk permintaan hapus data satu pelamar ada aksi terpisah `deleteJobApplication`. Keduanya menulis `audit_logs` (`job_posting` / `job_application`, action `deleted`; yang pertama mencatat judul, perusahaan, dan jumlah pelamar) dan diperingatkan di dialog konfirmasi.
+- **`resumeUrl` divalidasi** sebagai alamat http(s) saat melamar (`isHttpUrl` di `src/lib/job-application.ts`) dan hanya dirender sebagai tautan di console bila lolos cek yang sama, karena nilainya berasal dari input pelamar. Nama berkas untuk teks tautan diturunkan secara defensif (`decodeURIComponent` bisa melempar pada `%` yang menggantung).
+- **Semua id dari FormData dan route `[id]`** dicek `UUID_RE` (`src/lib/uuid.ts`) sebelum menyentuh kolom uuid, supaya id ngawur menjadi 404/penolakan, bukan error Postgres.
+- **Mutasi lowongan me-revalidate `/jobs`, `/jobs/:id`, `/career`, dan `/sitemap.xml`** (sitemap di-prerender statis dan memuat lowongan `open`).
 - **Skema**: hanya satu kolom baru, `job_applications.review_note` (nullable, aditif), migrasi `drizzle/0041_job_application_review_note.sql`. Siapa dan kapan mengubah status sudah ada di `audit_logs` (`entity_type = job_application`).
 
 ## Batasan yang diketahui
@@ -73,6 +76,8 @@ Sengaja tidak dikerjakan di Fase 1; masing-masing cukup kecil pada skala PPIT se
 - **Tidak ada unique `(job_id, user_id)` di `job_applications`.** `applyToJob` memeriksa dulu lalu insert, jadi klik ganda bersamaan bisa membuat dua baris. Sudah ada sebelum Fase 1. Perbaikan yang benar adalah unique index, tetapi harus mengecek duplikat yang sudah ada di produksi dulu, dan index itu sekaligus mempercepat query per lowongan (kolom FK `job_id` belum di-index).
 - **Belum ada pagination** di daftar lowongan dan daftar pelamar. Wajar untuk ratusan baris; tambahkan bila satu lowongan mulai menerima ratusan lamaran.
 - **`application_deadline` hanya label.** Lowongan tidak tertutup otomatis saat tanggalnya lewat; pengurus menutup manual. Menegakkannya adalah keputusan produk (zona waktu, tanggal inklusif).
+- **Berkas CV tidak ikut terhapus** saat lamaran/lowongan dihapus. CV diunggah ke Vercel Blob publik (folder `resume`, URL tak terduga tapi tanpa auth), dan repo belum punya penghapusan Blob di mana pun. Penghapusan otomatis sengaja tidak ditambahkan di sini karena `resume_url` berasal dari input pelamar (bisa menunjuk berkas lain). Prosedurnya manual, ada di SOP `karier`. Perbaikan yang benar adalah menyimpan pathname Blob hasil unggahan di sisi server, bukan memercayai URL kiriman klien.
+- **Lowongan `closed` tetap terbaca lewat tautannya.** `/jobs/:id` hanya menukar tombol lamar dengan keterangan ditutup; isinya tetap tampil. Jangan perlakukan "tertutup" sebagai draf rahasia.
 - **Notifikasi hanya in-app.** Tidak ada email ke pelamar saat status berubah (berbeda dengan keputusan Pendaftaran pengurus).
 - **CV diteruskan ke perusahaan secara manual** oleh pengurus (lihat SOP). Belum ada akun perusahaan.
 - **Artikel panduan karir dan mentorship belum punya sisi console** — `career_guide_articles` dan `mentorship_applications` dikelola lewat query langsung/laporan. (Catatan lama di dokumen ini yang menyebut "loker & guide lewat modul konten" tidak benar.)
