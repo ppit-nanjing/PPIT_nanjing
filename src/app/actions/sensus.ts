@@ -86,7 +86,13 @@ function normalizeFullName(value: string): string {
 // bandingkan pakai normalizeFullName yang sama persis dengan yang dipakai di
 // atas, daripada menduplikasi aturannya sebagai pola regex SQL (rawan meleset
 // beda lapisan escaping antara JS - driver - Postgres).
-async function fullNameMatchesAnotherUser(userId: string, fullName: string): Promise<boolean> {
+//
+// Diekspor (bukan private seperti passportTakenByAnotherUser) karena dipakai
+// dua tempat: di sini saat wizard menyimpan progres, DAN di /profile untuk
+// orang yang SUDAH lama isi sensus dan tidak akan pernah membuka wizard lagi -
+// tanpa itu, akun ganda yang sudah kadung ada (bukan yang baru dibuat) tidak
+// akan pernah ketahuan sendiri oleh pemiliknya.
+export async function fullNameMatchesAnotherUser(userId: string, fullName: string): Promise<boolean> {
   const normalized = normalizeFullName(fullName);
   if (!normalized) return false;
   const rows = await db

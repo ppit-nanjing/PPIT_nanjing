@@ -13,6 +13,7 @@ import { ImageUploadCropper } from "@/components/upload/image-upload-cropper";
 import { updateProfile } from "@/app/actions/user";
 import { requestReturn } from "@/app/actions/inventory";
 import { getMyCertificates } from "@/app/actions/committee";
+import { fullNameMatchesAnotherUser } from "@/app/actions/sensus";
 import { getT } from "@/lib/i18n/server";
 import {
   ClipboardCheck,
@@ -26,6 +27,7 @@ import {
   SlidersHorizontal,
   Languages,
   Bell,
+  AlertTriangle,
 } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
@@ -110,6 +112,12 @@ export default async function ProfilePage({
   const { t } = await getT();
 
   const sensusComplete = sensus?.completionStatus === "complete";
+  // Pengecekan yang SAMA dengan wizard sensus (src/app/actions/sensus.ts), tapi
+  // dipasang pasif di sini: orang yang sudah kadung punya akun ganda dan tidak
+  // akan pernah membuka wizard lagi tetap ketahuan begitu dia buka profilnya.
+  const possibleDuplicateName = sensus?.fullName
+    ? await fullNameMatchesAnotherUser(session.user.id, sensus.fullName)
+    : false;
 
   return (
     <>
@@ -125,6 +133,16 @@ export default async function ProfilePage({
             >
               <CheckCircle2 size={18} className="text-primary-container shrink-0" aria-hidden />
               <span className="text-body-sm text-on-background">{t("profile.savedNotice")}</span>
+            </div>
+          )}
+
+          {possibleDuplicateName && (
+            <div
+              role="status"
+              className="flex items-start gap-3 bg-error-container/40 border-l-4 border-error rounded-r-lg p-4 mb-6"
+            >
+              <AlertTriangle className="text-error shrink-0 mt-0.5" size={18} aria-hidden />
+              <p className="flex-1 text-body-md text-on-background">{t("profile.possibleDuplicateName")}</p>
             </div>
           )}
 

@@ -87,6 +87,7 @@ export const id = {
   "profile.sensusDesc": "Universitas, program studi, kontak darurat, dan data akademik lainnya",
   "profile.sensusEdit": "Ubah",
   "profile.sensusFill": "Isi Sekarang",
+  "profile.possibleDuplicateName": "Nama sensusmu juga tercatat di akun lain. Kalau kamu pernah login pakai HP teman atau akun Google lain, itu mungkin akunmu yang lama — hubungi pengurus untuk menggabungkannya supaya data sensus dan riwayat acaramu tidak terpisah.",
   "profile.certificatesHeading": "E-Sertifikat",
   "profile.certificatesEmpty": "Belum ada sertifikat yang diterbitkan untukmu.",
   "profile.certificatesViewFile": "Lihat berkas",

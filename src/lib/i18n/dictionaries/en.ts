@@ -84,6 +84,7 @@ export const en = {
   "profile.sensusDesc": "University, program, emergency contact, and other academic data",
   "profile.sensusEdit": "Edit",
   "profile.sensusFill": "Fill Now",
+  "profile.possibleDuplicateName": "Your census name is also on a different account. If you've ever signed in on a friend's phone or a different Google account, that may be your old one — contact the committee to merge them so your census data and event history don't stay split apart.",
   "profile.certificatesHeading": "E-Certificates",
   "profile.certificatesEmpty": "No certificates issued for you yet.",
   "profile.certificatesViewFile": "View file",
