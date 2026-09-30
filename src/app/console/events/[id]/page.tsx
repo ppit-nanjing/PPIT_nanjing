@@ -937,9 +937,9 @@ export default async function ConsoleEventDetailPage({ params }: { params: Promi
         )}
         {!canSeeRegistrantDetail && (
           <p className="text-xs text-on-surface-variant mb-3">
-            Kamu melihat versi ringkas (nama, WeChat, tarif, status). Biodata lengkap (paspor, KTM, kontak,
-            jurusan, email, jawaban) &amp; ekspor CSV tampil untuk BPH Kabinet, Divisi Teknologi, dan BPH
-            Panitia acara ini.
+            Kamu melihat versi ringkas (nama, kota, kampus, WeChat, tarif, status). Biodata lengkap (paspor,
+            KTM, kontak, jurusan, email, jawaban) &amp; ekspor CSV tampil untuk BPH Kabinet, Divisi Teknologi,
+            dan BPH Panitia acara ini.
           </p>
         )}
         <RegistrationList

@@ -41,7 +41,7 @@ interface Registration {
   // kosong.
   wechatId?: string | null;
   // Asal kampus — snapshot biodata atau fallback sensus (acara requiresSensus
-  // seperti Fun Hike). Ditampilkan di versi LENGKAP.
+  // seperti Fun Hike). Selalu tampil di baris ringkas.
   university?: string | null;
   // Biodata lengkap yang di-snapshot saat mendaftar (acara requiresBiodata).
   // Hanya dikirim ke versi LENGKAP (BPH Kabinet + Divisi Teknologi + BPH
@@ -127,7 +127,7 @@ export function RegistrationList({
       if (checkinFilter === "out" && r.status === "attended") return false;
       if (feeFilter !== "all" && r.feeCategory !== feeFilter) return false;
       if (q) {
-        const hay = [r.userName, r.wechatId, r.feeLabel, detail ? r.userEmail : null, detail ? r.university : null]
+        const hay = [r.userName, r.wechatId, r.feeLabel, r.branch, r.university, detail ? r.userEmail : null]
           .filter(Boolean)
           .join(" ")
           .toLowerCase();
@@ -225,7 +225,7 @@ export function RegistrationList({
             type="search"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder={detail ? "Cari nama / WeChat / email" : "Cari nama / WeChat"}
+            placeholder={detail ? "Cari nama / kampus / WeChat / email" : "Cari nama / kampus / WeChat"}
             aria-label="Cari pendaftar"
             className="w-full bg-soft-gray rounded-md py-2 pl-8 pr-2 text-body-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-container"
           />
@@ -267,7 +267,9 @@ export function RegistrationList({
         }
         renderSummary={(r) => ({
           title: r.userName ?? "(tanpa nama)",
-          subtitle: [detail ? r.branch : null, r.membership].filter(Boolean).join(" · "),
+          // Kota + kampus + status keanggotaan selalu tampil di baris ringkas —
+          // panitia memakainya untuk memastikan identitas pendaftar.
+          subtitle: [r.branch, r.university, r.membership].filter(Boolean).join(" · "),
           badge: { text: STATUS_LABEL[r.status], tone: STATUS_TONE[r.status] },
         })}
         renderDetail={(r) => {
@@ -281,30 +283,28 @@ export function RegistrationList({
                 {detail && r.userEmail && (
                   <span className="break-all normal-case">{r.userEmail}</span>
                 )}
-                {!detail && r.wechatId && (
+                {/* Kota, kampus, dan WeChat selalu tampil (ringkas maupun
+                    lengkap) supaya panitia bisa memastikan identitas pendaftar.
+                    Datanya dari snapshot biodata atau sensus; kalau blok biodata
+                    sudah memuatnya, jangan tampil dua kali. */}
+                {r.branch && (
+                  <span>
+                    Asal: <span className="text-on-background normal-case">{r.branch}</span>
+                  </span>
+                )}
+                {r.university && !rows.some((b) => b.key === "university") && (
+                  <span>
+                    Kampus: <span className="text-on-background normal-case">{r.university}</span>
+                  </span>
+                )}
+                {r.wechatId && !rows.some((b) => b.key === "wechatId") && (
                   <span>
                     WeChat ID: <span className="text-on-background normal-case">{r.wechatId}</span>
                   </span>
                 )}
                 <span>
-                  {detail ? "Asal: " : "Status: "}
-                  <span className="text-on-background normal-case">
-                    {[detail ? r.branch : null, r.membership].filter(Boolean).join(" · ") || "—"}
-                  </span>
+                  Status: <span className="text-on-background normal-case">{r.membership || "—"}</span>
                 </span>
-                {/* Kampus & WeChat dari sensus untuk acara tanpa blok biodata
-                    (mis. Fun Hike requiresSensus); kalau blok biodata sudah
-                    memuatnya, jangan tampil dua kali. */}
-                {detail && r.university && !rows.some((b) => b.key === "university") && (
-                  <span>
-                    Kampus: <span className="text-on-background normal-case">{r.university}</span>
-                  </span>
-                )}
-                {detail && r.wechatId && !rows.some((b) => b.key === "wechatId") && (
-                  <span>
-                    WeChat ID: <span className="text-on-background normal-case">{r.wechatId}</span>
-                  </span>
-                )}
                 {r.feeLabel && (
                   <span>
                     Tarif: <span className="text-on-background normal-case">{r.feeLabel}</span>
