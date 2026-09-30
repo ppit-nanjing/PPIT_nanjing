@@ -98,6 +98,21 @@ Rancangannya, supaya Divisi Teknologi berikutnya tidak menemukannya ulang:
 - Lowongan perusahaan yang sudah terverifikasi langsung tayang; admin tetap bisa menutup/menghapus.
 - **Peringatan kebocoran data:** `src/app/console/page.tsx` (dashboard `/console`) tidak punya gate modul sendiri dan menampilkan teks masukan, nama peserta, dan pelamar pengurus ke siapa pun yang lolos layout. Sebelum recruiter diizinkan masuk `/console`, dashboard harus mengalihkan mereka ke `/console/jobs`, dan seluruh halaman `/console/**` harus diaudit untuk gate modulnya sendiri. Alternatif yang lebih ketat: area terpisah `/company/*`.
 
+### Kebutuhan tambahan untuk sisi perusahaan (2026-10-01, belum dirancang)
+
+Permintaan dari pengurus: portal perusahaan sebaiknya setara **JobStreet**, dengan fitur yang benar-benar dibutuhkan recruiter, bukan sekadar formulir posting.
+
+- **Pertanyaan penyaring per lowongan.** Perusahaan membuat sendiri pertanyaan yang harus dijawab pelamar saat melamar (teks, pilihan, ya/tidak, skala, dst), wajib atau opsional. Jawaban tersimpan per lamaran.
+- **Recruiter melihat CV dan jawaban** pelamar lowongan perusahaannya sendiri, dan menggeser status (pipeline yang sama dengan Fase 1).
+- **Tab Analitik per lowongan**: ringkasan jawaban per pertanyaan (distribusi, grafik) dengan **filter** (mis. status lamaran, jawaban tertentu, kampus/kota), mirip tab Analitik sensus (`/console/sensus`).
+
+Bahan yang sudah ada dan patut dipakai ulang, supaya tidak membangun mesin formulir kedua:
+
+- `src/lib/membership-form.ts` — definisi tipe field (`MembershipFieldType`, `FIELD_TYPE_LABELS`, `OPTION_TYPES`, `SCALE_TYPES`, grid), `QUESTION_BANK`, dan penilaian jawaban. Mesin pertanyaan Pendaftaran sudah mendukung banyak tipe.
+- `src/components/console/sensus-analytics-view.tsx` — tampilan analitik (donat + batang, tanpa dependency baru) yang bisa dijadikan dasar tab Analitik lowongan.
+
+Hal yang harus diputuskan saat dirancang: apakah pertanyaan penyaring boleh memakai aturan gugur otomatis (knockout), apakah jawaban pelamar boleh dilihat perusahaan sebelum pelamar diberi tahu, dan bagaimana persetujuan pelamar atas dibagikannya CV dan jawaban ke perusahaan (lihat catatan privasi di atas). Skema jawaban per lamaran hampir pasti butuh tabel baru; ini **bukan** tambahan kecil di atas Fase 1.
+
 ## Terkait
 
 - SOP pengurus: Help Center artikel **`karier`** (`src/db/seed-help-articles.ts`). Diterapkan ke database dengan `npx tsx --env-file=.env src/db/seed-help-articles.ts` (idempotent). Unduh sebagai Word dari `/console/docs` untuk diserahkan ke BPH/pusat.
