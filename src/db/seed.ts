@@ -155,7 +155,7 @@ async function main() {
       name: "Divisi Usaha Dana",
       parentDepartmentId: deptSumberDaya.id,
       orderIndex: 1,
-      adminModuleScope: ["reports"],
+      adminModuleScope: ["reports", "career"],
       description: "Pendanaan dan kemitraan/sponsorship.",
     },
     {

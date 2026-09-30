@@ -724,6 +724,8 @@ export const jobApplications = pgTable("job_applications", {
   resumeUrl: text("resume_url"),
   coverLetter: text("cover_letter"),
   status: jobApplicationStatusEnum("status").notNull().default("submitted"),
+  // Catatan internal pengurus; tidak pernah ditampilkan ke pelamar.
+  reviewNote: text("review_note"),
   appliedAt: timestamp("applied_at").notNull().defaultNow(),
 });
 

@@ -25,7 +25,7 @@
 // /console/sensus in a LIMITED view — name, campus, completeness, student-card
 // photo only, no passport/contact/export/edit. A holder of full "sensus" is
 // unaffected (they see everything).
-export type AdminModule = "users" | "organization" | "events" | "inventory" | "reports" | "sensus" | "sensus-ranting" | "sensus-verify" | "content" | "feedback" | "membership" | "notifications" | "links" | "documents";
+export type AdminModule = "users" | "organization" | "events" | "inventory" | "reports" | "sensus" | "sensus-ranting" | "sensus-verify" | "content" | "feedback" | "membership" | "notifications" | "links" | "documents" | "career";
 
 const MODULE_ALIASES: Partial<Record<AdminModule, string[]>> = {
   content: ["content", "gallery"],
@@ -53,6 +53,7 @@ export const ASSIGNABLE_SCOPE_KEYS: { key: string; label: string }[] = [
   { key: "membership", label: "Pendaftaran Anggota (rekrutmen)" },
   { key: "links", label: "Tautan (short link)" },
   { key: "documents", label: "Dokumen (Google Drive)" },
+  { key: "career", label: "Karier (lowongan kerja & lamaran)" },
 ];
 
 // Keys that only a "full" tier actor may grant to a department - handing these

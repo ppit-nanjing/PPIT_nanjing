@@ -11,11 +11,13 @@ import type { T } from "@/lib/i18n/translate";
 import { CheckCircle2 } from "lucide-react";
 import Link from "next/link";
 
+// Kunci di sini harus sama dengan nilai jobApplicationStatusEnum di DB
+// (under_review / offered), bukan istilah kamusnya (reviewed / accepted).
 const STATUS_KEYS: Record<string, TKey> = {
   submitted: "jobs.status.submitted",
-  reviewed: "jobs.status.reviewed",
+  under_review: "jobs.status.reviewed",
   interview: "jobs.status.interview",
-  accepted: "jobs.status.accepted",
+  offered: "jobs.status.accepted",
   rejected: "jobs.status.rejected",
 };
 
