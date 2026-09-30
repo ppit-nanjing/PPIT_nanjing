@@ -1,6 +1,6 @@
 "use server";
 
-import { and, eq, ne } from "drizzle-orm";
+import { and, eq, ne, isNotNull } from "drizzle-orm";
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { auth } from "@/auth";
@@ -65,6 +65,37 @@ async function passportTakenByAnotherUser(userId: string, passportNumber: string
   return Boolean(clash);
 }
 
+// Normalisasi untuk perbandingan: exact match setelah trim + lowercase +
+// rapikan spasi ganda — BUKAN token-sort. Token-sort akan membuat "Ahmad
+// Budi" dan "Budi Ahmad" dianggap cocok padahal itu bisa dua orang berbeda
+// yang kebetulan berbagi dua kata; urutan kata dipertahankan justru untuk
+// menghindari itu.
+function normalizeFullName(value: string): string {
+  return value.trim().toLowerCase().replace(/\s+/g, " ");
+}
+
+// Sama filosofinya dengan passportTakenByAnotherUser di atas, TAPI bukan hard
+// block: nama lengkap, tidak seperti nomor paspor, memang bisa sama persis
+// milik dua orang yang sungguh berbeda. Fungsi ini HANYA boolean untuk
+// pengingat lembut ("mungkin kamu sudah pernah mengisi ini dari akun lain") -
+// tidak pernah membocorkan email/field lain milik akun itu, dan tidak pernah
+// menahan submit.
+//
+// Perbandingan dilakukan di kode, bukan lewat regex di sisi Postgres - jumlah
+// baris sensus di tabel ini kecil (ratusan), jadi ambil semua nama lalu
+// bandingkan pakai normalizeFullName yang sama persis dengan yang dipakai di
+// atas, daripada menduplikasi aturannya sebagai pola regex SQL (rawan meleset
+// beda lapisan escaping antara JS - driver - Postgres).
+async function fullNameMatchesAnotherUser(userId: string, fullName: string): Promise<boolean> {
+  const normalized = normalizeFullName(fullName);
+  if (!normalized) return false;
+  const rows = await db
+    .select({ userId: sensusProfiles.userId, fullName: sensusProfiles.fullName })
+    .from(sensusProfiles)
+    .where(and(ne(sensusProfiles.userId, userId), isNotNull(sensusProfiles.fullName)));
+  return rows.some((r) => normalizeFullName(r.fullName ?? "") === normalized);
+}
+
 export async function submitSensusProfile(
   returnTo: string | null,
   input: SensusInput
@@ -98,7 +129,9 @@ export async function submitSensusProfile(
 // implements the "simpan progres per-langkah" note in docs/Sensus Profile Flow.md
 // so an incomplete session isn't lost. Never downgrades an already-complete
 // profile back to incomplete; only the final submit sets completion_status.
-export async function saveSensusStep(input: SensusInput): Promise<{ savedAt: string } | { error: string }> {
+export async function saveSensusStep(
+  input: SensusInput
+): Promise<{ savedAt: string; possibleDuplicateName?: boolean } | { error: string }> {
   const session = await auth();
   if (!session?.user?.id) return { error: "unauthenticated" };
 
@@ -109,6 +142,10 @@ export async function saveSensusStep(input: SensusInput): Promise<{ savedAt: str
   if (await passportTakenByAnotherUser(session.user.id, input.passportNumber)) {
     return { error: "passport_taken" };
   }
+
+  // Beda dari cek paspor di atas: ini BUKAN hard block, jadi tidak pernah
+  // menahan penyimpanan - cuma ikut ke respons sukses sebagai pengingat lembut.
+  const possibleDuplicateName = await fullNameMatchesAnotherUser(session.user.id, input.fullName);
 
   const [existing] = await db
     .select({ completionStatus: sensusProfiles.completionStatus })
@@ -126,7 +163,10 @@ export async function saveSensusStep(input: SensusInput): Promise<{ savedAt: str
     .values({ userId: session.user.id, ...values })
     .onConflictDoUpdate({ target: sensusProfiles.userId, set: values });
 
-  return { savedAt: values.updatedAt.toISOString() };
+  return {
+    savedAt: values.updatedAt.toISOString(),
+    ...(possibleDuplicateName ? { possibleDuplicateName: true } : {}),
+  };
 }
 
 // ---------- Onboarding / first-login partial census save ----------

@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState, useTransition } from "react";
-import { ChevronRight, ChevronLeft, Check, AlertTriangle, Loader2 } from "lucide-react";
+import { ChevronRight, ChevronLeft, Check, AlertTriangle, Loader2, X } from "lucide-react";
 import { submitSensusProfile, saveSensusStep } from "@/app/actions/sensus";
 import { ImageUploadCropper } from "@/components/upload/image-upload-cropper";
 import { Select, CheckField } from "@/components/console/form";
@@ -257,6 +257,12 @@ export function SensusWizard({
   const [pending, startTransition] = useTransition();
   const [saving, setSaving] = useState(false);
   const [lastSaved, setLastSaved] = useState<Date | null>(null);
+  // Pengingat lembut nama-lengkap-mungkin-ganda - TERPISAH dari `issues` di
+  // atas karena tidak pernah boleh ikut menahan goNext(). `duplicateNameAcked`
+  // memastikan berhenti cuma sekali per nilai nama; klik "Lanjut" berikutnya
+  // selalu maju.
+  const [duplicateNameNotice, setDuplicateNameNotice] = useState(false);
+  const [duplicateNameAcked, setDuplicateNameAcked] = useState(false);
   const stepRef = useRef<HTMLDivElement>(null);
   // Lompatan langkah pertama tidak boleh menggeser layar — pengisi baru saja
   // membuka halaman dan mungkin sudah menggulir ke wizard dengan sengaja.
@@ -288,6 +294,10 @@ export function SensusWizard({
     // Begitu sebuah field disentuh, error-nya dilepas — biar tidak ada tulisan
     // merah yang bertahan padahal isiannya sudah dibetulkan.
     setIssues((prev) => prev.filter((i) => i.field !== key));
+    if (key === "fullName") {
+      setDuplicateNameNotice(false);
+      setDuplicateNameAcked(false);
+    }
   }
 
     function applyPassportScan(result: PassportMrzResult) {
@@ -309,6 +319,8 @@ export function SensusWizard({
         birthDate: result.birthDate,
       }));
       setIssues((current) => current.filter((issue) => !scannedFields.includes(issue.field)));
+      setDuplicateNameNotice(false);
+      setDuplicateNameAcked(false);
     }
 
   // Ganti cabang = daftar kampusnya ikut ganti, jadi pilihan lama hampir pasti
@@ -348,6 +360,20 @@ export function SensusWizard({
         }
       } else {
         setLastSaved(new Date(result.savedAt));
+        if (result.possibleDuplicateName) {
+          if (step === 0 && !duplicateNameAcked) {
+            // Pengingat lembut, BUKAN blokir - datanya SUDAH tersimpan di atas.
+            // Berhenti SATU KALI di langkah ini supaya sempat terbaca; klik
+            // "Lanjut" berikutnya (atau kalau baliknya lewat sini lagi) selalu
+            // maju, tidak pernah menjebak.
+            setDuplicateNameNotice(true);
+            setDuplicateNameAcked(true);
+            setIssues([]);
+            return;
+          }
+        } else {
+          setDuplicateNameNotice(false);
+        }
       }
       setIssues([]);
       setStep((s) => Math.min(STEP_KEYS.length - 1, s + 1));
@@ -504,6 +530,23 @@ export function SensusWizard({
             <legend className="sr-only">{t(STEP_KEYS[0])}</legend>
               <PassportScanner onResult={applyPassportScan} />
             {field(t("sensus.fullName"), "fullName", { required: true })}
+            {duplicateNameNotice && (
+              <div
+                role="status"
+                className="flex items-start gap-3 bg-error-container/40 border-l-4 border-error rounded-r-lg p-4 -mt-2"
+              >
+                <AlertTriangle className="text-error shrink-0 mt-0.5" size={18} />
+                <p className="flex-1 text-body-md text-on-background">{t("sensus.possibleDuplicateName")}</p>
+                <button
+                  type="button"
+                  onClick={() => setDuplicateNameNotice(false)}
+                  aria-label={t("common.close")}
+                  className="text-on-surface-variant hover:text-on-background shrink-0 rounded-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-container"
+                >
+                  <X size={16} />
+                </button>
+              </div>
+            )}
             {field(t("sensus.mandarinName"), "mandarinName", {
               hint: t("sensus.mandarinNameHint"),
               placeholder: "张伟",
