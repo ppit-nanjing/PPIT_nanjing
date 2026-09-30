@@ -2,7 +2,10 @@
 // content. Idempotent: re-running updates existing rows by slug instead of
 // duplicating them, so it's safe to run again after editing this file.
 //
-// Run with: npx tsx --env-file=.env src/db/seed-help-articles.ts
+// Run with: npx tsx --env-file=.env src/db/seed-help-articles.ts [slug ...]
+// Tanpa argumen SEMUA artikel di-upsert dan menimpa isi yang mungkin sudah
+// diedit lewat /console/docs. Sebut slug-nya (mis. "karier") untuk hanya
+// menulis artikel baru tanpa menyentuh yang lain.
 import { db } from "./index";
 import { helpArticles } from "./schema";
 import { sql } from "drizzle-orm";
@@ -305,10 +308,52 @@ Melihat hasil
 - Tombol CSV / Excel untuk mengunduh rekap (buat LPJ).
 - Tombol hapus (ikon tempat sampah) di tiap respons untuk membuang jawaban spam/uji coba.`,
   },
+  {
+    slug: "karier",
+    section: SERING_BINGUNG,
+    title: "Karier — Lowongan, Lamaran, dan SOP Menerima Perusahaan",
+    content: `Siapa yang bisa akses
+Menu Karier muncul kalau divisimu dicentangi modul "Karier" oleh admin penuh (Organisasi → edit divisi → centang "Karier"). Untuk instalasi baru, yang dapat otomatis adalah Divisi Usaha Dana. Kalau menunya tidak ada, itu sebabnya.
+
+SOP: perusahaan menghubungi PPIT untuk memasang lowongan
+1. Catat siapa yang menghubungi, dari perusahaan mana, posisi apa, dan untuk mahasiswa/lulusan seperti apa. Simpan percakapannya di folder Dokumen.
+2. Pastikan perusahaannya nyata: ada situs atau profil resmi, ada email kantor (bukan email gratis), dan ada kontak yang bisa dihubungi balik. Kalau ragu, minta satu pengurus lain ikut memeriksa sebelum dipasang.
+3. Tolak atau tunda kalau: pelamar diminta membayar apa pun, nama perusahaan tidak mau disebut, deskripsi kerjanya tidak jelas, atau perusahaan meminta data pribadi (nomor paspor, rekening) di tahap lamaran.
+4. Tanyakan sejak awal siapa yang akan menerima CV, dan minta perusahaan setuju data pelamar hanya dipakai untuk proses rekrutmen lowongan itu.
+5. Setelah lolos pemeriksaan, baru pasang lowongannya (langkah di bawah).
+
+Memasang lowongan (/console/jobs → Tambah Lowongan)
+- Judul, Perusahaan, Jenis pekerjaan: wajib.
+- Lokasi, Batas lamaran, Deskripsi, Persyaratan: opsional.
+- Kotak "Langsung buka untuk pelamar": kalau dicentang, lowongan langsung tampil di halaman Karir publik. Kalau dikosongkan, tersimpan sebagai draf tertutup dan bisa dibuka belakangan.
+- Batas lamaran hanya label yang tampil ke pelamar, lowongan TIDAK tertutup sendiri setelah tanggalnya lewat. Tutup manual.
+
+Menutup, membuka, menghapus lowongan
+- Tutup: hilang dari halaman publik dan tidak bisa dilamar lagi, termasuk lewat tautan lama. Lamaran yang sudah masuk tetap ada. Ini pilihan normal kalau lowongan sudah selesai.
+- Buka lagi: tampil dan bisa dilamar lagi.
+- Hapus: permanen, dan ikut menghapus SEMUA lamarannya. Hanya untuk lowongan salah input atau spam.
+
+Memproses lamaran (klik lowongan → Pelamar → klik nama)
+- Kamu melihat email pelamar, tautan CV, dan cover letter.
+- Status berjalan: Terkirim → Sedang direview → Tahap wawancara → Diterima / Ditolak. Setiap perubahan status otomatis mengirim notifikasi ke pelamar (muncul di lonceng), tapi hanya sekali: menyimpan status yang sama tidak mengirim ulang. Notifikasi tidak bisa ditarik, jadi pilih status dengan hati-hati.
+- "Diterima" artinya pelamar lolos atau mendapat tawaran, belum tentu sudah resmi bekerja.
+- Catatan Pengurus: internal, TIDAK terlihat pelamar. Disimpan terpisah dari status, jadi menyimpan catatan tidak mengubah status.
+- Riwayat Status mencatat siapa mengubah apa dan kapan.
+
+Aturan data pelamar
+- CV dan email pelamar hanya untuk proses lowongan itu. Jangan dibagikan ke grup atau pihak lain tanpa persetujuan pelamar.
+- Meneruskan CV ke perusahaan dilakukan lewat email resmi PPIT setelah pelamar tahu dan setuju, bukan lewat chat grup.
+- Pelamar minta datanya dihapus: buka lamarannya → Hapus Lamaran. Jangan hapus lowongannya, karena itu membuang lamaran orang lain juga.`,
+  },
 ];
 
 async function main() {
-  for (const a of articles) {
+  const only = process.argv.slice(2);
+  const unknown = only.filter((slug) => !articles.some((a) => a.slug === slug));
+  if (unknown.length > 0) throw new Error(`Slug tidak dikenal: ${unknown.join(", ")}`);
+  const toSeed = only.length > 0 ? articles.filter((a) => only.includes(a.slug)) : articles;
+
+  for (const a of toSeed) {
     await db
       .insert(helpArticles)
       .values({ slug: a.slug, section: a.section, title: a.title, content: a.content })
@@ -322,7 +367,7 @@ async function main() {
 
 main()
   .then(() => {
-    console.log(`done: ${articles.length} help articles`);
+    console.log("done");
     process.exit(0);
   })
   .catch((err) => {

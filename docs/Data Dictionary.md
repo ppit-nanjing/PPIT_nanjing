@@ -144,7 +144,7 @@ Kuesioner pasca-acara yang diisi **tanpa akun** dari halaman publik `/events/:sl
 `id`, `title`, `company`, `location`, `type` (enum: `internship`, `full_time`, `part_time`, `volunteer`), `description`, `requirements`, `application_deadline`, `posted_by` FK → USER, `status` (`open`/`closed`).
 
 ### JOB_APPLICATION
-`id`, `job_id` FK, `user_id` FK, `resume_url`, `cover_letter`, `status` (enum: `submitted`, `under_review`, `interview`, `offered`, `rejected`), `applied_at`.
+`id`, `job_id` FK, `user_id` FK, `resume_url`, `cover_letter`, `status` (enum: `submitted`, `under_review`, `interview`, `offered`, `rejected`), `review_note` (catatan internal pengurus, tidak pernah tampil ke pelamar; migrasi `0041`), `applied_at`. Tidak ada unique `(job_id, user_id)` — lihat batasan di [Career Flow](./Career%20Flow.md).
 
 ### CAREER_GUIDE_ARTICLE
 `id`, `title`, `slug`, `content`, `category`, `author_id` FK nullable, `published_at`. Sumber: layar *Career Guide* ("Mastering the Chinese Tech Interview").

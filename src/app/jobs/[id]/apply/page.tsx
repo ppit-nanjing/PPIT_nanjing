@@ -19,6 +19,9 @@ export default async function JobApplyPage({ params }: { params: Promise<{ id: s
 
   const [job] = await db.select().from(jobPostings).where(eq(jobPostings.id, id));
   if (!job) notFound();
+  // Lowongan yang ditutup pengurus tidak boleh dilamar lagi, termasuk lewat
+  // tautan langsung atau tab yang sudah terbuka (applyToJob menjaga hal yang sama).
+  if (job.status !== "open") redirect(`/jobs/${id}`);
 
   const { t } = await getT();
 

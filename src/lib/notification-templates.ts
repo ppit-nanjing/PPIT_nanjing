@@ -29,6 +29,7 @@ export type NotificationTemplateKey =
   | "contribution_rejected"
   | "procurement_approved"
   | "procurement_rejected"
+  | "job_application_status_changed"
   | "job_application"
   | "membership_accepted"
   | "membership_rejected";
@@ -200,6 +201,17 @@ export const NOTIFICATION_TEMPLATES: NotificationTemplateDef[] = [
     variables: ["itemName"],
     defaultSubject: "Usulan pengadaan ditolak",
     defaultBody: 'Usulan barang "{{itemName}}" telah ditolak oleh admin.',
+  },
+  {
+    key: "job_application_status_changed",
+    group: "Karier",
+    label: "Status lamaran berubah",
+    trigger:
+      "Dikirim saat pengurus mengubah status lamaran seseorang (sedang direview, tahap wawancara, diterima, ditolak).",
+    variables: ["jobTitle", "statusLabel"],
+    defaultSubject: "Status lamaran kamu diperbarui",
+    defaultBody:
+      'Status lamaran kamu untuk "{{jobTitle}}" kini: {{statusLabel}}. Buka halaman lamaran untuk detailnya.',
   },
   {
     key: "job_application",
