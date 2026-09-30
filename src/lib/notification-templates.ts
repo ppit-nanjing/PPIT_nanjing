@@ -30,6 +30,7 @@ export type NotificationTemplateKey =
   | "procurement_approved"
   | "procurement_rejected"
   | "job_application"
+  | "sensus_possible_duplicate_name"
   | "membership_accepted"
   | "membership_rejected";
 
@@ -209,6 +210,17 @@ export const NOTIFICATION_TEMPLATES: NotificationTemplateDef[] = [
     variables: ["jobTitle"],
     defaultSubject: "Lamaran pekerjaan terkirim",
     defaultBody: 'Lamaran kamu untuk "{{jobTitle}}" telah terkirim. Tim rekrutmen akan meninjau dan menghubungi kamu bila cocok.',
+  },
+  {
+    key: "sensus_possible_duplicate_name",
+    group: "Sensus",
+    label: "Kemungkinan akun ganda (nama sama)",
+    trigger:
+      "Dikirim sekali saat member mengisi nama lengkap di modal onboarding (login pertama) dan nama itu persis sama dengan sensus milik akun lain.",
+    variables: [],
+    defaultSubject: "Cek akunmu: nama yang sama tercatat di akun lain",
+    defaultBody:
+      "Nama lengkap yang kamu isi juga tercatat di sensus akun lain. Kalau kamu pernah login pakai HP teman atau akun Google lain, itu mungkin akunmu yang lama. Hubungi pengurus untuk menggabungkannya supaya data sensus dan riwayat acaramu tidak terpisah. Kalau bukan, abaikan saja, wajar ada nama yang sama.",
   },
   {
     key: "membership_accepted",

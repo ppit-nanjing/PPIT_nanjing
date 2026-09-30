@@ -8,6 +8,7 @@ import { requireModuleAccess } from "@/lib/admin-scope";
 import { db } from "@/db";
 import { auditLogs, sensusProfiles } from "@/db/schema";
 import { validateSensus, type SensusInput, type SensusIssue } from "@/lib/sensus-form";
+import { createTemplatedNotification } from "@/lib/notifications";
 
 // Tipe & aturan validasinya ada di src/lib/sensus-form.ts — berkas "use server"
 // hanya boleh mengekspor fungsi async, jadi tipe dan konstanta tidak bisa
@@ -202,6 +203,16 @@ export async function saveOnboardingSensus(
   }
   const now = new Date();
   if (Object.keys(patch).length === 0) return { savedAt: now.toISOString() };
+
+  // Modal onboarding menutup dirinya sebelum server menjawab, jadi tidak ada UI
+  // untuk banner di sini - pengingatnya lewat notifikasi in-app. Hanya jalan
+  // sekali per akun (modal tampil sekali, dijaga emailSubscribed === null).
+  if (patch.fullName && (await fullNameMatchesAnotherUser(session.user.id, patch.fullName))) {
+    await createTemplatedNotification({
+      userId: session.user.id,
+      templateKey: "sensus_possible_duplicate_name",
+    });
+  }
 
   const [existing] = await db
     .select({ id: sensusProfiles.id })
