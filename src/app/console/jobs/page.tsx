@@ -37,7 +37,7 @@ export default async function ConsoleJobsPage() {
       <FlashToast />
       <div className="flex flex-wrap items-start justify-between gap-3 mb-8">
         <div>
-          <h1 className="text-headline-md sm:text-headline-lg text-on-background">Karier</h1>
+          <h1 className="text-headline-md sm:text-headline-lg text-on-background">Lowongan</h1>
           <p className="text-body-md text-on-surface-variant mt-1">
             Lowongan yang tampil di halaman Jobs (/jobs), dan lamaran yang masuk.
           </p>

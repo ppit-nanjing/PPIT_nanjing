@@ -205,7 +205,7 @@ export const NOTIFICATION_TEMPLATES: NotificationTemplateDef[] = [
   },
   {
     key: "job_application_status_changed",
-    group: "Karier",
+    group: "Lowongan",
     label: "Status lamaran berubah",
     trigger:
       "Dikirim saat pengurus mengubah status lamaran seseorang (sedang direview, tahap wawancara, diterima, ditolak).",
@@ -216,7 +216,7 @@ export const NOTIFICATION_TEMPLATES: NotificationTemplateDef[] = [
   },
   {
     key: "job_application",
-    group: "Karier",
+    group: "Lowongan",
     label: "Lamaran terkirim",
     trigger: "Dikirim saat anggota melamar sebuah lowongan.",
     variables: ["jobTitle"],
