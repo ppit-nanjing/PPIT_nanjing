@@ -4,20 +4,18 @@
 
 ## Homepage (`/`)
 
-Layar paling banyak diiterasi di seluruh prototipe (6 varian: `ppit_nanjing_homepage`, `_refined_1`, `_refined_2`, `_final_refinement`, `_animated`, `_navigation_updated`, `_logged_in_workflow_connected`) — versi kanonik untuk referensi visual: **`ppit_nanjing_homepage_final_refinement`**.
+Halaman utama (`src/app/page.tsx`) memakai gaya Art Deco + Art Nouveau; aturan visualnya ada di [DESIGN.md](../DESIGN.md). Semua teks lewat kamus i18n (`id.ts` dan `en.ts`), semua data tetap dari database. Urutan bagian:
 
-Struktur konten (dikonfirmasi dari markup + konten referensi situs nasional `ppitiongkok.com`):
-1. Hero — headline besar (`display-hero`), tagline, CTA ganda ("Eksplorasi Kegiatan" + sekunder), badge "EST. 2012"
-2. Statistik organisasi (jumlah mahasiswa, jumlah cabang, event/tahun, volunteer) — angka besar bold
-3. Latest Events (preview, link ke [Event Flow](./Event%20Flow.md))
-4. Latest News (preview, link ke [Content Pages](./Content%20Pages.md))
-5. Kutipan Ketua Umum (quote block, `quote-text` style)
-6. "Connected Across China" — peta/direktori cabang regional (link ke [Organization & Regional Branches](./Organization%20&%20Regional%20Branches.md))
-7. AD/ART card (dokumen resmi, unduh PDF)
-8. Partners/Networks section
-9. Footer — navigasi piped (`|`), ikon sosial (Facebook, X, Instagram, YouTube, LinkedIn)
+1. **Intro** (`SiteIntro`, hanya di `/`): kurtain jade dengan logo. Desktop: 5 lembar yang terangkat bertingkat; ponsel (680px ke bawah): satu lapisan penuh yang memudar. Murni CSS, jadi hilang sendiri walau JS gagal. Sekali per sesi tab di produksi, tiap muat di development; `?intro` memaksa tampil, `?nointro` mematikan, Back/Forward tidak memutar ulang; tidak ada saat reduced motion. Aturannya di `src/lib/intro-gate.ts`.
+2. **Hero**: sunburst berputar pelan, bunga plum yang melayang, eyebrow, judul (`AnimatedHeroHeading`, kata terakhir berwarna emas-teks), subteks, kartu semboyan (teks baku, jangan diparafrasekan), CTA emas, dan CTA kedua yang berganti ke "Lengkapi Sensus" bila sensus anggota yang login belum lengkap. Garis foil emas di bawahnya.
+3. **Statistik**: tiga medali bercincin emas (jumlah kota naungan dan kampus dari database, tahun berdiri 2008). Tidak ada angka jumlah anggota karena tidak dikumpulkan per kota.
+4. **Tentang**: pita jade berlatis emas dengan judul, dua paragraf (`about.intro`, `about.coverageText`), dan `QuoteCard` kutipan Ketua Umum (`home.quote.*`).
+5. **Kebersamaan**: foto kabinet (`public/images/kabinet-ppit-nanjing.jpg`) dalam bingkai lengkung via `next/image`; keterangan dari `home.family.*`. Foto ini memuat banyak orang yang bisa dikenali: pastikan para anggota setuju sebelum dipasang di situs publik.
+6. **Kota naungan**: sembilan kartu lengkung dengan nama Mandarin; Nanjing adalah kartu emas "Markas Utama". Klik kartu untuk membuka detail.
+7. **Kegiatan Terbaru** dan 8. **Kabar Terbaru**: tiga item terbaru dari database, atau keadaan kosong yang jujur bila belum ada.
+9. **Footer**: pita gelap (`band`): kartu "Ayo bergabung", kolom navigasi, pemilih tema kota dan mode.
 
-**State bersyarat**: `ppit_nanjing_homepage_logged_in_workflow_connected` menunjukkan tampilan berbeda untuk user yang sudah login (kemungkinan CTA berubah dari "Join Us"/"Login" menjadi akses cepat ke profil/dashboard).
+Nav dan footer dipakai hampir semua halaman publik (tiap halaman mengimpornya sendiri, bukan lewat layout).
 
 ## Login (`/login`)
 

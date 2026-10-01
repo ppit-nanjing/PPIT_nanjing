@@ -18,6 +18,7 @@ import { PhotoFrame } from "@/components/photo-frame";
 import { Sunburst } from "@/components/deco/sunburst";
 import { PlumBlossoms, PlumSymbols } from "@/components/deco/plum-blossoms";
 import { DecoRule } from "@/components/deco/deco-rule";
+import { SiteIntro } from "@/components/site-intro";
 import { db } from "@/db";
 import { events, newsArticles, coverageCities, universities } from "@/db/schema";
 import { publishDueEvents } from "@/lib/publish-events";
@@ -93,6 +94,7 @@ export default async function Home() {
 
   return (
     <div className="min-h-screen bg-background text-on-background">
+      <SiteIntro />
       {/* Defines the shared plum-blossom <symbol>s used by the hero, the About band
           and the quote card. Render once per page. */}
       <PlumSymbols />

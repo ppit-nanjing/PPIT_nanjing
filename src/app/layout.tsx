@@ -38,6 +38,7 @@ import { regionalBranches } from "@/db/schema";
 import { asc } from "drizzle-orm";
 import { getT } from "@/lib/i18n/server";
 import { LocaleProvider } from "@/lib/i18n/client";
+import { INTRO_GATE } from "@/lib/intro-gate";
 import "./globals.css";
 
 // next/font/google downloads and self-hosts the font at build time - no runtime
@@ -164,7 +165,10 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
               "try{var d=document.documentElement,t=localStorage.getItem('ppit-city-theme'),m=localStorage.getItem('ppit-color-mode');" +
               "if(t&&t!=='zijin')d.dataset.theme=t;" +
               "d.dataset.mode=(m==='dark'||m==='light')?m:(matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light');" +
-              "}catch(e){}",
+              "}catch(e){}" +
+              // Home-page intro gate (see lib/intro-gate.ts): adds "no-intro" to <html>
+              // when the curtain should not play on this page load.
+              INTRO_GATE,
           }}
         />
         <Providers session={session}>
