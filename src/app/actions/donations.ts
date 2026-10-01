@@ -47,13 +47,20 @@ export async function submitDonation(formData: FormData) {
     throw new Error("Jumlah donasi tidak valid");
   }
 
+  // Bukti dirender sebagai link "Lihat bukti" di console, jadi hanya http(s)
+  // yang diterima - skema lain (javascript:, data:) ditolak di sini.
+  const proofUrl = String(formData.get("proofUrl") ?? "").trim() || null;
+  if (proofUrl && !isHttpUrl(proofUrl)) {
+    throw new Error("Tautan bukti donasi harus berupa alamat http(s) yang valid");
+  }
+
   await db.insert(donations).values({
     userId: session.user.id,
     donorName,
     amountCny,
     method: String(formData.get("method") ?? "").trim() || null,
     message: String(formData.get("message") ?? "").trim() || null,
-    proofUrl: String(formData.get("proofUrl") ?? "").trim() || null,
+    proofUrl,
     anonymous: formData.get("anonymous") === "on",
     // Never trust the reporter: it stays pending until a human checks it.
     status: "pending",
@@ -80,7 +87,9 @@ export async function updateDonationStatus(formData: FormData) {
     })
     .where(eq(donations.id, id));
 
-  revalidatePath("/console/catalogue");
+  // Path console-nya /console/katalog (dulu salah tulis /console/catalogue,
+  // jadi daftar & angka "menunggu verifikasi" bisa stale setelah Simpan).
+  revalidatePath("/console/katalog");
   revalidatePath("/catalogue/donasi");
 }
 
@@ -118,4 +127,55 @@ export async function deleteDonationChannel(formData: FormData) {
   await db.delete(donationChannels).where(eq(donationChannels.id, String(formData.get("id") ?? "")));
   revalidatePath("/console/katalog");
   revalidatePath("/catalogue/donasi");
+}
+
+// Edit kanal yang sudah ada (dulu hanya bisa tambah/hapus - ganti QR berarti
+// hapus lalu buat ulang, nomor kanal ikut berubah).
+export async function updateDonationChannel(formData: FormData) {
+  await requireModuleAccess("organization");
+  const id = String(formData.get("id") ?? "");
+  if (!id) throw new Error("Kanal tidak ditemukan");
+  const label = String(formData.get("label") ?? "").trim();
+  if (!label) throw new Error("Nama kanal wajib diisi");
+  const opt = (k: string) => String(formData.get(k) ?? "").trim() || null;
+
+  await db
+    .update(donationChannels)
+    .set({
+      label,
+      accountName: opt("accountName"),
+      accountDetail: opt("accountDetail"),
+      qrImageUrl: opt("qrImageUrl"),
+      instructions: opt("instructions"),
+      orderIndex: Number(String(formData.get("orderIndex") ?? "0")) || 0,
+    })
+    .where(eq(donationChannels.id, id));
+
+  revalidatePath("/console/katalog");
+  revalidatePath("/catalogue/donasi");
+}
+
+// Sembunyikan/tampilkan kanal tanpa menghapusnya (donation_channels.published).
+export async function toggleDonationChannelPublished(formData: FormData) {
+  await requireModuleAccess("organization");
+  const id = String(formData.get("id") ?? "");
+  if (!id) throw new Error("Kanal tidak ditemukan");
+
+  await db
+    .update(donationChannels)
+    .set({ published: formData.get("next") === "true" })
+    .where(eq(donationChannels.id, id));
+
+  revalidatePath("/console/katalog");
+  revalidatePath("/catalogue/donasi");
+}
+
+/** Validasi ringan untuk input pelapor: hanya skema http(s) yang diterima. */
+function isHttpUrl(value: string): boolean {
+  try {
+    const u = new URL(value);
+    return u.protocol === "https:" || u.protocol === "http:";
+  } catch {
+    return false;
+  }
 }

@@ -188,9 +188,9 @@ Maksimal 10 MB, format PNG/JPEG/WEBP saja. PENTING: pilih file dulu, lalu klik t
 - Sponsor & Mitra: Nama wajib, Tingkat pilih dari Mitra/Silver/Gold/Platinum.
 
 Kanal & Laporan Donasi (cuma muncul untuk admin dengan akses Organisasi, bukan semua admin Konten)
-Kanal Donasi cuma menampilkan info rekening/QR — situs TIDAK memproses pembayaran apa pun. Laporan Donasi berisi laporan yang dikirim SENDIRI oleh donatur (self-report); sebelum menandai "Terverifikasi", cek dulu manual ke mutasi rekening — jangan percaya angka yang diketik donatur begitu saja.
+Kanal Donasi cuma menampilkan info rekening/QR — situs TIDAK memproses pembayaran apa pun. Kanal bisa diedit (tombol Edit — termasuk ganti QR/rekening) atau disembunyikan sementara lewat Sembunyikan/Tampilkan; tidak perlu hapus lalu bikin ulang. Laporan Donasi berisi laporan yang dikirim SENDIRI oleh donatur (self-report); sebelum menandai "Terverifikasi", cek dulu manual ke mutasi rekening — jangan percaya angka yang diketik donatur begitu saja. Tombol Export CSV mengunduh rekap untuk LPJ (termasuk catatan internal dan tautan bukti — perlakukan sebagai data finansial).
 
-Semua tombol Hapus di halaman ini langsung permanen, tidak ada konfirmasi.`,
+Semua tombol Hapus di halaman ini meminta konfirmasi dulu, lalu menghapus permanen.`,
   },
   {
     slug: "laporan",

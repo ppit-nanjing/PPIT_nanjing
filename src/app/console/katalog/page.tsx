@@ -27,6 +27,8 @@ import {
   listChannelsForAdmin,
   createDonationChannel,
   deleteDonationChannel,
+  updateDonationChannel,
+  toggleDonationChannelPublished,
   updateDonationStatus,
 } from "@/app/actions/donations";
 // Token isian memakai primitif bersama konsol supaya semua form terlihat dan
@@ -34,7 +36,7 @@ import {
 import { fieldInput as input, primaryBtn, Select, CheckboxField, ToggleSwitch } from "@/components/console/form";
 import { ConfirmButton } from "@/components/console/confirm-button";
 import { SubmitButton } from "@/components/console/submit-button";
-import { Pencil } from "lucide-react";
+import { Download, Pencil } from "lucide-react";
 
 const label = "text-label-caps uppercase tracking-wide text-on-surface-variant";
 const rowBtn =
@@ -620,11 +622,68 @@ export default async function ConsoleKatalogPage() {
                 <li className="py-4 text-body-md text-on-surface-variant">Belum ada kanal.</li>
               ) : (
                 channelRows.map((c) => (
-                  <Row key={c.id} id={c.id} onDelete={deleteDonationChannel} itemLabel={c.label}>
-                    <p className="text-body-md text-on-background">{c.label}</p>
+                  <Row
+                    key={c.id}
+                    id={c.id}
+                    onDelete={deleteDonationChannel}
+                    itemLabel={c.label}
+                    edit={
+                      <form action={updateDonationChannel} className="flex flex-col gap-3 max-w-xl">
+                        <input type="hidden" name="id" value={c.id} />
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                          <label className="flex flex-col gap-1.5">
+                            <span className={label}>Nama kanal *</span>
+                            <input name="label" required defaultValue={c.label} className={input} />
+                          </label>
+                          <label className="flex flex-col gap-1.5">
+                            <span className={label}>Atas nama</span>
+                            <input name="accountName" defaultValue={c.accountName ?? ""} className={input} />
+                          </label>
+                          <label className="flex flex-col gap-1.5">
+                            <span className={label}>Nomor / detail</span>
+                            <input name="accountDetail" defaultValue={c.accountDetail ?? ""} className={input} />
+                          </label>
+                          <label className="flex flex-col gap-1.5">
+                            <span className={label}>Urutan</span>
+                            <input name="orderIndex" type="number" defaultValue={c.orderIndex} className={input} />
+                          </label>
+                        </div>
+                        <ImageUploadCropper
+                          name="qrImageUrl"
+                          folder="donation"
+                          label="Gambar QR"
+                          placeholder="Tempel URL atau unggah gambar"
+                          defaultValue={c.qrImageUrl ?? ""}
+                        />
+                        <label className="flex flex-col gap-1.5">
+                          <span className={label}>Petunjuk</span>
+                          <input name="instructions" defaultValue={c.instructions ?? ""} className={input} />
+                        </label>
+                        <SubmitButton successMessage="Kanal tersimpan." className={primaryBtn}>
+                          Simpan Kanal
+                        </SubmitButton>
+                      </form>
+                    }
+                  >
+                    <p className="text-body-md text-on-background">
+                      {c.label}{" "}
+                      {!c.published && (
+                        <span className="text-label-caps text-on-surface-variant">(disembunyikan)</span>
+                      )}
+                    </p>
                     <p className="text-label-caps text-on-surface-variant">
                       {c.accountName ?? ""} {c.accountDetail ?? ""}
                     </p>
+                    <form action={toggleDonationChannelPublished} className="mt-1">
+                      <input type="hidden" name="id" value={c.id} />
+                      <input type="hidden" name="next" value={c.published ? "false" : "true"} />
+                      <SubmitButton
+                        successMessage=""
+                        className="text-label-caps uppercase tracking-wide text-primary-container hover:text-primary"
+                      >
+                        {c.published ? "Sembunyikan" : "Tampilkan"}
+                      </SubmitButton>
+                    </form>
                   </Row>
                 ))
               )}
@@ -640,6 +699,15 @@ export default async function ConsoleKatalogPage() {
               Cocokkan dengan mutasi rekening sebelum memverifikasi &mdash; laporan ini diisi sendiri oleh
               donatur, jadi belum tentu benar. Hanya yang berstatus terverifikasi yang tampil publik.
             </p>
+            {donationRows.length > 0 && (
+              <a
+                href="/api/console/katalog/donations/export"
+                download
+                className="inline-flex items-center gap-1.5 text-label-caps uppercase tracking-wide text-primary-container hover:text-primary transition-colors mb-4"
+              >
+                <Download size={13} aria-hidden /> Export CSV
+              </a>
+            )}
             <ul className="bg-surface-container-lowest border border-outline-variant rounded-xl px-4">
               {donationRows.length === 0 ? (
                 <li className="py-4 text-body-md text-on-surface-variant">Belum ada laporan donasi.</li>
