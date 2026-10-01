@@ -15,6 +15,7 @@ import { StatsGrid } from "@/components/stats-grid";
 import { CitiesGrid } from "@/components/cities-grid";
 import { QuoteCard } from "@/components/quote-card";
 import { PhotoFrame } from "@/components/photo-frame";
+import kabinetPhoto from "../../public/images/kabinet-ppit-nanjing.jpg";
 import { Sunburst } from "@/components/deco/sunburst";
 import { PlumBlossoms, PlumSymbols } from "@/components/deco/plum-blossoms";
 import { DecoRule } from "@/components/deco/deco-rule";
@@ -115,8 +116,17 @@ export default async function Home() {
             width tier but is tall enough to clear it), so the tighter rhythm
             below, and dropping the eyebrow + divider, is gated on both, not
             just the mobile width tier - taller-but-narrow phones keep the
-            normal py-24 spacing. */}
-        <div className="relative z-10 max-w-[var(--container-max)] mx-auto px-[var(--spacing-container-padding)] py-24 md:py-36 [@media(max-width:639px)_and_(max-height:700px)]:pt-10 flex flex-col items-center text-center">
+            normal py-24 spacing.
+
+            From md up the hero is sized to the SCREEN, not to a fixed 144px of
+            padding: a 1920x1080 laptop at 125% Windows scaling is only ~1536x700
+            CSS px, and the old fixed padding pushed the main CTA to y=714, below
+            the fold, while the same hero floated in a 100% monitor. Now the
+            vertical padding follows the viewport height (7vh, 40-128px) and the
+            hero is at least one screen tall (capped at 52rem) with its content
+            centred, so the CTA stays visible on short laptops and the hero still
+            fills a tall monitor. */}
+        <div className="relative z-10 max-w-[var(--container-max)] mx-auto px-[var(--spacing-container-padding)] py-24 md:py-[clamp(2.5rem,7vh,8rem)] md:min-h-[min(calc(100svh-4.75rem),52rem)] md:justify-center [@media(max-width:639px)_and_(max-height:700px)]:pt-10 flex flex-col items-center text-center">
           <DecoRule className="mb-6 [@media(max-width:639px)_and_(max-height:700px)]:hidden" />
           <p className="text-label-caps uppercase tracking-[0.34em] text-gold-ink mb-4 text-balance [@media(max-width:639px)_and_(max-height:700px)]:hidden">
             {t("home.hero.eyebrow")}
@@ -185,9 +195,7 @@ export default async function Home() {
             </Reveal>
             <Reveal>
               <PhotoFrame
-                src="/images/kabinet-ppit-nanjing.jpg"
-                width={1218}
-                height={914}
+                image={kabinetPhoto}
                 alt={t("home.family.alt")}
                 caption={t("home.family.caption")}
                 note={t("home.family.note")}

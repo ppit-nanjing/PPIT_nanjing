@@ -1,5 +1,6 @@
 import Link from "next/link";
 import Image from "next/image";
+import { COVER_BLUR_DATA_URL } from "@/lib/image-placeholder";
 import { Reveal } from "@/components/reveal";
 import { Newspaper, ArrowRight } from "lucide-react";
 import { getT } from "@/lib/i18n/server";
@@ -52,6 +53,8 @@ export async function NewsCard({ article, index = 0 }: { article: NewsCardArticl
               alt={article.title}
               fill
               loading="lazy"
+              placeholder="blur"
+              blurDataURL={COVER_BLUR_DATA_URL}
               decoding="async"
               sizes="(max-width: 768px) 100vw, 33vw"
               className="object-cover transition-transform duration-700 group-hover:scale-105 motion-reduce:transition-none motion-reduce:group-hover:scale-100"

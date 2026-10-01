@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { motion, AnimatePresence, useReducedMotion } from "motion/react";
 import Image from "next/image";
+import { COVER_BLUR_DATA_URL } from "@/lib/image-placeholder";
 import { X, ChevronLeft, ChevronRight } from "lucide-react";
 import { useT } from "@/lib/i18n/client";
 
@@ -114,6 +115,8 @@ export function GalleryLightbox({ photos }: { photos: Photo[] }) {
                   alt={p.caption ?? t("lightbox.photoAlt", { index: i + 1 })}
                   fill
                   loading="lazy"
+                  placeholder="blur"
+                  blurDataURL={COVER_BLUR_DATA_URL}
                   decoding="async"
                   sizes={isHero ? "(max-width: 768px) 100vw, 45vw" : "(max-width: 768px) 50vw, 25vw"}
                   className="object-cover transition-transform duration-500 group-hover:scale-105 group-focus-visible:scale-105 motion-reduce:transition-none motion-reduce:group-hover:scale-100 motion-reduce:group-focus-visible:scale-100"

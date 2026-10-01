@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import Image from "next/image";
+import Image, { type StaticImageData } from "next/image";
 import { X, ZoomIn } from "lucide-react";
 import { useT } from "@/lib/i18n/client";
 
@@ -13,17 +13,7 @@ import { useT } from "@/lib/i18n/client";
  * download it up front. The enlarged <img> sits outside `.mat`, so the frame's
  * arch-radius image rule does not touch it.
  */
-export function PhotoZoom({
-  src,
-  width,
-  height,
-  alt,
-}: {
-  src: string;
-  width: number;
-  height: number;
-  alt: string;
-}) {
+export function PhotoZoom({ image, alt }: { image: StaticImageData; alt: string }) {
   const t = useT();
   const dialogRef = useRef<HTMLDialogElement>(null);
   const [open, setOpen] = useState(false);
@@ -54,10 +44,9 @@ export function PhotoZoom({
           className="group relative block w-full cursor-zoom-in rounded-[inherit] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-container focus-visible:ring-offset-2 focus-visible:ring-offset-background"
         >
           <Image
-            src={src}
-            width={width}
-            height={height}
+            src={image}
             alt={alt}
+            placeholder="blur"
             sizes="(min-width: 1024px) 940px, calc(100vw - 2.5rem)"
             loading="lazy"
             decoding="async"
@@ -89,10 +78,9 @@ export function PhotoZoom({
         <div className="flex h-full w-full items-center justify-center p-3 sm:p-10">
           {open && (
             <Image
-              src={src}
-              width={width}
-              height={height}
+              src={image}
               alt={alt}
+              loading="eager"
               sizes="100vw"
               onClick={(e) => e.stopPropagation()}
               className="h-auto max-h-[90dvh] w-auto max-w-full rounded-lg object-contain shadow-2xl"

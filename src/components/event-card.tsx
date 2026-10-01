@@ -1,5 +1,6 @@
 import Link from "next/link";
 import Image from "next/image";
+import { COVER_BLUR_DATA_URL } from "@/lib/image-placeholder";
 import { Reveal } from "@/components/reveal";
 import { CalendarDays, MapPin, CalendarX, Clock, ArrowRight } from "lucide-react";
 import { getT } from "@/lib/i18n/server";
@@ -57,6 +58,8 @@ export async function EventCard({
               alt={event.title}
               fill
               loading="lazy"
+              placeholder="blur"
+              blurDataURL={COVER_BLUR_DATA_URL}
               sizes="(max-width: 768px) 100vw, 33vw"
               className={`object-cover transition-transform duration-500 group-hover:scale-105 motion-reduce:transform-none ${
                 isPast ? "grayscale group-hover:grayscale-0" : ""

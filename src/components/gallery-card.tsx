@@ -2,6 +2,7 @@ import Link from "next/link";
 import { Reveal } from "@/components/reveal";
 import { Images, Expand } from "lucide-react";
 import Image from "next/image";
+import { COVER_BLUR_DATA_URL } from "@/lib/image-placeholder";
 import { getT } from "@/lib/i18n/server";
 
 export type GalleryCardAlbum = {
@@ -44,6 +45,8 @@ export async function GalleryCard({
               alt={t("gallery.cardCover", { title: album.title })}
               fill
               loading="lazy"
+              placeholder="blur"
+              blurDataURL={COVER_BLUR_DATA_URL}
               decoding="async"
               sizes="(max-width: 768px) 100vw, 25vw"
               className="object-cover transition-transform duration-500 group-hover:scale-105 group-focus-visible:scale-105 motion-reduce:transition-none motion-reduce:group-hover:scale-100 motion-reduce:group-focus-visible:scale-100"

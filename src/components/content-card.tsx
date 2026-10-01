@@ -1,5 +1,6 @@
 import { CalendarDays, Newspaper, ArrowRight } from "lucide-react";
 import Image from "next/image";
+import { COVER_BLUR_DATA_URL } from "@/lib/image-placeholder";
 import { getT } from "@/lib/i18n/server";
 
 /**
@@ -44,6 +45,8 @@ export async function ContentCard({
             alt={title}
             fill
             loading="lazy"
+            placeholder="blur"
+            blurDataURL={COVER_BLUR_DATA_URL}
             decoding="async"
             sizes="(max-width: 639px) 112px, (max-width: 768px) 100vw, 33vw"
             className="object-cover transition-transform duration-500 group-hover:scale-105 motion-reduce:transition-none motion-reduce:group-hover:scale-100"
