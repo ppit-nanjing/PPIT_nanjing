@@ -3,6 +3,7 @@ import { auth } from "@/auth";
 import { put } from "@vercel/blob";
 import { hasModuleAccess, type AdminModule } from "@/lib/admin-scope";
 import { PRIVATE_FILE_FOLDERS, isPrivateFileFolder, privateFileUrl } from "@/lib/private-files";
+import { anonUploadQuotaExceeded, clientIp, ipRateLimited } from "@/lib/anon-upload-limit";
 
 const MAX_BYTES = 10 * 1024 * 1024;
 const ALLOWED_TYPES = [
@@ -102,6 +103,13 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ errorKey: "upload.errForbidden" }, { status: 403 });
   }
 
+  // Unggahan tanpa login dibatasi (lihat anon-upload-limit.ts): per IP di sini,
+  // kuota global per jam setelah token store diketahui di bawah.
+  const anonymous = !session?.user?.id;
+  if (anonymous && ipRateLimited(clientIp(req))) {
+    return NextResponse.json({ errorKey: "upload.errRateLimited" }, { status: 429, headers: { "Retry-After": "600" } });
+  }
+
   if (!(file instanceof File)) return NextResponse.json({ errorKey: "upload.errNoFile" }, { status: 400 });
   if (!(folder in FOLDER_MODULE)) return NextResponse.json({ errorKey: "upload.errFolder" }, { status: 400 });
   const requiredModule = FOLDER_MODULE[folder];
@@ -135,6 +143,10 @@ export async function POST(req: NextRequest) {
     // untuk folder pribadi, BLOB_READ_WRITE_TOKEN untuk sisanya). Gagal keras
     // daripada diam-diam menyimpan entah ke mana.
     return NextResponse.json({ errorKey: "upload.errNotConfigured" }, { status: 503 });
+  }
+
+  if (anonymous && (await anonUploadQuotaExceeded(blobToken))) {
+    return NextResponse.json({ errorKey: "upload.errRateLimited" }, { status: 429, headers: { "Retry-After": "3600" } });
   }
 
   // Strip path separators / control chars so a malicious filename can't
