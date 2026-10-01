@@ -145,8 +145,20 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ errorKey: "upload.errNotConfigured" }, { status: 503 });
   }
 
-  if (anonymous && (await anonUploadQuotaExceeded(blobToken))) {
-    return NextResponse.json({ errorKey: "upload.errRateLimited" }, { status: 429, headers: { "Retry-After": "3600" } });
+  if (anonymous) {
+    // Gagal menghitung kuota (Blob bermasalah) = tolak, bukan loloskan: tanpa
+    // hitungan ini batas globalnya tidak berlaku. Tangkap supaya klien dapat JSON,
+    // bukan 500 kosong.
+    let exceeded: boolean;
+    try {
+      exceeded = await anonUploadQuotaExceeded(blobToken);
+    } catch (err) {
+      console.error("[upload] anonymous quota check failed:", err);
+      return NextResponse.json({ errorKey: "upload.errServer" }, { status: 502 });
+    }
+    if (exceeded) {
+      return NextResponse.json({ errorKey: "upload.errRateLimited" }, { status: 429, headers: { "Retry-After": "3600" } });
+    }
   }
 
   // Strip path separators / control chars so a malicious filename can't
