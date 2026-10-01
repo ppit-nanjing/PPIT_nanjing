@@ -27,7 +27,6 @@ const STATIC_PAGES: { url: string; priority: number; changeFrequency?: MetadataR
   { url: "/organization/branches", priority: 0.5, changeFrequency: "monthly" },
   { url: "/organization/map", priority: 0.5, changeFrequency: "monthly" },
   { url: "/organization/ad-art", priority: 0.4, changeFrequency: "yearly" },
-  { url: "/documents", priority: 0.6, changeFrequency: "weekly" },
   { url: "/inventory", priority: 0.5, changeFrequency: "weekly" },
   { url: "/inventory/contribute", priority: 0.4, changeFrequency: "monthly" },
   { url: "/inventory/request-new", priority: 0.3, changeFrequency: "monthly" },
@@ -37,7 +36,6 @@ const STATIC_PAGES: { url: string; priority: number; changeFrequency?: MetadataR
   { url: "/universities", priority: 0.5, changeFrequency: "monthly" },
   { url: "/join-us", priority: 0.7, changeFrequency: "monthly" },
   { url: "/search", priority: 0.3, changeFrequency: "daily" },
-  { url: "/notifications", priority: 0.3, changeFrequency: "daily" },
   { url: "/privacy", priority: 0.2, changeFrequency: "yearly" },
   { url: "/terms", priority: 0.2, changeFrequency: "yearly" },
 ];

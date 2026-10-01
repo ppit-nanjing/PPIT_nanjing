@@ -75,7 +75,12 @@ const FOLDER_TYPES: Record<string, readonly string[]> = {
 export async function POST(req: NextRequest) {
   const session = await auth();
 
-  const form = await req.formData();
+  let form: FormData;
+  try {
+    form = await req.formData();
+  } catch {
+    return NextResponse.json({ errorKey: "upload.errNoFile" }, { status: 400 });
+  }
   const file = form.get("file");
   const folder = String(form.get("folder") ?? "");
 

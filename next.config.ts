@@ -102,6 +102,8 @@ const nextConfig: NextConfig = {
       bodySizeLimit: "4mb",
     },
   },
+  // No "X-Powered-By: Next.js" response header (it only helps fingerprinting).
+  poweredByHeader: false,
   images: {
     // Serve images as they are, not through Vercel's /_next/image optimizer. On the
     // current plan the optimizer answers every request with 402
@@ -143,14 +145,14 @@ const nextConfig: NextConfig = {
         headers: [{ key: "Content-Security-Policy", value: buildCsp() }, ...securityHeaders("(self)")],
       },
       {
-        // Temporary design-lab mockups + internal vote. Needs the Google Fonts
-        // exception above, same-origin iframe framing (the vote page previews
-        // mockups in an <iframe>), and must never be indexed; disjoint from the
-        // scanner and catch-all rules, which both exclude this prefix.
+        // Temporary design-lab mockups. Needs the Google Fonts exception above and
+        // must never be indexed; disjoint from the scanner and catch-all rules, which
+        // both exclude this prefix. It used to allow same-origin framing for the
+        // vote page's mockup previews; that page is gone, so framing is denied again.
         source: "/design-lab/:path*",
         headers: [
-          { key: "Content-Security-Policy", value: buildCsp({ designLab: true, frameAncestors: "'self'" }) },
-          ...securityHeaders("()", "SAMEORIGIN"),
+          { key: "Content-Security-Policy", value: buildCsp({ designLab: true }) },
+          ...securityHeaders("()"),
           { key: "X-Robots-Tag", value: "noindex, nofollow" },
         ],
       },
