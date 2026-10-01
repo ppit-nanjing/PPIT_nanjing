@@ -144,6 +144,7 @@ export default async function EditJobPostingPage({ params }: { params: Promise<{
           description: job.description ?? "",
           requirements: job.requirements ?? "",
           applyUrl: job.applyUrl ?? "",
+          imageUrl: job.imageUrl ?? "",
         }}
       />
 

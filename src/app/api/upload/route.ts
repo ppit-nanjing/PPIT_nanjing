@@ -43,6 +43,8 @@ const FOLDER_MODULE: Record<string, AdminModule | null> = {
   news: "content",
   gallery: "content",
   album: "content",
+  // Poster lowongan ditempel di /console/jobs (modul "career").
+  jobs: "career",
   inventory: "inventory",
   events: "events",
   membership: null,

@@ -14,7 +14,7 @@ type Props = {
   // the Sensus wizard, which collects values into local state and submits via a
   // server action) instead passes `value` + `onValueChange` and omits `name`.
   name?: string;
-  folder: "resume" | "news" | "gallery" | "album" | "inventory" | "avatar" | "sensus" | "events" | "membership" | "catalog" | "donation";
+  folder: "resume" | "news" | "gallery" | "album" | "inventory" | "avatar" | "sensus" | "events" | "membership" | "catalog" | "donation" | "jobs";
   label?: string;
   /** @deprecated tidak dipakai lagi - komponen ini murni unggah berkas. */
   placeholder?: string;

@@ -325,6 +325,7 @@ SOP: perusahaan menghubungi PPIT untuk memasang lowongan
 Memasang lowongan (/console/jobs → Tambah Lowongan)
 - Judul, Perusahaan, Jenis pekerjaan: wajib.
 - Lokasi, Batas lamaran, Deskripsi, Persyaratan: opsional.
+- Poster (opsional): unggah gambar poster di kolom "Poster / gambar lowongan". Gambar diunggah apa adanya (tidak dipotong), tampil di samping kanan halaman lowongan — poster potret paling pas. Tautan yang kamu tempel di Deskripsi/Persyaratan otomatis bisa diklik pembaca.
 - Kotak "Langsung buka untuk pelamar": kalau dicentang, lowongan langsung tampil di halaman Jobs (/jobs, "Career Opportunities in Nanjing"). Kalau dikosongkan, lowongan tersimpan tertutup: tidak tampil di daftar dan tidak bisa dilamar, tapi halamannya TETAP bisa dibaca siapa pun yang punya tautannya. Jadi bukan draf rahasia, dan jangan bagikan tautannya sebelum dibuka.
 - Batas lamaran hanya label yang tampil ke pelamar, lowongan TIDAK tertutup sendiri setelah tanggalnya lewat. Tutup manual.
 

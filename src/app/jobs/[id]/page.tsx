@@ -7,11 +7,13 @@ import { SiteNav } from "@/components/site-nav";
 import { SiteFooter } from "@/components/site-footer";
 import { AnimatedHeroHeading } from "@/components/animated-hero-heading";
 import { DecoRule } from "@/components/deco/deco-rule";
+import { LinkifiedText } from "@/lib/linkified-text";
 import { formatRelativeTime } from "@/lib/format-relative-time";
 import { getT } from "@/lib/i18n/server";
 import { INTL_LOCALE } from "@/lib/i18n/config";
 import type { TKey } from "@/lib/i18n/dictionaries/id";
 import type { T } from "@/lib/i18n/translate";
+import Image from "next/image";
 import Link from "next/link";
 import { MapPin, Calendar, CheckCircle2, Info, ClipboardCheck, Building2, History, ArrowLeft } from "lucide-react";
 
@@ -164,7 +166,10 @@ export default async function JobDetailPage({ params }: { params: Promise<{ id: 
               <h3 className="text-headline-md text-on-background mb-4 flex items-center gap-2 border-b border-outline-variant pb-4">
                 <Info size={20} className="text-primary-container" /> {t("jobs.descriptionHeading")}
               </h3>
-              <p className="text-body-lg text-on-surface-variant whitespace-pre-wrap leading-relaxed">{job.description}</p>
+              <LinkifiedText
+                text={job.description}
+                className="text-body-lg text-on-surface-variant whitespace-pre-wrap leading-relaxed"
+              />
             </section>
           )}
           {job.requirements && (
@@ -172,16 +177,31 @@ export default async function JobDetailPage({ params }: { params: Promise<{ id: 
               <h3 className="text-headline-md text-on-background mb-4 flex items-center gap-2 border-b border-outline-variant pb-4">
                 <ClipboardCheck size={20} className="text-primary-container" /> {t("jobs.qualificationsHeading")}
               </h3>
-              <p className="text-body-lg text-on-surface-variant whitespace-pre-wrap leading-relaxed">{job.requirements}</p>
+              <LinkifiedText
+                text={job.requirements}
+                className="text-body-lg text-on-surface-variant whitespace-pre-wrap leading-relaxed"
+              />
             </section>
           )}
         </div>
 
         <div className="lg:col-span-4">
           <div aria-label={t("jobs.summaryAria")} className="deco-frame sticky top-24 bg-surface-container-lowest rounded-lg p-8">
-            <div className="flex items-center justify-center h-16 w-16 mx-auto bg-surface-container-low rounded-lg mb-4 text-primary-container">
-              <Building2 size={28} aria-hidden />
-            </div>
+            {job.imageUrl ? (
+              <div className="relative aspect-[3/4] w-full overflow-hidden rounded-lg border border-outline-variant bg-surface-container-low mb-4">
+                <Image
+                  src={job.imageUrl}
+                  alt={`${job.title} — ${job.company}`}
+                  fill
+                  sizes="(max-width: 1024px) 100vw, 360px"
+                  className="object-contain"
+                />
+              </div>
+            ) : (
+              <div className="flex items-center justify-center h-16 w-16 mx-auto bg-surface-container-low rounded-lg mb-4 text-primary-container">
+                <Building2 size={28} aria-hidden />
+              </div>
+            )}
             <h4 className="text-headline-md text-on-background mb-1 text-center">{job.company}</h4>
             {job.location && <p className="text-body-md text-on-surface-variant text-center mb-6">{job.location}</p>}
             <div className="border-t border-outline-variant pt-6">{applyCta}</div>

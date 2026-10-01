@@ -77,6 +77,7 @@ export type JobFormValues = {
   requirements: string;
   applyMode: string;
   applyUrl: string;
+  imageUrl: string;
   open: boolean;
 };
 
@@ -139,6 +140,7 @@ export async function upsertJobPosting(
   const deadline = String(formData.get("applicationDeadline") ?? "").trim();
   const applyMode = String(formData.get("applyMode") ?? "internal") === "external" ? "external" : "internal";
   const applyUrlRaw = String(formData.get("applyUrl") ?? "").trim();
+  const imageUrlRaw = String(formData.get("imageUrl") ?? "").trim();
 
   // React 19 mereset kolom form begitu aksi selesai, termasuk saat aksi
   // mengembalikan error. Isian yang dikirim ikut dikembalikan (dan form dibuat
@@ -157,6 +159,7 @@ export async function upsertJobPosting(
     requirements,
     applyMode,
     applyUrl: applyUrlRaw,
+    imageUrl: imageUrlRaw,
     open: formData.get("open") === "on",
   };
   const fail = (error: string): JobFormState => ({ error, values: submitted, nonce: crypto.randomUUID() });
@@ -166,6 +169,8 @@ export async function upsertJobPosting(
   if (!company) return fail("Nama perusahaan wajib diisi.");
   if (!isJobType(type)) return fail("Pilih jenis pekerjaan.");
   if (deadline && !isValidIsoDate(deadline)) return fail("Batas lamaran bukan tanggal yang valid.");
+  // Poster opsional; kalau diisi harus URL http(s) (unggahan Blob lolos).
+  if (imageUrlRaw && !isHttpUrl(imageUrlRaw)) return fail("URL gambar tidak valid.");
 
   // "Cara melamar": form PPIT (applyUrl null) atau situs perusahaan. Tautannya
   // nanti dipakai server untuk mengalihkan anggota ke luar, jadi dicek ketat di sini.
@@ -199,6 +204,7 @@ export async function upsertJobPosting(
     requirements: requirements || null,
     applicationDeadline: deadline || null,
     applyUrl,
+    imageUrl: imageUrlRaw || null,
   };
 
   let jobId: string;

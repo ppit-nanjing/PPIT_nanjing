@@ -3,6 +3,7 @@
 import { useActionState, useState } from "react";
 import type { JobFormState } from "@/app/actions/jobs";
 import { JOB_TYPES, JOB_TYPE_LABEL } from "@/lib/job-application";
+import { ImageUploadCropper } from "@/components/upload/image-upload-cropper";
 import { CheckboxField, RadioGroupField, SelectField, TextAreaField, TextField } from "@/components/console/form";
 import { useActionToast } from "@/components/console/submit-button";
 
@@ -33,6 +34,7 @@ export function JobPostingForm({
     description: string;
     requirements: string;
     applyUrl: string;
+    imageUrl: string;
   };
   submitLabel: string;
   isNew: boolean;
@@ -75,6 +77,14 @@ export function JobPostingForm({
           defaultValue={d?.applicationDeadline}
         />
       </div>
+      <ImageUploadCropper
+        name="imageUrl"
+        folder="jobs"
+        label="Poster / gambar lowongan (opsional)"
+        placeholder="URL atau unggah gambar"
+        defaultValue={d?.imageUrl ?? ""}
+        hint="Gambar diunggah apa adanya (tanpa crop) — poster potret 3:4 atau 2:3 paling pas."
+      />
       <TextAreaField name="description" label="Deskripsi" rows={7} defaultValue={d?.description} />
       <TextAreaField name="requirements" label="Persyaratan" rows={5} defaultValue={d?.requirements} />
 

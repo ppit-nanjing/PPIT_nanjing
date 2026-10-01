@@ -720,6 +720,9 @@ export const jobPostings = pgTable("job_postings", {
   // Klik "Lamar di situs perusahaan" dari anggota yang login. Satu-satunya
   // ukuran untuk lowongan tautan eksternal, karena lamarannya tidak lewat PPIT.
   externalClicks: integer("external_clicks").notNull().default(0),
+  // Poster/gambar lowongan (opsional, URL blob publik folder "jobs") -
+  // ditampilkan di halaman detail publik dan console.
+  imageUrl: text("image_url"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
 
