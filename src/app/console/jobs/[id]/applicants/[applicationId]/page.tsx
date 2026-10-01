@@ -216,7 +216,7 @@ export default async function JobApplicantPage({
       <div className="mt-8">
         <ConfirmButton
           title="Hapus lamaran ini?"
-          message={`Lamaran ${applicantName} untuk ${app.jobTitle} dihapus permanen, termasuk catatan pengurus. Lamaran lain tidak terpengaruh. Berkas CV yang diunggah TIDAK ikut terhapus dari penyimpanan; kalau pelamar meminta datanya dibuang, hapus juga berkasnya (lihat SOP Karier).`}
+          message={`Lamaran ${applicantName} untuk ${app.jobTitle} dihapus permanen, termasuk catatan pengurus. Lamaran lain tidak terpengaruh. Berkas CV yang diunggah TIDAK ikut terhapus dari penyimpanan; kalau pelamar meminta datanya dibuang, hapus juga berkasnya (lihat SOP Lowongan).`}
           action={deleteJobApplication}
           payload={{ id: app.id }}
           className="text-label-caps uppercase tracking-wide text-error hover:opacity-80 px-3 py-2 rounded-md hover:bg-error-container/30 transition-colors"

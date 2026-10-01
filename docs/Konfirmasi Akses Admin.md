@@ -40,7 +40,7 @@ Empat departemen induk (BPH, Program & Acara, Komunikasi & Media, Sumber Daya & 
 
 Modul `users`, `organization`, dan `feedback` sengaja **tidak bisa didelegasikan** sama sekali — hanya BPH bertier `full`. Modul `notifications` (template pesan otomatis) juga sama.
 
-> **Tambahan 2026-10-01 (dari kode, bukan dari database):** modul `career` (lowongan kerja + lamaran, [Career Flow](./Career%20Flow.md)) ditambahkan dan bisa didelegasikan. `src/db/seed.ts` memberikannya ke Usaha Dana untuk instalasi baru, tetapi tabel di atas adalah potret produksi 2026-08-17 dan belum dikonfirmasi ulang — di produksi, admin penuh perlu mencentang "Karier" untuk Usaha Dana lewat `/console/organization`.
+> **Tambahan 2026-10-01 (dari kode, bukan dari database):** modul `career` (lowongan kerja + lamaran, [Career Flow](./Career%20Flow.md)) ditambahkan dan bisa didelegasikan. `src/db/seed.ts` memberikannya ke Usaha Dana untuk instalasi baru, tetapi tabel di atas adalah potret produksi 2026-08-17 dan belum dikonfirmasi ulang — di produksi, admin penuh perlu mencentang "Lowongan" (dulu bernama "Karier"; kunci modulnya tetap `career`) untuk Usaha Dana lewat `/console/organization`.
 
 ## Draf pesan untuk pengurus
 

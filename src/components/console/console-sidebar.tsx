@@ -58,7 +58,7 @@ const GROUPS: { title: string; items: NavItem[] }[] = [
       { href: "/console/work-ledger", label: "Work Ledger", icon: ClipboardList, module: "events" },
       { href: "/console/inventory", label: "Inventaris", icon: Package, module: "inventory" },
       { href: "/console/membership", label: "Pendaftaran", icon: UserPlus, module: "membership" },
-      { href: "/console/jobs", label: "Karier", icon: Briefcase, module: "career" },
+      { href: "/console/jobs", label: "Lowongan", icon: Briefcase, module: "career" },
       { href: "/console/sensus", label: "Sensus", icon: ClipboardCheck, module: ["sensus", "sensus-verify"] },
       { href: "/console/ranting/sensus", label: "Sensus Ranting", icon: ClipboardCheck, module: "sensus-ranting" },
       { href: "/console/content", label: "Konten", icon: Images, module: "content" },

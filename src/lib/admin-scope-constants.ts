@@ -53,7 +53,7 @@ export const ASSIGNABLE_SCOPE_KEYS: { key: string; label: string }[] = [
   { key: "membership", label: "Pendaftaran Anggota (rekrutmen)" },
   { key: "links", label: "Tautan (short link)" },
   { key: "documents", label: "Dokumen (Google Drive)" },
-  { key: "career", label: "Karier (lowongan kerja & lamaran)" },
+  { key: "career", label: "Lowongan (pasang lowongan & proses lamaran)" },
 ];
 
 // Keys that only a "full" tier actor may grant to a department - handing these

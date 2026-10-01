@@ -30,6 +30,9 @@ export default async function ConsoleJobsPage() {
     .groupBy(jobPostings.id)
     .orderBy(desc(jobPostings.createdAt));
 
+  // Slug artikel Help Center tetap "karier" walau judul dan menunya kini
+  // "Lowongan": slug adalah kunci database (getGuide, tombol Panduan, URL
+  // /console/docs/karier), bukan label, jadi jangan "dibetulkan" tanpa migrasi.
   const [guide, rows] = await Promise.all([getGuide("karier"), rowsQuery]);
 
   return (
@@ -37,7 +40,7 @@ export default async function ConsoleJobsPage() {
       <FlashToast />
       <div className="flex flex-wrap items-start justify-between gap-3 mb-8">
         <div>
-          <h1 className="text-headline-md sm:text-headline-lg text-on-background">Karier</h1>
+          <h1 className="text-headline-md sm:text-headline-lg text-on-background">Lowongan</h1>
           <p className="text-body-md text-on-surface-variant mt-1">
             Lowongan yang tampil di halaman Jobs (/jobs), dan lamaran yang masuk.
           </p>

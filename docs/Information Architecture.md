@@ -118,7 +118,7 @@ flowchart TD
 | **Konten** | `/console/content` · `/console/content/news/new` · `/console/content/news/:id` · `/console/content/gallery/new` · `/console/content/gallery/:albumId` |
 | **Katalog kota** | `/console/katalog` — places, universities, merchandise, sponsors, donation channels |
 | **Keanggotaan** | `/console/membership` · `/console/membership/:id` · `/console/membership/form` (editor field) · `/console/membership/responses` |
-| **Karier** | `/console/jobs` · `/console/jobs/new` · `/console/jobs/:id` · `/console/jobs/:id/applicants/:applicationId` — lowongan + pipeline lamaran (modul `career`, lihat [Career Flow](./Career%20Flow.md)) |
+| **Lowongan** | `/console/jobs` · `/console/jobs/new` · `/console/jobs/:id` · `/console/jobs/:id/applicants/:applicationId` — lowongan + pipeline lamaran (modul `career`, lihat [Career Flow](./Career%20Flow.md)) |
 | **Laporan** | `/console/reports` — generator + ekspor CSV |
 | **Notifikasi** | `/console/notifications` — template |
 | **Feedback** | `/console/feedback` — inbox widget |

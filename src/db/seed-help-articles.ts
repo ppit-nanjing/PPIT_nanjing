@@ -311,9 +311,9 @@ Melihat hasil
   {
     slug: "karier",
     section: SERING_BINGUNG,
-    title: "Karier — Lowongan, Lamaran, dan SOP Menerima Perusahaan",
+    title: "Lowongan — Memasang, Memproses Lamaran, dan SOP Menerima Perusahaan",
     content: `Siapa yang bisa akses
-Menu Karier muncul kalau divisimu dicentangi modul "Karier" oleh admin penuh (Organisasi → edit divisi → centang "Karier"). Untuk instalasi baru, yang dapat otomatis adalah Divisi Usaha Dana. Kalau menunya tidak ada, itu sebabnya.
+Menu Lowongan muncul kalau divisimu dicentangi modul "Lowongan" oleh admin penuh (Organisasi → edit divisi → centang "Lowongan"). Dulu menu ini bernama "Karier"; isinya sama. Untuk instalasi baru, yang dapat otomatis adalah Divisi Usaha Dana. Kalau menunya tidak ada, itu sebabnya.
 
 SOP: perusahaan menghubungi PPIT untuk memasang lowongan
 1. Catat siapa yang menghubungi, dari perusahaan mana, posisi apa, dan untuk mahasiswa/lulusan seperti apa. Simpan percakapannya di folder Dokumen.
