@@ -210,7 +210,7 @@ export function EventRegisterFlow({
           </div>
           <div className="h-1.5 w-full overflow-hidden rounded-full bg-surface-container-low">
             <motion.div
-              className="h-full rounded-full bg-accent"
+              className="h-full rounded-full bg-primary-container"
               initial={false}
               animate={{ width: `${pct}%` }}
               transition={{ duration: reduceMotion ? 0 : 0.35, ease: "easeOut" }}

@@ -106,7 +106,7 @@ export function ThemeSwitcher() {
               />
               <span className="text-body-sm max-sm:text-[13px]">{ct.hanzi}</span>
               {/* Selection is conveyed by more than colour alone. */}
-              {selected && <Check size={14} className="max-sm:hidden opacity-70 shrink-0" aria-hidden />}
+              {selected && <Check size={14} className="opacity-70 shrink-0" aria-hidden />}
             </button>
           );
         })}
@@ -129,7 +129,7 @@ export function ThemeSwitcher() {
             >
               <Icon size={14} aria-hidden />
               <span className="text-body-sm max-sm:text-[12px] max-sm:leading-tight">{t(labelKey)}</span>
-              {selected && <Check size={14} className="max-sm:hidden opacity-70 shrink-0" aria-hidden />}
+              {selected && <Check size={14} className="opacity-70 shrink-0" aria-hidden />}
             </button>
           );
         })}

@@ -118,18 +118,23 @@ export async function registerForEventPractice(eventId: string, slug: string, fo
 const registerErrUrl = (slug: string, code: string, practice: boolean) =>
   `/events/${slug}/register?${practice ? "practice=1&" : ""}err=${code}`;
 
-async function runRegistration(eventId: string, slug: string, formData: FormData | undefined, practice: boolean) {
+async function runRegistration(eventId: string, slugArg: string, formData: FormData | undefined, practice: boolean) {
+  // slugArg is a bound argument the client can tamper with. Until the event is loaded
+  // it is only ever used encoded; afterwards every redirect uses the event's own slug.
   const session = await auth();
-  if (!session?.user?.id) redirect(`/login?returnTo=/events/${slug}${practice ? "/register?practice=1" : ""}`);
+  if (!session?.user?.id) {
+    redirect(`/login?returnTo=/events/${encodeURIComponent(slugArg)}${practice ? "/register?practice=1" : ""}`);
+  }
 
   const [event] = await db.select().from(events).where(eq(events.id, eventId));
+  if (!event) redirect(`/events/${encodeURIComponent(slugArg)}`);
+  const slug = event.slug;
   if (practice) {
-    if (!event) redirect(`/events/${slug}`);
     const access = await getEventAccess(event.id);
     const allowed = !!access && (access.isFullAdmin || access.moduleBridge || access.role != null);
     // Not committee: fall back to the normal form (the page ignores ?practice for them too).
     if (!allowed) redirect(`/events/${slug}/register`);
-  } else if (!event || event.status !== "published") {
+  } else if (event.status !== "published") {
     // Event is unpublished, closed, finished, or cancelled - don't throw here
     // (a raw Error inside a Server Action surfaces as a generic #441 in prod).
     // Bounce back to the event page, which already shows the right message.

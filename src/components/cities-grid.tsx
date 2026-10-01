@@ -50,6 +50,7 @@ export function CitiesGrid({ cities }: { cities: City[] }) {
               type="button"
               onClick={() => setOpen(isOpen ? null : city.name)}
               aria-expanded={isOpen}
+              aria-controls={isOpen ? "city-detail-panel" : undefined}
               variants={{ hidden: { opacity: 0, y: 16 }, visible: { opacity: 1, y: 0 } }}
               transition={{ duration: 0.4, ease: [0.25, 0.1, 0.25, 1] }}
               whileHover={{ y: -4 }}
@@ -63,9 +64,9 @@ export function CitiesGrid({ cities }: { cities: City[] }) {
                 <Fan className="h-auto w-7 sm:w-[42px]" />
               </span>
               {city.isHq && <span className="max-sm:sr-only text-label-caps uppercase tracking-[0.2em]">{t("cities.hq")}</span>}
-              <h3 className="text-headline-sm max-sm:text-[11.5px] max-sm:leading-tight max-sm:tracking-normal">{city.name}</h3>
+              <h3 className="text-headline-sm max-sm:text-[12px] max-sm:leading-tight max-sm:tracking-normal">{city.name}</h3>
               {city.hanzi && (
-                <span lang="zh-Hans" className={`text-body-sm max-sm:text-[11px] max-sm:leading-none ${city.isHq ? "text-on-accent" : "text-on-surface-variant"}`}>
+                <span lang="zh-Hans" className={`text-body-sm max-sm:text-[12px] max-sm:leading-none ${city.isHq ? "text-on-accent" : "text-on-surface-variant"}`}>
                   {city.hanzi}
                 </span>
               )}
@@ -99,7 +100,7 @@ export function CitiesGrid({ cities }: { cities: City[] }) {
 
             {/* Phone-only detail panel, full row width, under the tapped city's row. */}
             {openCity && i === panelAfter && (
-              <div className="deco-frame col-span-3 rounded-lg bg-surface-container-low p-4 text-left sm:hidden" role="region" aria-label={openCity.name}>
+              <div id="city-detail-panel" className="deco-frame col-span-3 rounded-lg bg-surface-container-low p-4 text-left sm:hidden" role="region" aria-label={openCity.name}>
                 <div className="mb-2 flex items-start justify-between gap-3">
                   <p className="text-headline-sm text-heading">
                     {openCity.name}

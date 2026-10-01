@@ -19,9 +19,7 @@ export default async function CatalogueLayout({ children }: { children: React.Re
         <CatalogueTabs />
       </PageHeader>
 
-      <div className="h-10" aria-hidden="true" />
-
-      <main className="max-w-[var(--container-max)] mx-auto px-[var(--spacing-container-padding)] pb-20">
+      <main className="max-w-[var(--container-max)] mx-auto px-[var(--spacing-container-padding)] pt-10 pb-20">
         {children}
       </main>
 

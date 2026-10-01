@@ -205,7 +205,7 @@ export function SiteNav() {
                     ~50px at a 1280 laptop). The first-visit hint below still
                     advertises the keyboard shortcut. */}
                 <button
-                  aria-label={t("nav.searchAria")}
+                  aria-label={isDesktop ? t("nav.searchAria") : t("nav.search")}
                   type="button"
                   onClick={() => {
                     setPaletteOpen(true);
