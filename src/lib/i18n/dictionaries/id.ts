@@ -974,6 +974,7 @@ export const id = {
   "upload.errTooLarge": "Berkas terlalu besar (maks {{mb}}MB).",
   "upload.errType": "Tipe berkas tidak didukung.",
   "upload.errNotConfigured": "Unggah berkas belum dikonfigurasi.",
+  "upload.errRateLimited": "Terlalu banyak unggahan dalam waktu singkat. Coba lagi beberapa saat lagi, atau masuk ke akunmu.",
   "upload.errServer": "Unggah gagal di server. Coba lagi; kalau berkasnya besar, kecilkan dulu (di bawah 4 MB).",
 
   // Email/password auth errors (src/app/actions/auth.ts)

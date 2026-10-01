@@ -970,6 +970,7 @@ export const en = {
   "upload.errFolder": "That target folder is not valid.",
   "upload.errTooLarge": "That file is too large (max {{mb}}MB).",
   "upload.errType": "That file type is not supported.",
+  "upload.errRateLimited": "Too many uploads in a short time. Try again in a little while, or sign in.",
   "upload.errNotConfigured": "File uploads are not configured yet.",
   "upload.errServer": "The upload failed on the server. Try again; if the file is large, shrink it below 4 MB first.",
 

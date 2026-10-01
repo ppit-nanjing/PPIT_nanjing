@@ -68,6 +68,8 @@ Unggahan ke folder-folder ini **gagal keras** kalau store private bermasalah, ti
 
 CSV ekspor pendaftar memuat URL penuh ke berkas (tetap butuh login pengurus untuk membukanya).
 
+Satu-satunya unggahan tanpa login adalah `borrow-doc` (Pernyataan Peminjam dari peminjam pihak luar). Itu dibatasi di `src/lib/anon-upload-limit.ts`: 5 unggahan per IP per 10 menit (di memori instance, upaya terbaik) dan batas global 20 berkas / 100 MB per jam yang dihitung dari berkas di store (waktu unggah ada di awal key). Lewat batas, `/api/upload` menjawab 429 (`upload.errRateLimited`). Konsekuensinya: saat diserang, peminjam luar yang sah bisa tertahan sampai jamnya lewat; pengguna yang login tidak kena batas ini.
+
 ### Memindahkan dokumen lama dari store publik
 
 Sebelum ini folder tersebut ada di store publik. Skrip sekali-jalan `src/db/migrate-private-docs.ts` memindahkannya (jalankan **setelah** proxy `/api/files` terpasang di produksi):

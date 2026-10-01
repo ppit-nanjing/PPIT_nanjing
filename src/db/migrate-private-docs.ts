@@ -145,6 +145,20 @@ async function readPrivate(pathname: string): Promise<{ bytes: Buffer; contentTy
   }
 }
 
+/**
+ * Read an object back from the private store, retrying: right after a put the
+ * object is occasionally not readable yet (seen live: 2 of 9 files answered
+ * with nothing on the first read and were byte-identical a moment later).
+ */
+async function readPrivateWithRetry(pathname: string, attempts = 4): Promise<Awaited<ReturnType<typeof readPrivate>>> {
+  for (let i = 0; i < attempts; i++) {
+    const got = await readPrivate(pathname);
+    if (got) return got;
+    await new Promise((r) => setTimeout(r, 1000 * (i + 1)));
+  }
+  return null;
+}
+
 const sha = (b: Buffer | ArrayBuffer) => createHash("sha256").update(Buffer.from(b as ArrayBuffer)).digest("hex");
 
 /** Repoint one DB reference, guarded on the old value. Returns rows changed. */
@@ -208,7 +222,7 @@ async function migrate() {
     const digest = sha(bytes);
 
     // 2. private copy (skip the upload if an identical one is already there)
-    const existing = await readPrivate(b.pathname);
+    const existing = await readPrivateWithRetry(b.pathname, 1);
     if (existing && sha(existing.bytes) === digest) {
       alreadyCopied++;
     } else {
@@ -227,9 +241,10 @@ async function migrate() {
         continue;
       }
       // 3. read it back and compare byte for byte
-      const back = await readPrivate(b.pathname);
+      const back = await readPrivateWithRetry(b.pathname);
       if (!back || back.bytes.byteLength !== bytes.byteLength || sha(back.bytes) !== digest) {
-        console.log(`  ✗ ${tag}: private readback mismatch - DB NOT touched`);
+        const why = !back ? "not readable" : back.bytes.byteLength !== bytes.byteLength ? `size ${back.bytes.byteLength} != ${bytes.byteLength}` : "sha256 differs";
+        console.log(`  ✗ ${tag}: private readback mismatch (${why}) - DB NOT touched`);
         failed++;
         continue;
       }
