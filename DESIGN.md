@@ -439,8 +439,9 @@ Do not wire it to the theme switcher.
 ### Don't:
 - **Don't** use bright gold as body text on ivory.
 - **Don't** use a gradient as the fill of a button, card or page. Gradients are
-  allowed only as the gold hairline fade (`.deco-rule`, `.deco-foil`) and the faint
-  diagonal lattice on a dark band.
+  allowed only as the gold hairline fade (`.deco-rule`, `.deco-foil`), the faint
+  diagonal lattice on a dark band, and a plain black-to-transparent scrim over a
+  photograph so text on it stays legible (event hero, register poster).
 - **Don't** add a glassmorphism panel (the scrolled nav pill's soft blur is the one
   exception), a blob illustration, or a neon pill.
 - **Don't** lean on flag-heavy red-and-white, oversized portraits, or slogan bombast.
