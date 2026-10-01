@@ -31,6 +31,15 @@ Prototipe menyertakan folder aset visual (`stitch_ppit_nanjing_web_portal/`) yan
 
 **Prinsip pemakaian** (dari `warm_institutional/DESIGN.md`): integrasikan foto *lifestyle* — mahasiswa beraktivitas, kumpul komunitas, momen kegiatan nyata — bukan stock photo generik. Foto dibingkai dengan radius besar (24px, `rounded-xl`) mengikuti shape language Warm. Motif batik/tekstur emas dipakai sebagai **aksen halus di background/divider**, bukan elemen dominan — jaga agar tetap minimalis dan tidak mengalahkan konten.
 
+## Pengiriman gambar (`next/image`)
+
+Gambar dikirim **apa adanya**, tanpa optimizer Vercel (`images.unoptimized: true` di `next.config.ts`). Alasannya: kuota optimizer di paket saat ini habis, dan saat itu setiap `/_next/image` dijawab `402 OPTIMIZED_IMAGE_REQUEST_PAYMENT_REQUIRED`, jadi semua sampul, avatar, dan foto beranda tidak termuat di produksi; konversi on-demand per lebar juga lambat bagi pembaca di balik Great Firewall. Akibatnya **berkas sumber harus kecil sejak awal**:
+
+- Aset statis (mis. foto kabinet): simpan sebagai **WebP** (kualitas ~80, lebar sesuai kebutuhan) di `src/assets/images/` dan `import` secara statis, supaya `next/image` tahu ukurannya dan membuat blur placeholder saat build. Jangan taruh di `public/` bila tidak ingin dapat diunduh di alamat lama.
+- Unggahan admin lewat `ImageUploadCropper`: sisi terpanjang dibatasi **1600px**, JPEG kualitas 0,85.
+- Pratinjau (`PhotoZoom`) memakai berkas yang sama dengan gambar kecilnya, jadi terbuka dari cache tanpa unduhan kedua.
+- **Belum tertangani:** unggahan galeri (`MultiPhotoUpload`) belum dibatasi ukurannya, dan beberapa avatar lama di Blob berukuran 1-1,4 MB (tampil di 32-80px). Keduanya sekarang dikirim apa adanya; kecilkan lewat pembatasan di `/api/upload` atau helper bersama dan unggah ulang avatar yang besar.
+
 ## Terkait
 
 - [Color System](./Color%20System.md) — `muted-gold` untuk aksen tekstur emas

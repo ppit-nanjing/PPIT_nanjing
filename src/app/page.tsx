@@ -15,7 +15,7 @@ import { StatsGrid } from "@/components/stats-grid";
 import { CitiesGrid } from "@/components/cities-grid";
 import { QuoteCard } from "@/components/quote-card";
 import { PhotoFrame } from "@/components/photo-frame";
-import kabinetPhoto from "@/assets/images/kabinet-ppit-nanjing.jpg";
+import kabinetPhoto from "@/assets/images/kabinet-ppit-nanjing.webp";
 import { Sunburst } from "@/components/deco/sunburst";
 import { PlumBlossoms, PlumSymbols } from "@/components/deco/plum-blossoms";
 import { DecoRule } from "@/components/deco/deco-rule";
