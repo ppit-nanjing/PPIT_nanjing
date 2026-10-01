@@ -12,6 +12,7 @@ import { EVENT_COMMITTEE_ROLE_LABEL, GRANTABLE_CAPABILITIES, type EventCommittee
 import { logEventAudit } from "@/lib/event-audit";
 import { getStructureTemplate } from "@/lib/event-structure-templates";
 import { createTemplatedNotification } from "@/lib/notifications";
+import { PRIVATE_FILE_PREFIX, isOwnPrivateFileUrl } from "@/lib/private-files";
 
 // Committee membership is per-event on purpose: the treasurer of one event is
 // not necessarily the cabinet treasurer, which is the exact complaint in the
@@ -492,6 +493,22 @@ export async function submitPaymentProof(formData: FormData) {
   const proofUrl = String(formData.get("proofUrl") ?? "").trim();
   const slug = String(formData.get("slug") ?? "").trim();
   if (!proofUrl) throw new Error("Tautan bukti pembayaran wajib diisi");
+  // Berkas di store private hanya boleh milik pengirim sendiri, atau berkas
+  // yang memang sudah tersimpan di pendaftaran ini (berkas lama hasil migrasi
+  // tidak punya segmen pemilik di key-nya, dan form ini mengirim ulang nilainya).
+  if (proofUrl.startsWith(PRIVATE_FILE_PREFIX) && !isOwnPrivateFileUrl(proofUrl, "payment-proof", session.user.id)) {
+    const [current] = await db
+      .select({ id: eventRegistrations.id })
+      .from(eventRegistrations)
+      .where(
+        and(
+          eq(eventRegistrations.id, id),
+          eq(eventRegistrations.userId, session.user.id),
+          eq(eventRegistrations.paymentProofUrl, proofUrl),
+        ),
+      );
+    if (!current) throw new Error("Berkas bukti pembayaran tidak valid, unggah ulang");
+  }
 
   const [updated] = await db
     .update(eventRegistrations)

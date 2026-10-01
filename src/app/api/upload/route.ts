@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/auth";
 import { put } from "@vercel/blob";
 import { hasModuleAccess, type AdminModule } from "@/lib/admin-scope";
+import { PRIVATE_FILE_FOLDERS, isPrivateFileFolder, privateFileUrl } from "@/lib/private-files";
 
 const MAX_BYTES = 10 * 1024 * 1024;
 const ALLOWED_TYPES = [
@@ -53,11 +54,16 @@ const FOLDER_MODULE: Record<string, AdminModule | null> = {
 };
 
 // Folder yang isinya dokumen pribadi -> store Blob PRIVATE
-// (PRIVATE_READ_WRITE_TOKEN), dilayani hanya lewat proxy ter-auth. Untuk
-// sekarang cuma "sensus" (kartu mahasiswa / LOA di alur sensus). "event-doc"
-// (bukti mahasiswa peserta acara) masih publik - butuh proxy ber-scope acara,
-// digarap terpisah.
-const PRIVATE_FOLDERS = new Set(["sensus"]);
+// (PRIVATE_READ_WRITE_TOKEN), dilayani hanya lewat proxy ter-auth: "sensus"
+// (kartu mahasiswa / LOA) lewat /api/sensus/student-card, sisanya (bukti
+// transfer, CV, berkas peserta acara, Pernyataan Peminjam, lampiran Join Us)
+// lewat /api/files - aturan aksesnya di src/lib/private-file-access.ts.
+const PRIVATE_FOLDERS = new Set<string>(["sensus", ...PRIVATE_FILE_FOLDERS]);
+
+// Hanya "sensus" yang boleh jatuh ke store publik kalau store private gagal
+// (perilaku lama, supaya kartu mahasiswa tetap terkirim). Folder lain gagal
+// keras: bukti transfer, CV, dsb. tidak boleh diam-diam jadi URL publik.
+const PUBLIC_FALLBACK_FOLDERS = new Set(["sensus"]);
 
 // Folder yang boleh diunggah TANPA login. Cuma "borrow-doc": Pernyataan Peminjam
 // bertanda tangan di form peminjaman aset harus bisa diunggah peminjam PIHAK
@@ -113,11 +119,13 @@ export async function POST(req: NextRequest) {
   const allowedTypes = FOLDER_TYPES[folder] ?? ALLOWED_TYPES;
   if (!allowedTypes.includes(file.type)) return NextResponse.json({ errorKey: "upload.errType" }, { status: 415 });
 
-  // Folder yang isinya dokumen pribadi (kartu mahasiswa / bukti dari alur
-  // sensus) disimpan di store Blob PRIVATE terpisah - hanya bisa dibaca lewat
-  // proxy ter-auth /api/sensus/student-card, tidak lewat URL blob langsung.
-  // Sisanya (berita, galeri, katalog, inventaris) tetap di store publik default.
-  const wantsPrivate = PRIVATE_FOLDERS.has(folder); // sensus wajib login, jadi sesi pasti ada
+  // Folder yang isinya dokumen pribadi (kartu mahasiswa, bukti transfer, CV, dst.)
+  // disimpan di store Blob PRIVATE terpisah - hanya bisa dibaca lewat proxy
+  // ter-auth, tidak lewat URL blob langsung. Sisanya (berita, galeri, katalog,
+  // inventaris) tetap di store publik default. Sesi hampir selalu ada di sini;
+  // satu-satunya pengecualian "borrow-doc" dari peminjam pihak luar (key-nya
+  // tanpa segmen pemilik, hanya Logistik yang bisa membacanya).
+  const wantsPrivate = PRIVATE_FOLDERS.has(folder);
   const blobToken = wantsPrivate
     ? process.env.PRIVATE_READ_WRITE_TOKEN
     : process.env.BLOB_READ_WRITE_TOKEN;
@@ -143,7 +151,7 @@ export async function POST(req: NextRequest) {
   try {
     blob = await put(key, file, { access: wantsPrivate ? "private" : "public", addRandomSuffix: true, token: blobToken });
   } catch (err) {
-    if (wantsPrivate && process.env.BLOB_READ_WRITE_TOKEN) {
+    if (wantsPrivate && PUBLIC_FALLBACK_FOLDERS.has(folder) && process.env.BLOB_READ_WRITE_TOKEN) {
       // Private gagal (token salah, store bermasalah). Daripada memblokir
       // mahasiswa mengirim kartunya, simpan ke store publik - key tetap pakai
       // addRandomSuffix jadi URL tak bisa ditebak, sama seperti sebelum ada
@@ -162,8 +170,11 @@ export async function POST(req: NextRequest) {
     }
   }
 
-  const url = storedPrivate
-    ? `/api/sensus/student-card/${blob.pathname.split("/").map(encodeURIComponent).join("/")}`
-    : blob.url;
+  let url = blob.url;
+  if (storedPrivate) {
+    url = isPrivateFileFolder(folder)
+      ? privateFileUrl(blob.pathname)
+      : `/api/sensus/student-card/${blob.pathname.split("/").map(encodeURIComponent).join("/")}`;
+  }
   return NextResponse.json({ url });
 }

@@ -12,6 +12,7 @@ import {
   type JobApplicationStatus,
 } from "@/lib/job-application";
 import { UUID_RE } from "@/lib/uuid";
+import { pathnameFromPrivateFileUrl } from "@/lib/private-files";
 import {
   deleteJobApplication,
   updateJobApplicationNote,
@@ -27,7 +28,8 @@ import { CollapsibleSection } from "@/components/console/collapsible-section";
 // bisa kosong (URL berakhiran "/"); keduanya jatuh ke URL utuh.
 function resumeLabel(url: string): string {
   try {
-    const last = new URL(url).pathname.split("/").filter(Boolean).pop();
+    // Base dummy: berkas unggahan berupa path relatif (/api/files/resume/...).
+    const last = new URL(url, "https://x.invalid").pathname.split("/").filter(Boolean).pop();
     if (last) return decodeURIComponent(last);
   } catch {
     // jatuh ke URL apa adanya
@@ -107,7 +109,7 @@ export default async function JobApplicantPage({
           </div>
           <div className="px-6 py-4">
             <p className="text-label-caps uppercase tracking-wide text-on-surface-variant">CV / Resume</p>
-            {app.resumeUrl && isHttpUrl(app.resumeUrl) ? (
+            {app.resumeUrl && (isHttpUrl(app.resumeUrl) || pathnameFromPrivateFileUrl(app.resumeUrl)) ? (
               <a
                 href={app.resumeUrl}
                 target="_blank"

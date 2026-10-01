@@ -11,6 +11,7 @@ import { requireCompletedSensus } from "@/lib/sensus-gate";
 import { createTemplatedNotification } from "@/lib/notifications";
 import { withFlash } from "@/lib/flash";
 import { UUID_RE } from "@/lib/uuid";
+import { isOwnPrivateFileUrl } from "@/lib/private-files";
 import {
   isHttpsUrl,
   isHttpUrl,
@@ -27,8 +28,11 @@ export async function applyToJob(jobId: string, formData: FormData) {
   const coverLetter = String(formData.get("coverLetter") ?? "").trim();
   if (!resumeUrl) throw new Error("Tautan resume/CV wajib diisi");
   // Tautan ini kini dirender sebagai link klik di console pengurus, jadi hanya
-  // http(s) yang diterima (unggahan Blob dan tautan Drive lolos).
-  if (!isHttpUrl(resumeUrl)) throw new Error("Tautan resume/CV harus berupa alamat http(s) yang valid");
+  // dua bentuk yang diterima: tautan http(s) (mis. Drive) atau berkas yang
+  // pelamar ini unggah sendiri (store private, lewat /api/files).
+  if (!isHttpUrl(resumeUrl) && !isOwnPrivateFileUrl(resumeUrl, "resume", session.user.id)) {
+    throw new Error("Tautan resume/CV harus berupa alamat http(s) yang valid");
+  }
 
   const [existing] = await db
     .select()

@@ -6,6 +6,7 @@ import { checkInRegistration, setRegistrationCancelled } from "@/app/actions/adm
 import { ConfirmButton } from "@/components/console/confirm-button";
 import { toast } from "sonner";
 import { ProofView } from "@/components/console/proof-view";
+import { PRIVATE_FILE_PREFIX } from "@/lib/private-files";
 import {
   CHECK_IN_BLOCK_LABEL,
   CHECK_IN_BLOCK_MESSAGE,
@@ -327,19 +328,22 @@ export function RegistrationList({
                     </span>
                   </span>
                 )}
-                {rows.map((b) => (
-                  <span
-                    key={b.key}
-                    className={b.key === "studentProofUrl" ? "flex flex-wrap items-center gap-1.5" : undefined}
-                  >
-                    {b.label}:{" "}
-                    {b.key === "studentProofUrl" ? (
-                      <ProofView url={b.value} label={b.label} />
-                    ) : (
-                      <span className="text-on-background normal-case">{b.value}</span>
-                    )}
-                  </span>
-                ))}
+                {rows.map((b) => {
+                  // Berkas unggahan (bukti mahasiswa, jawaban pertanyaan tipe file)
+                  // tersimpan sebagai path proxy /api/files/… - path relatif yang
+                  // tak bisa disalin-tempel, jadi tampilkan sebagai berkas.
+                  const isFile = b.key === "studentProofUrl" || b.value.startsWith(PRIVATE_FILE_PREFIX);
+                  return (
+                    <span key={b.key} className={isFile ? "flex flex-wrap items-center gap-1.5" : undefined}>
+                      {b.label}:{" "}
+                      {isFile ? (
+                        <ProofView url={b.value} label={b.label} />
+                      ) : (
+                        <span className="text-on-background normal-case">{b.value}</span>
+                      )}
+                    </span>
+                  );
+                })}
               </div>
               <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
                 <CheckInButton r={r} />

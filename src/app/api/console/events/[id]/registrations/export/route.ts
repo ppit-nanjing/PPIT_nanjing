@@ -26,8 +26,13 @@ const STATUS_LABEL: Record<string, string> = {
   cancelled: "Dibatalkan",
 };
 
-export async function GET(_req: Request, { params }: { params: Promise<{ id: string }> }) {
+export async function GET(req: Request, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
+  // Berkas unggahan peserta kini di store private dan dibuka lewat path relatif
+  // (/api/files/…, /api/sensus/student-card/…). Di CSV path relatif tak bisa
+  // diklik, jadi dijadikan URL penuh (tetap butuh login pengurus untuk dibuka).
+  const origin = new URL(req.url).origin;
+  const absUrl = (v: unknown) => (typeof v === "string" && v.startsWith("/api/") ? origin + v : v);
   // Ekspor ini memuat nomor paspor + bukti KTM + kontak → BPH Kabinet +
   // Divisi Teknologi (adminScope "full") DAN BPH Panitia acara ini
   // (ketua/wakil/sekretaris/SC) yang butuh rekap untuk operasional & LPJ.
@@ -130,10 +135,10 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
         effectiveBranch(r.sensusCompletion === "complete" ? r.sensusBranch : null, r.branch) ?? "",
         ...(anyBiodata ? [] : [r.sensusUniversity ?? "", r.sensusWechat ?? ""]),
         ...(anyFee ? [feeLabelFor(r.feeOptionId, r.registeredAt)] : []),
-        ...(anyBiodata ? BIODATA_COLS.map((c) => bio?.[c.key] ?? "") : []),
+        ...(anyBiodata ? BIODATA_COLS.map((c) => absUrl(bio?.[c.key]) ?? "") : []),
         ...questions.map((q) => {
           const v = answers[q.id];
-          return Array.isArray(v) ? v.join(", ") : v;
+          return Array.isArray(v) ? v.join(", ") : absUrl(v);
         }),
       ]
         .map(csvCell)
