@@ -16,7 +16,7 @@ const TONE_CLASS: Record<BadgeTone, string> = {
   // "info" = butuh perhatian (mis. Menunggu Verifikasi / Menunggu keputusan)
   info: "bg-primary-container/15 text-primary-container",
   success: "bg-primary-container/10 text-primary-container",
-  warning: "bg-tertiary-container/40 text-on-tertiary-container",
+  warning: "bg-tertiary-container/10 text-tertiary",
   danger: "bg-error-container/50 text-on-error-container",
 };
 

@@ -103,8 +103,37 @@ pairs.push(
   ["on-error-container", "error-container", TEXT],
 );
 
+/** `tint` laid over `ground` at `alpha`: what `bg-<tint>/<n>` renders as. */
+function blend(tint: string, ground: string, alpha: number): string {
+  const a = parseInt(tint.slice(1), 16);
+  const b = parseInt(ground.slice(1), 16);
+  const mix = (shift: number) => Math.round(((a >> shift) & 255) * alpha + ((b >> shift) & 255) * (1 - alpha));
+  return "#" + ((mix(16) << 16) | (mix(8) << 8) | mix(0)).toString(16).padStart(6, "0");
+}
+
+// Tinted chips: text on `bg-<tint>/<alpha>` over a surface. These once shipped as
+// `bg-primary-container/40 text-on-primary-container`, cream text on a pale tint
+// (~2:1), and the opaque pairs above could not catch it.
+const tintedChips: [fg: string, tint: string, alpha: number][] = [
+  ["primary-container", "primary-container", 0.15],
+  ["tertiary", "tertiary-container", 0.1],
+  ["gold-ink", "gold-ink", 0.1],
+  ["on-surface", "accent", 0.1],
+];
+const chipGrounds = ["background", "surface-container-lowest", "surface-container-low"];
+
 for (const [name, pal] of Object.entries(palettes)) {
   const bad: string[] = [];
+  for (const [fg, tint, alpha] of tintedChips) {
+    for (const g of chipGrounds) {
+      if (!pal[fg] || !pal[tint] || !pal[g]) {
+        bad.push(`${fg} on ${tint}/${alpha * 100}% over ${g}: token missing`);
+        continue;
+      }
+      const r = ratio(pal[fg], blend(pal[tint], pal[g], alpha));
+      if (r < TEXT) bad.push(`${fg} on ${tint}/${alpha * 100}% over ${g} = ${r.toFixed(2)}:1 (needs ${TEXT}:1)`);
+    }
+  }
   for (const [fg, bg, min] of pairs) {
     if (!pal[fg] || !pal[bg]) {
       bad.push(`${fg} on ${bg}: token missing`);

@@ -100,7 +100,7 @@ export function LinkDirectory({
               </div>
               {l.description && <p className="text-body-md text-on-surface-variant">{l.description}</p>}
               <div className="flex items-center justify-between gap-3">
-                <span className="text-label-caps text-on-surface-variant/80">Periode: {l.periodLabel}</span>
+                <span className="text-label-caps text-on-surface-variant">Periode: {l.periodLabel}</span>
                 <a
                   href={`/l/${l.slug}`}
                   className="inline-flex items-center gap-1.5 text-label-caps uppercase tracking-wide text-primary-container hover:text-primary transition-colors"

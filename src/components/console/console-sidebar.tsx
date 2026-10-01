@@ -111,7 +111,7 @@ function NavContent({
         return (
           <div key={group.title} className="mb-2">
             {!collapsed && (
-              <p className="px-6 pt-4 pb-1 text-label-caps uppercase tracking-wide text-on-surface-variant/70 text-xs">
+              <p className="px-6 pt-4 pb-1 text-label-caps uppercase tracking-wide text-on-surface-variant text-xs">
                 {group.title}
               </p>
             )}

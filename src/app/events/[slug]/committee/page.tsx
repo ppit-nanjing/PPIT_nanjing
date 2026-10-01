@@ -109,7 +109,7 @@ export default async function CommitteeTicketPage({ params }: { params: Promise<
             role="status"
             aria-live="polite"
             className={`inline-flex items-center gap-2 text-label-caps uppercase tracking-wide px-3 py-1.5 rounded-md ${
-              assignment.checkedInAt ? "bg-primary-container/40 text-on-primary-container" : "bg-surface-container-low text-on-surface-variant"
+              assignment.checkedInAt ? "bg-primary-container/15 text-primary-container" : "bg-surface-container-low text-on-surface-variant"
             }`}
           >
             <ScanLine size={14} aria-hidden />

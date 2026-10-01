@@ -204,7 +204,7 @@ export default async function ConsoleInventoryPage() {
                   {item.availableQuantity} / {item.totalQuantity} tersedia &middot; {conditionLabel(item.condition)}
                 </p>
                 {(item.category || item.location || item.custodian) && (
-                  <p className="text-label-caps text-on-surface-variant/70 mt-1">
+                  <p className="text-label-caps text-on-surface-variant mt-1">
                     {[item.category, item.location, item.custodian && `Pemegang: ${item.custodian}`]
                       .filter(Boolean)
                       .join(" · ")}

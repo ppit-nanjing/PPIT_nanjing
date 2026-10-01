@@ -135,7 +135,7 @@ export default async function RantingSensusPage({ searchParams }: { searchParams
                   <span
                     className={`shrink-0 text-label-caps px-2.5 py-1 rounded-full ${
                       s.completionStatus === "complete"
-                        ? "bg-primary-container/20 text-on-primary-container"
+                        ? "bg-primary-container/15 text-primary-container"
                         : "bg-error-container/30 text-on-error-container"
                     }`}
                   >

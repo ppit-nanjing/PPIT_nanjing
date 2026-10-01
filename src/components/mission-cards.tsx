@@ -57,7 +57,7 @@ export function MissionCards() {
             <div className="w-11 h-11 rounded-full bg-primary-container/10 flex items-center justify-center transition-colors group-hover:bg-primary-container/20">
               <Icon className="text-primary-container" size={22} />
             </div>
-            <span className="text-label-caps text-on-surface-variant/40" aria-hidden="true">
+            <span className="text-label-caps text-gold-ink" aria-hidden="true">
               {String(i + 1).padStart(2, "0")}
             </span>
           </div>

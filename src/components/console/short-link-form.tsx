@@ -82,14 +82,14 @@ export function ShortLinkForm({
           placeholder="https://drive.google.com/..."
           className={fieldInput}
         />
-        <span className="text-label-caps text-on-surface-variant/80">
+        <span className="text-label-caps text-on-surface-variant">
           Tujuan penerusan (Google Drive, Vercel Blob, dll). Catatan: Drive diblokir di Tiongkok.
         </span>
       </label>
 
       <label className="flex flex-col gap-1.5">
         <span className="text-label-caps uppercase tracking-wide text-on-surface-variant">
-          Slug <span className="text-on-surface-variant/70">(opsional, otomatis dari judul)</span>
+          Slug <span className="text-on-surface-variant">(opsional, otomatis dari judul)</span>
         </span>
         <input
           name="slug"
@@ -97,7 +97,7 @@ export function ShortLinkForm({
           placeholder={previewSlug || "dokumentasi-ad-art"}
           className={fieldInput}
         />
-        <span className="text-label-caps text-on-surface-variant/80">
+        <span className="text-label-caps text-on-surface-variant">
           Tautan publik: <code className="text-on-background">nanjing.ppitiongkok.com/l/{previewSlug || "…"}</code>
           {initial?.slug && " — mengganti slug memutus tautan lama yang sudah dibagikan."}
         </span>
@@ -132,7 +132,7 @@ export function ShortLinkForm({
 
       <label className="flex flex-col gap-1.5">
         <span className="text-label-caps uppercase tracking-wide text-on-surface-variant">
-          Kedaluwarsa <span className="text-on-surface-variant/70">(opsional)</span>
+          Kedaluwarsa <span className="text-on-surface-variant">(opsional)</span>
         </span>
         <input
           name="expiresAt"
@@ -144,7 +144,7 @@ export function ShortLinkForm({
 
       <label className="flex flex-col gap-1.5">
         <span className="text-label-caps uppercase tracking-wide text-on-surface-variant">
-          Deskripsi <span className="text-on-surface-variant/70">(opsional)</span>
+          Deskripsi <span className="text-on-surface-variant">(opsional)</span>
         </span>
         <textarea
           name="description"

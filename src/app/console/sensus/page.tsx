@@ -28,8 +28,8 @@ import { sortByCoverageOrder } from "@/lib/coverage-cities";
 // foto bukti KTM, tanpa paspor/kontak/ekspor/ubah.
 
 const STATUS_BADGE: Record<MembershipStatus, string> = {
-  anggota: "bg-primary-container/40 text-on-primary-container",
-  cabang_lain: "bg-tertiary-container/30 text-on-tertiary-container",
+  anggota: "bg-primary-container/15 text-primary-container",
+  cabang_lain: "bg-tertiary-container/10 text-tertiary",
   tamu: "bg-outline-variant/40 text-on-surface-variant",
 };
 
@@ -271,7 +271,7 @@ export default async function ConsoleSensusPage({ searchParams }: { searchParams
                         <span
                           className={`shrink-0 text-label-caps px-2.5 py-1 rounded-full ${
                             s.completionStatus === "complete"
-                              ? "bg-primary-container/20 text-on-primary-container"
+                              ? "bg-primary-container/15 text-primary-container"
                               : "bg-error-container/30 text-on-error-container"
                           }`}
                         >

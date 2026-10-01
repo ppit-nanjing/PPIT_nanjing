@@ -80,7 +80,7 @@ export default async function ConsoleSensusDetailPage({ params }: { params: Prom
         <span
           className={`text-label-caps px-2.5 py-1 rounded-full ${
             s.completionStatus === "complete"
-              ? "bg-primary-container/30 text-on-primary-container"
+              ? "bg-primary-container/15 text-primary-container"
               : "bg-error-container/30 text-on-error-container"
           }`}
         >

@@ -141,7 +141,7 @@ export function DriveExplorer({
         </div>
         <span
           className={`px-2.5 py-1 rounded-md text-label-caps ${
-            canWrite ? "bg-primary-container/40 text-on-primary-container" : "bg-outline-variant/40 text-on-surface-variant"
+            canWrite ? "bg-primary-container/15 text-primary-container" : "bg-outline-variant/40 text-on-surface-variant"
           }`}
         >
           {canWrite ? "Bisa edit" : "Baca saja"}

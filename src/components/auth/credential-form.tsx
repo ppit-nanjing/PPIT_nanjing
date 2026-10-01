@@ -171,7 +171,7 @@ export function CredentialForm({ action, googleAction, mode, returnTo }: Props) 
       <button
         type="submit"
         disabled={pending}
-        className="group bg-primary-container text-on-primary text-label-caps uppercase tracking-wide py-3 rounded-md hover:bg-primary transition-[background-color,transform] flex items-center justify-center gap-2 disabled:opacity-60 active:scale-[0.98] focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-container focus-visible:ring-offset-2 focus-visible:ring-offset-surface-container-lowest"
+        className="group deco-btn bg-accent text-on-accent text-label-caps uppercase py-3 rounded-md hover:brightness-95 transition-[filter,transform] flex items-center justify-center gap-2 disabled:opacity-60 active:scale-[0.98] focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-container focus-visible:ring-offset-2 focus-visible:ring-offset-surface-container-lowest"
       >
         {mode === "signup" ? t("auth.submitSignUp") : t("auth.submitSignIn")}
         {pending ? (

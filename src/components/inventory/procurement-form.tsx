@@ -49,7 +49,7 @@ export function ProcurementForm({ categories }: { categories: string[] }) {
   }
 
   return (
-    <form onSubmit={handleSubmit} className="flex flex-col gap-4 max-w-xl">
+    <form onSubmit={handleSubmit} className="flex flex-col gap-4 max-w-xl mx-auto">
       <label className="flex flex-col gap-2">
         <span className="text-label-caps uppercase tracking-wide text-on-surface-variant">{t("inventory.form.itemName")} *</span>
         <input name="itemName" required className="bg-soft-gray rounded-md p-3 text-body-md focus:outline-none focus:ring-2 focus:ring-primary-container" />
@@ -99,7 +99,7 @@ export function ProcurementForm({ categories }: { categories: string[] }) {
       <button
         type="submit"
         disabled={pending}
-        className="self-start bg-primary-container text-on-primary text-label-caps uppercase tracking-wide px-6 py-3 rounded-md hover:bg-primary transition-colors disabled:opacity-60"
+        className="self-start deco-btn bg-accent text-on-accent text-label-caps uppercase px-6 py-3 rounded-md hover:brightness-95 transition-[filter] disabled:opacity-60"
       >
         {pending ? t("inventory.form.sending") : t("inventory.form.procSubmit")}
       </button>

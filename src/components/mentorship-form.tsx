@@ -70,7 +70,7 @@ export function MentorshipForm() {
             <button
               type="button"
               onClick={() => setStep(1)}
-              className="flex items-center gap-1 bg-primary-container text-on-primary text-label-caps uppercase tracking-wide px-6 py-3 rounded-md hover:bg-primary transition-colors"
+              className="flex items-center gap-1 deco-btn bg-accent text-on-accent text-label-caps uppercase px-6 py-3 rounded-md hover:brightness-95 transition-[filter]"
             >
               {t("career.mentorship.next")} <ChevronRight size={16} />
             </button>
@@ -103,7 +103,7 @@ export function MentorshipForm() {
             </button>
             <button
               type="submit"
-              className="flex items-center gap-2 bg-primary-container text-on-primary text-label-caps uppercase tracking-wide px-6 py-3 rounded-md hover:bg-primary transition-colors"
+              className="flex items-center gap-2 deco-btn bg-accent text-on-accent text-label-caps uppercase px-6 py-3 rounded-md hover:brightness-95 transition-[filter]"
             >
               {t("career.mentorship.submit")} <CheckCircle2 size={16} />
             </button>
