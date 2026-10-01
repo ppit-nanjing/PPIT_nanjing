@@ -15,6 +15,7 @@ import {
   isHttpsUrl,
   isHttpUrl,
   isJobApplicationStatus,
+  isJobExpired,
   isJobType,
   JOB_APPLICATION_STATUS_LABEL,
 } from "@/lib/job-application";
@@ -37,13 +38,19 @@ export async function applyToJob(jobId: string, formData: FormData) {
   if (existing) redirect(`/jobs/${jobId}/applied`);
 
   const [job] = await db
-    .select({ title: jobPostings.title, status: jobPostings.status, applyUrl: jobPostings.applyUrl })
+    .select({
+      title: jobPostings.title,
+      status: jobPostings.status,
+      applyUrl: jobPostings.applyUrl,
+      applicationDeadline: jobPostings.applicationDeadline,
+    })
     .from(jobPostings)
     .where(eq(jobPostings.id, jobId));
   // Menutup lowongan di console harus benar-benar menghentikan lamaran baru,
   // bukan hanya menyembunyikan tombolnya. Lowongan yang melamar lewat situs
-  // perusahaan juga tidak boleh menampung lamaran lewat form PPIT.
-  if (!job || job.status !== "open" || job.applyUrl) redirect(`/jobs/${jobId}`);
+  // perusahaan juga tidak boleh menampung lamaran lewat form PPIT. Lewat batas
+  // lamaran juga ditolak di server, bukan hanya di tampilan.
+  if (!job || job.status !== "open" || job.applyUrl || isJobExpired(job.applicationDeadline)) redirect(`/jobs/${jobId}`);
 
   await db.insert(jobApplications).values({
     jobId,

@@ -2,6 +2,7 @@ import type { MetadataRoute } from "next";
 import { eq } from "drizzle-orm";
 import { db } from "@/db";
 import { events, newsArticles, galleryAlbums, jobPostings } from "@/db/schema";
+import { isJobExpired } from "@/lib/job-application";
 
 const SITE_URL =
   process.env.NEXT_PUBLIC_SITE_URL ?? "https://ppit-nanjing.vercel.app";
@@ -61,7 +62,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       .where(eq(newsArticles.status, "published")),
     db.select({ id: galleryAlbums.id, createdAt: galleryAlbums.createdAt }).from(galleryAlbums),
     db
-      .select({ id: jobPostings.id, createdAt: jobPostings.createdAt })
+      .select({ id: jobPostings.id, createdAt: jobPostings.createdAt, applicationDeadline: jobPostings.applicationDeadline })
       .from(jobPostings)
       .where(eq(jobPostings.status, "open")),
   ]);
@@ -87,7 +88,10 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     priority: 0.5,
   }));
 
-  const jobEntries: MetadataRoute.Sitemap = openJobs.map((j) => ({
+  // Lowongan yang lewat batas lamaran tidak lagi bisa dilamar - tidak masuk sitemap.
+  const jobEntries: MetadataRoute.Sitemap = openJobs
+    .filter((j) => !isJobExpired(j.applicationDeadline))
+    .map((j) => ({
     url: `${SITE_URL}/jobs/${j.id}`,
     lastModified: j.createdAt,
     changeFrequency: "daily",

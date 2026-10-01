@@ -3,7 +3,7 @@ import { redirect } from "next/navigation";
 import { auth } from "@/auth";
 import { db } from "@/db";
 import { jobPostings } from "@/db/schema";
-import { isHttpsUrl } from "@/lib/job-application";
+import { isHttpsUrl, isJobExpired } from "@/lib/job-application";
 import { hasCompletedSensus } from "@/lib/sensus-gate";
 import { UUID_RE } from "@/lib/uuid";
 
@@ -31,14 +31,19 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
   const [sensusComplete, [job]] = await Promise.all([
     hasCompletedSensus(session.user.id),
     db
-      .select({ status: jobPostings.status, applyUrl: jobPostings.applyUrl })
+      .select({
+        status: jobPostings.status,
+        applyUrl: jobPostings.applyUrl,
+        applicationDeadline: jobPostings.applicationDeadline,
+      })
       .from(jobPostings)
       .where(eq(jobPostings.id, id)),
   ]);
   if (!sensusComplete) redirect(`/sensus?returnTo=${encodeURIComponent(path)}`);
-  // Lowongan sudah tidak ada, ditutup, atau tidak (lagi) memakai tautan
-  // eksternal: halaman lowongan sendiri yang menjelaskan (termasuk 404 bergaya aplikasi).
-  if (!job || job.status !== "open" || !job.applyUrl || !isHttpsUrl(job.applyUrl)) redirect(`/jobs/${id}`);
+  // Lowongan sudah tidak ada, ditutup, lewat batas lamaran, atau tidak (lagi)
+  // memakai tautan eksternal: halaman lowongan sendiri yang menjelaskan
+  // (termasuk 404 bergaya aplikasi).
+  if (!job || job.status !== "open" || isJobExpired(job.applicationDeadline) || !job.applyUrl || !isHttpsUrl(job.applyUrl)) redirect(`/jobs/${id}`);
 
   // Gagal menghitung tidak boleh menghalangi anggota yang mau melamar.
   try {

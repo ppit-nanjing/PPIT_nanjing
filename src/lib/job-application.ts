@@ -62,3 +62,17 @@ export const JOB_TYPE_LABEL: Record<JobType, string> = {
 export function isJobType(value: string): value is JobType {
   return (JOB_TYPES as readonly string[]).includes(value);
 }
+
+// Batas lamaran kini ditegakkan (dulu hanya label): lowongan yang melewati
+// tanggal ini tidak bisa dilamar lagi dan tampil abu-abu. Deadline INKLUSIF -
+// tanggal terakhir masih bisa melamar. Dibandingkan sebagai tanggal
+// (YYYY-MM-DD) supaya bebas jam dan zona waktu server.
+export function isJobExpired(deadline: string | Date | null | undefined, now: Date = new Date()): boolean {
+  if (!deadline) return false;
+  const deadlineDay = typeof deadline === "string" ? deadline.slice(0, 10) : deadline.toISOString().slice(0, 10);
+  return now.toISOString().slice(0, 10) > deadlineDay;
+}
+
+// Berapa lowongan kadaluarsa yang masih ditampilkan abu-abu di /jobs; sisanya
+// hanya di /jobs/archive. Ubah satu angka ini kalau toleransinya perlu lain.
+export const EXPIRED_VISIBLE_LIMIT = 3;

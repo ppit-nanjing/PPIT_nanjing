@@ -325,9 +325,9 @@ SOP: perusahaan menghubungi PPIT untuk memasang lowongan
 Memasang lowongan (/console/jobs → Tambah Lowongan)
 - Judul, Perusahaan, Jenis pekerjaan: wajib.
 - Lokasi, Batas lamaran, Deskripsi, Persyaratan: opsional.
-- Poster (opsional): unggah gambar poster di kolom "Poster / gambar lowongan". Gambar diunggah apa adanya (tidak dipotong), tampil di samping kanan halaman lowongan — poster potret paling pas. Tautan yang kamu tempel di Deskripsi/Persyaratan otomatis bisa diklik pembaca.
+- Poster (opsional): unggah gambar poster di kolom "Poster / gambar lowongan". Gambar diunggah apa adanya (tidak dipotong), tampil di samping kanan halaman lowongan dan sebagai thumbnail di daftar Lowongan (publik dan console) — poster potret paling pas. Tautan yang kamu tempel di Deskripsi/Persyaratan otomatis bisa diklik pembaca.
 - Kotak "Langsung buka untuk pelamar": kalau dicentang, lowongan langsung tampil di halaman Jobs (/jobs, "Career Opportunities in Nanjing"). Kalau dikosongkan, lowongan tersimpan tertutup: tidak tampil di daftar dan tidak bisa dilamar, tapi halamannya TETAP bisa dibaca siapa pun yang punya tautannya. Jadi bukan draf rahasia, dan jangan bagikan tautannya sebelum dibuka.
-- Batas lamaran hanya label yang tampil ke pelamar, lowongan TIDAK tertutup sendiri setelah tanggalnya lewat. Tutup manual.
+- Batas lamaran DITEGAKKAN otomatis: begitu tanggalnya lewat, lowongan tidak bisa dilamar lagi (tombol lamar diganti keterangan) dan tampil abu-abu. Paling banyak 3 lowongan lewat batas yang tetap tampil abu-abu di /jobs; sisanya pindah ke halaman Arsip (/jobs/archive), bersama lowongan yang kamu tutup manual.
 
 Cara melamar (pilih satu per lowongan)
 - Lewat form PPIT (bawaan): pelamar mengunggah CV dan cover letter, kamu meninjaunya di console seperti di bawah.
@@ -336,7 +336,7 @@ Cara melamar (pilih satu per lowongan)
 - Mengganti cara melamar dari form PPIT ke tautan tidak menghapus lamaran yang sudah masuk; tetap bisa ditinjau di console.
 
 Menutup, membuka, menghapus lowongan
-- Tutup: hilang dari halaman publik dan tidak bisa dilamar lagi, termasuk lewat tautan lama. Lamaran yang sudah masuk tetap ada. Ini pilihan normal kalau lowongan sudah selesai.
+- Tutup: keluar dari daftar aktif /jobs dan tidak bisa dilamar lagi, termasuk lewat tautan lama; lowongannya pindah ke halaman Arsip (/jobs/archive). Lamaran yang sudah masuk tetap ada. Ini pilihan normal kalau lowongan sudah selesai.
 - Buka lagi: tampil dan bisa dilamar lagi.
 - Hapus: permanen, dan ikut menghapus SEMUA lamarannya (tercatat di log audit: siapa, lowongan apa, berapa pelamar). Hanya untuk lowongan salah input atau spam. Berkas CV yang sudah diunggah pelamar tidak ikut terhapus dari penyimpanan.
 

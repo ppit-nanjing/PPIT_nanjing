@@ -11,6 +11,7 @@ import { FileUpload } from "@/components/upload/file-upload";
 import { ArrowLeft } from "lucide-react";
 import Link from "next/link";
 import { getT } from "@/lib/i18n/server";
+import { isJobExpired } from "@/lib/job-application";
 
 export default async function JobApplyPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -23,7 +24,8 @@ export default async function JobApplyPage({ params }: { params: Promise<{ id: s
   // Lowongan yang ditutup pengurus tidak boleh dilamar lagi, termasuk lewat
   // tautan langsung atau tab yang sudah terbuka (applyToJob menjaga hal yang sama).
   // Lowongan yang melamar lewat situs perusahaan tidak punya form di sini.
-  if (job.status !== "open" || job.applyUrl) redirect(`/jobs/${id}`);
+  // Lewat batas lamaran juga ditolak di sini - bukan hanya di tombolnya.
+  if (job.status !== "open" || job.applyUrl || isJobExpired(job.applicationDeadline)) redirect(`/jobs/${id}`);
 
   const { t } = await getT();
 

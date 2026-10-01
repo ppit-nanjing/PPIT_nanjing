@@ -1,11 +1,13 @@
-import { eq, and, ilike, or, inArray, sql } from "drizzle-orm";
+import { and, count, eq, ilike, inArray, lt, or, sql } from "drizzle-orm";
 import { db } from "@/db";
 import { jobPostings, careerGuideArticles } from "@/db/schema";
 import { SiteNav } from "@/components/site-nav";
 import { SiteFooter } from "@/components/site-footer";
 import { PageHeader } from "@/components/page-header";
 import { formatRelativeTime } from "@/lib/format-relative-time";
-import { Briefcase, MapPin, Search, SlidersHorizontal, BookOpen, Users } from "lucide-react";
+import { EXPIRED_VISIBLE_LIMIT, isJobExpired } from "@/lib/job-application";
+import { Archive, Briefcase, MapPin, Search, SlidersHorizontal, BookOpen, Users } from "lucide-react";
+import Image from "next/image";
 import Link from "next/link";
 import { getT } from "@/lib/i18n/server";
 import type { TKey } from "@/lib/i18n/dictionaries/id";
@@ -57,6 +59,26 @@ export default async function JobsPage({
   const allOpenJobs = await db.select({ location: jobPostings.location }).from(jobPostings).where(eq(jobPostings.status, "open"));
   const locations = [...new Set(allOpenJobs.map((j) => j.location).filter((l): l is string => !!l))];
 
+  // Deadline ditegakkan: yang lewat batas dipisah, ditampilkan abu-abu sampai
+  // EXPIRED_VISIBLE_LIMIT, sisanya hanya di /jobs/archive (bersama yang ditutup).
+  const today = new Date().toISOString().slice(0, 10);
+  const activeJobs = jobs.filter((j) => !isJobExpired(j.applicationDeadline));
+  const visibleExpired = jobs
+    .filter((j) => isJobExpired(j.applicationDeadline))
+    // Paling baru kadaluarsa dulu; deadline selalu terisi di kelompok ini.
+    .sort((a, b) => (b.applicationDeadline ?? "").localeCompare(a.applicationDeadline ?? ""))
+    .slice(0, EXPIRED_VISIBLE_LIMIT);
+  // Angka arsip global (tanpa filter pencarian): ditutup pengurus ATAU lewat batas.
+  const [{ value: archiveCount }] = await db
+    .select({ value: count() })
+    .from(jobPostings)
+    .where(
+      or(
+        eq(jobPostings.status, "closed"),
+        and(eq(jobPostings.status, "open"), lt(jobPostings.applicationDeadline, today)),
+      )!,
+    );
+
   // Terbaru dulu, dan sampai 4 artikel (jumlah yang dulu tampil di /career).
   // published_at boleh NULL dan Postgres menaruh NULL di depan untuk DESC, jadi
   // NULLS LAST eksplisit (pola yang sama dengan daftar berita di console).
@@ -77,6 +99,57 @@ export default async function JobsPage({
       else params.set(key, value);
     }
     return `?${params.toString()}`;
+  }
+
+  // Satu kartu untuk dua keadaan: aktif dan abu-abu (lewat batas). Poster tampil
+  // sebagai thumbnail kecil kalau ada; kartu kadaluarsa tetap bisa dibuka untuk
+  // dibaca tapi tidak bisa dilamar.
+  function renderJobCard(j: (typeof jobs)[number], isExpired: boolean) {
+    return (
+      <a
+        key={j.id}
+        href={`/jobs/${j.id}`}
+        aria-label={t("jobs.detailAria", { title: j.title, company: j.company })}
+        className={`group flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-surface-container-lowest border rounded-lg p-6 transition-[box-shadow,border-color] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-container focus-visible:ring-offset-2 focus-visible:ring-offset-background motion-reduce:transition-none ${
+          isExpired
+            ? "opacity-60 grayscale border-outline-variant"
+            : "border-outline-variant hover:border-muted-gold hover:shadow-[0_10px_30px_rgba(29,27,20,0.10)]"
+        }`}
+      >
+        <div className="flex items-start gap-4 min-w-0">
+          {j.imageUrl && (
+            <span className="relative hidden sm:block w-20 shrink-0 aspect-[3/4] overflow-hidden rounded-md border border-outline-variant bg-surface-container-low">
+              <Image src={j.imageUrl} alt="" fill sizes="80px" className="object-cover" />
+            </span>
+          )}
+          <div className="min-w-0">
+            <div className="flex items-center gap-2 mb-1">
+              <span className="text-label-caps uppercase tracking-wide bg-surface-container-low px-2 py-0.5 rounded">
+                {typeLabel(j.type)}
+              </span>
+              <span className="text-label-caps text-secondary">{formatRelativeTime(j.createdAt, t)}</span>
+            </div>
+            <h2 className="text-headline-md text-on-background mb-1">{j.title}</h2>
+            <p className="text-body-md text-on-surface-variant mb-2">{j.company}</p>
+            {j.location && (
+              <span className="flex items-center gap-1 text-label-caps text-secondary">
+                <MapPin size={12} aria-hidden /> {j.location}
+              </span>
+            )}
+          </div>
+        </div>
+        <span
+          aria-hidden
+          className={`shrink-0 text-label-caps uppercase tracking-wide px-5 py-2 rounded-md ${
+            isExpired
+              ? "border border-outline text-on-surface-variant"
+              : "border border-primary-container text-primary-container group-hover:bg-primary-container group-hover:text-on-primary transition-colors"
+          }`}
+        >
+          {isExpired ? t("jobs.expiredBadge") : t("jobs.viewDetail")}
+        </span>
+      </a>
+    );
   }
 
   return (
@@ -164,7 +237,7 @@ export default async function JobsPage({
         <div className="lg:col-span-9 flex flex-col gap-4">
           <div className="flex items-center justify-between gap-4 mb-2">
             <p className="text-label-caps uppercase tracking-wide text-on-surface-variant" aria-live="polite">
-              {t("jobs.found", { count: jobs.length })}
+              {t("jobs.found", { count: activeJobs.length })}
             </p>
             {(q || selectedTypes.length > 0 || location) && (
               <Link
@@ -175,7 +248,7 @@ export default async function JobsPage({
               </Link>
             )}
           </div>
-          {jobs.length === 0 ? (
+          {activeJobs.length === 0 && visibleExpired.length === 0 ? (
             <div className="flex flex-col items-center text-center py-20 bg-surface-container-lowest border border-[var(--deco-line)] border-dashed rounded-lg px-6">
               <Briefcase className="text-outline-variant mb-4" size={40} aria-hidden />
               <h2 className="text-headline-md text-on-background mb-2">
@@ -196,36 +269,25 @@ export default async function JobsPage({
               )}
             </div>
           ) : (
-            jobs.map((j) => (
-              <a
-                key={j.id}
-                href={`/jobs/${j.id}`}
-                aria-label={t("jobs.detailAria", { title: j.title, company: j.company })}
-                className="group flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-surface-container-lowest border border-outline-variant rounded-lg p-6 hover:border-muted-gold hover:shadow-[0_10px_30px_rgba(29,27,20,0.10)] transition-[box-shadow,border-color] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-container focus-visible:ring-offset-2 focus-visible:ring-offset-background motion-reduce:transition-none"
-              >
-                <div>
-                  <div className="flex items-center gap-2 mb-1">
-                    <span className="text-label-caps uppercase tracking-wide bg-surface-container-low px-2 py-0.5 rounded">
-                      {typeLabel(j.type)}
-                    </span>
-                    <span className="text-label-caps text-secondary">{formatRelativeTime(j.createdAt, t)}</span>
-                  </div>
-                  <h2 className="text-headline-md text-on-background mb-1">{j.title}</h2>
-                  <p className="text-body-md text-on-surface-variant mb-2">{j.company}</p>
-                  {j.location && (
-                    <span className="flex items-center gap-1 text-label-caps text-secondary">
-                      <MapPin size={12} aria-hidden /> {j.location}
-                    </span>
-                  )}
-                </div>
-                <span
-                  aria-hidden
-                  className="shrink-0 border border-primary-container text-primary-container text-label-caps uppercase tracking-wide px-5 py-2 rounded-md group-hover:bg-primary-container group-hover:text-on-primary transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-container focus-visible:ring-offset-2 focus-visible:ring-offset-background motion-reduce:transition-none"
-                >
-                  {t("jobs.viewDetail")}
-                </span>
-              </a>
-            ))
+            <>
+              {activeJobs.map((j) => renderJobCard(j, false))}
+              {visibleExpired.length > 0 && (
+                <section className="mt-6 flex flex-col gap-4" aria-label={t("jobs.expiredHeading")}>
+                  <h2 className="text-headline-md text-on-surface-variant border-t border-[var(--deco-line)] pt-8">
+                    {t("jobs.expiredHeading")}
+                  </h2>
+                  {visibleExpired.map((j) => renderJobCard(j, true))}
+                </section>
+              )}
+            </>
+          )}
+          {archiveCount > 0 && (
+            <Link
+              href="/jobs/archive"
+              className="self-start inline-flex items-center gap-2 mt-2 text-label-caps uppercase tracking-wide text-on-surface-variant border border-outline-variant px-5 py-2.5 rounded-md hover:bg-surface-container-low hover:text-on-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-container focus-visible:ring-offset-2 focus-visible:ring-offset-background motion-reduce:transition-none"
+            >
+              <Archive size={14} aria-hidden /> {t("jobs.archiveLink", { count: archiveCount })}
+            </Link>
           )}
         </div>
       </main>

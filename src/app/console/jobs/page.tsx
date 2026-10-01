@@ -1,10 +1,11 @@
 import { desc, eq, sql } from "drizzle-orm";
 import { Plus } from "lucide-react";
+import Image from "next/image";
 import Link from "next/link";
 import { db } from "@/db";
 import { jobApplications, jobPostings } from "@/db/schema";
 import { requireModuleAccess } from "@/lib/admin-scope";
-import { JOB_TYPE_LABEL, type JobType } from "@/lib/job-application";
+import { isJobExpired, JOB_TYPE_LABEL, type JobType } from "@/lib/job-application";
 import { FlashToast } from "@/components/console/flash-toast";
 import { GuideButton } from "@/components/console/guide-button";
 import { getGuide } from "@/lib/guides";
@@ -21,6 +22,7 @@ export default async function ConsoleJobsPage() {
       status: jobPostings.status,
       applicationDeadline: jobPostings.applicationDeadline,
       applyUrl: jobPostings.applyUrl,
+      imageUrl: jobPostings.imageUrl,
       externalClicks: jobPostings.externalClicks,
       createdAt: jobPostings.createdAt,
       applicants: sql<number>`count(${jobApplications.id})::int`,
@@ -66,11 +68,18 @@ export default async function ConsoleJobsPage() {
               href={`/console/jobs/${r.id}`}
               className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between bg-surface-container-lowest border border-outline-variant rounded-lg px-5 py-3 hover:bg-surface-container-low transition-colors"
             >
-              <span className="min-w-0">
-                <span className="block text-body-md text-on-background truncate">{r.title}</span>
-                <span className="block text-body-sm text-on-surface-variant truncate">
-                  {r.company} &middot; {JOB_TYPE_LABEL[r.type as JobType]}
-                  {r.applicationDeadline ? ` · batas ${r.applicationDeadline}` : ""}
+              <span className="flex items-center gap-3 min-w-0">
+                {r.imageUrl && (
+                  <span className="relative hidden sm:block w-12 shrink-0 aspect-[3/4] overflow-hidden rounded border border-outline-variant bg-surface-container-low">
+                    <Image src={r.imageUrl} alt="" fill sizes="48px" className="object-cover" />
+                  </span>
+                )}
+                <span className="min-w-0">
+                  <span className="block text-body-md text-on-background truncate">{r.title}</span>
+                  <span className="block text-body-sm text-on-surface-variant truncate">
+                    {r.company} &middot; {JOB_TYPE_LABEL[r.type as JobType]}
+                    {r.applicationDeadline ? ` · batas ${r.applicationDeadline}` : ""}
+                  </span>
                 </span>
               </span>
               <span className="flex items-center gap-2 shrink-0">
@@ -81,12 +90,12 @@ export default async function ConsoleJobsPage() {
                 </span>
                 <span
                   className={`text-label-caps uppercase tracking-wide px-2 py-1 rounded ${
-                    r.status === "open"
+                    r.status === "open" && !isJobExpired(r.applicationDeadline)
                       ? "bg-primary-container/15 text-primary-container"
                       : "bg-surface-container-low text-on-surface-variant"
                   }`}
                 >
-                  {r.status === "open" ? "Dibuka" : "Ditutup"}
+                  {r.status === "open" ? (isJobExpired(r.applicationDeadline) ? "Lewat batas" : "Dibuka") : "Ditutup"}
                 </span>
               </span>
             </Link>

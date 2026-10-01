@@ -11,6 +11,7 @@ import { LinkifiedText } from "@/lib/linkified-text";
 import { formatRelativeTime } from "@/lib/format-relative-time";
 import { getT } from "@/lib/i18n/server";
 import { INTL_LOCALE } from "@/lib/i18n/config";
+import { isJobExpired } from "@/lib/job-application";
 import type { TKey } from "@/lib/i18n/dictionaries/id";
 import type { T } from "@/lib/i18n/translate";
 import Image from "next/image";
@@ -34,6 +35,10 @@ export default async function JobDetailPage({ params }: { params: Promise<{ id: 
   const { t, locale } = await getT();
   const [job] = await db.select().from(jobPostings).where(eq(jobPostings.id, id));
   if (!job) notFound();
+
+  // Batas lamaran ditegakkan: lewat tanggal = tidak bisa dilamar lagi. Halaman
+  // tetap terbaca (arsip abu-abu), bukan 404.
+  const expired = isJobExpired(job.applicationDeadline);
 
   const session = await auth();
   let alreadyApplied = false;
@@ -59,6 +64,8 @@ export default async function JobDetailPage({ params }: { params: Promise<{ id: 
     .limit(3);
 
   const deadlineSoon =
+    !expired &&
+    job.status === "open" &&
     job.applicationDeadline &&
     // Current time is required to compute deadline proximity; this is a server component.
     // eslint-disable-next-line react-hooks/purity
@@ -76,7 +83,17 @@ export default async function JobDetailPage({ params }: { params: Promise<{ id: 
         {t("jobs.viewApplicationStatus")}
       </Link>
     </div>
-  ) : job.status === "open" ? (
+  ) : job.status !== "open" ? (
+    <p className="text-center text-body-md text-on-surface-variant rounded-md bg-surface-container-low px-4 py-3">
+      {t("jobs.closed")}
+    </p>
+  ) : expired ? (
+    <p className="text-center text-body-md text-on-surface-variant rounded-md bg-surface-container-low px-4 py-3">
+      {t("jobs.expiredNote", {
+        date: job.applicationDeadline ? new Date(job.applicationDeadline).toLocaleDateString(INTL_LOCALE[locale]) : "",
+      })}
+    </p>
+  ) : (
     <div className="flex flex-col items-center gap-3">
       {/* Plain <a>, bukan <Link>: rute apply-external menghitung klik, jadi tidak
           boleh ikut di-prefetch Next. */}
@@ -103,10 +120,6 @@ export default async function JobDetailPage({ params }: { params: Promise<{ id: 
         </p>
       )}
     </div>
-  ) : (
-    <p className="text-center text-body-md text-on-surface-variant rounded-md bg-surface-container-low px-4 py-3">
-      {t("jobs.closed")}
-    </p>
   );
 
   return (
@@ -133,6 +146,11 @@ export default async function JobDetailPage({ params }: { params: Promise<{ id: 
               {deadlineSoon && (
                 <span className="bg-error-container/30 text-error text-label-caps uppercase tracking-wide px-3 py-1.5 rounded-md">
                   {t("jobs.closingSoon")}
+                </span>
+              )}
+              {expired && job.status === "open" && (
+                <span className="bg-surface-container-low text-on-surface-variant text-label-caps uppercase tracking-wide px-3 py-1.5 rounded-md">
+                  {t("jobs.expiredBadge")}
                 </span>
               )}
             </div>
