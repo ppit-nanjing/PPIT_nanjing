@@ -18,7 +18,6 @@ const STATIC_PAGES: { url: string; priority: number; changeFrequency?: MetadataR
   { url: "/gallery", priority: 0.7, changeFrequency: "weekly" },
   { url: "/gallery/archive", priority: 0.5, changeFrequency: "monthly" },
   { url: "/jobs", priority: 0.7, changeFrequency: "daily" },
-  { url: "/career", priority: 0.6, changeFrequency: "monthly" },
   { url: "/career/mentorship", priority: 0.5, changeFrequency: "monthly" },
   { url: "/catalogue", priority: 0.6, changeFrequency: "monthly" },
   { url: "/catalogue/donasi", priority: 0.5, changeFrequency: "monthly" },

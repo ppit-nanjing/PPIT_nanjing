@@ -1,4 +1,4 @@
-import { eq, and, ilike, or, inArray } from "drizzle-orm";
+import { eq, and, ilike, or, inArray, sql } from "drizzle-orm";
 import { db } from "@/db";
 import { jobPostings, careerGuideArticles } from "@/db/schema";
 import { SiteNav } from "@/components/site-nav";
@@ -18,6 +18,12 @@ const TYPE_KEYS: Record<string, TKey> = {
 };
 type JobType = "internship" | "full_time" | "part_time" | "volunteer";
 const TYPES = Object.keys(TYPE_KEYS) as JobType[];
+
+function excerpt(content: string | null, length = 120): string {
+  if (!content) return "";
+  const plain = content.replace(/\s+/g, " ").trim();
+  return plain.length > length ? plain.slice(0, length).trim() + "…" : plain;
+}
 
 export async function generateMetadata() {
   const { t } = await getT();
@@ -51,7 +57,14 @@ export default async function JobsPage({
   const allOpenJobs = await db.select({ location: jobPostings.location }).from(jobPostings).where(eq(jobPostings.status, "open"));
   const locations = [...new Set(allOpenJobs.map((j) => j.location).filter((l): l is string => !!l))];
 
-  const guides = await db.select().from(careerGuideArticles).limit(2);
+  // Terbaru dulu, dan sampai 4 artikel (jumlah yang dulu tampil di /career).
+  // published_at boleh NULL dan Postgres menaruh NULL di depan untuk DESC, jadi
+  // NULLS LAST eksplisit (pola yang sama dengan daftar berita di console).
+  const guides = await db
+    .select()
+    .from(careerGuideArticles)
+    .orderBy(sql`${careerGuideArticles.publishedAt} desc nulls last`)
+    .limit(4);
 
   function buildQuery(overrides: Record<string, string | undefined>) {
     const params = new URLSearchParams();
@@ -225,7 +238,7 @@ export default async function JobsPage({
       </main>
 
       {/* Career Resources - inline per the prototype rather than link-out only, mirrors comprehensive_career_center_ppit_nanjing */}
-      <section className="max-w-[var(--container-max)] mx-auto px-[var(--spacing-container-padding)] pb-24 border-t border-outline-variant pt-16">
+      <section id="panduan" className="max-w-[var(--container-max)] mx-auto px-[var(--spacing-container-padding)] pb-24 border-t border-outline-variant pt-16">
         <h2 className="text-headline-lg text-on-background mb-8">{t("jobs.resourcesHeading")}</h2>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           {guides.map((g) => (
@@ -237,7 +250,8 @@ export default async function JobsPage({
               <BookOpen className="text-primary-container shrink-0" size={22} />
               <div>
                 <h3 className="text-body-md font-semibold text-on-background mb-1">{g.title}</h3>
-                {g.category && <p className="text-label-caps text-on-surface-variant">{g.category}</p>}
+                {g.category && <p className="text-label-caps text-on-surface-variant mb-2">{g.category}</p>}
+                {g.content && <p className="text-body-md text-on-surface-variant">{excerpt(g.content)}</p>}
               </div>
             </a>
           ))}

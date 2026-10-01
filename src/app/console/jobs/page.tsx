@@ -39,7 +39,7 @@ export default async function ConsoleJobsPage() {
         <div>
           <h1 className="text-headline-md sm:text-headline-lg text-on-background">Karier</h1>
           <p className="text-body-md text-on-surface-variant mt-1">
-            Lowongan yang tampil di halaman Karir publik, dan lamaran yang masuk.
+            Lowongan yang tampil di halaman Jobs (/jobs), dan lamaran yang masuk.
           </p>
         </div>
         <div className="flex items-center gap-2">

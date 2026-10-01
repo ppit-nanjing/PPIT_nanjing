@@ -48,7 +48,7 @@
 - [Event Flow](./Event%20Flow.md)
 - [Evaluasi Acara](./Evaluasi%20Acara.md) — kuesioner pasca-acara (`/events/:slug/evaluasi`) + rekap & ekspor di console
 - [Content Pages](./Content%20Pages.md) (News, Gallery, Legal)
-- [Career Flow](./Career%20Flow.md) (Jobs, Career Center, Mentorship, console lowongan, rencana akun perusahaan)
+- [Career Flow](./Career%20Flow.md) (Jobs, panduan, Mentorship, console lowongan, rencana akun perusahaan; `/career` dialihkan ke `/jobs`)
 - [Join Us Flow](./Join%20Us%20Flow.md)
 - [Equipment Lending Flow](./Equipment%20Lending%20Flow.md)
 - [Sensus Profile Flow](./Sensus%20Profile%20Flow.md)

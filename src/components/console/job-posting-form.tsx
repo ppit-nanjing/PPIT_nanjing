@@ -113,7 +113,7 @@ export function JobPostingForm({
           name="open"
           defaultChecked={state.values ? state.values.open : true}
           label="Langsung buka untuk pelamar"
-          hint="Kalau dikosongkan, lowongan tersimpan tertutup: tidak tampil di daftar Karir, tapi halamannya tetap bisa dibaca lewat tautannya. Jangan bagikan tautannya sebelum dibuka."
+          hint="Kalau dikosongkan, lowongan tersimpan tertutup: tidak tampil di daftar /jobs, tapi halamannya tetap bisa dibaca lewat tautannya. Jangan bagikan tautannya sebelum dibuka."
           className="text-on-background"
         />
       )}

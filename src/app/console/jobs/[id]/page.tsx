@@ -83,8 +83,8 @@ export default async function EditJobPostingPage({ params }: { params: Promise<{
             title={isOpen ? "Tutup lowongan?" : "Buka lowongan lagi?"}
             message={
               isOpen
-                ? "Lowongan disembunyikan dari halaman Karir publik. Lamaran yang sudah masuk tetap tersimpan."
-                : "Lowongan tampil lagi di halaman Karir publik dan bisa dilamar."
+                ? "Lowongan disembunyikan dari halaman Jobs (/jobs). Lamaran yang sudah masuk tetap tersimpan."
+                : "Lowongan tampil lagi di halaman Jobs (/jobs) dan bisa dilamar."
             }
             confirmLabel={isOpen ? "Ya, tutup" : "Ya, buka"}
             action={setJobPostingStatus}

@@ -150,6 +150,14 @@ const nextConfig: NextConfig = {
       },
     ];
   },
+  // /career (dulu "Pusat Karir") digabung ke /jobs, yang sudah memuat seluruh
+  // isinya. Pengalihan HTTP sungguhan lewat konfigurasi: redirect() di dalam
+  // halaman yang sudah mulai di-stream hanya menghasilkan HTTP 200 + tag meta.
+  // Sementara (307, bukan 308) supaya mudah dibalik. Sub-rute /career/guide/*
+  // dan /career/mentorship* tetap ada dan tidak ikut dialihkan.
+  async redirects() {
+    return [{ source: "/career", destination: "/jobs", permanent: false }];
+  },
 };
 
 export default nextConfig;

@@ -40,7 +40,7 @@ export default async function CareerGuideDetailPage({ params }: { params: Promis
         <article className="md:col-span-8 flex flex-col gap-8">
           <header className="flex flex-col gap-4">
             <Link
-              href="/career"
+              href="/jobs"
               aria-label={t("career.backToCenterAria")}
               className="inline-flex items-center gap-1.5 text-label-caps uppercase tracking-wide text-on-surface-variant hover:text-primary-container transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-container focus-visible:ring-offset-2 focus-visible:ring-offset-background rounded-md motion-reduce:transition-none"
             >
