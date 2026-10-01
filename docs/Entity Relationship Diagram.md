@@ -17,7 +17,7 @@ Audit terakhir terhadap `schema.ts`: **2026-09-29.**
 
 ⚠️ **Tabel mati:** `permissions` + `role_permissions` ada di schema tapi **tidak pernah di-query**. Otorisasi admin memakai `roles.access_tier` + `departments.grants_full_admin_access` + `departments.admin_module_scope`. Jangan bangun fitur baru di atasnya tanpa memutuskan ulang. `verification_tokens` = milik adapter Auth.js, bukan aplikasi.
 
-🧪 **Tabel sementara:** `design_votes` — voting design-lab internal (bukan fitur produk), akan dihapus setelah voting selesai; sengaja tidak digambarkan di diagram domain.
+🧪 **Tabel sementara:** `design_votes` — voting design-lab internal (bukan fitur produk), voting sudah selesai: endpoint `/api/design-vote` dan halaman vote dihapus 2026-10-01 (endpoint itu menerima suara tanpa login), tabelnya dibiarkan sampai ada migrasi penghapusan; sengaja tidak digambarkan di diagram domain.
 
 ---
 

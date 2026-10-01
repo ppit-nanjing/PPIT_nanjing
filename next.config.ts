@@ -102,6 +102,8 @@ const nextConfig: NextConfig = {
       bodySizeLimit: "4mb",
     },
   },
+  // No "X-Powered-By: Next.js" response header (it only helps fingerprinting).
+  poweredByHeader: false,
   images: {
     // Serve images as they are, not through Vercel's /_next/image optimizer. On the
     // current plan the optimizer answers every request with 402
