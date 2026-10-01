@@ -158,6 +158,11 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
     // membungkam error lain.
     <html
       lang={locale}
+      // `scroll-smooth` below needs this: Next 16 stopped overriding scroll-behavior
+      // during route transitions, so without the attribute a page change would
+      // animate the scroll instead of jumping to the top. It also silences the dev
+      // warning (missing-data-scroll-behavior) the right way.
+      data-scroll-behavior="smooth"
       suppressHydrationWarning
       className={`${cinzel.variable} ${josefin.variable} ${cormorant.variable} ${jakarta.variable} ${spectral.variable} ${poppins.variable} ${inter.variable} ${manrope.variable} ${playfair.variable} ${lora.variable} ${merriweather.variable} ${bebasNeue.variable} ${anton.variable} ${oswald.variable} ${fredoka.variable} ${baloo.variable} ${quicksand.variable} ${caveat.variable} ${pacifico.variable} ${dancingScript.variable} ${kalam.variable} ${indieFlower.variable} ${permanentMarker.variable} ${greatVibes.variable} ${shadowsIntoLight.variable} ${jetbrainsMono.variable} ${spaceMono.variable} ${plexMono.variable} scroll-smooth`}
     >
