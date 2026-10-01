@@ -44,7 +44,7 @@ Ini yang harus dibereskan paling awal, sebelum meminta anggota mengisi sensus.
 
 Guard bersama ada di `src/lib/cron-auth.ts` (dipakai `/api/cron/publish-events` dan `/api/cron/mark-overdue`). Dulu berbentuk `if (secret) { ...periksa... }`, jadi variabel **kosong = tidak ada pemeriksaan**: pada 2026-10-01 nilainya di Vercel ternyata kosong dan kedua endpoint terbuka untuk siapa pun. Sekarang di produksi (`NODE_ENV=production`, termasuk preview) variabel kosong dijawab **503**, dan nilai yang salah dijawab 401; di lokal tetap boleh kosong. Vercel Cron mengirim `Authorization: Bearer $CRON_SECRET` sendiri begitu variabelnya terisi. Untuk memanggil manual: `curl -H "Authorization: Bearer <nilai>" .../api/cron/mark-overdue` (nilai bertipe sensitive, tidak bisa dibaca ulang dari Vercel; buat nilai baru bila lupa).
 
-Dulu dampaknya dinilai terbatas: `publish-events` hanya menerbitkan acara yang `scheduledPublishAt`-nya memang sudah lewat, dan `mark-overdue` hanya menandai pinjaman yang sudah lewat jatuh tempo (dan memberi tahu peminjamnya). Dampaknya terbatas (hanya menerbitkan acara yang `scheduledPublishAt`-nya memang sudah lewat), tapi tetap endpoint yang mengubah data tanpa autentikasi.
+Dulu dampaknya dinilai terbatas: `publish-events` hanya menerbitkan acara yang `scheduledPublishAt`-nya memang sudah lewat, dan `mark-overdue` hanya menandai pinjaman yang sudah lewat jatuh tempo (dan memberi tahu peminjamnya). Tetap saja endpoint yang mengubah data tidak boleh bisa dipicu tanpa autentikasi, makanya sekarang dijaga.
 
 Jadwalnya sendiri baru ditambahkan lewat [`vercel.json`](../vercel.json) — sebelumnya berkas itu **tidak ada**, jadi cron-nya tidak pernah berjalan otomatis sama sekali dan publikasi terjadwal diam-diam tidak terjadi.
 
