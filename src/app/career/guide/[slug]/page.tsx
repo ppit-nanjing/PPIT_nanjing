@@ -4,6 +4,7 @@ import { db } from "@/db";
 import { careerGuideArticles } from "@/db/schema";
 import { SiteNav } from "@/components/site-nav";
 import { SiteFooter } from "@/components/site-footer";
+import { DecoRule } from "@/components/deco/deco-rule";
 import { getT } from "@/lib/i18n/server";
 import { INTL_LOCALE } from "@/lib/i18n/config";
 import { Video, FileText, ArrowLeft } from "lucide-react";
@@ -48,7 +49,7 @@ export default async function CareerGuideDetailPage({ params }: { params: Promis
             </Link>
             <div className="flex items-center gap-2 text-label-caps text-on-surface-variant">
               {article.category && (
-                <span className="bg-surface-container-low px-2 py-1 rounded text-primary-container uppercase tracking-wide">
+                <span className="bg-gold-ink/10 px-2 py-1 rounded text-gold-ink uppercase tracking-wide">
                   {article.category}
                 </span>
               )}
@@ -61,7 +62,8 @@ export default async function CareerGuideDetailPage({ params }: { params: Promis
                 </>
               )}
             </div>
-            <h1 className="text-headline-lg text-on-background">{article.title}</h1>
+            <h1 className="text-headline-lg text-heading">{article.title}</h1>
+            <DecoRule align="start" />
           </header>
 
           {article.content && (
@@ -73,7 +75,7 @@ export default async function CareerGuideDetailPage({ params }: { params: Promis
 
         <aside className="md:col-span-4">
           <div aria-label={t("career.sidebarAria")} className="sticky top-24 flex flex-col gap-6">
-            <div className="bg-surface-container-lowest border border-outline-variant rounded-xl p-6 text-center">
+            <div className="deco-frame bg-surface-container-lowest rounded-lg p-6 text-center">
               <Video className="text-primary-container mx-auto mb-4" size={32} aria-hidden />
               <h3 className="text-headline-md text-on-background mb-2">{t("career.needPractice")}</h3>
               <p className="text-body-md text-on-surface-variant mb-6">
@@ -81,14 +83,14 @@ export default async function CareerGuideDetailPage({ params }: { params: Promis
               </p>
               <Link
                 href="/career/mentorship"
-                className="block w-full bg-primary-container text-on-primary text-label-caps uppercase tracking-wide py-3 rounded-md hover:bg-primary transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-container focus-visible:ring-offset-2 focus-visible:ring-offset-background motion-reduce:transition-none"
+                className="deco-btn block w-full bg-accent text-on-accent text-label-caps uppercase py-3 rounded-md hover:brightness-95 transition-[filter] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-container focus-visible:ring-offset-2 focus-visible:ring-offset-background motion-reduce:transition-none"
               >
                 {t("career.joinMentorship")}
               </Link>
             </div>
 
             {related.length > 0 && (
-              <div className="bg-surface-container-lowest border border-outline-variant rounded-xl p-6">
+              <div className="bg-surface-container-lowest border border-outline-variant rounded-lg p-6">
                 <h3 className="text-body-md font-bold text-on-background border-b border-outline-variant pb-4 mb-4 flex items-center gap-2">
                   <FileText size={18} className="text-on-surface-variant" aria-hidden /> {t("career.relatedArticles")}
                 </h3>

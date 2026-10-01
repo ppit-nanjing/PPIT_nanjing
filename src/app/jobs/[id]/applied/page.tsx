@@ -84,7 +84,7 @@ export default async function JobAppliedPage({ params }: { params: Promise<{ id:
         </div>
         <h1 className="text-headline-lg text-heading mb-3">{t("jobs.submittedTitle")}</h1>
         <DecoRule className="mb-4" />
-        <span className="inline-block mb-4 bg-surface-container-low text-on-surface-variant text-label-caps uppercase tracking-wide px-3 py-1.5 rounded-full">
+        <span className="inline-block mb-4 bg-surface-container-low text-on-surface-variant text-label-caps uppercase tracking-wide px-3 py-1.5 rounded-md">
           {t("jobs.statusLabel", { status: statusLabel(t, application.status) })}
         </span>
         <p className="text-body-md text-on-surface-variant mb-10">

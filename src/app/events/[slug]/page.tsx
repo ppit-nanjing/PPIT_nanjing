@@ -236,17 +236,17 @@ export default async function EventDetailPage({ params, searchParams }: { params
                 <div className="absolute inset-x-0 bottom-0 flex flex-col gap-4 p-6 sm:p-10">
                   <div className="flex flex-wrap items-center gap-2">
                     {event.category && (
-                      <span className="evt-chip rounded-full bg-white/15 px-3 py-1 text-label-caps uppercase tracking-wide text-white backdrop-blur">
+                      <span className="evt-chip rounded-md bg-white/15 px-3 py-1 text-label-caps uppercase tracking-wide text-white backdrop-blur">
                         {event.category}
                       </span>
                     )}
                     {event.requiresSensus && (
-                      <span className="evt-chip rounded-full bg-white/15 px-3 py-1 text-label-caps uppercase tracking-wide text-white backdrop-blur">
+                      <span className="evt-chip rounded-md bg-white/15 px-3 py-1 text-label-caps uppercase tracking-wide text-white backdrop-blur">
                         {t("events.sensusOnly")}
                       </span>
                     )}
                     {statusChip && (
-                      <span className="rounded-full bg-error/85 px-3 py-1 text-label-caps uppercase tracking-wide text-white backdrop-blur">
+                      <span className="rounded-md bg-error/85 px-3 py-1 text-label-caps uppercase tracking-wide text-white backdrop-blur">
                         {statusChip}
                       </span>
                     )}

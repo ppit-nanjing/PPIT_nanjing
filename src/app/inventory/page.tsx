@@ -82,7 +82,7 @@ export default async function InventoryPage({
             <Link
               href={q ? `/inventory?q=${encodeURIComponent(q)}` : "/inventory"}
               aria-current={!category ? "page" : undefined}
-              className={`px-4 py-2 rounded-full text-label-caps uppercase tracking-wide transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-container focus-visible:ring-offset-2 focus-visible:ring-offset-background motion-reduce:transition-none ${
+              className={`px-4 py-2 rounded-md text-label-caps uppercase tracking-wide transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-container focus-visible:ring-offset-2 focus-visible:ring-offset-background motion-reduce:transition-none ${
                 !category
                   ? "bg-primary-container text-on-primary"
                   : "bg-surface-container-low text-secondary border border-outline-variant hover:bg-surface-container-lowest"
@@ -99,7 +99,7 @@ export default async function InventoryPage({
                   key={c}
                   href={`/inventory?${params.toString()}`}
                   aria-current={category === c ? "page" : undefined}
-                  className={`px-4 py-2 rounded-full text-label-caps uppercase tracking-wide transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-container focus-visible:ring-offset-2 focus-visible:ring-offset-background motion-reduce:transition-none ${
+                  className={`px-4 py-2 rounded-md text-label-caps uppercase tracking-wide transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-container focus-visible:ring-offset-2 focus-visible:ring-offset-background motion-reduce:transition-none ${
                     category === c
                       ? "bg-primary-container text-on-primary"
                       : "bg-surface-container-low text-secondary border border-outline-variant hover:bg-surface-container-lowest"
@@ -147,7 +147,7 @@ export default async function InventoryPage({
               >
                 <div className="h-40 bg-surface-container-low flex items-center justify-center overflow-hidden relative">
                   <span
-                    className={`absolute top-3 left-3 flex items-center gap-1.5 bg-surface-container-lowest/90 backdrop-blur text-label-caps uppercase px-2.5 py-1 rounded-full shadow-sm ${
+                    className={`absolute top-3 left-3 flex items-center gap-1.5 bg-surface-container-lowest/90 backdrop-blur text-label-caps uppercase px-2.5 py-1 rounded-md shadow-sm ${
                       item.availableQuantity > 0 ? "text-primary-container" : "text-secondary"
                     }`}
                   >

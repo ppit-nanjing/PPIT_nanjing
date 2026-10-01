@@ -10,6 +10,7 @@ import { db } from "@/db";
 import { events, eventCommittee, eventDivisions } from "@/db/schema";
 import { SiteNav } from "@/components/site-nav";
 import { SiteFooter } from "@/components/site-footer";
+import { DecoRule } from "@/components/deco/deco-rule";
 import { CopyButton } from "@/components/copy-button";
 import { BadgeCheck, ArrowLeft, ScanLine, CalendarDays, MapPin } from "lucide-react";
 
@@ -79,15 +80,16 @@ export default async function CommitteeTicketPage({ params }: { params: Promise<
       <SiteNav />
 
       <main className="max-w-md mx-auto px-[var(--spacing-container-padding)] py-16 text-center">
-        <div className="w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-6 bg-primary-container/10">
+        <div className="medal-ring w-20 h-20 mx-auto mb-6">
           <BadgeCheck className="text-primary-container" size={28} aria-hidden="true" />
         </div>
-        <h1 className="text-headline-lg text-on-background mb-2">Tiket Kepanitiaan</h1>
+        <h1 className="text-headline-lg text-heading mb-3">Tiket Kepanitiaan</h1>
+        <DecoRule className="mb-4" />
         <p className="text-body-md text-on-surface-variant mb-10">
           Tunjukkan QR ini ke panitia pendataan untuk dicatat kehadirannya sebagai pengurus acara.
         </p>
 
-        <div className="bg-surface-container-lowest border border-outline-variant rounded-xl p-8">
+        <div className="deco-frame bg-surface-container-lowest rounded-lg p-8">
           <Image
             src={qrDataUrl}
             alt={`QR absensi kepanitiaan ${event.title}`}
@@ -96,7 +98,7 @@ export default async function CommitteeTicketPage({ params }: { params: Promise<
             unoptimized
             className="mx-auto mb-6 rounded-lg"
           />
-          <p className="text-headline-sm text-on-background font-medium mb-1">{title}</p>
+          <p className="text-headline-sm text-heading font-medium mb-1">{title}</p>
           <p className="text-body-md text-on-surface-variant mb-4">{session.user.name}</p>
           <div className="flex flex-col items-center gap-2 mb-6">
             <p className="text-label-caps text-on-surface-variant">Token absensi</p>
@@ -106,7 +108,7 @@ export default async function CommitteeTicketPage({ params }: { params: Promise<
           <div
             role="status"
             aria-live="polite"
-            className={`inline-flex items-center gap-2 text-label-caps uppercase tracking-wide px-3 py-1.5 rounded-full ${
+            className={`inline-flex items-center gap-2 text-label-caps uppercase tracking-wide px-3 py-1.5 rounded-md ${
               assignment.checkedInAt ? "bg-primary-container/40 text-on-primary-container" : "bg-surface-container-low text-on-surface-variant"
             }`}
           >
@@ -116,7 +118,7 @@ export default async function CommitteeTicketPage({ params }: { params: Promise<
               : "Belum check-in"}
           </div>
 
-          <h2 className="text-headline-md text-on-background mt-8 mb-3">{event.title}</h2>
+          <h2 className="text-headline-md text-heading mt-8 mb-3">{event.title}</h2>
           <div className="flex flex-col gap-1.5 text-label-caps text-on-surface-variant items-center">
             {event.startAt && (
               <span className="flex items-center gap-1.5">
@@ -146,7 +148,7 @@ export default async function CommitteeTicketPage({ params }: { params: Promise<
 
         <Link
           href={`/events/${slug}`}
-          className="mt-8 inline-flex items-center justify-center gap-2 border border-outline-variant text-on-background text-label-caps uppercase tracking-wide px-6 py-3 rounded-md hover:bg-surface-container-low transition-colors"
+          className="mt-8 inline-flex items-center justify-center gap-2 border border-outline-variant text-on-background text-label-caps uppercase tracking-wide px-6 py-3 rounded-md hover:border-muted-gold hover:text-gold-ink transition-colors"
         >
           <ArrowLeft size={16} aria-hidden="true" /> Kembali ke Acara
         </Link>

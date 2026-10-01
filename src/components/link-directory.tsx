@@ -88,13 +88,13 @@ export function LinkDirectory({
           {filtered.map((l) => (
             <li
               key={l.slug}
-              className="bg-surface-container-lowest border border-outline-variant rounded-xl p-4 flex flex-col gap-2"
+              className="bg-surface-container-lowest border border-outline-variant rounded-lg p-4 flex flex-col gap-2 transition-colors hover:border-muted-gold"
             >
               <div className="flex items-start justify-between gap-3">
                 <a href={`/l/${l.slug}`} className="font-medium text-primary-container hover:text-primary text-body-lg">
                   {l.title}
                 </a>
-                <span className="shrink-0 px-2.5 py-1 rounded-full text-label-caps bg-primary-container/30 text-on-primary-container">
+                <span className="shrink-0 px-2.5 py-1 rounded-md text-label-caps bg-gold-ink/10 text-gold-ink">
                   {l.categoryLabel}
                 </span>
               </div>

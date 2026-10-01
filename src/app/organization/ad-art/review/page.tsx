@@ -3,6 +3,7 @@ import { db } from "@/db";
 import { organizationDocuments } from "@/db/schema";
 import { SiteNav } from "@/components/site-nav";
 import { SiteFooter } from "@/components/site-footer";
+import { DecoRule } from "@/components/deco/deco-rule";
 import { Gavel, Download } from "lucide-react";
 import Link from "next/link";
 import { getT } from "@/lib/i18n/server";
@@ -29,7 +30,7 @@ export default async function ReviewAdArtGuidelinesPage() {
 
       <main className="max-w-[var(--container-max)] mx-auto px-[var(--spacing-container-padding)] py-16 grid grid-cols-1 md:grid-cols-12 gap-8">
         <aside className="md:col-span-3">
-          <div className="sticky top-24 bg-surface-container-lowest border border-outline-variant rounded-lg p-6">
+          <div className="deco-frame sticky top-24 bg-surface-container-lowest rounded-lg p-6">
             <h3 className="text-label-caps uppercase tracking-wide text-on-surface-variant mb-4">{t("org.adart.review.toc")}</h3>
             <ul className="flex flex-col gap-3 text-body-md">
               {SECTIONS.map((s, i) => (
@@ -43,14 +44,15 @@ export default async function ReviewAdArtGuidelinesPage() {
           </div>
         </aside>
 
-        <article className="md:col-span-9 bg-surface-container-lowest border border-outline-variant rounded-xl p-6 md:p-12">
-          <header className="mb-10 pb-8 border-b border-outline-variant">
-            <div className="inline-flex items-center gap-2 bg-surface-container-high text-primary-container px-3 py-1 rounded-full text-label-caps uppercase mb-4">
+        <article className="md:col-span-9 bg-surface-container-lowest border border-outline-variant rounded-lg p-6 md:p-12">
+          <header className="mb-10 pb-8 border-b border-[var(--deco-line)]">
+            <div className="inline-flex items-center gap-2 bg-gold-ink/10 text-gold-ink px-3 py-1 rounded-md text-label-caps uppercase mb-4">
               <Gavel size={14} aria-hidden /> {t("org.adart.officialDoc")}
             </div>
-            <h1 className="text-display-hero-mobile md:text-display-hero text-on-background mb-4">
+            <h1 className="text-display-hero-mobile md:text-display-hero text-heading mb-4">
               {t("org.adart.review.title")}
             </h1>
+            <DecoRule align="start" className="mb-5" />
             <p className="text-quote-text text-on-surface-variant max-w-3xl">
               {t("org.adart.review.intro")}
             </p>
@@ -58,8 +60,8 @@ export default async function ReviewAdArtGuidelinesPage() {
 
           <div className="flex flex-col gap-10">
             <section id="kerangka-hukum" className="scroll-mt-24">
-              <h2 className="text-headline-lg text-on-background mb-4 flex items-center gap-3">
-                <span className="bg-primary-container text-on-primary w-9 h-9 flex items-center justify-center rounded-md text-headline-md shrink-0">
+              <h2 className="text-headline-lg text-heading mb-4 flex items-center gap-3">
+                <span className="bg-accent text-on-accent w-9 h-9 flex items-center justify-center rounded-md text-headline-md shrink-0">
                   1
                 </span>
                 {t("org.adart.review.legal")}
@@ -77,8 +79,8 @@ export default async function ReviewAdArtGuidelinesPage() {
             <hr className="border-t border-outline-variant" />
 
             <section id="etika-anggota" className="scroll-mt-24">
-              <h2 className="text-headline-lg text-on-background mb-4 flex items-center gap-3">
-                <span className="bg-primary-container text-on-primary w-9 h-9 flex items-center justify-center rounded-md text-headline-md shrink-0">
+              <h2 className="text-headline-lg text-heading mb-4 flex items-center gap-3">
+                <span className="bg-accent text-on-accent w-9 h-9 flex items-center justify-center rounded-md text-headline-md shrink-0">
                   2
                 </span>
                 {t("org.adart.review.ethics")}
@@ -95,8 +97,8 @@ export default async function ReviewAdArtGuidelinesPage() {
             <hr className="border-t border-outline-variant" />
 
             <section id="peminjaman-inventaris" className="scroll-mt-24">
-              <h2 className="text-headline-lg text-on-background mb-4 flex items-center gap-3">
-                <span className="bg-primary-container text-on-primary w-9 h-9 flex items-center justify-center rounded-md text-headline-md shrink-0">
+              <h2 className="text-headline-lg text-heading mb-4 flex items-center gap-3">
+                <span className="bg-accent text-on-accent w-9 h-9 flex items-center justify-center rounded-md text-headline-md shrink-0">
                   3
                 </span>
                 {t("org.adart.review.loan")}
@@ -125,8 +127,8 @@ export default async function ReviewAdArtGuidelinesPage() {
             <hr className="border-t border-outline-variant" />
 
             <section id="amandemen" className="scroll-mt-24">
-              <h2 className="text-headline-lg text-on-background mb-4 flex items-center gap-3">
-                <span className="bg-primary-container text-on-primary w-9 h-9 flex items-center justify-center rounded-md text-headline-md shrink-0">
+              <h2 className="text-headline-lg text-heading mb-4 flex items-center gap-3">
+                <span className="bg-accent text-on-accent w-9 h-9 flex items-center justify-center rounded-md text-headline-md shrink-0">
                   4
                 </span>
                 {t("org.adart.review.amend")}

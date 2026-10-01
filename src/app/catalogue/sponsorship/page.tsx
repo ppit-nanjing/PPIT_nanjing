@@ -61,7 +61,7 @@ export default async function SponsorshipPage() {
 
   return (
     <section className="pt-8">
-      <p className="text-body-lg text-on-surface-variant max-w-2xl mb-8">
+      <p className="text-body-lg text-on-surface-variant max-w-2xl mx-auto text-center text-pretty mb-8">
         {t("sponsor.intro")}
       </p>
 
@@ -109,7 +109,7 @@ export default async function SponsorshipPage() {
       )}
 
       {rows.length === 0 ? (
-        <div className="bg-surface-container-low border border-outline-variant rounded-xl p-10 text-center">
+        <div className="deco-frame bg-surface-container-low rounded-lg p-10 text-center">
           <Handshake className="mx-auto mb-4 text-on-surface-variant" size={28} />
           <p className="text-body-lg text-on-background mb-1">{t("sponsor.empty")}</p>
           <p className="text-body-md text-on-surface-variant">
@@ -125,7 +125,7 @@ export default async function SponsorshipPage() {
               </h2>
               <ul className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
                 {list.map((s) => (
-                  <li key={s.id} className="flex gap-4 bg-surface-container-lowest border border-outline-variant rounded-xl p-5">
+                  <li key={s.id} className="flex gap-4 bg-surface-container-lowest border border-outline-variant rounded-lg p-5 transition-colors hover:border-muted-gold">
                     {s.logoUrl ? (
                       <Image src={s.logoUrl} alt="" width={56} height={56} className="w-14 h-14 rounded-md object-contain bg-surface-container shrink-0" />
                     ) : (

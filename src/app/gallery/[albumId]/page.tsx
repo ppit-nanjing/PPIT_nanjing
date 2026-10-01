@@ -4,6 +4,7 @@ import { db } from "@/db";
 import { galleryAlbums, galleryPhotos } from "@/db/schema";
 import { SiteNav } from "@/components/site-nav";
 import { SiteFooter } from "@/components/site-footer";
+import { DecoRule } from "@/components/deco/deco-rule";
 import { AnimatedHeroHeading } from "@/components/animated-hero-heading";
 import { Reveal } from "@/components/reveal";
 import { GalleryLightbox } from "@/components/gallery-lightbox";
@@ -58,8 +59,9 @@ export default async function GalleryAlbumPage({
 
         <AnimatedHeroHeading
           words={[album.title]}
-          className="text-display-hero-mobile md:text-display-hero text-on-background mb-2 leading-tight"
+          className="text-display-hero-mobile md:text-display-hero text-heading mb-4 leading-tight"
         />
+        <DecoRule align="start" className="mb-4" />
         <Reveal>
           <p className="text-body-md text-on-surface-variant mb-4">
             {t("gallery.photoCount", {
@@ -72,7 +74,7 @@ export default async function GalleryAlbumPage({
               href={album.driveUrl}
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-flex items-center gap-2 bg-primary-container text-on-primary text-label-caps uppercase tracking-wide px-5 py-3 rounded-md hover:bg-primary transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-container focus-visible:ring-offset-2 focus-visible:ring-offset-background mb-10"
+              className="deco-btn inline-flex items-center gap-2 bg-accent text-on-accent text-label-caps uppercase px-5 py-3 rounded-md hover:brightness-95 transition-[filter] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-container focus-visible:ring-offset-2 focus-visible:ring-offset-background mb-10"
             >
               <Download size={16} /> {t("gallery.driveAll")}
             </a>

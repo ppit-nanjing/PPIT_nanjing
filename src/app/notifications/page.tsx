@@ -4,6 +4,7 @@ import { listNotifications } from "@/lib/notifications";
 import { formatRelativeTime } from "@/lib/format-relative-time";
 import { SiteNav } from "@/components/site-nav";
 import { SiteFooter } from "@/components/site-footer";
+import { PageHeader } from "@/components/page-header";
 import { NotificationMarkAllReadButton } from "@/components/notifications/notification-bell";
 import { getT } from "@/lib/i18n/server";
 import { BellOff } from "lucide-react";
@@ -18,16 +19,16 @@ export default async function NotificationsPage() {
   return (
     <div className="min-h-screen bg-background text-on-background">
       <SiteNav />
-      <main className="max-w-2xl mx-auto px-[var(--spacing-container-padding)] py-10 sm:py-12 l:py-16">
-        <div className="flex items-center justify-between gap-3 flex-wrap mb-6 l:mb-8">
-          <h1 className="text-headline-md l:text-headline-lg text-on-background">{t("notifications.title")}</h1>
-          {items.some((i) => !i.isRead) && <NotificationMarkAllReadButton />}
-        </div>
+      <PageHeader title={t("notifications.title")}>
+        {items.some((i) => !i.isRead) && <NotificationMarkAllReadButton />}
+      </PageHeader>
+
+      <main className="max-w-2xl mx-auto px-[var(--spacing-container-padding)] py-12">
 
         {items.length === 0 ? (
           <div role="status" aria-live="polite" className="flex flex-col items-center text-center py-20">
             <BellOff className="text-outline-variant mb-4" size={40} aria-hidden />
-            <h2 className="text-headline-md text-on-background mb-2">{t("notifications.emptyTitle")}</h2>
+            <h2 className="text-headline-md text-heading mb-2">{t("notifications.emptyTitle")}</h2>
             <p className="text-body-md text-on-surface-variant max-w-sm">
               {t("notifications.emptyDesc")}
             </p>
@@ -41,10 +42,10 @@ export default async function NotificationsPage() {
                 // bg-surface-container-lowest and bg-primary-container/5 were
                 // emitted for unread rows and which one won depended on CSS
                 // order, not intent.
-                className={`border rounded-xl p-3 l:p-4 ${
+                className={`border rounded-lg p-3 l:p-4 ${
                   item.isRead
                     ? "bg-surface-container-lowest border-outline-variant"
-                    : "bg-primary-container/5 border-primary-container/30"
+                    : "bg-accent/10 border-muted-gold"
                 }`}
               >
                 <p
@@ -62,7 +63,7 @@ export default async function NotificationsPage() {
                 <p className="text-label-caps uppercase tracking-wide text-on-surface-variant mt-2 flex items-center gap-2">
                   {!item.isRead && (
                     <span
-                      className="w-1.5 h-1.5 rounded-full bg-primary-container shrink-0"
+                      className="w-1.5 h-1.5 rotate-45 bg-gold-ink shrink-0"
                       aria-hidden
                     />
                   )}

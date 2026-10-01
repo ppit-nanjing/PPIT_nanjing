@@ -90,7 +90,7 @@ export default async function AboutPage() {
                   {nearbyCities.map((c) => (
                     <span
                       key={c.label}
-                      className="px-3 py-1.5 bg-primary-container/10 text-primary-container text-label-caps uppercase tracking-wide rounded-full"
+                      className="px-3 py-1.5 bg-primary-container/10 text-primary-container text-label-caps uppercase tracking-wide rounded-md"
                     >
                       {c.label}
                     </span>

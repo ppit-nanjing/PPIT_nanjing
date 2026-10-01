@@ -414,7 +414,7 @@ export function OrgExplorer({ units }: { units: OrgNodeData[] }) {
             key={v.key}
             type="button"
             onClick={() => setView(v.key)}
-            className={`text-label-caps uppercase tracking-wide px-4 py-2 rounded-full border transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-container focus-visible:ring-offset-2 focus-visible:ring-offset-background motion-reduce:transition-none ${
+            className={`text-label-caps uppercase tracking-wide px-4 py-2 rounded-md border transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-container focus-visible:ring-offset-2 focus-visible:ring-offset-background motion-reduce:transition-none ${
               view === v.key
                 ? "bg-primary-container text-on-primary border-primary-container"
                 : "bg-surface-container-low text-on-surface-variant border-outline-variant hover:text-on-background"

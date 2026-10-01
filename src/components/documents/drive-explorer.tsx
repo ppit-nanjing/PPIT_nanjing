@@ -133,14 +133,14 @@ export function DriveExplorer({
   }
 
   return (
-    <div className="bg-surface-container-lowest border border-outline-variant rounded-xl p-4">
+    <div className="bg-surface-container-lowest border border-outline-variant rounded-lg p-4">
       <div className="flex items-center justify-between gap-3 mb-3">
         <div className="flex items-center gap-2">
           <FolderIcon size={18} className="text-secondary" />
-          <h3 className="text-title-md text-on-background">{title}</h3>
+          <h3 className="text-title-md text-heading">{title}</h3>
         </div>
         <span
-          className={`px-2.5 py-1 rounded-full text-label-caps ${
+          className={`px-2.5 py-1 rounded-md text-label-caps ${
             canWrite ? "bg-primary-container/40 text-on-primary-container" : "bg-outline-variant/40 text-on-surface-variant"
           }`}
         >

@@ -246,7 +246,7 @@ export default async function EventRegisterPage({
             <span className="text-error" aria-hidden="true"> *</span>
           </legend>
           {earlyBirdActive && earlyBirdUntilLabel && (
-            <p className="rounded-md bg-primary-container/10 px-3 py-2 text-body-sm text-on-background">
+            <p className="rounded-md bg-accent/10 px-3 py-2 text-body-sm text-on-background">
               {t("events.earlyBirdActive", { date: earlyBirdUntilLabel })}
             </p>
           )}
@@ -277,7 +277,7 @@ export default async function EventRegisterPage({
                     {discounted && <span className="line-through opacity-70"> ¥{o.amountCny}</span>})
                   </span>
                   {discounted && (
-                    <span className="ml-1.5 text-label-caps uppercase tracking-wide text-primary-container">
+                    <span className="ml-1.5 text-label-caps uppercase tracking-wide text-gold-ink">
                       {t("events.earlyBird")}
                     </span>
                   )}

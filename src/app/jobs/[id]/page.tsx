@@ -125,11 +125,11 @@ export default async function JobDetailPage({ params }: { params: Promise<{ id: 
               <span className="bg-gold-ink/10 text-gold-ink text-label-caps uppercase tracking-wide px-3 py-1.5 rounded-md">
                 {typeLabel(t, job.type)}
               </span>
-              <span className="bg-surface-container-low text-on-surface-variant text-label-caps uppercase tracking-wide px-3 py-1.5 rounded-full flex items-center gap-1">
+              <span className="bg-surface-container-low text-on-surface-variant text-label-caps uppercase tracking-wide px-3 py-1.5 rounded-md flex items-center gap-1">
                 <History size={13} aria-hidden /> {formatRelativeTime(job.createdAt, t)}
               </span>
               {deadlineSoon && (
-                <span className="bg-error-container/30 text-error text-label-caps uppercase tracking-wide px-3 py-1.5 rounded-full">
+                <span className="bg-error-container/30 text-error text-label-caps uppercase tracking-wide px-3 py-1.5 rounded-md">
                   {t("jobs.closingSoon")}
                 </span>
               )}

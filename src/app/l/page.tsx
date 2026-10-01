@@ -2,6 +2,7 @@ import { and, desc, eq, gt, isNull, or } from "drizzle-orm";
 import { db } from "@/db";
 import { managementPeriods, shortLinks } from "@/db/schema";
 import { LinkDirectory } from "@/components/link-directory";
+import { DecoRule } from "@/components/deco/deco-rule";
 
 export const dynamic = "force-dynamic";
 
@@ -42,7 +43,8 @@ export default async function LinkDirectoryPage() {
   return (
     <main className="min-h-screen bg-background px-4 py-10 sm:px-6 lg:px-8">
       <div className="mx-auto max-w-3xl">
-        <h1 className="text-headline-lg text-on-background mb-2">Tautan & Dokumen</h1>
+        <h1 className="text-headline-lg text-heading mb-3">Tautan & Dokumen</h1>
+        <DecoRule align="start" className="mb-4" />
         <p className="text-body-md text-on-surface-variant mb-8">
           Kumpulan dokumentasi & berkas PPIT Nanjing. Cari berdasarkan judul, atau filter per kategori & periode
           kepengurusan.
