@@ -46,6 +46,21 @@ export function pathnameFromPrivateFileUrl(url: string): string | null {
 }
 
 /**
+ * Nilai kiriman form: URL proxy yang BUKAN berkas milik pengirim (atau pengirimnya
+ * tidak login) dibuang jadi "", selain itu apa adanya. Akses ke berkas private
+ * ikut mengalir ke siapa pun yang barisnya menyimpan URL itu, jadi form tak
+ * boleh menerima URL berkas orang lain yang ditempel lewat input tersembunyi.
+ */
+export function scrubForeignPrivateUrl(
+  value: string,
+  folder: PrivateFileFolder,
+  userId: string | null | undefined,
+): string {
+  if (!value.startsWith(PRIVATE_FILE_PREFIX)) return value;
+  return userId && isOwnPrivateFileUrl(value, folder, userId) ? value : "";
+}
+
+/**
  * Apakah `url` berkas unggahan milik `userId` di folder ini? Upload route
  * menaruh berkas pengguna yang login di `<folder>/<userId>/...`, jadi server
  * action bisa menolak URL berkas orang lain yang ditempel ke form sendiri.

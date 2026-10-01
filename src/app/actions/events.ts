@@ -14,6 +14,7 @@ import { getEventSeats } from "@/lib/event-capacity";
 import { feeTierAt, amountForTier } from "@/lib/event-fee";
 import { isValidPassport } from "@/lib/sensus-form";
 import { getEventAccess } from "@/lib/event-access";
+import { scrubForeignPrivateUrl } from "@/lib/private-files";
 
 // Peserta yang sensusnya belum lengkap ditanyai asal cabangnya di form
 // pendaftaran (lihat komentar di event_registrations.branch). Nilainya
@@ -180,7 +181,9 @@ async function runRegistration(eventId: string, slugArg: string, formData: FormD
         if (picked.length > 0) answers[q.id] = picked.join(", ");
         continue;
       }
-      const value = String(formData?.get(q.id) ?? "").trim();
+      // Jawaban berkas (/api/files/event-doc/…) hanya boleh berkas yang peserta
+      // ini unggah sendiri; yang lain dibuang (pertanyaan wajib lalu menolak).
+      const value = scrubForeignPrivateUrl(String(formData?.get(q.id) ?? "").trim(), "event-doc", session.user.id);
       if (value) answers[q.id] = value;
     }
     for (const q of questions) {
