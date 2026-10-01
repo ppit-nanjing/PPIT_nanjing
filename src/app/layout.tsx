@@ -169,7 +169,9 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
             __html:
               "try{var d=document.documentElement,t=localStorage.getItem('ppit-city-theme'),m=localStorage.getItem('ppit-color-mode');" +
               "if(t&&t!=='zijin')d.dataset.theme=t;" +
-              "d.dataset.mode=(m==='dark'||m==='light')?m:(matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light');" +
+              // Light is the default. The OS setting is followed only when the visitor
+              // explicitly chose "Match system" (stored as 'system').
+              "d.dataset.mode=m==='dark'?'dark':(m==='system'&&matchMedia('(prefers-color-scheme: dark)').matches)?'dark':'light';" +
               "}catch(e){}" +
               // Home-page intro gate (see lib/intro-gate.ts): adds "no-intro" to <html>
               // when the curtain should not play on this page load.

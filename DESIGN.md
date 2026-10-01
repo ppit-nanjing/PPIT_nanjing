@@ -165,7 +165,8 @@ The identity carries three interchangeable city palettes, each with a dark
 variant: **zijin** (紫金山, jade and gold, the default), **meihua** (梅花, plum
 crimson and the same gold) and **mingwall** (明城墙, Ming-wall slate and bronze).
 A component is authored once and renders correctly in all six because every
-colour is a token.
+colour is a token. **Light is the default**: dark mode (and following the OS) is a
+choice the visitor makes in the footer.
 
 **Key characteristics:**
 - Engraved display type (Cinzel) over a warm ivory ground (`#f4efe3`)

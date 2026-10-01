@@ -20,8 +20,9 @@ export const THEME_STORAGE_KEY = "ppit-city-theme";
 export const MODE_STORAGE_KEY = "ppit-color-mode";
 const DEFAULT_THEME: CityThemeId = "zijin";
 
-// "system" is a stored *absence* of preference: the attribute still gets an
-// explicit light/dark value so the CSS never needs a duplicate @media block.
+// Light is the default when nothing is stored. "system" is an explicit choice
+// (stored as 'system'): the attribute still gets a concrete light/dark value, so
+// the CSS never needs a duplicate @media block.
 type ColorMode = "light" | "dark" | "system";
 const MODES: { id: ColorMode; labelKey: TKey; Icon: typeof Sun }[] = [
   { id: "light", labelKey: "theme.light", Icon: Sun },
@@ -45,7 +46,7 @@ function apply(id: CityThemeId) {
 export function ThemeSwitcher() {
   const t = useT();
   const [active, setActive] = useState<CityThemeId>(DEFAULT_THEME);
-  const [mode, setMode] = useState<ColorMode>("system");
+  const [mode, setMode] = useState<ColorMode>("light");
 
   // Read once on mount rather than during render: the server has no access to
   // localStorage, so touching it while rendering would desync hydration.
@@ -56,7 +57,7 @@ export function ThemeSwitcher() {
       setActive(stored);
     }
     const storedMode = localStorage.getItem(MODE_STORAGE_KEY) as ColorMode | null;
-    if (storedMode === "light" || storedMode === "dark") setMode(storedMode);
+    if (storedMode === "light" || storedMode === "dark" || storedMode === "system") setMode(storedMode);
   }, []);
 
   // While on "system", follow the OS if it flips mid-session.
@@ -71,8 +72,7 @@ export function ThemeSwitcher() {
   function chooseMode(next: ColorMode) {
     setMode(next);
     applyMode(next);
-    if (next === "system") localStorage.removeItem(MODE_STORAGE_KEY);
-    else localStorage.setItem(MODE_STORAGE_KEY, next);
+    localStorage.setItem(MODE_STORAGE_KEY, next);
   }
 
   function choose(id: CityThemeId) {

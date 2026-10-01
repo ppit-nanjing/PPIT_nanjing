@@ -12,7 +12,7 @@ Palet mengikuti struktur token bergaya **Material Design 3** (surface / on-surfa
 | **meihua** 梅花 | Plum-merah tua dan emas yang sama | `#6a1b3d` | `data-theme="meihua"` |
 | **mingwall** 明城墙 | Slate tembok Ming dan perunggu | `#26384c` | `data-theme="mingwall"` |
 
-Mode gelap: `data-mode="dark"`, atribut di `<html>` yang diset skrip pra-render di `layout.tsx`. Pilihan disimpan di `localStorage` (`ppit-city-theme`, `ppit-color-mode`) lewat `ThemeSwitcher` di footer.
+Mode: atribut `data-mode="light|dark"` di `<html>`, diset skrip pra-render di `layout.tsx`. **Bawaan adalah terang**; sistem operasi hanya diikuti bila pengunjung memilih "Match system" di footer. Pilihan disimpan di `localStorage` (`ppit-city-theme`; `ppit-color-mode` bernilai `light`, `dark`, atau `system`) lewat `ThemeSwitcher`.
 
 ## Palet bawaan (zijin, terang)
 
