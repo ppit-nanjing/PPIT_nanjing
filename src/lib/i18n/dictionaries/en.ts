@@ -438,8 +438,8 @@ export const en = {
   "career.readArticle": "Read Article",
   "career.mentorshipDesc": "Connect with PPIT Nanjing alumni for career guidance.",
   "career.joinMentorship": "Join Mentorship",
-  "career.backToCenterAria": "Back to Career Center",
-  "career.centerLabel": "Career Center",
+  "career.backToCenterAria": "Back to job listings",
+  "career.centerLabel": "Jobs",
   "career.sidebarAria": "Article sidebar",
   "career.needPractice": "Need Practice?",
   "career.needPracticeDesc": "Join Alumni Network Mentorship for a 1-on-1 mentoring session with PPIT Nanjing alumni.",
@@ -486,7 +486,7 @@ export const en = {
   "career.mentorship.successStep1": "Check your email regularly for mentor matching updates.",
   "career.mentorship.successStep2": "Prepare your profile and the questions you'd like to discuss.",
   "career.mentorship.successStep3": "Attend your 1-on-1 mentoring session with the alumni mentor.",
-  "career.mentorship.backToCenter": "Back to Career Center",
+  "career.mentorship.backToCenter": "Back to Jobs",
   "career.mentorship.exploreGuides": "Explore Guides",
 
   // Inventory (W5)

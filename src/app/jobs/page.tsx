@@ -1,4 +1,4 @@
-import { eq, and, ilike, or, inArray } from "drizzle-orm";
+import { eq, and, ilike, or, inArray, desc } from "drizzle-orm";
 import { db } from "@/db";
 import { jobPostings, careerGuideArticles } from "@/db/schema";
 import { SiteNav } from "@/components/site-nav";
@@ -51,7 +51,8 @@ export default async function JobsPage({
   const allOpenJobs = await db.select({ location: jobPostings.location }).from(jobPostings).where(eq(jobPostings.status, "open"));
   const locations = [...new Set(allOpenJobs.map((j) => j.location).filter((l): l is string => !!l))];
 
-  const guides = await db.select().from(careerGuideArticles).limit(2);
+  // Terbaru dulu, dan sampai 4 artikel (jumlah yang dulu tampil di /career).
+  const guides = await db.select().from(careerGuideArticles).orderBy(desc(careerGuideArticles.publishedAt)).limit(4);
 
   function buildQuery(overrides: Record<string, string | undefined>) {
     const params = new URLSearchParams();
@@ -225,7 +226,7 @@ export default async function JobsPage({
       </main>
 
       {/* Career Resources - inline per the prototype rather than link-out only, mirrors comprehensive_career_center_ppit_nanjing */}
-      <section className="max-w-[var(--container-max)] mx-auto px-[var(--spacing-container-padding)] pb-24 border-t border-outline-variant pt-16">
+      <section id="panduan" className="max-w-[var(--container-max)] mx-auto px-[var(--spacing-container-padding)] pb-24 border-t border-outline-variant pt-16">
         <h2 className="text-headline-lg text-on-background mb-8">{t("jobs.resourcesHeading")}</h2>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           {guides.map((g) => (

@@ -441,8 +441,8 @@ export const id = {
   "career.readArticle": "Baca Artikel",
   "career.mentorshipDesc": "Terhubung dengan alumni PPIT Nanjing untuk bimbingan karir.",
   "career.joinMentorship": "Daftar Mentorship",
-  "career.backToCenterAria": "Kembali ke Pusat Karir",
-  "career.centerLabel": "Pusat Karir",
+  "career.backToCenterAria": "Kembali ke daftar lowongan",
+  "career.centerLabel": "Lowongan",
   "career.sidebarAria": "Sidebar artikel",
   "career.needPractice": "Butuh Latihan?",
   "career.needPracticeDesc": "Daftar Alumni Network Mentorship untuk sesi bimbingan 1-on-1 dengan alumni PPIT Nanjing.",
@@ -489,7 +489,7 @@ export const id = {
   "career.mentorship.successStep1": "Cek email secara berkala untuk kabar pencocokan mentor.",
   "career.mentorship.successStep2": "Siapkan profil dan pertanyaan yang ingin kamu bahas.",
   "career.mentorship.successStep3": "Ikuti sesi bimbingan 1-on-1 dengan mentor alumni.",
-  "career.mentorship.backToCenter": "Kembali ke Pusat Karir",
+  "career.mentorship.backToCenter": "Kembali ke Lowongan",
   "career.mentorship.exploreGuides": "Jelajahi Panduan",
 
   // Inventory (W5)

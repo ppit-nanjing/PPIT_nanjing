@@ -33,13 +33,13 @@ export default async function MentorshipSuccessPage() {
         </ul>
         <div className="flex flex-col sm:flex-row gap-3 justify-center">
           <Link
-            href="/career"
+            href="/jobs"
             className="bg-primary-container text-on-primary text-label-caps uppercase tracking-wide px-6 py-3 rounded-md hover:bg-primary transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-container focus-visible:ring-offset-2 focus-visible:ring-offset-background motion-reduce:transition-none"
           >
             {t("career.mentorship.backToCenter")}
           </Link>
           <Link
-            href="/career#panduan"
+            href="/jobs#panduan"
             className="border border-outline-variant text-on-background text-label-caps uppercase tracking-wide px-6 py-3 rounded-md hover:bg-surface-container-low transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-container focus-visible:ring-offset-2 focus-visible:ring-offset-background motion-reduce:transition-none"
           >
             {t("career.mentorship.exploreGuides")}

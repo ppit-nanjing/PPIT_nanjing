@@ -45,7 +45,6 @@ flowchart TD
     subgraph Career["Karir"]
         Jobs["/jobs · /jobs/:id"]
         JobApply["/jobs/:id/apply · /applied"]
-        CareerCtr["/career"]
         Guide["/career/guide/:slug"]
         Mentor["/career/mentorship · /success"]
     end
@@ -100,7 +99,7 @@ flowchart TD
 | **Jelajahi** | `/coverage` · `/map` · `/places` · `/universities` · `/catalogue` · `/catalogue/donasi` · `/catalogue/sponsorship` |
 | **Berita & galeri** | `/news` · `/news/:slug` · `/gallery` · `/gallery/archive` · `/gallery/:albumId` |
 | **Events** | `/events` · `/events/:slug` · `/events/:slug/register` · `/events/:slug/ticket` · `/events/:slug/committee` · `/events/:slug/evaluasi` |
-| **Karir** | `/jobs` · `/jobs/:id` · `/jobs/:id/apply` · `/jobs/:id/applied` · `/career` · `/career/guide/:slug` · `/career/mentorship` · `/career/mentorship/success` |
+| **Karir** | `/jobs` · `/jobs/:id` · `/jobs/:id/apply` · `/jobs/:id/applied` · `/jobs/:id/apply-external` · `/career/guide/:slug` · `/career/mentorship` · `/career/mentorship/success` |
 | **Inventaris** | `/inventory` · `/inventory/:id/borrow` · `/inventory/borrow/success` · `/inventory/contribute` · `/inventory/request-new` |
 | **Lain** | `/search` · `/l` (redirect short-link) |
 

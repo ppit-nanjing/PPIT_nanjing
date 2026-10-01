@@ -17,9 +17,9 @@ flowchart TD
     Detail -->|"Lamar di situs perusahaan (apply_url terisi)"| Ext["/jobs/:id/apply-external"]
     Ext -->|"login + sensus lengkap, hitung klik"| Company["situs perusahaan (https)"]
 
-    Career["/career — Career Center (agregator)"] --> Jobs
-    Career --> Guide["/career/guide/:slug"]
-    Career --> Mentor["/career/mentorship"]
+    Jobs --> Guide["/career/guide/:slug — bagian Panduan di /jobs#panduan"]
+    Jobs --> Mentor["/career/mentorship — ajakan mentorship di /jobs"]
+    OldCareer["/career"] -.->|"dialihkan (307)"| Jobs
     Mentor --> MentorSubmit["mentorship_applications: status = pending"]
     MentorSubmit --> MentorOk["/career/mentorship/success"]
 ```
@@ -40,12 +40,12 @@ flowchart TD
 
 | Rute | Isi |
 |---|---|
-| `/jobs` | Listing loker/magang (hanya `status = open`), filter tipe (`internship`/`full_time`/`part_time`/`volunteer`) + lokasi |
+| `/jobs` | Halaman publik tunggal untuk karir ("Career Opportunities in Nanjing"): listing loker/magang (hanya `status = open`), filter tipe (`internship`/`full_time`/`part_time`/`volunteer`) + lokasi, lalu bagian **Panduan** (`#panduan`, sampai 4 artikel terbaru) dan ajakan mentorship |
 | `/jobs/:id` | Detail lowongan. Tombol lamar hanya muncul bila `open`; bila `closed` tampil keterangan ditutup |
 | `/jobs/:id/apply` | Form lamaran: resume (URL Drive atau unggah PDF) + cover letter opsional. **Lowongan yang sudah ditutup, atau yang `apply_url`-nya terisi, dialihkan ke `/jobs/:id`** |
 | `/jobs/:id/apply-external` | Route handler (GET) untuk lowongan yang melamar di situs perusahaan. Wajib login + sensus lengkap, menambah `external_clicks`, lalu mengalihkan ke `apply_url`. Tujuan dibaca dari database, bukan dari request |
 | `/jobs/:id/applied` | Status pelamaran user (`submitted` → `under_review` → `interview` → `offered`/`rejected`) |
-| `/career` | **Career Center** — halaman agregator: loker terbaru + artikel guide + CTA mentorship, di-query dari 3 tabel |
+| `/career` | **Dialihkan ke `/jobs`** (307). Dulu "Career Center" (6 lowongan terbaru + 4 panduan + ajakan mentorship), yang seluruh isinya sudah ada di `/jobs`. Lihat Keputusan desain |
 | `/career/guide/:slug` | Artikel panduan karir (`career_guide_articles`) |
 | `/career/mentorship` | Form "Alumni Network Mentorship" — bidang minat, latar belakang, motivasi. Terpisah dari lamaran kerja. |
 | `/career/mentorship/success` | Konfirmasi; matching mentor & tindak lanjut lewat email |
@@ -69,7 +69,8 @@ flowchart TD
 - **Hapus lowongan = hapus semua lamarannya** (FK cascade). Untuk permintaan hapus data satu pelamar ada aksi terpisah `deleteJobApplication`. Keduanya menulis `audit_logs` (`job_posting` / `job_application`, action `deleted`; yang pertama mencatat judul, perusahaan, dan jumlah pelamar) dan diperingatkan di dialog konfirmasi.
 - **`resumeUrl` divalidasi** sebagai alamat http(s) saat melamar (`isHttpUrl` di `src/lib/job-application.ts`) dan hanya dirender sebagai tautan di console bila lolos cek yang sama, karena nilainya berasal dari input pelamar. Nama berkas untuk teks tautan diturunkan secara defensif (`decodeURIComponent` bisa melempar pada `%` yang menggantung).
 - **Semua id dari FormData dan route `[id]`** dicek `UUID_RE` (`src/lib/uuid.ts`) sebelum menyentuh kolom uuid, supaya id ngawur menjadi 404/penolakan, bukan error Postgres.
-- **Mutasi lowongan me-revalidate `/jobs`, `/jobs/:id`, `/career`, dan `/sitemap.xml`** (sitemap di-prerender statis dan memuat lowongan `open`).
+- **Mutasi lowongan me-revalidate `/jobs`, `/jobs/:id`, dan `/sitemap.xml`** (sitemap di-prerender statis dan memuat lowongan `open`).
+- **`/career` digabung ke `/jobs`.** Dua halaman publik yang tumpang tindih membingungkan pengurus dan pengunjung ("beda Career dan Jobs apa?"): `/career` hanya versi lebih sempit dari `/jobs` (6 lowongan, 4 panduan, ajakan mentorship), dan tidak ada di navigasi utama. Sekarang `/career` dialihkan lewat `redirects()` di `next.config.ts` (HTTP 307, bukan 308 supaya mudah dibalik; `redirect()` di dalam halaman hanya menghasilkan 200 + tag meta karena halamannya sudah mulai di-stream) ke `/jobs`, bagian Panduan di `/jobs` menampilkan sampai 4 artikel terbaru, dan `/career` dikeluarkan dari sitemap. Sub-rute `/career/guide/:slug` dan `/career/mentorship*` tetap di URL lama (halaman isi yang berbeda; tautan lama tidak putus); tautan "kembali" di sana kini menuju `/jobs`. Nama menu console masih "Karier" (kunci modul `career`) dan sengaja tidak diganti di sini.
 - **Skema**: `job_applications.review_note` (nullable, aditif), migrasi `drizzle/0041_job_application_review_note.sql`. Siapa dan kapan mengubah status sudah ada di `audit_logs` (`entity_type = job_application`).
 - **Cara melamar: form PPIT atau situs perusahaan** (`job_postings.apply_url`, migrasi `0042`). `NULL` = form PPIT seperti biasa; terisi = lamaran dikerjakan di situs perusahaan dan form PPIT dimatikan (halaman apply dan `applyToJob` sama-sama menolak). Untuk pilihan kedua PPIT tidak menerima data pelamar sama sekali, jadi tidak ada daftar pelamar, status, notifikasi, atau analitik jawaban; satu-satunya ukuran adalah `external_clicks`.
 - **Keamanan tautan eksternal.** Tautan hanya `https`, tanpa kredensial tertanam, maksimal 2048 karakter, dan tidak boleh mengarah ke host PPIT sendiri. "Host PPIT" dihitung dari host request, `VERCEL_PROJECT_PRODUCTION_URL`, dan `VERCEL_URL` (bukan daftar yang dikonfigurasi, jadi tetap benar setelah domain pindah), untuk mencegah pengalihan berputar antar alias. Yang disimpan adalah bentuk ternormalisasi (`new URL(raw).href`), karena itu yang benar-benar sudah divalidasi. Rute `apply-external` tidak pernah membaca tujuan dari parameter request, jadi bukan open redirect. Tombolnya `<a>` biasa dengan `rel="nofollow"`, bukan `<Link>`, dan rute mengabaikan permintaan `Sec-Purpose: prefetch/prerender`, supaya pemuatan spekulatif browser tidak mengisi penghitung.

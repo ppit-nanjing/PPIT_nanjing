@@ -105,7 +105,6 @@ function readId(formData: FormData): string {
 function revalidatePublicJobs(jobId: string) {
   revalidatePath("/jobs");
   revalidatePath(`/jobs/${jobId}`);
-  revalidatePath("/career");
   revalidatePath("/sitemap.xml");
 }
 
