@@ -3,8 +3,7 @@ import { db } from "@/db";
 import { coverageCities } from "@/db/schema";
 import { SiteNav } from "@/components/site-nav";
 import { SiteFooter } from "@/components/site-footer";
-import { AnimatedRevealText } from "@/components/animated-reveal-text";
-import { AnimatedHeroHeading } from "@/components/animated-hero-heading";
+import { PageHeader } from "@/components/page-header";
 import { MissionCards } from "@/components/mission-cards";
 import { Reveal } from "@/components/reveal";
 import { Compass, MapPinned, GraduationCap, CalendarDays, MapPin } from "lucide-react";
@@ -34,29 +33,21 @@ export default async function AboutPage() {
     <div className="min-h-screen bg-background text-on-background">
       <SiteNav />
 
-      <header className="max-w-[var(--container-max)] mx-auto px-[var(--spacing-container-padding)] pt-20 sm:pt-24 pb-6 sm:pb-8">
-        <span className="text-label-caps text-primary-container tracking-widest uppercase mb-2 block">
-          {t("about.kicker")}
-        </span>
-        <AnimatedHeroHeading
-          words={[t("about.title")]}
-          className="text-display-hero-mobile md:text-display-hero text-on-background mb-6"
-        />
-        <div className="max-w-3xl flex flex-col gap-4 text-body-lg text-on-surface-variant mb-6 sm:mb-8">
-          <AnimatedRevealText text={t("about.intro")} />
-          <Reveal>
-            <p>{t("about.coverageText")}</p>
-          </Reveal>
-        </div>
-        <div className="flex flex-wrap gap-3">
-          <span className="flex items-center gap-2 px-4 py-2 bg-surface-container-low text-on-surface text-label-caps uppercase tracking-wide rounded-full border border-outline-variant">
-            <CalendarDays size={14} className="text-primary-container" aria-hidden /> {t("about.founded")}
+      <PageHeader eyebrow={t("about.kicker")} title={t("about.title")} intro={t("about.intro")}>
+        <Reveal>
+          <p className="max-w-3xl text-body-lg text-on-surface-variant text-pretty">{t("about.coverageText")}</p>
+        </Reveal>
+        <div className="flex flex-wrap justify-center gap-3">
+          <span className="flex items-center gap-2 px-4 py-2 bg-surface-container-low text-on-surface text-label-caps uppercase tracking-wide rounded-md border border-[var(--deco-line)]">
+            <CalendarDays size={14} className="text-gold-ink" aria-hidden /> {t("about.founded")}
           </span>
-          <span className="flex items-center gap-2 px-4 py-2 bg-surface-container-low text-on-surface text-label-caps uppercase tracking-wide rounded-full border border-outline-variant">
-            <MapPin size={14} className="text-primary-container" aria-hidden /> {t("about.location")}
+          <span className="flex items-center gap-2 px-4 py-2 bg-surface-container-low text-on-surface text-label-caps uppercase tracking-wide rounded-md border border-[var(--deco-line)]">
+            <MapPin size={14} className="text-gold-ink" aria-hidden /> {t("about.location")}
           </span>
         </div>
-      </header>
+      </PageHeader>
+
+      <div className="h-12 sm:h-16" aria-hidden="true" />
 
       <main className="max-w-[var(--container-max)] mx-auto px-[var(--spacing-container-padding)] pb-24">
         {/* Vision & Mission — bento layout */}
@@ -64,7 +55,7 @@ export default async function AboutPage() {
           <Reveal>
             <h2 className="text-headline-lg text-on-background mb-8">{t("about.visionMissions")}</h2>
             <div className="grid grid-cols-1 md:grid-cols-12 gap-6">
-              <div className="md:col-span-5 bg-primary-container text-on-primary p-8 md:p-10 rounded-xl flex flex-col justify-between">
+              <div className="deco-frame md:col-span-5 bg-primary-container text-on-primary p-8 md:p-10 rounded-lg flex flex-col justify-between">
                 <div>
                   <div className="w-12 h-12 bg-on-primary/15 rounded-full flex items-center justify-center mb-6">
                     <Compass className="text-on-primary" size={22} aria-hidden />
@@ -90,7 +81,7 @@ export default async function AboutPage() {
           </Reveal>
           <div className="flex flex-col gap-4">
             <Reveal delay={0.05}>
-              <div className="bg-surface-container-low border border-outline-variant text-on-background rounded-xl p-6 sm:p-8 transition-[box-shadow,border-color] motion-reduce:transition-none hover:border-primary-container hover:shadow-[0_10px_30px_rgba(39,23,22,0.05)]">
+              <div className="bg-surface-container-low border border-outline-variant text-on-background rounded-lg p-6 sm:p-8 transition-[box-shadow,border-color] motion-reduce:transition-none hover:border-muted-gold hover:shadow-[0_10px_30px_rgba(29,27,20,0.08)]">
                 <div className="w-12 h-12 bg-primary-container/15 rounded-full flex items-center justify-center mb-4">
                   <MapPinned className="text-primary-container" size={22} aria-hidden />
                 </div>
@@ -99,7 +90,7 @@ export default async function AboutPage() {
                   {nearbyCities.map((c) => (
                     <span
                       key={c.label}
-                      className="px-3 py-1.5 bg-primary-container/10 text-primary-container text-label-caps uppercase tracking-wide rounded-full"
+                      className="px-3 py-1.5 bg-primary-container/10 text-primary-container text-label-caps uppercase tracking-wide rounded-md"
                     >
                       {c.label}
                     </span>
@@ -116,7 +107,7 @@ export default async function AboutPage() {
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               {RANTING.map((r, i) => (
                 <Reveal key={r.name} delay={0.1 + i * 0.08} className="h-full">
-                  <div className="h-full bg-surface-container-low border border-outline-variant rounded-lg p-6 flex items-center gap-4 transition-[background-color,border-color] motion-reduce:transition-none hover:border-primary-container hover:bg-surface-container">
+                  <div className="h-full bg-surface-container-low border border-outline-variant rounded-lg p-6 flex items-center gap-4 transition-[background-color,border-color] motion-reduce:transition-none hover:border-muted-gold hover:bg-surface-container">
                     <div className="w-12 h-12 shrink-0 bg-primary-container/15 rounded-full flex items-center justify-center">
                       <GraduationCap className="text-primary-container" size={22} aria-hidden />
                     </div>
@@ -135,7 +126,7 @@ export default async function AboutPage() {
           <div className="flex flex-col sm:flex-row gap-3 sm:gap-4">
             <Link
               href="/organization"
-              className="w-full sm:w-auto text-center bg-primary-container text-on-primary text-label-caps uppercase tracking-wide px-6 py-3 rounded-md hover:bg-primary transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-container focus-visible:ring-offset-2 focus-visible:ring-offset-background motion-reduce:transition-none"
+              className="deco-btn w-full sm:w-auto text-center bg-accent text-on-accent text-label-caps uppercase px-6 py-3 rounded-md hover:brightness-95 transition-[filter] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-container focus-visible:ring-offset-2 focus-visible:ring-offset-background motion-reduce:transition-none"
             >
               {t("about.structCta")}
             </Link>

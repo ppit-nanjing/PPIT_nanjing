@@ -1,6 +1,6 @@
 import { SiteNav } from "@/components/site-nav";
 import { SiteFooter } from "@/components/site-footer";
-import { AnimatedHeroHeading } from "@/components/animated-hero-heading";
+import { PageHeader } from "@/components/page-header";
 import { CatalogueTabs } from "@/components/catalogue/catalogue-tabs";
 import { getT } from "@/lib/i18n/server";
 
@@ -15,16 +15,11 @@ export default async function CatalogueLayout({ children }: { children: React.Re
     <div className="min-h-screen bg-background text-on-background">
       <SiteNav />
 
-      <header className="max-w-[var(--container-max)] mx-auto px-[var(--spacing-container-padding)] pt-16 pb-6">
-        <p className="text-label-caps uppercase tracking-wide text-on-surface-variant mb-2">{t("catalogue.kicker")}</p>
-        <AnimatedHeroHeading
-          words={[t("catalogue.title")]}
-          className="text-display-hero-mobile md:text-display-hero text-on-background mb-4"
-        />
+      <PageHeader eyebrow={t("catalogue.kicker")} title={t("catalogue.title")}>
         <CatalogueTabs />
-      </header>
+      </PageHeader>
 
-      <main className="max-w-[var(--container-max)] mx-auto px-[var(--spacing-container-padding)] pb-20">
+      <main className="max-w-[var(--container-max)] mx-auto px-[var(--spacing-container-padding)] pt-10 pb-20">
         {children}
       </main>
 

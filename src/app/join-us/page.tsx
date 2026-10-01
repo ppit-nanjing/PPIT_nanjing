@@ -4,6 +4,7 @@ import { db } from "@/db";
 import { recruitmentPeriods } from "@/db/schema";
 import { SiteNav } from "@/components/site-nav";
 import { SiteFooter } from "@/components/site-footer";
+import { PageHeader } from "@/components/page-header";
 import { Lock } from "lucide-react";
 import { submitMembershipApplication, getFormFields, getFormMeta } from "@/app/actions/membership";
 import { MembershipApplicationForm } from "@/components/membership/membership-application-form";
@@ -21,13 +22,10 @@ export default async function JoinUsPage() {
     <div className="min-h-screen bg-background text-on-background">
       <SiteNav />
 
-      <main className="max-w-xl mx-auto px-[var(--spacing-container-padding)] py-16">
-        <h1 className="text-headline-lg text-on-background mb-2">{t("joinus.title")}</h1>
-        <p className="text-body-md text-on-surface-variant mb-6">
-          {t("joinus.subtitle", { batch: period?.batchLabel ?? "" })}
-        </p>
+      <PageHeader title={t("joinus.title")} intro={t("joinus.subtitle", { batch: period?.batchLabel ?? "" })} />
 
-        <section className="bg-surface-container-lowest border border-outline-variant rounded-xl p-6 mb-10">
+      <main className="max-w-xl mx-auto px-[var(--spacing-container-padding)] py-12">
+        <section className="deco-frame bg-surface-container-lowest rounded-lg p-6 mb-10">
           <h2 className="text-headline-md text-on-background mb-3">{t("joinus.guideHeading")}</h2>
           <ol className="list-decimal list-inside space-y-2 text-body-md text-on-surface-variant">
             <li>{t("joinus.guide1")}</li>
@@ -42,7 +40,7 @@ export default async function JoinUsPage() {
         </section>
 
         {!period || !period.isOpen ? (
-          <div className="bg-surface-container-low border border-outline-variant rounded-xl p-10 text-center">
+          <div className="deco-frame bg-surface-container-low rounded-lg p-10 text-center">
             <div className="w-14 h-14 rounded-full bg-outline-variant/30 flex items-center justify-center mx-auto mb-6">
               <Lock className="text-secondary" size={24} />
             </div>
@@ -64,7 +62,7 @@ export default async function JoinUsPage() {
         ) : (
           <div className="flex flex-col gap-4">
             {meta.bannerEnabled && (
-              <div className="rounded-t-xl bg-primary-container px-6 py-6">
+              <div className="rounded-t-lg bg-primary-container px-6 py-6">
                 <h2 className="text-headline-lg text-on-primary">{meta.title}</h2>
                 {meta.description && <p className="text-body-md text-on-primary/80 mt-1">{meta.description}</p>}
               </div>

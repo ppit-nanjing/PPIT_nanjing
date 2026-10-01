@@ -20,8 +20,8 @@ const STATUS_LABEL: Record<string, string> = {
 
 const STATUS_CLASS: Record<string, string> = {
   pending: "bg-outline-variant/40 text-on-surface-variant",
-  reviewed: "bg-tertiary-container/30 text-on-tertiary-container",
-  accepted: "bg-primary-container/40 text-on-primary-container",
+  reviewed: "bg-tertiary-container/10 text-tertiary",
+  accepted: "bg-primary-container/15 text-primary-container",
   rejected: "bg-error-container/40 text-on-error-container",
 };
 
@@ -105,7 +105,7 @@ export default async function ConsoleMembershipPage() {
                     {p.batchLabel ?? "(tanpa nama)"}{" "}
                     <span
                       className={`ml-1 px-2 py-0.5 rounded-full text-label-caps ${
-                        p.isOpen ? "bg-primary-container/40 text-on-primary-container" : "bg-outline-variant/40 text-on-surface-variant"
+                        p.isOpen ? "bg-primary-container/15 text-primary-container" : "bg-outline-variant/40 text-on-surface-variant"
                       }`}
                     >
                       {p.isOpen ? "Terbuka" : "Tutup"}

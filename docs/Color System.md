@@ -1,76 +1,61 @@
 # Color System
 
-> Bagian dari [Design System Overview](./Design%20System%20Overview.md).
+> Bagian dari [Design System Overview](./Design%20System%20Overview.md). Sumber kebenaran: `src/app/globals.css`. Aturan lengkap di [DESIGN.md](../DESIGN.md) § Colors. Ditulis ulang untuk redesain Art Deco + Art Nouveau (2026-10); palet merah-putih dan Warm Institutional di versi lama sudah tidak dipakai.
 
-Palet mengikuti struktur token bergaya **Material Design 3** (surface/on-surface/container tiers), diwarnai dengan identitas merah-putih Indonesia. Sistem kanonik = **Warm Institutional**. Sistem lama (Patriotic Institutional) didokumentasikan di bawah sebagai referensi historis/legacy.
+Palet mengikuti struktur token bergaya **Material Design 3** (surface / on-surface / container tiers), diwarnai gading hangat, jade pekat, dan emas antik. **Semua warna adalah token.** Ada **enam palet**: tiga tema kota × terang/gelap.
 
-## Brand Core
+## Tiga tema kota
 
-| Token | Hex | Peran |
-|---|---|---|
-| `primary` | `#b00816` | Merah dasar — teks aksen, border fokus, ikon aktif |
-| `primary-container` | `#d42b2b` | Merah terang — **background tombol utama/CTA**, highlight brand |
-| `on-primary` / `on-primary-container` | `#ffffff` / `#fff0ef` | Teks di atas merah |
-| `inverse-primary` | `#ffb4ac` | Merah untuk dark surface / state terbalik |
-| `error` | `#ba1a1a` | Error state (form validation, destructive) |
-| `on-error-container` | `#93000a` | Teks error di atas `error-container` (`#ffdad6`) |
+| Tema | Karakter | Aksen utama (terang) | Dipilih lewat |
+|---|---|---|---|
+| **zijin** 紫金山 (bawaan) | Jade dan emas | `#0e3b32` | Tanpa atribut |
+| **meihua** 梅花 | Plum-merah tua dan emas yang sama | `#6a1b3d` | `data-theme="meihua"` |
+| **mingwall** 明城墙 | Slate tembok Ming dan perunggu | `#26384c` | `data-theme="mingwall"` |
 
-## Neutral / Surface (Warm Institutional)
+Mode: atribut `data-mode="light|dark"` di `<html>`, diset skrip pra-render di `layout.tsx`. **Bawaan adalah terang**; sistem operasi hanya diikuti bila pengunjung memilih "Match system" di footer. Pilihan disimpan di `localStorage` (`ppit-city-theme`; `ppit-color-mode` bernilai `light`, `dark`, atau `system`) lewat `ThemeSwitcher`.
 
-| Token | Hex | Peran |
-|---|---|---|
-| `background` / `surface` | `#fff8f7` | Latar utama halaman |
-| `surface-dim` | `#f1d3d1` | Latar redup untuk seksi alternatif |
-| `surface-container-lowest` | `#ffffff` | Card di atas background berwarna |
-| `surface-container-low` | `#fff0ef` | Card level 1 |
-| `surface-container` | `#ffe9e7` | Card level 2 (default card) |
-| `surface-container-high` | `#ffe1df` | Card level 3 (hover/selected) |
-| `surface-container-highest` | `#fadcd9` | Card level 4 (paling menonjol) |
-| `on-surface` | `#271716` | Teks utama (near-black hangat, bukan pure black) |
-| `on-surface-variant` | `#5c403d` | Teks sekunder |
-| `outline` / `outline-variant` | `#906f6c` / `#e4bdb9` | Border tegas / border halus |
-| `inverse-surface` / `inverse-on-surface` | `#3e2c2b` / `#ffedeb` | Footer gelap, toast, tooltip dark |
-
-## Secondary & Tertiary
+## Palet bawaan (zijin, terang)
 
 | Token | Hex | Peran |
 |---|---|---|
-| `secondary` | `#5f5e5b` | Teks/ikon sekunder abu-hangat |
-| `secondary-container` / `on-secondary-container` | `#e2dfdb` / `#636260` | Badge/chip netral |
-| `tertiary` | `#5a5650` | Aksen ketiga (abu-taupe, menggantikan biru di Patriotic) |
-| `tertiary-container` / `on-tertiary-container` | `#736e68` / `#f9f2ea` | Badge kategori alternatif |
+| `background` / `surface` | `#f4efe3` | Gading: latar halaman |
+| `warm-cream` | `#f8f3e7` | Latar hero |
+| `surface-container` | `#ece4d2` | Gading-2: panel dan kartu |
+| `surface-container-lowest` → `-highest` | `#faf7ee` → `#ddd2b8` | Tangga permukaan (naik = menonjol / hover / terpilih) |
+| `on-background` / `on-surface` | `#1d1b14` | Tinta: teks utama (bukan hitam murni) |
+| `on-surface-variant` / `secondary` | `#605b4e` | Teks sekunder (5,9:1 di atas gading) |
+| `primary-container` / `heading` / `band` | `#0e3b32` | Jade: isi tombol utama, judul, pita gelap |
+| `primary` / `inverse-surface` | `#0a2b25` | Jade pekat: hover, teks dan tepi tergelap |
+| `on-primary` / `on-band` | `#f4efe3` | Gading di atas jade |
+| `accent` / `muted-gold` | `#c6a052` | Emas: isi tombol CTA, hairline, cincin, ornamen. **Bukan teks** di atas gading (2,1:1) |
+| `on-accent` | `#0a2b25` | Teks di atas emas (6,2:1) |
+| `gold-ink` / `tertiary` | `#7a5c1e` | Emas aman untuk teks di atas gading (5,4:1) |
+| `band-accent` / `inverse-primary` | `#e2cf9d` | Emas lembut: teks emas di pita gelap (8,1:1) |
+| `blossom` | `#d98f9a` | Bunga plum. Hiasan saja, tidak pernah teks |
+| `outline` / `outline-variant` | `#7a7463` / `#d4ccb8` | Tepi tegas (3:1) / hairline |
+| `error` (+ 3 turunan) | `#b3261e` | Satu-satunya warna yang tidak berubah antar tema |
 
-## Extended brand tokens (Warm Institutional)
+## Peran yang sering salah dipakai
 
-| Token | Hex | Peran |
-|---|---|---|
-| `warm-cream` | `#fdfaf6` | Latar section besar — lebih hangat dari putih polos |
-| `soft-gray` | `#f2f0ed` | Latar netral untuk input field / divider pengganti garis |
-| `muted-gold` | `#c5a368` | Aksen dekoratif premium (dipakai selektif — motif emas, lihat [Iconography & Imagery](./Iconography%20&%20Imagery.md)) |
+- **Emas terang vs emas teks.** `accent` / `muted-gold` untuk isi dan ornamen; teks emas di permukaan terang = `text-gold-ink`; di pita gelap = `text-band-accent`.
+- **`band` vs `inverse-surface`.** `inverse-surface` berbalik jadi terang di mode gelap; `band` tetap gelap di kedua mode. Pita Deco (Tentang, footer, kurtain intro) memakai `band`.
+- **`primary-container`** di mode terang adalah jade (juga warna teks aksen, ±190 pemakaian, jadi harus tetap gelap), di mode gelap menjadi emas.
+- Token tidak boleh ditambah sendiri-sendiri: tiap blok palet harus mendefinisikan **semua** token non-error, atau skrip kontras gagal.
 
-## Fixed tones (Material 3 pattern)
+## Memverifikasi kontras
 
-Set lengkap `primary-fixed` / `-dim`, `on-primary-fixed` / `-variant`, dan padanannya untuk secondary & tertiary tersedia di kedua `DESIGN.md` sumber — dipakai untuk komponen yang butuh warna konsisten terlepas dari light/dark mode (mis. badge di atas foto). Tidak diulang di sini secara penuh; rujuk `warm_institutional/DESIGN.md` di folder prototipe untuk nilai persis bila dibutuhkan saat implementasi token Tailwind.
+```bash
+npm run check:contrast
+```
 
-## Legacy — Patriotic Institutional (v1, untuk referensi)
+`scripts/check-contrast.ts` membaca `globals.css` apa adanya, menyusun keenam palet sesuai urutan cascade CSS, dan memeriksa pasangan yang benar-benar dipakai UI (teks di semua permukaan, tombol, pita, tepi, error) terhadap WCAG AA (4,5:1 teks, 3:1 komponen). Gagal dengan exit 1 bila ada pasangan di bawah ambang atau blok yang lupa mendefinisikan token. Jalankan setiap kali mengubah token warna.
 
-Struktur sama, nilai berbeda tipis pada beberapa token kunci:
+## Pengecualian warna literal (yang sah)
 
-| Token | Warm (kanonik) | Patriotic (legacy) |
-|---|---|---|
-| `tertiary` | `#5a5650` (taupe) | `#005d80` (biru) |
-| `secondary` | `#5f5e5b` | `#5f5e5e` |
-| Token ekstensi | `warm-cream`, `soft-gray`, `muted-gold` | `brand-red-deep` (`#A63232`), `surface-muted` (`#F9F9F9`), `border-light` (`#E5E7EB`) |
-
-⚠️ Kedua set token ekstensi (Warm dan Patriotic) ditemukan **dipakai bersamaan** di banyak file `code.html` yang sama — misalnya form input di `login_refined_inputs` memakai `bg-surface-muted border-border-light` (token Patriotic) padahal file itu sendiri sudah mengadopsi skala tipografi & spacing Warm. Ini indikasi token belum dikonsolidasi. **Sebelum build:** pilih satu nama per peran (rekomendasi — pakai `soft-gray` untuk latar input, hapus `surface-muted`/`border-light`/`brand-red-deep` dari config final) dan jadikan token Tailwind (`tailwind.config.colors`) sebagai satu-satunya sumber kebenaran warna.
-
-## Kontras & Aksesibilitas
-
-- `on-surface` (`#271716`) di atas `background` (`#fff8f7`) → kontras tinggi, aman untuk body text.
-- `on-primary` (putih) di atas `primary-container` (`#d42b2b`) → rasio kontras ±4.6:1, **lolos AA untuk teks besar/bold**, gunakan ukuran teks tombol ≥ 16px bold agar aman di semua kondisi.
-- Hindari menaruh teks `primary` (`#b00816`) di atas `surface-dim`/`surface-container-highest` — kontrasnya turun, gunakan `on-surface` untuk body text dan simpan `primary` untuk teks aksen pendek/link.
+Panel musim di `/login` dan `/signup` (ilustrasi tempat nyata, palet tetap), SVG merek pihak ketiga (huruf "G" Google), swatch di `ThemeSwitcher`, hex di dalam SVG `data:` (panah dropdown), dan HTML email. Selain itu, warna literal adalah bug.
 
 ## Terkait
 
-- [Elevation & Shadows](./Elevation%20&%20Shadows.md) — bayangan bertema merah untuk CTA
-- [Components](./Components.md) — penerapan warna di komponen nyata
+- [Typography](./Typography.md)
+- [Elevation & Shadows](./Elevation%20&%20Shadows.md)
+- [Iconography & Imagery](./Iconography%20&%20Imagery.md)

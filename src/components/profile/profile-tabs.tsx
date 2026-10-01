@@ -51,7 +51,7 @@ export function ProfileTabs({ tabs, ariaLabel }: { tabs: ProfileTab[]; ariaLabel
               aria-selected={selected}
               aria-controls={`profile-panel-${tab.id}`}
               onClick={() => select(tab.id)}
-              className={`flex items-center gap-1.5 shrink-0 whitespace-nowrap text-label-caps uppercase tracking-wide px-3.5 sm:px-4 py-2.5 rounded-full border transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-container focus-visible:ring-offset-2 focus-visible:ring-offset-background motion-reduce:transition-none ${
+              className={`flex items-center gap-1.5 shrink-0 whitespace-nowrap text-label-caps uppercase tracking-wide px-3.5 sm:px-4 py-2.5 rounded-md border transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-container focus-visible:ring-offset-2 focus-visible:ring-offset-background motion-reduce:transition-none ${
                 selected
                   ? "bg-primary-container text-on-primary border-primary-container shadow-sm"
                   : "bg-surface-container-lowest text-on-surface-variant border-outline-variant hover:bg-surface-container-low hover:text-on-background"
@@ -61,7 +61,7 @@ export function ProfileTabs({ tabs, ariaLabel }: { tabs: ProfileTab[]; ariaLabel
               {tab.label}
               {typeof tab.badge === "number" && tab.badge > 0 && (
                 <span
-                  className={`text-label-caps px-1.5 py-0.5 rounded-full leading-none ${
+                  className={`text-label-caps px-1.5 py-0.5 rounded-md leading-none ${
                     selected ? "bg-on-primary/20 text-on-primary" : "bg-primary-container/10 text-primary-container"
                   }`}
                 >

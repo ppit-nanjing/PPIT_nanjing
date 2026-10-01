@@ -4,6 +4,7 @@ import { hasCompletedSensus } from "@/lib/sensus-gate";
 import { runGlobalSearch, type SearchResult } from "@/lib/global-search";
 import { SiteNav } from "@/components/site-nav";
 import { SiteFooter } from "@/components/site-footer";
+import { PageHeader } from "@/components/page-header";
 import { getT } from "@/lib/i18n/server";
 import type { TKey } from "@/lib/i18n/dictionaries/id";
 import { Lock, Search as SearchIcon, SearchX } from "lucide-react";
@@ -39,9 +40,8 @@ export default async function SearchPage({
     <div className="min-h-screen bg-background text-on-background">
       <SiteNav />
 
-      <header className="max-w-[var(--container-max)] mx-auto px-[var(--spacing-container-padding)] pt-20 sm:pt-24 pb-8">
-        <h1 className="text-display-hero-mobile md:text-display-hero text-on-background mb-4">{t("search.title")}</h1>
-        <form action="/search" method="get" role="search" className="flex items-center gap-3">
+      <PageHeader title={t("search.title")}>
+        <form action="/search" method="get" role="search" className="flex w-full max-w-xl items-center gap-3">
           <label htmlFor="global-search" className="sr-only">
             {t("search.keywordLabel")}
           </label>
@@ -51,22 +51,22 @@ export default async function SearchPage({
             name="q"
             defaultValue={q}
             placeholder={t("search.placeholder")}
-            className="flex-1 bg-surface-container-lowest border border-outline-variant rounded-xl px-4 py-3 text-body-md text-on-background placeholder:text-on-surface-variant outline-none focus:border-primary focus-visible:ring-2 focus-visible:ring-primary-container"
+            className="flex-1 min-w-0 bg-surface-container-lowest border border-outline-variant rounded-md px-4 py-3 text-body-md text-on-background placeholder:text-on-surface-variant outline-none focus:border-primary focus-visible:ring-2 focus-visible:ring-primary-container"
           />
           <button
             type="submit"
-            className="bg-primary-container text-on-primary-container rounded-xl px-5 py-3 text-label-caps hover:opacity-90 transition-opacity focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-container focus-visible:ring-offset-2 focus-visible:ring-offset-background motion-reduce:transition-none"
+            className="deco-btn bg-accent text-on-accent rounded-md px-5 py-3 text-label-caps uppercase hover:brightness-95 transition-[filter] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-container focus-visible:ring-offset-2 focus-visible:ring-offset-background motion-reduce:transition-none"
           >
             {t("search.submit")}
           </button>
         </form>
-      </header>
+      </PageHeader>
 
-      <main className="max-w-[var(--container-max)] mx-auto px-[var(--spacing-container-padding)] pb-24">
+      <main className="max-w-[var(--container-max)] mx-auto px-[var(--spacing-container-padding)] py-12 pb-24">
         {!q ? (
           <div className="flex flex-col items-center text-center py-20">
             <SearchIcon className="text-outline-variant mb-4" size={40} aria-hidden />
-            <h2 className="text-headline-md text-on-background mb-2">{t("search.startTitle")}</h2>
+            <h2 className="text-headline-md text-heading mb-2">{t("search.startTitle")}</h2>
             <p className="text-body-md text-on-surface-variant max-w-sm">
               {t("search.startDesc")}
             </p>
@@ -74,7 +74,7 @@ export default async function SearchPage({
         ) : results.length === 0 ? (
           <div role="status" aria-live="polite" className="flex flex-col items-center text-center py-20">
             <SearchX className="text-outline-variant mb-4" size={40} aria-hidden />
-            <h2 className="text-headline-md text-on-background mb-2">{t("search.noResultsTitle")}</h2>
+            <h2 className="text-headline-md text-heading mb-2">{t("search.noResultsTitle")}</h2>
             <p className="text-body-md text-on-surface-variant max-w-sm">
               {t("search.noResultsDesc", { q })}
             </p>
@@ -86,7 +86,7 @@ export default async function SearchPage({
             </p>
             {byType.map((group) => (
               <section key={group.type}>
-                <h2 className="text-label-caps text-on-surface-variant mb-3">{t(group.labelKey as TKey)}</h2>
+                <h2 className="text-label-caps uppercase tracking-[0.2em] text-gold-ink mb-3">{t(group.labelKey as TKey)}</h2>
                 <ul className="grid grid-cols-1 md:grid-cols-2 gap-3">
                   {group.items.map((item) => (
                     <li key={`${item.type}:${item.href}`}>
@@ -99,7 +99,7 @@ export default async function SearchPage({
                             ? `${item.title} — ${t("search.lockedAriaSuffix")}`
                             : undefined
                         }
-                        className="block bg-surface-container-lowest border border-outline-variant rounded-xl px-4 py-3 hover:border-primary transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-container focus-visible:ring-offset-2 focus-visible:ring-offset-background motion-reduce:transition-none"
+                        className="block bg-surface-container-lowest border border-outline-variant rounded-lg px-4 py-3 hover:border-muted-gold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-container focus-visible:ring-offset-2 focus-visible:ring-offset-background motion-reduce:transition-none"
                       >
                         <span
                           className={`flex items-center gap-1.5 text-body-md truncate ${

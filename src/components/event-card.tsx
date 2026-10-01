@@ -1,5 +1,6 @@
 import Link from "next/link";
 import Image from "next/image";
+import { COVER_BLUR_DATA_URL } from "@/lib/image-placeholder";
 import { Reveal } from "@/components/reveal";
 import { CalendarDays, MapPin, CalendarX, Clock, ArrowRight } from "lucide-react";
 import { getT } from "@/lib/i18n/server";
@@ -43,7 +44,7 @@ export async function EventCard({
       <Link
         href={`/events/${event.slug}`}
         aria-label={t("events.viewDetail", { title: event.title })}
-        className="group relative block h-full bg-surface-container-lowest border border-outline-variant rounded-xl overflow-hidden hover:shadow-[0_14px_40px_rgba(39,23,22,0.10)] hover:-translate-y-1 transition-[box-shadow,transform] duration-300 motion-reduce:transition-none motion-reduce:transform-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-container focus-visible:ring-offset-2 focus-visible:ring-offset-background flex flex-col"
+        className="group relative block h-full bg-surface-container-lowest border border-outline-variant rounded-lg overflow-hidden hover:border-muted-gold hover:shadow-[0_14px_40px_rgba(29,27,20,0.12)] hover:-translate-y-1 transition-[box-shadow,transform] duration-300 motion-reduce:transition-none motion-reduce:transform-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-container focus-visible:ring-offset-2 focus-visible:ring-offset-background flex flex-col"
       >
         <div className="h-44 bg-surface-container-low overflow-hidden relative">
           {isPast && (
@@ -57,6 +58,8 @@ export async function EventCard({
               alt={event.title}
               fill
               loading="lazy"
+              placeholder="blur"
+              blurDataURL={COVER_BLUR_DATA_URL}
               sizes="(max-width: 768px) 100vw, 33vw"
               className={`object-cover transition-transform duration-500 group-hover:scale-105 motion-reduce:transform-none ${
                 isPast ? "grayscale group-hover:grayscale-0" : ""

@@ -15,15 +15,20 @@ import { motion } from "motion/react";
  *
  * `as` is "h1" by default. The footer's join card passes "h2" - it wants this
  * exact stagger at display scale but must not emit a second <h1> per page.
+ *
+ * `accentLast` colours the final word with the text-safe gold (gold-ink), the
+ * Deco "Nanjing" accent on the home hero.
  */
 export function AnimatedHeroHeading({
   words,
   className,
   as = "h1",
+  accentLast = false,
 }: {
   words: string[];
   className?: string;
   as?: "h1" | "h2";
+  accentLast?: boolean;
 }) {
   const MotionTag = as === "h2" ? motion.h2 : motion.h1;
   return (
@@ -34,7 +39,7 @@ export function AnimatedHeroHeading({
           initial={{ y: 20 }}
           animate={{ y: 0 }}
           transition={{ duration: 0.5, delay: i * 0.07, ease: [0.22, 1, 0.36, 1] }}
-          className="inline-block mr-[0.25em]"
+          className={`inline-block mr-[0.25em]${accentLast && i === words.length - 1 ? " text-gold-ink" : ""}`}
         >
           {word}
         </motion.span>

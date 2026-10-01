@@ -147,14 +147,13 @@ export default async function ProfilePage({
           )}
 
           {/* ---------- Kartu identitas ---------- */}
-          <header className="bg-surface-container-lowest border border-outline-variant rounded-2xl overflow-hidden shadow-sm mb-6">
-            <div
-              aria-hidden
-              className="h-20 sm:h-24 bg-gradient-to-r from-primary-container/30 via-secondary/15 to-tertiary/25"
-            />
+          <header className="deco-frame bg-surface-container-lowest rounded-lg overflow-hidden mb-6">
+            <div aria-hidden className="relative h-20 sm:h-24 bg-band overflow-hidden">
+              <div className="deco-lattice" />
+            </div>
             <div className="relative px-5 sm:px-8 pb-6">
               <div className="flex flex-wrap items-end gap-x-5 gap-y-3 -mt-9 sm:-mt-11">
-                <div className="w-[76px] h-[76px] sm:w-20 sm:h-20 rounded-full ring-4 ring-background overflow-hidden bg-surface-container flex items-center justify-center text-on-surface-variant shrink-0">
+                <div className="w-[76px] h-[76px] sm:w-20 sm:h-20 rounded-full ring-4 ring-background border-2 border-muted-gold overflow-hidden bg-surface-container flex items-center justify-center text-on-surface-variant shrink-0">
                   {user?.avatarUrl || session.user.image ? (
                     <Image
                       src={(user?.avatarUrl || session.user.image) as string}
@@ -168,14 +167,14 @@ export default async function ProfilePage({
                   )}
                 </div>
                 <div className="flex-1 min-w-[220px] pb-1">
-                  <p className="text-headline-md text-on-background leading-tight">
+                  <p className="text-headline-md text-heading leading-tight">
                     {user?.name ?? session.user.name}
                   </p>
                   <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-1">
                     <p className="text-body-sm text-on-surface-variant">{session.user.email}</p>
                     <Link
                       href="/sensus"
-                      className={`inline-flex items-center gap-1.5 text-label-caps px-2 py-0.5 rounded-full ${sensusComplete ? "bg-primary-container/10 text-primary-container" : "bg-surface-container-low text-on-surface-variant"} hover:opacity-80 transition-opacity`}
+                      className={`inline-flex items-center gap-1.5 text-label-caps px-2 py-0.5 rounded-md ${sensusComplete ? "bg-gold-ink/10 text-gold-ink" : "bg-surface-container-low text-on-surface-variant"} hover:opacity-80 transition-opacity`}
                     >
                       {sensusComplete ? (
                         <ClipboardCheck size={13} aria-hidden />
@@ -188,7 +187,7 @@ export default async function ProfilePage({
                 </div>
                 <Link
                   href="#profil"
-                  className="inline-flex items-center gap-1.5 mb-1 text-label-caps uppercase tracking-wide border border-outline-variant text-on-background px-4 py-2 rounded-full hover:bg-surface-container-low transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-container focus-visible:ring-offset-2 focus-visible:ring-offset-background motion-reduce:transition-none"
+                  className="inline-flex items-center gap-1.5 mb-1 text-label-caps uppercase tracking-wide border border-outline-variant text-on-background px-4 py-2 rounded-md hover:border-muted-gold hover:text-gold-ink transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-container focus-visible:ring-offset-2 focus-visible:ring-offset-background motion-reduce:transition-none"
                 >
                   <Pencil size={14} aria-hidden /> {t("profile.editProfile")}
                 </Link>
@@ -204,9 +203,9 @@ export default async function ProfilePage({
                 ).map(([label, count]) => (
                   <div
                     key={label}
-                    className="bg-surface-container-low rounded-lg px-2 py-3 text-center"
+                    className="bg-surface-container-low border border-[var(--deco-line-soft)] rounded-lg px-2 py-3 text-center"
                   >
-                    <dd className="text-headline-md text-on-background">{count}</dd>
+                    <dd className="text-headline-md text-heading">{count}</dd>
                     <dt className="text-label-caps text-on-surface-variant mt-0.5">{label}</dt>
                   </div>
                 ))}
@@ -225,7 +224,7 @@ export default async function ProfilePage({
                 content: (
                   <section
                     aria-label={t("profile.sectionProfile")}
-                    className="bg-surface-container-lowest border border-outline-variant rounded-2xl p-5 sm:p-8"
+                    className="bg-surface-container-lowest border border-outline-variant rounded-lg p-5 sm:p-8"
                   >
                     <form action={updateProfile} className="flex flex-col gap-4">
                       <label className="flex flex-col gap-2">
@@ -292,7 +291,7 @@ export default async function ProfilePage({
                       <div className="flex items-center gap-3 mt-2">
                         <button
                           type="submit"
-                          className="bg-primary-container text-on-primary text-label-caps uppercase tracking-wide px-6 py-3 rounded-md hover:bg-primary transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-container focus-visible:ring-offset-2 focus-visible:ring-offset-background motion-reduce:transition-none"
+                          className="deco-btn bg-accent text-on-accent text-label-caps uppercase px-6 py-3 rounded-md hover:brightness-95 transition-[filter] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-container focus-visible:ring-offset-2 focus-visible:ring-offset-background motion-reduce:transition-none"
                         >
                           {t("profile.saveButton")}
                         </button>
@@ -311,9 +310,9 @@ export default async function ProfilePage({
                   myBorrows.length === 0 ? (
                     <section
                       aria-label={t("profile.borrowHeading")}
-                      className="flex flex-col items-center text-center bg-surface-container-lowest border border-outline-variant rounded-2xl px-6 py-14"
+                      className="flex flex-col items-center text-center bg-surface-container-lowest border border-outline-variant rounded-lg px-6 py-14"
                     >
-                      <div className="w-16 h-16 rounded-full bg-surface-container flex items-center justify-center text-outline-variant mb-4">
+                      <div className="medal-ring w-16 h-16 text-gold-ink mb-4">
                         <Package size={28} aria-hidden />
                       </div>
                       <p className="text-body-md text-on-surface-variant max-w-xs mb-6">
@@ -321,7 +320,7 @@ export default async function ProfilePage({
                       </p>
                       <Link
                         href="/inventory"
-                        className="bg-primary-container text-on-primary text-label-caps uppercase tracking-wide px-6 py-3 rounded-md hover:bg-primary transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-container focus-visible:ring-offset-2 focus-visible:ring-offset-background motion-reduce:transition-none"
+                        className="deco-btn bg-accent text-on-accent text-label-caps uppercase px-6 py-3 rounded-md hover:brightness-95 transition-[filter] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-container focus-visible:ring-offset-2 focus-visible:ring-offset-background motion-reduce:transition-none"
                       >
                         {t("profile.borrowBrowseInventory")}
                       </Link>
@@ -329,7 +328,7 @@ export default async function ProfilePage({
                   ) : (
                     <ul
                       aria-label={t("profile.borrowHeading")}
-                      className="bg-surface-container-lowest border border-outline-variant rounded-2xl px-4 sm:px-5"
+                      className="bg-surface-container-lowest border border-outline-variant rounded-lg px-4 sm:px-5"
                     >
                       {myBorrows.map(({ req, itemName, imageUrl }) => (
                         <li
@@ -405,7 +404,7 @@ export default async function ProfilePage({
                         {t("profile.certificatesHeading")} · {certificates.length}
                       </h2>
                       {certificates.length === 0 ? (
-                        <p className="text-body-md text-on-surface-variant bg-surface-container-lowest border border-outline-variant rounded-2xl px-5 py-6">
+                        <p className="text-body-md text-on-surface-variant bg-surface-container-lowest border border-outline-variant rounded-lg px-5 py-6">
                           {t("profile.certificatesEmpty")}
                         </p>
                       ) : (
@@ -413,7 +412,7 @@ export default async function ProfilePage({
                           {certificates.map((c) => (
                             <li
                               key={c.id}
-                              className="flex items-start gap-3 bg-surface-container-lowest border border-outline-variant rounded-xl p-4 hover:bg-surface-container-low transition-colors"
+                              className="flex items-start gap-3 bg-surface-container-lowest border border-outline-variant rounded-lg p-4 hover:border-muted-gold transition-colors"
                             >
                               <Award className="text-primary-container shrink-0 mt-0.5" size={20} aria-hidden />
                               <div className="min-w-0">
@@ -451,11 +450,11 @@ export default async function ProfilePage({
                         {t("profile.eventsHeading")} · {myEvents.length}
                       </h2>
                       {myEvents.length === 0 ? (
-                        <p className="text-body-md text-on-surface-variant bg-surface-container-lowest border border-outline-variant rounded-2xl px-5 py-6">
+                        <p className="text-body-md text-on-surface-variant bg-surface-container-lowest border border-outline-variant rounded-lg px-5 py-6">
                           {t("profile.eventsEmpty")}
                         </p>
                       ) : (
-                        <ul className="bg-surface-container-lowest border border-outline-variant rounded-2xl px-4 sm:px-5">
+                        <ul className="bg-surface-container-lowest border border-outline-variant rounded-lg px-4 sm:px-5">
                           {myEvents.map((e) => {
                             const when = e.startAt ?? e.registeredAt;
                             return (
@@ -499,7 +498,7 @@ export default async function ProfilePage({
                   <div className="flex flex-col gap-4">
                     <section
                       aria-labelledby="profile-settings-sensus"
-                      className="bg-surface-container-lowest border border-outline-variant rounded-2xl p-5 sm:p-6"
+                      className="bg-surface-container-lowest border border-outline-variant rounded-lg p-5 sm:p-6"
                     >
                       <h2
                         id="profile-settings-sensus"
@@ -532,7 +531,7 @@ export default async function ProfilePage({
 
                     <section
                       aria-labelledby="profile-settings-language"
-                      className="bg-surface-container-lowest border border-outline-variant rounded-2xl p-5 sm:p-6"
+                      className="bg-surface-container-lowest border border-outline-variant rounded-lg p-5 sm:p-6"
                     >
                       <h2
                         id="profile-settings-language"
@@ -545,7 +544,7 @@ export default async function ProfilePage({
 
                     <section
                       aria-labelledby="profile-settings-notifications"
-                      className="bg-surface-container-lowest border border-outline-variant rounded-2xl p-5 sm:p-6"
+                      className="bg-surface-container-lowest border border-outline-variant rounded-lg p-5 sm:p-6"
                     >
                       <h2
                         id="profile-settings-notifications"

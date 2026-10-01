@@ -81,7 +81,7 @@ export default async function WorkLedgerPage() {
       </p>
 
       {overloaded.length > 0 && (
-        <div className="bg-tertiary-container/25 border border-outline-variant rounded-xl p-4 mb-6 max-w-3xl">
+        <div className="bg-tertiary-container/10 border border-outline-variant rounded-xl p-4 mb-6 max-w-3xl">
           <p className="text-body-md text-on-background">
             <strong>{overloaded.length} orang</strong> memegang 3 kepanitiaan atau lebih:{" "}
             {overloaded.map((p) => p.name).join(", ")}.

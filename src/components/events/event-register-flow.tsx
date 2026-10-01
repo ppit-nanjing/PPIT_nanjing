@@ -176,7 +176,7 @@ export function EventRegisterFlow({
   return (
     <div ref={topRef} className="mx-auto w-full max-w-2xl scroll-mt-6">
       {/* Identitas acara — biar peserta tahu persis mereka mendaftar ke apa. */}
-      <div className="evt-surface overflow-hidden rounded-2xl border border-outline-variant bg-surface-container-lowest">
+      <div className="evt-surface overflow-hidden rounded-lg border border-outline-variant bg-surface-container-lowest">
         {event.posterUrl && (
           <div className="relative h-40 w-full sm:h-52">
             <Image src={event.posterUrl} alt={event.title} fill sizes="(max-width: 640px) 100vw, 672px" className="object-cover" />
@@ -184,8 +184,8 @@ export function EventRegisterFlow({
           </div>
         )}
         <div className="flex flex-col gap-1 p-5">
-          <span className="text-label-caps uppercase tracking-wide text-primary-container">{t("events.registerTitle")}</span>
-          <h1 className="text-headline-md text-on-background">{event.title}</h1>
+          <span className="text-label-caps uppercase tracking-[0.2em] text-gold-ink">{t("events.registerTitle")}</span>
+          <h1 className="text-headline-md text-heading">{event.title}</h1>
           <div className="mt-1 flex flex-wrap gap-x-4 gap-y-1 text-body-sm text-on-surface-variant">
             {event.dateLabel && (
               <span className="flex items-center gap-1.5">
@@ -203,7 +203,7 @@ export function EventRegisterFlow({
 
       {/* Progres */}
       {!single && (
-        <div className="sticky top-2 z-10 mt-4 flex flex-col gap-1.5 rounded-xl border border-outline-variant bg-background/85 px-4 py-3 backdrop-blur">
+        <div className="sticky top-2 z-10 mt-4 flex flex-col gap-1.5 rounded-lg border border-outline-variant bg-background/85 px-4 py-3 backdrop-blur">
           <div className="flex items-center justify-between text-label-caps uppercase tracking-wide text-on-surface-variant">
             <span>{steps[step]?.title}</span>
             <span>{t("events.registerStepOf", { n: step + 1, total: steps.length })}</span>
@@ -243,11 +243,11 @@ export function EventRegisterFlow({
                       : { opacity: active ? 1 : 0, x: active ? 0 : dir * 20 }
                   }
                   transition={{ duration: reduceMotion ? 0 : 0.25, ease: "easeOut" }}
-                  className="evt-surface flex flex-col gap-4 rounded-2xl border border-outline-variant bg-surface-container-lowest p-5 sm:p-6"
+                  className="evt-surface flex flex-col gap-4 rounded-lg border border-outline-variant bg-surface-container-lowest p-5 sm:p-6"
                 >
                   {!single && (
                     <div className="flex flex-col gap-1">
-                      <h2 className="text-headline-sm text-on-background">{s.title}</h2>
+                      <h2 className="text-headline-sm text-heading">{s.title}</h2>
                       {s.hint && <p className="text-body-sm text-on-surface-variant">{s.hint}</p>}
                     </div>
                   )}
@@ -259,7 +259,7 @@ export function EventRegisterFlow({
         </div>
 
         {/* Navigasi */}
-        <div className="sticky bottom-0 flex gap-3 rounded-xl border border-outline-variant bg-background/90 p-3 backdrop-blur sm:static sm:border-0 sm:bg-transparent sm:p-0">
+        <div className="sticky bottom-0 flex gap-3 rounded-lg border border-outline-variant bg-background/90 p-3 backdrop-blur sm:static sm:border-0 sm:bg-transparent sm:p-0">
           {step > 0 ? (
             <button
               type="button"
@@ -283,7 +283,7 @@ export function EventRegisterFlow({
               onClick={() => {
                 if (currentStepValid()) go(Math.min(last, step + 1), 1);
               }}
-              className="inline-flex flex-1 items-center justify-center gap-2 rounded-md bg-primary-container px-6 py-3.5 text-label-caps uppercase tracking-wide text-on-primary transition-colors hover:bg-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-container focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+              className="inline-flex flex-1 items-center justify-center gap-2 deco-btn rounded-md bg-accent px-6 py-3.5 text-label-caps uppercase text-on-accent transition-[filter] hover:brightness-95 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-container focus-visible:ring-offset-2 focus-visible:ring-offset-background"
             >
               {t("events.wizardNext")} <ArrowRight size={16} aria-hidden="true" />
             </button>
@@ -294,7 +294,7 @@ export function EventRegisterFlow({
               // tak valid, batalkan submit + lompat ke langkah bermasalah +
               // reportValidity() — bukan gagal senyap.
               onClick={handleSubmitClick}
-              className="inline-flex flex-1 items-center justify-center gap-2 rounded-md bg-primary-container px-6 py-3.5 text-label-caps uppercase tracking-wide text-on-primary transition-colors hover:bg-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-container focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+              className="inline-flex flex-1 items-center justify-center gap-2 deco-btn rounded-md bg-accent px-6 py-3.5 text-label-caps uppercase text-on-accent transition-[filter] hover:brightness-95 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-container focus-visible:ring-offset-2 focus-visible:ring-offset-background"
             >
               <Check size={16} aria-hidden="true" /> {submitLabel}
             </button>

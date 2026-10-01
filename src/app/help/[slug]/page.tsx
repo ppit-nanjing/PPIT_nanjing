@@ -4,6 +4,7 @@ import { db } from "@/db";
 import { helpArticles } from "@/db/schema";
 import { SiteNav } from "@/components/site-nav";
 import { SiteFooter } from "@/components/site-footer";
+import { DecoRule } from "@/components/deco/deco-rule";
 import { ArrowLeft } from "lucide-react";
 import Link from "next/link";
 import { getT } from "@/lib/i18n/server";
@@ -39,12 +40,13 @@ export default async function HelpArticleDetailPage({ params }: { params: Promis
           <ArrowLeft size={16} aria-hidden="true" /> {t("help.back")}
         </Link>
 
-        <span className="text-label-caps uppercase tracking-wide text-primary-container mb-3 block">
+        <span className="text-label-caps uppercase tracking-[0.3em] text-gold-ink mb-3 block">
           {article.section}
         </span>
-        <h1 className="text-display-hero-mobile md:text-display-hero text-on-background mb-4 leading-tight">
+        <h1 className="text-display-hero-mobile md:text-display-hero text-heading mb-5 leading-tight">
           {article.title}
         </h1>
+        <DecoRule align="start" className="mb-5" />
         <p className="text-label-caps text-on-surface-variant mb-10">
           {t("help.updated", {
             date: new Date(article.updatedAt).toLocaleDateString(INTL_LOCALE[locale], { dateStyle: "long" }),

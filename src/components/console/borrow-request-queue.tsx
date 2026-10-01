@@ -165,9 +165,9 @@ export function BorrowRequestQueue({ requests }: { requests: Request[] }) {
             </button>
           )}
           {r.status === "returned" && (
-            <p className="text-label-caps text-on-surface-variant/70">Selesai - barang kembali ke stok.</p>
+            <p className="text-label-caps text-on-surface-variant">Selesai - barang kembali ke stok.</p>
           )}
-          {r.status === "rejected" && <p className="text-label-caps text-on-surface-variant/70">Pengajuan ditolak.</p>}
+          {r.status === "rejected" && <p className="text-label-caps text-on-surface-variant">Pengajuan ditolak.</p>}
         </>
       )}
     />

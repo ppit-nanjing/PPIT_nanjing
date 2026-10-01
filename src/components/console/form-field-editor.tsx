@@ -120,7 +120,7 @@ export function FormFieldEditor({ field, index, sectionLabel, isQuiz }: { field:
           aria-label="Seret untuk mengubah urutan"
           onMouseDown={() => setDragEnabled(true)}
           onMouseUp={() => setDragEnabled(false)}
-          className="text-on-surface-variant/60 hover:text-on-surface-variant cursor-grab active:cursor-grabbing p-1"
+          className="text-on-surface-variant hover:text-on-surface-variant cursor-grab active:cursor-grabbing p-1"
         >
           <GripVertical size={18} />
         </button>
@@ -330,7 +330,7 @@ export function FormFieldEditor({ field, index, sectionLabel, isQuiz }: { field:
                       <span className="text-label-caps text-on-surface-variant">Tampil sebaris di bawah pertanyaan (sama seperti Google Form).</span>
                     </div>
                     {isQuiz && (
-                      <div className="flex flex-col gap-4 bg-tertiary-container/20 rounded-md p-3">
+                      <div className="flex flex-col gap-4 bg-tertiary-container/10 rounded-md p-3">
                         <label className="flex flex-col gap-1 text-label-caps uppercase tracking-wide text-on-surface-variant sm:max-w-[12rem]">
                           Nilai Poin
                           <input type="number" min={0} defaultValue={cfg.points ?? ""} onChange={(e) => setCfg((c) => ({ ...c, points: e.target.value ? Number(e.target.value) : undefined }))} className="bg-surface-container-lowest rounded-md p-2 text-body-md" />

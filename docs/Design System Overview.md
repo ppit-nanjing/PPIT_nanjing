@@ -11,24 +11,11 @@ Sistem desain ini **bukan dibuat dari nol** — direkonstruksi dan disatukan dar
 - `ppit_nanjing_animation_system_prd.md` — PRD sistem animasi & interaksi
 - Konfigurasi `tailwind.config` yang di-embed di dalam ~95 file `code.html` prototipe
 
-## Dua Generasi Desain — mana yang dipakai?
+## Status sistem desain
 
-| | **Patriotic Institutional** (v1) | **Warm Institutional** (v2 — kanonik) |
-|---|---|---|
-| Status | Legacy, masih dipakai di sebagian layar awal | **Rekomendasi resmi** — dipakai di semua file `*_master_edition`, `*_final_refinement`, `*_refined_*` |
-| Karakter | Formal, kontras tinggi, kaku (birokratis) | Lebih hangat, lapang, "lifestyle", tetap institusional |
-| Radius dasar | 4px (tegas) | 8px (lembut) |
-| Section gap desktop | 96px | 128px |
+Sumber kebenaran visual sekarang adalah **[DESIGN.md](../DESIGN.md)** di root repo, yang mendeskripsikan sistem **"The Gilded Courtyard"**: Art Deco + Art Nouveau dalam gading hangat, jade pekat, dan emas antik; Cinzel, Josefin Sans, dan Cormorant Garamond; enam palet (tiga tema kota × terang/gelap). Implementasinya ada di `src/app/globals.css` dan komponen di `src/components/`. Sistem sebelumnya (Scholar's Courtyard dengan Spectral + Plus Jakarta Sans, dan sebelumnya lagi Warm Institutional dan Patriotic Institutional dari prototipe Stitch) sudah digantikan. Catatan prototipe dan bagian historis lama hanya referensi sejarah; jangan mengekstrak token darinya.
 
-Warm Institutional secara eksplisit ditulis sebagai **evolusi** dari Patriotic ("*This design system evolves the Patriotic Institutional aesthetic into a more approachable, Warm Institutional identity*"). File-file dengan penanda `_master_edition`, `_final_refinement`, `_refined_*`, `_navigation_updated` — yaitu iterasi paling akhir dari tiap layar — semuanya sudah memakai token warna & tipografi Warm Institutional. **Maka dokumen ini menjadikan Warm Institutional sebagai sistem kanonik**, dengan Patriotic didokumentasikan sebagai referensi historis di [Color System](./Color%20System.md).
-
-## ⚠️ Temuan penting: drift antara spek dan implementasi
-
-Saat membandingkan `DESIGN.md` dengan `tailwind.config` yang benar-benar di-embed di file `code.html` "final" (mis. `ppit_nanjing_homepage_final_refinement`), ditemukan **inkonsistensi radius**: warna & spacing yang dipakai sudah 100% Warm Institutional, tapi `borderRadius` yang ter-generate masih memakai skala lama Patriotic (`DEFAULT: 0.25rem`, bukan `0.5rem` seperti spek Warm). Ini kemungkinan bug/miss saat Stitch meng-generate ulang layar tanpa menyinkronkan token radius baru.
-
-**Rekomendasi:** sebelum development dimulai, tim desain memutuskan satu radius scale final (dokumen ini merekomendasikan skala Warm — lihat [Spacing System](./Spacing%20System.md)) lalu menerapkannya konsisten di semua komponen — jangan lanjutkan drift ini ke kode produksi.
-
-Ditemukan juga token warna "duplikat" dari dua generasi yang sama-sama dipakai di file yang sama (`surface-muted` #F9F9F9 vs `soft-gray` #f2f0ed; `brand-red-deep` #A63232 vs `primary` #b00816). Rekomendasi konsolidasi ada di [Color System](./Color%20System.md).
+Saat mengubah token atau UI global: uji terang dan gelap di ketiga tema kota dan jalankan `npm run check:contrast` (lihat [Color System](./Color%20System.md)).
 
 ## Isi Design System
 

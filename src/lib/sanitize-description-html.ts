@@ -41,6 +41,17 @@ const OPTIONS: sanitizeHtml.IOptions = {
   },
 };
 
+// Descriptions saved before the Deco redesign store "Jakarta Sans" / "Spectral" as
+// var(--font-sans) / var(--font-serif). Those two variables now mean the site's
+// Josefin Sans / Cinzel, which would silently restyle every saved description (Spectral
+// body text would turn into Cinzel). The editor now writes --font-jakarta /
+// --font-spectral, so map the legacy values at sanitize time (it also runs on render).
+const LEGACY_FONT_VARS: [RegExp, string][] = [
+  [/var\(--font-sans\)/g, "var(--font-jakarta)"],
+  [/var\(--font-serif\)/g, "var(--font-spectral)"],
+];
+
 export function sanitizeDescriptionHtml(html: string): string {
-  return sanitizeHtml(html, OPTIONS);
+  const migrated = LEGACY_FONT_VARS.reduce((acc, [from, to]) => acc.replace(from, to), html);
+  return sanitizeHtml(migrated, OPTIONS);
 }

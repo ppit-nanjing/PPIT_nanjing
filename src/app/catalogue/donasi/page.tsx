@@ -35,7 +35,7 @@ export default async function DonasiPage() {
         <h2 className="text-headline-md text-on-background mb-1">{t("donation.channelsTitle")}</h2>
         <p className="text-body-md text-on-surface-variant mb-5">{t("donation.channelsDesc")}</p>
         {channels.length === 0 ? (
-          <div className="bg-surface-container-low border border-outline-variant rounded-xl p-8 text-center">
+          <div className="deco-frame bg-surface-container-low rounded-lg p-8 text-center">
             <p className="text-body-md text-on-surface-variant">
               {t("donation.channelsEmpty")}
             </p>
@@ -74,12 +74,12 @@ export default async function DonasiPage() {
           {t("donation.reportDesc")}
         </p>
         {!authed ? (
-          <div className="bg-surface-container-low border border-outline-variant rounded-xl p-8 text-center max-w-xl">
+          <div className="deco-frame bg-surface-container-low rounded-lg p-8 text-center max-w-xl">
             <Lock className="mx-auto mb-3 text-on-surface-variant" size={22} aria-hidden />
             <p className="text-body-md text-on-background mb-3">{t("donation.loginPrompt")}</p>
             <Link
               href="/login"
-              className="inline-block bg-primary-container text-on-primary text-label-caps uppercase tracking-wide px-5 py-2.5 rounded-md hover:bg-primary transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-container focus-visible:ring-offset-2 focus-visible:ring-offset-surface-container-low"
+              className="deco-btn inline-block bg-accent text-on-accent text-label-caps uppercase px-5 py-2.5 rounded-md hover:brightness-95 transition-[filter] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-container focus-visible:ring-offset-2 focus-visible:ring-offset-surface-container-low"
             >
               {t("donation.loginBtn")}
             </Link>
@@ -128,7 +128,7 @@ export default async function DonasiPage() {
             <CheckboxField name="anonymous" label={t("donation.anonymous")} className="text-on-background" />
             <button
               type="submit"
-              className="self-start bg-primary-container text-on-primary text-label-caps uppercase tracking-wide px-6 py-3 rounded-md hover:bg-primary transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-container focus-visible:ring-offset-2 focus-visible:ring-offset-surface-container-lowest"
+              className="deco-btn self-start bg-accent text-on-accent text-label-caps uppercase px-6 py-3 rounded-md hover:brightness-95 transition-[filter] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-container focus-visible:ring-offset-2 focus-visible:ring-offset-surface-container-lowest"
             >
               {t("donation.submit")}
             </button>
@@ -143,7 +143,7 @@ export default async function DonasiPage() {
         <h2 className="text-headline-md text-on-background mb-1">{t("donation.supportersTitle")}</h2>
         <p className="text-body-md text-on-surface-variant mb-5">{t("donation.supportersDesc")}</p>
         {supporters.length === 0 ? (
-          <div className="bg-surface-container-low border border-outline-variant rounded-xl p-8 text-center">
+          <div className="deco-frame bg-surface-container-low rounded-lg p-8 text-center">
             <Heart className="mx-auto mb-3 text-on-surface-variant" size={22} aria-hidden />
             <p className="text-body-md text-on-surface-variant">{t("donation.supportersEmpty")}</p>
           </div>

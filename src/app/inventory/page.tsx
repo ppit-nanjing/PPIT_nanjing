@@ -3,7 +3,7 @@ import { db } from "@/db";
 import { inventoryItems } from "@/db/schema";
 import { SiteNav } from "@/components/site-nav";
 import { SiteFooter } from "@/components/site-footer";
-import { AnimatedHeroHeading } from "@/components/animated-hero-heading";
+import { PageHeader } from "@/components/page-header";
 import { Package, MapPin, Search } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
@@ -35,19 +35,11 @@ export default async function InventoryPage({
     <div className="min-h-screen bg-background text-on-background">
       <SiteNav />
 
-      <header className="max-w-[var(--container-max)] mx-auto px-[var(--spacing-container-padding)] pt-16 pb-8">
-        <AnimatedHeroHeading
-          words={[t("inventory.title")]}
-          className="text-display-hero-mobile md:text-display-hero text-on-background mb-4"
-        />
-        <p className="text-body-lg text-on-surface-variant max-w-2xl mb-8">
-          {t("inventory.intro")}
-        </p>
-
-        <div className="flex flex-wrap gap-3 mb-8">
+      <PageHeader title={t("inventory.title")} intro={t("inventory.intro")}>
+        <div className="flex flex-wrap justify-center gap-3">
           <Link
             href="/inventory/contribute"
-            className="bg-primary-container text-on-primary text-label-caps uppercase tracking-wide px-5 py-2.5 rounded-md hover:bg-primary transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-container focus-visible:ring-offset-2 focus-visible:ring-offset-background motion-reduce:transition-none"
+            className="deco-btn bg-accent text-on-accent text-label-caps uppercase px-5 py-2.5 rounded-md hover:brightness-95 transition-[filter] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-container focus-visible:ring-offset-2 focus-visible:ring-offset-background motion-reduce:transition-none"
           >
             {t("inventory.contribute")}
           </Link>
@@ -59,7 +51,7 @@ export default async function InventoryPage({
           </Link>
         </div>
 
-        <form action="/inventory" role="search" className="relative max-w-xl mb-6">
+        <form action="/inventory" role="search" className="relative w-full max-w-xl">
           <label htmlFor="inventory-search" className="sr-only">
             {t("inventory.searchLabel")}
           </label>
@@ -86,11 +78,11 @@ export default async function InventoryPage({
         </form>
 
         {categories.length > 0 && (
-          <nav aria-label={t("inventory.filterAria")} className="flex flex-wrap gap-2">
+          <nav aria-label={t("inventory.filterAria")} className="flex flex-wrap justify-center gap-2">
             <Link
               href={q ? `/inventory?q=${encodeURIComponent(q)}` : "/inventory"}
               aria-current={!category ? "page" : undefined}
-              className={`px-4 py-2 rounded-full text-label-caps uppercase tracking-wide transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-container focus-visible:ring-offset-2 focus-visible:ring-offset-background motion-reduce:transition-none ${
+              className={`px-4 py-2 rounded-md text-label-caps uppercase tracking-wide transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-container focus-visible:ring-offset-2 focus-visible:ring-offset-background motion-reduce:transition-none ${
                 !category
                   ? "bg-primary-container text-on-primary"
                   : "bg-surface-container-low text-secondary border border-outline-variant hover:bg-surface-container-lowest"
@@ -107,7 +99,7 @@ export default async function InventoryPage({
                   key={c}
                   href={`/inventory?${params.toString()}`}
                   aria-current={category === c ? "page" : undefined}
-                  className={`px-4 py-2 rounded-full text-label-caps uppercase tracking-wide transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-container focus-visible:ring-offset-2 focus-visible:ring-offset-background motion-reduce:transition-none ${
+                  className={`px-4 py-2 rounded-md text-label-caps uppercase tracking-wide transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-container focus-visible:ring-offset-2 focus-visible:ring-offset-background motion-reduce:transition-none ${
                     category === c
                       ? "bg-primary-container text-on-primary"
                       : "bg-surface-container-low text-secondary border border-outline-variant hover:bg-surface-container-lowest"
@@ -119,7 +111,7 @@ export default async function InventoryPage({
             })}
           </nav>
         )}
-      </header>
+      </PageHeader>
 
       <main className="max-w-[var(--container-max)] mx-auto px-[var(--spacing-container-padding)] pb-24">
         {items.length === 0 ? (
@@ -155,7 +147,7 @@ export default async function InventoryPage({
               >
                 <div className="h-40 bg-surface-container-low flex items-center justify-center overflow-hidden relative">
                   <span
-                    className={`absolute top-3 left-3 flex items-center gap-1.5 bg-surface-container-lowest/90 backdrop-blur text-label-caps uppercase px-2.5 py-1 rounded-full shadow-sm ${
+                    className={`absolute top-3 left-3 flex items-center gap-1.5 bg-surface-container-lowest/90 backdrop-blur text-label-caps uppercase px-2.5 py-1 rounded-md shadow-sm ${
                       item.availableQuantity > 0 ? "text-primary-container" : "text-secondary"
                     }`}
                   >

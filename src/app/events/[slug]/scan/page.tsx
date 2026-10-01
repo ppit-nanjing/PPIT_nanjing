@@ -139,13 +139,13 @@ export default async function EventScanPage({
           <ArrowLeft size={16} aria-hidden="true" /> Kembali ke Acara
         </Link>
 
-        <h1 className="text-headline-md sm:text-headline-lg text-on-background mb-1">{event.title}</h1>
+        <h1 className="text-headline-md sm:text-headline-lg text-heading mb-1">{event.title}</h1>
         <p className="text-body-md text-on-surface-variant mb-4">
           Scan QR tiket peserta atau tiket kepanitiaan untuk mencatat kehadiran.
         </p>
 
         {!closed && practiceMode && (
-          <div className="mb-6 flex items-start gap-3 rounded-xl border-2 border-amber-400 bg-amber-50 p-4">
+          <div className="mb-6 flex items-start gap-3 rounded-lg border-2 border-amber-400 bg-amber-50 p-4">
             <FlaskConical className="text-amber-600 shrink-0 mt-0.5" size={20} aria-hidden="true" />
             <div>
               <p className="text-body-md font-semibold text-amber-900">
@@ -173,7 +173,7 @@ export default async function EventScanPage({
         )}
 
         {closed ? (
-          <div className="mb-8 rounded-xl border border-outline-variant bg-surface-container-lowest p-6 flex flex-col items-center text-center">
+          <div className="mb-8 rounded-lg border border-outline-variant bg-surface-container-lowest p-6 flex flex-col items-center text-center">
             <CalendarX className="text-on-surface-variant mb-3" size={40} aria-hidden="true" />
             <p className="text-body-lg text-on-background font-semibold mb-1">
               {closed === "cancelled" ? "Acara dibatalkan" : "Check-in ditutup"}
@@ -197,7 +197,7 @@ export default async function EventScanPage({
             )}
 
             {t && !lookup && (
-              <div className="mb-8 rounded-xl border border-red-300 bg-surface-container-lowest p-6 flex flex-col items-center text-center">
+              <div className="mb-8 rounded-lg border border-red-300 bg-surface-container-lowest p-6 flex flex-col items-center text-center">
                 <XCircle className="text-red-500 mb-3" size={40} aria-hidden="true" />
                 <p className="text-body-lg text-on-background font-semibold">Token tidak valid</p>
               </div>
@@ -214,7 +214,7 @@ export default async function EventScanPage({
               />
               <button
                 type="submit"
-                className="bg-primary-container text-on-primary text-label-caps uppercase tracking-wide px-6 py-3 rounded-md hover:bg-primary transition-colors"
+                className="deco-btn bg-accent text-on-accent text-label-caps uppercase px-6 py-3 rounded-md hover:brightness-95 transition-[filter]"
               >
                 Cek Token
               </button>

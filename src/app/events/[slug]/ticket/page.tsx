@@ -7,6 +7,7 @@ import { db } from "@/db";
 import { events, eventRegistrations, eventFeeOptions } from "@/db/schema";
 import { SiteNav } from "@/components/site-nav";
 import { SiteFooter } from "@/components/site-footer";
+import { DecoRule } from "@/components/deco/deco-rule";
 import { CopyButton } from "@/components/copy-button";
 import Image from "next/image";
 import Link from "next/link";
@@ -121,7 +122,7 @@ export default async function EventTicketPage({ params }: { params: Promise<{ sl
           hasNextSteps ? "max-w-md lg:max-w-4xl" : "max-w-md"
         }`}
       >
-        <div className={`w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-6 ${gated ? "bg-surface-container-low" : "bg-primary-container/10"}`}>
+        <div className="medal-ring w-20 h-20 mx-auto mb-6">
           {gated ? (
             <CalendarDays className="text-on-surface-variant" size={28} aria-hidden="true" />
           ) : (
@@ -129,9 +130,10 @@ export default async function EventTicketPage({ params }: { params: Promise<{ sl
           )}
         </div>
         <div role="status" aria-live="polite">
-          <h1 className="text-headline-lg text-on-background mb-2">
+          <h1 className="text-headline-lg text-heading mb-3">
             {gated ? t("ticket.pendingTitle") : t("ticket.success")}
           </h1>
+          <DecoRule className="mb-4" />
           <p className="text-body-md text-on-surface-variant mb-10">
             {gated
               ? t("ticket.pendingDesc")
@@ -141,9 +143,9 @@ export default async function EventTicketPage({ params }: { params: Promise<{ sl
 
         <div className={`grid gap-6 ${hasNextSteps ? "lg:grid-cols-2 lg:items-start" : ""}`}>
           {hasNextSteps && (
-            <div className="bg-primary-container/10 border border-primary-container/30 rounded-xl p-6 text-left">
-              <h2 className="text-headline-sm text-on-background mb-2 flex items-center gap-2">
-                <Users size={18} className="text-primary-container" aria-hidden="true" />
+            <div className="deco-frame bg-accent/10 rounded-lg p-6 text-left">
+              <h2 className="text-headline-sm text-heading mb-2 flex items-center gap-2">
+                <Users size={18} className="text-gold-ink" aria-hidden="true" />
                 {t("ticket.nextSteps")}
               </h2>
               {event.confirmationInfo && (
@@ -169,7 +171,7 @@ export default async function EventTicketPage({ params }: { params: Promise<{ sl
             </div>
           )}
 
-          <div className="bg-surface-container-lowest border border-outline-variant rounded-xl p-8">
+          <div className="deco-frame bg-surface-container-lowest rounded-lg p-8">
             {gated ? (
               <div className="mb-6 text-left text-body-sm text-on-surface-variant flex flex-col gap-1.5">
                 <p>{t("ticket.pay.step1")}</p>
@@ -192,7 +194,7 @@ export default async function EventTicketPage({ params }: { params: Promise<{ sl
                 <a
                   href={qrDataUrl}
                   download={`qr-checkin-${event.slug}.png`}
-                  className="inline-flex items-center justify-center gap-2 border border-outline-variant text-on-background text-label-caps uppercase tracking-wide px-4 py-2.5 rounded-md hover:bg-surface-container-low transition-colors mb-6 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-container focus-visible:ring-offset-2 focus-visible:ring-offset-surface-container-lowest"
+                  className="inline-flex items-center justify-center gap-2 border border-outline-variant text-on-background text-label-caps uppercase tracking-wide px-4 py-2.5 rounded-md hover:border-muted-gold hover:text-gold-ink transition-colors mb-6 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-container focus-visible:ring-offset-2 focus-visible:ring-offset-surface-container-lowest"
                 >
                   <Download size={16} aria-hidden="true" /> {t("ticket.downloadQr")}
                 </a>
@@ -203,14 +205,14 @@ export default async function EventTicketPage({ params }: { params: Promise<{ sl
                 </div>
               </>
             )}
-            <h2 className="text-headline-md text-on-background mb-3">{event.title}</h2>
+            <h2 className="text-headline-md text-heading mb-3">{event.title}</h2>
 
             {calUrl && !gated && (
               <a
                 href={calUrl}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="inline-flex items-center justify-center gap-2 border border-outline-variant text-on-background text-label-caps uppercase tracking-wide px-4 py-2.5 rounded-md hover:bg-surface-container-low transition-colors mb-5 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-container focus-visible:ring-offset-2 focus-visible:ring-offset-surface-container-lowest"
+                className="inline-flex items-center justify-center gap-2 border border-outline-variant text-on-background text-label-caps uppercase tracking-wide px-4 py-2.5 rounded-md hover:border-muted-gold hover:text-gold-ink transition-colors mb-5 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-container focus-visible:ring-offset-2 focus-visible:ring-offset-surface-container-lowest"
               >
                 <CalendarPlus size={16} aria-hidden="true" /> {t("ticket.addCalendar")}
               </a>
@@ -245,8 +247,8 @@ export default async function EventTicketPage({ params }: { params: Promise<{ sl
         </div>
 
         {hasFee && (
-          <div className="bg-surface-container-lowest border border-outline-variant rounded-xl p-6 mt-6 text-left">
-            <h2 className="text-headline-sm text-on-background mb-3">{t("ticket.pay.heading")}</h2>
+          <div className="deco-frame bg-surface-container-lowest rounded-lg p-6 mt-6 text-left">
+            <h2 className="text-headline-sm text-heading mb-3">{t("ticket.pay.heading")}</h2>
             {feeAmount != null ? (
               <div className="mb-4 rounded-lg bg-primary-container/10 px-4 py-3">
                 <p className="text-label-caps uppercase tracking-wide text-on-surface-variant">{t("ticket.pay.amountLabel")}</p>
@@ -298,7 +300,7 @@ export default async function EventTicketPage({ params }: { params: Promise<{ sl
                 </p>
                 <a
                   href={alipayLink}
-                  className="inline-flex items-center justify-center border border-outline-variant text-on-background text-label-caps uppercase tracking-wide px-4 py-2 rounded-md hover:bg-surface-container-low transition-colors motion-reduce:transition-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-container focus-visible:ring-offset-2 focus-visible:ring-offset-surface-container-lowest"
+                  className="inline-flex items-center justify-center border border-outline-variant text-on-background text-label-caps uppercase tracking-wide px-4 py-2 rounded-md hover:border-muted-gold hover:text-gold-ink transition-colors motion-reduce:transition-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-container focus-visible:ring-offset-2 focus-visible:ring-offset-surface-container-lowest"
                 >
                   {t("ticket.pay.openAlipay")}
                 </a>
@@ -341,7 +343,7 @@ export default async function EventTicketPage({ params }: { params: Promise<{ sl
                 />
                 <button
                   type="submit"
-                  className="self-start bg-primary-container text-on-primary text-label-caps uppercase tracking-wide px-6 py-3 rounded-md hover:bg-primary transition-colors motion-reduce:transition-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-container focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+                  className="self-start deco-btn bg-accent text-on-accent text-label-caps uppercase px-6 py-3 rounded-md hover:brightness-95 transition-[filter] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-container focus-visible:ring-offset-2 focus-visible:ring-offset-background motion-reduce:transition-none"
                 >
                   {t("ticket.pay.submitProof")}
                 </button>
@@ -353,13 +355,13 @@ export default async function EventTicketPage({ params }: { params: Promise<{ sl
         <div className="flex flex-col sm:flex-row gap-3 mt-8 justify-center">
           <Link
             href={`/events/${slug}`}
-            className="inline-flex items-center justify-center gap-2 border border-outline-variant text-on-background text-label-caps uppercase tracking-wide px-6 py-3 rounded-md hover:bg-surface-container-low transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-container focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+            className="inline-flex items-center justify-center gap-2 border border-outline-variant text-on-background text-label-caps uppercase tracking-wide px-6 py-3 rounded-md hover:border-muted-gold hover:text-gold-ink transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-container focus-visible:ring-offset-2 focus-visible:ring-offset-background"
           >
             <ArrowLeft size={16} aria-hidden="true" /> {t("ticket.toDetail")}
           </Link>
           <Link
             href="/events"
-            className="border border-outline-variant text-on-background text-label-caps uppercase tracking-wide px-6 py-3 rounded-md hover:bg-surface-container-low transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-container focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+            className="border border-outline-variant text-on-background text-label-caps uppercase tracking-wide px-6 py-3 rounded-md hover:border-muted-gold hover:text-gold-ink transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-container focus-visible:ring-offset-2 focus-visible:ring-offset-background"
           >
             {t("events.others")}
           </Link>

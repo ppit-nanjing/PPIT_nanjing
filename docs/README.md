@@ -9,7 +9,7 @@
 - [Progress & Handoff.md](./Progress%20&%20Handoff.md) — living status doc, mulai di sini kalau ambil alih sesi/dev baru
 - [Perbandingan dengan PPIT Chongqing.md](./Perbandingan%20dengan%20PPIT%20Chongqing.md) — audit fitur dibanding cabang lain
 - [PRODUCT.md](../PRODUCT.md) — product truth (users, purpose, positioning, constraints, locked brand) — for the impeccable skill
-- [DESIGN.md](../DESIGN.md) — the **real** visual system extracted from `globals.css` + components (via `/impeccable document`, 2026-09-09). The `Design System/*` notes below are pre-2026-08 and describe a superseded palette
+- [DESIGN.md](../DESIGN.md) — the **real** visual system, rewritten for the Art Deco + Art Nouveau redesign (2026-10) and kept in step with `globals.css` + components. The `Design System/*` notes below that predate it describe superseded palettes and are history only
 
 ## 🧭 Information Architecture
 

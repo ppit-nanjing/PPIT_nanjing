@@ -2,6 +2,7 @@ import { eq, and } from "drizzle-orm";
 import { notFound, redirect } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
+import { CheckCircle2, FlaskConical } from "lucide-react";
 import { auth } from "@/auth";
 import { db } from "@/db";
 import {
@@ -25,7 +26,7 @@ import { FileUpload } from "@/components/upload/file-upload";
 import { EventBiodataFields, type BiodataDefaults } from "@/components/events/event-biodata-fields";
 import { EventRegisterFlow, type FlowStep } from "@/components/events/event-register-flow";
 import { EventThemeStyle } from "@/components/events/event-theme-style";
-import { registerForEvent } from "@/app/actions/events";
+import { registerForEvent, registerForEventPractice } from "@/app/actions/events";
 import { getT } from "@/lib/i18n/server";
 import { INTL_LOCALE } from "@/lib/i18n/config";
 import { sortByCoverageOrder } from "@/lib/coverage-cities";
@@ -35,13 +36,13 @@ export default async function EventRegisterPage({
   searchParams,
 }: {
   params: Promise<{ slug: string }>;
-  searchParams: Promise<{ err?: string }>;
+  searchParams: Promise<{ err?: string; practice?: string; done?: string; amt?: string }>;
 }) {
   const { slug } = await params;
-  const { err } = await searchParams;
+  const { err, practice: practiceParam, done, amt } = await searchParams;
   const { t, locale } = await getT();
   const eventHref = `/events/${slug}`;
-  const registerHref = `${eventHref}/register`;
+  const registerHref = `${eventHref}/register${practiceParam === "1" ? "?practice=1" : ""}`;
   // Alasan pantulan dari registerForEvent (?err=...) -> pesan siap tampil.
   // Nilai asing jatuh ke pesan generik, jadi query string yang diutak-atik aman.
   const initialError = !err
@@ -66,6 +67,9 @@ export default async function EventRegisterPage({
   const hasEventConsoleAccess =
     !!eventAccess && (eventAccess.isFullAdmin || eventAccess.moduleBridge || eventAccess.role != null);
   if ((event.status === "scheduled" || event.status === "draft") && !hasEventConsoleAccess) notFound();
+  // "Mode Latihan": the committee can walk the real form (same validation, nothing
+  // saved) whatever the event's state. ?practice=1 is ignored for everyone else.
+  const practice = practiceParam === "1" && hasEventConsoleAccess;
 
   if (!session?.user?.id) redirect(`/login?returnTo=${encodeURIComponent(registerHref)}`);
   const userId = session.user.id;
@@ -74,10 +78,10 @@ export default async function EventRegisterPage({
     .select()
     .from(eventRegistrations)
     .where(and(eq(eventRegistrations.eventId, event.id), eq(eventRegistrations.userId, userId)));
-  if (existing) redirect(`${eventHref}/ticket`);
+  if (existing && !practice) redirect(`${eventHref}/ticket`);
 
   const sensusComplete = await hasCompletedSensus(userId);
-  if (event.requiresSensus && !sensusComplete) {
+  if (!practice && event.requiresSensus && !sensusComplete) {
     redirect(`/sensus?returnTo=${encodeURIComponent(registerHref)}`);
   }
 
@@ -88,7 +92,9 @@ export default async function EventRegisterPage({
   // `seats.isFull` = pagu total acara tercapai ATAU setiap kategori tarif
   // berkuota sudah penuh. Draft/scheduled + akses konsol tetap boleh lewat
   // (mode preview - sama seperti canRegister di halaman detail publik).
-  if ((event.status !== "published" && !hasEventConsoleAccess) || seats.isFull || deadlinePassed) redirect(eventHref);
+  if (!practice && ((event.status !== "published" && !hasEventConsoleAccess) || seats.isFull || deadlinePassed)) {
+    redirect(eventHref);
+  }
 
   // Cabang hanya ditanyakan ke peserta yang sensusnya belum lengkap dan hanya
   // bila biodata lengkap tidak dikumpulkan (di sana kota/ranting sudah ditanya).
@@ -246,7 +252,7 @@ export default async function EventRegisterPage({
             <span className="text-error" aria-hidden="true"> *</span>
           </legend>
           {earlyBirdActive && earlyBirdUntilLabel && (
-            <p className="rounded-md bg-primary-container/10 px-3 py-2 text-body-sm text-on-background">
+            <p className="rounded-md bg-accent/10 px-3 py-2 text-body-sm text-on-background">
               {t("events.earlyBirdActive", { date: earlyBirdUntilLabel })}
             </p>
           )}
@@ -277,7 +283,7 @@ export default async function EventRegisterPage({
                     {discounted && <span className="line-through opacity-70"> ¥{o.amountCny}</span>})
                   </span>
                   {discounted && (
-                    <span className="ml-1.5 text-label-caps uppercase tracking-wide text-primary-container">
+                    <span className="ml-1.5 text-label-caps uppercase tracking-wide text-gold-ink">
                       {t("events.earlyBird")}
                     </span>
                   )}
@@ -324,6 +330,20 @@ export default async function EventRegisterPage({
 
   const themed = !!(event.themeBg && event.themeAccent && event.themeAccent2);
 
+  // Outcome of a practice submit (?done=...), shown above the form.
+  const practiceAmount = /^\d{1,6}(\.\d{1,2})?$/.test(amt ?? "") ? (amt as string) : null;
+  const practiceResult = !practice
+    ? null
+    : done === "confirmed"
+      ? t("events.practice.doneConfirmed")
+      : done === "pending"
+        ? practiceAmount
+          ? t("events.practice.donePendingAmount", { amount: practiceAmount })
+          : t("events.practice.donePending")
+        : done === "full"
+          ? t("events.practice.doneFull")
+          : null;
+
   return (
     <div
       className="relative min-h-screen overflow-hidden bg-background text-on-background"
@@ -349,9 +369,35 @@ export default async function EventRegisterPage({
           >
             ← {t("events.back")}
           </Link>
+          {practice && (
+            <div className="mx-auto mb-5 w-full max-w-2xl rounded-lg border border-muted-gold bg-tertiary-container/10 p-4">
+              <div className="flex items-start gap-3">
+                <FlaskConical size={20} className="mt-0.5 shrink-0 text-gold-ink" aria-hidden="true" />
+                <div className="min-w-0">
+                  <p className="text-label-caps uppercase tracking-[0.18em] text-gold-ink">{t("events.practice.title")}</p>
+                  <p className="mt-1 text-body-sm text-on-surface-variant text-pretty">{t("events.practice.body")}</p>
+                  <Link
+                    href={eventHref}
+                    className="mt-2 inline-block rounded text-label-caps uppercase tracking-wide text-primary-container underline underline-offset-2 transition-colors hover:text-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-container focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+                  >
+                    {t("events.practice.exit")}
+                  </Link>
+                </div>
+              </div>
+            </div>
+          )}
+          {practiceResult && (
+            <div
+              role="status"
+              className="mx-auto mb-4 flex w-full max-w-2xl items-start gap-2 rounded-lg border border-primary-container/40 bg-primary-container/10 p-3"
+            >
+              <CheckCircle2 size={16} className="mt-0.5 shrink-0 text-primary-container" aria-hidden="true" />
+              <p className="text-body-sm text-on-background">{practiceResult}</p>
+            </div>
+          )}
           <EventRegisterFlow
-            action={registerForEvent.bind(null, event.id, slug)}
-            submitLabel={t("events.registerSubmit")}
+            action={(practice ? registerForEventPractice : registerForEvent).bind(null, event.id, slug)}
+            submitLabel={practice ? t("events.practice.submit") : t("events.registerSubmit")}
             backHref={eventHref}
             initialError={initialError}
             event={{

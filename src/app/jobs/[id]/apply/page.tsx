@@ -5,6 +5,7 @@ import { db } from "@/db";
 import { jobPostings } from "@/db/schema";
 import { SiteNav } from "@/components/site-nav";
 import { SiteFooter } from "@/components/site-footer";
+import { PageHeader } from "@/components/page-header";
 import { applyToJob } from "@/app/actions/jobs";
 import { FileUpload } from "@/components/upload/file-upload";
 import { ArrowLeft } from "lucide-react";
@@ -29,17 +30,17 @@ export default async function JobApplyPage({ params }: { params: Promise<{ id: s
   return (
     <div className="min-h-screen bg-background text-on-background">
       <SiteNav />
-      <main className="max-w-xl mx-auto px-[var(--spacing-container-padding)] py-16">
+      <PageHeader title={t("jobs.applyTitle", { title: job.title })} intro={job.company}>
         <Link
           href={`/jobs/${id}`}
           aria-label={t("jobs.backToDetailAria")}
-          className="inline-flex items-center gap-1.5 text-label-caps uppercase tracking-wide text-on-surface-variant hover:text-primary-container transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-container focus-visible:ring-offset-2 focus-visible:ring-offset-background rounded-md mb-6 motion-reduce:transition-none"
+          className="inline-flex items-center gap-1.5 text-label-caps uppercase tracking-wide text-on-surface-variant hover:text-primary-container transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-container focus-visible:ring-offset-2 focus-visible:ring-offset-background rounded-md motion-reduce:transition-none"
         >
           <ArrowLeft size={14} aria-hidden /> {t("jobs.detailLabel")}
         </Link>
-        <h1 className="text-headline-lg text-on-background mb-2">{t("jobs.applyTitle", { title: job.title })}</h1>
-        <p className="text-body-md text-on-surface-variant mb-10">{job.company}</p>
+      </PageHeader>
 
+      <main className="max-w-xl mx-auto px-[var(--spacing-container-padding)] py-12">
         <form action={applyToJob.bind(null, id)} className="flex flex-col gap-6">
           <FileUpload
             name="resumeUrl"
@@ -69,7 +70,7 @@ export default async function JobApplyPage({ params }: { params: Promise<{ id: s
           </div>
           <button
             type="submit"
-            className="bg-primary-container text-on-primary text-label-caps uppercase tracking-wide py-3.5 rounded-md hover:bg-primary transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-container focus-visible:ring-offset-2 focus-visible:ring-offset-background motion-reduce:transition-none"
+            className="deco-btn bg-accent text-on-accent text-label-caps uppercase py-3.5 rounded-md hover:brightness-95 transition-[filter] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-container focus-visible:ring-offset-2 focus-visible:ring-offset-background motion-reduce:transition-none"
           >
             {t("jobs.submitApplication")}
           </button>

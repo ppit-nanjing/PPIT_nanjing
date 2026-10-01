@@ -15,8 +15,8 @@ const STATUS_LABEL: Record<string, string> = {
 
 const STATUS_CLASS: Record<string, string> = {
   pending: "bg-outline-variant/40 text-on-surface-variant",
-  reviewed: "bg-tertiary-container/30 text-on-tertiary-container",
-  accepted: "bg-primary-container/40 text-on-primary-container",
+  reviewed: "bg-tertiary-container/10 text-tertiary",
+  accepted: "bg-primary-container/15 text-primary-container",
   rejected: "bg-error-container/40 text-on-error-container",
 };
 

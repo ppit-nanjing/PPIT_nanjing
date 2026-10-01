@@ -35,6 +35,19 @@ Konsisten di semua area data-berat (Admin, Peta, Sensus): background `surface-co
 
 Warna aktif/fokus animasi memakai `primary` (`#d42b2b` di dokumen PRD — nilai ini sebenarnya `primary-container` di token final, lihat [Color System](./Color%20System.md), kemungkinan penamaan longgar di PRD asli). Transisi background surface bergerak dari `surface-container-low` → `surface-container-high`.
 
+## Motion Deco (redesain 2026-10)
+
+Ornamen Art Deco + Art Nouveau digerakkan **CSS murni**, terpisah dari library Motion yang dipakai komponen masuk (`Reveal`, `AnimatedHeroHeading`, `CountUp`):
+
+| Elemen | Keyframes | Catatan |
+|---|---|---|
+| Bunga plum (`PlumBlossoms`) | `deco-drift`, `deco-fall` | Melayang di tempat, atau jatuh melintasi hero. Hiasan, `aria-hidden`. |
+| Sunburst hero | `deco-spin` (140 detik/putaran) | Sangat pelan. |
+| Garis foil emas | `deco-foil` | Kilau emas bergeser di bawah hero. |
+| Intro `/` (`SiteIntro`) | `intro-slat`, `intro-logo-*`, `intro-veil-out` | Desktop 5 lembar, ponsel satu lapisan. Hilang sendiri lewat state akhir animasi. |
+
+**Reduced motion:** aturan global menyusutkan durasi animasi dan transisi jadi ~0. Karena itu **state akhir tiap animasi harus tetap terlihat benar**: bunga yang jatuh (`deco-fall` berakhir transparan) diberi `animation: none` dan diletakkan di `--y`-nya sehingga tetap tampil diam; intro dihapus (`display: none`); sunburst dan foil berhenti. Jangan pernah membiarkan animasi yang runtuh berakhir pada keadaan tak terlihat. Aturan pemutaran intro ada di `src/lib/intro-gate.ts`.
+
 ## Terkait
 
 - [Elevation & Shadows](./Elevation%20&%20Shadows.md) — shadow yang dianimasikan di Tier 3

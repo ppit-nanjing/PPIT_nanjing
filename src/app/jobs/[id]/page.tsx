@@ -6,6 +6,7 @@ import { jobPostings, jobApplications } from "@/db/schema";
 import { SiteNav } from "@/components/site-nav";
 import { SiteFooter } from "@/components/site-footer";
 import { AnimatedHeroHeading } from "@/components/animated-hero-heading";
+import { DecoRule } from "@/components/deco/deco-rule";
 import { formatRelativeTime } from "@/lib/format-relative-time";
 import { getT } from "@/lib/i18n/server";
 import { INTL_LOCALE } from "@/lib/i18n/config";
@@ -85,7 +86,7 @@ export default async function JobDetailPage({ params }: { params: Promise<{ id: 
             ? t("jobs.applyExternalAria", { title: job.title })
             : t("jobs.applyAria", { title: job.title })
         }
-        className="block w-full text-center bg-primary-container text-on-primary text-label-caps uppercase tracking-wide px-6 py-4 rounded-md hover:bg-primary transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background motion-reduce:transition-none"
+        className="deco-btn block w-full text-center bg-accent text-on-accent text-label-caps uppercase px-6 py-4 rounded-md hover:brightness-95 transition-[filter] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background motion-reduce:transition-none"
       >
         {job.applyUrl ? t("jobs.applyExternal") : t("jobs.applyNow")}
       </a>
@@ -110,7 +111,7 @@ export default async function JobDetailPage({ params }: { params: Promise<{ id: 
     <div className="min-h-screen bg-background text-on-background">
       <SiteNav />
 
-      <header className="border-b border-outline-variant bg-surface-container-lowest">
+      <header className="border-b border-[var(--deco-line)] bg-warm-cream">
         <div className="max-w-[var(--container-max)] mx-auto px-[var(--spacing-container-padding)] py-16">
           <div className="max-w-3xl">
             <Link
@@ -121,23 +122,24 @@ export default async function JobDetailPage({ params }: { params: Promise<{ id: 
               <ArrowLeft size={14} aria-hidden /> {t("jobs.listLabel")}
             </Link>
             <div className="flex items-center gap-3 mb-6">
-              <span className="bg-primary-container/10 text-primary-container text-label-caps uppercase tracking-wide px-3 py-1.5 rounded-full">
+              <span className="bg-gold-ink/10 text-gold-ink text-label-caps uppercase tracking-wide px-3 py-1.5 rounded-md">
                 {typeLabel(t, job.type)}
               </span>
-              <span className="bg-surface-container-low text-on-surface-variant text-label-caps uppercase tracking-wide px-3 py-1.5 rounded-full flex items-center gap-1">
+              <span className="bg-surface-container-low text-on-surface-variant text-label-caps uppercase tracking-wide px-3 py-1.5 rounded-md flex items-center gap-1">
                 <History size={13} aria-hidden /> {formatRelativeTime(job.createdAt, t)}
               </span>
               {deadlineSoon && (
-                <span className="bg-error-container/30 text-error text-label-caps uppercase tracking-wide px-3 py-1.5 rounded-full">
+                <span className="bg-error-container/30 text-error text-label-caps uppercase tracking-wide px-3 py-1.5 rounded-md">
                   {t("jobs.closingSoon")}
                 </span>
               )}
             </div>
             <AnimatedHeroHeading
               words={[job.title]}
-              className="text-display-hero-mobile md:text-display-hero text-on-background mb-3"
+              className="text-display-hero-mobile md:text-display-hero text-heading mb-3"
             />
-            <h2 className="text-headline-md text-secondary mb-6">{job.company}</h2>
+            <h2 className="text-headline-md text-secondary mb-4">{job.company}</h2>
+            <DecoRule align="start" className="mb-6" />
             <div className="flex flex-wrap gap-6 text-body-md text-on-surface-variant">
               {job.location && (
                 <span className="flex items-center gap-2">
@@ -158,7 +160,7 @@ export default async function JobDetailPage({ params }: { params: Promise<{ id: 
       <main className="max-w-[var(--container-max)] mx-auto px-[var(--spacing-container-padding)] py-16 grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
         <div className="lg:col-span-8 flex flex-col gap-8">
           {job.description && (
-            <section className="bg-surface-container-lowest border border-outline-variant rounded-xl p-8">
+            <section className="bg-surface-container-lowest border border-outline-variant rounded-lg p-8">
               <h3 className="text-headline-md text-on-background mb-4 flex items-center gap-2 border-b border-outline-variant pb-4">
                 <Info size={20} className="text-primary-container" /> {t("jobs.descriptionHeading")}
               </h3>
@@ -166,7 +168,7 @@ export default async function JobDetailPage({ params }: { params: Promise<{ id: 
             </section>
           )}
           {job.requirements && (
-            <section className="bg-surface-container-lowest border border-outline-variant rounded-xl p-8">
+            <section className="bg-surface-container-lowest border border-outline-variant rounded-lg p-8">
               <h3 className="text-headline-md text-on-background mb-4 flex items-center gap-2 border-b border-outline-variant pb-4">
                 <ClipboardCheck size={20} className="text-primary-container" /> {t("jobs.qualificationsHeading")}
               </h3>
@@ -176,7 +178,7 @@ export default async function JobDetailPage({ params }: { params: Promise<{ id: 
         </div>
 
         <div className="lg:col-span-4">
-          <div aria-label={t("jobs.summaryAria")} className="sticky top-24 bg-surface-container-lowest border border-outline-variant rounded-xl p-8">
+          <div aria-label={t("jobs.summaryAria")} className="deco-frame sticky top-24 bg-surface-container-lowest rounded-lg p-8">
             <div className="flex items-center justify-center h-16 w-16 mx-auto bg-surface-container-low rounded-lg mb-4 text-primary-container">
               <Building2 size={28} aria-hidden />
             </div>
@@ -198,7 +200,7 @@ export default async function JobDetailPage({ params }: { params: Promise<{ id: 
                 key={j.id}
                 href={`/jobs/${j.id}`}
                 aria-label={t("jobs.similarAria", { title: j.title, company: j.company })}
-                className="group bg-surface-container-lowest border border-outline-variant rounded-xl p-6 hover:shadow-[0_10px_30px_rgba(39,23,22,0.06)] transition-shadow focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-container focus-visible:ring-offset-2 focus-visible:ring-offset-background motion-reduce:transition-none"
+                className="group bg-surface-container-lowest border border-outline-variant rounded-lg p-6 hover:border-muted-gold hover:shadow-[0_10px_30px_rgba(29,27,20,0.10)] transition-[box-shadow,border-color] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-container focus-visible:ring-offset-2 focus-visible:ring-offset-background motion-reduce:transition-none"
               >
                 <span className="text-label-caps uppercase tracking-wide bg-surface-container-low px-2 py-0.5 rounded">
                   {typeLabel(t, j.type)}

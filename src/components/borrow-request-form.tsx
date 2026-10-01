@@ -180,7 +180,7 @@ export function BorrowRequestForm({
               type="button"
               disabled={!detailsValid}
               onClick={() => setStep(1)}
-              className="flex items-center gap-1 bg-primary-container text-on-primary text-label-caps uppercase tracking-wide px-6 py-3 rounded-md hover:bg-primary transition-colors disabled:opacity-40"
+              className="flex items-center gap-1 deco-btn bg-accent text-on-accent text-label-caps uppercase px-6 py-3 rounded-md hover:brightness-95 transition-[filter] disabled:opacity-40"
             >
               {t("inventory.form.next")} <ChevronRight size={16} />
             </button>
@@ -238,7 +238,7 @@ export function BorrowRequestForm({
             </button>
             <button
               type="submit"
-              className="flex items-center gap-2 bg-primary-container text-on-primary text-label-caps uppercase tracking-wide px-6 py-3 rounded-md hover:bg-primary transition-colors disabled:opacity-40"
+              className="flex items-center gap-2 deco-btn bg-accent text-on-accent text-label-caps uppercase px-6 py-3 rounded-md hover:brightness-95 transition-[filter] disabled:opacity-40"
             >
               {t("inventory.form.submit")} <Send size={16} />
             </button>

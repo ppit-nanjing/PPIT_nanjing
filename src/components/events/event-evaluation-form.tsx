@@ -199,7 +199,7 @@ export function EventEvaluationForm({
         </section>
       ))}
 
-      <button type="submit" disabled={isPending || !token} className={`${BTN} self-start bg-primary-container text-on-primary hover:bg-primary disabled:opacity-60`}>
+      <button type="submit" disabled={isPending || !token} className={`${BTN} deco-btn self-start bg-accent text-on-accent hover:brightness-95 disabled:opacity-60`}>
         {isPending ? t("eval.submitting") : t("eval.submit")}
       </button>
 

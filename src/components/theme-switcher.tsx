@@ -9,9 +9,9 @@ import type { TKey } from "@/lib/i18n/dictionaries/id";
 // so the site reads as this city and not as a generic chapter template. The
 // palettes themselves live in globals.css - this only flips data-theme.
 export const CITY_THEMES = [
-  { id: "zijin", label: "Zijin", hanzi: "紫金山", noteKey: "theme.note.zijin", swatch: "#3f5a49" },
-  { id: "meihua", label: "Meihua", hanzi: "梅花", noteKey: "theme.note.meihua", swatch: "#a3304f" },
-  { id: "mingwall", label: "Ming", hanzi: "明城墙", noteKey: "theme.note.mingwall", swatch: "#3f4e5e" },
+  { id: "zijin", label: "Zijin", hanzi: "紫金山", noteKey: "theme.note.zijin", swatch: "#0e3b32" },
+  { id: "meihua", label: "Meihua", hanzi: "梅花", noteKey: "theme.note.meihua", swatch: "#6a1b3d" },
+  { id: "mingwall", label: "Ming", hanzi: "明城墙", noteKey: "theme.note.mingwall", swatch: "#26384c" },
 ] as const satisfies readonly { id: string; label: string; hanzi: string; noteKey: TKey; swatch: string }[];
 
 export type CityThemeId = (typeof CITY_THEMES)[number]["id"];
@@ -20,8 +20,9 @@ export const THEME_STORAGE_KEY = "ppit-city-theme";
 export const MODE_STORAGE_KEY = "ppit-color-mode";
 const DEFAULT_THEME: CityThemeId = "zijin";
 
-// "system" is a stored *absence* of preference: the attribute still gets an
-// explicit light/dark value so the CSS never needs a duplicate @media block.
+// Light is the default when nothing is stored. "system" is an explicit choice
+// (stored as 'system'): the attribute still gets a concrete light/dark value, so
+// the CSS never needs a duplicate @media block.
 type ColorMode = "light" | "dark" | "system";
 const MODES: { id: ColorMode; labelKey: TKey; Icon: typeof Sun }[] = [
   { id: "light", labelKey: "theme.light", Icon: Sun },
@@ -45,7 +46,7 @@ function apply(id: CityThemeId) {
 export function ThemeSwitcher() {
   const t = useT();
   const [active, setActive] = useState<CityThemeId>(DEFAULT_THEME);
-  const [mode, setMode] = useState<ColorMode>("system");
+  const [mode, setMode] = useState<ColorMode>("light");
 
   // Read once on mount rather than during render: the server has no access to
   // localStorage, so touching it while rendering would desync hydration.
@@ -56,7 +57,7 @@ export function ThemeSwitcher() {
       setActive(stored);
     }
     const storedMode = localStorage.getItem(MODE_STORAGE_KEY) as ColorMode | null;
-    if (storedMode === "light" || storedMode === "dark") setMode(storedMode);
+    if (storedMode === "light" || storedMode === "dark" || storedMode === "system") setMode(storedMode);
   }, []);
 
   // While on "system", follow the OS if it flips mid-session.
@@ -71,8 +72,7 @@ export function ThemeSwitcher() {
   function chooseMode(next: ColorMode) {
     setMode(next);
     applyMode(next);
-    if (next === "system") localStorage.removeItem(MODE_STORAGE_KEY);
-    else localStorage.setItem(MODE_STORAGE_KEY, next);
+    localStorage.setItem(MODE_STORAGE_KEY, next);
   }
 
   function choose(id: CityThemeId) {
@@ -84,7 +84,7 @@ export function ThemeSwitcher() {
   return (
     <div className="flex flex-col gap-2">
       <span className="text-label-caps uppercase tracking-wide opacity-70">{t("theme.cityTheme")}</span>
-      <div role="radiogroup" aria-label={t("theme.cityThemeAria")} className="flex flex-wrap gap-2">
+      <div role="radiogroup" aria-label={t("theme.cityThemeAria")} className="grid grid-cols-3 gap-1.5 sm:flex sm:flex-wrap sm:gap-2">
         {CITY_THEMES.map((ct) => {
           const selected = ct.id === active;
           return (
@@ -95,7 +95,7 @@ export function ThemeSwitcher() {
               aria-checked={selected}
               onClick={() => choose(ct.id)}
               title={`${ct.hanzi} — ${t(ct.noteKey)}`}
-              className={`flex items-center gap-2 rounded-md border px-3 py-2 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-current focus-visible:ring-offset-2 focus-visible:ring-offset-transparent ${
+              className={`flex items-center justify-center gap-1.5 sm:gap-2 rounded-md border px-2 py-1.5 sm:px-3 sm:py-2 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-current focus-visible:ring-offset-2 focus-visible:ring-offset-transparent ${
                 selected ? "border-current bg-current/15" : "border-current/30 hover:bg-current/10"
               }`}
             >
@@ -104,7 +104,7 @@ export function ThemeSwitcher() {
                 className="h-4 w-4 rounded-full border border-current/30"
                 style={{ background: ct.swatch }}
               />
-              <span className="text-body-sm">{ct.hanzi}</span>
+              <span className="text-body-sm max-sm:text-[13px]">{ct.hanzi}</span>
               {/* Selection is conveyed by more than colour alone. */}
               {selected && <Check size={14} className="opacity-70 shrink-0" aria-hidden />}
             </button>
@@ -112,8 +112,8 @@ export function ThemeSwitcher() {
         })}
       </div>
 
-      <span className="text-label-caps uppercase tracking-wide opacity-70 mt-3">{t("theme.appearance")}</span>
-      <div role="radiogroup" aria-label={t("theme.appearanceAria")} className="flex flex-wrap gap-2">
+      <span className="text-label-caps uppercase tracking-wide opacity-70 mt-1 sm:mt-3">{t("theme.appearance")}</span>
+      <div role="radiogroup" aria-label={t("theme.appearanceAria")} className="grid grid-cols-3 gap-1.5 sm:flex sm:flex-wrap sm:gap-2">
         {MODES.map(({ id, labelKey, Icon }) => {
           const selected = id === mode;
           return (
@@ -123,12 +123,12 @@ export function ThemeSwitcher() {
               role="radio"
               aria-checked={selected}
               onClick={() => chooseMode(id)}
-              className={`flex items-center gap-2 rounded-md border px-3 py-2 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-current focus-visible:ring-offset-2 focus-visible:ring-offset-transparent ${
+              className={`flex items-center justify-center gap-1.5 sm:gap-2 rounded-md border px-2 py-1.5 sm:px-3 sm:py-2 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-current focus-visible:ring-offset-2 focus-visible:ring-offset-transparent ${
                 selected ? "border-current bg-current/15" : "border-current/30 hover:bg-current/10"
               }`}
             >
               <Icon size={14} aria-hidden />
-              <span className="text-body-sm">{t(labelKey)}</span>
+              <span className="text-body-sm max-sm:text-[12px] max-sm:leading-tight">{t(labelKey)}</span>
               {selected && <Check size={14} className="opacity-70 shrink-0" aria-hidden />}
             </button>
           );

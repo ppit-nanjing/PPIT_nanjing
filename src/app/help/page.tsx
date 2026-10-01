@@ -3,7 +3,7 @@ import { helpArticles } from "@/db/schema";
 import { eq } from "drizzle-orm";
 import { SiteNav } from "@/components/site-nav";
 import { SiteFooter } from "@/components/site-footer";
-import { AnimatedHeroHeading } from "@/components/animated-hero-heading";
+import { PageHeader } from "@/components/page-header";
 import { LifeBuoy, ArrowRight } from "lucide-react";
 import Link from "next/link";
 import { getT } from "@/lib/i18n/server";
@@ -23,13 +23,7 @@ export default async function HelpPage() {
     <div className="min-h-screen bg-background text-on-background">
       <SiteNav />
 
-      <header className="max-w-[var(--container-max)] mx-auto px-[var(--spacing-container-padding)] pt-20 sm:pt-24 pb-8 border-b border-outline-variant">
-        <AnimatedHeroHeading
-          words={[t("help.title")]}
-          className="text-display-hero-mobile md:text-display-hero text-on-background mb-4"
-        />
-        <p className="text-body-lg text-on-surface-variant max-w-2xl">{t("help.intro")}</p>
-      </header>
+      <PageHeader title={t("help.title")} intro={t("help.intro")} />
 
       <main className="max-w-[var(--container-max)] mx-auto px-[var(--spacing-container-padding)] pb-24 pt-12">
         {Object.keys(bySection).length === 0 ? (

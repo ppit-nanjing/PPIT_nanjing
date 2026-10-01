@@ -23,7 +23,7 @@ const CATEGORY_LABEL: Record<string, string> = {
 };
 
 const STATUS_CLASS: Record<string, string> = {
-  active: "bg-primary-container/40 text-on-primary-container",
+  active: "bg-primary-container/15 text-primary-container",
   inactive: "bg-outline-variant/40 text-on-surface-variant",
   expired: "bg-error-container/40 text-on-error-container",
 };
@@ -161,7 +161,7 @@ export default async function ConsoleLinksPage({
               <div key={p.id} className="flex items-center justify-between gap-3 px-4 py-2.5 bg-surface-container-lowest">
                 <span className="text-body-md text-on-background">{p.label}</span>
                 {p.isCurrent ? (
-                  <span className="px-2.5 py-1 rounded-full text-label-caps bg-primary-container/40 text-on-primary-container shrink-0">
+                  <span className="px-2.5 py-1 rounded-full text-label-caps bg-primary-container/15 text-primary-container shrink-0">
                     Aktif
                   </span>
                 ) : (
@@ -215,7 +215,7 @@ export default async function ConsoleLinksPage({
                     <Link href={`/console/links/${l.id}`} className="font-medium text-primary-container hover:text-primary">
                       {l.title}
                     </Link>
-                    <div className="text-label-caps text-on-surface-variant/80 truncate max-w-[260px]">{l.slug}</div>
+                    <div className="text-label-caps text-on-surface-variant truncate max-w-[260px]">{l.slug}</div>
                   </td>
                   <td className="px-5 py-3">
                     <CopyLinkButton slug={l.slug} />

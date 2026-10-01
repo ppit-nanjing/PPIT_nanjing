@@ -2,6 +2,7 @@ import Link from "next/link";
 import { Reveal } from "@/components/reveal";
 import { Images, Expand } from "lucide-react";
 import Image from "next/image";
+import { COVER_BLUR_DATA_URL } from "@/lib/image-placeholder";
 import { getT } from "@/lib/i18n/server";
 
 export type GalleryCardAlbum = {
@@ -35,7 +36,7 @@ export async function GalleryCard({
       <Link
         href={`/gallery/${album.id}`}
         aria-label={t("gallery.cardAria", { title: album.title })}
-        className="group block h-full bg-surface-container-lowest border border-outline-variant rounded-xl overflow-hidden hover:shadow-[0_14px_40px_rgba(39,23,22,0.10)] hover:-translate-y-1 focus-visible:outline-none focus-visible:-translate-y-1 focus-visible:ring-2 focus-visible:ring-primary-container focus-visible:ring-offset-2 focus-visible:ring-offset-background focus-visible:shadow-[0_14px_40px_rgba(39,23,22,0.10)] transition-[box-shadow,transform] duration-300 motion-reduce:transition-none motion-reduce:hover:translate-y-0 motion-reduce:focus-visible:translate-y-0"
+        className="group block h-full bg-surface-container-lowest border border-outline-variant rounded-lg overflow-hidden hover:border-muted-gold hover:shadow-[0_14px_40px_rgba(29,27,20,0.12)] hover:-translate-y-1 focus-visible:outline-none focus-visible:-translate-y-1 focus-visible:ring-2 focus-visible:ring-primary-container focus-visible:ring-offset-2 focus-visible:ring-offset-background focus-visible:border-muted-gold focus-visible:shadow-[0_14px_40px_rgba(29,27,20,0.12)] transition-[box-shadow,transform] duration-300 motion-reduce:transition-none motion-reduce:hover:translate-y-0 motion-reduce:focus-visible:translate-y-0"
       >
         <div className="relative h-52 bg-surface-container-low flex items-center justify-center overflow-hidden">
           {cover ? (
@@ -44,6 +45,8 @@ export async function GalleryCard({
               alt={t("gallery.cardCover", { title: album.title })}
               fill
               loading="lazy"
+              placeholder="blur"
+              blurDataURL={COVER_BLUR_DATA_URL}
               decoding="async"
               sizes="(max-width: 768px) 100vw, 25vw"
               className="object-cover transition-transform duration-500 group-hover:scale-105 group-focus-visible:scale-105 motion-reduce:transition-none motion-reduce:group-hover:scale-100 motion-reduce:group-focus-visible:scale-100"

@@ -4,6 +4,7 @@ import { db } from "@/db";
 import { inventoryItems } from "@/db/schema";
 import { SiteNav } from "@/components/site-nav";
 import { SiteFooter } from "@/components/site-footer";
+import { PageHeader } from "@/components/page-header";
 import { ContributeForm } from "@/components/inventory/contribute-form";
 import { ArrowLeft } from "lucide-react";
 import Link from "next/link";
@@ -21,18 +22,13 @@ export default async function ContributePage() {
   return (
     <div className="min-h-screen bg-background text-on-background">
       <SiteNav />
-      <main className="max-w-[var(--container-max)] mx-auto px-[var(--spacing-container-padding)] py-16">
-        <Link
-          href="/inventory"
-          aria-label={t("inventory.back")}
-          className="inline-flex items-center gap-1.5 text-label-caps uppercase tracking-wide text-on-surface-variant hover:text-primary-container transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-container focus-visible:ring-offset-2 focus-visible:ring-offset-background rounded-md mb-6 motion-reduce:transition-none"
-        >
+      <PageHeader title={t("inventory.contribute")} intro={t("inventory.contributeIntro")}>
+        <Link href="/inventory" aria-label={t("inventory.back")} className="inline-flex items-center gap-1.5 text-label-caps uppercase tracking-wide text-on-surface-variant hover:text-primary-container transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-container focus-visible:ring-offset-2 focus-visible:ring-offset-background rounded-md motion-reduce:transition-none">
           <ArrowLeft size={14} aria-hidden /> {t("nav.inventory")}
         </Link>
-        <h1 className="text-headline-lg text-on-background mb-2">{t("inventory.contribute")}</h1>
-        <p className="text-body-md text-on-surface-variant mb-8 max-w-2xl">
-          {t("inventory.contributeIntro")}
-        </p>
+      </PageHeader>
+
+      <main className="max-w-[var(--container-max)] mx-auto px-[var(--spacing-container-padding)] py-12">
         <ContributeForm categories={categories} />
       </main>
       <SiteFooter />

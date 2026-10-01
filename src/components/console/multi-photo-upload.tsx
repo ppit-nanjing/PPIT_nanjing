@@ -104,7 +104,7 @@ export function MultiPhotoUpload({ albumId }: { albumId?: string }) {
             <p className="text-label-caps text-on-surface-variant text-center">
               Klik atau seret beberapa foto sekaligus
             </p>
-            <p className="text-body-sm text-on-surface-variant/70 text-center max-w-xs">
+            <p className="text-body-sm text-on-surface-variant text-center max-w-xs">
               Foto di-resize ke sisi terpanjang 1920 px & dikompres WebP otomatis.
               {!albumId && " Setelah unggah, tandai foto terbaik sebagai highlight."}
             </p>

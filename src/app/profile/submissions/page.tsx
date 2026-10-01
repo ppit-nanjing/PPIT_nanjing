@@ -5,6 +5,7 @@ import { db } from "@/db";
 import { eventRegistrations, events, borrowRequests, inventoryItems, jobApplications, jobPostings } from "@/db/schema";
 import { SiteNav } from "@/components/site-nav";
 import { SiteFooter } from "@/components/site-footer";
+import { PageHeader } from "@/components/page-header";
 import { CalendarDays, Package, Briefcase, Inbox } from "lucide-react";
 import { getT } from "@/lib/i18n/server";
 import { INTL_LOCALE } from "@/lib/i18n/config";
@@ -116,23 +117,21 @@ export default async function SubmissionHistoryPage() {
   return (
     <div className="min-h-screen bg-background text-on-background">
       <SiteNav />
-      <main className="max-w-2xl mx-auto px-[var(--spacing-container-padding)] py-16">
-        <h1 className="text-headline-lg text-on-background mb-2">{t("submissions.title")}</h1>
-        <p className="text-body-md text-on-surface-variant mb-10">
-          {t("submissions.desc")}
-        </p>
+      <PageHeader title={t("submissions.title")} intro={t("submissions.desc")} />
+
+      <main className="max-w-2xl mx-auto px-[var(--spacing-container-padding)] py-12">
 
         {items.length === 0 ? (
           <div role="status" aria-live="polite" className="flex flex-col items-center text-center py-24">
             <Inbox className="text-outline-variant mb-4" size={40} aria-hidden />
-            <h2 className="text-headline-md text-on-background mb-2">{t("submissions.empty")}</h2>
+            <h2 className="text-headline-md text-heading mb-2">{t("submissions.empty")}</h2>
             <p className="text-body-md text-on-surface-variant max-w-sm mb-6">
               {t("submissions.emptyDesc")}
             </p>
             <div className="flex flex-wrap gap-3 justify-center">
               <Link
                 href="/events"
-                className="bg-primary-container text-on-primary text-label-caps uppercase tracking-wide px-6 py-3 rounded-md hover:bg-primary transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-container focus-visible:ring-offset-2 focus-visible:ring-offset-background motion-reduce:transition-none"
+                className="deco-btn bg-accent text-on-accent text-label-caps uppercase px-6 py-3 rounded-md hover:brightness-95 transition-[filter] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-container focus-visible:ring-offset-2 focus-visible:ring-offset-background motion-reduce:transition-none"
               >
                 {t("submissions.viewEvents")}
               </Link>
@@ -157,7 +156,7 @@ export default async function SubmissionHistoryPage() {
                       title: item.title,
                       status: statusLabel(t, item.status),
                     })}
-                    className="flex items-center gap-4 bg-surface-container-lowest border border-outline-variant rounded-lg p-5 hover:bg-surface-container-low transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-container focus-visible:ring-offset-2 focus-visible:ring-offset-background motion-reduce:transition-none"
+                    className="flex items-center gap-4 bg-surface-container-lowest border border-outline-variant rounded-lg p-5 hover:border-muted-gold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-container focus-visible:ring-offset-2 focus-visible:ring-offset-background motion-reduce:transition-none"
                   >
                     <Icon className="text-secondary shrink-0" size={20} aria-hidden />
                     <div className="flex-1 min-w-0">

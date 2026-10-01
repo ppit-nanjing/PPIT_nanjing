@@ -4,6 +4,7 @@ import { db } from "@/db";
 import { coverageCities, events } from "@/db/schema";
 import { SiteNav } from "@/components/site-nav";
 import { SiteFooter } from "@/components/site-footer";
+import { PageHeader } from "@/components/page-header";
 import { EventEvaluationForm } from "@/components/events/event-evaluation-form";
 import { sortByCoverageOrder } from "@/lib/coverage-cities";
 import { evaluationTemplateForSlug } from "@/lib/event-evaluation-template";
@@ -33,15 +34,9 @@ export default async function EventEvaluationPage({ params }: { params: Promise<
     <div className="min-h-screen bg-background text-on-background">
       <SiteNav />
 
-      <header className="max-w-[var(--container-max)] mx-auto px-[var(--spacing-container-padding)] pt-16 pb-8">
-        <p className="text-label-caps uppercase tracking-wide text-on-surface-variant mb-2">{t("eval.kicker")}</p>
-        <h1 className="text-display-hero-mobile md:text-display-hero text-on-background text-balance mb-4">
-          {t("eval.title", { event: event.title })}
-        </h1>
-        <p className="text-body-lg text-on-surface-variant max-w-2xl text-pretty">{t("eval.intro")}</p>
-      </header>
+      <PageHeader eyebrow={t("eval.kicker")} title={t("eval.title", { event: event.title })} intro={t("eval.intro")} />
 
-      <main className="max-w-3xl mx-auto px-[var(--spacing-container-padding)] pb-20">
+      <main className="max-w-3xl mx-auto px-[var(--spacing-container-padding)] py-12 pb-20">
         <EventEvaluationForm
           slug={event.slug}
           eventTitle={event.title}

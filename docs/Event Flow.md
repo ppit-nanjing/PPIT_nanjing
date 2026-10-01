@@ -67,6 +67,15 @@ Acara seperti Fun Hike hanya menerima pendaftar yang sensusnya lengkap. Karena d
 
 Admin bisa menambah pertanyaan per acara (`event_questions`): teks, textarea, select, radio, multiselect, `file` (unggah satu berkas). Jawaban di `event_registrations.answers_json`, tampil ke admin di daftar pendaftar & ekspor.
 
+## Mode Latihan (uji form pendaftaran)
+
+Panitia/admin bisa mencoba form pendaftaran tanpa mendaftar sungguhan: buka `/events/<slug>/register?practice=1` (tombol **Coba Form Pendaftaran (Mode Latihan)** di kotak "Panitia" pada halaman acara). Syaratnya akses konsol acara itu (BPH/modul Kegiatan atau peran panitia); untuk orang lain `?practice=1` diabaikan dan form berjalan normal.
+
+- Validasi **sama persis** dengan pendaftaran asli (`runRegistration` di `src/app/actions/events.ts`, dipakai bersama oleh `registerForEvent` dan `registerForEventPractice`): pertanyaan wajib, kategori tarif, kuota total/per kategori, kelengkapan biodata.
+- **Tidak ditulis apa pun**: tidak ada baris `event_registrations`, tidak ada notifikasi, tidak ada pencerminan biodata ke `sensus_profiles`. Satu pengecualian: berkas yang diunggah lewat field `file`/bukti mahasiswa tetap masuk penyimpanan Blob.
+- Jalan di status acara apa pun (draf, ditutup, selesai), melewati pantulan "sudah terdaftar", "wajib sensus", "penuh" dan "lewat tenggat" yang berlaku untuk peserta.
+- Hasil kembali sebagai `?practice=1&done=confirmed|pending|full` (QR langsung terbit / menunggu verifikasi pembayaran / kuota penuh); galat validasi memakai `?err=` yang sama dengan form asli. Padanan untuk scan kehadiran: `/events/<slug>/scan?practice=1`.
+
 ## Setelah acara: sertifikat & riwayat
 
 - **Semua peserta dapat e-certificate** secara bawaan (`events.certificate_for_participants`, checkbox bisa mematikannya). Penerbitan tetap manual — satu tombol "Terbitkan Sertifikat Peserta" di console. Sertifikat panitia/pemateri/juara diterbitkan manual lewat Work Ledger.

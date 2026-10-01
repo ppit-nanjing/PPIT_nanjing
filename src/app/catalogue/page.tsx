@@ -24,12 +24,12 @@ export default async function MerchandisePage() {
 
   return (
     <section className="pt-8">
-      <p className="text-body-lg text-on-surface-variant max-w-2xl mb-8">
+      <p className="text-body-lg text-on-surface-variant max-w-2xl mx-auto text-center text-pretty mb-8">
         {t("merch.intro")}
       </p>
 
       {items.length === 0 ? (
-        <div className="bg-surface-container-low border border-outline-variant rounded-xl p-10 text-center">
+        <div className="deco-frame bg-surface-container-low rounded-lg p-10 text-center">
           <ShoppingBag className="mx-auto mb-4 text-on-surface-variant" size={28} />
           <p className="text-body-lg text-on-background mb-1">{t("merch.empty")}</p>
           <p className="text-body-md text-on-surface-variant">
@@ -41,7 +41,7 @@ export default async function MerchandisePage() {
           {items.map((m) => {
             const s = STATUS[m.status] ?? STATUS.unavailable;
             return (
-              <li key={m.id} className="flex flex-col bg-surface-container-lowest border border-outline-variant rounded-xl overflow-hidden">
+              <li key={m.id} className="flex flex-col bg-surface-container-lowest border border-outline-variant rounded-lg overflow-hidden transition-colors hover:border-muted-gold">
                 <div className="relative w-full aspect-square bg-surface-container">
                   {m.imageUrl ? (
                     <Image src={m.imageUrl} alt="" fill sizes="(max-width: 640px) 100vw, 33vw" className="object-cover" />

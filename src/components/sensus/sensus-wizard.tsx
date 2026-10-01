@@ -774,7 +774,7 @@ export function SensusWizard({
           <button
             onClick={goNext}
             disabled={pending}
-            className="flex w-full items-center justify-center gap-1 bg-primary-container text-on-primary text-label-caps uppercase tracking-wide px-6 py-3 rounded-md hover:bg-primary transition-colors disabled:opacity-60 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-container focus-visible:ring-offset-2 focus-visible:ring-offset-background sm:w-auto"
+            className="flex w-full items-center justify-center gap-1 deco-btn bg-accent text-on-accent text-label-caps uppercase px-6 py-3 rounded-md hover:brightness-95 transition-[filter] disabled:opacity-60 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-container focus-visible:ring-offset-2 focus-visible:ring-offset-background sm:w-auto"
           >
             {t("sensus.next")} <ChevronRight size={16} />
           </button>
@@ -782,7 +782,7 @@ export function SensusWizard({
           <button
             onClick={handleSubmit}
             disabled={pending}
-            className="flex w-full items-center justify-center gap-2 bg-primary-container text-on-primary text-label-caps uppercase tracking-wide px-6 py-3 rounded-md hover:bg-primary transition-colors disabled:opacity-60 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-container focus-visible:ring-offset-2 focus-visible:ring-offset-background sm:w-auto"
+            className="flex w-full items-center justify-center gap-2 deco-btn bg-accent text-on-accent text-label-caps uppercase px-6 py-3 rounded-md hover:brightness-95 transition-[filter] disabled:opacity-60 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-container focus-visible:ring-offset-2 focus-visible:ring-offset-background sm:w-auto"
           >
             {pending && <Loader2 />}
             {pending ? t("sensus.saving") : t("sensus.saveSensus")}

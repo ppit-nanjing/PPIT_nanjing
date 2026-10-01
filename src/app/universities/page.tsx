@@ -5,7 +5,7 @@ import { db } from "@/db";
 import { universities, coverageCities } from "@/db/schema";
 import { SiteNav } from "@/components/site-nav";
 import { SiteFooter } from "@/components/site-footer";
-import { AnimatedHeroHeading } from "@/components/animated-hero-heading";
+import { PageHeader } from "@/components/page-header";
 import { getT } from "@/lib/i18n/server";
 import { sortByCoverageOrder } from "@/lib/coverage-cities";
 
@@ -48,22 +48,21 @@ export default async function UniversitiesPage() {
     <div className="min-h-screen bg-background text-on-background">
       <SiteNav />
 
-      <header className="max-w-[var(--container-max)] mx-auto px-[var(--spacing-container-padding)] pt-16 pb-8">
-        <p className="text-label-caps uppercase tracking-wide text-on-surface-variant mb-2">{t("explore.kicker")}</p>
-        <AnimatedHeroHeading
-          words={[t("uni.title")]}
-          className="text-display-hero-mobile md:text-display-hero text-on-background mb-4"
-        />
-        <p className="text-body-lg text-on-surface-variant max-w-2xl">
-          {rows.length > 0
+      <PageHeader
+        eyebrow={t("explore.kicker")}
+        title={t("uni.title")}
+        intro={
+          rows.length > 0
             ? t("uni.lead", {
                 n: rows.length,
                 cities: ordered.length,
                 partners: partnerCount ? t("uni.leadPartners", { n: partnerCount }) : "",
               })
-            : t("uni.leadEmpty")}
-        </p>
-      </header>
+            : t("uni.leadEmpty")
+        }
+      />
+
+      <div className="h-10" aria-hidden="true" />
 
       <main className="max-w-[var(--container-max)] mx-auto px-[var(--spacing-container-padding)] pb-20">
         {rows.length === 0 ? (

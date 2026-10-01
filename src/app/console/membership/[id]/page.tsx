@@ -127,7 +127,7 @@ export default async function MembershipDetailPage({ params }: { params: Promise
       </CollapsibleSection>
 
       {quizScore && (
-        <div className="mt-6 bg-tertiary-container/20 border border-outline-variant rounded-xl p-4 flex items-center gap-3">
+        <div className="mt-6 bg-tertiary-container/10 border border-outline-variant rounded-xl p-4 flex items-center gap-3">
           <span className="text-label-caps uppercase tracking-wide text-on-surface-variant">Skor Kuis</span>
           <span className="text-headline-md text-on-background">{quizScore.score}</span>
           <span className="text-body-md text-on-surface-variant">/ {quizScore.max} poin</span>

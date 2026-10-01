@@ -3,6 +3,7 @@ import { auth } from "@/auth";
 import { getFolderContents, getMemberDepartments } from "@/lib/drive-queries";
 import { preloadDriveFolders, resolveDriveFolder } from "@/lib/drive-folders";
 import { DriveExplorer } from "@/components/documents/drive-explorer";
+import { DecoRule } from "@/components/deco/deco-rule";
 
 type Section =
   | { id: string; name: string; ok: true; contents: Awaited<ReturnType<typeof getFolderContents>> }
@@ -17,7 +18,7 @@ export default async function MemberDocumentsPage() {
   if (!periodId) {
     return (
       <div className="max-w-3xl mx-auto px-4 py-10">
-        <h1 className="text-headline-md text-on-background mb-2">Dokumen</h1>
+        <h1 className="text-headline-md text-heading mb-2">Dokumen</h1>
         <p className="text-body-md text-on-surface-variant">
           Belum ada periode kepengurusan aktif, sehingga folder dokumen belum tersedia.
         </p>
@@ -56,7 +57,8 @@ export default async function MemberDocumentsPage() {
 
   return (
     <div className="max-w-4xl mx-auto px-4 py-8 sm:px-6">
-      <h1 className="text-headline-md sm:text-headline-lg text-on-background">Dokumen</h1>
+      <h1 className="text-headline-md sm:text-headline-lg text-heading mb-3">Dokumen</h1>
+      <DecoRule align="start" className="mb-4" />
       <p className="text-body-md text-on-surface-variant mb-6">
         Berkas divisimu bisa diedit; divisi lain hanya bisa dibaca. Buka dengan VPN jika Drive terblokir.
       </p>
@@ -76,7 +78,7 @@ export default async function MemberDocumentsPage() {
           ) : (
             <div
               key={s.id}
-              className="bg-surface-container-lowest border border-outline-variant rounded-xl p-4 text-body-md text-on-surface-variant"
+              className="bg-surface-container-lowest border border-outline-variant rounded-lg p-4 text-body-md text-on-surface-variant"
             >
               Folder {s.name} tidak bisa dimuat saat ini.
             </div>

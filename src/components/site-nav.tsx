@@ -85,7 +85,8 @@ export function SiteNav() {
   const [isDesktop, setIsDesktop] = useState(true);
 
   useEffect(() => {
-    const mq = window.matchMedia("(min-width: 1024px)");
+    // Same breakpoint as `xl:` below: the inline links need ~1170px of pill.
+    const mq = window.matchMedia("(min-width: 1280px)");
     const update = () => setIsDesktop(mq.matches);
     update();
     mq.addEventListener("change", update);
@@ -140,7 +141,8 @@ export function SiteNav() {
             backgroundColor: `color-mix(in srgb, var(--color-background) ${Math.round(bgAlpha * 100)}%, transparent)`,
             backdropFilter: `blur(${blurPx}px) saturate(140%)`,
             WebkitBackdropFilter: `blur(${blurPx}px) saturate(140%)`,
-            boxShadow: `0 10px 30px rgba(39,23,22,${shadowAlpha})`,
+            border: "1px solid var(--deco-line)",
+            boxShadow: `0 10px 30px rgba(29,27,20,${shadowAlpha})`,
             transition:
               "max-width 350ms cubic-bezier(0.22, 1, 0.36, 1), background-color 350ms ease, backdrop-filter 350ms ease, -webkit-backdrop-filter 350ms ease, box-shadow 350ms ease",
           }}
@@ -151,26 +153,21 @@ export function SiteNav() {
           >
             <Link
               href="/"
-              className="inline-flex items-center gap-1.5 text-body-lg sm:text-headline-md font-bold text-primary uppercase tracking-tight shrink-0 whitespace-nowrap"
+              className="inline-flex items-center gap-2 min-w-0 text-[15px] sm:text-headline-sm text-primary uppercase tracking-[0.08em] sm:tracking-[0.12em] whitespace-nowrap"
             >
-              <span
-                aria-hidden="true"
-                className="brand-logo w-6 h-6"
-                style={{ backgroundColor: "currentColor" }}
-              />
-              <span>PPIT Nanjing</span>
+              <span aria-hidden="true" className="brand-logo h-8 md:h-9 shrink-0" />
+              <span className="truncate">PPIT Nanjing</span>
             </Link>
 
-            {/* Inline links: desktop (lg) and up only - narrower viewports use
-                the burger menu below. Deliberately NOT shrink-0 (unlike the
-                logo and the right-side icon cluster either side of it): this
-                row is revealed at exactly the same 1024px width the icon
-                cluster needs to coexist with the logo, and with all three
-                shrink-0 there was nowhere for the extra width to go but
-                overflow - measured 58px of real horizontal scroll at 1024px,
-                gone by ~1120px. min-w-0 lets this row's gap (not the link
-                text itself) absorb the squeeze instead. */}
-            <div className="hidden lg:flex items-center gap-2 xl:gap-7 text-body-md min-w-0">
+            {/* Inline links: xl (1280px) and up only - narrower viewports use the
+                burger menu. Measured: logo (179) + eight links (~600 at gap-5) +
+                controls (~270 with the search as an icon) + gaps needs ~1100px
+                of pill, so 1280 (pill 1268, inner ~1218) fits with slack while
+                the old lg (1024, inner ~954) never did. Deliberately NOT
+                shrink-0 (unlike the logo and the icon cluster either side of
+                it): min-w-0 lets this row's gap, not the link text, absorb any
+                squeeze. */}
+            <div className="hidden xl:flex items-center gap-5 text-body-md min-w-0">
               {NAV_LINKS.map((link) => {
                 const active = pathname === link.href;
                 return (
@@ -200,37 +197,21 @@ export function SiteNav() {
             </div>
 
             <div className="flex items-center gap-1 sm:gap-2 shrink-0">
-              <div className="relative">
-                {/* Desktop, expanded: labeled search pill that advertises the
-                    shortcut. Collapses to icon-only when the navbar shrinks -
-                    and also below xl even at rest: at 1024-1280px the inline
-                    links row (revealed at the same lg breakpoint) already
-                    needs every spare pixel, and this pill alone measured
-                    ~152px of the icon cluster's ~305px, which is what was
-                    actually spilling "Explore" into the search area (not
-                    fixed by the links row's own min-w-0, since its shrink-0
-                    children don't shrink - they just paint past it). */}
+              <div className="relative max-sm:hidden">
+                {/* Icon-only trigger at every width. The labelled "Search... Ctrl K"
+                    pill that used to sit here was ~104px wider than this icon, and
+                    with it the logo + eight links + controls measured exactly the
+                    pill's full 1270px (zero slack at the widest, an overflow of
+                    ~50px at a 1280 laptop). The first-visit hint below still
+                    advertises the keyboard shortcut. */}
                 <button
-                  aria-label={t("nav.searchAria")}
+                  aria-label={isDesktop ? t("nav.searchAria") : t("nav.search")}
                   type="button"
                   onClick={() => {
                     setPaletteOpen(true);
                     dismissHint();
                   }}
-                  className={`${compact ? "hidden" : "hidden xl:flex"} items-center gap-2 bg-surface-container-low text-on-surface-variant rounded-full pl-3 pr-2 py-1.5 text-body-md hover:bg-surface-container transition-colors`}
-                >
-                  <Search size={16} />
-                  <span>{t("nav.searchPlaceholder")}</span>
-                  <kbd className="text-label-caps border border-outline-variant rounded px-1.5 py-0.5">⌘K</kbd>
-                </button>
-                {/* Icon-only trigger: mobile/tablet, the 1024-1280px band
-                    (see above), and also desktop once the navbar has shrunk
-                    (no keyboard shortcut hint needed then). */}
-                <button
-                  aria-label={t("nav.search")}
-                  type="button"
-                  onClick={() => setPaletteOpen(true)}
-                  className={`${compact ? "lg:flex" : "xl:hidden"} text-on-background p-1 shrink-0`}
+                  className="text-on-background p-1 shrink-0"
                 >
                   <Search size={20} />
                 </button>
@@ -259,13 +240,15 @@ export function SiteNav() {
                   </div>
                 )}
               </div>
-              <LanguageToggle compact={compact} locale={locale} switchLocale={switchLocale} t={t} />
+              <div className="max-sm:hidden">
+                <LanguageToggle compact={compact} locale={locale} switchLocale={switchLocale} t={t} />
+              </div>
               <NotificationBell />
               <AccountMenu compact={compact} />
               <button
                 aria-label={menuOpen ? t("nav.menuClose") : t("nav.menuOpen")}
                 type="button"
-                className="lg:hidden text-on-background p-1 shrink-0"
+                className="xl:hidden text-on-background p-1 shrink-0"
                 onClick={() => setMenuOpen((v) => !v)}
               >
                 <AnimatedMenuIcon open={menuOpen} size={22} />
@@ -275,10 +258,10 @@ export function SiteNav() {
         </nav>
       </header>
 
-      {/* Mobile / tablet full-screen menu (below lg). The header pill stays on
-          top (z-50) so the close (X) button remains reachable. */}
+      {/* Phone / tablet / small-laptop full-screen menu (below xl). The header pill
+          stays on top (z-50) so the close (X) button remains reachable. */}
       <div
-        className={`lg:hidden fixed inset-0 z-40 bg-surface transition-opacity duration-300 ${
+        className={`xl:hidden fixed inset-0 z-40 bg-surface transition-opacity duration-300 ${
           menuOpen ? "opacity-100 pointer-events-auto" : "opacity-0 pointer-events-none"
         }`}
         aria-hidden={!menuOpen}
@@ -292,6 +275,21 @@ export function SiteNav() {
             keeps everything reachable; on tall viewports where content
             genuinely fits, this just means a gap below instead of centered. */}
         <nav className="h-full flex flex-col items-stretch justify-start gap-1 pt-20 px-5 overflow-y-auto">
+          {/* Phones only: the bar has no room for the search icon, so it opens from here. */}
+          <div className="px-1 mb-2 sm:hidden">
+            <button
+              type="button"
+              onClick={() => {
+                setMenuOpen(false);
+                setPaletteOpen(true);
+              }}
+              className="flex w-full items-center gap-3 rounded-md border border-outline-variant bg-surface-container-low px-4 py-3 text-left text-body-md text-on-surface-variant transition-colors hover:border-muted-gold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-container"
+            >
+              <Search size={18} aria-hidden="true" />
+              <span>{t("nav.searchPlaceholder")}</span>
+            </button>
+          </div>
+
           {/* Self-contained account header so login / profile / logout are
               reachable from the drawer without relying on the top pill. */}
           <div className="px-1 mb-3">
@@ -327,7 +325,7 @@ export function SiteNav() {
               <Link
                 href={`/login?returnTo=${encodeURIComponent(currentPath)}`}
                 onClick={() => setMenuOpen(false)}
-                className="w-full block text-center bg-primary-container text-on-primary text-label-caps uppercase tracking-wide px-6 py-3 rounded-md hover:bg-primary transition-colors"
+                className="deco-btn w-full block text-center bg-accent text-on-accent text-label-caps uppercase px-6 py-3 rounded-md hover:brightness-95 transition-[filter]"
               >
                 {t("nav.login")}
               </Link>

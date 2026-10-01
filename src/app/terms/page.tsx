@@ -3,6 +3,7 @@ import { SiteFooter } from "@/components/site-footer";
 import { LegalNav } from "@/components/legal-nav";
 import { getT } from "@/lib/i18n/server";
 import Link from "next/link";
+import { DecoRule } from "@/components/deco/deco-rule";
 
 export default async function TermsPage() {
   const { t } = await getT();
@@ -12,7 +13,8 @@ export default async function TermsPage() {
       <main className="max-w-[var(--container-max)] mx-auto px-[var(--spacing-container-padding)] py-16 flex flex-col md:flex-row gap-10">
         <LegalNav active="terms" />
         <article className="w-full max-w-3xl">
-          <h1 className="text-headline-lg text-on-background mb-8">{t("legal.termsTitle")}</h1>
+          <h1 className="text-headline-lg text-heading mb-4">{t("legal.termsTitle")}</h1>
+          <DecoRule align="start" className="mb-8" />
           <div className="flex flex-col gap-6 text-body-md text-on-surface-variant">
             <p>{t("legal.termsIntro")}</p>
             <section>

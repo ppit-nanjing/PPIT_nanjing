@@ -1,5 +1,6 @@
 import { CalendarDays, Newspaper, ArrowRight } from "lucide-react";
 import Image from "next/image";
+import { COVER_BLUR_DATA_URL } from "@/lib/image-placeholder";
 import { getT } from "@/lib/i18n/server";
 
 /**
@@ -35,17 +36,19 @@ export async function ContentCard({
     <a
       href={href}
       aria-label={t("common.readAria", { title })}
-      className="group bg-surface-container-lowest border border-outline-variant rounded-xl overflow-hidden hover:shadow-[0_14px_40px_rgba(39,23,22,0.10)] hover:-translate-y-1 transition-[box-shadow,transform] duration-300 motion-reduce:transition-none motion-reduce:hover:translate-y-0 flex flex-col focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-container focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+      className="group bg-surface-container-lowest border border-outline-variant rounded-lg overflow-hidden hover:border-muted-gold hover:shadow-[0_14px_40px_rgba(29,27,20,0.12)] hover:-translate-y-1 transition-[box-shadow,transform] duration-300 motion-reduce:transition-none motion-reduce:hover:translate-y-0 flex flex-row sm:flex-col focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-container focus-visible:ring-offset-2 focus-visible:ring-offset-background"
     >
-      <div className="relative h-44 bg-surface-container-low overflow-hidden">
+      <div className="relative w-28 min-h-[6.75rem] shrink-0 sm:w-auto sm:min-h-0 sm:h-44 bg-surface-container-low overflow-hidden border-r sm:border-r-0 sm:border-b border-outline-variant">
         {imageUrl ? (
           <Image
             src={imageUrl}
             alt={title}
             fill
             loading="lazy"
+            placeholder="blur"
+            blurDataURL={COVER_BLUR_DATA_URL}
             decoding="async"
-            sizes="(max-width: 768px) 100vw, 33vw"
+            sizes="(max-width: 639px) 112px, (max-width: 768px) 100vw, 33vw"
             className="object-cover transition-transform duration-500 group-hover:scale-105 motion-reduce:transition-none motion-reduce:group-hover:scale-100"
           />
         ) : (
@@ -54,21 +57,21 @@ export async function ContentCard({
           </div>
         )}
       </div>
-      <div className="p-6 flex flex-col flex-1">
+      <div className="p-3 sm:p-6 flex flex-col flex-1 min-w-0 justify-center sm:justify-start">
         {eyebrow && (
-          <span className="inline-block w-fit bg-primary-container/10 text-primary-container text-label-caps uppercase tracking-wide px-2 py-0.5 rounded-md mb-2">
+          <span className="inline-block w-fit bg-gold-ink/10 text-gold-ink text-label-caps uppercase tracking-wide px-2 py-0.5 rounded-md mb-1 sm:mb-2">
             {eyebrow}
           </span>
         )}
         {meta && (
-          <div className={`flex items-center gap-2 text-label-caps text-secondary mb-3 ${metaIcon ? "" : "uppercase"}`}>
+          <div className={`flex items-center gap-2 text-label-caps text-secondary mb-1 sm:mb-3 ${metaIcon ? "" : "uppercase"}`}>
             {metaIcon && <CalendarDays size={14} aria-hidden="true" />}
             <span>{meta}</span>
           </div>
         )}
-        <h3 className="text-headline-md text-on-background mb-2 text-balance">{title}</h3>
-        {excerpt && <p className="text-body-md text-on-surface-variant line-clamp-2 text-pretty">{excerpt}</p>}
-        <span className="mt-4 inline-flex w-fit items-center gap-1.5 rounded-md bg-primary-container px-3 py-2 text-label-caps uppercase tracking-wide text-on-primary transition-colors group-hover:bg-primary">
+        <h3 className="text-headline-md max-sm:text-[15px] max-sm:leading-snug max-sm:line-clamp-2 text-on-background sm:mb-2 text-balance">{title}</h3>
+        {excerpt && <p className="max-sm:hidden text-body-md text-on-surface-variant line-clamp-2 text-pretty">{excerpt}</p>}
+        <span className="mt-4 max-sm:hidden inline-flex w-fit items-center gap-1.5 rounded-md bg-primary-container px-3 py-2 text-label-caps uppercase tracking-wide text-on-primary transition-colors group-hover:bg-primary">
           {t("common.read")} <ArrowRight size={14} className="transition-transform group-hover:translate-x-1 motion-reduce:transition-none motion-reduce:group-hover:translate-x-0" />
         </span>
       </div>

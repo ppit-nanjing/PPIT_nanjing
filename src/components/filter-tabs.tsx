@@ -27,7 +27,7 @@ export function FilterTabs({
           href={o.href}
           scroll={false}
           aria-current={o.active ? "true" : undefined}
-          className={`relative px-5 py-2.5 rounded-lg text-label-caps uppercase tracking-wide transition-colors ${
+          className={`relative isolate px-5 py-2.5 rounded-lg text-label-caps uppercase tracking-wide transition-colors ${
             o.active
               ? "text-on-primary"
               : "text-on-background hover:bg-surface-container-low"

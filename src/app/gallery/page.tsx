@@ -3,8 +3,7 @@ import { db } from "@/db";
 import { galleryAlbums, galleryPhotos } from "@/db/schema";
 import { SiteNav } from "@/components/site-nav";
 import { SiteFooter } from "@/components/site-footer";
-import { AnimatedHeroHeading } from "@/components/animated-hero-heading";
-import { AnimatedRevealText } from "@/components/animated-reveal-text";
+import { PageHeader } from "@/components/page-header";
 import { Reveal } from "@/components/reveal";
 import { GalleryCard } from "@/components/gallery-card";
 import { Images, Archive } from "lucide-react";
@@ -25,21 +24,14 @@ export default async function GalleryPage() {
     <div className="min-h-screen bg-background text-on-background">
       <SiteNav />
 
-      <header className="max-w-[var(--container-max)] mx-auto px-[var(--spacing-container-padding)] pt-20 sm:pt-24 pb-8 flex items-end justify-between gap-4 flex-wrap">
-        <div>
-          <AnimatedHeroHeading
-            words={[t("gallery.title")]}
-            className="text-display-hero-mobile md:text-display-hero text-on-background mb-4"
-          />
-          <AnimatedRevealText text={t("gallery.intro")} />
-        </div>
+      <PageHeader title={t("gallery.title")} intro={t("gallery.intro")}>
         <Link
           href="/gallery/archive"
-          className="flex items-center gap-2 text-label-caps text-primary-container hover:text-primary transition-colors shrink-0"
+          className="flex items-center gap-2 text-label-caps uppercase text-primary-container hover:text-primary transition-colors motion-reduce:transition-none"
         >
           <Archive size={16} /> {t("gallery.archiveLink")}
         </Link>
-      </header>
+      </PageHeader>
 
       <main className="max-w-[var(--container-max)] mx-auto px-[var(--spacing-container-padding)] pb-24">
         {albums.length === 0 ? (

@@ -5,6 +5,7 @@ import { db } from "@/db";
 import { jobPostings, jobApplications } from "@/db/schema";
 import { SiteNav } from "@/components/site-nav";
 import { SiteFooter } from "@/components/site-footer";
+import { DecoRule } from "@/components/deco/deco-rule";
 import { getT } from "@/lib/i18n/server";
 import type { TKey } from "@/lib/i18n/dictionaries/id";
 import type { T } from "@/lib/i18n/translate";
@@ -46,10 +47,11 @@ export default async function JobAppliedPage({ params }: { params: Promise<{ id:
       <div className="min-h-screen bg-background text-on-background">
         <SiteNav />
         <main role="status" aria-live="polite" className="max-w-md mx-auto px-[var(--spacing-container-padding)] py-16 text-center">
-          <div className="w-16 h-16 rounded-full bg-surface-container-lowest flex items-center justify-center mx-auto mb-6">
+          <div className="medal-ring w-20 h-20 mx-auto mb-6">
             <CheckCircle2 className="text-on-surface-variant" size={28} aria-hidden />
           </div>
-          <h1 className="text-headline-lg text-on-background mb-2">{t("jobs.notAppliedTitle")}</h1>
+          <h1 className="text-headline-lg text-heading mb-3">{t("jobs.notAppliedTitle")}</h1>
+          <DecoRule className="mb-4" />
           <p className="text-body-md text-on-surface-variant mb-10">
             {t("jobs.notAppliedDesc", { title: job.title, company: job.company })}
           </p>
@@ -62,7 +64,7 @@ export default async function JobAppliedPage({ params }: { params: Promise<{ id:
             </a>
             <Link
               href="/jobs"
-              className="bg-primary-container text-on-primary text-label-caps uppercase tracking-wide px-6 py-3 rounded-md hover:bg-primary transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-container focus-visible:ring-offset-2 focus-visible:ring-offset-background motion-reduce:transition-none"
+              className="deco-btn bg-accent text-on-accent text-label-caps uppercase px-6 py-3 rounded-md hover:brightness-95 transition-[filter] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-container focus-visible:ring-offset-2 focus-visible:ring-offset-background motion-reduce:transition-none"
             >
               {t("jobs.findOther")}
             </Link>
@@ -77,11 +79,12 @@ export default async function JobAppliedPage({ params }: { params: Promise<{ id:
     <div className="min-h-screen bg-background text-on-background">
       <SiteNav />
       <main role="status" aria-live="polite" className="max-w-md mx-auto px-[var(--spacing-container-padding)] py-16 text-center">
-        <div className="w-16 h-16 rounded-full bg-primary-container/10 flex items-center justify-center mx-auto mb-6">
+        <div className="medal-ring w-20 h-20 mx-auto mb-6">
           <CheckCircle2 className="text-primary-container" size={28} aria-hidden />
         </div>
-        <h1 className="text-headline-lg text-on-background mb-2">{t("jobs.submittedTitle")}</h1>
-        <span className="inline-block mb-4 bg-surface-container-low text-on-surface-variant text-label-caps uppercase tracking-wide px-3 py-1.5 rounded-full">
+        <h1 className="text-headline-lg text-heading mb-3">{t("jobs.submittedTitle")}</h1>
+        <DecoRule className="mb-4" />
+        <span className="inline-block mb-4 bg-surface-container-low text-on-surface-variant text-label-caps uppercase tracking-wide px-3 py-1.5 rounded-md">
           {t("jobs.statusLabel", { status: statusLabel(t, application.status) })}
         </span>
         <p className="text-body-md text-on-surface-variant mb-10">
@@ -96,7 +99,7 @@ export default async function JobAppliedPage({ params }: { params: Promise<{ id:
           </Link>
           <Link
             href="/"
-            className="bg-primary-container text-on-primary text-label-caps uppercase tracking-wide px-6 py-3 rounded-md hover:bg-primary transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-container focus-visible:ring-offset-2 focus-visible:ring-offset-background motion-reduce:transition-none"
+            className="deco-btn bg-accent text-on-accent text-label-caps uppercase px-6 py-3 rounded-md hover:brightness-95 transition-[filter] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-container focus-visible:ring-offset-2 focus-visible:ring-offset-background motion-reduce:transition-none"
           >
             {t("jobs.backHome")}
           </Link>
