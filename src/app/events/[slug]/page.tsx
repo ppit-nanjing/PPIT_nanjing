@@ -220,7 +220,7 @@ export default async function EventDetailPage({ params, searchParams }: { params
 
           {event.coverImageUrl ? (
             <Reveal>
-              <header className="relative mb-12 overflow-hidden rounded-xl border border-outline-variant">
+              <header className="relative mb-12 overflow-hidden rounded-lg border border-[var(--deco-line)]">
                 <div className="relative h-[22rem] w-full sm:h-[28rem] lg:h-[32rem]">
                   <Image
                     src={event.coverImageUrl}
@@ -298,7 +298,7 @@ export default async function EventDetailPage({ params, searchParams }: { params
           ) : (
             <div className="mb-12">
               {event.category && (
-                <span className="mb-3 block text-label-caps uppercase tracking-wide text-primary-container">
+                <span className="mb-3 block text-label-caps uppercase tracking-[0.3em] text-gold-ink">
                   {event.category}
                 </span>
               )}
@@ -309,7 +309,7 @@ export default async function EventDetailPage({ params, searchParams }: { params
               )}
               <AnimatedHeroHeading
                 words={[event.title]}
-                className="text-display-hero-mobile leading-tight text-on-background md:text-display-hero"
+                className="text-display-hero-mobile leading-tight text-heading md:text-display-hero"
               />
             </div>
           )}
@@ -483,7 +483,7 @@ export default async function EventDetailPage({ params, searchParams }: { params
 
             <div className="lg:col-span-4">
               <Reveal>
-                <div className="evt-tintcard sticky top-24 flex flex-col gap-5 rounded-lg border border-outline-variant bg-surface-container-low p-6">
+                <div className="evt-tintcard deco-frame sticky top-24 flex flex-col gap-5 rounded-lg bg-surface-container-low p-6">
                 {(canScan || hasEventConsoleAccess) && (
                   <div className="flex flex-col gap-2 rounded-lg border border-outline-variant bg-surface-container-lowest p-4">
                     <p className="text-label-caps uppercase tracking-wide text-on-surface-variant">Panitia</p>
@@ -656,7 +656,7 @@ export default async function EventDetailPage({ params, searchParams }: { params
                       {alreadyRegistered && (
                         <a
                           href={`/events/${slug}/ticket`}
-                          className="w-full inline-flex items-center justify-center gap-2 bg-primary-container text-on-primary text-label-caps uppercase tracking-wide px-6 py-4 rounded-md hover:bg-primary transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-container focus-visible:ring-offset-2 focus-visible:ring-offset-surface-container-low"
+                          className="deco-btn w-full inline-flex items-center justify-center gap-2 bg-accent text-on-accent text-label-caps uppercase px-6 py-4 rounded-md hover:brightness-95 transition-[filter] focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-container focus-visible:ring-offset-2 focus-visible:ring-offset-surface-container-low"
                         >
                           <Ticket size={18} aria-hidden="true" /> {t("events.myTicket")}
                         </a>
@@ -677,7 +677,7 @@ export default async function EventDetailPage({ params, searchParams }: { params
                       </p>
                       <Link
                         href={`/sensus?returnTo=${encodeURIComponent(`/events/${slug}`)}`}
-                        className="w-full inline-flex items-center justify-center gap-2 bg-primary-container text-on-primary text-label-caps uppercase tracking-wide px-6 py-4 rounded-md hover:bg-primary transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-container focus-visible:ring-offset-2 focus-visible:ring-offset-surface-container-low"
+                        className="deco-btn w-full inline-flex items-center justify-center gap-2 bg-accent text-on-accent text-label-caps uppercase px-6 py-4 rounded-md hover:brightness-95 transition-[filter] focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-container focus-visible:ring-offset-2 focus-visible:ring-offset-surface-container-low"
                       >
                         <ListChecks size={18} aria-hidden="true" /> {t("events.fillSensus")}
                       </Link>
@@ -685,7 +685,7 @@ export default async function EventDetailPage({ params, searchParams }: { params
                   ) : alreadyRegistered ? (
                     <a
                       href={`/events/${slug}/ticket`}
-                      className="w-full inline-flex items-center justify-center gap-2 bg-primary-container text-on-primary text-label-caps uppercase tracking-wide px-6 py-4 rounded-md hover:bg-primary transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-container focus-visible:ring-offset-2 focus-visible:ring-offset-surface-container-low"
+                      className="deco-btn w-full inline-flex items-center justify-center gap-2 bg-accent text-on-accent text-label-caps uppercase px-6 py-4 rounded-md hover:brightness-95 transition-[filter] focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-container focus-visible:ring-offset-2 focus-visible:ring-offset-surface-container-low"
                     >
                       <Ticket size={18} aria-hidden="true" /> {t("events.myTicket")}
                     </a>
@@ -696,7 +696,7 @@ export default async function EventDetailPage({ params, searchParams }: { params
                           ? `/events/${slug}/register`
                           : `/login?returnTo=${encodeURIComponent(`/events/${slug}/register`)}`
                       }
-                      className="w-full inline-flex items-center justify-center gap-2 bg-primary-container text-on-primary text-label-caps uppercase tracking-wide px-6 py-4 rounded-md hover:bg-primary transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-container focus-visible:ring-offset-2 focus-visible:ring-offset-surface-container-low"
+                      className="deco-btn w-full inline-flex items-center justify-center gap-2 bg-accent text-on-accent text-label-caps uppercase px-6 py-4 rounded-md hover:brightness-95 transition-[filter] focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-container focus-visible:ring-offset-2 focus-visible:ring-offset-surface-container-low"
                     >
                       {session?.user?.id ? (
                         <>

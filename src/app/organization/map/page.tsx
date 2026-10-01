@@ -2,7 +2,7 @@ import { db } from "@/db";
 import { regionalBranches } from "@/db/schema";
 import { SiteNav } from "@/components/site-nav";
 import { SiteFooter } from "@/components/site-footer";
-import { AnimatedHeroHeading } from "@/components/animated-hero-heading";
+import { PageHeader } from "@/components/page-header";
 import { MapPin } from "lucide-react";
 import { getT } from "@/lib/i18n/server";
 
@@ -30,18 +30,9 @@ export default async function DistributionMapPage() {
     <div className="min-h-screen bg-background text-on-background">
       <SiteNav />
 
-      <header className="max-w-[var(--container-max)] mx-auto px-[var(--spacing-container-padding)] pt-16 pb-8">
-          <span className="text-label-caps text-primary-container tracking-widest uppercase mb-2 block">
-            {t("org.spreadKicker")}
-          </span>
-          <AnimatedHeroHeading
-            words={[t("org.map.title")]}
-            className="text-display-hero-mobile md:text-display-hero text-on-background mb-4"
-          />
-          <p className="text-body-lg text-on-surface-variant max-w-2xl">
-            {t("org.map.intro")}
-          </p>
-      </header>
+      <PageHeader eyebrow={t("org.spreadKicker")} title={t("org.map.title")} intro={t("org.map.intro")} />
+
+      <div className="h-10" aria-hidden="true" />
 
       <main className="max-w-[var(--container-max)] mx-auto px-[var(--spacing-container-padding)] pb-24">
         {plottable.length === 0 ? (

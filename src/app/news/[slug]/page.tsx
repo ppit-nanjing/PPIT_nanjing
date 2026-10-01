@@ -5,6 +5,7 @@ import { newsArticles, users } from "@/db/schema";
 import { SiteNav } from "@/components/site-nav";
 import { SiteFooter } from "@/components/site-footer";
 import { AnimatedHeroHeading } from "@/components/animated-hero-heading";
+import { DecoRule } from "@/components/deco/deco-rule";
 import { Reveal } from "@/components/reveal";
 import { NewsCard } from "@/components/news-card";
 import { ReadingProgress } from "@/components/reading-progress";
@@ -87,7 +88,7 @@ export default async function NewsDetailPage({
           {a.category && (
             <>
               <span className="text-secondary" aria-hidden="true">&bull;</span>
-              <span className="text-primary-container">{a.category}</span>
+              <span className="text-gold-ink">{a.category}</span>
             </>
           )}
           <span className="text-secondary" aria-hidden="true">&bull;</span>
@@ -96,8 +97,9 @@ export default async function NewsDetailPage({
 
         <AnimatedHeroHeading
           words={a.title.split(" ")}
-          className="text-display-hero-mobile md:text-display-hero text-on-background mb-8 leading-tight"
+          className="text-display-hero-mobile md:text-display-hero text-heading mb-5 leading-tight"
         />
+        <DecoRule align="start" className="mb-8" />
 
         {a.coverImageUrl && (
           <Reveal>
@@ -109,7 +111,7 @@ export default async function NewsDetailPage({
               priority
               decoding="async"
               sizes="(max-width: 768px) 100vw, 768px"
-              className="w-full h-auto rounded-xl mb-10 object-cover max-h-[420px]"
+              className="w-full h-auto rounded-lg mb-10 object-cover max-h-[420px] ring-1 ring-[var(--deco-line)] ring-offset-[5px] ring-offset-background"
             />
           </Reveal>
         )}

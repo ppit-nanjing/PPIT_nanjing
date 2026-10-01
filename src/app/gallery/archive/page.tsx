@@ -3,8 +3,7 @@ import { db } from "@/db";
 import { galleryAlbums, galleryPhotos } from "@/db/schema";
 import { SiteNav } from "@/components/site-nav";
 import { SiteFooter } from "@/components/site-footer";
-import { AnimatedHeroHeading } from "@/components/animated-hero-heading";
-import { AnimatedRevealText } from "@/components/animated-reveal-text";
+import { PageHeader } from "@/components/page-header";
 import { Reveal } from "@/components/reveal";
 import { FilterTabs } from "@/components/filter-tabs";
 import { GalleryCard } from "@/components/gallery-card";
@@ -46,13 +45,9 @@ export default async function GalleryArchivePage({
     <div className="min-h-screen bg-background text-on-background">
       <SiteNav />
 
-      <header className="max-w-[var(--container-max)] mx-auto px-[var(--spacing-container-padding)] pt-20 sm:pt-24 pb-8">
-        <AnimatedHeroHeading
-          words={[t("gallery.archiveTitle")]}
-          className="text-display-hero-mobile md:text-display-hero text-on-background mb-4"
-        />
-        <AnimatedRevealText text={t("gallery.archiveIntro")} />
-      </header>
+      <PageHeader title={t("gallery.archiveTitle")} intro={t("gallery.archiveIntro")} />
+
+      <div className="h-10" aria-hidden="true" />
 
       <main className="max-w-[var(--container-max)] mx-auto px-[var(--spacing-container-padding)] pb-24">
         {years.length > 0 && <FilterTabs options={filterOptions} layoutId="gallery-year-pill" className="mb-10" />}

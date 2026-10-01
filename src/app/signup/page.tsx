@@ -7,6 +7,8 @@ import { signUpWithPassword } from "@/app/actions/auth";
 import { safeRedirect } from "@/lib/safe-redirect";
 import { getT } from "@/lib/i18n/server";
 import Link from "next/link";
+import { AuthBrand } from "@/components/auth/auth-brand";
+import { DecoRule } from "@/components/deco/deco-rule";
 
 export default async function SignUpPage({
   searchParams,
@@ -30,10 +32,10 @@ export default async function SignUpPage({
           — the page itself never scrolls, so the season panel always fills. */}
       <div className="flex flex-col items-center px-[var(--spacing-container-padding)] py-4 s:py-6 lg:h-screen lg:overflow-y-auto">
       <div className="max-w-sm w-full lg:my-auto">
-        <div className="relative overflow-hidden bg-surface-container-lowest border border-outline-variant rounded-xl p-6 lg:p-4 shadow-[0_4px_24px_rgba(0,0,0,0.04)] text-center">
-          <div className="absolute top-0 left-0 w-full h-1 bg-primary-container" />
-          <span className="text-headline-md font-bold text-primary uppercase tracking-tight block mb-1">PPIT Nanjing</span>
-          <h1 className="text-headline-lg text-on-background mb-1.5">{t("auth.signupTitle")}</h1>
+        <div className="deco-frame relative overflow-hidden bg-surface-container-lowest rounded-lg p-6 lg:p-5 shadow-[0_4px_24px_rgba(29,27,20,0.06)] text-center">
+          <AuthBrand />
+          <h1 className="text-headline-lg text-heading mb-2">{t("auth.signupTitle")}</h1>
+          <DecoRule className="mb-3" />
           <p className="text-body-sm text-on-surface-variant mb-3">
             {t("auth.signupIntro")}
           </p>

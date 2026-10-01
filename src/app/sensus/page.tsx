@@ -5,6 +5,7 @@ import { db } from "@/db";
 import { coverageCities, sensusProfiles, universities } from "@/db/schema";
 import { SiteNav } from "@/components/site-nav";
 import { SiteFooter } from "@/components/site-footer";
+import { PageHeader } from "@/components/page-header";
 import { SensusWizard } from "@/components/sensus/sensus-wizard";
 import { AlertTriangle, ShieldCheck } from "lucide-react";
 import { getT } from "@/lib/i18n/server";
@@ -52,13 +53,12 @@ export default async function SensusPage({
   return (
     <div className="min-h-screen bg-background text-on-background">
       <SiteNav />
-      <main className="max-w-xl mx-auto px-[var(--spacing-container-padding)] py-16">
-        <h1 className="text-headline-lg text-on-background mb-2">{t("sensus.title")}</h1>
-        <p className="text-body-md text-on-surface-variant mb-6">
-          {existing
-            ? t("sensus.subtitleEdit")
-            : t("sensus.subtitleNew")}
-        </p>
+      <PageHeader
+        title={t("sensus.title")}
+        intro={existing ? t("sensus.subtitleEdit") : t("sensus.subtitleNew")}
+      />
+
+      <main className="max-w-xl mx-auto px-[var(--spacing-container-padding)] py-12">
 
         {existing?.completionStatus !== "complete" && (
           <div className="flex items-start gap-3 bg-error-container/40 border-l-4 border-error rounded-r-lg p-4 mb-8">

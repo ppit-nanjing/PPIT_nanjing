@@ -3,7 +3,7 @@ import { db } from "@/db";
 import { coverageCities } from "@/db/schema";
 import { SiteNav } from "@/components/site-nav";
 import { SiteFooter } from "@/components/site-footer";
-import { AnimatedHeroHeading } from "@/components/animated-hero-heading";
+import { PageHeader } from "@/components/page-header";
 import { CoverageMap } from "@/components/coverage-map";
 import geo from "@/data/nanjing-coverage.geo.json";
 import { sortByCoverageOrder } from "@/lib/coverage-cities";
@@ -36,21 +36,22 @@ export default async function CoveragePage() {
     <div className="min-h-screen bg-background text-on-background">
       <SiteNav />
 
-      <header className="max-w-[var(--container-max)] mx-auto px-[var(--spacing-container-padding)] pt-16 pb-8">
-        <p className="text-label-caps uppercase tracking-wide text-on-surface-variant mb-2">{t("explore.kicker")}</p>
-        <AnimatedHeroHeading
-          words={[t("coverage.title")]}
-          className="text-display-hero-mobile md:text-display-hero text-on-background mb-4"
-        />
-        <p className="text-body-lg text-on-surface-variant max-w-2xl">
-          {t("coverage.leadPrefix")}{" "}
-          <strong className="text-on-background">{t("coverage.leadCities", { n: features.length })}</strong>{" "}
-          {t("coverage.leadSuffix")}{" "}
-          {counted.length > 0
-            ? t("coverage.counted", { total, cities: counted.length })
-            : t("coverage.notCounted")}
-        </p>
-      </header>
+      <PageHeader
+        eyebrow={t("explore.kicker")}
+        title={t("coverage.title")}
+        intro={
+          <>
+            {t("coverage.leadPrefix")}{" "}
+            <strong className="text-on-background">{t("coverage.leadCities", { n: features.length })}</strong>{" "}
+            {t("coverage.leadSuffix")}{" "}
+            {counted.length > 0
+              ? t("coverage.counted", { total, cities: counted.length })
+              : t("coverage.notCounted")}
+          </>
+        }
+      />
+
+      <div className="h-10" aria-hidden="true" />
 
       <main className="max-w-[var(--container-max)] mx-auto px-[var(--spacing-container-padding)] pb-20">
         <CoverageMap

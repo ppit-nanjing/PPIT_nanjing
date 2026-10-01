@@ -2,7 +2,7 @@ import { db } from "@/db";
 import { regionalBranches } from "@/db/schema";
 import { SiteNav } from "@/components/site-nav";
 import { SiteFooter } from "@/components/site-footer";
-import { AnimatedHeroHeading } from "@/components/animated-hero-heading";
+import { PageHeader } from "@/components/page-header";
 import { MapPin, Map, Users, Phone } from "lucide-react";
 import Link from "next/link";
 import { getT } from "@/lib/i18n/server";
@@ -46,15 +46,11 @@ export default async function RegionalBranchesPage() {
     <div className="min-h-screen bg-background text-on-background">
       <SiteNav />
 
-      <header className="max-w-[var(--container-max)] mx-auto px-[var(--spacing-container-padding)] pt-16 pb-8">
-          <span className="text-label-caps text-primary-container tracking-widest uppercase mb-2 block">
-            {t("org.spreadKicker")}
-          </span>
-          <AnimatedHeroHeading
-            words={[t("org.branches.title")]}
-            className="text-display-hero-mobile md:text-display-hero text-on-background mb-4"
-          />
-          <p className="text-body-lg text-on-surface-variant max-w-2xl mb-6">
+      <PageHeader
+        eyebrow={t("org.spreadKicker")}
+        title={t("org.branches.title")}
+        intro={
+          <>
             {t("org.branches.intro")}
             {branches.length > 0 && (
               <>
@@ -65,14 +61,18 @@ export default async function RegionalBranchesPage() {
                 })}
               </>
             )}
-          </p>
-          <Link
-            href="/organization/map"
-            className="inline-flex items-center gap-2 text-label-caps text-primary-container hover:text-primary transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-container focus-visible:ring-offset-2 focus-visible:ring-offset-background rounded-md motion-reduce:transition-none"
-          >
-            <Map size={16} aria-hidden /> {t("org.branches.viewMap")}
-          </Link>
-      </header>
+          </>
+        }
+      >
+        <Link
+          href="/organization/map"
+          className="inline-flex items-center gap-2 text-label-caps uppercase text-primary-container hover:text-primary transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-container focus-visible:ring-offset-2 focus-visible:ring-offset-background rounded-md motion-reduce:transition-none"
+        >
+          <Map size={16} aria-hidden /> {t("org.branches.viewMap")}
+        </Link>
+      </PageHeader>
+
+      <div className="h-10" aria-hidden="true" />
 
       <main className="max-w-[var(--container-max)] mx-auto px-[var(--spacing-container-padding)] pb-24">
         {branches.length === 0 ? (

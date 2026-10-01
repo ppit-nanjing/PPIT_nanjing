@@ -4,8 +4,7 @@ import { events } from "@/db/schema";
 import { publishDueEvents } from "@/lib/publish-events";
 import { SiteNav } from "@/components/site-nav";
 import { SiteFooter } from "@/components/site-footer";
-import { AnimatedHeroHeading } from "@/components/animated-hero-heading";
-import { AnimatedRevealText } from "@/components/animated-reveal-text";
+import { PageHeader } from "@/components/page-header";
 import { Reveal } from "@/components/reveal";
 import { FilterTabs } from "@/components/filter-tabs";
 import { EventCard } from "@/components/event-card";
@@ -61,16 +60,11 @@ export default async function EventsPage({
     <div className="min-h-screen bg-background text-on-background">
       <SiteNav />
 
-      <header className="max-w-[var(--container-max)] mx-auto px-[var(--spacing-container-padding)] pt-20 sm:pt-24 pb-8 flex flex-col md:flex-row justify-between items-start md:items-end gap-8 border-b border-outline-variant">
-        <div className="max-w-2xl">
-          <AnimatedHeroHeading
-            words={[t("events.title")]}
-            className="text-display-hero-mobile md:text-display-hero text-on-background mb-4"
-          />
-          <AnimatedRevealText text={t("events.intro")} />
-        </div>
-        {categories.length > 0 && <FilterTabs options={filterOptions} layoutId="events-filter-pill" />}
-      </header>
+      <PageHeader title={t("events.title")} intro={t("events.intro")}>
+        {categories.length > 0 && (
+          <FilterTabs options={filterOptions} layoutId="events-filter-pill" className="justify-center" />
+        )}
+      </PageHeader>
 
       <main className="max-w-[var(--container-max)] mx-auto px-[var(--spacing-container-padding)] pb-24 pt-12 flex flex-col gap-16">
         {list.length === 0 ? (
@@ -109,7 +103,7 @@ export default async function EventsPage({
                   <a
                     href={`/events/${featured.slug}`}
                     aria-label={t("events.viewDetail", { title: featured.title })}
-                    className="group grid grid-cols-1 lg:grid-cols-12 bg-surface-container-lowest border border-outline-variant rounded-xl overflow-hidden hover:shadow-[0_14px_40px_rgba(39,23,22,0.10)] hover:-translate-y-1 transition-[box-shadow,transform] duration-300 motion-reduce:transform-none motion-reduce:transition-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-container focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+                    className="group grid grid-cols-1 lg:grid-cols-12 bg-surface-container-lowest border border-outline-variant rounded-xl overflow-hidden hover:border-muted-gold hover:shadow-[0_14px_40px_rgba(29,27,20,0.12)] hover:-translate-y-1 transition-[box-shadow,transform] duration-300 motion-reduce:transform-none motion-reduce:transition-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-container focus-visible:ring-offset-2 focus-visible:ring-offset-background"
                   >
                     <div className="lg:col-span-7 h-64 lg:h-auto relative overflow-hidden bg-surface-container-low">
                       {featured.coverImageUrl ? (
@@ -125,7 +119,7 @@ export default async function EventsPage({
                           <CalendarDays className="text-outline-variant" size={40} />
                         </div>
                       )}
-                       <span className="absolute top-6 left-6 bg-primary-container text-on-primary px-4 py-2 rounded-lg text-label-caps uppercase tracking-wide shadow-[0_10px_30px_rgba(39,23,22,0.10)]">
+                       <span className="absolute top-6 left-6 bg-primary-container text-on-primary px-4 py-2 rounded-lg text-label-caps uppercase tracking-wide shadow-[0_10px_30px_rgba(29,27,20,0.10)]">
                         {t("events.badgeUpcoming")}
                       </span>
                     </div>
@@ -169,7 +163,7 @@ export default async function EventsPage({
                         )}
                         <span
                           aria-hidden="true"
-                          className="flex items-center gap-2 bg-primary-container text-on-primary px-6 py-3 rounded-lg text-label-caps uppercase tracking-wide group-hover:bg-primary transition-colors"
+                          className="deco-btn flex items-center gap-2 bg-accent text-on-accent px-6 py-3 rounded-md text-label-caps uppercase group-hover:brightness-95 transition-[filter]"
                         >
                            {t("events.registerNow")}{" "}
                            <ArrowRight size={16} className="group-hover:translate-x-1 transition-transform motion-reduce:transform-none" />

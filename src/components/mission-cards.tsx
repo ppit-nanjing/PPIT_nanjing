@@ -47,11 +47,11 @@ export function MissionCards() {
           }}
           transition={{ duration: 0.5, ease: [0.25, 0.1, 0.25, 1] }}
           whileHover={{ y: -6 }}
-          className="group relative bg-surface-container-low border border-outline-variant rounded-xl p-6 flex flex-col gap-4 overflow-hidden transition-colors hover:border-primary-container"
+          className="group relative bg-surface-container-low border border-outline-variant rounded-lg p-6 flex flex-col gap-4 overflow-hidden transition-colors hover:border-muted-gold"
         >
           <span
             aria-hidden="true"
-            className="absolute inset-x-0 top-0 h-1 bg-primary-container origin-left scale-x-0 group-hover:scale-x-100 transition-transform duration-300 ease-out"
+            className="absolute inset-x-0 top-0 h-1 bg-muted-gold origin-left scale-x-0 group-hover:scale-x-100 transition-transform duration-300 ease-out"
           />
           <div className="flex items-center justify-between">
             <div className="w-11 h-11 rounded-full bg-primary-container/10 flex items-center justify-center transition-colors group-hover:bg-primary-container/20">

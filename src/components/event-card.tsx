@@ -43,7 +43,7 @@ export async function EventCard({
       <Link
         href={`/events/${event.slug}`}
         aria-label={t("events.viewDetail", { title: event.title })}
-        className="group relative block h-full bg-surface-container-lowest border border-outline-variant rounded-xl overflow-hidden hover:shadow-[0_14px_40px_rgba(39,23,22,0.10)] hover:-translate-y-1 transition-[box-shadow,transform] duration-300 motion-reduce:transition-none motion-reduce:transform-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-container focus-visible:ring-offset-2 focus-visible:ring-offset-background flex flex-col"
+        className="group relative block h-full bg-surface-container-lowest border border-outline-variant rounded-lg overflow-hidden hover:border-muted-gold hover:shadow-[0_14px_40px_rgba(29,27,20,0.12)] hover:-translate-y-1 transition-[box-shadow,transform] duration-300 motion-reduce:transition-none motion-reduce:transform-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-container focus-visible:ring-offset-2 focus-visible:ring-offset-background flex flex-col"
       >
         <div className="h-44 bg-surface-container-low overflow-hidden relative">
           {isPast && (

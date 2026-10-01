@@ -509,6 +509,11 @@ h4, h5, h6 {
 }
 
 
+/* The ornament classes live in @layer components on purpose: unlayered CSS always beats
+   Tailwind utilities, so a plain .deco-frame { position: relative } would silently
+   break any element that also says `sticky` or `absolute`. In the components layer a
+   utility on the same element wins, which is what a caller expects. */
+@layer components {
 /* ===== Art Deco + Art Nouveau ornament =====
    Everything here is built from the colour tokens, so it follows all six palettes.
    Gold hairlines are decoration; gold TEXT must use text-gold-ink. */
@@ -535,7 +540,6 @@ h4, h5, h6 {
 .deco-rule {
   display: flex;
   align-items: center;
-  justify-content: center;
   gap: 0.7rem;
 }
 .deco-rule i {
@@ -842,6 +846,8 @@ h4, h5, h6 {
   .photo-frame .mat img { border-radius: calc(var(--arch-r) - 7px) calc(var(--arch-r) - 7px) 2px 2px; }
 }
 
+}
+
 /* ===== Home intro (components/site-intro.tsx) =====
    Desktop: five slats lift away in a stagger while the logo fades. Phones: one
    full layer fades. Both hide themselves via animation end states, so no JS is
@@ -906,6 +912,18 @@ h4, h5, h6 {
 @media (prefers-reduced-motion: reduce) {
   .intro-curtain,
   .intro-veil { display: none; }
+}
+
+/* Primary buttons: every <a>/<button> that carries the primary fill gets the same
+   engraved-plate inner hairline as .deco-btn, so jade buttons across the site match
+   the gold call to action. It is an outline with a negative offset (it follows the
+   element's radius and its background, whatever the hover state), skipped while
+   focused so it never fights the focus ring. Badges and pills that are not links or
+   buttons are untouched. */
+a[class~="bg-primary-container"][class~="text-on-primary"]:not(:focus-visible),
+button[class~="bg-primary-container"][class~="text-on-primary"]:not(:focus-visible) {
+  outline: 1px solid color-mix(in oklab, var(--color-on-primary) 38%, transparent);
+  outline-offset: -3px;
 }
 
 /* ===== Org chart (Struktur Organisasi) ===== */

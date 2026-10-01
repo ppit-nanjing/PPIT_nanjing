@@ -3,8 +3,7 @@ import { db } from "@/db";
 import { newsArticles } from "@/db/schema";
 import { SiteNav } from "@/components/site-nav";
 import { SiteFooter } from "@/components/site-footer";
-import { AnimatedHeroHeading } from "@/components/animated-hero-heading";
-import { AnimatedRevealText } from "@/components/animated-reveal-text";
+import { PageHeader } from "@/components/page-header";
 import { Reveal } from "@/components/reveal";
 import { FilterTabs } from "@/components/filter-tabs";
 import { NewsCard } from "@/components/news-card";
@@ -55,16 +54,11 @@ export default async function NewsPage({
     <div className="min-h-screen bg-background text-on-background">
       <SiteNav />
 
-      <header className="max-w-[var(--container-max)] mx-auto px-[var(--spacing-container-padding)] pt-20 sm:pt-24 pb-8 flex flex-col md:flex-row justify-between items-start md:items-end gap-8 border-b border-outline-variant">
-        <div className="max-w-2xl">
-          <AnimatedHeroHeading
-            words={[t("news.title")]}
-            className="text-display-hero-mobile md:text-display-hero text-on-background mb-4"
-          />
-          <AnimatedRevealText text={t("news.intro")} />
-        </div>
-        {categories.length > 0 && <FilterTabs options={filterOptions} layoutId="news-filter-pill" />}
-      </header>
+      <PageHeader title={t("news.title")} intro={t("news.intro")}>
+        {categories.length > 0 && (
+          <FilterTabs options={filterOptions} layoutId="news-filter-pill" className="justify-center" />
+        )}
+      </PageHeader>
 
       <main className="max-w-[var(--container-max)] mx-auto px-[var(--spacing-container-padding)] pb-24 pt-12 flex flex-col gap-16">
         {articles.length === 0 ? (
@@ -106,7 +100,7 @@ export default async function NewsPage({
                 <a
                   href={`/news/${featured.slug}`}
                   aria-label={t("news.readAria", { title: featured.title })}
-                  className="group grid grid-cols-1 lg:grid-cols-2 bg-surface-container-lowest border border-outline-variant rounded-xl overflow-hidden hover:shadow-[0_14px_40px_rgba(39,23,22,0.10)] hover:-translate-y-1 transition-[box-shadow,transform] duration-300 motion-reduce:transition-none motion-reduce:hover:translate-y-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-container focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+                  className="group grid grid-cols-1 lg:grid-cols-2 bg-surface-container-lowest border border-outline-variant rounded-xl overflow-hidden hover:border-muted-gold hover:shadow-[0_14px_40px_rgba(29,27,20,0.12)] hover:-translate-y-1 transition-[box-shadow,transform] duration-300 motion-reduce:transition-none motion-reduce:hover:translate-y-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-container focus-visible:ring-offset-2 focus-visible:ring-offset-background"
                 >
                   <div className="relative h-64 lg:h-auto bg-surface-container-low overflow-hidden">
                     {featured.coverImageUrl ? (

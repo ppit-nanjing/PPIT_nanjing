@@ -1,6 +1,8 @@
 import { redirect } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
 import Link from "next/link";
+import { AuthBrand } from "@/components/auth/auth-brand";
+import { DecoRule } from "@/components/deco/deco-rule";
 import { auth } from "@/auth";
 import { getT } from "@/lib/i18n/server";
 import { ResetPasswordForm } from "@/components/auth/reset-password-form";
@@ -26,14 +28,12 @@ export default async function ResetPasswordPage({
       </div>
 
       <div className="max-w-sm w-full relative z-10">
-        <div className="relative overflow-hidden bg-surface-container-lowest border border-outline-variant rounded-xl p-8 shadow-[0_4px_24px_rgba(0,0,0,0.04)] text-center">
-          <div className="absolute top-0 left-0 w-full h-1 bg-primary-container" />
-          <span className="text-headline-md font-bold text-primary uppercase tracking-tight block mb-2">
-            PPIT Nanjing
-          </span>
-          <h1 className="text-headline-lg text-on-background mb-3">
+        <div className="deco-frame relative overflow-hidden bg-surface-container-lowest rounded-lg p-8 shadow-[0_4px_24px_rgba(29,27,20,0.06)] text-center">
+          <AuthBrand />
+          <h1 className="text-headline-lg text-heading mb-3">
             {mode === "request" ? t("auth.resetRequestTitle") : t("auth.resetNewTitle")}
           </h1>
+          <DecoRule className="mb-4" />
           <p className="text-body-md text-on-surface-variant mb-6">
             {mode === "request" ? t("auth.resetRequestIntro") : t("auth.resetNewIntro")}
           </p>

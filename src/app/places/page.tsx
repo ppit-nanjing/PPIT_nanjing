@@ -15,7 +15,7 @@ import { db } from "@/db";
 import { places } from "@/db/schema";
 import { SiteNav } from "@/components/site-nav";
 import { SiteFooter } from "@/components/site-footer";
-import { AnimatedHeroHeading } from "@/components/animated-hero-heading";
+import { PageHeader } from "@/components/page-header";
 import { PlacesGrid } from "@/components/places/places-grid";
 import { getT } from "@/lib/i18n/server";
 import type { TKey } from "@/lib/i18n/dictionaries/id";
@@ -76,22 +76,19 @@ export default async function PlacesPage({
     <div className="min-h-screen bg-background text-on-background">
       <SiteNav />
 
-      <header className="max-w-[var(--container-max)] mx-auto px-[var(--spacing-container-padding)] pt-16 pb-8">
-        <p className="text-label-caps uppercase tracking-wide text-on-surface-variant mb-2">{t("explore.kicker")}</p>
-        <AnimatedHeroHeading
-          words={[t("places.title")]}
-          className="text-display-hero-mobile md:text-display-hero text-on-background mb-4"
-        />
-        <p className="text-body-lg text-on-surface-variant max-w-2xl mb-8">
-          {rows.length > 0
+      <PageHeader
+        eyebrow={t("explore.kicker")}
+        title={t("places.title")}
+        intro={
+          rows.length > 0
             ? t("places.lead", {
                 n: rows.length,
                 districts: districts.length ? t("places.leadDistricts", { n: districts.length }) : "",
               })
-            : t("places.leadEmpty")}
-        </p>
-
-        <nav aria-label={t("places.filterAria")} className="flex flex-wrap gap-2">
+            : t("places.leadEmpty")
+        }
+      >
+        <nav aria-label={t("places.filterAria")} className="flex flex-wrap justify-center gap-2">
           {FILTER_ORDER.map((id) => {
             const active = (valid ?? "") === id;
             const label = id ? t(CATEGORY[id].labelKey) : t("places.filterAll");
@@ -113,7 +110,7 @@ export default async function PlacesPage({
             );
           })}
         </nav>
-      </header>
+      </PageHeader>
 
       <main className="max-w-[var(--container-max)] mx-auto px-[var(--spacing-container-padding)] pb-20">
         {rows.length === 0 ? (

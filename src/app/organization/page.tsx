@@ -3,7 +3,7 @@ import { db } from "@/db";
 import { departments, departmentMembers, users } from "@/db/schema";
 import { SiteNav } from "@/components/site-nav";
 import { SiteFooter } from "@/components/site-footer";
-import { AnimatedHeroHeading } from "@/components/animated-hero-heading";
+import { PageHeader } from "@/components/page-header";
 import { OrgExplorer, type OrgNodeData, type OrgMember } from "@/components/org-explorer";
 import { Network } from "lucide-react";
 import { getT } from "@/lib/i18n/server";
@@ -97,18 +97,9 @@ export default async function OrganizationPage() {
     <div className="min-h-screen bg-background text-on-background">
       <SiteNav />
 
-      <header className="max-w-[var(--container-max)] mx-auto px-[var(--spacing-container-padding)] pt-16 pb-8">
-          <span className="text-label-caps tracking-widest uppercase mb-2 block text-primary-container">
-            {t("org.structure.term")}
-          </span>
-          <AnimatedHeroHeading
-            words={[t("org.structure.title")]}
-            className="text-display-hero-mobile md:text-display-hero text-on-background mb-4"
-          />
-          <p className="text-body-lg text-on-surface-variant max-w-2xl">
-            {t("org.structure.intro")}
-          </p>
-      </header>
+      <PageHeader eyebrow={t("org.structure.term")} title={t("org.structure.title")} intro={t("org.structure.intro")} />
+
+      <div className="h-10" aria-hidden="true" />
 
       <main className="max-w-[var(--container-max)] mx-auto px-[var(--spacing-container-padding)] pb-24">
         {units.length === 0 ? (

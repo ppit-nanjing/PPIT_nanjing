@@ -3,7 +3,7 @@ import { db } from "@/db";
 import { jobPostings, careerGuideArticles } from "@/db/schema";
 import { SiteNav } from "@/components/site-nav";
 import { SiteFooter } from "@/components/site-footer";
-import { AnimatedHeroHeading } from "@/components/animated-hero-heading";
+import { PageHeader } from "@/components/page-header";
 import { formatRelativeTime } from "@/lib/format-relative-time";
 import { Briefcase, MapPin, Search, SlidersHorizontal, BookOpen, Users } from "lucide-react";
 import Link from "next/link";
@@ -83,15 +83,8 @@ export default async function JobsPage({
     <div className="min-h-screen bg-background text-on-background">
       <SiteNav />
 
-      <header className="max-w-2xl mx-auto px-[var(--spacing-container-padding)] pt-16 pb-10 text-center flex flex-col items-center">
-        <AnimatedHeroHeading
-          words={[t("jobs.title")]}
-          className="text-display-hero-mobile md:text-display-hero text-on-background mb-4"
-        />
-        <p className="text-body-lg text-on-surface-variant mb-8">
-          {t("jobs.subtitle")}
-        </p>
-        <form action="/jobs" role="search" aria-label={t("jobs.searchAria")} className="w-full relative">
+      <PageHeader title={t("jobs.title")} intro={t("jobs.subtitle")}>
+        <form action="/jobs" role="search" aria-label={t("jobs.searchAria")} className="w-full max-w-2xl relative">
           <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-secondary" size={18} aria-hidden />
           <input
             name="q"
@@ -107,7 +100,7 @@ export default async function JobsPage({
             {t("nav.search")}
           </button>
         </form>
-      </header>
+      </PageHeader>
 
       <main className="max-w-[var(--container-max)] mx-auto px-[var(--spacing-container-padding)] pb-24 grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
         <aside aria-label={t("jobs.filterAria")} className="lg:col-span-3 bg-surface-container-lowest border border-outline-variant rounded-lg p-6">
@@ -183,7 +176,7 @@ export default async function JobsPage({
             )}
           </div>
           {jobs.length === 0 ? (
-            <div className="flex flex-col items-center text-center py-20 bg-surface-container-lowest border border-outline-variant border-dashed rounded-xl px-6">
+            <div className="flex flex-col items-center text-center py-20 bg-surface-container-lowest border border-[var(--deco-line)] border-dashed rounded-lg px-6">
               <Briefcase className="text-outline-variant mb-4" size={40} aria-hidden />
               <h2 className="text-headline-md text-on-background mb-2">
                 {q || selectedTypes.length > 0 || location ? t("jobs.emptyResultsTitle") : t("jobs.emptyTitle")}
@@ -208,7 +201,7 @@ export default async function JobsPage({
                 key={j.id}
                 href={`/jobs/${j.id}`}
                 aria-label={t("jobs.detailAria", { title: j.title, company: j.company })}
-                className="group flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-surface-container-lowest border border-outline-variant rounded-lg p-6 hover:shadow-[0_10px_30px_rgba(39,23,22,0.06)] transition-shadow focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-container focus-visible:ring-offset-2 focus-visible:ring-offset-background motion-reduce:transition-none"
+                className="group flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-surface-container-lowest border border-outline-variant rounded-lg p-6 hover:border-muted-gold hover:shadow-[0_10px_30px_rgba(29,27,20,0.10)] transition-[box-shadow,border-color] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-container focus-visible:ring-offset-2 focus-visible:ring-offset-background motion-reduce:transition-none"
               >
                 <div>
                   <div className="flex items-center gap-2 mb-1">
@@ -245,7 +238,7 @@ export default async function JobsPage({
             <a
               key={g.id}
               href={`/career/guide/${g.slug}`}
-              className="flex items-start gap-4 bg-surface-container-lowest border border-outline-variant rounded-lg p-6 hover:bg-surface-container-low transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-container focus-visible:ring-offset-2 focus-visible:ring-offset-background motion-reduce:transition-none"
+              className="flex items-start gap-4 bg-surface-container-lowest border border-outline-variant rounded-lg p-6 hover:border-muted-gold hover:bg-surface-container-low transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-container focus-visible:ring-offset-2 focus-visible:ring-offset-background motion-reduce:transition-none"
             >
               <BookOpen className="text-primary-container shrink-0" size={22} />
               <div>
