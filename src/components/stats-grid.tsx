@@ -19,7 +19,7 @@ export function StatsGrid({ cityCount, campusCount }: { cityCount: number; campu
 
   return (
     <motion.section
-      className="grid grid-cols-1 md:grid-cols-3 gap-6"
+      className="grid grid-cols-3 gap-2 sm:gap-6"
       initial="hidden"
       whileInView="visible"
       viewport={{ once: true, amount: 0.2 }}
@@ -30,12 +30,12 @@ export function StatsGrid({ cityCount, campusCount }: { cityCount: number; campu
           key={labelKey}
           variants={{ hidden: { opacity: 0, y: 24 }, visible: { opacity: 1, y: 0 } }}
           transition={{ duration: 0.5, ease: [0.25, 0.1, 0.25, 1] }}
-          className="deco-frame bg-surface-container rounded-md px-6 py-9 flex flex-col items-center text-center"
+          className="deco-frame bg-surface-container rounded-md px-1.5 py-5 sm:px-6 sm:py-9 flex flex-col items-center text-center"
         >
-          <span className="medal-ring mb-5">
-            <CountUp value={value} className="text-headline-lg text-on-background" />
+          <span className="medal-ring mb-3 sm:mb-5 max-sm:h-[3.75rem] max-sm:w-[3.75rem]">
+            <CountUp value={value} className="text-headline-lg max-sm:text-[18px] text-on-background" />
           </span>
-          <p className="text-label-caps text-gold-ink uppercase tracking-[0.26em]">{t(labelKey)}</p>
+          <p className="text-label-caps max-sm:text-[10px] text-gold-ink uppercase tracking-[0.26em] max-sm:tracking-[0.12em]">{t(labelKey)}</p>
         </motion.div>
       ))}
     </motion.section>

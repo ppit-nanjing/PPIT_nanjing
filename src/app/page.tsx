@@ -38,9 +38,9 @@ import { INTL_LOCALE } from "@/lib/i18n/config";
 // layout. Capping columns to the actual count and centering keeps a short
 // row looking intentional.
 function cardGridClass(count: number) {
-  if (count === 1) return "grid grid-cols-1 gap-8 max-w-md mx-auto";
-  if (count === 2) return "grid grid-cols-1 sm:grid-cols-2 gap-8 max-w-3xl mx-auto";
-  return "grid grid-cols-1 md:grid-cols-3 gap-8";
+  if (count === 1) return "grid grid-cols-1 gap-3 sm:gap-8 max-w-md mx-auto";
+  if (count === 2) return "grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-8 max-w-3xl mx-auto";
+  return "grid grid-cols-1 md:grid-cols-3 gap-3 sm:gap-8";
 }
 
 const CITIES = [
@@ -153,7 +153,7 @@ export default async function Home() {
 
       <main>
         {/* Stats */}
-        <div className={`${CONTAINER} py-16 md:py-24`}>
+        <div className={`${CONTAINER} py-8 md:py-24`}>
           <StatsGrid cityCount={cityCount} campusCount={campusCount} />
         </div>
 
@@ -161,12 +161,12 @@ export default async function Home() {
         <section className="relative overflow-hidden bg-band text-on-band">
           <div className="deco-lattice" aria-hidden="true" />
           <PlumBlossoms variant="band" />
-          <div className={`${CONTAINER} relative z-10 py-16 md:py-[var(--spacing-section-gap)] flex flex-col gap-12 md:gap-16`}>
+          <div className={`${CONTAINER} relative z-10 py-10 md:py-[var(--spacing-section-gap)] flex flex-col gap-8 md:gap-16`}>
             <Reveal>
               <SectionHeading tone="band" kicker={t("about.kicker")} title={t("home.about.title")} description={t("home.about.lead")} />
             </Reveal>
             <Reveal>
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-14 lg:gap-16 items-start">
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-16 items-start">
                 <div className="flex flex-col gap-4 text-body-md text-on-band-muted text-pretty">
                   <p>{t("about.intro")}</p>
                   <p>{t("about.coverageText")}</p>
@@ -179,7 +179,7 @@ export default async function Home() {
 
         {/* The family: cabinet photo in an arch frame */}
         <section className="bg-surface-container border-y border-outline-variant">
-          <div className={`${CONTAINER} py-16 md:py-[var(--spacing-section-gap)] flex flex-col gap-12 md:gap-16`}>
+          <div className={`${CONTAINER} py-10 md:py-[var(--spacing-section-gap)] flex flex-col gap-8 md:gap-16`}>
             <Reveal>
               <SectionHeading kicker={t("home.family.kicker")} title={t("home.family.title")} description={t("home.family.desc")} />
             </Reveal>
@@ -196,10 +196,10 @@ export default async function Home() {
           </div>
         </section>
 
-        <div className={`${CONTAINER} flex flex-col gap-16 md:gap-[var(--spacing-section-gap)] py-16 md:py-[var(--spacing-section-gap)]`}>
+        <div className={`${CONTAINER} flex flex-col gap-10 md:gap-[var(--spacing-section-gap)] py-10 md:py-[var(--spacing-section-gap)]`}>
           {/* Cities under PPIT Nanjing's umbrella */}
           <Reveal>
-            <section className="flex flex-col gap-10">
+            <section className="flex flex-col gap-6 sm:gap-10">
               <SectionHeading
                 kicker={t("home.cities.kicker")}
                 title={t("home.cities.title")}
@@ -219,9 +219,9 @@ export default async function Home() {
 
           {/* Latest Events - honest empty state guides users when nothing is published yet */}
           <Reveal>
-            <section className="flex flex-col gap-10">
+            <section className="flex flex-col gap-6 sm:gap-10">
               <SectionHeading kicker={t("home.events.kicker")} title={t("home.events.title")} href="/events" />
-              <div className={latestEvents.length > 0 ? cardGridClass(latestEvents.length) : "grid grid-cols-1 md:grid-cols-3 gap-8"}>
+              <div className={latestEvents.length > 0 ? cardGridClass(latestEvents.length) : "grid grid-cols-1 md:grid-cols-3 gap-3 sm:gap-8"}>
                 {latestEvents.length > 0 ? (
                   latestEvents.map((e) => (
                     <ContentCard
@@ -249,9 +249,9 @@ export default async function Home() {
 
           {/* Latest News - same honesty rule, with a graceful empty state */}
           <Reveal>
-            <section className="flex flex-col gap-10">
+            <section className="flex flex-col gap-6 sm:gap-10">
               <SectionHeading kicker={t("home.news.kicker")} title={t("home.news.title")} href="/news" />
-              <div className={latestNews.length > 0 ? cardGridClass(latestNews.length) : "grid grid-cols-1 md:grid-cols-3 gap-8"}>
+              <div className={latestNews.length > 0 ? cardGridClass(latestNews.length) : "grid grid-cols-1 md:grid-cols-3 gap-3 sm:gap-8"}>
                 {latestNews.length > 0 ? (
                   latestNews.map((a) => (
                     <ContentCard

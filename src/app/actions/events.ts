@@ -13,6 +13,7 @@ import { createTemplatedNotification } from "@/lib/notifications";
 import { getEventSeats } from "@/lib/event-capacity";
 import { feeTierAt, amountForTier } from "@/lib/event-fee";
 import { isValidPassport } from "@/lib/sensus-form";
+import { getEventAccess } from "@/lib/event-access";
 
 // Peserta yang sensusnya belum lengkap ditanyai asal cabangnya di form
 // pendaftaran (lihat komentar di event_registrations.branch). Nilainya
@@ -101,26 +102,54 @@ async function mirrorFormBiodataToSensus(userId: string, bio: EventBiodata): Pro
 }
 
 export async function registerForEvent(eventId: string, slug: string, formData?: FormData) {
+  return runRegistration(eventId, slug, formData, false);
+}
+
+// "Mode Latihan" for the registration form (/events/[slug]/register?practice=1):
+// the same validation as the real thing - required questions, fee category, quota,
+// biodata - but nothing is written: no registration row, no notification, no
+// sensus mirroring. Only people with console access to this event can run it, and
+// it works whatever the event's status, so a committee member can try the form on
+// a draft, closed or finished event. The outcome comes back as ?done=...
+export async function registerForEventPractice(eventId: string, slug: string, formData?: FormData) {
+  return runRegistration(eventId, slug, formData, true);
+}
+
+const registerErrUrl = (slug: string, code: string, practice: boolean) =>
+  `/events/${slug}/register?${practice ? "practice=1&" : ""}err=${code}`;
+
+async function runRegistration(eventId: string, slug: string, formData: FormData | undefined, practice: boolean) {
   const session = await auth();
-  if (!session?.user?.id) redirect(`/login?returnTo=/events/${slug}`);
+  if (!session?.user?.id) redirect(`/login?returnTo=/events/${slug}${practice ? "/register?practice=1" : ""}`);
 
   const [event] = await db.select().from(events).where(eq(events.id, eventId));
-  // Event is unpublished, closed, finished, or cancelled - don't throw here
-  // (a raw Error inside a Server Action surfaces as a generic #441 in prod).
-  // Bounce back to the event page, which already shows the right message.
-  if (!event || event.status !== "published") redirect(`/events/${slug}`);
+  if (practice) {
+    if (!event) redirect(`/events/${slug}`);
+    const access = await getEventAccess(event.id);
+    const allowed = !!access && (access.isFullAdmin || access.moduleBridge || access.role != null);
+    // Not committee: fall back to the normal form (the page ignores ?practice for them too).
+    if (!allowed) redirect(`/events/${slug}/register`);
+  } else if (!event || event.status !== "published") {
+    // Event is unpublished, closed, finished, or cancelled - don't throw here
+    // (a raw Error inside a Server Action surfaces as a generic #441 in prod).
+    // Bounce back to the event page, which already shows the right message.
+    redirect(`/events/${slug}`);
+  }
 
   // By default events only need login. Sensus (verified Indonesian student in
   // China) is only required when the event opts in via requiresSensus.
   const sensusComplete = await hasCompletedSensus(session.user.id);
-  if (event.requiresSensus && !sensusComplete) {
+  if (!practice && event.requiresSensus && !sensusComplete) {
     redirect(`/sensus?returnTo=/events/${slug}`);
   }
 
-  const [existing] = await db
-    .select()
-    .from(eventRegistrations)
-    .where(and(eq(eventRegistrations.eventId, eventId), eq(eventRegistrations.userId, session.user.id)));
+  // Practice never writes, so an existing registration does not block it.
+  const [existing] = practice
+    ? []
+    : await db
+        .select()
+        .from(eventRegistrations)
+        .where(and(eq(eventRegistrations.eventId, eventId), eq(eventRegistrations.userId, session.user.id)));
 
   if (!existing) {
     // Hanya disimpan untuk peserta yang sensusnya belum lengkap. Kalau sensusnya
@@ -153,7 +182,7 @@ export async function registerForEvent(eventId: string, slug: string, formData?:
       // Kembali ke FORM (bukan halaman acara) dengan alasan, supaya peserta
       // tahu apa yang kurang — dulu ini pantulan senyap yang terasa seperti
       // "tombol kirim tidak berfungsi".
-      if (q.required && !answers[q.id]) redirect(`/events/${slug}/register?err=question`);
+      if (q.required && !answers[q.id]) redirect(registerErrUrl(slug, "question", practice));
     }
 
     // Kategori tarif (event_fee_options). Kalau acara berbayar DAN punya
@@ -165,7 +194,7 @@ export async function registerForEvent(eventId: string, slug: string, formData?:
       .where(eq(eventFeeOptions.eventId, eventId));
     const pickedFeeOption = String(formData?.get("feeOptionId") ?? "").trim();
     const feeOptionId = feeOptions.some((o) => o.id === pickedFeeOption) ? pickedFeeOption : null;
-    if (event.isPaid && feeOptions.length > 0 && !feeOptionId) redirect(`/events/${slug}/register?err=fee`);
+    if (event.isPaid && feeOptions.length > 0 && !feeOptionId) redirect(registerErrUrl(slug, "fee", practice));
 
     // Pagu kapasitas: pagu total acara (events.capacity) DAN kuota per kategori
     // tarif (event_fee_options.quota, mis. WIF Freshmen 130 / Non-freshmen 20).
@@ -175,12 +204,12 @@ export async function registerForEvent(eventId: string, slug: string, formData?:
     // sama seperti cek `isFull` di halaman acara; skalanya kecil dan verifikasi
     // panitia jadi lapis terakhir.
     const seats = await getEventSeats(event);
-    if (seats.capacityFull) redirect(`/events/${slug}`);
+    if (seats.capacityFull) redirect(practice ? `/events/${slug}/register?practice=1&done=full` : `/events/${slug}`);
     if (feeOptionId) {
       const picked = seats.feeOptions.find((o) => o.id === feeOptionId);
       // Kategori itu penuh persis di sela ini — balik ke form supaya peserta
       // bisa pilih kategori lain yang masih ada kuotanya.
-      if (picked?.isFull) redirect(`/events/${slug}/register?err=category_full`);
+      if (picked?.isFull) redirect(registerErrUrl(slug, "category_full", practice));
     }
 
     // Biodata lengkap (acara requiresBiodata): snapshot dari sensus bila lengkap,
@@ -229,7 +258,7 @@ export async function registerForEvent(eventId: string, slug: string, formData?:
         // ini lapis servernya) supaya "." / "-" / "123" tidak lolos ke sensus.
         const biodataIncomplete = Object.entries(biodataJson).some(([k, v]) => k !== "source" && !v);
         if (biodataIncomplete || !isValidPassport(biodataJson.passportNumber)) {
-          redirect(`/events/${slug}/register?err=biodata`);
+          redirect(registerErrUrl(slug, "biodata", practice));
         }
       }
     }
@@ -248,6 +277,13 @@ export async function registerForEvent(eventId: string, slug: string, formData?:
       ? amountForTier(feeTierAt(event.earlyBirdUntil), pickedSeat.amountCny, pickedSeat.earlyBirdAmountCny)
       : event.feeCny;
     const needsPayment = event.isPaid && effectiveAmount !== 0;
+
+    // Practice stops here: everything above (the real validation) has passed, and
+    // nothing below (insert, notification, sensus mirror) runs.
+    if (practice) {
+      const amount = needsPayment && effectiveAmount != null ? `&amt=${effectiveAmount}` : "";
+      redirect(`/events/${slug}/register?practice=1&done=${needsPayment ? "pending" : "confirmed"}${amount}`);
+    }
 
     await db.insert(eventRegistrations).values({
       eventId,

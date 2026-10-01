@@ -9,7 +9,7 @@ import { AnimatedHeroHeading } from "@/components/animated-hero-heading";
 import { Reveal } from "@/components/reveal";
 import { EventCard } from "@/components/event-card";
 import { GalleryLightbox } from "@/components/gallery-lightbox";
-import { CalendarDays, MapPin, Users, Ticket, ArrowLeft, ListChecks, Images, ArrowRight, CalendarX, PartyPopper, BadgeCheck, PlayCircle, FolderOpen, ScanLine, SlidersHorizontal, ClipboardList } from "lucide-react";
+import { CalendarDays, MapPin, Users, Ticket, ArrowLeft, ListChecks, Images, ArrowRight, CalendarX, PartyPopper, BadgeCheck, PlayCircle, FolderOpen, ScanLine, SlidersHorizontal, ClipboardList, FlaskConical } from "lucide-react";
 import Image from "next/image";
 import { Select } from "@/components/console/form";
 import { EventThemeStyle } from "@/components/events/event-theme-style";
@@ -493,6 +493,14 @@ export default async function EventDetailPage({ params, searchParams }: { params
                         className="inline-flex items-center justify-center gap-2 bg-primary-container text-on-primary text-label-caps uppercase tracking-wide px-4 py-3 rounded-md hover:bg-primary transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-container focus-visible:ring-offset-2 focus-visible:ring-offset-surface-container-lowest"
                       >
                         <ScanLine size={16} aria-hidden="true" /> Buka Scanner Check-in
+                      </Link>
+                    )}
+                    {hasEventConsoleAccess && (
+                      <Link
+                        href={`/events/${slug}/register?practice=1`}
+                        className="inline-flex items-center justify-center gap-2 border border-outline-variant text-on-background text-label-caps uppercase tracking-wide px-4 py-3 rounded-md hover:border-muted-gold hover:text-gold-ink transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-container focus-visible:ring-offset-2 focus-visible:ring-offset-surface-container-lowest"
+                      >
+                        <FlaskConical size={16} aria-hidden="true" /> {t("events.practice.link")}
                       </Link>
                     )}
                     {hasEventConsoleAccess && (

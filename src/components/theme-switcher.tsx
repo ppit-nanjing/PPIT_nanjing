@@ -84,7 +84,7 @@ export function ThemeSwitcher() {
   return (
     <div className="flex flex-col gap-2">
       <span className="text-label-caps uppercase tracking-wide opacity-70">{t("theme.cityTheme")}</span>
-      <div role="radiogroup" aria-label={t("theme.cityThemeAria")} className="flex flex-wrap gap-2">
+      <div role="radiogroup" aria-label={t("theme.cityThemeAria")} className="grid grid-cols-3 gap-1.5 sm:flex sm:flex-wrap sm:gap-2">
         {CITY_THEMES.map((ct) => {
           const selected = ct.id === active;
           return (
@@ -95,7 +95,7 @@ export function ThemeSwitcher() {
               aria-checked={selected}
               onClick={() => choose(ct.id)}
               title={`${ct.hanzi} — ${t(ct.noteKey)}`}
-              className={`flex items-center gap-2 rounded-md border px-3 py-2 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-current focus-visible:ring-offset-2 focus-visible:ring-offset-transparent ${
+              className={`flex items-center justify-center gap-1.5 sm:gap-2 rounded-md border px-2 py-1.5 sm:px-3 sm:py-2 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-current focus-visible:ring-offset-2 focus-visible:ring-offset-transparent ${
                 selected ? "border-current bg-current/15" : "border-current/30 hover:bg-current/10"
               }`}
             >
@@ -104,16 +104,16 @@ export function ThemeSwitcher() {
                 className="h-4 w-4 rounded-full border border-current/30"
                 style={{ background: ct.swatch }}
               />
-              <span className="text-body-sm">{ct.hanzi}</span>
+              <span className="text-body-sm max-sm:text-[13px]">{ct.hanzi}</span>
               {/* Selection is conveyed by more than colour alone. */}
-              {selected && <Check size={14} className="opacity-70 shrink-0" aria-hidden />}
+              {selected && <Check size={14} className="max-sm:hidden opacity-70 shrink-0" aria-hidden />}
             </button>
           );
         })}
       </div>
 
-      <span className="text-label-caps uppercase tracking-wide opacity-70 mt-3">{t("theme.appearance")}</span>
-      <div role="radiogroup" aria-label={t("theme.appearanceAria")} className="flex flex-wrap gap-2">
+      <span className="text-label-caps uppercase tracking-wide opacity-70 mt-1 sm:mt-3">{t("theme.appearance")}</span>
+      <div role="radiogroup" aria-label={t("theme.appearanceAria")} className="grid grid-cols-3 gap-1.5 sm:flex sm:flex-wrap sm:gap-2">
         {MODES.map(({ id, labelKey, Icon }) => {
           const selected = id === mode;
           return (
@@ -123,13 +123,13 @@ export function ThemeSwitcher() {
               role="radio"
               aria-checked={selected}
               onClick={() => chooseMode(id)}
-              className={`flex items-center gap-2 rounded-md border px-3 py-2 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-current focus-visible:ring-offset-2 focus-visible:ring-offset-transparent ${
+              className={`flex items-center justify-center gap-1.5 sm:gap-2 rounded-md border px-2 py-1.5 sm:px-3 sm:py-2 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-current focus-visible:ring-offset-2 focus-visible:ring-offset-transparent ${
                 selected ? "border-current bg-current/15" : "border-current/30 hover:bg-current/10"
               }`}
             >
               <Icon size={14} aria-hidden />
-              <span className="text-body-sm">{t(labelKey)}</span>
-              {selected && <Check size={14} className="opacity-70 shrink-0" aria-hidden />}
+              <span className="text-body-sm max-sm:text-[12px] max-sm:leading-tight">{t(labelKey)}</span>
+              {selected && <Check size={14} className="max-sm:hidden opacity-70 shrink-0" aria-hidden />}
             </button>
           );
         })}
