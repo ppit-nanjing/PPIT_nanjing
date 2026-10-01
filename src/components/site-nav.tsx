@@ -10,7 +10,7 @@ import { NotificationBell } from "@/components/notifications/notification-bell";
 import { AnimatedMenuIcon } from "@/components/icons/animated-menu-icon";
 import { CommandPalette, useCommandPalette } from "@/components/command-palette";
 import { NAV_LINKS, DISCOVER_LINKS } from "@/lib/nav-links";
-import { INTRO_REPLAY_EVENT } from "@/lib/intro-gate";
+import { INTRO_FORCE_KEY, INTRO_REPLAY_EVENT } from "@/lib/intro-gate";
 import { useT, useLocale, useLocaleSwitch, type Origin } from "@/lib/i18n/client";
 import { LOCALE_LABEL, LOCALE_SHORT, otherLocale, type Locale } from "@/lib/i18n/config";
 import type { T } from "@/lib/i18n/translate";
@@ -155,15 +155,22 @@ export function SiteNav() {
             <Link
               href="/"
               onClick={(e) => {
-                // Sudah di beranda: klik logo bukan navigasi baru (rutenya sama,
-                // jadi halaman tidak di-remount) - putar ulang intro di tempat
-                // dan kembali ke atas. Dari halaman lain, navigasi biasa; intro
-                // ikut terputar karena halaman beranda di-mount ulang.
+                // Klik logo = satu-satunya pemicu intro saat berpindah rute.
+                // Sudah di beranda: putar ulang di tempat (rutenya sama, jadi
+                // halaman tidak di-remount) + kembali ke atas. Dari halaman
+                // lain: titipkan flag agar beranda memutar intro setelah mount.
                 if (pathname === "/") {
                   e.preventDefault();
                   window.dispatchEvent(new Event(INTRO_REPLAY_EVENT));
                   const reduce = window.matchMedia?.("(prefers-reduced-motion: reduce)")?.matches;
                   window.scrollTo({ top: 0, behavior: reduce ? "auto" : "smooth" });
+                } else {
+                  try {
+                    sessionStorage.setItem(INTRO_FORCE_KEY, "1");
+                  } catch {
+                    // Tanpa storage (mode privasi ketat), intro tidak ikut -
+                    // navigasi tetap jalan.
+                  }
                 }
               }}
               className="inline-flex items-center gap-2 min-w-0 text-[15px] sm:text-headline-sm text-primary uppercase tracking-[0.08em] sm:tracking-[0.12em] whitespace-nowrap"

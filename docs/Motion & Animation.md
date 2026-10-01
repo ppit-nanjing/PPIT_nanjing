@@ -46,7 +46,7 @@ Ornamen Art Deco + Art Nouveau digerakkan **CSS murni**, terpisah dari library M
 | Garis foil emas | `deco-foil` | Kilau emas bergeser di bawah hero. |
 | Intro `/` (`SiteIntro`) | `intro-slat`, `intro-logo-*`, `intro-veil-out` | Desktop 5 lembar, ponsel satu lapisan. Hilang sendiri lewat state akhir animasi. |
 
-**Reduced motion:** aturan global menyusutkan durasi animasi dan transisi jadi ~0. Karena itu **state akhir tiap animasi harus tetap terlihat benar**: bunga yang jatuh (`deco-fall` berakhir transparan) diberi `animation: none` dan diletakkan di `--y`-nya sehingga tetap tampil diam; intro dihapus (`display: none`); sunburst dan foil berhenti. Jangan pernah membiarkan animasi yang runtuh berakhir pada keadaan tak terlihat. Aturan pemutaran intro ada di `src/lib/intro-gate.ts`; intro diputar tiap kali beranda dimuat/dinavigasi, dan klik logo saat sudah di beranda memutar ulang lewat event `ppit:intro-replay`.
+**Reduced motion:** aturan global menyusutkan durasi animasi dan transisi jadi ~0. Karena itu **state akhir tiap animasi harus tetap terlihat benar**: bunga yang jatuh (`deco-fall` berakhir transparan) diberi `animation: none` dan diletakkan di `--y`-nya sehingga tetap tampil diam; intro dihapus (`display: none`); sunburst dan foil berhenti. Jangan pernah membiarkan animasi yang runtuh berakhir pada keadaan tak terlihat. Aturan pemutaran intro ada di `src/lib/intro-gate.ts`; navigasi biasa ke beranda tidak memutar ulang (muat penuh: sekali per sesi), sedangkan klik logo memutarnya — dari halaman lain via flag `ppit-intro-force`, saat sudah di beranda via event `ppit:intro-replay`.
 
 ## Terkait
 
