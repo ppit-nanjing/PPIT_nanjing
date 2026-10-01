@@ -103,6 +103,18 @@ const nextConfig: NextConfig = {
     },
   },
   images: {
+    // Serve images as they are, not through Vercel's /_next/image optimizer. On the
+    // current plan the optimizer answers every request with 402
+    // OPTIMIZED_IMAGE_REQUEST_PAYMENT_REQUIRED (monthly quota used up), which broke
+    // every cover, avatar and the home photo in production (the blur placeholder
+    // stayed on screen forever). The optimizer also needs a cold, on-demand
+    // conversion per width and format, which is slow for readers behind the Great
+    // Firewall. Source files are therefore kept small instead: the home photo is a
+    // static WebP, the cropper downsizes uploads to 1600px (see
+    // components/upload/image-upload-cropper.tsx). remotePatterns is kept for the
+    // day the optimizer is switched back on; the CSP `img-src` is what limits remote
+    // hosts while unoptimized.
+    unoptimized: true,
     remotePatterns: [
       { protocol: "https", hostname: "*.public.blob.vercel-storage.com" },
       { protocol: "https", hostname: "*.googleusercontent.com" },

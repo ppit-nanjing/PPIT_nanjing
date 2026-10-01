@@ -34,13 +34,21 @@ type Props = {
   onValueChange?: (url: string) => void;
 };
 
+const MAX_UPLOAD_EDGE = 1600;
+
 function getCroppedBlob(imageSrc: string, pixelCrop: Area, t: T): Promise<Blob> {
   return new Promise((resolve, reject) => {
     const image = new Image();
     image.onload = () => {
+      // Images are served as uploaded (no image optimizer in front of them), so cap the
+      // longest edge: a phone photo cropped at its natural 4000px would otherwise be a
+      // multi-megabyte cover.
+      const scale = Math.min(1, MAX_UPLOAD_EDGE / Math.max(pixelCrop.width, pixelCrop.height));
+      const outW = Math.max(1, Math.round(pixelCrop.width * scale));
+      const outH = Math.max(1, Math.round(pixelCrop.height * scale));
       const canvas = document.createElement("canvas");
-      canvas.width = pixelCrop.width;
-      canvas.height = pixelCrop.height;
+      canvas.width = outW;
+      canvas.height = outH;
       const ctx = canvas.getContext("2d");
       if (!ctx) {
         reject(new Error(t("upload.errProcess")));
@@ -54,13 +62,13 @@ function getCroppedBlob(imageSrc: string, pixelCrop: Area, t: T): Promise<Blob> 
         pixelCrop.height,
         0,
         0,
-        pixelCrop.width,
-        pixelCrop.height
+        outW,
+        outH
       );
       canvas.toBlob(
         (blob) => (blob ? resolve(blob) : reject(new Error(t("upload.errCrop")))),
         "image/jpeg",
-        0.92
+        0.85
       );
     };
     image.onerror = () => reject(new Error(t("upload.errLoad")));
