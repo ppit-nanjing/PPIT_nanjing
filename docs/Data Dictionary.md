@@ -141,7 +141,7 @@ Kuesioner pasca-acara yang diisi **tanpa akun** dari halaman publik `/events/:sl
 ## 5. Karir
 
 ### JOB_POSTING
-`id`, `title`, `company`, `location`, `type` (enum: `internship`, `full_time`, `part_time`, `volunteer`), `description`, `requirements`, `application_deadline`, `posted_by` FK → USER, `status` (`open`/`closed`).
+`id`, `title`, `company`, `location`, `type` (enum: `internship`, `full_time`, `part_time`, `volunteer`), `description`, `requirements`, `application_deadline`, `posted_by` FK → USER, `status` (`open`/`closed`), `apply_url` (nullable; terisi = lamaran di situs perusahaan, https saja; migrasi `0042`), `external_clicks` (integer, default 0; klik anggota ke `apply_url`).
 
 ### JOB_APPLICATION
 `id`, `job_id` FK, `user_id` FK, `resume_url`, `cover_letter`, `status` (enum: `submitted`, `under_review`, `interview`, `offered`, `rejected`), `review_note` (catatan internal pengurus, tidak pernah tampil ke pelamar; migrasi `0041`), `applied_at`. Tidak ada unique `(job_id, user_id)` — lihat batasan di [Career Flow](./Career%20Flow.md).

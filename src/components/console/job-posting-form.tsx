@@ -1,9 +1,9 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, useState } from "react";
 import type { JobFormState } from "@/app/actions/jobs";
 import { JOB_TYPES, JOB_TYPE_LABEL } from "@/lib/job-application";
-import { CheckboxField, SelectField, TextAreaField, TextField } from "@/components/console/form";
+import { CheckboxField, RadioGroupField, SelectField, TextAreaField, TextField } from "@/components/console/form";
 import { useActionToast } from "@/components/console/submit-button";
 
 // Form buat/ubah lowongan. Client component supaya error validasi dari
@@ -26,12 +26,14 @@ export function JobPostingForm({
     applicationDeadline: string;
     description: string;
     requirements: string;
+    applyUrl: string;
   };
   submitLabel: string;
   isNew: boolean;
 }) {
   const [state, formAction, isPending] = useActionState<JobFormState, FormData>(action, {});
   useActionToast(isPending, state.error, "Lowongan tersimpan.");
+  const [applyMode, setApplyMode] = useState<"internal" | "external">(initial?.applyUrl ? "external" : "internal");
 
   return (
     <form action={formAction} className="flex flex-col gap-5">
@@ -65,6 +67,36 @@ export function JobPostingForm({
       </div>
       <TextAreaField name="description" label="Deskripsi" rows={7} defaultValue={initial?.description} />
       <TextAreaField name="requirements" label="Persyaratan" rows={5} defaultValue={initial?.requirements} />
+
+      <RadioGroupField
+        name="applyMode"
+        label="Cara melamar"
+        value={applyMode}
+        onChange={(v) => setApplyMode(v === "external" ? "external" : "internal")}
+        options={[
+          {
+            value: "internal",
+            label: "Lewat form PPIT",
+            hint: "Pelamar mengunggah CV di sini dan kamu meninjaunya di console.",
+          },
+          {
+            value: "external",
+            label: "Lewat situs perusahaan",
+            hint: "Pelamar diarahkan ke tautan perusahaan. Tidak ada daftar pelamar, status, atau notifikasi di PPIT, hanya jumlah klik.",
+          },
+        ]}
+      />
+      {applyMode === "external" && (
+        <TextField
+          name="applyUrl"
+          type="url"
+          required
+          label="Tautan lamaran perusahaan"
+          placeholder="https://..."
+          defaultValue={initial?.applyUrl}
+          hint="Harus https dan mengarah ke situs resmi perusahaan. Buka tautannya di tab baru dulu dan pastikan halamannya benar (kalau bisa dari jaringan di Tiongkok). Setelah disimpan, tautannya bisa diuji lagi dari halaman ini. Lamaran yang sudah masuk lewat PPIT tetap tersimpan di console."
+        />
+      )}
 
       {isNew && (
         <CheckboxField

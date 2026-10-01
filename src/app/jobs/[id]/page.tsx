@@ -75,13 +75,25 @@ export default async function JobDetailPage({ params }: { params: Promise<{ id: 
     </div>
   ) : job.status === "open" ? (
     <div className="flex flex-col items-center gap-3">
+      {/* Plain <a>, bukan <Link>: rute apply-external menghitung klik, jadi tidak
+          boleh ikut di-prefetch Next. */}
       <a
-        href={`/jobs/${id}/apply`}
-        aria-label={t("jobs.applyAria", { title: job.title })}
+        href={job.applyUrl ? `/jobs/${id}/apply-external` : `/jobs/${id}/apply`}
+        rel={job.applyUrl ? "nofollow" : undefined}
+        aria-label={
+          job.applyUrl
+            ? t("jobs.applyExternalAria", { title: job.title })
+            : t("jobs.applyAria", { title: job.title })
+        }
         className="block w-full text-center bg-primary-container text-on-primary text-label-caps uppercase tracking-wide px-6 py-4 rounded-md hover:bg-primary transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background motion-reduce:transition-none"
       >
-        {t("jobs.applyNow")}
+        {job.applyUrl ? t("jobs.applyExternal") : t("jobs.applyNow")}
       </a>
+      {job.applyUrl && (
+        <p className="text-body-sm text-on-surface-variant text-center">
+          {t("jobs.applyExternalNote", { company: job.company })}
+        </p>
+      )}
       {!session && (
         <p className="text-label-caps text-on-surface-variant text-center">
           {t("jobs.loginToApply")}

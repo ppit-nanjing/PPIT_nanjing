@@ -25,16 +25,28 @@ export function isJobApplicationStatus(value: string): value is JobApplicationSt
   return (JOB_APPLICATION_STATUSES as readonly string[]).includes(value);
 }
 
+function parseUrl(value: string): URL | null {
+  try {
+    return new URL(value);
+  } catch {
+    return null;
+  }
+}
+
 // CV boleh berupa unggahan (https Blob) atau tautan Drive, tapi tidak pernah
 // skema lain (data:, file:, javascript:, ...). Dicek di server sebelum disimpan
 // dan lagi sebelum dirender sebagai tautan di console.
 export function isHttpUrl(value: string): boolean {
-  try {
-    const { protocol } = new URL(value);
-    return protocol === "https:" || protocol === "http:";
-  } catch {
-    return false;
-  }
+  const u = parseUrl(value);
+  return !!u && (u.protocol === "https:" || u.protocol === "http:");
+}
+
+// Tautan lamaran eksternal: https saja, tanpa kredensial tertanam, dan tidak
+// kepanjangan. Tautan ini dipakai server untuk mengalihkan anggota ke luar.
+export function isHttpsUrl(value: string): boolean {
+  if (value.length > 2048) return false;
+  const u = parseUrl(value);
+  return !!u && u.protocol === "https:" && !u.username && !u.password;
 }
 
 export const JOB_TYPES = ["internship", "full_time", "part_time", "volunteer"] as const;

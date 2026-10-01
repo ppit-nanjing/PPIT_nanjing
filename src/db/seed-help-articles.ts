@@ -328,6 +328,12 @@ Memasang lowongan (/console/jobs → Tambah Lowongan)
 - Kotak "Langsung buka untuk pelamar": kalau dicentang, lowongan langsung tampil di halaman Karir publik. Kalau dikosongkan, lowongan tersimpan tertutup: tidak tampil di daftar dan tidak bisa dilamar, tapi halamannya TETAP bisa dibaca siapa pun yang punya tautannya. Jadi bukan draf rahasia, dan jangan bagikan tautannya sebelum dibuka.
 - Batas lamaran hanya label yang tampil ke pelamar, lowongan TIDAK tertutup sendiri setelah tanggalnya lewat. Tutup manual.
 
+Cara melamar (pilih satu per lowongan)
+- Lewat form PPIT (bawaan): pelamar mengunggah CV dan cover letter, kamu meninjaunya di console seperti di bawah.
+- Lewat situs perusahaan: isi tautan https resmi milik perusahaan. Anggota yang login dan sensusnya lengkap lalu klik "Lamar di Situs Perusahaan" dan dialihkan ke sana. PPIT TIDAK menerima data pelamar sama sekali, jadi tidak ada daftar pelamar, status, atau notifikasi; yang tercatat hanya jumlah klik di daftar lowongan. Data yang dikirim pelamar di situs itu menjadi urusan perusahaan.
+- Sebelum menyimpan tautan eksternal: pastikan itu situs resmi perusahaan (bukan formulir pribadi seseorang), dan coba bukanya, kalau bisa dari jaringan di Tiongkok, karena layanan Google sering tidak terbuka dari sana. Tautan ke situs PPIT sendiri ditolak.
+- Mengganti cara melamar dari form PPIT ke tautan tidak menghapus lamaran yang sudah masuk; tetap bisa ditinjau di console.
+
 Menutup, membuka, menghapus lowongan
 - Tutup: hilang dari halaman publik dan tidak bisa dilamar lagi, termasuk lewat tautan lama. Lamaran yang sudah masuk tetap ada. Ini pilihan normal kalau lowongan sudah selesai.
 - Buka lagi: tampil dan bisa dilamar lagi.
