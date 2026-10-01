@@ -152,10 +152,10 @@ export function SiteNav() {
           >
             <Link
               href="/"
-              className="inline-flex items-center gap-2 text-body-lg sm:text-headline-sm text-primary uppercase tracking-[0.12em] shrink-0 whitespace-nowrap"
+              className="inline-flex items-center gap-2 min-w-0 text-[15px] sm:text-headline-sm text-primary uppercase tracking-[0.08em] sm:tracking-[0.12em] whitespace-nowrap"
             >
-              <span aria-hidden="true" className="brand-logo h-8 md:h-9" />
-              <span>PPIT Nanjing</span>
+              <span aria-hidden="true" className="brand-logo h-8 md:h-9 shrink-0" />
+              <span className="truncate">PPIT Nanjing</span>
             </Link>
 
             {/* Inline links: desktop (lg) and up only - narrower viewports use
@@ -256,7 +256,9 @@ export function SiteNav() {
                   </div>
                 )}
               </div>
-              <LanguageToggle compact={compact} locale={locale} switchLocale={switchLocale} t={t} />
+              <div className="max-sm:hidden">
+                <LanguageToggle compact={compact} locale={locale} switchLocale={switchLocale} t={t} />
+              </div>
               <NotificationBell />
               <AccountMenu compact={compact} />
               <button
