@@ -20,11 +20,11 @@ const FONT_CATEGORY_LABEL = {
 } as const;
 
 export const DESCRIPTION_FONT_OPTIONS = [
-  { key: "jakarta", category: "sans", label: "Jakarta Sans", hint: "Baku situs", cssVar: "var(--font-sans)" },
+  { key: "jakarta", category: "sans", label: "Jakarta Sans", hint: "Baku situs", cssVar: "var(--font-jakarta)" },
   { key: "poppins", category: "sans", label: "Poppins", hint: "Ramah & serbaguna", cssVar: "var(--font-poppins)" },
   { key: "inter", category: "sans", label: "Inter", hint: "Netral, dibuat untuk layar", cssVar: "var(--font-inter)" },
   { key: "manrope", category: "sans", label: "Manrope", hint: "Geometris & lapang", cssVar: "var(--font-manrope)" },
-  { key: "spectral", category: "serif", label: "Spectral", hint: "Serif situs, formal", cssVar: "var(--font-serif)" },
+  { key: "spectral", category: "serif", label: "Spectral", hint: "Serif situs, formal", cssVar: "var(--font-spectral)" },
   { key: "playfair", category: "serif", label: "Playfair Display", hint: "Kontras tinggi, mewah", cssVar: "var(--font-playfair)" },
   { key: "lora", category: "serif", label: "Lora", hint: "Serif hangat, mudah dibaca", cssVar: "var(--font-lora)" },
   { key: "merriweather", category: "serif", label: "Merriweather", hint: "Serif tebal & mantap", cssVar: "var(--font-merriweather)" },

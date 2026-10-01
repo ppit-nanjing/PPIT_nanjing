@@ -1,5 +1,8 @@
 import type { Metadata } from "next";
 import {
+  Cinzel,
+  Josefin_Sans,
+  Cormorant_Garamond,
   Plus_Jakarta_Sans,
   Spectral,
   Poppins,
@@ -41,21 +44,31 @@ import "./globals.css";
 // request to fonts.googleapis.com ever happens (important for reachability from
 // mainland China, see docs/Tech Stack.md).
 //
-// Body + UI face: Plus Jakarta Sans. Commissioned for Jakarta's city branding -
-// an Indonesian-rooted humanist sans that stays warm at reading sizes and holds
-// up in the dense console tables. Replaces Inter (see docs/Typography.md).
+// Art Deco + Art Nouveau type system (redesign 2026-10):
+// - Cinzel: display face for headings, eyebrows/labels, buttons, statistic numerals.
+// - Josefin Sans: body and UI text, including the dense console tables.
+// - Cormorant Garamond (italic only): leadership quotes.
+// All three are variable fonts, so no `weight` list: one clean query per font
+// avoids the discrete-weight resolver failure documented at Manrope below.
+const cinzel = Cinzel({ variable: "--font-cinzel", subsets: ["latin"], weight: "variable" });
+const josefin = Josefin_Sans({ variable: "--font-josefin", subsets: ["latin"], weight: "variable" });
+const cormorant = Cormorant_Garamond({ variable: "--font-cormorant", subsets: ["latin"], style: "italic", weight: "variable" });
+
+// The former site faces (Plus Jakarta Sans body, Spectral headings). They are no
+// longer the site typography; they stay loaded ONLY so the event-description font
+// picker can still offer them (src/lib/event-description-style.ts).
+// preload: false, so a visitor downloads them only when an event actually uses one.
 const jakarta = Plus_Jakarta_Sans({
   variable: "--font-jakarta",
   subsets: ["latin"],
   weight: ["400", "500", "600", "700", "800"],
+  preload: false,
 });
-
-// Serif display face for headings - Nanjing as the Jiangnan literary capital.
-// Self-hosted through next/font for the same China-reachability reason as Jakarta.
 const spectral = Spectral({
   variable: "--font-spectral",
   subsets: ["latin"],
   weight: ["400", "600", "800"],
+  preload: false,
 });
 
 // Optional per-event description typography (src/lib/event-description-style.ts)
@@ -140,7 +153,7 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
     <html
       lang={locale}
       suppressHydrationWarning
-      className={`${jakarta.variable} ${spectral.variable} ${poppins.variable} ${inter.variable} ${manrope.variable} ${playfair.variable} ${lora.variable} ${merriweather.variable} ${bebasNeue.variable} ${anton.variable} ${oswald.variable} ${fredoka.variable} ${baloo.variable} ${quicksand.variable} ${caveat.variable} ${pacifico.variable} ${dancingScript.variable} ${kalam.variable} ${indieFlower.variable} ${permanentMarker.variable} ${greatVibes.variable} ${shadowsIntoLight.variable} ${jetbrainsMono.variable} ${spaceMono.variable} ${plexMono.variable} scroll-smooth`}
+      className={`${cinzel.variable} ${josefin.variable} ${cormorant.variable} ${jakarta.variable} ${spectral.variable} ${poppins.variable} ${inter.variable} ${manrope.variable} ${playfair.variable} ${lora.variable} ${merriweather.variable} ${bebasNeue.variable} ${anton.variable} ${oswald.variable} ${fredoka.variable} ${baloo.variable} ${quicksand.variable} ${caveat.variable} ${pacifico.variable} ${dancingScript.variable} ${kalam.variable} ${indieFlower.variable} ${permanentMarker.variable} ${greatVibes.variable} ${shadowsIntoLight.variable} ${jetbrainsMono.variable} ${spaceMono.variable} ${plexMono.variable} scroll-smooth`}
     >
       <body className="antialiased">
         {/* Applies the saved city theme + colour mode before anything paints.
