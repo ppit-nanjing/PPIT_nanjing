@@ -30,6 +30,9 @@ export default async function ConsoleJobsPage() {
     .groupBy(jobPostings.id)
     .orderBy(desc(jobPostings.createdAt));
 
+  // Slug artikel Help Center tetap "karier" walau judul dan menunya kini
+  // "Lowongan": slug adalah kunci database (getGuide, tombol Panduan, URL
+  // /console/docs/karier), bukan label, jadi jangan "dibetulkan" tanpa migrasi.
   const [guide, rows] = await Promise.all([getGuide("karier"), rowsQuery]);
 
   return (
