@@ -6,7 +6,7 @@ import { Upload, Loader2, ImageIcon, X, Crop, FileText } from "lucide-react";
 import { useT } from "@/lib/i18n/client";
 import type { T } from "@/lib/i18n/translate";
 import { readUploadResult } from "./upload-error";
-import { compressImage } from "@/lib/image-compress";
+import { AVATAR_MAX_EDGE, CROP_MAX_EDGE, compressImage, imageExtension } from "@/lib/image-compress";
 
 type Props = {
   // Uncontrolled (form-submit) mode: a hidden input named `name` carries the
@@ -34,16 +34,14 @@ type Props = {
   onValueChange?: (url: string) => void;
 };
 
-const MAX_UPLOAD_EDGE = 1600;
-
-function getCroppedBlob(imageSrc: string, pixelCrop: Area, t: T): Promise<Blob> {
+function getCroppedBlob(imageSrc: string, pixelCrop: Area, t: T, maxEdge: number): Promise<Blob> {
   return new Promise((resolve, reject) => {
     const image = new Image();
     image.onload = () => {
       // Images are served as uploaded (no image optimizer in front of them), so cap the
       // longest edge: a phone photo cropped at its natural 4000px would otherwise be a
       // multi-megabyte cover.
-      const scale = Math.min(1, MAX_UPLOAD_EDGE / Math.max(pixelCrop.width, pixelCrop.height));
+      const scale = Math.min(1, maxEdge / Math.max(pixelCrop.width, pixelCrop.height));
       const outW = Math.max(1, Math.round(pixelCrop.width * scale));
       const outH = Math.max(1, Math.round(pixelCrop.height * scale));
       const canvas = document.createElement("canvas");
@@ -127,13 +125,7 @@ export function ImageUploadCropper({
       const isImage = rawBlob.type.startsWith("image/");
       const blob = folder === "avatar" || !isImage ? rawBlob : await compressImage(rawBlob);
       const origExt = filename.match(/\.([A-Za-z0-9]+)$/)?.[1]?.toLowerCase();
-      const ext = !isImage
-        ? origExt ?? "bin"
-        : blob.type === "image/webp"
-          ? "webp"
-          : blob.type === "image/png"
-            ? "png"
-            : "jpg";
+      const ext = !isImage ? origExt ?? "bin" : imageExtension(blob.type);
       const base = filename.replace(/\.[^.]+$/, "") || "image";
       const fd = new FormData();
       fd.append("file", new File([blob], `${base}-${Date.now()}.${ext}`, { type: blob.type }));
@@ -185,7 +177,10 @@ export function ImageUploadCropper({
   async function handleCropConfirm() {
     if (!previewUrl || !croppedAreaPixels) return;
     try {
-      const blob = await getCroppedBlob(previewUrl, croppedAreaPixels, t);
+      // Avatars are shown at most 192 CSS px (24-80 almost everywhere), so they
+      // get a much lower cap than covers and album photos.
+      const maxEdge = folder === "avatar" ? AVATAR_MAX_EDGE : CROP_MAX_EDGE;
+      const blob = await getCroppedBlob(previewUrl, croppedAreaPixels, t, maxEdge);
       await uploadBlob(blob, file?.name ?? "image.jpg");
       setCropping(false);
     } catch (e) {
