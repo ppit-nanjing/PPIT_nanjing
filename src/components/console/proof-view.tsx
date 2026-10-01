@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Image from "next/image";
 import { FileText, TriangleAlert, ExternalLink, Download } from "lucide-react";
+import { PRIVATE_FILE_PREFIX } from "@/lib/private-files";
 
 // Menampilkan berkas yang diunggah peserta/peminjam (Pernyataan Peminjam
 // bertanda tangan, bukti mahasiswa aktif, bukti transfer) di panel admin, dengan
@@ -13,9 +14,12 @@ import { FileText, TriangleAlert, ExternalLink, Download } from "lucide-react";
 //  - blob publik PDF      -> tombol Pratinjau (iframe inline, dimuat saat diklik)
 //    + Buka + Unduh (?download=1 supaya Vercel Blob kirim attachment)
 //  - blob publik dokumen lain -> tautan Buka + Unduh
-//  - route internal /api/… (kartu mahasiswa privat) -> <img> biasa / tautan Buka
-//    (browser bawa cookie sesi; kalau admin tak punya akses `reports`, gambarnya
-//    gagal dan kita jatuh ke tautan)
+//  - berkas private /api/files/… (bukti transfer, CV, Pernyataan Peminjam, dst.)
+//    -> sama seperti blob publik: thumbnail <img> / pratinjau PDF inline +
+//    Buka + Unduh (?download=1). Same-origin, jadi browser membawa cookie sesi;
+//    header /api/files mengizinkan framing dari situs sendiri (next.config.ts)
+//  - route internal lain /api/… (kartu mahasiswa sensus) -> <img> biasa / tautan
+//    Buka (kalau admin tak punya aksesnya, gambar gagal dan kita jatuh ke tautan)
 //  - path relatif situs (/pernyataan-peminjam.pdf dll) -> sama seperti di atas
 //  - selain itu (file://, C:\…, \\server\, teks acak) -> peringatan merah.
 //    Nilai begini muncul kalau unggahan gagal lalu nilai path lokal ikut tersimpan.
@@ -41,6 +45,7 @@ export function ProofView({ url, label }: { url: string | null | undefined; labe
   const isBlob = BLOB_RE.test(clean);
   const isSameOriginPath = clean.startsWith("/") && !clean.startsWith("//");
   const isInternal = clean.startsWith("/api/");
+  const isPrivateFile = clean.startsWith(PRIVATE_FILE_PREFIX);
 
   // Bukan sumber yang bisa dibuka admin. statementUrl / proofUrl divalidasi
   // server-side (blob atau /api/…), jadi selain itu = data rusak / path lokal.
@@ -52,12 +57,12 @@ export function ProofView({ url, label }: { url: string | null | undefined; labe
     );
   }
 
-  // Vercel Blob melayani berkas inline; `?download=1` memaksa attachment supaya
-  // admin bisa menyimpannya. Route internal & path statis tak punya opsi ini —
-  // tautan Unduh-nya buka biasa, admin simpan lewat menu browser. Query harus
-  // sebelum fragment (#…), makanya di-split dulu.
+  // Vercel Blob dan proxy /api/files melayani berkas inline; `?download=1`
+  // memaksa attachment supaya admin bisa menyimpannya. Route internal lain &
+  // path statis tak punya opsi ini — tautan Unduh-nya buka biasa, admin simpan
+  // lewat menu browser. Query harus sebelum fragment (#…), makanya di-split dulu.
   const [cleanNoFrag] = clean.split("#");
-  const downloadHref = isBlob
+  const downloadHref = isBlob || isPrivateFile
     ? `${cleanNoFrag}${cleanNoFrag.includes("?") ? "&" : "?"}download=1`
     : cleanNoFrag;
 
@@ -75,7 +80,7 @@ export function ProofView({ url, label }: { url: string | null | undefined; labe
   const downloadLink = (
     <a
       href={downloadHref}
-      target={isBlob ? undefined : "_blank"}
+      target={isBlob || isPrivateFile ? undefined : "_blank"}
       rel="noopener noreferrer"
       className="inline-flex items-center gap-1 text-on-surface-variant hover:text-primary-container normal-case"
       title={`Unduh ${label}`}
@@ -84,13 +89,14 @@ export function ProofView({ url, label }: { url: string | null | undefined; labe
     </a>
   );
 
-  // PDF: pratinjau inline lewat <iframe>. Cuma URL blob publik Vercel yang bisa
-  // di-frame — berkas dari origin sendiri (/public, /api/…) kena
+  // PDF: pratinjau inline lewat <iframe>. Yang bisa di-frame cuma URL blob publik
+  // Vercel dan proxy /api/files (header-nya sendiri mengizinkan frame dari situs
+  // ini). Berkas origin sendiri lain (/public, /api/sensus/…) kena
   // `X-Frame-Options: DENY` + `frame-ancestors 'none'` dari header global, jadi
-  // buat itu tampilkan Buka/Unduh saja. Unggahan Pernyataan Peminjam yang asli
-  // selalu berujung URL blob, jadi jalur pratinjau yang jalan di produksi.
+  // buat itu tampilkan Buka/Unduh saja.
   const isPdf = (isBlob || isSameOriginPath) && PDF_EXT_RE.test(cleanNoFrag);
-  const canFramePdf = isPdf && /^https:\/\/[a-z0-9-]+\.public\.blob\.vercel-storage\.com\//i.test(clean);
+  const canFramePdf =
+    isPdf && (isPrivateFile || /^https:\/\/[a-z0-9-]+\.public\.blob\.vercel-storage\.com\//i.test(clean));
 
   if (isPdf) {
     return (

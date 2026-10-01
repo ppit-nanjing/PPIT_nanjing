@@ -15,9 +15,14 @@ function csvCell(value: unknown): string {
   return s;
 }
 
-export async function GET() {
+export async function GET(req: Request) {
   await auth();
   await requireModuleAccess("membership");
+  // Lampiran Join Us tersimpan di store private sebagai path relatif
+  // (/api/files/membership/…). Di CSV path relatif tak bisa diklik, jadi
+  // dijadikan URL penuh (tetap butuh login pengurus untuk membukanya).
+  const origin = new URL(req.url).origin;
+  const absUrl = (v: unknown) => (typeof v === "string" && v.startsWith("/api/") ? origin + v : v);
   const [apps, fields] = await Promise.all([
     db.select().from(membershipApplications).orderBy(desc(membershipApplications.submittedAt)),
     db.select().from(membershipFormFields).orderBy(asc(membershipFormFields.orderIndex)),
@@ -65,7 +70,7 @@ export async function GET() {
             return Array.isArray(ans) ? ans.join(", ") : ans ? String(ans) : "";
           });
         }
-        return [csvCell(responses[f.key ?? ""])];
+        return [csvCell(absUrl(responses[f.key ?? ""]))];
       }),
     ];
     lines.push(row.map(csvCell).join(","));

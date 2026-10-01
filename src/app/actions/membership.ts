@@ -4,6 +4,7 @@ import { asc, eq, sql } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { auth } from "@/auth";
+import { scrubForeignPrivateUrl } from "@/lib/private-files";
 import { db } from "@/db";
 import {
   auditLogs,
@@ -71,7 +72,9 @@ export async function submitMembershipApplication(recruitmentPeriodId: string, f
       // Multiple checkbox values arrive as repeated entries; store as a JSON array.
       responses[f.key] = formData.getAll(f.key).map((v) => String(v).trim()).filter(Boolean);
     } else {
-      const v = String(formData.get(f.key) ?? "").trim();
+      // Lampiran (/api/files/membership/…) hanya boleh berkas yang pengirim ini
+      // unggah sendiri; yang lain dibuang (field wajib lalu menolak).
+      const v = scrubForeignPrivateUrl(String(formData.get(f.key) ?? "").trim(), "membership", session?.user?.id);
       responses[f.key] = f.type === "checkbox" ? (v === "true" ? "true" : "false") : v;
     }
   }

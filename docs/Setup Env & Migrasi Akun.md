@@ -17,6 +17,7 @@ Sebelumnya `.env.example` hanya memuat 11 dari 13 variabel yang benar-benar diba
 | `AUTH_GOOGLE_ID` | **WAJIB** | Google Cloud Console → APIs & Services → Credentials → OAuth client | Vercel + `.env` lokal |
 | `AUTH_GOOGLE_SECRET` | **WAJIB** | Sama, di layar yang sama | Vercel + `.env` lokal |
 | `BLOB_READ_WRITE_TOKEN` | **WAJIB untuk sensus** | Vercel → Storage → Blob store → Connect ke project (disuntik otomatis di produksi) | Vercel (otomatis) + `.env` lokal (salin manual) |
+| `PRIVATE_READ_WRITE_TOKEN` | **WAJIB untuk dokumen pribadi** | Vercel → Storage → store Blob **Private** (terpisah dari yang publik) → Connect ke project; Vercel menyuntiknya dengan prefix `PRIVATE_` | Vercel (otomatis) + `.env` lokal (salin manual) |
 | `CRON_SECRET` | **WAJIB di produksi** | Dibuat sendiri, lihat di bawah | Vercel |
 | `MAINTENANCE_MODE` | Opsional | — (isi `"true"`/`"false"`) | Vercel |
 | `GROQ_API_KEY` | Opsional | https://console.groq.com/keys | Vercel + `.env` lokal |
@@ -47,6 +48,39 @@ Guard bersama ada di `src/lib/cron-auth.ts` (dipakai `/api/cron/publish-events` 
 Dulu dampaknya dinilai terbatas: `publish-events` hanya menerbitkan acara yang `scheduledPublishAt`-nya memang sudah lewat, dan `mark-overdue` hanya menandai pinjaman yang sudah lewat jatuh tempo (dan memberi tahu peminjamnya). Tetap saja endpoint yang mengubah data tidak boleh bisa dipicu tanpa autentikasi, makanya sekarang dijaga.
 
 Jadwalnya sendiri baru ditambahkan lewat [`vercel.json`](../vercel.json) — sebelumnya berkas itu **tidak ada**, jadi cron-nya tidak pernah berjalan otomatis sama sekali dan publikasi terjadwal diam-diam tidak terjadi.
+
+## Dokumen pribadi: store Blob private
+
+Berkas yang berisi data pribadi tidak boleh punya URL publik, walau URL-nya acak. Semuanya disimpan di store Blob **private** (`PRIVATE_READ_WRITE_TOKEN`) dan hanya dibuka lewat proxy yang memeriksa sesi login:
+
+| Folder upload | Isi | Proxy | Siapa yang boleh membuka |
+|---|---|---|---|
+| `sensus` | Kartu mahasiswa / LOA sensus | `/api/sensus/student-card/…` | Pemilik; modul `sensus` / `sensus-verify` |
+| `payment-proof` | Bukti transfer peserta acara | `/api/files/payment-proof/…` | Pemilik; kapabilitas acara `event.manageFinance`; modul `organization` |
+| `event-doc` | Bukti mahasiswa / LOA peserta acara | `/api/files/event-doc/…` | Pemilik; kapabilitas acara `event.viewRegistrants` |
+| `resume` | CV pelamar lowongan | `/api/files/resume/…` | Pemilik; modul `career` |
+| `membership` | Lampiran form Join Us | `/api/files/membership/…` | Pemilik; modul `membership` |
+| `borrow-doc` | Pernyataan Peminjam bertanda tangan | `/api/files/borrow-doc/…` | Pemilik (kalau login); modul `inventory`. Peminjam pihak luar tidak punya akun, jadi hanya Logistik yang membukanya |
+
+Aturan lengkap ada di `src/lib/private-file-access.ts`; daftar folder dan pembantu URL di `src/lib/private-files.ts`. Berkas pengguna yang login disimpan di `<folder>/<userId>/…` (segmen kedua = pemilik); berkas lama hasil migrasi tidak punya segmen itu, jadi pemiliknya dicari lewat baris database yang menyimpannya. Respons proxy `Cache-Control: private, no-store`, dan `?download=1` memaksa unduhan (tombol "Unduh" di konsol). PDF boleh dipratinjau di <iframe> dari situs sendiri (aturan header `/api/files/:path*` di `next.config.ts`).
+
+Unggahan ke folder-folder ini **gagal keras** kalau store private bermasalah, tidak jatuh ke store publik (hanya `sensus` yang masih punya fallback itu, perilaku lama).
+
+CSV ekspor pendaftar memuat URL penuh ke berkas (tetap butuh login pengurus untuk membukanya).
+
+### Memindahkan dokumen lama dari store publik
+
+Sebelum ini folder tersebut ada di store publik. Skrip sekali-jalan `src/db/migrate-private-docs.ts` memindahkannya (jalankan **setelah** proxy `/api/files` terpasang di produksi):
+
+```bash
+npx tsx --env-file=.env src/db/migrate-private-docs.ts                   # dry run, tidak menulis apa pun
+npx tsx --env-file=.env src/db/migrate-private-docs.ts --apply --limit 2 # coba 2 berkas dulu
+npx tsx --env-file=.env src/db/migrate-private-docs.ts --apply           # sisanya
+npx tsx --env-file=.env src/db/migrate-private-docs.ts --verify          # cek ulang, hanya baca
+npx tsx --env-file=.env src/db/migrate-private-docs.ts --delete-public --yes   # LANGKAH TERAKHIR
+```
+
+Tiap berkas diunduh dari store publik, diunggah ke store private dengan pathname yang sama, dibaca balik dan dibandingkan byte per byte (ukuran + sha256) sebelum baris database disentuh; `UPDATE`-nya dijaga nilai lamanya sehingga baris yang berubah di tengah jalan dilewati. Skrip menulis peta URL lama → baru (`private-docs-map-….json`) untuk rollback. `--delete-public` hanya menghapus salinan publik yang kembarannya di store private identik dan tidak lagi dipakai baris database mana pun; tanpa `--yes` ia hanya melaporkan.
 
 ## Urutan migrasi akun
 

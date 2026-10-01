@@ -157,9 +157,24 @@ const nextConfig: NextConfig = {
         ],
       },
       {
+        // Dokumen pribadi (bukti transfer, CV, Pernyataan Peminjam, dst.) dilayani
+        // proxy ini dan dipratinjau sebagai PDF di <iframe> di konsol, jadi framing
+        // dari situs sendiri dibuka (SAMEORIGIN + frame-ancestors 'self'). Sengaja
+        // TANPA CSP penuh: `object-src 'none'` dkk di respons PDF bisa memblokir
+        // penampil PDF bawaan browser. Isinya hanya berkas unggahan dari allowlist
+        // tipe (tanpa HTML/SVG) dan nosniff, jadi tak ada skrip yang tereksekusi
+        // di origin ini. Terpisah dari aturan lain (catch-all mengecualikan
+        // prefix ini) supaya tak ada header ganda.
+        source: "/api/files/:path*",
+        headers: [
+          { key: "Content-Security-Policy", value: "frame-ancestors 'self'" },
+          ...securityHeaders("()", "SAMEORIGIN"),
+        ],
+      },
+      {
         // Everything else: camera fully blocked (negative lookahead keeps the
-        // scanner and design-lab routes out of this rule).
-        source: "/((?!events/[^/]+/scan|design-lab/).*)",
+        // scanner, design-lab and private-file routes out of this rule).
+        source: "/((?!events/[^/]+/scan|design-lab/|api/files/).*)",
         headers: [{ key: "Content-Security-Policy", value: buildCsp() }, ...securityHeaders("()")],
       },
     ];
