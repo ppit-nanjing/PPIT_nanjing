@@ -66,7 +66,23 @@ export async function applyToJob(jobId: string, formData: FormData) {
 
 // ---------- Console (modul "career") ----------
 
-export type JobFormState = { error?: string };
+// Isian form lowongan sebagaimana dikirim, dikembalikan bersama error validasi.
+export type JobFormValues = {
+  title: string;
+  company: string;
+  location: string;
+  type: string;
+  applicationDeadline: string;
+  description: string;
+  requirements: string;
+  applyMode: string;
+  applyUrl: string;
+  open: boolean;
+};
+
+// nonce berganti di setiap error; form memakainya sebagai key supaya dibuat
+// ulang dengan isian yang dikembalikan (lihat JobPostingForm).
+export type JobFormState = { error?: string; values?: JobFormValues; nonce?: string };
 
 // Bentuk YYYY-MM-DD saja tidak cukup ("2026-13-45" lolos); round-trip lewat Date
 // memastikan tanggalnya ada, karena Postgres akan melempar error untuk yang tidak valid.
@@ -114,7 +130,6 @@ export async function upsertJobPosting(
   formData: FormData,
 ): Promise<JobFormState> {
   const session = await requireModuleAccess("career");
-  if (existingId && !UUID_RE.test(existingId)) return { error: "Lowongan tidak ditemukan." };
 
   const title = String(formData.get("title") ?? "").trim();
   const company = String(formData.get("company") ?? "").trim();
@@ -123,22 +138,52 @@ export async function upsertJobPosting(
   const description = String(formData.get("description") ?? "").trim();
   const requirements = String(formData.get("requirements") ?? "").trim();
   const deadline = String(formData.get("applicationDeadline") ?? "").trim();
+  const applyMode = String(formData.get("applyMode") ?? "internal") === "external" ? "external" : "internal";
+  const applyUrlRaw = String(formData.get("applyUrl") ?? "").trim();
 
-  if (!title) return { error: "Judul lowongan wajib diisi." };
-  if (!company) return { error: "Nama perusahaan wajib diisi." };
-  if (!isJobType(type)) return { error: "Pilih jenis pekerjaan." };
-  if (deadline && !isValidIsoDate(deadline)) return { error: "Batas lamaran bukan tanggal yang valid." };
+  // React 19 mereset kolom form begitu aksi selesai, termasuk saat aksi
+  // mengembalikan error. Isian yang dikirim ikut dikembalikan (dan form dibuat
+  // ulang dengan nonce baru) supaya setiap kolom, termasuk <select> yang tidak
+  // mengikuti perubahan defaultValue, kembali ke yang tadi diketik. Tanpa ini
+  // satu salah ketik di tautan mengosongkan seluruh form, dan percobaan
+  // berikutnya bisa terkirim tanpa pilihan "Cara melamar" sehingga tautan
+  // diam-diam hilang.
+  const submitted: JobFormValues = {
+    title,
+    company,
+    location,
+    type,
+    applicationDeadline: deadline,
+    description,
+    requirements,
+    applyMode,
+    applyUrl: applyUrlRaw,
+    open: formData.get("open") === "on",
+  };
+  const fail = (error: string): JobFormState => ({ error, values: submitted, nonce: crypto.randomUUID() });
+
+  if (existingId && !UUID_RE.test(existingId)) return fail("Lowongan tidak ditemukan.");
+  if (!title) return fail("Judul lowongan wajib diisi.");
+  if (!company) return fail("Nama perusahaan wajib diisi.");
+  if (!isJobType(type)) return fail("Pilih jenis pekerjaan.");
+  if (deadline && !isValidIsoDate(deadline)) return fail("Batas lamaran bukan tanggal yang valid.");
 
   // "Cara melamar": form PPIT (applyUrl null) atau situs perusahaan. Tautannya
   // nanti dipakai server untuk mengalihkan anggota ke luar, jadi dicek ketat di sini.
   let applyUrl: string | null = null;
-  if (String(formData.get("applyMode") ?? "internal") === "external") {
-    const raw = String(formData.get("applyUrl") ?? "").trim();
-    if (!isHttpsUrl(raw)) return { error: "Tautan lamaran harus berupa alamat https yang valid." };
-    const url = new URL(raw);
+  // Isian tautan hanya dirender (dan dikirim) saat "Lewat situs perusahaan"
+  // dipilih. Tautan terisi dengan mode lain berarti pilihannya tidak ikut
+  // terkirim; menyimpannya sebagai form PPIT berarti membuang tautan tanpa
+  // pesan, jadi ditolak dengan jelas.
+  if (applyMode !== "external" && applyUrlRaw) {
+    return fail('Tautan terisi, tetapi "Cara melamar" bukan "Lewat situs perusahaan". Pilih opsi itu atau kosongkan tautannya.');
+  }
+  if (applyMode === "external") {
+    if (!isHttpsUrl(applyUrlRaw)) return fail("Tautan lamaran harus berupa alamat https yang valid.");
+    const url = new URL(applyUrlRaw);
     // Tautan ke PPIT sendiri akan membuat pengalihan berputar.
     if ((await ownHosts()).has(url.host.toLowerCase())) {
-      return { error: "Tautan harus mengarah ke situs perusahaan, bukan ke situs PPIT." };
+      return fail("Tautan harus mengarah ke situs perusahaan, bukan ke situs PPIT.");
     }
     // Simpan bentuk ternormalisasi: itulah yang sebenarnya sudah divalidasi.
     // String mentah bisa memuat karakter yang dibuang/di-encode oleh parser URL
@@ -170,7 +215,7 @@ export async function upsertJobPosting(
       .set(values)
       .where(eq(jobPostings.id, existingId))
       .returning({ id: jobPostings.id });
-    if (!updated) return { error: "Lowongan tidak ditemukan (mungkin sudah dihapus)." };
+    if (!updated) return fail("Lowongan tidak ditemukan (mungkin sudah dihapus).");
     jobId = updated.id;
   } else {
     // Lowongan baru langsung dibuka kecuali kotaknya sengaja dikosongkan.
@@ -181,7 +226,7 @@ export async function upsertJobPosting(
       .values({
         ...values,
         postedBy: session.user.id,
-        status: formData.get("open") === "on" ? "open" : "closed",
+        status: submitted.open ? "open" : "closed",
       })
       .returning({ id: jobPostings.id });
     jobId = created.id;
