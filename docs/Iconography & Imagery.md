@@ -38,6 +38,7 @@ Gambar dikirim **apa adanya**, tanpa optimizer Vercel (`images.unoptimized: true
 - Aset statis (mis. foto kabinet): simpan sebagai **WebP** (kualitas ~80, lebar sesuai kebutuhan) di `src/assets/images/` dan `import` secara statis, supaya `next/image` tahu ukurannya dan membuat blur placeholder saat build. Jangan taruh di `public/` bila tidak ingin dapat diunduh di alamat lama.
 - Unggahan admin lewat `ImageUploadCropper`: sisi terpanjang dibatasi **1600px**, JPEG kualitas 0,85.
 - Pratinjau (`PhotoZoom`) memakai berkas yang sama dengan gambar kecilnya, jadi terbuka dari cache tanpa unduhan kedua.
+- **Belum tertangani:** unggahan galeri (`MultiPhotoUpload`) belum dibatasi ukurannya, dan beberapa avatar lama di Blob berukuran 1-1,4 MB (tampil di 32-80px). Keduanya sekarang dikirim apa adanya; kecilkan lewat pembatasan di `/api/upload` atau helper bersama dan unggah ulang avatar yang besar.
 
 ## Terkait
 

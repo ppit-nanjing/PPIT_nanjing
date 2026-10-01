@@ -54,6 +54,7 @@ function getCroppedBlob(imageSrc: string, pixelCrop: Area, t: T): Promise<Blob> 
         reject(new Error(t("upload.errProcess")));
         return;
       }
+      ctx.imageSmoothingQuality = "high";
       ctx.drawImage(
         image,
         pixelCrop.x,
@@ -68,7 +69,8 @@ function getCroppedBlob(imageSrc: string, pixelCrop: Area, t: T): Promise<Blob> 
       canvas.toBlob(
         (blob) => (blob ? resolve(blob) : reject(new Error(t("upload.errCrop")))),
         "image/jpeg",
-        0.85
+        // Only trade quality for size when the image was actually shrunk.
+        scale < 1 ? 0.85 : 0.92
       );
     };
     image.onerror = () => reject(new Error(t("upload.errLoad")));
