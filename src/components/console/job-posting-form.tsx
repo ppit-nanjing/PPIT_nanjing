@@ -10,12 +10,13 @@ import { useActionToast } from "@/components/console/submit-button";
 // upsertJobPosting tampil inline (useActionState) tanpa memicu error boundary.
 //
 // React 19 mereset kolom uncontrolled begitu aksi form selesai, juga saat aksi
-// mengembalikan error. Karena itu server mengembalikan isian yang dikirim
-// (state.values) dan setiap kolom memakainya sebagai defaultValue: reset
-// kembali ke nilai yang tadi diketik, bukan ke kosong. Tanpa ini satu salah
-// ketik di tautan mengosongkan seluruh form, dan percobaan berikutnya bisa
-// terkirim sebagai "Lewat form PPIT" sehingga tautannya hilang tanpa pesan
-// (ketahuan lewat uji langsung di produksi).
+// mengembalikan error. Server karena itu mengembalikan isian yang dikirim
+// (state.values) beserta nonce baru, dan form dibuat ulang lewat key={nonce}:
+// setiap kolom, termasuk <select> yang defaultValue-nya tidak diperbarui React
+// setelah mount, dimulai lagi dari yang tadi diketik. Tanpa ini satu salah
+// ketik di tautan mengosongkan seluruh form, dan percobaan berikutnya terkirim
+// sebagai "Lewat form PPIT" sehingga tautannya hilang tanpa pesan (ketahuan
+// lewat uji langsung di produksi).
 export function JobPostingForm({
   action,
   initial,
@@ -41,27 +42,28 @@ export function JobPostingForm({
   const initialMode = initial?.applyUrl ? "external" : "internal";
   // Hanya untuk menampilkan isian tautan; yang dikirim tetap nilai radio di DOM.
   const [applyMode, setApplyMode] = useState<"internal" | "external">(initialMode);
-  const v = state.values;
+  // Isian yang dikembalikan server (setelah error) menggantikan nilai awal.
+  const d = state.values ?? initial;
 
   return (
-    <form action={formAction} className="flex flex-col gap-5">
+    <form key={state.nonce ?? "initial"} action={formAction} className="flex flex-col gap-5">
       {state.error && (
         <p role="alert" className="bg-error-container/40 text-on-error-container text-body-md px-4 py-3 rounded-lg">
           {state.error}
         </p>
       )}
 
-      <TextField name="title" label="Judul lowongan" required defaultValue={v?.title ?? initial?.title} placeholder="mis. Software Engineer Intern" />
+      <TextField name="title" label="Judul lowongan" required defaultValue={d?.title} placeholder="mis. Software Engineer Intern" />
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-        <TextField name="company" label="Perusahaan" required defaultValue={v?.company ?? initial?.company} />
-        <TextField name="location" label="Lokasi" defaultValue={v?.location ?? initial?.location} placeholder="mis. Nanjing, China" />
+        <TextField name="company" label="Perusahaan" required defaultValue={d?.company} />
+        <TextField name="location" label="Lokasi" defaultValue={d?.location} placeholder="mis. Nanjing, China" />
       </div>
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <SelectField
           name="type"
           label="Jenis pekerjaan"
           required
-          defaultValue={v?.type ?? initial?.type}
+          defaultValue={d?.type}
           placeholder="Pilih jenis"
           options={JOB_TYPES.map((value) => ({ value, label: JOB_TYPE_LABEL[value] }))}
         />
@@ -70,16 +72,16 @@ export function JobPostingForm({
           type="date"
           label="Batas lamaran"
           hint="Kosongkan bila tidak ada batas."
-          defaultValue={v?.applicationDeadline ?? initial?.applicationDeadline}
+          defaultValue={d?.applicationDeadline}
         />
       </div>
-      <TextAreaField name="description" label="Deskripsi" rows={7} defaultValue={v?.description ?? initial?.description} />
-      <TextAreaField name="requirements" label="Persyaratan" rows={5} defaultValue={v?.requirements ?? initial?.requirements} />
+      <TextAreaField name="description" label="Deskripsi" rows={7} defaultValue={d?.description} />
+      <TextAreaField name="requirements" label="Persyaratan" rows={5} defaultValue={d?.requirements} />
 
       <RadioGroupField
         name="applyMode"
         label="Cara melamar"
-        defaultValue={v?.applyMode ?? initialMode}
+        defaultValue={state.values?.applyMode ?? initialMode}
         onChange={(mode) => setApplyMode(mode === "external" ? "external" : "internal")}
         options={[
           {
@@ -101,7 +103,7 @@ export function JobPostingForm({
           required
           label="Tautan lamaran perusahaan"
           placeholder="https://..."
-          defaultValue={v?.applyUrl ?? initial?.applyUrl}
+          defaultValue={d?.applyUrl}
           hint="Harus https dan mengarah ke situs resmi perusahaan. Buka tautannya di tab baru dulu dan pastikan halamannya benar (kalau bisa dari jaringan di Tiongkok). Setelah disimpan, tautannya bisa diuji lagi dari halaman ini. Lamaran yang sudah masuk lewat PPIT tetap tersimpan di console."
         />
       )}
@@ -109,7 +111,7 @@ export function JobPostingForm({
       {isNew && (
         <CheckboxField
           name="open"
-          defaultChecked={v ? v.open : true}
+          defaultChecked={state.values ? state.values.open : true}
           label="Langsung buka untuk pelamar"
           hint="Kalau dikosongkan, lowongan tersimpan tertutup: tidak tampil di daftar Karir, tapi halamannya tetap bisa dibaca lewat tautannya. Jangan bagikan tautannya sebelum dibuka."
           className="text-on-background"
