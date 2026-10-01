@@ -21,7 +21,8 @@ export default async function JobApplyPage({ params }: { params: Promise<{ id: s
   if (!job) notFound();
   // Lowongan yang ditutup pengurus tidak boleh dilamar lagi, termasuk lewat
   // tautan langsung atau tab yang sudah terbuka (applyToJob menjaga hal yang sama).
-  if (job.status !== "open") redirect(`/jobs/${id}`);
+  // Lowongan yang melamar lewat situs perusahaan tidak punya form di sini.
+  if (job.status !== "open" || job.applyUrl) redirect(`/jobs/${id}`);
 
   const { t } = await getT();
 

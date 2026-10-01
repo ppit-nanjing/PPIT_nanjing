@@ -20,6 +20,8 @@ export default async function ConsoleJobsPage() {
       type: jobPostings.type,
       status: jobPostings.status,
       applicationDeadline: jobPostings.applicationDeadline,
+      applyUrl: jobPostings.applyUrl,
+      externalClicks: jobPostings.externalClicks,
       createdAt: jobPostings.createdAt,
       applicants: sql<number>`count(${jobApplications.id})::int`,
     })
@@ -70,7 +72,9 @@ export default async function ConsoleJobsPage() {
               </span>
               <span className="flex items-center gap-2 shrink-0">
                 <span className="text-label-caps uppercase tracking-wide text-on-surface-variant">
-                  {r.applicants} pelamar
+                  {r.applyUrl
+                    ? `Situs perusahaan · ${r.externalClicks} klik${r.applicants > 0 ? ` · ${r.applicants} pelamar` : ""}`
+                    : `${r.applicants} pelamar`}
                 </span>
                 <span
                   className={`text-label-caps uppercase tracking-wide px-2 py-1 rounded ${

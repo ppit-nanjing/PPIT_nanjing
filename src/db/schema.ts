@@ -714,6 +714,12 @@ export const jobPostings = pgTable("job_postings", {
   applicationDeadline: date("application_deadline"),
   postedBy: uuid("posted_by").references(() => users.id),
   status: jobPostingStatusEnum("status").notNull().default("open"),
+  // NULL = melamar lewat form PPIT. Terisi = lamaran dikerjakan di situs
+  // perusahaan (https saja, dicek saat disimpan); form PPIT dimatikan.
+  applyUrl: text("apply_url"),
+  // Klik "Lamar di situs perusahaan" dari anggota yang login. Satu-satunya
+  // ukuran untuk lowongan tautan eksternal, karena lamarannya tidak lewat PPIT.
+  externalClicks: integer("external_clicks").notNull().default(0),
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
 

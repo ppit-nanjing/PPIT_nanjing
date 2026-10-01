@@ -105,6 +105,26 @@ export default async function EditJobPostingPage({ params }: { params: Promise<{
         </div>
       </div>
 
+      {job.applyUrl && (
+        <div className="mb-6 rounded-lg border border-outline-variant bg-surface-container-lowest px-4 py-3">
+          <p className="text-label-caps uppercase tracking-wide text-on-surface-variant">
+            Lamaran lewat situs perusahaan
+          </p>
+          <a
+            href={job.applyUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-body-md text-primary-container underline break-all"
+          >
+            {job.applyUrl}
+          </a>
+          <p className="text-body-sm text-on-surface-variant mt-1">
+            {job.externalClicks} klik dari anggota yang login. Lamaran tidak masuk ke PPIT, jadi tidak ada daftar
+            pelamar baru di bawah.
+          </p>
+        </div>
+      )}
+
       <JobPostingForm
         action={upsertJobPosting.bind(null, job.id)}
         submitLabel="Simpan Perubahan"
@@ -117,6 +137,7 @@ export default async function EditJobPostingPage({ params }: { params: Promise<{
           applicationDeadline: job.applicationDeadline ?? "",
           description: job.description ?? "",
           requirements: job.requirements ?? "",
+          applyUrl: job.applyUrl ?? "",
         }}
       />
 

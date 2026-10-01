@@ -2,6 +2,7 @@
 
 import { and, count, eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
+import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { db } from "@/db";
 import { auditLogs, jobApplications, jobPostings } from "@/db/schema";
@@ -11,6 +12,7 @@ import { createTemplatedNotification } from "@/lib/notifications";
 import { withFlash } from "@/lib/flash";
 import { UUID_RE } from "@/lib/uuid";
 import {
+  isHttpsUrl,
   isHttpUrl,
   isJobApplicationStatus,
   isJobType,
@@ -35,12 +37,13 @@ export async function applyToJob(jobId: string, formData: FormData) {
   if (existing) redirect(`/jobs/${jobId}/applied`);
 
   const [job] = await db
-    .select({ title: jobPostings.title, status: jobPostings.status })
+    .select({ title: jobPostings.title, status: jobPostings.status, applyUrl: jobPostings.applyUrl })
     .from(jobPostings)
     .where(eq(jobPostings.id, jobId));
   // Menutup lowongan di console harus benar-benar menghentikan lamaran baru,
-  // bukan hanya menyembunyikan tombolnya.
-  if (!job || job.status !== "open") redirect(`/jobs/${jobId}`);
+  // bukan hanya menyembunyikan tombolnya. Lowongan yang melamar lewat situs
+  // perusahaan juga tidak boleh menampung lamaran lewat form PPIT.
+  if (!job || job.status !== "open" || job.applyUrl) redirect(`/jobs/${jobId}`);
 
   await db.insert(jobApplications).values({
     jobId,
@@ -113,6 +116,21 @@ export async function upsertJobPosting(
   if (!isJobType(type)) return { error: "Pilih jenis pekerjaan." };
   if (deadline && !isValidIsoDate(deadline)) return { error: "Batas lamaran bukan tanggal yang valid." };
 
+  // "Cara melamar": form PPIT (applyUrl null) atau situs perusahaan. Tautannya
+  // nanti dipakai server untuk mengalihkan anggota ke luar, jadi dicek ketat di sini.
+  let applyUrl: string | null = null;
+  if (String(formData.get("applyMode") ?? "internal") === "external") {
+    const raw = String(formData.get("applyUrl") ?? "").trim();
+    if (!isHttpsUrl(raw)) return { error: "Tautan lamaran harus berupa alamat https yang valid." };
+    // Tautan ke PPIT sendiri akan membuat pengalihan berputar. Host dibaca dari
+    // request, bukan dikonfigurasi, supaya tetap benar setelah domain pindah.
+    const ownHost = (await headers()).get("host");
+    if (ownHost && new URL(raw).host === ownHost) {
+      return { error: "Tautan harus mengarah ke situs perusahaan, bukan ke situs PPIT." };
+    }
+    applyUrl = raw;
+  }
+
   const values = {
     title,
     company,
@@ -121,6 +139,7 @@ export async function upsertJobPosting(
     description: description || null,
     requirements: requirements || null,
     applicationDeadline: deadline || null,
+    applyUrl,
   };
 
   let jobId: string;

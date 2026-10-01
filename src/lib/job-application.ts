@@ -37,6 +37,18 @@ export function isHttpUrl(value: string): boolean {
   }
 }
 
+// Tautan lamaran eksternal: https saja, tanpa kredensial tertanam, dan tidak
+// kepanjangan. Tautan ini dipakai server untuk mengalihkan anggota ke luar.
+export function isHttpsUrl(value: string): boolean {
+  if (value.length > 2048) return false;
+  try {
+    const u = new URL(value);
+    return u.protocol === "https:" && !u.username && !u.password;
+  } catch {
+    return false;
+  }
+}
+
 export const JOB_TYPES = ["internship", "full_time", "part_time", "volunteer"] as const;
 export type JobType = (typeof JOB_TYPES)[number];
 

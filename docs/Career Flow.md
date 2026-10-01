@@ -10,10 +10,12 @@ Dua sisi: **publik** (mahasiswa melihat dan melamar lowongan) dan **console** (p
 flowchart TD
     Jobs["/jobs"] --> Detail["/jobs/:id"]
     Detail -->|belum login| Login["/login → kembali"]
-    Detail -->|"Lamar (hanya bila open)"| Apply["/jobs/:id/apply"]
+    Detail -->|"Lamar (hanya bila open, apply_url kosong)"| Apply["/jobs/:id/apply"]
     Apply --> Submit["job_applications: status = submitted"]
     Submit --> Applied["/jobs/:id/applied — status pelamaran"]
     Applied -.-> History["/profile/submissions"]
+    Detail -->|"Lamar di situs perusahaan (apply_url terisi)"| Ext["/jobs/:id/apply-external"]
+    Ext -->|"login + sensus lengkap, hitung klik"| Company["situs perusahaan (https)"]
 
     Career["/career — Career Center (agregator)"] --> Jobs
     Career --> Guide["/career/guide/:slug"]
@@ -40,14 +42,15 @@ flowchart TD
 |---|---|
 | `/jobs` | Listing loker/magang (hanya `status = open`), filter tipe (`internship`/`full_time`/`part_time`/`volunteer`) + lokasi |
 | `/jobs/:id` | Detail lowongan. Tombol lamar hanya muncul bila `open`; bila `closed` tampil keterangan ditutup |
-| `/jobs/:id/apply` | Form lamaran: resume (URL Drive atau unggah PDF) + cover letter opsional. **Lowongan yang sudah ditutup dialihkan ke `/jobs/:id`** |
+| `/jobs/:id/apply` | Form lamaran: resume (URL Drive atau unggah PDF) + cover letter opsional. **Lowongan yang sudah ditutup, atau yang `apply_url`-nya terisi, dialihkan ke `/jobs/:id`** |
+| `/jobs/:id/apply-external` | Route handler (GET) untuk lowongan yang melamar di situs perusahaan. Wajib login + sensus lengkap, menambah `external_clicks`, lalu mengalihkan ke `apply_url`. Tujuan dibaca dari database, bukan dari request |
 | `/jobs/:id/applied` | Status pelamaran user (`submitted` → `under_review` → `interview` → `offered`/`rejected`) |
 | `/career` | **Career Center** — halaman agregator: loker terbaru + artikel guide + CTA mentorship, di-query dari 3 tabel |
 | `/career/guide/:slug` | Artikel panduan karir (`career_guide_articles`) |
 | `/career/mentorship` | Form "Alumni Network Mentorship" — bidang minat, latar belakang, motivasi. Terpisah dari lamaran kerja. |
 | `/career/mentorship/success` | Konfirmasi; matching mentor & tindak lanjut lewat email |
 | `/console/jobs` | Daftar semua lowongan (open + closed) dengan jumlah pelamar |
-| `/console/jobs/new` | Form lowongan baru. Kotak "Langsung buka" mati = tersimpan `closed` (tidak tampil di daftar, tidak bisa dilamar, tapi halaman `/jobs/:id`-nya tetap terbaca lewat tautan) |
+| `/console/jobs/new` | Form lowongan baru, termasuk "Cara melamar" (form PPIT atau tautan situs perusahaan). Kotak "Langsung buka" mati = tersimpan `closed` (tidak tampil di daftar, tidak bisa dilamar, tapi halaman `/jobs/:id`-nya tetap terbaca lewat tautan) |
 | `/console/jobs/:id` | Ubah lowongan, Tutup/Buka lagi, Hapus, dan daftar pelamar |
 | `/console/jobs/:id/applicants/:applicationId` | Tinjau satu pelamar: email, CV, cover letter, ubah status, catatan, riwayat status, hapus lamaran |
 
@@ -67,7 +70,10 @@ flowchart TD
 - **`resumeUrl` divalidasi** sebagai alamat http(s) saat melamar (`isHttpUrl` di `src/lib/job-application.ts`) dan hanya dirender sebagai tautan di console bila lolos cek yang sama, karena nilainya berasal dari input pelamar. Nama berkas untuk teks tautan diturunkan secara defensif (`decodeURIComponent` bisa melempar pada `%` yang menggantung).
 - **Semua id dari FormData dan route `[id]`** dicek `UUID_RE` (`src/lib/uuid.ts`) sebelum menyentuh kolom uuid, supaya id ngawur menjadi 404/penolakan, bukan error Postgres.
 - **Mutasi lowongan me-revalidate `/jobs`, `/jobs/:id`, `/career`, dan `/sitemap.xml`** (sitemap di-prerender statis dan memuat lowongan `open`).
-- **Skema**: hanya satu kolom baru, `job_applications.review_note` (nullable, aditif), migrasi `drizzle/0041_job_application_review_note.sql`. Siapa dan kapan mengubah status sudah ada di `audit_logs` (`entity_type = job_application`).
+- **Skema**: `job_applications.review_note` (nullable, aditif), migrasi `drizzle/0041_job_application_review_note.sql`. Siapa dan kapan mengubah status sudah ada di `audit_logs` (`entity_type = job_application`).
+- **Cara melamar: form PPIT atau situs perusahaan** (`job_postings.apply_url`, migrasi `0042`). `NULL` = form PPIT seperti biasa; terisi = lamaran dikerjakan di situs perusahaan dan form PPIT dimatikan (halaman apply dan `applyToJob` sama-sama menolak). Untuk pilihan kedua PPIT tidak menerima data pelamar sama sekali, jadi tidak ada daftar pelamar, status, notifikasi, atau analitik jawaban; satu-satunya ukuran adalah `external_clicks`.
+- **Keamanan tautan eksternal.** Tautan hanya `https`, tanpa kredensial tertanam, maksimal 2048 karakter, dan tidak boleh mengarah ke host PPIT sendiri (host dibaca dari request supaya tetap benar setelah domain pindah; mencegah pengalihan berputar). Rute `apply-external` tidak pernah membaca tujuan dari parameter request, jadi bukan open redirect. Tombolnya `<a>` biasa dengan `rel="nofollow"`, bukan `<Link>`, supaya tidak ikut di-prefetch dan mengisi penghitung.
+- **Syarat masuk `apply-external` sama dengan melamar lewat PPIT** (login + sensus lengkap): lowongan di halaman ini untuk anggota, dan itu sekaligus menjaga `external_clicks` dari robot dan pengunjung anonim. Ini keputusan produk yang mudah dibalik bila tautan perlu terbuka untuk umum.
 
 ## Batasan yang diketahui
 
@@ -78,6 +84,8 @@ Sengaja tidak dikerjakan di Fase 1; masing-masing cukup kecil pada skala PPIT se
 - **`application_deadline` hanya label.** Lowongan tidak tertutup otomatis saat tanggalnya lewat; pengurus menutup manual. Menegakkannya adalah keputusan produk (zona waktu, tanggal inklusif).
 - **Berkas CV tidak ikut terhapus** saat lamaran/lowongan dihapus. CV diunggah ke Vercel Blob publik (folder `resume`, URL tak terduga tapi tanpa auth), dan repo belum punya penghapusan Blob di mana pun. Penghapusan otomatis sengaja tidak ditambahkan di sini karena `resume_url` berasal dari input pelamar (bisa menunjuk berkas lain). Prosedurnya manual, ada di SOP `karier`. Perbaikan yang benar adalah menyimpan pathname Blob hasil unggahan di sisi server, bukan memercayai URL kiriman klien.
 - **Lowongan `closed` tetap terbaca lewat tautannya.** `/jobs/:id` hanya menukar tombol lamar dengan keterangan ditutup; isinya tetap tampil. Jangan perlakukan "tertutup" sebagai draf rahasia.
+- **`external_clicks` bukan jumlah pelamar.** Satu orang yang klik berkali-kali dihitung berkali-kali, dan klik tidak berarti orang itu benar-benar menyelesaikan lamaran di situs perusahaan. Kalau perlu hitungan per orang, tabel klik per anggota harus ditambah.
+- **Situs perusahaan bisa tidak terbuka dari Tiongkok** (mis. layanan Google). PPIT tidak bisa memeriksanya otomatis; SOP meminta pengurus mencoba tautannya sebelum membuka lowongan.
 - **Notifikasi hanya in-app.** Tidak ada email ke pelamar saat status berubah (berbeda dengan keputusan Pendaftaran pengurus).
 - **CV diteruskan ke perusahaan secara manual** oleh pengurus (lihat SOP). Belum ada akun perusahaan.
 - **Artikel panduan karir dan mentorship belum punya sisi console** — `career_guide_articles` dan `mentorship_applications` dikelola lewat query langsung/laporan. (Catatan lama di dokumen ini yang menyebut "loker & guide lewat modul konten" tidak benar.)
@@ -105,6 +113,9 @@ Permintaan dari pengurus: portal perusahaan sebaiknya setara **JobStreet**, deng
 - **Pertanyaan penyaring per lowongan.** Perusahaan membuat sendiri pertanyaan yang harus dijawab pelamar saat melamar (teks, pilihan, ya/tidak, skala, dst), wajib atau opsional. Jawaban tersimpan per lamaran.
 - **Recruiter melihat CV dan jawaban** pelamar lowongan perusahaannya sendiri, dan menggeser status (pipeline yang sama dengan Fase 1).
 - **Tab Analitik per lowongan**: ringkasan jawaban per pertanyaan (distribusi, grafik) dengan **filter** (mis. status lamaran, jawaban tertentu, kampus/kota), mirip tab Analitik sensus (`/console/sensus`).
+- **Perwakilan perusahaan mengelola pertanyaannya sendiri (CRUD).** Aturan yang disarankan agar analitik tidak rusak: bebas ubah selama belum ada pelamar; setelah ada pelamar hanya boleh menambah pertanyaan opsional, memperbaiki salah ketik di teks, dan mengarsipkan (jawaban lama tetap tersimpan). Tipe dan pilihan jawaban tidak boleh berubah, dan tidak ada hapus permanen.
+- **Opsi lamaran lewat tautan perusahaan** sudah dibangun (lihat Keputusan desain, `apply_url`). Lowongan seperti itu tidak punya pelamar, pertanyaan, atau analitik jawaban di PPIT.
+- **Prasyarat sebelum recruiter melihat CV:** CV kini disimpan di Blob publik (folder `resume`). Pindahkan ke penyimpanan privat dengan proxy berotorisasi, seperti folder `sensus`, karena tautan publik bisa dibagikan dan tidak bisa dicabut.
 
 Bahan yang sudah ada dan patut dipakai ulang, supaya tidak membangun mesin formulir kedua:
 
