@@ -140,7 +140,8 @@ export function SiteNav() {
             backgroundColor: `color-mix(in srgb, var(--color-background) ${Math.round(bgAlpha * 100)}%, transparent)`,
             backdropFilter: `blur(${blurPx}px) saturate(140%)`,
             WebkitBackdropFilter: `blur(${blurPx}px) saturate(140%)`,
-            boxShadow: `0 10px 30px rgba(39,23,22,${shadowAlpha})`,
+            border: "1px solid var(--deco-line)",
+            boxShadow: `0 10px 30px rgba(29,27,20,${shadowAlpha})`,
             transition:
               "max-width 350ms cubic-bezier(0.22, 1, 0.36, 1), background-color 350ms ease, backdrop-filter 350ms ease, -webkit-backdrop-filter 350ms ease, box-shadow 350ms ease",
           }}
@@ -151,13 +152,9 @@ export function SiteNav() {
           >
             <Link
               href="/"
-              className="inline-flex items-center gap-1.5 text-body-lg sm:text-headline-md font-bold text-primary uppercase tracking-tight shrink-0 whitespace-nowrap"
+              className="inline-flex items-center gap-2 text-body-lg sm:text-headline-sm text-primary uppercase tracking-[0.12em] shrink-0 whitespace-nowrap"
             >
-              <span
-                aria-hidden="true"
-                className="brand-logo w-6 h-6"
-                style={{ backgroundColor: "currentColor" }}
-              />
+              <span aria-hidden="true" className="brand-logo h-8 md:h-9" />
               <span>PPIT Nanjing</span>
             </Link>
 
@@ -327,7 +324,7 @@ export function SiteNav() {
               <Link
                 href={`/login?returnTo=${encodeURIComponent(currentPath)}`}
                 onClick={() => setMenuOpen(false)}
-                className="w-full block text-center bg-primary-container text-on-primary text-label-caps uppercase tracking-wide px-6 py-3 rounded-md hover:bg-primary transition-colors"
+                className="deco-btn w-full block text-center bg-accent text-on-accent text-label-caps uppercase px-6 py-3 rounded-md hover:brightness-95 transition-[filter]"
               >
                 {t("nav.login")}
               </Link>

@@ -78,7 +78,7 @@ const surfaces = ["background", "surface-container-lowest", "surface-container-l
 type Pair = [fg: string, bg: string, min: number];
 const pairs: Pair[] = [];
 for (const s of surfaces) {
-  for (const fg of ["on-surface", "on-surface-variant", "primary", "primary-container", "secondary", "tertiary", "gold-ink"]) pairs.push([fg, s, TEXT]);
+  for (const fg of ["on-surface", "on-surface-variant", "primary", "primary-container", "secondary", "tertiary", "gold-ink", "heading"]) pairs.push([fg, s, TEXT]);
 }
 pairs.push(
   ["on-primary", "primary-container", TEXT],

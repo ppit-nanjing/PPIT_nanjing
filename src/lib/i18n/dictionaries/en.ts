@@ -121,6 +121,17 @@ export const en = {
     "Thousands of young Indonesians study in this historic city, far from home. PPIT Nanjing exists so no one has to do that alone. The committee, the events, and the student network are here to help you settle in, create, and contribute.",
   "home.quote.author": "Chairman of PPIT Nanjing",
   "home.quote.period": "Term 2026-2027",
+  "home.hero.eyebrow": "Indonesian Student Association in China",
+  // The motto wording is fixed; never paraphrase it (see PRODUCT.md).
+  "home.hero.motto": "Synergize · Create · Contribute",
+  "home.about.title": "A Home for Indonesian Students",
+  "home.about.lead": "The official student organization for Indonesian students in Nanjing and the nine cities under its umbrella.",
+  "home.family.kicker": "Together",
+  "home.family.title": "The PPIT Nanjing Family",
+  "home.family.desc": "The committee and members of PPIT Nanjing in one frame.",
+  "home.family.caption": "PPIT Nanjing Cabinet",
+  "home.family.note": "Group photo with the PPI Tiongkok Nanjing branch banner",
+  "home.family.alt": "Group photo of the PPIT Nanjing cabinet in front of the PPI Tiongkok Nanjing banner",
   "home.cities.kicker": "Regional Reach",
   "home.cities.title": "Cities Under PPIT Nanjing",
   "home.cities.description":

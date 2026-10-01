@@ -124,6 +124,17 @@ export const id = {
     "PPIT Nanjing adalah rumah bagi ribuan mimpi anak bangsa di kota bersejarah ini. Melalui kolaborasi dan semangat gotong royong, kita pastikan setiap pelajar Indonesia di sini memiliki support system terbaik untuk berkarya dan berkontribusi.",
   "home.quote.author": "Ketua Umum PPIT Nanjing",
   "home.quote.period": "Periode 2026-2027",
+  "home.hero.eyebrow": "Perhimpunan Pelajar Indonesia Tiongkok",
+  // Semboyan: kata-katanya baku, jangan diparafrasekan (lihat PRODUCT.md).
+  "home.hero.motto": "Bersinergi · Berkarya · Berkontribusi",
+  "home.about.title": "Rumah bagi Pelajar Indonesia",
+  "home.about.lead": "Organisasi kemahasiswaan resmi untuk pelajar dan mahasiswa Indonesia di Kota Nanjing dan sembilan kota naungannya.",
+  "home.family.kicker": "Kebersamaan",
+  "home.family.title": "Keluarga Besar PPIT Nanjing",
+  "home.family.desc": "Pengurus dan anggota PPIT Nanjing dalam satu bingkai.",
+  "home.family.caption": "Kabinet PPIT Nanjing",
+  "home.family.note": "Foto bersama dengan bendera PPI Tiongkok Cabang Nanjing",
+  "home.family.alt": "Foto bersama kabinet PPIT Nanjing di depan bendera PPI Tiongkok Nanjing",
   "home.cities.kicker": "Jangkauan Wilayah",
   "home.cities.title": "Kota di Bawah Naungan PPIT Nanjing",
   "home.cities.description":

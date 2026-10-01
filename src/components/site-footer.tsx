@@ -6,6 +6,7 @@
 import { NAV_LINKS, DISCOVER_LINKS } from "@/lib/nav-links";
 import { ThemeSwitcher } from "@/components/theme-switcher";
 import { AnimatedHeroHeading } from "@/components/animated-hero-heading";
+import { DecoRule } from "@/components/deco/deco-rule";
 import { useT } from "@/lib/i18n/client";
 import type { TKey } from "@/lib/i18n/dictionaries/id";
 import { ArrowRight } from "lucide-react";
@@ -27,13 +28,13 @@ function FooterColumn({ heading, links }: { heading: string; links: ReadonlyArra
     // names it for assistive tech, and four footer <h2>s otherwise sit in the
     // page outline next to the real content sections.
     <nav aria-label={heading} className="flex flex-col gap-3">
-      <p className="text-label-caps uppercase tracking-wide text-inverse-on-surface/60">{heading}</p>
+      <p className="text-label-caps uppercase tracking-[0.2em] text-band-accent">{heading}</p>
       <ul className="flex flex-col gap-2">
         {links.map((link) => (
           <li key={link.href}>
             <Link
               href={link.href}
-              className="text-body-sm text-inverse-on-surface/90 hover:text-primary-fixed-dim transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-on-primary rounded-sm"
+              className="text-body-sm text-on-band-muted hover:text-band-accent transition-colors motion-reduce:transition-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-band-accent rounded-sm"
             >
               {t(link.labelKey)}
             </Link>
@@ -44,21 +45,25 @@ function FooterColumn({ heading, links }: { heading: string; links: ReadonlyArra
   );
 }
 
+// The footer is the dark Deco band (bg-band): unlike the old inverse-surface it
+// stays dark in dark mode, so every colour here is a band token.
 export function SiteFooter() {
   const t = useT();
 
   return (
-    <footer className="w-full mt-16 bg-inverse-surface text-inverse-on-surface px-[var(--spacing-container-padding)]">
-      <div className="max-w-[var(--container-max)] mx-auto pt-14 pb-8 flex flex-col gap-12">
-        <div className="bg-primary-container text-on-primary rounded-2xl px-8 py-14 flex flex-col items-center text-center gap-8">
+    <footer className="relative w-full mt-16 overflow-hidden bg-band text-on-band px-[var(--spacing-container-padding)]">
+      <div className="deco-lattice" aria-hidden="true" />
+      <div className="relative z-10 max-w-[var(--container-max)] mx-auto pt-14 pb-8 flex flex-col gap-12">
+        <div className="deco-frame rounded-md px-8 py-14 flex flex-col items-center text-center gap-6">
           <AnimatedHeroHeading
             as="h2"
             words={[t("footer.joinHeading")]}
-            className="text-display-hero-mobile md:text-display-hero"
+            className="text-display-hero-mobile md:text-display-hero text-band-accent text-balance"
           />
+          <DecoRule />
           <Link
             href="/join-us"
-            className="inline-flex items-center gap-2 bg-on-primary text-primary-container text-label-caps uppercase tracking-wide px-8 py-3.5 rounded-full hover:bg-on-primary/90 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-on-primary focus-visible:ring-offset-2 focus-visible:ring-offset-primary-container"
+            className="deco-btn inline-flex items-center gap-2 bg-accent text-on-accent text-label-caps uppercase px-8 py-3.5 rounded-md hover:brightness-95 transition-[filter] motion-reduce:transition-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-band-accent focus-visible:ring-offset-2 focus-visible:ring-offset-band"
           >
             {t("footer.joinCta")} <ArrowRight size={16} />
           </Link>
@@ -66,17 +71,17 @@ export function SiteFooter() {
 
         <div className="grid grid-cols-1 md:grid-cols-12 gap-10">
           <div className="md:col-span-5 flex flex-col gap-4">
-            <div className="flex items-center gap-2">
-              <span aria-hidden="true" className="brand-logo w-7 h-7" />
-              <span className="text-headline-md font-bold uppercase">PPIT Nanjing</span>
+            <div className="flex items-center gap-3 text-band-accent">
+              <span aria-hidden="true" className="brand-logo h-12" />
+              <span className="text-headline-sm uppercase tracking-[0.2em]">PPIT Nanjing</span>
             </div>
-            <p className="text-body-sm text-inverse-on-surface/70 max-w-xs">{t("footer.tagline")}</p>
+            <p className="text-body-sm text-on-band-muted max-w-xs">{t("footer.tagline")}</p>
             <a
               href="https://www.instagram.com/ppit_nanjing/"
               target="_blank"
               rel="noopener noreferrer"
               aria-label={t("footer.instagramAria")}
-              className="inline-flex items-center justify-center w-11 h-11 rounded-full bg-inverse-on-surface/10 hover:bg-inverse-on-surface/20 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-on-primary mt-1"
+              className="inline-flex items-center justify-center w-11 h-11 rounded-full bg-on-band/10 hover:bg-on-band/20 transition-colors motion-reduce:transition-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-band-accent mt-1"
             >
               <svg
                 viewBox="0 0 24 24"
@@ -110,10 +115,8 @@ export function SiteFooter() {
           </div>
         </div>
 
-        <div className="pt-6 border-t border-current/15 flex flex-col md:flex-row items-center justify-between gap-4">
-          <p className="text-label-caps text-inverse-on-surface/60">
-            &copy; {new Date().getFullYear()} PPIT Nanjing
-          </p>
+        <div className="pt-6 border-t border-[var(--deco-line-soft)] flex flex-col md:flex-row items-center justify-between gap-4">
+          <p className="text-label-caps text-on-band-muted">&copy; {new Date().getFullYear()} PPIT Nanjing</p>
           <ThemeSwitcher />
         </div>
       </div>

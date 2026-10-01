@@ -35,9 +35,9 @@ export async function ContentCard({
     <a
       href={href}
       aria-label={t("common.readAria", { title })}
-      className="group bg-surface-container-lowest border border-outline-variant rounded-xl overflow-hidden hover:shadow-[0_14px_40px_rgba(39,23,22,0.10)] hover:-translate-y-1 transition-[box-shadow,transform] duration-300 motion-reduce:transition-none motion-reduce:hover:translate-y-0 flex flex-col focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-container focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+      className="group bg-surface-container-lowest border border-outline-variant rounded-lg overflow-hidden hover:border-muted-gold hover:shadow-[0_14px_40px_rgba(29,27,20,0.12)] hover:-translate-y-1 transition-[box-shadow,transform] duration-300 motion-reduce:transition-none motion-reduce:hover:translate-y-0 flex flex-col focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-container focus-visible:ring-offset-2 focus-visible:ring-offset-background"
     >
-      <div className="relative h-44 bg-surface-container-low overflow-hidden">
+      <div className="relative h-44 bg-surface-container-low overflow-hidden border-b border-outline-variant">
         {imageUrl ? (
           <Image
             src={imageUrl}
@@ -56,7 +56,7 @@ export async function ContentCard({
       </div>
       <div className="p-6 flex flex-col flex-1">
         {eyebrow && (
-          <span className="inline-block w-fit bg-primary-container/10 text-primary-container text-label-caps uppercase tracking-wide px-2 py-0.5 rounded-md mb-2">
+          <span className="inline-block w-fit bg-gold-ink/10 text-gold-ink text-label-caps uppercase tracking-wide px-2 py-0.5 rounded-md mb-2">
             {eyebrow}
           </span>
         )}
