@@ -59,10 +59,13 @@ const cormorant = Cormorant_Garamond({ variable: "--font-cormorant", subsets: ["
 // longer the site typography; they stay loaded ONLY so the event-description font
 // picker can still offer them (src/lib/event-description-style.ts).
 // preload: false, so a visitor downloads them only when an event actually uses one.
+// Plus Jakarta Sans is a variable font on Google Fonts, so it takes weight:
+// "variable" like Manrope below; requesting discrete weights trips the Turbopack
+// font resolver ("queries have exactly one entry") in a production build.
 const jakarta = Plus_Jakarta_Sans({
   variable: "--font-jakarta",
   subsets: ["latin"],
-  weight: ["400", "500", "600", "700", "800"],
+  weight: "variable",
   preload: false,
 });
 const spectral = Spectral({
@@ -76,47 +79,49 @@ const spectral = Spectral({
 // - admins can match an event's card to its poster's mood, grouped into 6
 // categories in the picker. Same self-hosting reasoning as above; weights
 // kept to 2 per font (regular + a bold-ish step, or just the 1 available
-// weight for single-weight display/script faces) since each is only ever
-// downloaded by a visitor whose event actually uses it, but there's no
-// reason to ship more than the picker needs. Suffixed "-g" (raw next/font
+// weight for single-weight display/script faces). Every one has preload: false:
+// next/font otherwise injects a <link rel="preload"> for each on EVERY page, which
+// measured ~710 KB of fonts per page load for readers behind the Great Firewall
+// who almost never see an event that uses one. With it off, the @font-face is still
+// declared and the file downloads only when an element actually uses the font. Suffixed "-g" (raw next/font
 // var) because globals.css wraps each with CJK/generic fallbacks into the
 // final --font-poppins etc. used by the font-* utilities - same two-step
 // pattern as --font-jakarta -> --font-sans above.
 // Bersih & Modern
-const poppins = Poppins({ variable: "--font-poppins-g", subsets: ["latin"], weight: ["400", "700"] });
-const inter = Inter({ variable: "--font-inter-g", subsets: ["latin"], weight: ["400", "700"] });
+const poppins = Poppins({ variable: "--font-poppins-g", subsets: ["latin"], weight: ["400", "700"], preload: false });
+const inter = Inter({ variable: "--font-inter-g", subsets: ["latin"], weight: ["400", "700"], preload: false });
 // Manrope is variable-only on Google Fonts (no static per-weight files) -
 // requesting discrete weight: ["400","700"] worked in local dev/build but
 // broke Turbopack's font resolver on Vercel's build ("next/font/google
 // queries have exactly one entry", 12 failures - one per unicode-range
 // subset block Google splits it into). weight: "variable" requests the
 // actual variable axis in one clean query instead of two colliding ones.
-const manrope = Manrope({ variable: "--font-manrope-g", subsets: ["latin"], weight: "variable" });
+const manrope = Manrope({ variable: "--font-manrope-g", subsets: ["latin"], weight: "variable", preload: false });
 // Serif & Elegan
-const playfair = Playfair_Display({ variable: "--font-playfair-g", subsets: ["latin"], weight: ["400", "700"] });
-const lora = Lora({ variable: "--font-lora-g", subsets: ["latin"], weight: ["400", "700"] });
-const merriweather = Merriweather({ variable: "--font-merriweather-g", subsets: ["latin"], weight: ["400", "700"] });
+const playfair = Playfair_Display({ variable: "--font-playfair-g", subsets: ["latin"], weight: ["400", "700"], preload: false });
+const lora = Lora({ variable: "--font-lora-g", subsets: ["latin"], weight: ["400", "700"], preload: false });
+const merriweather = Merriweather({ variable: "--font-merriweather-g", subsets: ["latin"], weight: ["400", "700"], preload: false });
 // Tegas & Poster
-const bebasNeue = Bebas_Neue({ variable: "--font-bebas-g", subsets: ["latin"], weight: ["400"] });
-const anton = Anton({ variable: "--font-anton-g", subsets: ["latin"], weight: ["400"] });
-const oswald = Oswald({ variable: "--font-oswald-g", subsets: ["latin"], weight: ["400", "700"] });
+const bebasNeue = Bebas_Neue({ variable: "--font-bebas-g", subsets: ["latin"], weight: ["400"], preload: false });
+const anton = Anton({ variable: "--font-anton-g", subsets: ["latin"], weight: ["400"], preload: false });
+const oswald = Oswald({ variable: "--font-oswald-g", subsets: ["latin"], weight: ["400", "700"], preload: false });
 // Playful & Santai
-const fredoka = Fredoka({ variable: "--font-fredoka-g", subsets: ["latin"], weight: ["400", "600"] });
-const baloo = Baloo_2({ variable: "--font-baloo-g", subsets: ["latin"], weight: ["400", "700"] });
-const quicksand = Quicksand({ variable: "--font-quicksand-g", subsets: ["latin"], weight: ["400", "700"] });
+const fredoka = Fredoka({ variable: "--font-fredoka-g", subsets: ["latin"], weight: ["400", "600"], preload: false });
+const baloo = Baloo_2({ variable: "--font-baloo-g", subsets: ["latin"], weight: ["400", "700"], preload: false });
+const quicksand = Quicksand({ variable: "--font-quicksand-g", subsets: ["latin"], weight: ["400", "700"], preload: false });
 // Tulisan Tangan
-const caveat = Caveat({ variable: "--font-caveat-g", subsets: ["latin"], weight: ["400", "700"] });
-const pacifico = Pacifico({ variable: "--font-pacifico-g", subsets: ["latin"], weight: ["400"] });
-const dancingScript = Dancing_Script({ variable: "--font-dancing-g", subsets: ["latin"], weight: ["400", "700"] });
-const kalam = Kalam({ variable: "--font-kalam-g", subsets: ["latin"], weight: ["400", "700"] });
-const indieFlower = Indie_Flower({ variable: "--font-indieflower-g", subsets: ["latin"], weight: ["400"] });
-const permanentMarker = Permanent_Marker({ variable: "--font-permanentmarker-g", subsets: ["latin"], weight: ["400"] });
-const greatVibes = Great_Vibes({ variable: "--font-greatvibes-g", subsets: ["latin"], weight: ["400"] });
-const shadowsIntoLight = Shadows_Into_Light({ variable: "--font-shadows-g", subsets: ["latin"], weight: ["400"] });
+const caveat = Caveat({ variable: "--font-caveat-g", subsets: ["latin"], weight: ["400", "700"], preload: false });
+const pacifico = Pacifico({ variable: "--font-pacifico-g", subsets: ["latin"], weight: ["400"], preload: false });
+const dancingScript = Dancing_Script({ variable: "--font-dancing-g", subsets: ["latin"], weight: ["400", "700"], preload: false });
+const kalam = Kalam({ variable: "--font-kalam-g", subsets: ["latin"], weight: ["400", "700"], preload: false });
+const indieFlower = Indie_Flower({ variable: "--font-indieflower-g", subsets: ["latin"], weight: ["400"], preload: false });
+const permanentMarker = Permanent_Marker({ variable: "--font-permanentmarker-g", subsets: ["latin"], weight: ["400"], preload: false });
+const greatVibes = Great_Vibes({ variable: "--font-greatvibes-g", subsets: ["latin"], weight: ["400"], preload: false });
+const shadowsIntoLight = Shadows_Into_Light({ variable: "--font-shadows-g", subsets: ["latin"], weight: ["400"], preload: false });
 // Monospace & Teknis
-const jetbrainsMono = JetBrains_Mono({ variable: "--font-jetbrains-g", subsets: ["latin"], weight: ["400", "700"] });
-const spaceMono = Space_Mono({ variable: "--font-spacemono-g", subsets: ["latin"], weight: ["400", "700"] });
-const plexMono = IBM_Plex_Mono({ variable: "--font-plexmono-g", subsets: ["latin"], weight: ["400", "700"] });
+const jetbrainsMono = JetBrains_Mono({ variable: "--font-jetbrains-g", subsets: ["latin"], weight: ["400", "700"], preload: false });
+const spaceMono = Space_Mono({ variable: "--font-spacemono-g", subsets: ["latin"], weight: ["400", "700"], preload: false });
+const plexMono = IBM_Plex_Mono({ variable: "--font-plexmono-g", subsets: ["latin"], weight: ["400", "700"], preload: false });
 
 // generateMetadata, not a static object, so the tab title follows the reader's
 // language. Crawlers carry no locale cookie, so they always see the id default

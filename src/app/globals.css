@@ -6,6 +6,11 @@
 
 @import "tailwindcss";
 
+/* Make the `dark:` variant follow the site's own colour mode (data-mode on <html>,
+   set by the pre-paint script and the theme switcher) instead of the OS setting.
+   Without it, a visitor who picked Light on a dark-mode OS got dark: utilities. */
+@custom-variant dark (&:where([data-mode="dark"], [data-mode="dark"] *));
+
 /* Design tokens ported from Design System/Color System.md, Typography.md, Spacing System.md
    (Warm Institutional - canonical). See docs/Design System Overview.md */
 @theme {
@@ -176,6 +181,10 @@
   --radius-md: 0.25rem;
   --radius-lg: 0.375rem;
   --radius-xl: 0.5rem;
+  /* Tailwind's own 2xl/3xl are 16px/24px: with xl at 8px they would invert the
+     hierarchy, so they stay in step with the crisper scale. */
+  --radius-2xl: 0.625rem;
+  --radius-3xl: 0.75rem;
 
   /* Container */
   --container-max: 1200px;
