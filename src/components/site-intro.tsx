@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useSyncExternalStore } from "react";
+import { Fragment, useEffect, useState } from "react";
+import { INTRO_REPLAY_EVENT } from "@/lib/intro-gate";
 
 /**
  * Home-page intro: a jade curtain with the logo that lifts away (desktop: five
@@ -10,22 +11,30 @@ import { useState, useSyncExternalStore } from "react";
  * the page content is in the DOM underneath the whole time (crawlers, screen
  * readers). The overlay is aria-hidden and pointer-events: none.
  *
- * WHETHER it plays on a full page load is decided before paint by the gate in
- * lib/intro-gate.ts (adds `no-intro` to <html>). This component only guards the
- * other case: reaching "/" by clicking a link (no reload) must not replay it. It
- * tells the two apart with useSyncExternalStore: during server render and
- * hydration the server snapshot (true) is used, on a pure client mount the client
- * snapshot (false) is, and useState freezes the first answer.
+ * Playback:
+ *   - A full page load is gated before paint by lib/intro-gate.ts (plays unless
+ *     `?nointro`);
+ *   - Arriving at "/" by client navigation (Home link, logo from another page)
+ *     remounts this page component, so the intro plays again;
+ *   - Clicking the logo while ALREADY on "/" changes no route, so site-nav.tsx
+ *     dispatches INTRO_REPLAY_EVENT; runId bumps and the keyed fragment is
+ *     remounted, restarting the CSS from the first frame.
  */
-const subscribe = () => () => {};
-
 export function SiteIntro() {
-  const fullLoad = useSyncExternalStore(subscribe, () => false, () => true);
-  const [show] = useState(fullLoad);
-  if (!show) return null;
+  const [runId, setRunId] = useState(0);
+
+  useEffect(() => {
+    const replay = () => {
+      // A `?nointro` load asked for no intro; an explicit logo click asks for one.
+      document.documentElement.classList.remove("no-intro");
+      setRunId((n) => n + 1);
+    };
+    window.addEventListener(INTRO_REPLAY_EVENT, replay);
+    return () => window.removeEventListener(INTRO_REPLAY_EVENT, replay);
+  }, []);
 
   return (
-    <>
+    <Fragment key={runId}>
       <div className="intro-curtain" aria-hidden="true">
         <span />
         <span />
@@ -37,6 +46,6 @@ export function SiteIntro() {
       <div className="intro-veil" aria-hidden="true">
         <i className="brand-logo intro-logo" />
       </div>
-    </>
+    </Fragment>
   );
 }

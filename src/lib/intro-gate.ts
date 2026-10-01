@@ -3,23 +3,18 @@
  * appended to the inline script in app/layout.tsx, which already runs before
  * anything paints, and adds `no-intro` to <html> to switch the overlay off.
  *
- * Rules, for a FULL page load:
- *   - ?intro forces it on (to review it); ?nointro forces it off;
- *   - Back/Forward never replays it;
- *   - in production it plays once per browser tab session (sessionStorage), on
- *     whichever page the session starts;
- *   - in development it plays on every load, so it can be reviewed by reloading.
- * Prefers-reduced-motion is handled in CSS. Navigating to "/" without a reload
- * (clicking Home) never replays it: see SiteIntro.
+ * Rule, for a full page load: the intro ALWAYS plays, except `?nointro`.
+ * `?intro` overrides `?nointro` when both are present. Back/Forward and repeat
+ * visits play it again too - that is deliberate: arrival at "/" is treated as a
+ * ceremony. Reduced motion is handled in CSS.
  *
- * Flip INTRO_ONCE_PER_SESSION to change the production rule.
+ * Client-side arrival at "/" (Home/logo click from another page) remounts the
+ * page, so SiteIntro always plays. Clicking the logo while ALREADY on "/" has
+ * no route change to remount it, so site-nav.tsx dispatches INTRO_REPLAY_EVENT
+ * and SiteIntro replays the CSS in place.
  */
-export const INTRO_ONCE_PER_SESSION = process.env.NODE_ENV === "production";
+export const INTRO_REPLAY_EVENT = "ppit:intro-replay";
 
 export const INTRO_GATE =
-  "try{var d2=document.documentElement,q=location.search,s=false,n=performance.getEntriesByType('navigation')[0];" +
-  "if(!/[?&]intro\\b/.test(q)){" +
-  "if(/[?&]nointro\\b/.test(q)||(n&&n.type==='back_forward'))s=true;" +
-  (INTRO_ONCE_PER_SESSION ? "else if(sessionStorage.getItem('ppit-intro'))s=true;" : "") +
-  "}" +
-  "sessionStorage.setItem('ppit-intro','1');if(s)d2.classList.add('no-intro');}catch(e){}";
+  "try{var d2=document.documentElement,q=location.search;" +
+  "if(/[?&]nointro\\b/.test(q)&&!/[?&]intro\\b/.test(q))d2.classList.add('no-intro');}catch(e){}";
