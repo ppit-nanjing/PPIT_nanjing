@@ -197,7 +197,7 @@ export function SiteNav() {
             </div>
 
             <div className="flex items-center gap-1 sm:gap-2 shrink-0">
-              <div className="relative">
+              <div className="relative max-sm:hidden">
                 {/* Desktop, expanded: labeled search pill that advertises the
                     shortcut. Collapses to icon-only when the navbar shrinks -
                     and also below xl even at rest: at 1024-1280px the inline
@@ -291,6 +291,21 @@ export function SiteNav() {
             keeps everything reachable; on tall viewports where content
             genuinely fits, this just means a gap below instead of centered. */}
         <nav className="h-full flex flex-col items-stretch justify-start gap-1 pt-20 px-5 overflow-y-auto">
+          {/* Phones only: the bar has no room for the search icon, so it opens from here. */}
+          <div className="px-1 mb-2 sm:hidden">
+            <button
+              type="button"
+              onClick={() => {
+                setMenuOpen(false);
+                setPaletteOpen(true);
+              }}
+              className="flex w-full items-center gap-3 rounded-md border border-outline-variant bg-surface-container-low px-4 py-3 text-left text-body-md text-on-surface-variant transition-colors hover:border-muted-gold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-container"
+            >
+              <Search size={18} aria-hidden="true" />
+              <span>{t("nav.searchPlaceholder")}</span>
+            </button>
+          </div>
+
           {/* Self-contained account header so login / profile / logout are
               reachable from the drawer without relying on the top pill. */}
           <div className="px-1 mb-3">
