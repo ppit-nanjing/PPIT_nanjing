@@ -69,7 +69,7 @@ keseluruhan, fokusnya saja yang berbeda. Kita lebih kuat di sisi
 | `/inventory` + pinjam, sumbang, ajukan barang | tidak ada |
 | `/sensus` (pendataan mahasiswa) | tidak ada |
 | `/organization` + AD/ART + review + cabang + peta cabang | tidak ada |
-| `/career` + panduan karier + mentorship | tidak ada |
+| Bagian panduan karier + mentorship di `/jobs` (rute `/career/guide/*`, `/career/mentorship`; `/career` sendiri dialihkan ke `/jobs`) | tidak ada |
 | `/profile` + riwayat pengajuan | tidak ada |
 | `/notifications` (in-app) | tidak ada |
 | `/search` (pencarian global) | tidak ada |
