@@ -6,6 +6,7 @@ import { db } from "@/db";
 import { jobApplications, jobPostings, sensusProfiles, users } from "@/db/schema";
 import { requireModuleAccess } from "@/lib/admin-scope";
 import {
+  isHttpsUrl,
   JOB_APPLICATION_STATUS_LABEL,
   JOB_TYPE_LABEL,
   type JobApplicationStatus,
@@ -110,14 +111,19 @@ export default async function EditJobPostingPage({ params }: { params: Promise<{
           <p className="text-label-caps uppercase tracking-wide text-on-surface-variant">
             Lamaran lewat situs perusahaan
           </p>
-          <a
-            href={job.applyUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="text-body-md text-primary-container underline break-all"
-          >
-            {job.applyUrl}
-          </a>
+          {isHttpsUrl(job.applyUrl) ? (
+            <a
+              href={job.applyUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-body-md text-primary-container underline break-all"
+            >
+              {job.applyUrl}
+            </a>
+          ) : (
+            // Nilai yang tidak lolos cek (mis. diubah langsung di database): teks saja.
+            <p className="text-body-md text-on-background break-all">{job.applyUrl}</p>
+          )}
           <p className="text-body-sm text-on-surface-variant mt-1">
             {job.externalClicks} klik dari anggota yang login. Lamaran tidak masuk ke PPIT, jadi tidak ada daftar
             pelamar baru di bawah.

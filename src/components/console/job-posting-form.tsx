@@ -94,7 +94,7 @@ export function JobPostingForm({
           label="Tautan lamaran perusahaan"
           placeholder="https://..."
           defaultValue={initial?.applyUrl}
-          hint="Harus https dan mengarah ke situs resmi perusahaan. Coba klik dulu sebelum disimpan. Lamaran yang sudah masuk lewat PPIT tetap tersimpan di console."
+          hint="Harus https dan mengarah ke situs resmi perusahaan. Buka tautannya di tab baru dulu dan pastikan halamannya benar (kalau bisa dari jaringan di Tiongkok). Setelah disimpan, tautannya bisa diuji lagi dari halaman ini. Lamaran yang sudah masuk lewat PPIT tetap tersimpan di console."
         />
       )}
 

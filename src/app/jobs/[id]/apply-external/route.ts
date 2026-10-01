@@ -14,22 +14,31 @@ import { UUID_RE } from "@/lib/uuid";
 // open redirect. Syarat masuknya sama dengan melamar lewat form PPIT (login +
 // sensus lengkap): lowongan di sini untuk anggota, dan itu juga yang menjaga
 // penghitung klik dari robot dan pengunjung anonim.
-export async function GET(_request: Request, { params }: { params: Promise<{ id: string }> }) {
+export async function GET(request: Request, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   if (!UUID_RE.test(id)) return new Response("Not found", { status: 404 });
+
+  // Browser memuat tautan yang diprediksi akan diklik secara spekulatif, lengkap
+  // dengan cookie sesi. Itu bukan niat melamar, jadi tidak boleh menambah hitungan.
+  const purpose = `${request.headers.get("sec-purpose") ?? ""} ${request.headers.get("purpose") ?? ""}`;
+  if (/prefetch|prerender/i.test(purpose)) return new Response(null, { status: 204 });
 
   const path = `/jobs/${id}/apply-external`;
   const session = await auth();
   if (!session?.user?.id) redirect(`/login?returnTo=${encodeURIComponent(path)}`);
-  if (!(await hasCompletedSensus(session.user.id))) redirect(`/sensus?returnTo=${encodeURIComponent(path)}`);
 
-  const [job] = await db
-    .select({ status: jobPostings.status, applyUrl: jobPostings.applyUrl })
-    .from(jobPostings)
-    .where(eq(jobPostings.id, id));
-  if (!job) return new Response("Not found", { status: 404 });
-  // Ditutup, atau tidak (lagi) memakai tautan eksternal: kembali ke halaman lowongan.
-  if (job.status !== "open" || !job.applyUrl || !isHttpsUrl(job.applyUrl)) redirect(`/jobs/${id}`);
+  // Dua query ini tidak saling bergantung.
+  const [sensusComplete, [job]] = await Promise.all([
+    hasCompletedSensus(session.user.id),
+    db
+      .select({ status: jobPostings.status, applyUrl: jobPostings.applyUrl })
+      .from(jobPostings)
+      .where(eq(jobPostings.id, id)),
+  ]);
+  if (!sensusComplete) redirect(`/sensus?returnTo=${encodeURIComponent(path)}`);
+  // Lowongan sudah tidak ada, ditutup, atau tidak (lagi) memakai tautan
+  // eksternal: halaman lowongan sendiri yang menjelaskan (termasuk 404 bergaya aplikasi).
+  if (!job || job.status !== "open" || !job.applyUrl || !isHttpsUrl(job.applyUrl)) redirect(`/jobs/${id}`);
 
   // Gagal menghitung tidak boleh menghalangi anggota yang mau melamar.
   try {

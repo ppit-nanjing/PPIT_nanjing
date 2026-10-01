@@ -93,6 +93,19 @@ function revalidatePublicJobs(jobId: string) {
   revalidatePath("/sitemap.xml");
 }
 
+// Semua nama host yang menyajikan situs ini: host request ini, alias produksi,
+// dan URL deployment. Dibaca dari request/environment, bukan dikonfigurasi,
+// supaya tetap benar setelah domain pindah.
+async function ownHosts(): Promise<Set<string>> {
+  const hosts = new Set<string>();
+  const requestHost = (await headers()).get("host");
+  if (requestHost) hosts.add(requestHost.toLowerCase());
+  for (const h of [process.env.VERCEL_PROJECT_PRODUCTION_URL, process.env.VERCEL_URL]) {
+    if (h) hosts.add(h.toLowerCase());
+  }
+  return hosts;
+}
+
 // Inline error, bukan throw: error yang dilempar membuang pengurus ke error
 // boundary dan formulir yang sudah panjang hilang.
 export async function upsertJobPosting(
@@ -122,13 +135,15 @@ export async function upsertJobPosting(
   if (String(formData.get("applyMode") ?? "internal") === "external") {
     const raw = String(formData.get("applyUrl") ?? "").trim();
     if (!isHttpsUrl(raw)) return { error: "Tautan lamaran harus berupa alamat https yang valid." };
-    // Tautan ke PPIT sendiri akan membuat pengalihan berputar. Host dibaca dari
-    // request, bukan dikonfigurasi, supaya tetap benar setelah domain pindah.
-    const ownHost = (await headers()).get("host");
-    if (ownHost && new URL(raw).host === ownHost) {
+    const url = new URL(raw);
+    // Tautan ke PPIT sendiri akan membuat pengalihan berputar.
+    if ((await ownHosts()).has(url.host.toLowerCase())) {
       return { error: "Tautan harus mengarah ke situs perusahaan, bukan ke situs PPIT." };
     }
-    applyUrl = raw;
+    // Simpan bentuk ternormalisasi: itulah yang sebenarnya sudah divalidasi.
+    // String mentah bisa memuat karakter yang dibuang/di-encode oleh parser URL
+    // (mis. tab atau baris baru) dan akan merusak header Location saat dipakai.
+    applyUrl = url.href;
   }
 
   const values = {
@@ -143,7 +158,13 @@ export async function upsertJobPosting(
   };
 
   let jobId: string;
+  let previousApplyUrl: string | null = null;
   if (existingId) {
+    const [before] = await db
+      .select({ applyUrl: jobPostings.applyUrl })
+      .from(jobPostings)
+      .where(eq(jobPostings.id, existingId));
+    previousApplyUrl = before?.applyUrl ?? null;
     const [updated] = await db
       .update(jobPostings)
       .set(values)
@@ -164,6 +185,19 @@ export async function upsertJobPosting(
       })
       .returning({ id: jobPostings.id });
     jobId = created.id;
+  }
+
+  // Tujuan lamaran menentukan ke mana anggota dikirim dari tombol berlogo PPIT,
+  // jadi setiap perubahannya dicatat (siapa, dari apa ke apa).
+  if (applyUrl !== previousApplyUrl) {
+    await db.insert(auditLogs).values({
+      actorUserId: session.user.id,
+      entityType: "job_posting",
+      entityId: jobId,
+      action: "apply_url_changed",
+      beforeJson: { applyUrl: previousApplyUrl },
+      afterJson: { applyUrl },
+    });
   }
 
   revalidatePath("/console/jobs");
