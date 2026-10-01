@@ -405,7 +405,12 @@ override; no component knows which is active.
 ### Signature: the Seasonal Auth Panel
 `/login` and `/signup` show the 紫金山 silhouette recoloured across four real Nanjing
 seasons. It has its **own fixed palette**, independent of the theme and dark mode.
-Do not wire it to the theme switcher.
+Do not wire it to the theme switcher. Below `lg` the panel is replaced by the landing
+page's plum blossoms (`PlumBlossoms`, hero variant) - the mini season strip read as
+noise at phone/tablet sizes. On desktop the panel carries a huge translucent season
+character (春/夏/秋/冬) behind the ridges, a depth vignette, a slowly breathing orb
+glow, and the meihua branch in spring (pink) and winter (pale) - the two seasons when
+plum blossoms actually open in Nanjing.
 
 ## Motion
 

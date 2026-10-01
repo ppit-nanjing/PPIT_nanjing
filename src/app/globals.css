@@ -1210,6 +1210,61 @@ select.pp-select {
 .auth-season-panel[data-season="spring"] .auth-season-branch {
   opacity: 0.95;
 }
+/* Cabang meihua juga tampil di musim dingin (梅花 justru mekar Jan-Mar di
+   Nanjing): warna kelopak/batang lewat custom property, jadi satu gambar yang
+   sama dipakai ulang - semi pink, dingin pucat. */
+.auth-season-panel {
+  --season-branch-petal: #f2b8c6;
+  --season-branch-core: #e8b23f;
+  --season-branch-ink: #2a140f;
+}
+.auth-season-panel[data-season="winter"] {
+  --season-branch-petal: #f4f8ff;
+  --season-branch-core: #e8dcae;
+  --season-branch-ink: #202a3d;
+}
+.auth-season-panel[data-season="winter"] .auth-season-branch {
+  opacity: 0.9;
+}
+/* Watermark karakter musim raksasa di belakang pegunungan: satu span per
+   musim, opacity 0 default - hanya yang aktif terlihat, jadi pergantiannya
+   crossfade lewat transisi yang sama dengan elemen musim lain. */
+.auth-season-kanji {
+  position: absolute;
+  right: 2%;
+  bottom: -9%;
+  font-size: clamp(180px, 26vw, 340px);
+  line-height: 1;
+  font-weight: 600;
+  color: var(--season-ink);
+  opacity: 0;
+  pointer-events: none;
+  user-select: none;
+  transition: opacity var(--season-transition-duration) var(--season-transition-ease);
+}
+.auth-season-panel[data-season="spring"] .auth-season-kanji[data-kanji="spring"],
+.auth-season-panel[data-season="summer"] .auth-season-kanji[data-kanji="summer"],
+.auth-season-panel[data-season="autumn"] .auth-season-kanji[data-kanji="autumn"],
+.auth-season-panel[data-season="winter"] .auth-season-kanji[data-kanji="winter"] {
+  opacity: 0.08;
+}
+/* Vignette kedalaman di atas pegunungan (di bawah teks z-10), plus orb yang
+   "bernafas" - animasi opacity saja supaya transform centering Tailwind pada
+   .auth-season-orb-glow tidak pernah tertimpa. */
+.auth-season-panel::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: radial-gradient(130% 90% at 50% 12%, rgba(0, 0, 0, 0) 52%, rgba(0, 0, 0, 0.32) 100%);
+}
+.auth-season-orb-glow {
+  animation: auth-season-orb-breathe 9s ease-in-out infinite;
+}
+@keyframes auth-season-orb-breathe {
+  0%, 100% { opacity: 0.85; }
+  50% { opacity: 1; }
+}
 /* Respect users who prefer reduced motion: disable non-essential animation
    and transitions (spinners, blurs, reveals) without changing layout. */
 @media (prefers-reduced-motion: reduce) {

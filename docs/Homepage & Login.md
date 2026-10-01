@@ -6,7 +6,7 @@
 
 Halaman utama (`src/app/page.tsx`) memakai gaya Art Deco + Art Nouveau; aturan visualnya ada di [DESIGN.md](../DESIGN.md). Semua teks lewat kamus i18n (`id.ts` dan `en.ts`), semua data tetap dari database. Urutan bagian:
 
-1. **Intro** (`SiteIntro`, hanya di `/`): kurtain jade dengan logo. Desktop: 5 lembar yang terangkat bertingkat; ponsel (680px ke bawah): satu lapisan penuh yang memudar. Murni CSS, jadi hilang sendiri walau JS gagal. Diputar **setiap kali beranda dimuat** (termasuk Back/Forward), dan ikut terputar saat masuk beranda lewat navigasi client; `?nointro` mematikan (kecuali `?intro`); klik logo saat sudah di beranda memutar ulang tanpa navigasi + scroll ke atas; tidak ada saat reduced motion. Aturannya di `src/lib/intro-gate.ts`.
+1. **Intro** (`SiteIntro`, hanya di `/`): kurtain jade dengan logo. Desktop: 5 lembar yang terangkat bertingkat; ponsel (680px ke bawah): satu lapisan penuh yang memudar. Murni CSS, jadi hilang sendiri walau JS gagal. Muat penuh: sekali per sesi tab di produksi (development: tiap muat), `?intro` memaksa, `?nointro` mematikan, Back/Forward tidak memutar ulang; tidak ada saat reduced motion. **Navigasi biasa ke beranda tidak memutar intro — hanya klik logo PPIT Nanjing** yang memicunya: dari halaman lain lewat flag `ppit-intro-force`, dan saat sudah di beranda lewat event `ppit:intro-replay` + scroll ke atas. Aturannya di `src/lib/intro-gate.ts`.
 2. **Hero**: sunburst berputar pelan, bunga plum yang melayang, eyebrow, judul (`AnimatedHeroHeading`, kata terakhir berwarna emas-teks), subteks, kartu semboyan (teks baku, jangan diparafrasekan), CTA emas, dan CTA kedua yang berganti ke "Lengkapi Sensus" bila sensus anggota yang login belum lengkap. Garis foil emas di bawahnya.
 3. **Statistik**: tiga medali bercincin emas (jumlah kota naungan dan kampus dari database, tahun berdiri 2008), tiga kolom sejajar juga di ponsel. Tidak ada angka jumlah anggota karena tidak dikumpulkan per kota.
 4. **Tentang**: pita jade berlatis emas dengan judul, dua paragraf (`about.intro`, `about.coverageText`), dan `QuoteCard` kutipan Ketua Umum (`home.quote.*`).
@@ -23,6 +23,8 @@ Nav dan footer dipakai hampir semua halaman publik (tiap halaman mengimpornya se
 
 - Form: email + password, checkbox "remember me", link "forgot password" (bukan layar terpisah di prototipe — perlu ditambahkan saat build).
 - **Login with Google** — tombol OAuth terpisah, diimplementasikan lewat Auth.js v5 Google Provider (lihat [Tech Stack](./Tech%20Stack.md)).
+
+Panel musim (`SeasonPanel`) hanya tampil di `lg` ke atas; di ponsel dan tablet halaman memakai bunga plum yang sama dengan beranda (`PlumBlossoms` varian hero) di belakang kartu. Detail visualnya di [DESIGN.md](../DESIGN.md) § Signature: the Seasonal Auth Panel.
 
 ## Entitas terkait
 

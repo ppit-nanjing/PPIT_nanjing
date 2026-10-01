@@ -22,6 +22,16 @@ const SEASON_LABEL_KEY: Record<Season, TKey> = {
   winter: "auth.seasonWinter",
 };
 
+// Karakter musim sebagai watermark raksasa di belakang pegunungan (dekorasi
+// saja, aria-hidden). Satu span per musim supaya pergantiannya ikut crossfade
+// lewat transisi CSS yang sama dengan elemen musim lain.
+const SEASON_KANJI: Record<Season, string> = {
+  spring: "春",
+  summer: "夏",
+  autumn: "秋",
+  winter: "冬",
+};
+
 // Same 3 ridge shapes reused across every season - only the CSS custom
 // properties they're filled with change (see globals.css). front=closest/
 // most parallax, back=furthest/least.
@@ -332,6 +342,14 @@ export function SeasonPanel() {
       onMouseEnter={() => setPaused(true)}
       onMouseLeave={resetParallax}
     >
+      {/* Watermark karakter musim di belakang pegunungan (di bawah scene di
+          DOM, jadi punggungan meng-overlap-nya). Hanya yang aktif terlihat. */}
+      {SEASON_ORDER.map((s) => (
+        <span key={s} className="auth-season-kanji" data-kanji={s} aria-hidden="true">
+          {SEASON_KANJI[s]}
+        </span>
+      ))}
+
       {/* Mobile (< lg): a fixed-320px "reference canvas" scaled down per tier
           so the mountain/orb/stars shrink together as one geometric miniature
           instead of the width-sized ridge SVGs clipping to a baseline sliver
@@ -398,19 +416,19 @@ export function SeasonPanel() {
         >
           <defs>
             <g id="auth-season-blossom">
-              <g fill="#f2b8c6">
+              <g fill="var(--season-branch-petal, #f2b8c6)">
                 <ellipse cx="0" cy="-7" rx="4.5" ry="7" />
                 <ellipse cx="0" cy="-7" rx="4.5" ry="7" transform="rotate(72)" />
                 <ellipse cx="0" cy="-7" rx="4.5" ry="7" transform="rotate(144)" />
                 <ellipse cx="0" cy="-7" rx="4.5" ry="7" transform="rotate(216)" />
                 <ellipse cx="0" cy="-7" rx="4.5" ry="7" transform="rotate(288)" />
               </g>
-              <circle r="2.2" fill="#e8b23f" />
+              <circle r="2.2" fill="var(--season-branch-core, #e8b23f)" />
             </g>
           </defs>
-          <path d="M300,0 C276,26 256,6 234,40 C220,62 238,84 212,108 C194,128 170,114 148,146" fill="none" stroke="#2a140f" strokeWidth="4" strokeLinecap="round" />
-          <path d="M234,40 C250,54 266,48 282,68" fill="none" stroke="#2a140f" strokeWidth="3" strokeLinecap="round" />
-          <path d="M194,128 C180,148 158,142 144,168" fill="none" stroke="#2a140f" strokeWidth="3" strokeLinecap="round" />
+          <path d="M300,0 C276,26 256,6 234,40 C220,62 238,84 212,108 C194,128 170,114 148,146" fill="none" stroke="var(--season-branch-ink, #2a140f)" strokeWidth="4" strokeLinecap="round" />
+          <path d="M234,40 C250,54 266,48 282,68" fill="none" stroke="var(--season-branch-ink, #2a140f)" strokeWidth="3" strokeLinecap="round" />
+          <path d="M194,128 C180,148 158,142 144,168" fill="none" stroke="var(--season-branch-ink, #2a140f)" strokeWidth="3" strokeLinecap="round" />
           <use href="#auth-season-blossom" transform="translate(148,146) scale(1.4)" />
           <use href="#auth-season-blossom" transform="translate(282,68) scale(1.1)" />
           <use href="#auth-season-blossom" transform="translate(144,168) scale(1.2)" />

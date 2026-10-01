@@ -9,6 +9,7 @@ import { getT } from "@/lib/i18n/server";
 import Link from "next/link";
 import { AuthBrand } from "@/components/auth/auth-brand";
 import { DecoRule } from "@/components/deco/deco-rule";
+import { PlumBlossoms, PlumSymbols } from "@/components/deco/plum-blossoms";
 
 export default async function SignUpPage({
   searchParams,
@@ -23,8 +24,15 @@ export default async function SignUpPage({
 
   return (
     <div className="min-h-screen lg:h-screen bg-background relative overflow-hidden grid grid-cols-1 lg:grid-cols-2">
-      <div className="relative h-16 s:h-20 m:h-24 l:h-28 sm:h-36 lg:h-auto">
+      {/* Panel musim hanya untuk laptop ke atas. */}
+      <div className="hidden lg:block relative lg:h-auto">
         <SeasonPanel />
+      </div>
+      {/* Ponsel & tablet: tanpa strip musim - bunga plum (komponen yang sama
+          dengan beranda) melayang di belakang kartu form. */}
+      <div className="lg:hidden">
+        <PlumSymbols />
+        <PlumBlossoms variant="hero" />
       </div>
 
       {/* lg: fixed viewport height + own scroll, and the card centres via
