@@ -12,8 +12,9 @@ export const GALLERY_MAX_EDGE = 1920;
 export const CROP_MAX_EDGE = 1600;
 export const AVATAR_MAX_EDGE = 1024;
 
-// File extension for an image MIME type, for naming the uploaded File. The blob
-// key and Content-Type both follow the extension, so it has to match the bytes.
+// File extension for naming an uploaded image File, for the types /api/upload
+// accepts (jpeg, png, webp, gif). Anything else is rejected there, so "jpg" for
+// an unknown type is only a placeholder name, never a stored one.
 export function imageExtension(type: string): "webp" | "png" | "gif" | "jpg" {
   if (type === "image/webp") return "webp";
   if (type === "image/png") return "png";
@@ -26,18 +27,21 @@ export function imageExtension(type: string): "webp" | "png" | "gif" | "jpg" {
 // can't encode WebP (older Safari). Avatars are NOT routed through this -
 // profile pictures stay JPEG for maximum compatibility (in-app browsers).
 //
-// Never throws: when the image can't be improved it comes back untouched, and
-// /api/upload's type and size checks have the final word.
-// - It can't be decoded here (HEIC on desktop Chrome, a browser without
-//   createImageBitmap, a file too big to decode): a photo the server would
-//   accept must not fail just because the browser couldn't shrink it.
-// - It already fits within `maxEdge` and re-encoding doesn't make it smaller
-//   (WhatsApp JPEGs, small PNG icons): keep the original instead of paying
-//   generation loss for a bigger file.
+// Always re-encodes through a canvas, which also drops the EXIF block (GPS
+// position, device, timestamps). Do not hand back the original just because it
+// is already small: that would publish the metadata.
+//
+// Types a browser does not decode (HEIC on desktop Chrome) come back untouched,
+// so /api/upload's type allowlist rejects them with its own message instead of a
+// generic client error. A jpeg/png/webp/gif that fails to decode is corrupt:
+// that error propagates, so it fails here and is not stored and shown broken.
+const DECODABLE = new Set(["image/jpeg", "image/png", "image/webp", "image/gif"]);
+
 export async function compressImage(source: Blob, maxEdge = GALLERY_MAX_EDGE, quality = 0.8): Promise<Blob> {
   try {
     return await downscale(source, maxEdge, quality);
-  } catch {
+  } catch (err) {
+    if (DECODABLE.has(source.type)) throw err;
     return source;
   }
 }
@@ -65,7 +69,7 @@ async function downscale(source: Blob, maxEdge: number, quality: number): Promis
     if (!out || out.type !== "image/webp") out = await encode("image/jpeg");
     if (!out) throw new Error("compress-failed");
 
-    return scale === 1 && out.size >= source.size ? source : out;
+    return out;
   } finally {
     bitmap.close();
   }
