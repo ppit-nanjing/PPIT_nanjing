@@ -2,7 +2,7 @@
 
 import { useRef, useState, useTransition } from "react";
 import { Loader2, Images, X, AlertCircle, Star } from "lucide-react";
-import { compressImage } from "@/lib/image-compress";
+import { compressImage, imageExtension } from "@/lib/image-compress";
 import { addGalleryPhotos } from "@/app/actions/admin-content";
 import { ConfirmButton } from "@/components/console/confirm-button";
 
@@ -40,9 +40,8 @@ export function MultiPhotoUpload({ albumId }: { albumId?: string }) {
       try {
         // Sequential on purpose - keeps memory flat and gives honest progress.
         const blob = await compressImage(images[i]);
-        const ext = blob.type === "image/webp" ? "webp" : "jpg";
         const fd = new FormData();
-        fd.append("file", new File([blob], `photo-${Date.now()}-${i}.${ext}`, { type: blob.type }));
+        fd.append("file", new File([blob], `photo-${Date.now()}-${i}.${imageExtension(blob.type)}`, { type: blob.type }));
         fd.append("folder", "gallery");
         const res = await fetch("/api/upload", { method: "POST", body: fd });
         const data = await res.json();

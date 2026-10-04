@@ -4,7 +4,7 @@ import { useState, useRef, type DragEvent } from "react";
 import { Upload, Loader2, ImageIcon, X, CheckCircle2 } from "lucide-react";
 import { useT } from "@/lib/i18n/client";
 import { readUploadResult } from "./upload-error";
-import { compressImage } from "@/lib/image-compress";
+import { compressImage, imageExtension } from "@/lib/image-compress";
 
 type Props = {
   name: string;
@@ -84,9 +84,8 @@ export function FileUpload({
       let name = chosen.name;
       if (compressImages && chosen.type.startsWith("image/") && chosen.type !== "image/gif") {
         payload = await compressImage(chosen);
-        const ext = payload.type === "image/webp" ? "webp" : "jpg";
         const base = name.replace(/\.[^.]+$/, "") || "image";
-        name = `${base}.${ext}`;
+        name = `${base}.${imageExtension(payload.type)}`;
       }
       const fd = new FormData();
       fd.append("file", new File([payload], name, { type: payload.type }));
