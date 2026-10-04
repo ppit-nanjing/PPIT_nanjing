@@ -177,8 +177,8 @@ export function ImageUploadCropper({
   async function handleCropConfirm() {
     if (!previewUrl || !croppedAreaPixels) return;
     try {
-      // Avatars are shown at most 192 CSS px (24-80 almost everywhere), so they
-      // get a much lower cap than covers and album photos.
+      // Avatars are shown at 24-192 CSS px, so they get a lower cap than covers
+      // and album photos.
       const maxEdge = folder === "avatar" ? AVATAR_MAX_EDGE : CROP_MAX_EDGE;
       const blob = await getCroppedBlob(previewUrl, croppedAreaPixels, t, maxEdge);
       await uploadBlob(blob, file?.name ?? "image.jpg");

@@ -6,10 +6,11 @@
 // the original bytes.
 
 // Longest-edge caps (px). Album photos and covers are shown large; avatars are
-// shown at most 192 CSS px (the org-chart photo preview), usually 24-80.
+// shown at 24-192 CSS px (192 = the org-chart photo preview, 576 physical px on
+// a 3x phone), so 1024 leaves headroom for a bigger preview at ~100 KB a file.
 export const GALLERY_MAX_EDGE = 1920;
 export const CROP_MAX_EDGE = 1600;
-export const AVATAR_MAX_EDGE = 512;
+export const AVATAR_MAX_EDGE = 1024;
 
 // File extension for an image MIME type, for naming the uploaded File. The blob
 // key and Content-Type both follow the extension, so it has to match the bytes.
