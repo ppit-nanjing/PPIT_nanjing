@@ -3,8 +3,10 @@
 import { and, eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { db } from "@/db";
-import { eventEvaluations, events } from "@/db/schema";
+import { eventEvaluationAnswers, eventEvaluations, events } from "@/db/schema";
 import { requireEventConsoleAccess } from "@/lib/event-access";
+import { type EvalQuestionRow, validateEvalAnswer } from "@/lib/event-evaluation-questions";
+import { loadEvaluationQuestions } from "@/lib/event-evaluation-queries";
 
 export type EventEvaluationFormState = {
   ok?: boolean;
@@ -61,10 +63,18 @@ export async function submitEventEvaluation(
   if (!slug) return { error: "invalid" };
 
   const [event] = await db
-    .select({ id: events.id })
+    .select({ id: events.id, status: events.status })
     .from(events)
     .where(eq(events.slug, slug));
-  if (!event) return { error: "invalid" };
+  // Sama dengan halaman publiknya (404 untuk draft/terjadwal): aksi ini juga bisa
+  // dipanggil langsung tanpa halaman, jadi gerbangnya harus ada di sini juga.
+  if (!event || event.status === "draft" || event.status === "scheduled") return { error: "invalid" };
+
+  // Acara dengan pertanyaan buatan panitia: bentuk jawabannya dinamis.
+  const customQuestions = await loadEvaluationQuestions(event.id);
+  if (customQuestions.length > 0) {
+    return submitCustomEvaluation(event.id, slug, customQuestions, formData);
+  }
 
   const ratingRegistration = rating(formData, "ratingRegistration");
   const ratingFacilities = rating(formData, "ratingFacilities");
@@ -130,6 +140,78 @@ export async function submitEventEvaluation(
   } catch (error) {
     if (isUniqueViolation(error)) return { already: true };
     console.error("[event-evaluation] insert failed:", error);
+    return { error: "generic" };
+  }
+
+  revalidatePath(`/events/${slug}/evaluasi`);
+  return { ok: true };
+}
+
+// Jalur untuk acara yang punya pertanyaan evaluasi buatan panitia. Field jawaban
+// bernama `q_<id pertanyaan>`; identitas (nama/kota/anonim) dan token perangkat
+// sama dengan jalur template. Respons + semua jawabannya ditulis dalam satu
+// batch (satu transaksi), supaya tidak ada respons tanpa jawaban kalau gagal di tengah.
+async function submitCustomEvaluation(
+  eventId: string,
+  slug: string,
+  questions: EvalQuestionRow[],
+  formData: FormData,
+): Promise<EventEvaluationFormState> {
+  const token = typeof formData.get("token") === "string" ? String(formData.get("token")).trim() : "";
+  if (token.length < TOKEN_MIN || token.length > TOKEN_MAX) return { error: "invalid" };
+
+  const anonymous = formData.get("anonymous") === "on" || formData.get("anonymous") === "true";
+  let name: string | null = null;
+  let city: string | null = null;
+  try {
+    if (!anonymous) {
+      name = trimmedText(formData, "name", NAME_MAX);
+      city = trimmedText(formData, "city", CITY_MAX);
+    }
+  } catch {
+    return { error: "invalid" };
+  }
+
+  const answers: { questionId: string; label: string; type: string; text: string | null; number: number | null }[] = [];
+  for (const q of questions) {
+    const result = validateEvalAnswer(q, formData.getAll(`q_${q.id}`));
+    if (!result.ok) return { error: result.reason === "required" ? "required" : "invalid" };
+    if (result.answer) {
+      answers.push({ questionId: q.id, label: q.label, type: q.type, text: result.answer.text, number: result.answer.number });
+    }
+  }
+
+  const evaluationId = crypto.randomUUID();
+  const insertEvaluation = db.insert(eventEvaluations).values({
+    id: evaluationId,
+    eventId,
+    respondentName: name,
+    respondentCity: city,
+    anonymous,
+    responderToken: token,
+  });
+
+  try {
+    if (answers.length > 0) {
+      await db.batch([
+        insertEvaluation,
+        db.insert(eventEvaluationAnswers).values(
+          answers.map((a) => ({
+            evaluationId,
+            questionId: a.questionId,
+            questionLabel: a.label,
+            questionType: a.type,
+            valueText: a.text,
+            valueNumber: a.number,
+          })),
+        ),
+      ]);
+    } else {
+      await insertEvaluation;
+    }
+  } catch (error) {
+    if (isUniqueViolation(error)) return { already: true };
+    console.error("[event-evaluation] custom insert failed:", error);
     return { error: "generic" };
   }
 

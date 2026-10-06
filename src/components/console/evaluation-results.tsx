@@ -7,8 +7,37 @@ import type { eventEvaluations } from "@/db/schema";
 import { ConfirmButton } from "@/components/console/confirm-button";
 import { deleteEventEvaluation } from "@/app/actions/event-evaluations";
 import { ratingQuestions, textQuestions, type EvaluationSection } from "@/lib/event-evaluation-template";
+import type { EvalQuestionRow } from "@/lib/event-evaluation-questions";
+import {
+  type EvalAnswerRow,
+  type EvalColumn,
+  answersByEvaluation,
+  choiceCounts,
+  evalColumns,
+  formatAnswer,
+  isChoiceType,
+  ratingValues,
+} from "@/lib/event-evaluation-results";
 
 type Evaluation = InferSelectModel<typeof eventEvaluations>;
+
+// Respons dari template tetap: keempat penilaian bawaan terisi. Respons dari
+// pertanyaan buatan panitia membiarkannya NULL (jawabannya ada di tabel jawaban).
+type LegacyEvaluation = Evaluation & {
+  ratingRegistration: number;
+  ratingFacilities: number;
+  ratingCgt: number;
+  ratingOverall: number;
+};
+
+function isLegacy(e: Evaluation): e is LegacyEvaluation {
+  return (
+    e.ratingRegistration != null &&
+    e.ratingFacilities != null &&
+    e.ratingCgt != null &&
+    e.ratingOverall != null
+  );
+}
 
 function formatWhen(date: Date | string): string {
   return new Date(date).toLocaleString("id-ID", { dateStyle: "medium", timeStyle: "short" });
@@ -68,13 +97,53 @@ function Tabs({ tabs, active, onChange }: { tabs: { id: string; label: string; i
   );
 }
 
+const TAB_LIST = [
+  { id: "grafik", label: "Grafik", icon: <BarChart3 size={14} aria-hidden="true" /> },
+  { id: "jawaban", label: "Jawaban", icon: <ListChecks size={14} aria-hidden="true" /> },
+  { id: "respons", label: "Respons", icon: <Users size={14} aria-hidden="true" /> },
+];
+
 export function EvaluationResults({
+  eventId,
+  evaluations,
+  sections,
+  questions = [],
+  answers = [],
+}: {
+  eventId: string;
+  evaluations: Evaluation[];
+  sections: EvaluationSection[];
+  /** Pertanyaan buatan panitia (kosong = acara memakai template tetap). */
+  questions?: EvalQuestionRow[];
+  answers?: EvalAnswerRow[];
+}) {
+  const legacy = evaluations.filter(isLegacy);
+  const custom = evaluations.filter((e) => !isLegacy(e));
+  // Mode pertanyaan sendiri berlaku selama acara punya pertanyaan, atau sudah ada
+  // respons bentuk itu (mis. semua pertanyaan dihapus setelah ada jawaban).
+  if (questions.length > 0 || custom.length > 0) {
+    return (
+      <CustomResults
+        eventId={eventId}
+        evaluations={custom}
+        questions={questions}
+        answers={answers}
+        legacyCount={legacy.length}
+      />
+    );
+  }
+  return <TemplateResults eventId={eventId} evaluations={legacy} sections={sections} />;
+}
+
+// ---------- Template tetap (WIF / umum) ----------
+
+function TemplateResults({
   eventId,
   evaluations,
   sections,
 }: {
   eventId: string;
-  evaluations: Evaluation[];
+  evaluations: LegacyEvaluation[];
   sections: EvaluationSection[];
 }) {
   const [tab, setTab] = useState<"grafik" | "jawaban" | "respons">("grafik");
@@ -114,15 +183,7 @@ export function EvaluationResults({
         <ExportLinks eventId={eventId} />
       </div>
 
-      <Tabs
-        active={tab}
-        onChange={(id) => setTab(id as typeof tab)}
-        tabs={[
-          { id: "grafik", label: "Grafik", icon: <BarChart3 size={14} aria-hidden="true" /> },
-          { id: "jawaban", label: "Jawaban", icon: <ListChecks size={14} aria-hidden="true" /> },
-          { id: "respons", label: "Respons", icon: <Users size={14} aria-hidden="true" /> },
-        ]}
-      />
+      <Tabs active={tab} onChange={(id) => setTab(id as typeof tab)} tabs={TAB_LIST} />
 
       {tab === "grafik" && (
         <div className="grid grid-cols-1 gap-3 pb-1 sm:grid-cols-2">
@@ -179,13 +240,13 @@ export function EvaluationResults({
               <div key={q.name} className="rounded-lg border border-outline-variant p-4">
                 <p className="text-label-caps uppercase tracking-wide text-on-surface-variant">{q.label}</p>
                 {(() => {
-                  const answers = evaluations.filter((e) => e[q.name]);
-                  if (answers.length === 0) {
+                  const textAnswers = evaluations.filter((e) => e[q.name]);
+                  if (textAnswers.length === 0) {
                     return <p className="mt-3 text-body-sm text-on-surface-variant">— belum ada jawaban —</p>;
                   }
                   return (
                     <ul className="mt-3 flex flex-col gap-2">
-                      {answers.map((e) => (
+                      {textAnswers.map((e) => (
                         <li key={e.id} className="rounded-md bg-surface-container-low px-3 py-2">
                           <p className="text-body-md text-on-background whitespace-pre-wrap">{e[q.name]}</p>
                           <p className="mt-1 text-label-caps text-on-surface-variant">
@@ -218,15 +279,7 @@ export function EvaluationResults({
                     </p>
                     <p className="text-label-caps text-on-surface-variant">{formatWhen(e.createdAt)}</p>
                   </div>
-                  <ConfirmButton
-                    action={deleteEventEvaluation}
-                    payload={{ id: e.id, eventId }}
-                    message="Hapus respons evaluasi ini? Tindakan ini tidak bisa dibatalkan."
-                    aria-label="Hapus respons"
-                    className="rounded-md border border-outline-variant p-2 text-error hover:bg-error-container/30 transition-colors"
-                  >
-                    <Trash2 size={16} aria-hidden="true" />
-                  </ConfirmButton>
+                  <DeleteResponse eventId={eventId} id={e.id} />
                 </div>
 
                 <div className="flex flex-wrap gap-2">
@@ -256,6 +309,248 @@ export function EvaluationResults({
   );
 }
 
-function valuesCount(evaluations: Evaluation[], name: keyof Evaluation, value: number): number {
+function DeleteResponse({ eventId, id }: { eventId: string; id: string }) {
+  return (
+    <ConfirmButton
+      action={deleteEventEvaluation}
+      payload={{ id, eventId }}
+      message="Hapus respons evaluasi ini? Tindakan ini tidak bisa dibatalkan."
+      aria-label="Hapus respons"
+      className="rounded-md border border-outline-variant p-2 text-error hover:bg-error-container/30 transition-colors"
+    >
+      <Trash2 size={16} aria-hidden="true" />
+    </ConfirmButton>
+  );
+}
+
+// ---------- Pertanyaan buatan panitia ----------
+
+function ChoiceBars({ counts }: { counts: { option: string; count: number }[] }) {
+  const max = Math.max(...counts.map((c) => c.count), 1);
+  return (
+    <ul className="mt-3 flex flex-col gap-2">
+      {counts.map((c) => (
+        <li key={c.option}>
+          <div className="flex items-baseline justify-between gap-3 text-body-sm text-on-background">
+            <span className="min-w-0 break-words">{c.option}</span>
+            <b>{c.count}</b>
+          </div>
+          <div className="mt-1 h-2 rounded-sm bg-surface-container-low">
+            <div className="h-2 rounded-sm bg-primary-container/70" style={{ width: `${(c.count / max) * 100}%` }} />
+          </div>
+        </li>
+      ))}
+    </ul>
+  );
+}
+
+function average(values: number[]): string {
+  return values.length === 0 ? "–" : (values.reduce((s, v) => s + v, 0) / values.length).toFixed(1);
+}
+
+function ColumnTitle({ column, suffix }: { column: EvalColumn; suffix?: string }) {
+  return (
+    <p className="text-label-caps uppercase tracking-wide text-on-surface-variant">
+      {column.label}
+      {suffix ? ` — ${suffix}` : ""}
+      {column.removed ? " (pertanyaan sudah dihapus)" : ""}
+    </p>
+  );
+}
+
+function CustomResults({
+  eventId,
+  evaluations,
+  questions,
+  answers,
+  legacyCount,
+}: {
+  eventId: string;
+  evaluations: Evaluation[];
+  questions: EvalQuestionRow[];
+  answers: EvalAnswerRow[];
+  legacyCount: number;
+}) {
+  const [tab, setTab] = useState<"grafik" | "jawaban" | "respons">("grafik");
+  const columns = evalColumns(questions, answers);
+  const byEvaluation = answersByEvaluation(answers);
+
+  const legacyNote =
+    legacyCount > 0 ? (
+      <p className="text-body-sm text-on-surface-variant max-w-2xl">
+        {legacyCount} respons dengan pertanyaan standar tidak ditampilkan di sini, tapi tetap tersimpan dan ikut di
+        ekspor CSV/Excel.
+      </p>
+    ) : null;
+
+  if (evaluations.length === 0) {
+    return (
+      <div className="flex flex-col gap-3">
+        <p className="text-body-md text-on-surface-variant max-w-2xl">
+          Belum ada respons untuk pertanyaan ini. Bagikan tautan{" "}
+          <code className="text-on-background">/events/&lt;slug&gt;/evaluasi</code> ke grup peserta — buat short link +
+          QR-nya di menu Tautan supaya gampang disebar di WeChat.
+        </p>
+        {legacyNote}
+        <ExportLinks eventId={eventId} />
+      </div>
+    );
+  }
+
+  const ratingCols = columns.filter((c) => c.type === "rating");
+  const choiceCols = columns.filter((c) => isChoiceType(c.type));
+  const anonymousCount = evaluations.filter((e) => e.anonymous).length;
+  const allRatings = ratingCols.flatMap((c) => ratingValues(c, byEvaluation));
+
+  return (
+    <div className="flex flex-col gap-5">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="rounded-md bg-surface-container-low px-3 py-1.5 text-label-caps text-on-surface-variant">
+            <b className="text-on-background">{evaluations.length}</b> respons
+          </span>
+          {allRatings.length > 0 && (
+            <span className="rounded-md bg-surface-container-low px-3 py-1.5 text-label-caps text-on-surface-variant">
+              rata-rata penilaian <b className="text-on-background">{average(allRatings)}</b>/10
+            </span>
+          )}
+          <span className="rounded-md bg-surface-container-low px-3 py-1.5 text-label-caps text-on-surface-variant">
+            <b className="text-on-background">{anonymousCount}</b> anonim
+          </span>
+        </div>
+        <ExportLinks eventId={eventId} />
+      </div>
+      {legacyNote}
+
+      <Tabs active={tab} onChange={(id) => setTab(id as typeof tab)} tabs={TAB_LIST} />
+
+      {tab === "grafik" &&
+        (ratingCols.length + choiceCols.length === 0 ? (
+          <p className="text-body-md text-on-surface-variant">
+            Belum ada pertanyaan penilaian atau pilihan untuk digrafikkan. Jawaban teks ada di tab Jawaban.
+          </p>
+        ) : (
+          <div className="grid grid-cols-1 gap-3 pb-1 sm:grid-cols-2">
+            {ratingCols.map((c) => {
+              const values = ratingValues(c, byEvaluation);
+              return (
+                <div key={c.key} className="rounded-lg border border-outline-variant bg-surface-container-low p-4">
+                  <div className="flex items-baseline justify-between gap-3">
+                    <ColumnTitle column={c} />
+                    <p className="text-headline-lg text-on-background leading-none">{average(values)}</p>
+                  </div>
+                  <div className="mt-4">
+                    <Distribution values={values} tall />
+                  </div>
+                  <div className="mt-1 flex justify-between text-[10px] text-on-surface-variant">
+                    <span>1</span>
+                    <span>10</span>
+                  </div>
+                </div>
+              );
+            })}
+            {choiceCols.map((c) => (
+              <div key={c.key} className="rounded-lg border border-outline-variant bg-surface-container-low p-4">
+                <ColumnTitle column={c} />
+                <ChoiceBars counts={choiceCounts(c, byEvaluation)} />
+              </div>
+            ))}
+          </div>
+        ))}
+
+      {tab === "jawaban" && (
+        <div className="flex flex-col gap-4 pb-1">
+          {columns.map((c) => {
+            if (c.type === "rating") {
+              const values = ratingValues(c, byEvaluation);
+              return (
+                <div key={c.key} className="rounded-lg border border-outline-variant p-4">
+                  <ColumnTitle column={c} suffix="penilaian 1–10" />
+                  <div className="mt-3 flex flex-wrap items-center gap-4">
+                    <p className="text-body-md text-on-background">
+                      rata-rata <b>{average(values)}</b> dari {values.length} jawaban
+                    </p>
+                    <div className="min-w-[220px] max-w-xs flex-1">
+                      <Distribution values={values} />
+                    </div>
+                  </div>
+                </div>
+              );
+            }
+            if (isChoiceType(c.type)) {
+              return (
+                <div key={c.key} className="rounded-lg border border-outline-variant p-4">
+                  <ColumnTitle column={c} />
+                  <ChoiceBars counts={choiceCounts(c, byEvaluation)} />
+                </div>
+              );
+            }
+            const withAnswer = evaluations.filter((e) => byEvaluation.get(e.id)?.get(c.key)?.valueText);
+            return (
+              <div key={c.key} className="rounded-lg border border-outline-variant p-4">
+                <ColumnTitle column={c} />
+                {withAnswer.length === 0 ? (
+                  <p className="mt-3 text-body-sm text-on-surface-variant">— belum ada jawaban —</p>
+                ) : (
+                  <ul className="mt-3 flex flex-col gap-2">
+                    {withAnswer.map((e) => (
+                      <li key={e.id} className="rounded-md bg-surface-container-low px-3 py-2">
+                        <p className="text-body-md text-on-background whitespace-pre-wrap">
+                          {byEvaluation.get(e.id)?.get(c.key)?.valueText}
+                        </p>
+                        <p className="mt-1 text-label-caps text-on-surface-variant">
+                          {respondentLabel(e)} · {formatWhen(e.createdAt)}
+                        </p>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      {tab === "respons" && (
+        <ul className="flex flex-col gap-3 pb-1">
+          {evaluations.map((e) => {
+            const own = byEvaluation.get(e.id);
+            return (
+              <li key={e.id} className="rounded-lg border border-outline-variant p-4 flex flex-col gap-3">
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <p className="text-body-md font-semibold text-on-background">
+                      {respondentLabel(e)}
+                      {e.respondentCity && !e.anonymous ? (
+                        <span className="ml-2 text-body-sm font-normal text-on-surface-variant">{e.respondentCity}</span>
+                      ) : null}
+                    </p>
+                    <p className="text-label-caps text-on-surface-variant">{formatWhen(e.createdAt)}</p>
+                  </div>
+                  <DeleteResponse eventId={eventId} id={e.id} />
+                </div>
+                <div className="flex flex-col gap-2 border-t border-outline-variant/60 pt-3">
+                  {columns.map((c) => {
+                    const value = formatAnswer(own?.get(c.key));
+                    if (!value) return null;
+                    return (
+                      <div key={c.key}>
+                        <ColumnTitle column={c} />
+                        <p className="text-body-md text-on-background whitespace-pre-wrap">{value}</p>
+                      </div>
+                    );
+                  })}
+                  {!own && <p className="text-body-sm text-on-surface-variant">— semua pertanyaan dikosongkan —</p>}
+                </div>
+              </li>
+            );
+          })}
+        </ul>
+      )}
+    </div>
+  );
+}
+
+function valuesCount(evaluations: LegacyEvaluation[], name: keyof LegacyEvaluation, value: number): number {
   return evaluations.filter((e) => e[name] === value).length;
 }

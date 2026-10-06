@@ -6,6 +6,7 @@ import { ArrowLeft, CheckCircle2 } from "lucide-react";
 import { submitEventEvaluation, type EventEvaluationFormState } from "@/app/actions/event-evaluations";
 import { useT } from "@/lib/i18n/client";
 import type { EvaluationSection } from "@/lib/event-evaluation-template";
+import { type EvalQuestionRow, splitOptions } from "@/lib/event-evaluation-questions";
 
 const CARD = "bg-surface-container-lowest border border-outline-variant rounded-xl p-5 sm:p-6 flex flex-col gap-5";
 const LABEL = "text-label-caps uppercase tracking-wide text-on-surface-variant";
@@ -21,23 +22,32 @@ function RatingScale({
   hint,
   lowLabel,
   highLabel,
+  required = true,
+  optionalLabel,
 }: {
   name: string;
   legend: string;
   hint?: string;
   lowLabel: string;
   highLabel: string;
+  required?: boolean;
+  optionalLabel?: string;
 }) {
   return (
     <fieldset className="flex flex-col gap-3">
       <legend className="text-body-md font-semibold text-on-background">
-        {legend} <span className="text-primary-container" aria-hidden="true">*</span>
+        {legend}{" "}
+        {required ? (
+          <span className="text-primary-container" aria-hidden="true">*</span>
+        ) : (
+          <span className="text-body-sm font-normal text-on-surface-variant">({optionalLabel})</span>
+        )}
       </legend>
       {hint && <p className="text-body-sm text-on-surface-variant -mt-2">{hint}</p>}
       <div className="flex flex-wrap gap-1.5">
         {Array.from({ length: 10 }, (_, i) => i + 1).map((n) => (
           <label key={n} className="cursor-pointer">
-            <input type="radio" name={name} value={n} required className="peer sr-only" />
+            <input type="radio" name={name} value={n} required={required} className="peer sr-only" />
             <span className="flex h-10 w-10 items-center justify-center rounded-md border border-outline-variant bg-surface-container-low text-body-md text-on-surface-variant transition-colors peer-checked:border-primary-container peer-checked:bg-primary-container peer-checked:text-on-primary peer-focus-visible:ring-2 peer-focus-visible:ring-primary-container peer-focus-visible:ring-offset-2 peer-focus-visible:ring-offset-background">
               {n}
             </span>
@@ -52,16 +62,107 @@ function RatingScale({
   );
 }
 
+// Satu pertanyaan buatan panitia. Field bernama `q_<id>` (dibaca submitCustomEvaluation).
+function CustomQuestionField({
+  q,
+  labels,
+}: {
+  q: EvalQuestionRow;
+  labels: { low: string; high: string; optional: string; choose: string };
+}) {
+  const name = `q_${q.id}`;
+  if (q.type === "rating") {
+    return (
+      <RatingScale
+        name={name}
+        legend={q.label}
+        lowLabel={labels.low}
+        highLabel={labels.high}
+        required={q.required}
+        optionalLabel={labels.optional}
+      />
+    );
+  }
+  const options = splitOptions(q.options);
+  const title = (
+    <span className="text-body-md font-semibold text-on-background">
+      {q.label}{" "}
+      {q.required ? (
+        <span className="text-primary-container" aria-hidden="true">*</span>
+      ) : (
+        <span className="text-body-sm font-normal text-on-surface-variant">({labels.optional})</span>
+      )}
+    </span>
+  );
+  if (q.type === "text") {
+    return (
+      <label className="flex flex-col gap-1.5">
+        {title}
+        <input name={name} maxLength={300} required={q.required} aria-required={q.required} className={INPUT} />
+      </label>
+    );
+  }
+  if (q.type === "textarea") {
+    return (
+      <label className="flex flex-col gap-1.5">
+        {title}
+        <textarea name={name} maxLength={2000} rows={3} required={q.required} aria-required={q.required} className={TEXTAREA} />
+      </label>
+    );
+  }
+  if (q.type === "select") {
+    return (
+      <label className="flex flex-col gap-1.5">
+        {title}
+        <select name={name} defaultValue="" required={q.required} aria-required={q.required} className={INPUT}>
+          <option value="">{labels.choose}</option>
+          {options.map((o) => (
+            <option key={o} value={o}>
+              {o}
+            </option>
+          ))}
+        </select>
+      </label>
+    );
+  }
+  // radio / multiselect: kelompok pilihan. Kewajiban multiselect dicek server (checkbox
+  // berkelompok tidak punya `required` bawaan).
+  const inputType = q.type === "radio" ? "radio" : "checkbox";
+  return (
+    <fieldset className="flex flex-col gap-2">
+      <legend className="mb-1">{title}</legend>
+      {options.map((o) => (
+        <label key={o} className="flex items-start gap-3">
+          <input
+            type={inputType}
+            name={name}
+            value={o}
+            required={q.type === "radio" && q.required}
+            className="mt-1 h-4 w-4 accent-primary-container"
+          />
+          <span className="text-body-md text-on-background">{o}</span>
+        </label>
+      ))}
+    </fieldset>
+  );
+}
+
 export function EventEvaluationForm({
   slug,
   eventTitle,
   cityOptions,
   sections,
+  questions,
+  preview = false,
 }: {
   slug: string;
   eventTitle: string;
   cityOptions: string[];
   sections: EvaluationSection[];
+  /** Pertanyaan buatan panitia. Kosong/tidak ada = pakai `sections` dari template tetap. */
+  questions?: EvalQuestionRow[];
+  /** Pratinjau di konsol: tampilan sama persis, tapi tidak mengirim/menyimpan apa pun. */
+  preview?: boolean;
 }) {
   const t = useT();
   const [state, formAction, isPending] = useActionState<EventEvaluationFormState, FormData>(submitEventEvaluation, {});
@@ -70,6 +171,8 @@ export function EventEvaluationForm({
   const [doneBefore, setDoneBefore] = useState(false);
 
   useEffect(() => {
+    // Pratinjau tidak menyentuh token/penanda "sudah mengisi" milik perangkat ini.
+    if (preview) return;
     const timer = window.setTimeout(() => {
       let deviceToken = "";
       try {
@@ -88,7 +191,7 @@ export function EventEvaluationForm({
       setToken(deviceToken);
     }, 0);
     return () => window.clearTimeout(timer);
-  }, [slug]);
+  }, [slug, preview]);
 
   useEffect(() => {
     if (state.ok) {
@@ -98,7 +201,7 @@ export function EventEvaluationForm({
     }
   }, [state.ok, slug]);
 
-  if (state.ok || state.already || doneBefore) {
+  if (!preview && (state.ok || state.already || doneBefore)) {
     const already = !state.ok;
     return (
       <div className={`${CARD} items-center py-10 text-center`}>
@@ -113,9 +216,19 @@ export function EventEvaluationForm({
   }
 
   return (
-    <form action={formAction} className="flex flex-col gap-5">
+    <form
+      action={preview ? undefined : formAction}
+      onSubmit={preview ? (e) => e.preventDefault() : undefined}
+      className="flex flex-col gap-5"
+    >
       <input type="hidden" name="slug" value={slug} />
       <input type="hidden" name="token" value={token} />
+
+      {preview && (
+        <p role="note" className="rounded-lg border border-primary-container/40 bg-primary-container/10 px-4 py-3 text-body-md text-on-background">
+          {t("eval.previewBanner")}
+        </p>
+      )}
 
       {state.error && (
         <p className="rounded-lg bg-error-container/40 px-4 py-3 text-body-md text-on-error-container">
@@ -169,7 +282,24 @@ export function EventEvaluationForm({
         </label>
       </section>
 
-      {sections.map((section) => (
+      {questions && questions.length > 0 && (
+        <section className={CARD}>
+          {questions.map((q) => (
+            <CustomQuestionField
+              key={q.id}
+              q={q}
+              labels={{
+                low: t("eval.scaleLow"),
+                high: t("eval.scaleHigh"),
+                optional: t("eval.optional"),
+                choose: t("eval.choose"),
+              }}
+            />
+          ))}
+        </section>
+      )}
+
+      {(!questions || questions.length === 0) && sections.map((section) => (
         <section key={section.titleKey} className={CARD}>
           <h2 className="text-headline-sm text-on-background">{t(section.titleKey)}</h2>
           {section.questions.map((q) =>
@@ -199,8 +329,12 @@ export function EventEvaluationForm({
         </section>
       ))}
 
-      <button type="submit" disabled={isPending || !token} className={`${BTN} deco-btn self-start bg-accent text-on-accent hover:brightness-95 disabled:opacity-60`}>
-        {isPending ? t("eval.submitting") : t("eval.submit")}
+      <button
+        type="submit"
+        disabled={preview || isPending || !token}
+        className={`${BTN} deco-btn self-start bg-accent text-on-accent hover:brightness-95 disabled:opacity-60`}
+      >
+        {preview ? t("eval.previewSubmit") : isPending ? t("eval.submitting") : t("eval.submit")}
       </button>
 
       <p className="text-body-sm text-on-surface-variant">
