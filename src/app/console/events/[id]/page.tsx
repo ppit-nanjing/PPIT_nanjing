@@ -60,6 +60,7 @@ export default async function ConsoleEventDetailPage({ params }: { params: Promi
   const canPostArticle = can("event.postArticle"); // grant "Post artikel" atau BPH Panitia
   const canManageGallery = can("event.manageGallery"); // grant "Galeri" atau BPH Panitia
   const canBorrowAssets = can("event.borrowAssets"); // grant "Pinjam aset" atau BPH Panitia
+  const canManageCommittee = can("event.manageCommittee"); // panel Struktur Kepanitiaan
   const [
     registrations,
     { divisions, members: committee }, // struktur kepanitiaan acara ini (Departemen -> sub-tim)
@@ -122,10 +123,14 @@ export default async function ConsoleEventDetailPage({ params }: { params: Promi
       .leftJoin(users, eq(eventVolunteers.assignedUserId, users.id))
       .where(eq(eventVolunteers.eventId, id))
       .orderBy(desc(eventVolunteers.createdAt)),
-    db
-      .select({ id: users.id, name: users.name, email: users.email })
-      .from(users)
-      .orderBy(users.name),
+    // Daftar semua akun hanya dirender di panel Struktur Kepanitiaan dan form
+    // Kredit; viewer lain tidak perlu nama + email semua orang diambil.
+    canManageCommittee || canEditCredits
+      ? db
+          .select({ id: users.id, name: users.name, email: users.email })
+          .from(users)
+          .orderBy(users.name)
+      : Promise.resolve([]),
     // Semua album, plus tandai mana yang sudah tertaut ke acara ini
     // (galleryAlbums.eventId). Album yang tertaut ke acara LAIN tetap
     // ditampilkan tapi diberi keterangan supaya tidak sengaja dicuri.
