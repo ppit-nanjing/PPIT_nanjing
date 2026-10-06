@@ -12,6 +12,8 @@ PPIT Nanjing dipakai oleh mahasiswa yang **secara fisik berada di balik Great Fi
 
 ✅ **Kabar baik**: project Neon yang dipakai ada di region **`ap-southeast-1` (Singapore)** — jauh lebih dekat secara jaringan ke Nanjing dibanding region default US yang biasa dipakai provider database gratisan. Latensi query DB dari sisi Tiongkok akan lebih baik daripada skenario "asal pilih region US".
 
+⚠️ **Region fungsi Vercel harus ikut Singapore.** Tanpa pengaturan, fungsi Vercel berjalan di `iad1` (Washington D.C.) sementara Neon di Singapore, jadi **setiap query menyeberangi Pasifik (~240 ms)**; halaman yang melakukan puluhan query berurutan (mis. `/console/events/[id]`) jadi terasa lambat. Karena itu `vercel.json` menetapkan `"regions": ["sin1"]`. Cara memeriksa: bagian kedua header `x-vercel-id` pada respons halaman dinamis (format `edge::fungsi::id`) harus `sin1` (contoh yang salah: `sin1::iad1::…`, artinya edge di Singapore tetapi fungsi di iad1). Kalau region Neon pernah dipindah, ubah nilai ini juga.
+
 **Implikasi keputusan stack di bawah tetap berlaku:**
 1. Font **wajib di-self-host** (`.woff2` dibundle, bukan `<link>` ke Google Fonts).
 2. Ikon pakai **Lucide React** (bundled), bukan Material Symbols via CDN.

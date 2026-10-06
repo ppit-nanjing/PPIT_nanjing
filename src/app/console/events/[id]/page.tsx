@@ -50,62 +50,154 @@ export default async function ConsoleEventDetailPage({ params }: { params: Promi
   const [event] = await db.select().from(events).where(eq(events.id, id));
   if (!event) notFound();
 
-  const registrations = await db
-    .select({
-      reg: eventRegistrations,
-      userName: users.name,
-      userEmail: users.email,
-      // Sensus di-join supaya roster bisa menjawab "siapa saja yang hadir":
-      // anggota Nanjing, mahasiswa dari cabang lain, atau tamu luar. Kota,
-      // kampus, dan WeChat ID juga diambil dari sini untuk acara tanpa biodata
-      // (mis. Fun Hike requiresSensus — pertanyaan itu sengaja tidak ditanya
-      // ulang di form pendaftaran).
-      sensusBranch: sensusProfiles.branch,
-      sensusCompletion: sensusProfiles.completionStatus,
-      sensusUniversity: sensusProfiles.university,
-      sensusWechat: sensusProfiles.wechatId,
-    })
-    .from(eventRegistrations)
-    .leftJoin(users, eq(eventRegistrations.userId, users.id))
-    .leftJoin(sensusProfiles, eq(sensusProfiles.userId, eventRegistrations.userId))
-    .where(eq(eventRegistrations.eventId, id))
-    .orderBy(desc(eventRegistrations.registeredAt));
+  // Semua query di bawah hanya bergantung pada `id` dan hak akses, bukan satu
+  // sama lain, jadi dijalankan serentak: satu putaran ke database alih-alih
+  // belasan putaran berurutan (tiap putaran ~240 ms bila fungsi dan database
+  // berjauhan). Dua yang bergantung pada hasil lain (nama petugas scan, jumlah
+  // foto album) berjalan di gelombang kedua, di bawah.
+  const canViewAuditLog = can("event.viewAuditLog"); // BPH Panitia + BPH Kabinet
+  const canEditCredits = can("event.editCredits"); // kredit/arsip kepanitiaan
+  const canPostArticle = can("event.postArticle"); // grant "Post artikel" atau BPH Panitia
+  const canManageGallery = can("event.manageGallery"); // grant "Galeri" atau BPH Panitia
+  const canBorrowAssets = can("event.borrowAssets"); // grant "Pinjam aset" atau BPH Panitia
+  const [
+    registrations,
+    { divisions, members: committee }, // struktur kepanitiaan acara ini (Departemen -> sub-tim)
+    questions,
+    feeOptions,
+    evaluations,
+    volunteerApps,
+    candidates, // kandidat penugasan: SEMUA akun, kepanitiaan tidak terikat jabatan struktural
+    albums, // album galeri untuk section "Setelah Acara"
+    issuedCerts,
+    auditRows,
+    credits,
+    eventArticles,
+    [assetItems, assetReservations], // reservasi aset Inventaris, hanya untuk yang punya grant
+  ] = await Promise.all([
+    db
+      .select({
+        reg: eventRegistrations,
+        userName: users.name,
+        userEmail: users.email,
+        // Sensus di-join supaya roster bisa menjawab "siapa saja yang hadir":
+        // anggota Nanjing, mahasiswa dari cabang lain, atau tamu luar. Kota,
+        // kampus, dan WeChat ID juga diambil dari sini untuk acara tanpa biodata
+        // (mis. Fun Hike requiresSensus — pertanyaan itu sengaja tidak ditanya
+        // ulang di form pendaftaran).
+        sensusBranch: sensusProfiles.branch,
+        sensusCompletion: sensusProfiles.completionStatus,
+        sensusUniversity: sensusProfiles.university,
+        sensusWechat: sensusProfiles.wechatId,
+      })
+      .from(eventRegistrations)
+      .leftJoin(users, eq(eventRegistrations.userId, users.id))
+      .leftJoin(sensusProfiles, eq(sensusProfiles.userId, eventRegistrations.userId))
+      .where(eq(eventRegistrations.eventId, id))
+      .orderBy(desc(eventRegistrations.registeredAt)),
+    listEventDivisions(id),
+    db
+      .select()
+      .from(eventQuestions)
+      .where(eq(eventQuestions.eventId, id))
+      .orderBy(eventQuestions.orderIndex, eventQuestions.id),
+    db
+      .select()
+      .from(eventFeeOptions)
+      .where(eq(eventFeeOptions.eventId, id))
+      .orderBy(eventFeeOptions.orderIndex, eventFeeOptions.id),
+    db
+      .select()
+      .from(eventEvaluations)
+      .where(eq(eventEvaluations.eventId, id))
+      .orderBy(desc(eventEvaluations.createdAt)),
+    db
+      .select({
+        app: eventVolunteers,
+        divisionName: eventDivisions.name,
+        accountName: users.name,
+      })
+      .from(eventVolunteers)
+      .leftJoin(eventDivisions, eq(eventVolunteers.divisionId, eventDivisions.id))
+      .leftJoin(users, eq(eventVolunteers.assignedUserId, users.id))
+      .where(eq(eventVolunteers.eventId, id))
+      .orderBy(desc(eventVolunteers.createdAt)),
+    db
+      .select({ id: users.id, name: users.name, email: users.email })
+      .from(users)
+      .orderBy(users.name),
+    // Semua album, plus tandai mana yang sudah tertaut ke acara ini
+    // (galleryAlbums.eventId). Album yang tertaut ke acara LAIN tetap
+    // ditampilkan tapi diberi keterangan supaya tidak sengaja dicuri.
+    db
+      .select({ id: galleryAlbums.id, title: galleryAlbums.title, eventId: galleryAlbums.eventId })
+      .from(galleryAlbums)
+      .orderBy(desc(galleryAlbums.createdAt)),
+    db
+      .select({ userId: certificates.userId, kind: certificates.kind })
+      .from(certificates)
+      .where(eq(certificates.eventId, id)),
+    canViewAuditLog
+      ? db
+          .select({ log: auditLogs, actorName: users.name })
+          .from(auditLogs)
+          .leftJoin(users, eq(auditLogs.actorUserId, users.id))
+          .where(and(eq(auditLogs.entityType, "event"), eq(auditLogs.entityId, id)))
+          .orderBy(desc(auditLogs.createdAt))
+          .limit(80)
+      : Promise.resolve([]),
+    canEditCredits
+      ? db
+          .select({ id: eventCredits.id, displayName: eventCredits.displayName, roleLabel: eventCredits.roleLabel })
+          .from(eventCredits)
+          .where(eq(eventCredits.eventId, id))
+          .orderBy(eventCredits.orderIndex, eventCredits.createdAt)
+      : Promise.resolve([]),
+    canPostArticle
+      ? db
+          .select({ id: newsArticles.id, title: newsArticles.title, status: newsArticles.status })
+          .from(newsArticles)
+          .where(eq(newsArticles.eventId, id))
+          .orderBy(desc(newsArticles.publishedAt))
+      : Promise.resolve([]),
+    canBorrowAssets
+      ? Promise.all([
+          db.select({ id: inventoryItems.id, name: inventoryItems.name }).from(inventoryItems).orderBy(inventoryItems.name),
+          db
+            .select({ r: itemReservations, itemName: inventoryItems.name })
+            .from(itemReservations)
+            .leftJoin(inventoryItems, eq(itemReservations.itemId, inventoryItems.id))
+            .where(and(eq(itemReservations.eventId, id), eq(itemReservations.status, "active")))
+            .orderBy(desc(itemReservations.reservedFrom)),
+        ])
+      : Promise.resolve([[], []]),
+  ]);
 
+  const linkedAlbum = albums.find((a) => a.eventId === id) ?? null;
+  // Gelombang kedua: bergantung pada `registrations` dan `linkedAlbum`.
   // Nama petugas yang men-scan tiap kehadiran (event_registrations.checked_in_by)
   // — satu lookup untuk semua id, dihindari self-join beralias.
   const scannerIds = [
     ...new Set(registrations.map((r) => r.reg.checkedInBy).filter((v): v is string => !!v)),
   ];
-  const scannerNames = scannerIds.length
-    ? new Map(
-        (
-          await db
-            .select({ id: users.id, name: users.name })
-            .from(users)
-            .where(inArray(users.id, scannerIds))
-        ).map((u) => [u.id, u.name] as const),
-      )
-    : new Map<string, string | null>();
+  const [scannerNames, albumPhotoCount] = await Promise.all([
+    scannerIds.length
+      ? db
+          .select({ id: users.id, name: users.name })
+          .from(users)
+          .where(inArray(users.id, scannerIds))
+          .then((rows) => new Map(rows.map((u) => [u.id, u.name] as const)))
+      : Promise.resolve(new Map<string, string | null>()),
+    // Galeri foto acara: hanya dihitung bila viewer boleh mengelolanya dan album tertaut.
+    canManageGallery && linkedAlbum
+      ? db
+          .select({ n: sql<number>`count(*)::int` })
+          .from(galleryPhotos)
+          .where(eq(galleryPhotos.albumId, linkedAlbum.id))
+          .then((r) => r[0]?.n ?? 0)
+      : Promise.resolve(0),
+  ]);
 
-  // Struktur kepanitiaan acara ini (Departemen -> sub-tim) + daftar orang yang
-  // bisa ditugaskan. Kandidatnya SEMUA akun, bukan cuma anggota departemen:
-  // kepanitiaan acara memang tidak terikat jabatan struktural.
-  const { divisions, members: committee } = await listEventDivisions(id);
-  const questions = await db
-    .select()
-    .from(eventQuestions)
-    .where(eq(eventQuestions.eventId, id))
-    .orderBy(eventQuestions.orderIndex, eventQuestions.id);
-  const feeOptions = await db
-    .select()
-    .from(eventFeeOptions)
-    .where(eq(eventFeeOptions.eventId, id))
-    .orderBy(eventFeeOptions.orderIndex, eventFeeOptions.id);
-  const evaluations = await db
-    .select()
-    .from(eventEvaluations)
-    .where(eq(eventEvaluations.eventId, id))
-    .orderBy(desc(eventEvaluations.createdAt));
   const feeOptionById = new Map(feeOptions.map((o) => [o.id, o]));
   // Label kategori tarif untuk satu pendaftaran: pakai NOMINAL EFEKTIF-nya —
   // tergantung tahap (early bird / normal) yang berlaku saat dia mendaftar.
@@ -129,92 +221,10 @@ export default async function ConsoleEventDetailPage({ params }: { params: Promi
     const registered = feeOptionRegCount.get(o.id) ?? 0;
     return { ...o, registered, isFull: o.quota != null && registered >= o.quota };
   });
-  const volunteerApps = await db
-    .select({
-      app: eventVolunteers,
-      divisionName: eventDivisions.name,
-      accountName: users.name,
-    })
-    .from(eventVolunteers)
-    .leftJoin(eventDivisions, eq(eventVolunteers.divisionId, eventDivisions.id))
-    .leftJoin(users, eq(eventVolunteers.assignedUserId, users.id))
-    .where(eq(eventVolunteers.eventId, id))
-    .orderBy(desc(eventVolunteers.createdAt));
   const pendingVolunteers = volunteerApps.filter((v) => v.app.status === "pending");
-  const candidates = await db
-    .select({ id: users.id, name: users.name, email: users.email })
-    .from(users)
-    .orderBy(users.name);
-  // Album galeri untuk section "Setelah Acara": semua album, plus tandai mana
-  // yang sudah tertaut ke acara ini (galleryAlbums.eventId). Album yang tertaut
-  // ke acara LAIN tetap ditampilkan tapi diberi keterangan supaya tidak
-  // sengaja dicuri dari acara lain.
-  const albums = await db
-    .select({ id: galleryAlbums.id, title: galleryAlbums.title, eventId: galleryAlbums.eventId })
-    .from(galleryAlbums)
-    .orderBy(desc(galleryAlbums.createdAt));
-  const linkedAlbum = albums.find((a) => a.eventId === id) ?? null;
 
-  const issuedCerts = await db
-    .select({ userId: certificates.userId, kind: certificates.kind })
-    .from(certificates)
-    .where(eq(certificates.eventId, id));
   const committeeCertUserIds = issuedCerts.filter((c) => c.kind === "panitia").map((c) => c.userId);
   const participantCertCount = issuedCerts.filter((c) => c.kind === "peserta").length;
-
-  // Riwayat audit acara — BPH Panitia (ketua/wakil/sekretaris/SC) + BPH Kabinet.
-  const canViewAuditLog = can("event.viewAuditLog");
-  const auditRows = canViewAuditLog
-    ? await db
-        .select({ log: auditLogs, actorName: users.name })
-        .from(auditLogs)
-        .leftJoin(users, eq(auditLogs.actorUserId, users.id))
-        .where(and(eq(auditLogs.entityType, "event"), eq(auditLogs.entityId, id)))
-        .orderBy(desc(auditLogs.createdAt))
-        .limit(80)
-    : [];
-
-  // Kredit / arsip kepanitiaan (fitur tampilan, terpisah dari akses).
-  const canEditCredits = can("event.editCredits");
-  const credits = canEditCredits
-    ? await db
-        .select({ id: eventCredits.id, displayName: eventCredits.displayName, roleLabel: eventCredits.roleLabel })
-        .from(eventCredits)
-        .where(eq(eventCredits.eventId, id))
-        .orderBy(eventCredits.orderIndex, eventCredits.createdAt)
-    : [];
-
-  // Artikel berita acara — grant "Post artikel" atau BPH Panitia.
-  const canPostArticle = can("event.postArticle");
-  const eventArticles = canPostArticle
-    ? await db
-        .select({ id: newsArticles.id, title: newsArticles.title, status: newsArticles.status })
-        .from(newsArticles)
-        .where(eq(newsArticles.eventId, id))
-        .orderBy(desc(newsArticles.publishedAt))
-    : [];
-
-  // Galeri foto acara — grant "Galeri" (Divisi Dokumentasi) atau BPH Panitia.
-  const canManageGallery = can("event.manageGallery");
-  const albumPhotoCount =
-    canManageGallery && linkedAlbum
-      ? (await db.select({ n: sql<number>`count(*)::int` }).from(galleryPhotos).where(eq(galleryPhotos.albumId, linkedAlbum.id)))[0]?.n ?? 0
-      : 0;
-
-  // Reservasi aset Inventaris untuk acara ini — hanya diambil kalau viewer-nya
-  // punya grant "Pinjam aset" (Divisi Logistik acara) atau BPH Panitia.
-  const canBorrowAssets = can("event.borrowAssets");
-  const [assetItems, assetReservations] = canBorrowAssets
-    ? await Promise.all([
-        db.select({ id: inventoryItems.id, name: inventoryItems.name }).from(inventoryItems).orderBy(inventoryItems.name),
-        db
-          .select({ r: itemReservations, itemName: inventoryItems.name })
-          .from(itemReservations)
-          .leftJoin(inventoryItems, eq(itemReservations.itemId, inventoryItems.id))
-          .where(and(eq(itemReservations.eventId, id), eq(itemReservations.status, "active")))
-          .orderBy(desc(itemReservations.reservedFrom)),
-      ])
-    : [[], []];
 
   // Biodata lengkap pendaftar (paspor, KTM, universitas, telpon, jurusan, email,
   // kota, jawaban kustom) tampil untuk BPH Kabinet + Divisi Teknologi
