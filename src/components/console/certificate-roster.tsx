@@ -59,6 +59,10 @@ export function CertificateRoster({
                 name="fileUrl"
                 type="url"
                 required
+                // Peramban menerima http://, server hanya https://. Cegat di sini supaya tidak
+                // berakhir di halaman error (aksi yang melempar error menggantikan seluruh halaman).
+                pattern="https://.+"
+                title="Alamat harus diawali https://"
                 defaultValue={row.cert?.fileUrl ?? ""}
                 placeholder="https://… tautan berkas sertifikat"
                 aria-label={`Tautan berkas sertifikat ${row.name}`}

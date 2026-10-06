@@ -312,8 +312,11 @@ export default async function ConsoleEventDetailPage({ params }: { params: Promi
     .filter((r) => r.reg.status === "attended")
     .map((r) => ({
       userId: r.reg.userId,
-      name: r.sensusFullName?.trim() || r.userName || r.userEmail || "(tanpa nama)",
-      detail: r.userEmail,
+      // Email hanya untuk yang boleh melihat detail pendaftar (BPH Kabinet/Teknologi dan BPH
+      // Panitia). Panitia dengan hak "Sertifikat" saja melihat nama, seperti di daftar pendaftar
+      // ringkas; server tetap mencocokkan tempel massal berdasarkan email maupun nama.
+      name: r.sensusFullName?.trim() || r.userName || (canSeeRegistrantDetail ? r.userEmail : null) || "(tanpa nama)",
+      detail: canSeeRegistrantDetail ? r.userEmail : null,
       cert: certByPerson.get(`peserta:${r.reg.userId}`) ?? null,
     }));
   const confirmedNotAttended = registrations.filter((r) => r.reg.status === "confirmed").length;
@@ -321,7 +324,7 @@ export default async function ConsoleEventDetailPage({ params }: { params: Promi
     .filter((m) => !!m.userId)
     .map((m) => ({
       userId: m.userId as string,
-      name: m.name ?? m.email ?? "(tanpa nama)",
+      name: m.name ?? (canSeeRegistrantDetail ? m.email : null) ?? "(tanpa nama)",
       detail: EVENT_COMMITTEE_ROLE_LABEL[m.role as keyof typeof EVENT_COMMITTEE_ROLE_LABEL] ?? m.role,
       cert: certByPerson.get(`panitia:${m.userId}`) ?? null,
     }));

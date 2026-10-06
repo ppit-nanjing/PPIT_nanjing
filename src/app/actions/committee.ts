@@ -315,11 +315,17 @@ export async function issueCertificate(formData: FormData) {
     ? (await requireEventCapability(eventId, "event.issueCertificates")).session
     : await requireModuleAccess("events");
 
+  // Sertifikat peserta/panitia untuk sebuah acara tunduk pada aturan yang sama dengan
+  // daftar penerbitan di konsol acara (hadir ter-scan / anggota kepanitiaan); jalur
+  // Work Ledger ini tidak boleh jadi celah. Pemateri, juara, dan "lainnya" bebas.
+  const kind = String(formData.get("kind") ?? "peserta");
+  if (eventId) await assertEligibleForEventCertificate(eventId, userId, kind);
+
   await insertCertificates([
     {
       userId,
       eventId,
-      kind: (String(formData.get("kind") ?? "peserta")) as "peserta",
+      kind: kind as "peserta",
       title,
       fileUrl,
       issuedBy: session.user.id,
@@ -354,10 +360,20 @@ export async function updateCertificateFileUrl(formData: FormData) {
   const id = String(formData.get("id") ?? "");
   if (!id) throw new Error("ID sertifikat wajib diisi");
 
-  const [existing] = await db.select({ eventId: certificates.eventId }).from(certificates).where(eq(certificates.id, id));
+  const [existing] = await db
+    .select({ eventId: certificates.eventId, userId: certificates.userId, kind: certificates.kind })
+    .from(certificates)
+    .where(eq(certificates.id, id));
   if (!existing) throw new Error("Sertifikat tidak ditemukan");
-  if (existing.eventId) await requireEventCapability(existing.eventId, "event.issueCertificates");
-  else await requireModuleAccess("events");
+  if (existing.eventId) {
+    await requireEventCapability(existing.eventId, "event.issueCertificates");
+    // Menempel tautan membuat sertifikat TERBIT, jadi pemiliknya harus berhak. Ini juga
+    // menahan sertifikat lama (tanpa berkas) milik orang yang tidak hadir agar tidak
+    // ikut terbit hanya karena seseorang mengisi kolom tautannya di Work Ledger.
+    await assertEligibleForEventCertificate(existing.eventId, existing.userId, existing.kind);
+  } else {
+    await requireModuleAccess("events");
+  }
 
   // Tautan tidak boleh dikosongkan: sertifikat tanpa berkas tidak dianggap terbit.
   const fileUrl = normalizeCertificateUrl(String(formData.get("fileUrl") ?? ""));
@@ -432,6 +448,25 @@ async function certificateCandidates(event: { id: string; title: string }, kind:
     email: m.email,
     title: buildCertificateTitle(m.role, divisionNames.get(m.divisionId ?? "") ?? null, event.title),
   }));
+}
+
+/**
+ * Kelayakan untuk sertifikat sebuah acara. Hanya jenis "peserta" (harus tercatat hadir)
+ * dan "panitia" (harus anggota kepanitiaan acara itu) yang dijaga; pemateri, juara,
+ * dan "lainnya" memang bebas karena orangnya bukan peserta/panitia terdaftar.
+ */
+async function assertEligibleForEventCertificate(eventId: string, userId: string, kind: string): Promise<void> {
+  if (kind !== "peserta" && kind !== "panitia") return;
+  const [event] = await db.select({ id: events.id, title: events.title }).from(events).where(eq(events.id, eventId));
+  if (!event) throw new Error("Acara tidak ditemukan");
+  const candidates = await certificateCandidates(event, kind);
+  if (!candidates.some((c) => c.userId === userId)) {
+    throw new Error(
+      kind === "peserta"
+        ? "Hanya peserta yang kehadirannya tercatat (QR di-scan) yang berhak atas sertifikat peserta"
+        : "Orang ini bukan anggota kepanitiaan acara ini",
+    );
+  }
 }
 
 /**
