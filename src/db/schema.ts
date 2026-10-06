@@ -12,6 +12,7 @@ import {
   doublePrecision,
   primaryKey,
   uniqueIndex,
+  index,
   AnyPgColumn,
 } from "drizzle-orm/pg-core";
 
@@ -1577,10 +1578,13 @@ export const eventEvaluations = pgTable(
     eventId: uuid("event_id")
       .notNull()
       .references(() => events.id, { onDelete: "cascade" }),
-    ratingRegistration: integer("rating_registration").notNull(),
-    ratingFacilities: integer("rating_facilities").notNull(),
-    ratingCgt: integer("rating_cgt").notNull(),
-    ratingOverall: integer("rating_overall").notNull(),
+    // 4 penilaian bawaan (template WIF / umum). NULL untuk respons acara yang
+    // memakai pertanyaan buatan panitia: jawabannya ada di eventEvaluationAnswers.
+    // Dipakai juga sebagai pembeda: ratingRegistration IS NULL = respons kustom.
+    ratingRegistration: integer("rating_registration"),
+    ratingFacilities: integer("rating_facilities"),
+    ratingCgt: integer("rating_cgt"),
+    ratingOverall: integer("rating_overall"),
     improveRegistration: text("improve_registration"),
     improveFacilities: text("improve_facilities"),
     cgtMessage: text("cgt_message"),
@@ -1594,4 +1598,50 @@ export const eventEvaluations = pgTable(
     createdAt: timestamp("created_at").notNull().defaultNow(),
   },
   (t) => [uniqueIndex("event_evaluations_event_token_idx").on(t.eventId, t.responderToken)],
+);
+
+// Pertanyaan evaluasi buatan panitia (pola sama dengan eventQuestions untuk form
+// pendaftaran, tapi tabel terpisah supaya form pendaftaran tidak ikut berubah).
+// Acara tanpa baris di sini memakai template tetap (event-evaluation-template.ts).
+// `type`: rating (1-10) | text | textarea | select | radio | multiselect.
+export const eventEvaluationQuestions = pgTable(
+  "event_evaluation_questions",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    eventId: uuid("event_id")
+      .notNull()
+      .references(() => events.id, { onDelete: "cascade" }),
+    label: text("label").notNull(),
+    type: text("type").notNull(),
+    // Pilihan untuk select/radio/multiselect, satu opsi per baris.
+    options: text("options"),
+    required: boolean("required").notNull().default(true),
+    orderIndex: integer("order_index").notNull().default(0),
+    createdAt: timestamp("created_at").notNull().defaultNow(),
+  },
+  (t) => [index("event_evaluation_questions_event_idx").on(t.eventId, t.orderIndex)],
+);
+
+// Jawaban satu pertanyaan dalam satu respons. question_label/question_type adalah
+// salinan saat dijawab: menghapus pertanyaan (question_id jadi NULL) tidak
+// menghilangkan jawaban yang sudah terkumpul.
+export const eventEvaluationAnswers = pgTable(
+  "event_evaluation_answers",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    evaluationId: uuid("evaluation_id")
+      .notNull()
+      .references(() => eventEvaluations.id, { onDelete: "cascade" }),
+    questionId: uuid("question_id").references(() => eventEvaluationQuestions.id, { onDelete: "set null" }),
+    questionLabel: text("question_label").notNull(),
+    questionType: text("question_type").notNull(),
+    // Teks, atau pilihan (multiselect: satu opsi per baris).
+    valueText: text("value_text"),
+    // Nilai rating 1-10.
+    valueNumber: integer("value_number"),
+  },
+  (t) => [
+    index("event_evaluation_answers_evaluation_idx").on(t.evaluationId),
+    index("event_evaluation_answers_question_idx").on(t.questionId),
+  ],
 );

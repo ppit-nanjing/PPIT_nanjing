@@ -24,8 +24,26 @@ flowchart TD
 | Rute | Isi |
 |---|---|
 | `/events/:slug/evaluasi` | Form publik. `draft`/`scheduled` → 404. Tanpa login; identitas opsional; satu perangkat satu respons (token `localStorage` + unique `(event_id, responder_token)`). |
-| `/console/events/:id` | Section **Evaluasi Acara** (CollapsibleSection): ringkasan (jumlah respons, rata-rata, anonim) + **3 tab** — *Grafik* (rata-rata & distribusi tiap rating), *Jawaban* (preview jawaban per pertanyaan: distribusi nilai + semua teks), *Respons* (daftar per orang + hapus). |
-| `/api/console/events/:id/evaluasi/export?format=csv\|xlsx` | Ekspor lengkap 14 kolom. Akses: sesi dengan akses console acara ini (sama seperti halaman console-nya). |
+| `/console/events/:id` | Section **Pertanyaan Evaluasi** (builder + pratinjau, lihat di bawah) dan section **Evaluasi Acara** (CollapsibleSection): ringkasan (jumlah respons, rata-rata, anonim) + **3 tab** — *Grafik* (rata-rata & distribusi tiap rating; hitungan per pilihan), *Jawaban* (preview jawaban per pertanyaan: distribusi nilai + semua teks), *Respons* (daftar per orang + hapus). |
+| `/api/console/events/:id/evaluasi/export?format=csv\|xlsx` | Ekspor lengkap. Template tetap: 14 kolom. Pertanyaan sendiri: satu kolom per pertanyaan. Akses: sesi dengan akses console acara ini (sama seperti halaman console-nya). |
+
+## Dua mode pertanyaan
+
+| Mode | Kapan | Pertanyaan | Jawaban disimpan di |
+|---|---|---|---|
+| **Template tetap** | Acara belum punya pertanyaan sendiri (default semua acara, termasuk WIF 2026) | WIF atau umum, dipilih dari slug (bagian "Pertanyaan (skema tetap)" di bawah) | kolom bawaan `event_evaluations` |
+| **Pertanyaan sendiri** | Acara punya ≥ 1 baris di `event_evaluation_questions` | Dibuat panitia di console | `event_evaluation_answers` (satu baris per jawaban) |
+
+Pindah mode otomatis: begitu pertanyaan pertama ditambahkan, form publik, rekap, dan ekspor memakai pertanyaan sendiri; kalau semua pertanyaan dihapus lagi, acara kembali ke template tetap. Respons yang sudah masuk tidak pernah dihapus oleh perpindahan ini (respons lama tidak tampil di rekap mode lain, tapi tetap ada di ekspor).
+
+### Builder pertanyaan evaluasi (`/console/events/:id` → "Pertanyaan Evaluasi")
+
+- Dipakai panitia yang boleh mengatur form pendaftaran (kapabilitas `event.registrationForm`, dasar untuk semua panitia). Pola dan tampilannya sama dengan builder "Pertanyaan Pendaftaran", tapi tabelnya terpisah (`event_evaluation_questions`) supaya form pendaftaran tidak ikut berubah.
+- Tipe pertanyaan: **Penilaian 1–10**, Teks Pendek (≤ 300 karakter), Teks Panjang (≤ 2000), Dropdown, Pilihan (radio), Pilih Banyak (centang). Opsi satu per baris; maksimal 30 opsi, 120 karakter per opsi, maksimal 40 pertanyaan per acara. Tiap pertanyaan bisa wajib atau opsional.
+- **Mulai dari template standar**: tombol (hanya muncul saat belum ada pertanyaan sendiri) menyalin pertanyaan template WIF/umum menjadi pertanyaan yang bisa diedit. Ini cara memakai WIF sebagai acuan.
+- **Tipe terkunci setelah ada jawaban**: nilai rating (angka) dan teks disimpan berbeda, jadi tipe tidak bisa diubah kalau sudah ada yang menjawab; hapus dan buat pertanyaan baru. Label, opsi, dan wajib/opsional tetap bisa diedit.
+- **Menghapus pertanyaan tidak menghapus jawabannya**: tiap jawaban menyimpan salinan label dan tipe pertanyaannya, jadi rekap dan ekspor tetap menampilkannya dengan tanda "(pertanyaan sudah dihapus)".
+- **Pratinjau** ("Pratinjau form evaluasi" di dalam section): komponen form publik yang sama persis dengan `preview` aktif: tombol kirim mati, tidak ada yang tersimpan, token perangkat tidak disentuh. Bisa dibuka walau acara masih draft (form publiknya sendiri 404 selama draft/terjadwal).
 
 ## Pertanyaan (skema tetap)
 
@@ -68,3 +86,12 @@ Skema DB tetap sama untuk kedua template (4 kolom rating + 6 kolom teks); yang b
 - Halaman: `src/app/events/[slug]/evaluasi/page.tsx` (i18n `id`/`en`, kota memakai urutan kanonik `src/lib/coverage-cities.ts`).
 - Ekspor memakai `src/lib/report-export.ts` yang sama dengan ekspor sensus.
 - Kalau fitur ini tidak dipakai lagi untuk acara tertentu: cukup berhenti membagikan tautannya (tidak ada flag buka/tutup).
+
+### Pertanyaan sendiri (builder)
+
+- **Migrasi `drizzle/0044_event_evaluation_questions.sql`**: tabel `event_evaluation_questions` (tipe dibatasi CHECK), `event_evaluation_answers` (FK ke respons ON DELETE CASCADE; FK ke pertanyaan ON DELETE SET NULL; salinan `question_label`/`question_type`), dan **empat kolom penilaian bawaan di `event_evaluations` jadi boleh NULL** (respons pertanyaan sendiri tidak mengisinya; kolom itu juga pembeda: `rating_registration IS NULL` = respons pertanyaan sendiri). Jalankan dengan `npx tsx --env-file=.env src/db/apply-sql.ts drizzle/0044_event_evaluation_questions.sql` setelah memastikan targetnya database yang benar.
+- **Kode toleran terhadap migrasi yang belum jalan**: `src/lib/event-evaluation-queries.ts` membaca tabel baru dan menganggap error Postgres `42P01` (tabel tidak ada) sebagai "tidak ada pertanyaan sendiri", jadi kode boleh ter-deploy sebelum migrasi tanpa merusak konsol, form publik, atau pengiriman evaluasi (semua acara tetap pakai template tetap). Builder sendiri (aksi simpan) baru bisa dipakai setelah migrasi.
+- Server Action builder: `src/app/actions/event-evaluation-questions.ts` (`saveEventEvaluationQuestion`, `deleteEventEvaluationQuestion`, `startEvaluationFromTemplate`); UI: `src/components/console/evaluation-questions-builder.tsx`.
+- Pengiriman jawaban: `submitEventEvaluation` memilih jalur dari ada-tidaknya pertanyaan sendiri. Jalur sendiri (`submitCustomEvaluation`) membaca field `q_<id pertanyaan>`, memvalidasi per tipe (`validateEvalAnswer` di `src/lib/event-evaluation-questions.ts`: rating bulat 1–10, teks dibatasi panjang, pilihan harus salah satu opsi), lalu menulis respons + semua jawaban dalam satu `db.batch` (satu transaksi). Aksi ini juga menolak acara `draft`/`scheduled` (sebelumnya hanya halamannya yang 404).
+- Rekap dan ekspor memakai fungsi murni di `src/lib/event-evaluation-results.ts` (kolom = pertanyaan sekarang + pertanyaan terhapus yang masih punya jawaban).
+- Teks UI baru (`eval.choose`, `eval.previewBanner`, `eval.previewSubmit`) ada di kedua kamus `id`/`en`. Teks builder dan rekap di console tetap Indonesia, seperti bagian console lainnya.

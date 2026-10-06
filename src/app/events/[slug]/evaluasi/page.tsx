@@ -8,6 +8,7 @@ import { PageHeader } from "@/components/page-header";
 import { EventEvaluationForm } from "@/components/events/event-evaluation-form";
 import { sortByCoverageOrder } from "@/lib/coverage-cities";
 import { evaluationTemplateForSlug } from "@/lib/event-evaluation-template";
+import { loadEvaluationQuestions } from "@/lib/event-evaluation-queries";
 import { getT } from "@/lib/i18n/server";
 
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }) {
@@ -24,11 +25,12 @@ export default async function EventEvaluationPage({ params }: { params: Promise<
   const [event] = await db.select().from(events).where(eq(events.slug, slug));
   if (!event || event.status === "draft" || event.status === "scheduled") notFound();
 
-  const cityRows = sortByCoverageOrder(
-    await db.select({ label: coverageCities.label }).from(coverageCities),
-    (row) => row.label,
-  );
-  const cityOptions = cityRows.map((c) => c.label);
+  // Kota (urutan kanonik) dan pertanyaan buatan panitia tidak saling bergantung.
+  const [cityRowsRaw, customQuestions] = await Promise.all([
+    db.select({ label: coverageCities.label }).from(coverageCities),
+    loadEvaluationQuestions(event.id),
+  ]);
+  const cityOptions = sortByCoverageOrder(cityRowsRaw, (row) => row.label).map((c) => c.label);
 
   return (
     <div className="min-h-screen bg-background text-on-background">
@@ -42,6 +44,7 @@ export default async function EventEvaluationPage({ params }: { params: Promise<
           eventTitle={event.title}
           cityOptions={cityOptions}
           sections={evaluationTemplateForSlug(event.slug).sections}
+          questions={customQuestions}
         />
       </main>
 

@@ -1,7 +1,7 @@
 import { eq, and, desc, sql, inArray } from "drizzle-orm";
 import { notFound } from "next/navigation";
 import { db } from "@/db";
-import { auditLogs, certificates, events, eventCredits, eventDivisions, eventEvaluations, eventFeeOptions, eventQuestions, eventRegistrations, eventVolunteers, galleryAlbums, galleryPhotos, inventoryItems, itemReservations, newsArticles, sensusProfiles, users } from "@/db/schema";
+import { auditLogs, certificates, coverageCities, events, eventCredits, eventDivisions, eventEvaluations, eventFeeOptions, eventQuestions, eventRegistrations, eventVolunteers, galleryAlbums, galleryPhotos, inventoryItems, itemReservations, newsArticles, sensusProfiles, users } from "@/db/schema";
 import { MEMBERSHIP_LABEL, effectiveBranch, membershipStatus } from "@/lib/membership-status";
 import { updateEventInfo, updateEventContent, updateEventPostReport, setEventStatus, saveEventQuestion, deleteEventQuestion, saveFeeOption, deleteFeeOption } from "@/app/actions/admin-events";
 import { createEventGalleryAlbum } from "@/app/actions/admin-content";
@@ -24,6 +24,9 @@ import { Select, CheckboxField, CheckField } from "@/components/console/form";
 import { PaymentVerificationList } from "@/components/console/payment-verification-list";
 import { EvaluationResults } from "@/components/console/evaluation-results";
 import { evaluationTemplateForSlug } from "@/lib/event-evaluation-template";
+import { EvaluationQuestionsBuilder } from "@/components/console/evaluation-questions-builder";
+import { sortByCoverageOrder } from "@/lib/coverage-cities";
+import { loadEvaluationAnswers, loadEvaluationQuestions } from "@/lib/event-evaluation-queries";
 import { ReservationManager } from "@/components/console/reservation-manager";
 import { checkInBlockReason } from "@/lib/event-checkin";
 import { feeTierAt, amountForTier } from "@/lib/event-fee";
@@ -61,6 +64,7 @@ export default async function ConsoleEventDetailPage({ params }: { params: Promi
   const canManageGallery = can("event.manageGallery"); // grant "Galeri" atau BPH Panitia
   const canBorrowAssets = can("event.borrowAssets"); // grant "Pinjam aset" atau BPH Panitia
   const canManageCommittee = can("event.manageCommittee"); // panel Struktur Kepanitiaan
+  const canEditEvaluationQuestions = can("event.registrationForm"); // builder pertanyaan evaluasi
   const [
     registrations,
     { divisions, members: committee }, // struktur kepanitiaan acara ini (Departemen -> sub-tim)
@@ -74,6 +78,9 @@ export default async function ConsoleEventDetailPage({ params }: { params: Promi
     auditRows,
     credits,
     eventArticles,
+    evalQuestions, // pertanyaan evaluasi buatan panitia (kosong = template tetap)
+    evalAnswers, // jawaban untuk pertanyaan itu, semua respons acara ini
+    cityRows, // untuk pratinjau form evaluasi, hanya bila viewer boleh menyusunnya
     [assetItems, assetReservations], // reservasi aset Inventaris, hanya untuk yang punya grant
   ] = await Promise.all([
     db
@@ -165,6 +172,11 @@ export default async function ConsoleEventDetailPage({ params }: { params: Promi
           .where(eq(newsArticles.eventId, id))
           .orderBy(desc(newsArticles.publishedAt))
       : Promise.resolve([]),
+    loadEvaluationQuestions(id),
+    loadEvaluationAnswers(id),
+    canEditEvaluationQuestions
+      ? db.select({ label: coverageCities.label }).from(coverageCities)
+      : Promise.resolve([]),
     canBorrowAssets
       ? Promise.all([
           db.select({ id: inventoryItems.id, name: inventoryItems.name }).from(inventoryItems).orderBy(inventoryItems.name),
@@ -179,6 +191,11 @@ export default async function ConsoleEventDetailPage({ params }: { params: Promi
   ]);
 
   const linkedAlbum = albums.find((a) => a.eventId === id) ?? null;
+  // Jawaban yang sudah masuk per pertanyaan evaluasi: tipe pertanyaan dikunci bila > 0.
+  const evalAnswerCounts: Record<string, number> = {};
+  for (const a of evalAnswers) {
+    if (a.questionId) evalAnswerCounts[a.questionId] = (evalAnswerCounts[a.questionId] ?? 0) + 1;
+  }
   // Gelombang kedua: bergantung pada `registrations` dan `linkedAlbum`.
   // Nama petugas yang men-scan tiap kehadiran (event_registrations.checked_in_by)
   // — satu lookup untuk semua id, dihindari self-join beralias.
@@ -1181,11 +1198,35 @@ export default async function ConsoleEventDetailPage({ params }: { params: Promi
       </CollapsibleSection>
       )}
 
+      {canEditEvaluationQuestions && (
+      <CollapsibleSection
+        title="Pertanyaan Evaluasi"
+        description={evalQuestions.length > 0 ? `${evalQuestions.length} pertanyaan sendiri` : "template standar"}
+      >
+        <EvaluationQuestionsBuilder
+          eventId={id}
+          slug={event.slug}
+          eventTitle={event.title}
+          questions={evalQuestions}
+          answerCounts={evalAnswerCounts}
+          legacyResponseCount={evaluations.filter((e) => e.ratingRegistration != null).length}
+          cityOptions={sortByCoverageOrder(cityRows, (row) => row.label).map((c) => c.label)}
+          sections={evaluationTemplateForSlug(event.slug).sections}
+        />
+      </CollapsibleSection>
+      )}
+
       <CollapsibleSection
         title="Evaluasi Acara"
         description={evaluations.length > 0 ? `${evaluations.length} respons` : "belum ada respons"}
       >
-        <EvaluationResults eventId={id} evaluations={evaluations} sections={evaluationTemplateForSlug(event.slug).sections} />
+        <EvaluationResults
+          eventId={id}
+          evaluations={evaluations}
+          sections={evaluationTemplateForSlug(event.slug).sections}
+          questions={evalQuestions}
+          answers={evalAnswers}
+        />
       </CollapsibleSection>
         </div>
 
