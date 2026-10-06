@@ -1603,7 +1603,7 @@ export const eventEvaluations = pgTable(
 // Pertanyaan evaluasi buatan panitia (pola sama dengan eventQuestions untuk form
 // pendaftaran, tapi tabel terpisah supaya form pendaftaran tidak ikut berubah).
 // Acara tanpa baris di sini memakai template tetap (event-evaluation-template.ts).
-// `type`: rating (1-10) | text | textarea | select | radio | multiselect.
+// `type`: rating (1-10) | stars (1-5) | text | textarea | select | radio | multiselect.
 export const eventEvaluationQuestions = pgTable(
   "event_evaluation_questions",
   {

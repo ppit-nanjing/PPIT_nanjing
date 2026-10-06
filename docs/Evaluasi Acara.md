@@ -39,7 +39,7 @@ Pindah mode otomatis: begitu pertanyaan pertama ditambahkan, form publik, rekap,
 ### Builder pertanyaan evaluasi (`/console/events/:id` → "Pertanyaan Evaluasi")
 
 - Dipakai panitia yang boleh mengatur form pendaftaran (kapabilitas `event.registrationForm`, dasar untuk semua panitia). Pola dan tampilannya sama dengan builder "Pertanyaan Pendaftaran", tapi tabelnya terpisah (`event_evaluation_questions`) supaya form pendaftaran tidak ikut berubah.
-- Tipe pertanyaan: **Penilaian 1–10**, Teks Pendek (≤ 300 karakter), Teks Panjang (≤ 2000), Dropdown, Pilihan (radio), Pilih Banyak (centang). Opsi satu per baris; maksimal 30 opsi, 120 karakter per opsi, maksimal 40 pertanyaan per acara. Tiap pertanyaan bisa wajib atau opsional.
+- Tipe pertanyaan: **Penilaian 1–10**, **Bintang 1–5** (dua skala angka; rekapnya dipisah per skala, rata-ratanya tidak pernah dicampur), Teks Pendek (≤ 300 karakter), Teks Panjang (≤ 2000), Dropdown, Pilihan (radio), Pilih Banyak (centang). Opsi satu per baris; maksimal 30 opsi, 120 karakter per opsi, maksimal 40 pertanyaan per acara. Tiap pertanyaan bisa wajib atau opsional.
 - **Mulai dari template standar**: tombol (hanya muncul saat belum ada pertanyaan sendiri) menyalin pertanyaan template WIF/umum menjadi pertanyaan yang bisa diedit. Ini cara memakai WIF sebagai acuan.
 - **Tipe terkunci setelah ada jawaban**: nilai rating (angka) dan teks disimpan berbeda, jadi tipe tidak bisa diubah kalau sudah ada yang menjawab; hapus dan buat pertanyaan baru. Label, opsi, dan wajib/opsional tetap bisa diedit.
 - **Menghapus pertanyaan tidak menghapus jawabannya**: tiap jawaban menyimpan salinan label dan tipe pertanyaannya, jadi rekap dan ekspor tetap menampilkannya dengan tanda "(pertanyaan sudah dihapus)".

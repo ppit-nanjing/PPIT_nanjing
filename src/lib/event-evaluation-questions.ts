@@ -2,11 +2,20 @@
 // Client-safe (tanpa import db/auth/kamus) supaya
 // form publik, builder konsol, dan server action memakai definisi yang sama.
 
-export const EVAL_QUESTION_TYPES = ["rating", "text", "textarea", "select", "radio", "multiselect"] as const;
+export const EVAL_QUESTION_TYPES = ["rating", "stars", "text", "textarea", "select", "radio", "multiselect"] as const;
 export type EvalQuestionType = (typeof EVAL_QUESTION_TYPES)[number];
+
+// Dua tipe berskala angka. Skalanya berbeda, jadi rekapnya tidak boleh dicampur.
+export const SCALE_MAX = { rating: 10, stars: 5 } as const;
+export type ScaleType = keyof typeof SCALE_MAX;
+
+export function isScaleType(type: EvalQuestionType): type is ScaleType {
+  return type === "rating" || type === "stars";
+}
 
 export const EVAL_QUESTION_TYPE_LABELS: Record<EvalQuestionType, string> = {
   rating: "Penilaian 1–10",
+  stars: "Bintang 1–5",
   text: "Teks Pendek",
   textarea: "Teks Panjang",
   select: "Dropdown",
@@ -59,9 +68,11 @@ export function validateEvalAnswer(
   const strings = values.filter((v): v is string => typeof v === "string").map((v) => v.trim()).filter(Boolean);
   if (strings.length === 0) return q.required ? { ok: false, reason: "required" } : { ok: true, answer: null };
 
-  if (q.type === "rating") {
+  if (isScaleType(q.type)) {
     const n = Number.parseInt(strings[0], 10);
-    if (!Number.isInteger(n) || String(n) !== strings[0] || n < 1 || n > 10) return { ok: false, reason: "invalid" };
+    if (!Number.isInteger(n) || String(n) !== strings[0] || n < 1 || n > SCALE_MAX[q.type]) {
+      return { ok: false, reason: "invalid" };
+    }
     return { ok: true, answer: { text: null, number: n } };
   }
 

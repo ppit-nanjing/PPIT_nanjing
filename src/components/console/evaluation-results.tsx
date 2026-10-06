@@ -7,7 +7,7 @@ import type { eventEvaluations } from "@/db/schema";
 import { ConfirmButton } from "@/components/console/confirm-button";
 import { deleteEventEvaluation } from "@/app/actions/event-evaluations";
 import { ratingQuestions, textQuestions, type EvaluationSection } from "@/lib/event-evaluation-template";
-import type { EvalQuestionRow } from "@/lib/event-evaluation-questions";
+import { type EvalQuestionRow, SCALE_MAX, isScaleType } from "@/lib/event-evaluation-questions";
 import {
   type EvalAnswerRow,
   type EvalColumn,
@@ -63,8 +63,8 @@ function ExportLinks({ eventId }: { eventId: string }) {
   );
 }
 
-function Distribution({ values, tall }: { values: number[]; tall?: boolean }) {
-  const counts = Array.from({ length: 10 }, (_, i) => values.filter((v) => v === i + 1).length);
+function Distribution({ values, tall, scale = 10 }: { values: number[]; tall?: boolean; scale?: number }) {
+  const counts = Array.from({ length: scale }, (_, i) => values.filter((v) => v === i + 1).length);
   const max = Math.max(...counts, 1);
   const h = tall ? 56 : 32;
   return (
@@ -397,10 +397,16 @@ function CustomResults({
     );
   }
 
-  const ratingCols = columns.filter((c) => c.type === "rating");
+  // Penilaian 1-10 dan bintang 1-5 beda skala: rata-ratanya dihitung terpisah.
+  const ratingCols = columns.filter((c) => isScaleType(c.type));
   const choiceCols = columns.filter((c) => isChoiceType(c.type));
   const anonymousCount = evaluations.filter((e) => e.anonymous).length;
-  const allRatings = ratingCols.flatMap((c) => ratingValues(c, byEvaluation));
+  const averageChips = (["rating", "stars"] as const)
+    .map((type) => ({
+      type,
+      values: columns.filter((c) => c.type === type).flatMap((c) => ratingValues(c, byEvaluation)),
+    }))
+    .filter((chip) => chip.values.length > 0);
 
   return (
     <div className="flex flex-col gap-5">
@@ -409,11 +415,12 @@ function CustomResults({
           <span className="rounded-md bg-surface-container-low px-3 py-1.5 text-label-caps text-on-surface-variant">
             <b className="text-on-background">{evaluations.length}</b> respons
           </span>
-          {allRatings.length > 0 && (
-            <span className="rounded-md bg-surface-container-low px-3 py-1.5 text-label-caps text-on-surface-variant">
-              rata-rata penilaian <b className="text-on-background">{average(allRatings)}</b>/10
+          {averageChips.map((chip) => (
+            <span key={chip.type} className="rounded-md bg-surface-container-low px-3 py-1.5 text-label-caps text-on-surface-variant">
+              rata-rata {chip.type === "stars" ? "bintang" : "penilaian"}{" "}
+              <b className="text-on-background">{average(chip.values)}</b>/{SCALE_MAX[chip.type]}
             </span>
-          )}
+          ))}
           <span className="rounded-md bg-surface-container-low px-3 py-1.5 text-label-caps text-on-surface-variant">
             <b className="text-on-background">{anonymousCount}</b> anonim
           </span>
@@ -433,18 +440,22 @@ function CustomResults({
           <div className="grid grid-cols-1 gap-3 pb-1 sm:grid-cols-2">
             {ratingCols.map((c) => {
               const values = ratingValues(c, byEvaluation);
+              const scale = isScaleType(c.type) ? SCALE_MAX[c.type] : 10;
               return (
                 <div key={c.key} className="rounded-lg border border-outline-variant bg-surface-container-low p-4">
                   <div className="flex items-baseline justify-between gap-3">
                     <ColumnTitle column={c} />
-                    <p className="text-headline-lg text-on-background leading-none">{average(values)}</p>
+                    <p className="text-headline-lg text-on-background leading-none">
+                      {average(values)}
+                      <span className="ml-1 text-body-sm text-on-surface-variant">/{scale}</span>
+                    </p>
                   </div>
                   <div className="mt-4">
-                    <Distribution values={values} tall />
+                    <Distribution values={values} tall scale={scale} />
                   </div>
                   <div className="mt-1 flex justify-between text-[10px] text-on-surface-variant">
                     <span>1</span>
-                    <span>10</span>
+                    <span>{scale}</span>
                   </div>
                 </div>
               );
@@ -461,17 +472,18 @@ function CustomResults({
       {tab === "jawaban" && (
         <div className="flex flex-col gap-4 pb-1">
           {columns.map((c) => {
-            if (c.type === "rating") {
+            if (isScaleType(c.type)) {
               const values = ratingValues(c, byEvaluation);
+              const scale = SCALE_MAX[c.type];
               return (
                 <div key={c.key} className="rounded-lg border border-outline-variant p-4">
-                  <ColumnTitle column={c} suffix="penilaian 1–10" />
+                  <ColumnTitle column={c} suffix={c.type === "stars" ? "bintang 1–5" : "penilaian 1–10"} />
                   <div className="mt-3 flex flex-wrap items-center gap-4">
                     <p className="text-body-md text-on-background">
-                      rata-rata <b>{average(values)}</b> dari {values.length} jawaban
+                      rata-rata <b>{average(values)}</b>/{scale} dari {values.length} jawaban
                     </p>
                     <div className="min-w-[220px] max-w-xs flex-1">
-                      <Distribution values={values} />
+                      <Distribution values={values} scale={scale} />
                     </div>
                   </div>
                 </div>
