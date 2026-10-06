@@ -10,7 +10,10 @@ import { publishDueEvents } from "@/lib/publish-events";
 import { DeleteEventButton } from "@/components/console/delete-event-button";
 import { RegistrationList } from "@/components/console/registration-list";
 import { EventCommitteeStructure } from "@/components/console/event-committee-structure";
-import { listEventDivisions, issueParticipantCertificates, takeOverEvent, addEventCredit, removeEventCredit } from "@/app/actions/committee";
+import { listEventDivisions, takeOverEvent, addEventCredit, removeEventCredit } from "@/app/actions/committee";
+import { CertificateRoster } from "@/components/console/certificate-roster";
+import { CertificateBulkForm } from "@/components/console/certificate-bulk-form";
+import { EVENT_COMMITTEE_ROLE_LABEL } from "@/lib/event-capabilities";
 import { requireEventConsoleAccess } from "@/lib/event-access";
 import { EVENT_STATUS_LABEL as STATUS_LABEL } from "@/lib/event-status-labels";
 import { EVENT_AUDIT_ACTION_LABEL, type EventAuditAction } from "@/lib/event-audit";
@@ -97,6 +100,7 @@ export default async function ConsoleEventDetailPage({ params }: { params: Promi
         sensusCompletion: sensusProfiles.completionStatus,
         sensusUniversity: sensusProfiles.university,
         sensusWechat: sensusProfiles.wechatId,
+        sensusFullName: sensusProfiles.fullName, // nama pada sertifikat (hanya untuk daftar penerbitan)
       })
       .from(eventRegistrations)
       .leftJoin(users, eq(eventRegistrations.userId, users.id))
@@ -146,7 +150,7 @@ export default async function ConsoleEventDetailPage({ params }: { params: Promi
       .from(galleryAlbums)
       .orderBy(desc(galleryAlbums.createdAt)),
     db
-      .select({ userId: certificates.userId, kind: certificates.kind })
+      .select({ userId: certificates.userId, kind: certificates.kind, fileUrl: certificates.fileUrl })
       .from(certificates)
       .where(eq(certificates.eventId, id)),
     canViewAuditLog
@@ -245,8 +249,10 @@ export default async function ConsoleEventDetailPage({ params }: { params: Promi
   });
   const pendingVolunteers = volunteerApps.filter((v) => v.app.status === "pending");
 
-  const committeeCertUserIds = issuedCerts.filter((c) => c.kind === "panitia").map((c) => c.userId);
-  const participantCertCount = issuedCerts.filter((c) => c.kind === "peserta").length;
+  // Sertifikat dianggap terbit hanya bila tautan berkasnya ada (baris lama tanpa berkas tidak dihitung).
+  const committeeCertUserIds = issuedCerts.filter((c) => c.kind === "panitia" && c.fileUrl).map((c) => c.userId);
+  const participantCertCount = issuedCerts.filter((c) => c.kind === "peserta" && c.fileUrl).length;
+  const certByPerson = new Map(issuedCerts.map((c) => [`${c.kind}:${c.userId}`, { fileUrl: c.fileUrl }] as const));
 
   // Biodata lengkap pendaftar (paspor, KTM, universitas, telpon, jurusan, email,
   // kota, jawaban kustom) tampil untuk BPH Kabinet + Divisi Teknologi
@@ -299,12 +305,27 @@ export default async function ConsoleEventDetailPage({ params }: { params: Promi
   // cuma yang di halaman publik. registrations.length mentah dulu dipakai
   // langsung di sini dan diam-diam tidak ikut turun.
   const activeRegistrationCount = registrations.filter((r) => r.reg.status !== "cancelled").length;
-  // Berhak sertifikat kehadiran = pendaftar yang diterima: confirmed maupun
-  // attended (pending belum diterima, cancelled batal). Harus sinkron dengan
-  // aturan di issueParticipantCertificates supaya angkanya tidak menipu.
-  const eligible = registrations.filter(
-    (r) => r.reg.status === "confirmed" || r.reg.status === "attended"
-  ).length;
+  // Berhak sertifikat peserta = HANYA yang kehadirannya tercatat (status "attended",
+  // QR-nya di-scan). Terkonfirmasi saja tidak cukup. Aturan yang sama dijaga server
+  // di certificateCandidates() (actions/committee.ts).
+  const certAttendees = registrations
+    .filter((r) => r.reg.status === "attended")
+    .map((r) => ({
+      userId: r.reg.userId,
+      name: r.sensusFullName?.trim() || r.userName || r.userEmail || "(tanpa nama)",
+      detail: r.userEmail,
+      cert: certByPerson.get(`peserta:${r.reg.userId}`) ?? null,
+    }));
+  const confirmedNotAttended = registrations.filter((r) => r.reg.status === "confirmed").length;
+  const certCommittee = committee
+    .filter((m) => !!m.userId)
+    .map((m) => ({
+      userId: m.userId as string,
+      name: m.name ?? m.email ?? "(tanpa nama)",
+      detail: EVENT_COMMITTEE_ROLE_LABEL[m.role as keyof typeof EVENT_COMMITTEE_ROLE_LABEL] ?? m.role,
+      cert: certByPerson.get(`panitia:${m.userId}`) ?? null,
+    }));
+  const committeeCertCount = certCommittee.filter((p) => p.cert?.fileUrl).length;
 
   return (
     <div className="py-2">
@@ -833,27 +854,34 @@ export default async function ConsoleEventDetailPage({ params }: { params: Promi
       )}
 
       {can("event.issueCertificates") && (
+      <>
       <CollapsibleSection
         title="Sertifikat Peserta"
-        description={`${eligible} berhak · ${participantCertCount} terbit`}
+        description={`${certAttendees.length} hadir · ${participantCertCount} terbit`}
       >
         {event.certificateForParticipants ? (
-          <>
-            <p className="text-body-md text-on-surface-variant mb-4 max-w-2xl">
-              Semua pendaftar yang diterima (konfirmasi &amp; hadir) berhak atas e-sertifikat kehadiran.
-              Tombol ini menerbitkan untuk <strong className="text-on-background">yang belum punya saja</strong>,
-              jadi aman ditekan ulang setelah ada pendaftar baru. Berkas PDF-nya ditautkan manual belakangan lewat Work Ledger.
+          <div className="flex flex-col gap-4">
+            <p className="text-body-md text-on-surface-variant max-w-2xl">
+              Hanya peserta yang <strong className="text-on-background">kehadirannya tercatat</strong> (QR-nya di-scan
+              di acara) yang berhak. Sertifikat <strong className="text-on-background">tidak terbit tanpa tautan
+              berkas</strong>: tempel tautan https:// berkas PDF-nya di samping nama, lalu simpan. Saat itu juga
+              sertifikatnya muncul di profil peserta dan mereka diberi notifikasi. Untuk banyak orang sekaligus,
+              pakai &quot;Tempel banyak sekaligus&quot;.
             </p>
-            <form action={issueParticipantCertificates}>
-              <input type="hidden" name="eventId" value={id} />
-              <SubmitButton
-                successMessage="Sertifikat peserta diterbitkan."
-                className="bg-primary-container text-on-primary text-label-caps uppercase tracking-wide px-6 py-3 rounded-md hover:bg-primary transition-colors"
-              >
-                Terbitkan Sertifikat Peserta
-              </SubmitButton>
-            </form>
-          </>
+            {confirmedNotAttended > 0 && (
+              <p className="text-body-sm text-on-surface-variant">
+                {confirmedNotAttended} pendaftar terkonfirmasi belum tercatat hadir, jadi belum berhak. Kalau ada yang
+                hadir tapi belum di-scan, catat kehadirannya dulu di daftar pendaftar.
+              </p>
+            )}
+            <CertificateRoster
+              eventId={id}
+              kind="peserta"
+              rows={certAttendees}
+              emptyText="Belum ada peserta yang tercatat hadir. Daftar ini terisi saat panitia men-scan QR peserta di acara."
+            />
+            {certAttendees.length > 0 && <CertificateBulkForm eventId={id} kind="peserta" />}
+          </div>
         ) : (
           <p className="text-body-md text-on-surface-variant max-w-2xl">
             Acara ini tidak memberi e-sertifikat kehadiran. Centang &quot;Peserta mendapat e-sertifikat
@@ -861,6 +889,27 @@ export default async function ConsoleEventDetailPage({ params }: { params: Promi
           </p>
         )}
       </CollapsibleSection>
+
+      <CollapsibleSection
+        title="Sertifikat Panitia"
+        description={`${certCommittee.length} panitia · ${committeeCertCount} terbit`}
+      >
+        <div className="flex flex-col gap-4">
+          <p className="text-body-md text-on-surface-variant max-w-2xl">
+            Untuk semua anggota kepanitiaan acara ini (susunannya di &quot;Struktur Kepanitiaan&quot;). Sama seperti
+            peserta: <strong className="text-on-background">sertifikat baru terbit saat tautan berkasnya
+            disimpan</strong>. Judulnya dirakit otomatis dari peran, divisi, dan nama acara.
+          </p>
+          <CertificateRoster
+            eventId={id}
+            kind="panitia"
+            rows={certCommittee}
+            emptyText="Belum ada panitia. Susun kepanitiaan dulu di section Struktur Kepanitiaan."
+          />
+          {certCommittee.length > 0 && <CertificateBulkForm eventId={id} kind="panitia" />}
+        </div>
+      </CollapsibleSection>
+      </>
       )}
 
       {canPostArticle && (

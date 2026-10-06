@@ -3,8 +3,6 @@ import {
   saveEventDivision,
   deleteEventDivision,
   applyStructureTemplate,
-  issueDivisionCertificates,
-  issueEventCertificates,
   assignCommittee,
   assignMembersToDivision,
   removeCommittee,
@@ -111,7 +109,6 @@ export function EventCommitteeStructure({
   certifiedUserIds: string[];
 }) {
   const certified = new Set(certifiedUserIds);
-  const certifiedCount = members.filter((m) => m.userId && certified.has(m.userId)).length;
   const roots = divisions.filter((d) => !d.parentDivisionId);
   const childrenOf = (id: string) => divisions.filter((d) => d.parentDivisionId === id);
   const membersOf = (id: string) => members.filter((m) => m.divisionId === id);
@@ -138,22 +135,11 @@ export function EventCommitteeStructure({
           Susunan panitia acara ini. <strong className="text-on-background">Berbeda dari jabatan struktural</strong> —
           seseorang bisa jadi Ketua Departemen Perlengkapan di acara ini tanpa memegang jabatan apa pun di kabinet.
         </p>
-        {members.length > 0 && (
-          <form action={issueEventCertificates}>
-            <input type="hidden" name="eventId" value={eventId} />
-            <SubmitButton
-              successMessage="Sertifikat panitia diterbitkan."
-              className="flex items-center gap-2 bg-primary-container text-on-primary text-label-caps uppercase tracking-wide px-4 py-3 rounded-md hover:bg-primary transition-colors"
-            >
-              <Award size={16} /> Terbitkan Sertifikat Semua Panitia ({members.length - certifiedCount})
-            </SubmitButton>
-          </form>
-        )}
       </div>
       <p className="text-xs text-on-surface-variant -mt-3">
-        Setiap peran di kepanitiaan dapat sertifikat, termasuk BPH &amp; Supervisory Committee yang tidak berada di
-        divisi mana pun — tombol per-departemen di bawah tidak menjangkau mereka, tombol ini menjangkau.
-        Yang sudah punya dilewati, jadi menekannya lagi setelah menambah orang hanya menerbitkan untuk yang baru.
+        Setiap peran di kepanitiaan berhak atas sertifikat, termasuk BPH &amp; Supervisory Committee yang tidak berada
+        di divisi mana pun. Sertifikat diterbitkan di section &quot;Sertifikat Panitia&quot; (butuh tautan berkas
+        untuk tiap orang); angka &quot;sudah bersertifikat&quot; di bawah menghitung yang sudah bertautan berkas.
       </p>
 
       {divisions.length === 0 && (
@@ -205,15 +191,6 @@ export function EventCommitteeStructure({
                 </p>
               </div>
               <div className="flex items-center gap-2">
-                <form action={issueDivisionCertificates}>
-                  <input type="hidden" name="divisionId" value={dept.id} />
-                  <SubmitButton
-                    successMessage="Sertifikat divisi diterbitkan."
-                    className="flex items-center gap-1 text-label-caps uppercase tracking-wide border border-outline-variant px-3 py-2 rounded-md hover:bg-surface-container-low transition-colors"
-                  >
-                    <Award size={14} /> Terbitkan Sertifikat
-                  </SubmitButton>
-                </form>
                 <form action={deleteEventDivision}>
                   <input type="hidden" name="id" value={dept.id} />
                   <SubmitButton successMessage="Departemen dihapus." className="text-error hover:opacity-70 p-2" aria-label={`Hapus ${dept.name}`}>

@@ -1,11 +1,11 @@
 "use server";
 
 import { randomUUID } from "crypto";
-import { and, desc, eq, inArray, sql as raw } from "drizzle-orm";
+import { and, desc, eq, inArray, isNotNull, sql as raw } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { auth } from "@/auth";
 import { db } from "@/db";
-import { eventCommittee, eventCredits, eventDivisions, certificates, events, users, eventRegistrations } from "@/db/schema";
+import { eventCommittee, eventCredits, eventDivisions, certificates, events, users, eventRegistrations, sensusProfiles } from "@/db/schema";
 import { requireModuleAccess } from "@/lib/admin-scope";
 import { requireEventCapability, requireEventConsoleAccess } from "@/lib/event-access";
 import { EVENT_COMMITTEE_ROLE_LABEL, GRANTABLE_CAPABILITIES, type EventCommitteeRole } from "@/lib/event-capabilities";
@@ -13,6 +13,8 @@ import { logEventAudit } from "@/lib/event-audit";
 import { getStructureTemplate } from "@/lib/event-structure-templates";
 import { createTemplatedNotification } from "@/lib/notifications";
 import { PRIVATE_FILE_PREFIX, isOwnPrivateFileUrl } from "@/lib/private-files";
+import { buildCertificateTitle } from "@/lib/certificate-title";
+import { normalizeCertificateUrl, parseCertificateBulk, personKey } from "@/lib/certificate-links";
 
 // Committee membership is per-event on purpose: the treasurer of one event is
 // not necessarily the cabinet treasurer, which is the exact complaint in the
@@ -303,6 +305,9 @@ export async function issueCertificate(formData: FormData) {
   const title = String(formData.get("title") ?? "").trim();
   const eventId = String(formData.get("eventId") ?? "") || null;
   if (!userId || !title) throw new Error("Penerima dan judul sertifikat wajib diisi");
+  // Sertifikat tidak boleh terbit tanpa tautan berkas, dan tautannya harus https://.
+  const fileUrl = normalizeCertificateUrl(String(formData.get("fileUrl") ?? ""));
+  if (!fileUrl) throw new Error("Tautan berkas wajib diisi dan harus berupa alamat https://…");
 
   // Sertifikat bertaut acara → wewenang event.issueCertificates untuk acara itu.
   // Sertifikat lepas (tanpa acara) tetap butuh modul "events" tingkat kabinet.
@@ -316,9 +321,7 @@ export async function issueCertificate(formData: FormData) {
       eventId,
       kind: (String(formData.get("kind") ?? "peserta")) as "peserta",
       title,
-      // A Google Drive link is fine - the ideas doc says so explicitly when
-      // storage is tight, and Vercel Blob is not provisioned yet anyway.
-      fileUrl: String(formData.get("fileUrl") ?? "").trim() || null,
+      fileUrl,
       issuedBy: session.user.id,
     },
   ]);
@@ -356,15 +359,235 @@ export async function updateCertificateFileUrl(formData: FormData) {
   if (existing.eventId) await requireEventCapability(existing.eventId, "event.issueCertificates");
   else await requireModuleAccess("events");
 
+  // Tautan tidak boleh dikosongkan: sertifikat tanpa berkas tidak dianggap terbit.
+  const fileUrl = normalizeCertificateUrl(String(formData.get("fileUrl") ?? ""));
+  if (!fileUrl) throw new Error("Tautan berkas wajib diisi dan harus berupa alamat https://…");
+
   const [row] = await db
     .update(certificates)
-    .set({ fileUrl: String(formData.get("fileUrl") ?? "").trim() || null })
+    .set({ fileUrl })
     .where(eq(certificates.id, id))
     .returning({ eventId: certificates.eventId });
 
   revalidatePath("/console/work-ledger");
   if (row?.eventId) revalidatePath(`/console/events/${row.eventId}`);
   revalidatePath("/profile/submissions");
+}
+
+// ---------- penerbitan sertifikat acara: tautan wajib, peserta harus hadir ----------
+//
+// Dua aturan yang dijaga di sini (server), bukan di tampilan:
+//  1. Sertifikat TIDAK terbit tanpa tautan berkas https://. Barisnya baru dibuat
+//     saat tautannya ada, jadi tidak pernah ada sertifikat kosong.
+//  2. Sertifikat PESERTA hanya untuk yang kehadirannya tercatat (status "attended",
+//     artinya QR-nya sudah di-scan). Terkonfirmasi saja tidak cukup. Sertifikat
+//     PANITIA untuk anggota kepanitiaan acara itu.
+
+type CertificateKind = "peserta" | "panitia";
+
+type CertificateCandidate = {
+  userId: string;
+  /** Nama untuk ditampilkan dan dicocokkan: nama lengkap sensus dulu, lalu nama akun. */
+  names: string[];
+  email: string | null;
+  title: string;
+};
+
+async function certificateCandidates(event: { id: string; title: string }, kind: CertificateKind): Promise<CertificateCandidate[]> {
+  if (kind === "peserta") {
+    const rows = await db
+      .select({ userId: eventRegistrations.userId, name: users.name, email: users.email, fullName: sensusProfiles.fullName })
+      .from(eventRegistrations)
+      .innerJoin(users, eq(eventRegistrations.userId, users.id))
+      .leftJoin(sensusProfiles, eq(sensusProfiles.userId, eventRegistrations.userId))
+      .where(and(eq(eventRegistrations.eventId, event.id), eq(eventRegistrations.status, "attended")));
+    return rows.map((r) => ({
+      userId: r.userId,
+      names: [r.fullName?.trim(), r.name?.trim()].filter((n): n is string => !!n),
+      email: r.email,
+      title: `Peserta — ${event.title}`,
+    }));
+  }
+
+  const [members, divisions] = await Promise.all([
+    db
+      .select({
+        userId: eventCommittee.userId,
+        role: eventCommittee.role,
+        divisionId: eventCommittee.divisionId,
+        name: users.name,
+        email: users.email,
+        fullName: sensusProfiles.fullName,
+      })
+      .from(eventCommittee)
+      .innerJoin(users, eq(eventCommittee.userId, users.id))
+      .leftJoin(sensusProfiles, eq(sensusProfiles.userId, eventCommittee.userId))
+      .where(eq(eventCommittee.eventId, event.id)),
+    db.select({ id: eventDivisions.id, name: eventDivisions.name }).from(eventDivisions).where(eq(eventDivisions.eventId, event.id)),
+  ]);
+  const divisionNames = new Map(divisions.map((d) => [d.id, d.name]));
+  return members.map((m) => ({
+    userId: m.userId,
+    names: [m.fullName?.trim(), m.name?.trim()].filter((n): n is string => !!n),
+    email: m.email,
+    title: buildCertificateTitle(m.role, divisionNames.get(m.divisionId ?? "") ?? null, event.title),
+  }));
+}
+
+/**
+ * Menulis tautan sertifikat untuk sekumpulan orang yang SUDAH dipastikan berhak.
+ * Yang belum punya sertifikat: dibuat (lengkap dengan tautannya) + diberi notifikasi.
+ * Yang sudah punya: hanya tautannya yang diperbarui (tanpa notifikasi ulang, tanggal
+ * terbit tetap).
+ */
+async function saveCertificateLinks(
+  event: { id: string },
+  kind: CertificateKind,
+  items: { candidate: CertificateCandidate; url: string }[],
+  actorId: string,
+): Promise<{ issued: number; updated: number }> {
+  const existing = await db
+    .select({ id: certificates.id, userId: certificates.userId, fileUrl: certificates.fileUrl })
+    .from(certificates)
+    .where(and(eq(certificates.eventId, event.id), eq(certificates.kind, kind)));
+  const byUser = new Map(existing.map((c) => [c.userId, c]));
+
+  const toInsert: (typeof certificates.$inferInsert)[] = [];
+  let updated = 0;
+  for (const { candidate, url } of items) {
+    const current = byUser.get(candidate.userId);
+    if (!current) {
+      toInsert.push({ userId: candidate.userId, eventId: event.id, kind, title: candidate.title, fileUrl: url, issuedBy: actorId });
+    } else if (current.fileUrl !== url) {
+      await db.update(certificates).set({ fileUrl: url }).where(eq(certificates.id, current.id));
+      updated += 1;
+    }
+  }
+  await insertCertificates(toInsert); // notifikasi + entri audit "diterbitkan"
+  if (updated > 0) await logEventAudit(actorId, event.id, "certificate.link_updated", { after: { count: updated } });
+  return { issued: toInsert.length, updated };
+}
+
+function revalidateCertificates(eventId: string) {
+  revalidatePath(`/console/events/${eventId}`);
+  revalidatePath("/console/work-ledger");
+  revalidatePath("/profile");
+  revalidatePath("/profile/submissions");
+}
+
+async function loadCertificateEvent(eventId: string, kind: CertificateKind) {
+  const [event] = await db.select().from(events).where(eq(events.id, eventId));
+  if (!event) throw new Error("Acara tidak ditemukan");
+  if (kind === "peserta" && !event.certificateForParticipants) {
+    throw new Error('Acara ini tidak memberi e-sertifikat peserta (kotak "Peserta mendapat e-sertifikat kehadiran" belum dicentang)');
+  }
+  return event;
+}
+
+function parseKind(value: FormDataEntryValue | null): CertificateKind {
+  if (value === "peserta" || value === "panitia") return value;
+  throw new Error("Jenis sertifikat tidak valid");
+}
+
+/** Terbitkan (atau perbarui tautan) sertifikat untuk SATU orang, dengan tautan wajib. */
+export async function issueCertificateWithLink(formData: FormData): Promise<void> {
+  const eventId = String(formData.get("eventId") ?? "");
+  const userId = String(formData.get("userId") ?? "");
+  const kind = parseKind(formData.get("kind"));
+  if (!eventId || !userId) throw new Error("Acara dan penerima wajib diisi");
+  const { session } = await requireEventCapability(eventId, "event.issueCertificates");
+
+  const url = normalizeCertificateUrl(String(formData.get("fileUrl") ?? ""));
+  if (!url) throw new Error("Tautan berkas wajib diisi dan harus berupa alamat https://…");
+
+  const event = await loadCertificateEvent(eventId, kind);
+  const candidate = (await certificateCandidates(event, kind)).find((c) => c.userId === userId);
+  if (!candidate) {
+    throw new Error(
+      kind === "peserta"
+        ? "Hanya peserta yang kehadirannya tercatat (QR di-scan) yang berhak atas sertifikat"
+        : "Orang ini bukan anggota kepanitiaan acara ini",
+    );
+  }
+
+  await saveCertificateLinks(event, kind, [{ candidate, url }], session.user.id);
+  revalidateCertificates(eventId);
+}
+
+export type CertificateBulkState = { done: boolean; issued: number; updated: number; problems: string[] };
+
+const BULK_MAX_LINES = 300;
+const BULK_MAX_CHARS = 60_000;
+
+/**
+ * Tempel massal: satu orang per baris, "email atau nama lengkap" + tautan. Hanya
+ * baris yang cocok dengan satu orang yang berhak yang diproses; sisanya dilaporkan
+ * satu per satu (tidak ditemukan / ganda / bukan yang berhak), tidak dibuang diam-diam.
+ */
+export async function saveCertificateLinksBulk(
+  _prev: CertificateBulkState,
+  formData: FormData,
+): Promise<CertificateBulkState> {
+  const eventId = String(formData.get("eventId") ?? "");
+  const kind = parseKind(formData.get("kind"));
+  if (!eventId) throw new Error("Acara wajib dipilih");
+  const { session } = await requireEventCapability(eventId, "event.issueCertificates");
+
+  const text = String(formData.get("lines") ?? "");
+  if (text.length > BULK_MAX_CHARS) {
+    return { done: true, issued: 0, updated: 0, problems: [`Daftar terlalu panjang (maksimal ${BULK_MAX_CHARS} karakter)`] };
+  }
+  const { entries, problems } = parseCertificateBulk(text);
+  if (entries.length === 0 && problems.length === 0) {
+    return { done: true, issued: 0, updated: 0, problems: ["Daftar kosong"] };
+  }
+  if (entries.length > BULK_MAX_LINES) {
+    return { done: true, issued: 0, updated: 0, problems: [`Maksimal ${BULK_MAX_LINES} baris sekali tempel`] };
+  }
+
+  const event = await loadCertificateEvent(eventId, kind);
+  const candidates = await certificateCandidates(event, kind);
+
+  // email dan nama (lengkap sensus maupun nama akun) -> orang yang berhak.
+  const byKey = new Map<string, CertificateCandidate[]>();
+  for (const c of candidates) {
+    for (const raw of [c.email, ...c.names]) {
+      if (!raw) continue;
+      const key = personKey(raw);
+      const list = byKey.get(key) ?? [];
+      if (!list.includes(c)) list.push(c);
+      byKey.set(key, list);
+    }
+  }
+
+  const items: { candidate: CertificateCandidate; url: string }[] = [];
+  const seen = new Set<string>();
+  const allProblems = [...problems];
+  for (const entry of entries) {
+    const matches = byKey.get(personKey(entry.key)) ?? [];
+    if (matches.length === 0) {
+      allProblems.push(
+        `Baris ${entry.line} "${entry.key}": tidak ada di daftar yang berhak` +
+          (kind === "peserta" ? " (harus tercatat hadir, QR di-scan)" : " (harus anggota kepanitiaan acara ini)"),
+      );
+      continue;
+    }
+    if (matches.length > 1) {
+      allProblems.push(`Baris ${entry.line} "${entry.key}": cocok dengan lebih dari satu orang, pakai email supaya pasti`);
+      continue;
+    }
+    const candidate = matches[0];
+    if (seen.has(candidate.userId)) {
+      allProblems.push(`Baris ${entry.line} "${entry.key}": orang ini sudah ada di baris sebelumnya, baris ini dilewati`);
+      continue;
+    }
+    seen.add(candidate.userId);
+    items.push({ candidate, url: entry.url });
+  }
+
+  const result = items.length > 0 ? await saveCertificateLinks(event, kind, items, session.user.id) : { issued: 0, updated: 0 };
+  revalidateCertificates(eventId);
+  return { done: true, issued: result.issued, updated: result.updated, problems: allProblems };
 }
 
 /** Certificates belong to the signed-in user; no admin scope needed. */
@@ -383,7 +606,9 @@ export async function getMyCertificates() {
     })
     .from(certificates)
     .leftJoin(events, eq(certificates.eventId, events.id))
-    .where(eq(certificates.userId, session.user.id))
+    // Hanya yang sudah bertautan berkas: sertifikat tanpa berkas belum dianggap terbit
+    // (baris lama dari sebelum aturan ini tetap tersimpan tapi tidak ditampilkan).
+    .where(and(eq(certificates.userId, session.user.id), isNotNull(certificates.fileUrl)))
     .orderBy(desc(certificates.issuedAt));
 }
 
@@ -723,216 +948,4 @@ export async function applyStructureTemplate(formData: FormData) {
   });
 
   revalidatePath(`/console/events/${eventId}`);
-}
-
-/**
- * Menerbitkan sertifikat panitia untuk semua anggota satu divisi sekaligus,
- * termasuk sub-timnya. Judulnya dirakit dari peran + nama divisi + nama acara,
- * jadi "Ketua Departemen Perlengkapan — WIF 2026" tidak perlu diketik satu per
- * satu untuk tiap orang.
- *
- * Berkas PDF-nya tetap ditautkan manual belakangan: tidak ada generator PDF di
- * proyek ini, dan menerbitkan baris sertifikat tanpa berkas masih berguna -
- * anggota bisa melihat perannya tercatat, pengurus tinggal menambah tautannya.
- *
- * Tidak mengembalikan hitungan "N terbit / N dilewati": dipakai langsung sebagai
- * <form action>, yang hanya menerima void. Umpan baliknya dibuat permanen saja -
- * halaman strukturnya menandai siapa yang sudah bersertifikat, jadi hasilnya
- * masih terbaca setelah halaman di-reload, bukan pesan sekilas yang hilang.
- */
-export async function issueDivisionCertificates(formData: FormData): Promise<void> {
-  const divisionId = String(formData.get("divisionId") ?? "");
-  if (!divisionId) throw new Error("Divisi wajib dipilih");
-
-  const [division] = await db.select().from(eventDivisions).where(eq(eventDivisions.id, divisionId));
-  if (!division) throw new Error("Divisi tidak ditemukan");
-  const { session } = await requireEventCapability(division.eventId, "event.issueCertificates");
-  const [event] = await db.select().from(events).where(eq(events.id, division.eventId));
-
-  const children = await db
-    .select({ id: eventDivisions.id })
-    .from(eventDivisions)
-    .where(eq(eventDivisions.parentDivisionId, divisionId));
-  const scope = [divisionId, ...children.map((c) => c.id)];
-
-  const members = await db
-    .select({ userId: eventCommittee.userId, role: eventCommittee.role, divisionId: eventCommittee.divisionId })
-    .from(eventCommittee)
-    .where(and(eq(eventCommittee.eventId, division.eventId), inArray(eventCommittee.divisionId, scope)));
-
-  if (members.length === 0) return;
-
-  // Sertifikat panitia yang sudah ada untuk acara ini, supaya menekan tombolnya
-  // dua kali tidak menggandakan sertifikat orang yang sama.
-  const existing = await db
-    .select({ userId: certificates.userId })
-    .from(certificates)
-    .where(and(eq(certificates.eventId, division.eventId), eq(certificates.kind, "panitia")));
-  const already = new Set(existing.map((e) => e.userId));
-
-  const divisionNames = new Map(
-    (await db.select().from(eventDivisions).where(eq(eventDivisions.eventId, division.eventId))).map((d) => [d.id, d.name])
-  );
-
-  const toInsert = members
-    .filter((m) => !already.has(m.userId))
-    .map((m) => {
-      const unitName = divisionNames.get(m.divisionId ?? "") ?? division.name;
-      return {
-        userId: m.userId,
-        eventId: division.eventId,
-        kind: "panitia" as const,
-        title: buildCertificateTitle(m.role, unitName, event?.title ?? null),
-        issuedBy: session.user.id,
-      };
-    });
-
-  await insertCertificates(toInsert);
-
-  revalidatePath(`/console/events/${division.eventId}`);
-  revalidatePath("/console/work-ledger");
-  revalidatePath("/profile/submissions");
-}
-
-/**
- * Menerbitkan sertifikat panitia untuk SELURUH panitia acara, termasuk yang
- * tidak berada di divisi mana pun.
- *
- * Tombol per-divisi tidak cukup: BPH + SC (Supervisory Committee, Ketua
- * Pelaksana, Wakil, Bendahara, Sekretaris) memang berdiri di luar divisi mana
- * pun, jadi mereka tidak akan pernah terjangkau kalau penerbitannya hanya bisa
- * lewat divisi — padahal setiap peran di kepanitiaan berhak atas sertifikatnya.
- *
- * Sama seperti versi per-divisi: yang sudah punya sertifikat panitia untuk acara
- * ini dilewati, jadi menekan tombolnya setelah menambah orang baru hanya
- * menerbitkan untuk yang baru itu.
- */
-export async function issueEventCertificates(formData: FormData): Promise<void> {
-  const eventId = String(formData.get("eventId") ?? "");
-  if (!eventId) throw new Error("Acara wajib dipilih");
-  const { session } = await requireEventCapability(eventId, "event.issueCertificates");
-
-  const [event] = await db.select().from(events).where(eq(events.id, eventId));
-  const members = await db
-    .select({ userId: eventCommittee.userId, role: eventCommittee.role, divisionId: eventCommittee.divisionId })
-    .from(eventCommittee)
-    .where(eq(eventCommittee.eventId, eventId));
-  if (members.length === 0) return;
-
-  const existing = await db
-    .select({ userId: certificates.userId })
-    .from(certificates)
-    .where(and(eq(certificates.eventId, eventId), eq(certificates.kind, "panitia")));
-  const already = new Set(existing.map((e) => e.userId));
-
-  const divisionNames = new Map(
-    (await db.select().from(eventDivisions).where(eq(eventDivisions.eventId, eventId))).map((d) => [d.id, d.name])
-  );
-
-  const toInsert = members
-    .filter((m) => !already.has(m.userId))
-    .map((m) => ({
-      userId: m.userId,
-      eventId,
-      kind: "panitia" as const,
-      title: buildCertificateTitle(m.role, divisionNames.get(m.divisionId ?? "") ?? null, event?.title ?? null),
-      issuedBy: session.user.id,
-    }));
-
-  await insertCertificates(toInsert);
-
-  revalidatePath(`/console/events/${eventId}`);
-  revalidatePath("/console/work-ledger");
-  revalidatePath("/profile/submissions");
-}
-
-/**
- * Menerbitkan sertifikat PESERTA untuk semua pendaftar satu acara sekaligus.
- *
- * Kebalikan dari pola panitia: di sini yang jadi patokan adalah "semua peserta
- * dapat" - pendaftar yang sudah diterima (confirmed maupun attended; pending
- * belum diterima dan cancelled batal) berhak atas sertifikat kehadiran tanpa
- * diketik satu per satu. Yang sudah punya sertifikat peserta untuk acara ini
- * dilewati, jadi tombol aman ditekan ulang setelah ada pendaftar baru.
- *
- * Hanya jalan kalau acara menyalakan flag `certificateForParticipants` -
- * checkbox itu memang saklar ketersediaannya, bukan formalitas.
- */
-/**
- * Inti penerbitan sertifikat peserta, dipanggil dari dua tempat: tombol manual
- * di halaman acara DAN otomatis saat acara ditandai "Selesai" (admin-events).
- * Mengembalikan jumlah yang benar-benar diterbitkan supaya pemanggilnya tahu
- * apakah ada yang berubah.
- */
-export async function issueParticipantCertificatesCore(eventId: string, actorId: string): Promise<number> {
-  const [event] = await db.select().from(events).where(eq(events.id, eventId));
-  if (!event || !event.certificateForParticipants) return 0;
-
-  const participants = await db
-    .select({ userId: eventRegistrations.userId })
-    .from(eventRegistrations)
-    .where(
-      and(eq(eventRegistrations.eventId, eventId), inArray(eventRegistrations.status, ["confirmed", "attended"]))
-    );
-  if (participants.length === 0) return 0;
-
-  const existing = await db
-    .select({ userId: certificates.userId })
-    .from(certificates)
-    .where(and(eq(certificates.eventId, eventId), eq(certificates.kind, "peserta")));
-  const already = new Set(existing.map((e) => e.userId));
-
-  const toInsert = participants
-    .filter((p) => !already.has(p.userId))
-    .map((p) => ({
-      userId: p.userId,
-      eventId,
-      kind: "peserta" as const,
-      title: `Peserta — ${event.title}`,
-      issuedBy: actorId,
-    }));
-
-  await insertCertificates(toInsert);
-  return toInsert.length;
-}
-
-/** Pembungkus form untuk tombol "Terbitkan Sertifikat Peserta" yang manual. */
-export async function issueParticipantCertificates(formData: FormData): Promise<void> {
-  const eventId = String(formData.get("eventId") ?? "");
-  if (!eventId) throw new Error("Acara wajib dipilih");
-  const { session } = await requireEventCapability(eventId, "event.issueCertificates");
-
-  await issueParticipantCertificatesCore(eventId, session.user.id);
-
-  revalidatePath(`/console/events/${eventId}`);
-  revalidatePath("/console/work-ledger");
-  revalidatePath("/profile/submissions");
-}
-
-/**
- * Merakit judul sertifikat dari peran + unit + acara.
- *
- * Tanpa divisi, peran berdiri sendiri sebagai jabatan tingkat acara: "ketua"
- * jadi Ketua Pelaksana, bukan "Ketua " menggantung tanpa nama unit. Itu yang
- * membuat BPH + SC terbaca benar.
- */
-function buildCertificateTitle(role: string, unitName: string | null, eventTitle: string | null): string {
-  const TOP_LEVEL: Record<string, string> = {
-    ketua: "Ketua Pelaksana",
-    wakil: "Wakil Ketua Pelaksana",
-    supervisor: "Supervisory Committee",
-    sekretaris: "Sekretaris",
-    bendahara: "Bendahara",
-    anggota: "Panitia",
-  };
-  const label = unitName
-    ? role === "anggota"
-      ? `Anggota ${unitName}`
-      : `${titleCase(role)} ${unitName}`
-    : TOP_LEVEL[role] ?? titleCase(role);
-  return eventTitle ? `${label} — ${eventTitle}` : label;
-}
-
-function titleCase(value: string): string {
-  return value.charAt(0).toUpperCase() + value.slice(1);
 }

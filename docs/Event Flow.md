@@ -78,8 +78,26 @@ Panitia/admin bisa mencoba form pendaftaran tanpa mendaftar sungguhan: buka `/ev
 
 ## Setelah acara: sertifikat & riwayat
 
-- **Semua peserta dapat e-certificate** secara bawaan (`events.certificate_for_participants`, checkbox bisa mematikannya). Penerbitan tetap manual — satu tombol "Terbitkan Sertifikat Peserta" di console. Sertifikat panitia/pemateri/juara diterbitkan manual lewat Work Ledger.
-- `/profile` menampilkan **E-Sertifikat** (semua `certificates` user) + **Riwayat Acara** (semua `event_registrations`, terbaru dulu). Riwayat lintas-domain (pinjam barang, lamaran kerja) di `/profile/submissions`.
+### Aturan sertifikat
+
+1. **Tidak ada sertifikat tanpa tautan berkas.** Aplikasi tidak membuat PDF; PDF dibuat di luar (Canva/Word) dan **tautannya wajib ada saat sertifikat diterbitkan**. Barisnya baru dibuat saat tautan disimpan, jadi tidak pernah ada sertifikat kosong. Tautan harus `https://` (ditampilkan sebagai `<a href>` di profil penerima, jadi `http:`, `javascript:`, dan `data:` ditolak server; lihat `src/lib/certificate-links.ts`). Pakai penyimpanan yang bisa dibuka dari Tiongkok: Google Drive sering terblokir tanpa VPN.
+2. **Sertifikat peserta hanya untuk yang kehadirannya tercatat**: status pendaftaran `attended`, artinya QR-nya sudah di-scan di acara. `confirmed` saja tidak cukup. Acara yang kehadirannya tidak di-scan tidak menghasilkan sertifikat peserta sampai kehadiran dicatat.
+3. **Sertifikat panitia** untuk semua anggota kepanitiaan acara itu (`event_committee`); judulnya dirakit dari peran + divisi + acara (`src/lib/certificate-title.ts`).
+4. Menandai acara **Selesai tidak lagi menerbitkan** sertifikat otomatis (dulu ya): tautan berkasnya per orang, jadi tidak bisa dibuat otomatis.
+5. Sertifikat tanpa berkas (sisa dari aturan lama) tetap tersimpan tapi **tidak tampil** di profil dan tidak dihitung terbit; menempel tautan padanya membuatnya terbit (tanpa notifikasi ulang).
+
+### Cara menerbitkan (panitia)
+
+Di konsol acara (kapabilitas `event.issueCertificates`: BPH Panitia, atau divisi yang diberi hak "Sertifikat", atau BPH Kabinet):
+
+- Section **Sertifikat Peserta** dan **Sertifikat Panitia**: daftar orang yang berhak, tiap baris punya kolom tautan; tombol **Terbitkan** menyimpan tautan dan menerbitkan (notifikasi + muncul di profil). Menyimpan tautan lain pada yang sudah terbit hanya memperbarui tautannya.
+- **Tempel banyak sekaligus**: satu orang per baris, `email atau nama lengkap` lalu tautan (dipisah tab/koma/spasi). Server mencocokkan ke daftar yang berhak, dan melaporkan per baris yang tidak ditemukan, ganda (pakai email), atau bukan yang berhak; maksimal 300 baris.
+- Sertifikat lepas (pemateri, juara, dll.): **Work Ledger → Sertifikat**; tautan wajib juga di sana.
+- Kode: `src/app/actions/committee.ts` (`issueCertificateWithLink`, `saveCertificateLinksBulk`, `updateCertificateFileUrl`, `issueCertificate`), UI di `src/components/console/certificate-roster.tsx` dan `certificate-bulk-form.tsx`.
+
+### Yang dilihat peserta/panitia
+
+- `/profile` menampilkan **E-Sertifikat** (hanya `certificates` user yang sudah bertautan berkas, dengan tautan untuk membukanya) + **Riwayat Acara** (semua `event_registrations`, terbaru dulu). Riwayat lintas-domain (pinjam barang, lamaran kerja) di `/profile/submissions`. Notifikasi "sertifikat terbit" dikirim saat sertifikat dibuat.
 
 ## Terkait
 

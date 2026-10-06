@@ -14,7 +14,6 @@ import { createTemplatedNotification } from "@/lib/notifications";
 import { checkInBlockReason, checkInClosedReason } from "@/lib/event-checkin";
 import { WIF_2026_KELOMPOK, normalizeNameForKelompok } from "@/lib/wif-2026-kelompok";
 import { sanitizeDescriptionHtml } from "@/lib/sanitize-description-html";
-import { issueParticipantCertificatesCore } from "@/app/actions/committee";
 
 async function requireAdmin() {
   const session = await auth();
@@ -346,11 +345,9 @@ export async function setEventStatus(formData: FormData) {
         : "event.status";
   await logEventAudit(actorId, id, auditAction, { before: { status: before?.status }, after: { status } });
 
-  // Selesai = e-sertifikat peserta keluar otomatis (idempoten).
-  if (status === "completed" && before?.status !== "completed") {
-    await issueParticipantCertificatesCore(id, actorId);
-    revalidatePath("/console/work-ledger");
-  }
+  // Menandai acara Selesai TIDAK lagi menerbitkan sertifikat otomatis: sertifikat
+  // tidak boleh terbit tanpa tautan berkas, dan tautannya per orang, jadi
+  // penerbitannya dilakukan panitia di section "Sertifikat" konsol acara.
   revalidatePath("/console/events");
   revalidatePath(`/console/events/${id}`);
   if (before?.slug) revalidatePath(`/events/${before.slug}`);
