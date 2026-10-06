@@ -1,8 +1,8 @@
 "use client";
 
-import { useActionState, useEffect, useState, type FormEvent } from "react";
+import { useActionState, useEffect, useRef, useState, type FormEvent } from "react";
 import Link from "next/link";
-import { ArrowLeft, CheckCircle2 } from "lucide-react";
+import { ArrowLeft, CheckCircle2, Star } from "lucide-react";
 import { submitEventEvaluation, type EventEvaluationFormState } from "@/app/actions/event-evaluations";
 import { useT } from "@/lib/i18n/client";
 import type { EvaluationSection } from "@/lib/event-evaluation-template";
@@ -62,6 +62,84 @@ function RatingScale({
   );
 }
 
+// Penilaian bintang 1-5. Tetap kelompok radio native (keyboard, pembaca layar, `required`
+// bawaan browser); bintang hanya tampilannya: terisi sampai yang dipilih, atau sampai
+// yang sedang di-hover.
+function StarScale({
+  name,
+  legend,
+  lowLabel,
+  highLabel,
+  required,
+  optionalLabel,
+}: {
+  name: string;
+  legend: string;
+  lowLabel: string;
+  highLabel: string;
+  required: boolean;
+  optionalLabel: string;
+}) {
+  const [value, setValue] = useState(0);
+  const [hover, setHover] = useState(0);
+  const ref = useRef<HTMLFieldSetElement>(null);
+  const shown = hover || value;
+
+  // React mengosongkan form setelah sebuah aksi selesai; radio-nya ikut kosong, jadi
+  // bintang yang terisi harus ikut dikosongkan supaya tidak menampilkan pilihan yang sudah hilang.
+  useEffect(() => {
+    const form = ref.current?.closest("form");
+    const onReset = () => setValue(0);
+    form?.addEventListener("reset", onReset);
+    return () => form?.removeEventListener("reset", onReset);
+  }, []);
+
+  return (
+    <fieldset ref={ref} className="flex flex-col gap-3">
+      <legend className="text-body-md font-semibold text-on-background">
+        {legend}{" "}
+        {required ? (
+          <span className="text-primary-container" aria-hidden="true">*</span>
+        ) : (
+          <span className="text-body-sm font-normal text-on-surface-variant">({optionalLabel})</span>
+        )}
+      </legend>
+      <div className="flex gap-1" onMouseLeave={() => setHover(0)}>
+        {[1, 2, 3, 4, 5].map((n) => (
+          <label key={n} className="cursor-pointer" onMouseEnter={() => setHover(n)}>
+            <input
+              type="radio"
+              name={name}
+              value={n}
+              required={required}
+              onChange={() => {
+                // Hover dibersihkan: pilihan lewat keyboard/sentuhan tidak memicu mouseleave,
+                // dan `hover || value` akan terus menampilkan bintang yang salah.
+                setValue(n);
+                setHover(0);
+              }}
+              className="peer sr-only"
+            />
+            <span className="sr-only">{n}</span>
+            <Star
+              size={34}
+              aria-hidden="true"
+              strokeWidth={1.75}
+              className={`rounded-sm transition-colors peer-focus-visible:ring-2 peer-focus-visible:ring-primary-container peer-focus-visible:ring-offset-2 peer-focus-visible:ring-offset-background ${
+                n <= shown ? "fill-primary-container text-primary-container" : "text-outline-variant"
+              }`}
+            />
+          </label>
+        ))}
+      </div>
+      <div className="flex max-w-[12rem] justify-between text-label-caps text-on-surface-variant">
+        <span>{lowLabel}</span>
+        <span>{highLabel}</span>
+      </div>
+    </fieldset>
+  );
+}
+
 // Satu pertanyaan buatan panitia. Field bernama `q_<id>` (dibaca submitCustomEvaluation).
 function CustomQuestionField({
   q,
@@ -71,6 +149,18 @@ function CustomQuestionField({
   labels: { low: string; high: string; optional: string; choose: string };
 }) {
   const name = `q_${q.id}`;
+  if (q.type === "stars") {
+    return (
+      <StarScale
+        name={name}
+        legend={q.label}
+        lowLabel={labels.low}
+        highLabel={labels.high}
+        required={q.required}
+        optionalLabel={labels.optional}
+      />
+    );
+  }
   if (q.type === "rating") {
     return (
       <RatingScale

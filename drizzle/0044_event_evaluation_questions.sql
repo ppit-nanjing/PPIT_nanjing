@@ -14,7 +14,7 @@ CREATE TABLE IF NOT EXISTS "event_evaluation_questions" (
   "order_index" integer NOT NULL DEFAULT 0,
   "created_at" timestamp NOT NULL DEFAULT now(),
   CONSTRAINT "event_evaluation_questions_type_check"
-    CHECK ("type" IN ('rating', 'text', 'textarea', 'select', 'radio', 'multiselect'))
+    CHECK ("type" IN ('rating', 'stars', 'text', 'textarea', 'select', 'radio', 'multiselect'))
 );
 
 CREATE INDEX IF NOT EXISTS "event_evaluation_questions_event_idx"

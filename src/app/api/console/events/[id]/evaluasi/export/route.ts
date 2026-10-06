@@ -5,6 +5,7 @@ import { eventEvaluations, events } from "@/db/schema";
 import { getEventAccess } from "@/lib/event-access";
 import { evaluationTemplateForSlug, ratingQuestions, textQuestions } from "@/lib/event-evaluation-template";
 import { loadEvaluationAnswers, loadEvaluationQuestions } from "@/lib/event-evaluation-queries";
+import { isScaleType } from "@/lib/event-evaluation-questions";
 import { answersByEvaluation, evalColumns, formatAnswer } from "@/lib/event-evaluation-results";
 import { datasetToCsv, datasetToXlsx, type ReportColumn, type ReportDataset } from "@/lib/report-export";
 
@@ -56,7 +57,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
     ...customColumns.map((c, i) => ({
       header: c.removed ? `${c.label} (dihapus)` : c.label,
       key: `c${i}`,
-      ...(c.type === "rating" ? { type: "number" as const } : {}),
+      ...(isScaleType(c.type) ? { type: "number" as const } : {}),
     })),
     ...(!customMode || hasTemplateRows ? templateColumns : []),
   ];
@@ -72,7 +73,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
       const customValues = Object.fromEntries(
         customColumns.map((c, i) => {
           const answer = own?.get(c.key);
-          return [`c${i}`, c.type === "rating" ? (answer?.valueNumber ?? null) : formatAnswer(answer)];
+          return [`c${i}`, isScaleType(c.type) ? (answer?.valueNumber ?? null) : formatAnswer(answer)];
         }),
       );
       return {
