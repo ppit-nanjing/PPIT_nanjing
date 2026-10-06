@@ -112,7 +112,12 @@ function StarScale({
               name={name}
               value={n}
               required={required}
-              onChange={() => setValue(n)}
+              onChange={() => {
+                // Hover dibersihkan: pilihan lewat keyboard/sentuhan tidak memicu mouseleave,
+                // dan `hover || value` akan terus menampilkan bintang yang salah.
+                setValue(n);
+                setHover(0);
+              }}
               className="peer sr-only"
             />
             <span className="sr-only">{n}</span>
