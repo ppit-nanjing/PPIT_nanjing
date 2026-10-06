@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useEffect, useState } from "react";
+import { useActionState, useEffect, useState, type FormEvent } from "react";
 import Link from "next/link";
 import { ArrowLeft, CheckCircle2 } from "lucide-react";
 import { submitEventEvaluation, type EventEvaluationFormState } from "@/app/actions/event-evaluations";
@@ -169,6 +169,7 @@ export function EventEvaluationForm({
   const [anonymous, setAnonymous] = useState(false);
   const [token, setToken] = useState("");
   const [doneBefore, setDoneBefore] = useState(false);
+  const [clientMissing, setClientMissing] = useState(false);
 
   useEffect(() => {
     // Pratinjau tidak menyentuh token/penanda "sudah mengisi" milik perangkat ini.
@@ -215,14 +216,44 @@ export function EventEvaluationForm({
     );
   }
 
+  // Browser tidak bisa mewajibkan kelompok centang, dan `required` menerima teks yang
+  // isinya spasi saja. Kalau dibiarkan ke server, jawaban salah-isi kembali sebagai
+  // error DAN React mengosongkan seluruh form setelah aksi selesai - peserta kehilangan
+  // semua jawabannya. Jadi pemeriksaan itu dilakukan di sini, sebelum aksi jalan.
+  function onSubmit(e: FormEvent<HTMLFormElement>) {
+    if (preview) {
+      e.preventDefault();
+      return;
+    }
+    const form = e.currentTarget;
+    const missing = (questions ?? []).some((q) => {
+      if (!q.required) return false;
+      const fields = Array.from(form.elements).filter(
+        (el): el is HTMLInputElement | HTMLTextAreaElement =>
+          (el instanceof HTMLInputElement || el instanceof HTMLTextAreaElement) && el.name === `q_${q.id}`,
+      );
+      if (q.type === "multiselect") return !fields.some((f) => f instanceof HTMLInputElement && f.checked);
+      if (q.type === "text" || q.type === "textarea") return fields.every((f) => f.value.trim() === "");
+      return false;
+    });
+    setClientMissing(missing);
+    if (missing) e.preventDefault();
+  }
+
   return (
     <form
       action={preview ? undefined : formAction}
-      onSubmit={preview ? (e) => e.preventDefault() : undefined}
+      onSubmit={onSubmit}
       className="flex flex-col gap-5"
     >
       <input type="hidden" name="slug" value={slug} />
       <input type="hidden" name="token" value={token} />
+
+      {clientMissing && (
+        <p role="alert" className="rounded-lg bg-error-container/40 px-4 py-3 text-body-md text-on-error-container">
+          {t("eval.requiredTexts")}
+        </p>
+      )}
 
       {preview && (
         <p role="note" className="rounded-lg border border-primary-container/40 bg-primary-container/10 px-4 py-3 text-body-md text-on-background">
