@@ -244,8 +244,9 @@ export default async function WorkLedgerPage() {
           <TextField
             name="fileUrl"
             label="Tautan berkas"
-            hint="Boleh tautan Google Drive — bisa juga diisi belakangan dari daftar di bawah."
-            placeholder="https://drive.google.com/…"
+            required
+            hint="Wajib, alamat https://… — sertifikat tidak terbit tanpa tautan berkas. Pilih penyimpanan yang bisa dibuka dari Tiongkok (Google Drive sering terblokir tanpa VPN)."
+            placeholder="https://…"
           />
           <FormActions>
             <SubmitButton successMessage="Sertifikat diterbitkan." className={primaryBtn}>Terbitkan Sertifikat</SubmitButton>

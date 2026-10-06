@@ -14,6 +14,7 @@ export type EventAuditAction =
   | "payment.unverified"
   | "payment.other"
   | "certificate.issued"
+  | "certificate.link_updated"
   | "certificate.deleted"
   | "event.published"
   | "event.unpublished"
@@ -57,6 +58,7 @@ export const EVENT_AUDIT_ACTION_LABEL: Record<EventAuditAction, string> = {
   "payment.unverified": "Verifikasi pembayaran dibatalkan",
   "payment.other": "Status pembayaran diubah",
   "certificate.issued": "Sertifikat diterbitkan",
+  "certificate.link_updated": "Tautan sertifikat diperbarui",
   "certificate.deleted": "Sertifikat dihapus",
   "event.published": "Acara dipublikasikan",
   "event.unpublished": "Acara ditarik dari publik",
