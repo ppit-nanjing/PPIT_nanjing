@@ -463,9 +463,15 @@ export const events = pgTable("events", {
   // Sertifikat kehadiran (peserta): hampir semua acara memberikannya ke SEMUA
   // peserta, jadi default NYALA dan checkbox di form acara yang bisa
   // mematikannya (mis. lomba tanpa sertifikat partisipasi). Flag ini cuma
-  // saklar ketersediaannya - penerbitan tetap manual lewat tombol "Terbitkan
-  // sertifikat peserta", bukan otomatis saat acara selesai.
+  // saklar ketersediaannya - penerbitan manual per orang dari roster
+  // "Sertifikat Peserta" (tautan berkas wajib), bukan otomatis saat selesai.
   certificateForParticipants: boolean("certificate_for_participants").notNull().default(true),
+  // Folder sertifikat (biasanya Google Drive) berisi semua PDF peserta/panitia,
+  // diisi panitia dari section sertifikat; dipakai tombol "Terbitkan semua yang
+  // berhak" supaya tautannya tidak ditempel per orang. NULL = belum diisi
+  // (terbit massal nonaktif; roster per-orang tetap bisa).
+  certificateFolderPesertaUrl: text("certificate_folder_peserta_url"),
+  certificateFolderPanitiaUrl: text("certificate_folder_panitia_url"),
   // Buka pendaftaran VOLUNTEER publik: orang luar PPIT bisa melamar sendiri di
   // halaman acara tanpa akun; admin yang menerima, barulah dibuatkan akun
   // undangan + ditugaskan ke divisinya.

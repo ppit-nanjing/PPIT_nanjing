@@ -13,6 +13,7 @@ import { EventCommitteeStructure } from "@/components/console/event-committee-st
 import { listEventDivisions, takeOverEvent, addEventCredit, removeEventCredit } from "@/app/actions/committee";
 import { CertificateRoster } from "@/components/console/certificate-roster";
 import { CertificateBulkForm } from "@/components/console/certificate-bulk-form";
+import { CertificateFolder } from "@/components/console/certificate-folder";
 import { EVENT_COMMITTEE_ROLE_LABEL } from "@/lib/event-capabilities";
 import { requireEventConsoleAccess } from "@/lib/event-access";
 import { EVENT_STATUS_LABEL as STATUS_LABEL } from "@/lib/event-status-labels";
@@ -869,13 +870,22 @@ export default async function ConsoleEventDetailPage({ params }: { params: Promi
               di acara) yang berhak. Sertifikat <strong className="text-on-background">tidak terbit tanpa tautan
               berkas</strong>: tempel tautan https:// berkas PDF-nya di samping nama, lalu simpan. Saat itu juga
               sertifikatnya muncul di profil peserta dan mereka diberi notifikasi. Untuk banyak orang sekaligus,
-              pakai &quot;Tempel banyak sekaligus&quot;.
+              pakai &quot;Tempel banyak sekaligus&quot;, atau simpan <strong className="text-on-background">tautan
+              folder</strong> lalu terbitkan ke semua yang berhak sekaligus.
             </p>
             {confirmedNotAttended > 0 && (
               <p className="text-body-sm text-on-surface-variant">
                 {confirmedNotAttended} pendaftar terkonfirmasi belum tercatat hadir, jadi belum berhak. Kalau ada yang
                 hadir tapi belum di-scan, catat kehadirannya dulu di daftar pendaftar.
               </p>
+            )}
+            {certAttendees.length > 0 && (
+              <CertificateFolder
+                eventId={id}
+                kind="peserta"
+                folderUrl={event.certificateFolderPesertaUrl ?? ""}
+                eligibleCount={certAttendees.length}
+              />
             )}
             <CertificateRoster
               eventId={id}
@@ -901,8 +911,17 @@ export default async function ConsoleEventDetailPage({ params }: { params: Promi
           <p className="text-body-md text-on-surface-variant max-w-2xl">
             Untuk semua anggota kepanitiaan acara ini (susunannya di &quot;Struktur Kepanitiaan&quot;). Sama seperti
             peserta: <strong className="text-on-background">sertifikat baru terbit saat tautan berkasnya
-            disimpan</strong>. Judulnya dirakit otomatis dari peran, divisi, dan nama acara.
+            disimpan</strong>. Judulnya dirakit otomatis dari peran, divisi, dan nama acara. Untuk banyak orang
+            sekaligus: &quot;Tempel banyak sekaligus&quot; atau tautan folder di bawah.
           </p>
+          {certCommittee.length > 0 && (
+            <CertificateFolder
+              eventId={id}
+              kind="panitia"
+              folderUrl={event.certificateFolderPanitiaUrl ?? ""}
+              eligibleCount={certCommittee.length}
+            />
+          )}
           <CertificateRoster
             eventId={id}
             kind="panitia"

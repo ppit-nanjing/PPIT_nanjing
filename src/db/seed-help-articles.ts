@@ -119,7 +119,7 @@ Sertifikat
 - Sertifikat TANPA berkas (sisa aturan lama) tidak tampil di profil penerima; menempel tautan padanya membuatnya terbit.
 Hapus sertifikat langsung permanen, tidak ada konfirmasi.
 
-Terbit sertifikat massal peserta/panitia TIDAK lagi dari sini — sekarang dari halaman detail Kegiatan (section "Sertifikat Peserta" / "Sertifikat Panitia"), pakai tautan per orang atau "Tempel banyak sekaligus". Sertifikat peserta hanya untuk yang sudah di-scan hadir (status attended).`,
+Terbit sertifikat massal peserta/panitia TIDAK lagi dari sini — sekarang dari halaman detail Kegiatan (section "Sertifikat Peserta" / "Sertifikat Panitia"): pakai tautan per orang, "Tempel banyak sekaligus", atau simpan satu **tautan folder** lalu "Terbitkan semua yang berhak" (praktis kalau semua PDF dikumpulkan dalam satu folder Drive; yang sudah punya tautan diganti ke folder tanpa notifikasi ulang). Sertifikat peserta hanya untuk yang sudah di-scan hadir (status attended).`,
   },
   {
     slug: "inventaris",

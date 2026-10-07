@@ -92,6 +92,7 @@ Di konsol acara (kapabilitas `event.issueCertificates`: BPH Panitia, atau divisi
 
 - Section **Sertifikat Peserta** dan **Sertifikat Panitia**: daftar orang yang berhak, tiap baris punya kolom tautan; tombol **Terbitkan** menyimpan tautan dan menerbitkan (notifikasi + muncul di profil). Menyimpan tautan lain pada yang sudah terbit hanya memperbarui tautannya.
 - **Tempel banyak sekaligus**: satu orang per baris, `email atau nama lengkap` lalu tautan (dipisah tab/koma/spasi). Server mencocokkan ke daftar yang berhak, dan melaporkan per baris yang tidak ditemukan, ganda (pakai email), atau bukan yang berhak; maksimal 300 baris.
+- **Folder sertifikat (massal)**: simpan satu tautan folder (`events.certificate_folder_peserta_url` / `_panitia_url`, migrasi `0045`) di section yang sama, lalu **Terbitkan semua yang berhak** memasang tautan folder itu ke seluruh daftar berhak sekaligus — yang belum punya dibuat + notifikasi, yang sudah punya hanya tautannya diperbarui (tanpa notifikasi ulang), jadi aman diklik ulang setelah ada peserta/panitia baru. Cocok kalau semua PDF dikumpulkan dalam satu folder Drive; tautan per-orang tetap menang kalau ada yang berbeda.
 - Sertifikat lepas (pemateri, juara, dll.): **Work Ledger → Sertifikat**; tautan wajib juga di sana.
 - Kode: `src/app/actions/committee.ts` (`issueCertificateWithLink`, `saveCertificateLinksBulk`, `updateCertificateFileUrl`, `issueCertificate`), UI di `src/components/console/certificate-roster.tsx` dan `certificate-bulk-form.tsx`.
 

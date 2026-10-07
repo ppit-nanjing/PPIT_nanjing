@@ -625,6 +625,63 @@ export async function saveCertificateLinksBulk(
   return { done: true, issued: result.issued, updated: result.updated, problems: allProblems };
 }
 
+/**
+ * Simpan/bersihkan tautan FOLDER sertifikat acara (peserta atau panitia).
+ * Dikosongkan = hapus (terbit massal nonaktif); selain itu wajib https://.
+ */
+export async function setCertificateFolder(formData: FormData): Promise<void> {
+  const eventId = String(formData.get("eventId") ?? "");
+  const kind = parseKind(formData.get("kind"));
+  if (!eventId) throw new Error("Acara wajib dipilih");
+  await requireEventCapability(eventId, "event.issueCertificates");
+
+  const raw = String(formData.get("folderUrl") ?? "").trim();
+  const folderUrl = raw ? normalizeCertificateUrl(raw) : null;
+  if (raw && !folderUrl) throw new Error("Tautan folder harus berupa alamat https:// yang valid");
+
+  await db
+    .update(events)
+    .set(kind === "peserta" ? { certificateFolderPesertaUrl: folderUrl } : { certificateFolderPanitiaUrl: folderUrl })
+    .where(eq(events.id, eventId));
+
+  revalidateCertificates(eventId);
+}
+
+/**
+ * Terbitkan/perbarui sertifikat untuk SEMUA orang yang berhak dengan satu
+ * tautan folder (lihat setCertificateFolder). Yang belum punya sertifikat:
+ * dibuat + notifikasi; yang sudah punya: tautannya diperbarui tanpa notifikasi
+ * ulang (perilaku sama dengan isi tautan manual), jadi tombolnya aman diklik
+ * ulang setelah ada peserta/panitia baru.
+ */
+export async function issueAllCertificatesWithFolder(
+  eventId: string,
+  kind: CertificateKind,
+): Promise<{ issued: number; updated: number }> {
+  if (!eventId) throw new Error("Acara wajib dipilih");
+  const { session } = await requireEventCapability(eventId, "event.issueCertificates");
+
+  const event = await loadCertificateEvent(eventId, kind);
+  const folderUrl = normalizeCertificateUrl(
+    (kind === "peserta" ? event.certificateFolderPesertaUrl : event.certificateFolderPanitiaUrl) ?? "",
+  );
+  if (!folderUrl) {
+    throw new Error("Simpan tautan folder sertifikatnya dulu sebelum menerbitkan massal");
+  }
+
+  const candidates = await certificateCandidates(event, kind);
+  if (candidates.length === 0) return { issued: 0, updated: 0 };
+
+  const result = await saveCertificateLinks(
+    event,
+    kind,
+    candidates.map((candidate) => ({ candidate, url: folderUrl })),
+    session.user.id,
+  );
+  revalidateCertificates(eventId);
+  return result;
+}
+
 /** Certificates belong to the signed-in user; no admin scope needed. */
 export async function getMyCertificates() {
   const session = await auth();
