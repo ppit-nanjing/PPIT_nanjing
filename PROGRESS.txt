@@ -1,0 +1,175 @@
+================================================================
+PROGRESS PENGEMBANGAN — PPIT NANJING
+Periode: 6-7 Oktober 2026
+Fokus: Formulir BPH (pengganti Google Forms) + Evaluasi Panitia per-Acara
+================================================================
+
+----------------------------------------------------------------
+1. SINKRONISASI REPOSITORI DENGAN GITHUB (7 Okt)
+----------------------------------------------------------------
+- Menarik 62 commit baru dari origin/master (217 berkas): modul Jobs/Karier,
+  builder pertanyaan evaluasi acara, sertifikat massal, redesign design
+  system, dan lain-lain.
+- Pekerjaan lokal yang belum ter-commit (fitur formulir) diamankan lewat
+  git stash lalu dipulihkan setelah pull.
+- Konflik merge di 3 berkas diselesaikan dengan MENG-GABUNGKAN kedua sisi
+  (fitur "career" dari remote + fitur "forms" milik lokal):
+    * src/components/console/console-sidebar.tsx  -> dua menu nav dipakai
+    * src/lib/admin-scope-constants.ts            -> AdminModule punya
+      "career" DAN "forms"
+    * src/db/schema.ts                            -> tabel career DAN forms
+- Verifikasi: npm install, npx tsc --noEmit, npm run lint -> bersih.
+- Posisi git: 3 commit di depan origin (2 commit lama + 1 commit merge).
+
+----------------------------------------------------------------
+2. FITUR FORMULIR BPH (dipulihkan + dirapikan)
+----------------------------------------------------------------
+Sistem formulir multi-template pengganti Google Forms untuk kebutuhan
+internal BPH. Tiga template placeholder, masing-masing punya URL publik:
+
+| URL publik               | Slug template         | Isi placeholder                          |
+|--------------------------|-----------------------|------------------------------------------|
+| /recruitment             | recruitment           | Rekrutmen pengurus (data diri, motivasi, CV upload, persetujuan) |
+| /evaluation/committee    | evaluation-committee  | Evaluasi anggota panitia (6 skala 1-5 + catatan) |
+| /evaluation/participant  | evaluation-participant| Evaluasi peserta acara (5 skala 1-5 + masukan) |
+
+Kemampuan:
+- Semua pertanyaan disimpan sebagai JSON "sections" di tabel form_templates,
+  diedit dari konsol TANPA mengubah kode.
+- Konsol /console/forms: daftar template, editor pertanyaan (tambah/hapus/
+  pindah section & pertanyaan, opsi dropdown, skala, tanda wajib), review
+  jawaban (tandai reviewed, catatan internal, hapus), ekspor CSV/Excel,
+  duplikat template untuk periode berikutnya.
+- Anti isi dobel per perangkat (token perangkat + unique index).
+- Modul "forms" delegable ke divisi lewat checkbox scope Organisasi.
+
+Rapikan migrasi:
+- drizzle/0041_form_templates.sql DINAMAI drizzle/0045_form_templates.sql
+  (nomor 0041 bentrok dengan migrasi baru dari remote:
+  0041_job_application_review_note.sql). docs/Formulir.md ikut diperbarui.
+- Saat dijalankan ternyata tabel + enum sudah terlanjur ada di database
+  (dibuat sesi sebelumnya), jadi migrasi ini no-op.
+
+Keputusan produk: KETIGA template di-set DRAFT di database.
+- Rekrutmen baru buka setahun lagi -> draft sampai waktunya; saat itu BPH
+  cukup edit pertanyaan di konsol lalu ubah status jadi Published.
+- Dua formulir evaluasi diaktifkan per-periode saat benar-benar dipakai.
+- Saat draft/closed, URL publik menampilkan layar gembok "Formulir
+  ditutup" (bukan error).
+
+----------------------------------------------------------------
+3. FITUR BARU: EVALUASI PANITIA PER-ACARA (KOLEKTIF)
+----------------------------------------------------------------
+Hasil diskusi dengan BPH:
+- Evaluasi panitia memang alaminya per-acara (tiap acara panitianya beda),
+  tetapi sasarannya KOLEKTIF - menilai kerja sama divisi & kepanitiaan
+  secara keseluruhan, BUKAN skor per orang (menghindari "kontes skor"
+  antar teman).
+- Pengisinya PANITIA ACARA ITU SENDIRI: wajib login, sistem cek roster
+  event_committee, satu orang sekali mengisi.
+- BPH yang menentukan JENDELA WAKTU pengisian, mis. "1 minggu setelah
+  acara" - bisa pasang sendiri dari konsol tanpa sentuh kode.
+
+ALUR KERJA (workflow):
+  BPH (konsol kegiatan -> section "Evaluasi Panitia (Kolektif)")
+    1. Pasang jendela: isi manual "Buka" & "Tutup" (tanggal-jam), ATAU klik
+       pintasan "Buka setelah acara" dengan durasi 3/7/14 hari
+       (mulai = akhir acara, tutup = mulai + durasi).
+    2. Kosongkan kedua kolom + simpan = melepas jadwal.
+    3. Bagikan tautan /events/<slug>/evaluasi-panitia ke grup panitia.
+  Panitia:
+    4. Buka tautan -> jika jendela terbuka: login (khusus) -> sistem cek
+       roster -> form muncul dengan identitas terisi otomatis (nama + divisi
+       dari roster).
+    5. Isi 5 skala kolektif 1-5 + 2 teks wajib + 1 opsional -> kirim.
+    6. Kirim ulang dari akun sama ditolak (satu orang sekali).
+  Status jendela (dihitung otomatis dari waktu saat ini, TANPA cron):
+    - belum dipasang  -> layar "Evaluasi belum dijadwalkan"
+    - belum mulai     -> layar "dibuka <tanggal-jam>"
+    - terbuka         -> form (login + roster dicek di server)
+    - lewat tutup     -> layar "Pengisian sudah ditutup"; jawaban tetap
+                         bisa dilihat/diekspor BPH
+  BPH (kembali ke konsol):
+    7. Rekap: X dari Y panitia mengisi, rata-rata per aspek (bar mini),
+       rata-rata per divisi evaluator, daftar jawaban lengkap + tombol hapus.
+    8. Ekspor CSV / Excel (satu baris per pengisi).
+
+PERTANYAAN PLACEHOLDER (satu-satunya tempat: src/lib/committee-evaluation.ts):
+  Skala 1-5 (wajib):
+    1. Koordinasi antar divisi selama acara
+    2. Kerja sama & suasana tim
+    3. Komunikasi informasi dari panitia inti / BPH
+    4. Pembagian tugas & beban kerja
+    5. Kepuasan menjadi panitia acara ini
+  Teks:
+    - "Apa yang berjalan baik?"      (wajib)
+    - "Apa yang perlu diperbaiki?"   (wajib)
+    - Masukan tambahan untuk panitia acara berikutnya (opsional)
+  Ganti pertanyaan asli nanti cukup edit berkas lib tersebut + kunci kamus
+  ceval.* di dua locale - tidak perlu migrasi (kolom rating tetap lima).
+
+DETAIL TEKNIS:
+- Database (drizzle/0046_event_committee_evaluation.sql, SUDAH diaplikasikan):
+  * events: +2 kolom committee_eval_opens_at / committee_eval_closes_at
+    (NULL = belum dipasang; satu acara satu jendela).
+  * event_committee_evaluations: event_id (cascade), user_id (cascade),
+    division_id (SNAPSHOT divisi evaluator saat mengisi - agregat per divisi
+    tetap benar walau penempatan berubah), 5 kolom rating NOT NULL,
+    went_well + to_improve NOT NULL, feedback nullable, created_at.
+    Unique (event_id, user_id) = dedup lewat LOGIN, bukan token perangkat.
+- Keamanan (semua dicek di server, bukan hanya UI):
+  * submitCommitteeEvaluation: sesi + roster + status jendela dihitung ulang
+    di action; draft/scheduled event ditolak; rating 1-5 & teks <= 2000
+    karakter divalidasi.
+  * saveCommitteeEvaluationWindow / deleteCommitteeEvaluation:
+    requireEventConsoleAccess (BPH Panitia acara + BPH Kabinet/Teknologi).
+  * Route ekspor: getEventAccess - pola sama dengan ekspor evaluasi peserta.
+  * UI konsol: editor jendela & hapus/ekspor hanya untuk
+    isFullAdmin || isBphPanitia; rekap tampil untuk semua yang lolos gerbang
+    konsol acara.
+- i18n: ~40 kunci "ceval.*" di src/lib/i18n/dictionaries/{id,en}.ts (krom UI
+  dwibahasa; label pertanyaan tinggal di kode, bahasa Indonesia - pola sama
+  dengan konten DB).
+
+----------------------------------------------------------------
+4. STATUS DATABASE (neondb)
+----------------------------------------------------------------
+- Migrasi 0045 (form templates): sudah terlanjur ada -> no-op, file tetap
+  disimpan sebagai catatan.
+- Migrasi 0046 (evaluasi panitia): BARU, sudah diaplikasikan.
+- form_templates: ketiga template status DRAFT, belum ada jawaban.
+- events.fun-hike-pinyx-2026: jendela evaluasi panitia TERPASANG untuk test
+  (buka 7 Okt akhir acara, tutup 14 Okt) - artefak test, lepas lewat konsol
+  ("Kosongkan jadwal" -> Simpan) bila tidak dipakai.
+- event_committee_evaluations: kosong (belum ada submission).
+
+----------------------------------------------------------------
+5. VERIFIKASI YANG SUDAH DILARANKAN
+----------------------------------------------------------------
+- npx tsc --noEmit            -> bersih
+- npm run lint                -> bersih
+- npm run build (produksi)    -> sukses, 87 halaman termasuk route baru
+- Dev server (5 status jendela): not-configured / before / open+anonim
+  (kartu login) / closed / open tanpa tutup -> semua sesuai harapan
+- Ekspor anonim -> 403; format liar -> 400; konsol anonim -> 307 ke login
+- Regresi: halaman acara, evaluasi peserta, formulir generik -> normal
+- Catatan: di dev mode, notFound() di-stream dengan HTTP 200 (perilaku
+  bawaan Next.js, sama juga di halaman acara lama) - bukan regresi.
+- Yang butuh login (dilakukan manual oleh BPH): isi form sebagai panitia,
+  cek rekap/hapus/ekspor di konsol.
+
+----------------------------------------------------------------
+6. YANG BELUM / RENCANA LANJUT
+----------------------------------------------------------------
+- [ ] Ganti pertanyaan placeholder dengan alur asli (bersama Shem):
+      * Opsi divisi rekrutmen + pertanyaan evaluasi sesuai kebijakan BPH
+      * Pertanyaan evaluasi panitia: src/lib/committee-evaluation.ts
+- [ ] Artikel Help Center untuk pengisi/pengurus (buat via /console/docs/new)
+- [ ] Lepas jendela test Fun Hike setelah selesai uji coba
+- [ ] Push/PR + deploy ke Vercel (build produksi sudah divalidasi lokal)
+- [ ] Opsional: pertanyaan evaluasi panitia per-acara yang bisa diedit dari
+      konsol (pola builder sudah ada di evaluation-questions-builder.tsx);
+      notifikasi otomatis saat jendela buka
+- [ ] Halaman publik untuk slug duplikat formulir generik (mis. per-periode)
+
+Dibuat otomatis pada 7 Oktober 2026.

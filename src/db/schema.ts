@@ -440,6 +440,13 @@ export const events = pgTable("events", {
   // 'published') once this time passes. Lets admins prepare an event fully and
   // have it go live automatically at a chosen moment.
   scheduledPublishAt: timestamp("scheduled_publish_at"),
+  // Jendela pengisian evaluasi panitia (kolom di tabel acara, bukan tabel
+  // terpisah — satu acara punya tepat satu jendela). Dua-duanya NULL = belum
+  // dijadwalkan. Status jendela dihitung dari waktu saat ini oleh
+  // committeeEvalWindowState() (src/lib/committee-evaluation.ts) — tidak butuh
+  // cron — dan BPH bisa membuka/menutup manual kapan pun lewat konsol kegiatan.
+  committeeEvalOpensAt: timestamp("committee_eval_opens_at"),
+  committeeEvalClosesAt: timestamp("committee_eval_closes_at"),
   departmentId: uuid("department_id").references(() => departments.id),
   createdBy: uuid("created_by").references(() => users.id),
   // The HTM ("berbayar") toggle itself - kept separate from feeCny because the
@@ -1398,6 +1405,48 @@ export const eventCommittee = pgTable(
   (t) => [uniqueIndex("event_committee_unique").on(t.eventId, t.userId)],
 );
 
+// Evaluasi panitia PER-ACARA, sifatnya KOLEKTIF: pengisi (panitia acara itu —
+// wajib login dan ada di event_committee) menilai kerja sama divisi dan
+// kepanitiaan secara keseluruhan, BUKAN skor per orang (sasaran per orang
+// sengaja dihindari; apresiasi individu lewat jalur lain). Satu jawaban per
+// pengisi per acara — unique (event_id, user_id), jadi tanpa token perangkat:
+// login yang jadi kunci dedupnya. Jendela pengisian diatur BPH lewat
+// events.committee_eval_opens_at / committee_eval_closes_at. Daftar
+// pertanyaannya tetap (placeholder, bisa diganti lewat satu berkas):
+// src/lib/committee-evaluation.ts.
+export const eventCommitteeEvaluations = pgTable(
+  "event_committee_evaluations",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    eventId: uuid("event_id")
+      .notNull()
+      .references(() => events.id, { onDelete: "cascade" }),
+    // Pengisi = panitia acara itu (baris event_committee). onDelete cascade:
+    // menghapus akun menghapus evaluasinya — ini umpan balik internal, bukan
+    // arsip keanggotaan (yang arsip ada di event_credits dengan snapshot nama).
+    userId: uuid("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+    // Snapshot divisi evaluator SAAT MENGISI — agregat per divisi tetap benar
+    // walau penempatannya berubah kemudian. NULL = panitia inti tanpa divisi.
+    divisionId: uuid("division_id").references((): AnyPgColumn => eventDivisions.id, {
+      onDelete: "set null",
+    }),
+    // Lima penilaian kolektif, skala 1–5 (placeholder — lihat lib di atas).
+    ratingCoordination: integer("rating_coordination").notNull(),
+    ratingTeamwork: integer("rating_teamwork").notNull(),
+    ratingCommunication: integer("rating_communication").notNull(),
+    ratingWorkload: integer("rating_workload").notNull(),
+    ratingSatisfaction: integer("rating_satisfaction").notNull(),
+    // "Apa yang berjalan baik?" dan "Apa yang perlu diperbaiki?" — wajib,
+    // supaya rekap selalu punya bahan kualitatif, bukan cuma angka.
+    wentWell: text("went_well").notNull(),
+    toImprove: text("to_improve").notNull(),
+    // Masukan bebas tambahan — opsional.
+    feedback: text("feedback"),
+    createdAt: timestamp("created_at").notNull().defaultNow(),
+  },
+  (t) => [uniqueIndex("event_committee_evaluations_unique").on(t.eventId, t.userId)],
+);
+
 // Kredit / arsip kepanitiaan — FITUR TERPISAH dari event_committee (Spesifikasi
 // §10). Diisi Sekretaris saat LPJ sebagai daftar "siapa saja panitianya" untuk
 // ditampilkan di halaman acara publik. Mengisi baris di sini TIDAK memberi akses
@@ -1651,3 +1700,90 @@ export const eventEvaluationAnswers = pgTable(
     index("event_evaluation_answers_question_idx").on(t.questionId),
   ],
 );
+
+// ---------- Formulir template (pengganti Google Forms internal) ----------
+// Satu template = satu formulir mandiri dengan URL publik sendiri (mis.
+// /recruitment, /evaluation/committee). Struktur pertanyaannya disimpan sebagai
+// JSON `sections` supaya BPH bisa mengganti pertanyaan/label/deskripsi dari
+// console tanpa menyentuh kode — pola yang sama dengan membership_form_fields,
+// tapi multi-template. Jawaban mengikuti field id, jadi mengubah urutan/label
+// tidak merusak data lama; MENGHAPUS field id memang membuat jawaban lama tak
+// tampil lagi (label lama tetap tersimpan di baris ekspor yang sudah dibuat).
+export const formTemplateStatusEnum = pgEnum("form_template_status", ["draft", "published", "closed"]);
+
+export const formFieldTypeEnum = pgEnum("form_field_type", [
+  "short_text",
+  "paragraph",
+  "email",
+  "tel",
+  "number",
+  "date",
+  "select",
+  "radio",
+  "multiselect",
+  "scale",
+  "file",
+]);
+
+export type FormField = {
+  id: string;
+  type: (typeof formFieldTypeEnum.enumValues)[number];
+  label: string;
+  description?: string;
+  placeholder?: string;
+  required: boolean;
+  // Pilihan untuk select/radio/multiselect.
+  options?: string[];
+  // Untuk scale: nilai maksimum (default 5, selalu mulai dari 1).
+  scaleMax?: number;
+  lowLabel?: string;
+  highLabel?: string;
+};
+
+export type FormSection = {
+  id: string;
+  title: string;
+  description?: string;
+  fields: FormField[];
+};
+
+export type FormAnswers = Record<string, string | number | string[]>;
+
+export const formTemplates = pgTable("form_templates", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  slug: text("slug").notNull().unique(),
+  title: text("title").notNull(),
+  description: text("description"),
+  status: formTemplateStatusEnum("status").notNull().default("draft"),
+  sections: jsonb("sections").$type<FormSection[]>().notNull().default([]),
+  // Pesan sukses kustom yang tampil setelah kirim; kosong = default bilingual.
+  successMessage: text("success_message"),
+  // Email admin opsional untuk notifikasi submission baru (no-op kalau kosong).
+  notifyEmail: text("notify_email"),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+});
+
+export const formSubmissions = pgTable(
+  "form_submissions",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    templateId: uuid("template_id")
+      .notNull()
+      .references(() => formTemplates.id, { onDelete: "cascade" }),
+    answers: jsonb("answers").$type<FormAnswers>().notNull(),
+    // Token perangkat anti isi dobel (pola event_evaluations) + pengisi yang
+    // kebetulan login ikut tercatat supaya mudah dihubungi kembali.
+    responderToken: text("responder_token").notNull(),
+    submitterUserId: uuid("submitter_user_id").references(() => users.id, { onDelete: "set null" }),
+    reviewed: boolean("reviewed").notNull().default(false),
+    reviewedBy: uuid("reviewed_by").references(() => users.id, { onDelete: "set null" }),
+    reviewedAt: timestamp("reviewed_at"),
+    internalNote: text("internal_note"),
+    createdAt: timestamp("created_at").notNull().defaultNow(),
+  },
+  (t) => [uniqueIndex("form_submissions_template_token_idx").on(t.templateId, t.responderToken)],
+);
+
+export type FormTemplateRow = typeof formTemplates.$inferSelect;
+export type FormSubmissionRow = typeof formSubmissions.$inferSelect;

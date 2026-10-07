@@ -25,7 +25,7 @@
 // /console/sensus in a LIMITED view — name, campus, completeness, student-card
 // photo only, no passport/contact/export/edit. A holder of full "sensus" is
 // unaffected (they see everything).
-export type AdminModule = "users" | "organization" | "events" | "inventory" | "reports" | "sensus" | "sensus-ranting" | "sensus-verify" | "content" | "feedback" | "membership" | "notifications" | "links" | "documents" | "career";
+export type AdminModule = "users" | "organization" | "events" | "inventory" | "reports" | "sensus" | "sensus-ranting" | "sensus-verify" | "content" | "feedback" | "membership" | "notifications" | "links" | "documents" | "career" | "forms";
 
 const MODULE_ALIASES: Partial<Record<AdminModule, string[]>> = {
   content: ["content", "gallery"],
@@ -51,6 +51,7 @@ export const ASSIGNABLE_SCOPE_KEYS: { key: string; label: string }[] = [
   { key: "organization", label: "Organisasi (sensitif — hanya BPH)" },
   { key: "feedback", label: "Masukan Pengguna (sensitif — hanya BPH)" },
   { key: "membership", label: "Pendaftaran Anggota (rekrutmen)" },
+  { key: "forms", label: "Formulir (rekrutmen & evaluasi internal)" },
   { key: "links", label: "Tautan (short link)" },
   { key: "documents", label: "Dokumen (Google Drive)" },
   { key: "career", label: "Lowongan (pasang lowongan & proses lamaran)" },

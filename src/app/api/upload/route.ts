@@ -42,6 +42,9 @@ const FOLDER_MODULE: Record<string, AdminModule | null> = {
   // "Pernyataan Peminjam" bertanda tangan di form peminjaman aset - diunggah
   // peminjam (anggota maupun pihak luar), Divisi Logistik yang memeriksa.
   "borrow-doc": null,
+  // Lampiran jawaban formulir publik BPH (mis. CV di /recruitment). Pengisi
+  // formulir kebanyakan calon pengurus tanpa akun - sama seperti borrow-doc.
+  "form-doc": null,
   news: "content",
   gallery: "content",
   album: "content",
@@ -66,17 +69,20 @@ const PRIVATE_FOLDERS = new Set<string>(["sensus", ...PRIVATE_FILE_FOLDERS]);
 // keras: bukti transfer, CV, dsb. tidak boleh diam-diam jadi URL publik.
 const PUBLIC_FALLBACK_FOLDERS = new Set(["sensus"]);
 
-// Folder yang boleh diunggah TANPA login. Cuma "borrow-doc": Pernyataan Peminjam
+// Folder yang boleh diunggah TANPA login. "borrow-doc": Pernyataan Peminjam
 // bertanda tangan di form peminjaman aset harus bisa diunggah peminjam PIHAK
-// LUAR yang memang tidak punya akun PPIT (SOP Peminjaman Aset). Semua pengaman
-// lain (allowlist tipe, batas 10 MB, cek origin, nama diacak) tetap berlaku.
-const ANON_FOLDERS = new Set(["borrow-doc"]);
+// LUAR yang memang tidak punya akun PPIT (SOP Peminjaman Aset). "form-doc":
+// lampiran formulir publik BPH (CV calon pengurus). Semua pengaman lain
+// (allowlist tipe, batas 10 MB, cek origin, nama diacak) tetap berlaku.
+const ANON_FOLDERS = new Set(["borrow-doc", "form-doc"]);
 
 // Batasan tipe per folder yang lebih ketat dari ALLOWED_TYPES umum. "borrow-doc"
 // hanya PDF: peminjam mengekspor Word ke PDF sebelum unggah, dan konsol
-// menampilkan pratinjau PDF inline (bukan gambar/office).
+// menampilkan pratinjau PDF inline (bukan gambar/office). "form-doc" PDF +
+// gambar biasa (CV/lampiran formulir).
 const FOLDER_TYPES: Record<string, readonly string[]> = {
   "borrow-doc": ["application/pdf"],
+  "form-doc": ["application/pdf", "image/png", "image/jpeg", "image/webp"],
 };
 
 export async function POST(req: NextRequest) {
