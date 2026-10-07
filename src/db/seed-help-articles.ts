@@ -114,10 +114,12 @@ Sertifikat
 - Acara: opsional.
 - Jenis: peserta/panitia/pemateri/lainnya.
 - Judul: wajib, teks bebas (mis. "Sertifikat Panitia Divisi Acara").
-- Tautan berkas: opsional, boleh link Google Drive — upload langsung belum didukung di sini. Link bisa diisi/diganti belakangan langsung dari daftar di bawah (kolom tautan → Simpan), tanpa perlu hapus-ulang.
+- Tautan berkas: WAJIB berupa tautan https:// (PDF-nya dibuat di luar aplikasi; boleh Google Drive — upload langsung belum didukung). Sertifikat tidak dianggap terbit sebelum tautannya diisi, dan hanya https yang diterima (http/javascript/data ditolak). Pakai penyimpanan yang bisa dibuka dari Tiongkok: Google Drive sering terblokir tanpa VPN.
+- Mengganti tautan pada sertifikat yang sudah terbit hanya memperbarui tautannya — tanggal terbit tetap, notifikasi tidak dikirim ulang.
+- Sertifikat TANPA berkas (sisa aturan lama) tidak tampil di profil penerima; menempel tautan padanya membuatnya terbit.
 Hapus sertifikat langsung permanen, tidak ada konfirmasi.
 
-Terbit sertifikat massal per-divisi/per-acara dilakukan dari halaman detail Kegiatan, bukan dari sini — dan aman diklik ulang karena yang sudah punya sertifikat dilewati.`,
+Terbit sertifikat massal peserta/panitia TIDAK lagi dari sini — sekarang dari halaman detail Kegiatan (section "Sertifikat Peserta" / "Sertifikat Panitia"), pakai tautan per orang atau "Tempel banyak sekaligus". Sertifikat peserta hanya untuk yang sudah di-scan hadir (status attended).`,
   },
   {
     slug: "inventaris",

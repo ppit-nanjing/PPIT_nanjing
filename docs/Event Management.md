@@ -72,13 +72,14 @@ Sponsor dikelola sebagai direktori bertingkat (Platinum / Gold / Silver / Mitra)
 
 ### Sertifikat
 
-Aturan bawaannya **semua peserta dapat e-certificate**: tiap acara punya checkbox "Peserta mendapat e-sertifikat kehadiran" (nyala secara default) — cukup dimatikan untuk acara tanpa sertifikat partisipasi.
+Aturan bawaannya **semua peserta dapat e-certificate**: tiap acara punya checkbox "Peserta mendapat e-sertifikat kehadiran" (nyala secara default) — cukup dimatikan untuk acara tanpa sertifikat partisipasi. Dua aturan baru (2026-10-07): **tidak ada sertifikat tanpa tautan berkas https://**, dan **sertifikat peserta hanya untuk yang kehadirannya tercatat** (`attended`, QR sudah di-scan). Aturan lengkap + kode ada di [Event Flow](./Event%20Flow.md) § Setelah acara.
 
-- **Otomatis saat acara selesai**: begitu acara pertama kali ditandai `completed` (lewat form Edit atau tombol status di daftar), semua pendaftar yang diterima (`confirmed`/`attended`) langsung kebagian sertifikat — bila checkbox-nya menyala. Idempoten; tombol **Terbitkan Sertifikat Peserta** tetap ada untuk pendaftar yang masuk belakangan.
-- Di luar sertifikat kehadiran itu, keputusan tambahan tetap milik panitia per acara lewat Work Ledger: sertifikat juara/pemenang, panitia per divisi, atau pemateri.
-- Jenis: `peserta`, `panitia`, `pemateri`, `lainnya`; sertifikat juara dicatat lewat judul bebas (mis. "Juara 1 Lomba …").
-- File dibuat/diunggah di luar aplikasi (boleh tautan Google Drive); aplikasi mencatat pemilik, jenis, acara, dan penerbitnya. Tautan berkas bisa diisi/diganti belakangan langsung dari daftar sertifikat di Work Ledger.
-- Setelah diterbitkan, sertifikat tampil di **profil user** (bagian E-Sertifikat) — lihat [Event Flow](./Event%20Flow.md) § Setelah acara.
+- **Penerbitan tidak lagi otomatis** saat acara ditandai `completed`: tautannya per orang, jadi dibuat manual dari console acara — section **Sertifikat Peserta** / **Sertifikat Panitia** (kapabilitas `event.issueCertificates`): tiap baris punya kolom tautan + tombol Terbitkan, plus **Tempel banyak sekaligus** (satu orang per baris: `email atau nama lengkap` + tautan; server melaporkan baris yang tidak cocok/ganda/bukan yang berhak).
+- Menyimpan tautan lain pada sertifikat yang sudah terbit hanya **memperbarui tautannya** — tanggal terbit tidak berubah dan tidak ada notifikasi kedua.
+- **Sertifikat panitia** untuk semua anggota kepanitiaan acara itu; judulnya dirakit dari peran + divisi + acara (`src/lib/certificate-title.ts`).
+- Jenis: `peserta`, `panitia`, `pemateri`, `lainnya`; sertifikat juara dicatat lewat judul bebas (mis. "Juara 1 Lomba …"). Sertifikat lepas (pemateri/juara) lewat **Work Ledger → Sertifikat** — tautan juga wajib di sana.
+- Sertifikat **tanpa berkas** (sisa aturan lama) tetap tersimpan tapi tidak tampil di profil dan tidak dihitung terbit; menempel tautan padanya membuatnya terbit (tanpa notifikasi ulang).
+- Setelah punya tautan, sertifikat tampil di **profil user** (E-Sertifikat) + notifikasi "E-sertifikat sudah terbit" dikirim saat dibuat.
 
 ## Entitas terkait
 
