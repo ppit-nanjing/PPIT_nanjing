@@ -12,7 +12,10 @@ import {
   eventEvaluations,
   events,
 } from "@/db/schema";
-import { requireEventConsoleAccess } from "@/lib/event-access";
+import { canEditCommitteeEvaluation, requireEventConsoleAccess } from "@/lib/event-access";
+import { parseChinaLocalInput } from "@/lib/datetime";
+import { isUniqueViolation } from "@/lib/db-errors";
+import { UUID_RE } from "@/lib/uuid";
 import { type EvalFormState, validateEvalAnswer, type EvalQuestionRow } from "@/lib/event-evaluation-questions";
 import { loadEvaluationQuestions } from "@/lib/event-evaluation-queries";
 import {
@@ -27,27 +30,6 @@ import {
 // yang memanggilnya.
 
 export type CommitteeEvaluationFormState = EvalFormState;
-
-const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-
-function isUniqueViolation(error: unknown): boolean {
-  let current: unknown = error;
-  for (let depth = 0; depth < 5 && current; depth += 1) {
-    if (
-      typeof current === "object" &&
-      current !== null &&
-      "code" in current &&
-      (current as { code?: unknown }).code === "23505"
-    ) {
-      return true;
-    }
-    current =
-      typeof current === "object" && current !== null && "cause" in current
-        ? (current as { cause?: unknown }).cause
-        : null;
-  }
-  return false;
-}
 
 // Kirim evaluasi panitia: HARUS login, HARUS tercatat di event_committee acara
 // ini, dan jendela (events.committee_eval_opens_at/closes_at) harus sedang
@@ -153,13 +135,13 @@ export async function submitCommitteeEvaluation(
   return { ok: true };
 }
 
-// Gerbang pengelola evaluasi panitia (B2): BPH Kabinet/Teknologi atau BPH
-// Panitia acara ini. Peran panitia lain tidak boleh membaca isi jawaban, belum
-// lagi menghapus/mengekspor/mengubah jendela — aksi di bawah memakai ini, bukan
-// sekadar menyembunyikan tombolnya di UI.
-async function requireCommitteeEvalManager(eventId: string) {
+// Gerbang MENGUBAH evaluasi panitia (B2 + kunci kepanitiaan): BPH Kabinet/
+// Teknologi, atau BPH Panitia acara ini selama acara belum terkunci (14 hari
+// setelah selesai). Aturannya di canEditCommitteeEvaluation (event-access.ts),
+// dipakai juga halaman konsol untuk menyembunyikan editornya.
+async function requireCommitteeEvalEditor(eventId: string) {
   const access = await requireEventConsoleAccess(eventId);
-  if (!access.isFullAdmin && !access.isBphPanitia) redirect("/console");
+  if (!canEditCommitteeEvaluation(access)) redirect(`/console/events/${eventId}`);
   return access;
 }
 
@@ -174,16 +156,19 @@ export async function saveCommitteeEvaluationWindow(
 ): Promise<CommitteeEvalWindowFormState> {
   const eventId = typeof formData.get("eventId") === "string" ? String(formData.get("eventId")).trim() : "";
   if (!UUID_RE.test(eventId)) return { error: "Acara tidak valid." };
-  await requireCommitteeEvalManager(eventId);
+  await requireCommitteeEvalEditor(eventId);
 
-  function parseLocal(value: FormDataEntryValue | null): Date | null {
-    if (typeof value !== "string" || !value.trim()) return null;
-    const date = new Date(value);
-    return Number.isNaN(date.getTime()) ? null : date;
+  // Nilai datetime-local dibaca sebagai jam Tiongkok, bukan jam server: fungsi
+  // Vercel berjalan di UTC, jadi `new Date(value)` membuat jendela buka/tutup
+  // 8 jam lebih lambat dari yang diketik BPH. Isian tak valid ditolak, bukan
+  // diam-diam dianggap kosong (kosong = melepas jadwal).
+  const rawOpens = String(formData.get("opensAt") ?? "").trim();
+  const rawCloses = String(formData.get("closesAt") ?? "").trim();
+  const opensAt = rawOpens ? parseChinaLocalInput(rawOpens) : null;
+  const closesAt = rawCloses ? parseChinaLocalInput(rawCloses) : null;
+  if ((rawOpens && !opensAt) || (rawCloses && !closesAt)) {
+    return { error: "Format tanggal/jam tidak valid." };
   }
-
-  const opensAt = parseLocal(formData.get("opensAt"));
-  const closesAt = parseLocal(formData.get("closesAt"));
   if (opensAt && closesAt && closesAt <= opensAt) {
     return { error: "Waktu tutup harus setelah waktu buka." };
   }
@@ -206,24 +191,30 @@ export async function saveCommitteeEvaluationWindow(
   // baris DB (salinan template kolektif bila BPH belum menyusun sendiri). Jendela
   // wajib ada sebelum siapa pun bisa mengisi, jadi setiap jawaban panitia selalu
   // menunjuk questionId uuid yang asli dan rekap/ekspor membaca kolom yang benar.
+  //
+  // Satu transaksi (db.batch): advisory lock per acara dulu, baru INSERT ...
+  // WHERE NOT EXISTS. Tanpa lock, dua BPH yang menyimpan bersamaan sama-sama
+  // melihat 0 pertanyaan dan template tersalin dua kali. Dengan lock, transaksi
+  // kedua menunggu yang pertama selesai, lalu NOT EXISTS-nya melihat baris itu.
   if (opensAt || closesAt) {
-    const [{ n }] = await db
-      .select({ n: sql<number>`count(*)::int` })
-      .from(eventEvaluationQuestions)
-      .where(and(eq(eventEvaluationQuestions.eventId, eventId), eq(eventEvaluationQuestions.audience, "panitia")));
-    if (n === 0) {
-      await db.insert(eventEvaluationQuestions).values(
-        committeeEvalTemplateQuestions().map((q, i) => ({
-          eventId,
-          audience: "panitia",
-          label: q.label,
-          type: q.type,
-          options: null,
-          required: q.required,
-          orderIndex: i + 1,
-        })),
-      );
-    }
+    const rows = sql.join(
+      committeeEvalTemplateQuestions().map(
+        (q, i) => sql`(${q.label}::text, ${q.type}::text, ${q.required}::boolean, ${i + 1}::int)`,
+      ),
+      sql`, `,
+    );
+    await db.batch([
+      db.execute(sql`select pg_advisory_xact_lock(hashtext(${`ceval-template:${eventId}`}))`),
+      db.execute(sql`
+        insert into ${eventEvaluationQuestions} (event_id, audience, label, type, options, required, order_index)
+        select ${eventId}::uuid, 'panitia', t.label, t.type, null, t.required, t.order_index
+        from (values ${rows}) as t(label, type, required, order_index)
+        where not exists (
+          select 1 from ${eventEvaluationQuestions}
+          where ${eventEvaluationQuestions.eventId} = ${eventId}::uuid and ${eventEvaluationQuestions.audience} = 'panitia'
+        )
+      `),
+    ]);
   }
 
   revalidatePath(`/console/events/${eventId}`);

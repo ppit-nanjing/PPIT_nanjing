@@ -2,7 +2,7 @@ import { and, desc, eq } from "drizzle-orm";
 import { NextResponse } from "next/server";
 import { db } from "@/db";
 import { eventDivisions, eventEvaluations, events, users } from "@/db/schema";
-import { getEventAccess } from "@/lib/event-access";
+import { canReadCommitteeEvaluation, getEventAccess } from "@/lib/event-access";
 import { evaluationTemplateForSlug, ratingQuestions, textQuestions } from "@/lib/event-evaluation-template";
 import { loadEvaluationAnswers, loadEvaluationQuestions } from "@/lib/event-evaluation-queries";
 import { isEvalAudience, isScaleType } from "@/lib/event-evaluation-questions";
@@ -30,7 +30,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
   if (!audience) {
     return NextResponse.json({ error: "Audiens tidak didukung (peserta|panitia)" }, { status: 400 });
   }
-  if (audience === "panitia" && !access.isFullAdmin && !access.isBphPanitia) {
+  if (audience === "panitia" && !canReadCommitteeEvaluation(access)) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 

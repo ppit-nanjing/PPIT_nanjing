@@ -5,7 +5,8 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { db } from "@/db";
 import { eventEvaluationAnswers, eventEvaluations, events } from "@/db/schema";
-import { requireEventConsoleAccess } from "@/lib/event-access";
+import { canEditCommitteeEvaluation, requireEventConsoleAccess } from "@/lib/event-access";
+import { isUniqueViolation } from "@/lib/db-errors";
 import { logEventAudit } from "@/lib/event-audit";
 import { type EvalFormState, type EvalQuestionRow, validateEvalAnswer } from "@/lib/event-evaluation-questions";
 import { loadEvaluationQuestions } from "@/lib/event-evaluation-queries";
@@ -32,25 +33,6 @@ function rating(formData: FormData, key: string): number | null {
   const value = typeof raw === "string" ? Number.parseInt(raw, 10) : Number.NaN;
   if (!Number.isInteger(value) || value < 1 || value > 10) return null;
   return value;
-}
-
-function isUniqueViolation(error: unknown): boolean {
-  let current: unknown = error;
-  for (let depth = 0; depth < 5 && current; depth += 1) {
-    if (
-      typeof current === "object" &&
-      current !== null &&
-      "code" in current &&
-      (current as { code?: unknown }).code === "23505"
-    ) {
-      return true;
-    }
-    current =
-      typeof current === "object" && current !== null && "cause" in current
-        ? (current as { cause?: unknown }).cause
-        : null;
-  }
-  return false;
 }
 
 export async function submitEventEvaluation(
@@ -234,14 +216,18 @@ export async function deleteEventEvaluation(formData: FormData): Promise<void> {
     .from(eventEvaluations)
     .where(and(eq(eventEvaluations.id, id), eq(eventEvaluations.eventId, eventId)));
   if (!row) return;
-  if (row.audience === "panitia") {
-    if (!access.isFullAdmin && !access.isBphPanitia) redirect("/console");
+  // Respons panitia: gerbang ubah evaluasi panitia (ikut kunci kepanitiaan).
+  if (row.audience === "panitia" && !canEditCommitteeEvaluation(access)) redirect(`/console/events/${eventId}`);
+  const deleted = await db
+    .delete(eventEvaluations)
+    .where(and(eq(eventEvaluations.id, id), eq(eventEvaluations.eventId, eventId)))
+    .returning({ id: eventEvaluations.id });
+  // Audit SETELAH baris benar-benar terhapus: kalau DELETE gagal atau barisnya
+  // sudah dihapus orang lain lebih dulu, log tidak boleh mengklaim penghapusan.
+  if (row.audience === "panitia" && deleted.length > 0) {
     await logEventAudit(access.session.user.id, eventId, "committee_evaluation.deleted", {
       after: { evaluationId: id },
     });
   }
-  await db
-    .delete(eventEvaluations)
-    .where(and(eq(eventEvaluations.id, id), eq(eventEvaluations.eventId, eventId)));
   revalidatePath(`/console/events/${eventId}`);
 }

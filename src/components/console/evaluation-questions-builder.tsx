@@ -79,10 +79,11 @@ export function EvaluationQuestionsBuilder({
       <p className="text-body-md text-on-surface-variant max-w-2xl">
         {isCommittee ? (
           <>
-            Kosong = form evaluasi panitia memakai <strong className="text-on-background">template kolektif</strong> (lima
-            penilaian Bintang 1–5 + pertanyaan teks). Begitu ada satu pertanyaan di bawah, form evaluasi panitia memakai
-            pertanyaan kamu saja. Panitia mengisinya lewat <code className="text-on-background">{formPath}</code> saat
-            jendela waktu dibuka.
+            Masih kosong? <strong className="text-on-background">Template kolektif</strong> (lima penilaian Bintang 1–5 +
+            pertanyaan teks) disalin ke sini otomatis saat jendela pengisian pertama kali disimpan di section Evaluasi
+            Acara; kalau kamu sudah menyusun pertanyaan sendiri, yang dipakai pertanyaanmu. Panitia mengisinya lewat{" "}
+            <code className="text-on-background">{formPath}</code> selama jendela terbuka. Jangan hapus semua pertanyaan
+            saat jendela terbuka: form panitia akan menampilkan &ldquo;Evaluasi belum disiapkan&rdquo;.
           </>
         ) : (
           <>

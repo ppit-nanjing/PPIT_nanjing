@@ -2,7 +2,7 @@ import { eq, and, desc, like, or, sql, inArray } from "drizzle-orm";
 import { notFound } from "next/navigation";
 import QRCode from "qrcode";
 import { db } from "@/db";
-import { auditLogs, certificates, coverageCities, events, eventCredits, eventDivisions, eventEvaluations, eventEvaluationAnswers, eventFeeOptions, eventQuestions, eventRegistrations, eventVolunteers, galleryAlbums, galleryPhotos, inventoryItems, itemReservations, newsArticles, sensusProfiles, shortLinks, users } from "@/db/schema";
+import { auditLogs, certificates, coverageCities, events, eventCredits, eventDivisions, eventEvaluations, eventFeeOptions, eventQuestions, eventRegistrations, eventVolunteers, galleryAlbums, galleryPhotos, inventoryItems, itemReservations, newsArticles, sensusProfiles, shortLinks, users } from "@/db/schema";
 import { MEMBERSHIP_LABEL, effectiveBranch, membershipStatus } from "@/lib/membership-status";
 import { updateEventInfo, updateEventContent, updateEventPostReport, setEventStatus, saveEventQuestion, deleteEventQuestion, saveFeeOption, deleteFeeOption } from "@/app/actions/admin-events";
 import { createEventGalleryAlbum } from "@/app/actions/admin-content";
@@ -19,7 +19,7 @@ import { EventQuestionFields } from "@/components/events/event-question-fields";
 import { EventShareLinks } from "@/components/console/event-share-links";
 import { getSiteOrigin } from "@/lib/site";
 import { EVENT_COMMITTEE_ROLE_LABEL } from "@/lib/event-capabilities";
-import { requireEventConsoleAccess } from "@/lib/event-access";
+import { canEditCommitteeEvaluation, canReadCommitteeEvaluation, requireEventConsoleAccess } from "@/lib/event-access";
 import { EVENT_STATUS_LABEL as STATUS_LABEL } from "@/lib/event-status-labels";
 import { EVENT_AUDIT_ACTION_LABEL, type EventAuditAction } from "@/lib/event-audit";
 import { ImageUploadCropper } from "@/components/upload/image-upload-cropper";
@@ -38,7 +38,7 @@ import { loadEvaluationAnswers, loadEvaluationQuestions } from "@/lib/event-eval
 import { ReservationManager } from "@/components/console/reservation-manager";
 import { checkInBlockReason } from "@/lib/event-checkin";
 import { feeTierAt, amountForTier } from "@/lib/event-fee";
-import { toDateLocalInput } from "@/lib/datetime";
+import { toChinaLocalInput, toDateLocalInput } from "@/lib/datetime";
 import { ConfirmButton } from "@/components/console/confirm-button";
 import { FlashToast } from "@/components/console/flash-toast";
 import { SubmitButton } from "@/components/console/submit-button";
@@ -86,7 +86,10 @@ export default async function ConsoleEventDetailPage({ params }: { params: Promi
   // Editor jendela waktu, rekap lengkap, dan ekspor hanya untuk BPH Kabinet/
   // Teknologi atau BPH Panitia acara ini; panitia lain cukup melihat jumlah
   // pengisi dan statusnya sendiri.
-  const canManageCommitteeEval = access.isFullAdmin || access.isBphPanitia;
+  const canManageCommitteeEval = canReadCommitteeEvaluation(access);
+  // Mengubah (jendela, pertanyaan panitia, hapus respons) ikut kunci kepanitiaan:
+  // BPH Panitia hanya bisa membaca rekap setelah acara terkunci.
+  const canEditCommitteeEval = canEditCommitteeEvaluation(access);
 
   // Semua query di bawah hanya bergantung pada `id` dan hak akses, bukan satu
   // sama lain, jadi dijalankan serentak: satu putaran ke database alih-alih
@@ -119,7 +122,6 @@ export default async function ConsoleEventDetailPage({ params }: { params: Promi
     cityRows, // untuk pratinjau form evaluasi, hanya bila viewer boleh menyusunnya
     committeeEvalRows, // respons audiens panitia + nama/divisi — HANYA untuk pengelola (B2)
     committeeEvalAnswers, // jawaban audiens panitia — HANYA untuk pengelola (B2)
-    committeeAnswerCounts, // hitungan jawaban per pertanyaan panitia (angka saja, tanpa isi)
     committeeEvalStats, // (non-pengelola) jumlah respons panitia + apakah dirinya sudah mengisi
     [assetItems, assetReservations], // reservasi aset Inventaris, hanya untuk yang punya grant
     shareLinkRows, // tautan pendek pendaftaran & evaluasi yang sudah dibuat
@@ -243,17 +245,6 @@ export default async function ConsoleEventDetailPage({ params }: { params: Promi
     // B2: isi jawaban evaluasi panitia hanya dibaca untuk pengelola; rekapnya
     // dirender dari sini, bukan dari daftar jawaban yang bocor ke semua orang.
     canManageCommitteeEval ? loadEvaluationAnswers(id, "panitia") : Promise.resolve([]),
-    // Hitungan jawaban per pertanyaan panitia: angka agregat tanpa isi/nama,
-    // dibutuhkan builder panitia untuk mengunci tipe. Builder itu hanya untuk
-    // pengelola (lihat R4 di bawah), jadi query-nya ikut gerbang yang sama.
-    canManageCommitteeEval
-      ? db
-          .select({ questionId: eventEvaluationAnswers.questionId, n: sql<number>`count(*)::int` })
-          .from(eventEvaluationAnswers)
-          .innerJoin(eventEvaluations, eq(eventEvaluationAnswers.evaluationId, eventEvaluations.id))
-          .where(and(eq(eventEvaluations.eventId, id), eq(eventEvaluations.audience, "panitia")))
-          .groupBy(eventEvaluationAnswers.questionId)
-      : Promise.resolve([]),
     // Non-pengelola: jumlah pengisi + apakah penampil sendiri sudah mengisi
     // (status dirinya saja, bukan status orang lain).
     canManageCommitteeEval
@@ -451,9 +442,11 @@ export default async function ConsoleEventDetailPage({ params }: { params: Promi
     respondentName: r.userName,
     respondentCity: r.divisionName,
   }));
+  // Hitungan jawaban per pertanyaan panitia (builder memakainya untuk mengunci
+  // tipe), diturunkan dari jawaban yang sudah dimuat — sama seperti evalAnswerCounts.
   const committeeAnswerCountMap: Record<string, number> = {};
-  for (const a of committeeAnswerCounts) {
-    if (a.questionId) committeeAnswerCountMap[a.questionId] = a.n;
+  for (const a of committeeEvalAnswers) {
+    if (a.questionId) committeeAnswerCountMap[a.questionId] = (committeeAnswerCountMap[a.questionId] ?? 0) + 1;
   }
 
   return (
@@ -1477,7 +1470,7 @@ export default async function ConsoleEventDetailPage({ params }: { params: Promi
             // Pertanyaan yang menilai kepanitiaan disusun BPH, bukan anggota
             // panitia yang ikut dinilai. Server action-nya memakai gerbang yang
             // sama (requireQuestionAccess di actions/event-evaluation-questions.ts).
-            canManageCommitteeEval ? (
+            canEditCommitteeEval ? (
               <EvaluationQuestionsBuilder
                 eventId={id}
                 slug={event.slug}
@@ -1491,7 +1484,9 @@ export default async function ConsoleEventDetailPage({ params }: { params: Promi
               />
             ) : (
               <p className="text-body-md text-on-surface-variant max-w-2xl">
-                Pertanyaan evaluasi panitia disusun oleh BPH Panitia atau BPH Kabinet.
+                {canManageCommitteeEval
+                  ? "Acara ini sudah terkunci (14 hari setelah selesai): pertanyaan evaluasi panitia hanya bisa diubah BPH Kabinet."
+                  : "Pertanyaan evaluasi panitia disusun oleh BPH Panitia atau BPH Kabinet."}
                 {evalQuestionsPanitia.length > 0
                   ? ` Saat ini ada ${evalQuestionsPanitia.length} pertanyaan.`
                   : " Pertanyaannya disiapkan otomatis saat BPH memasang jendela pengisian."}
@@ -1545,11 +1540,14 @@ export default async function ConsoleEventDetailPage({ params }: { params: Promi
                     Hanya panitia acara ini yang login yang bisa mengisi, dan hanya selama jendela di bawah terbuka.
                   </p>
                 </div>
+                {canEditCommitteeEval ? (
                 <CommitteeEvalWindowEditor
                   eventId={id}
-                  opensAt={event.committeeEvalOpensAt ? toDateLocalInput(new Date(event.committeeEvalOpensAt)) : ""}
-                  closesAt={event.committeeEvalClosesAt ? toDateLocalInput(new Date(event.committeeEvalClosesAt)) : ""}
-                  presetOpens={event.endAt ? toDateLocalInput(new Date(event.endAt)) : toDateLocalInput(new Date())}
+                  // Jam Tiongkok, bukan jam server: aksi simpannya membaca nilai
+                  // ini sebagai jam Tiongkok juga (parseChinaLocalInput).
+                  opensAt={event.committeeEvalOpensAt ? toChinaLocalInput(new Date(event.committeeEvalOpensAt)) : ""}
+                  closesAt={event.committeeEvalClosesAt ? toChinaLocalInput(new Date(event.committeeEvalClosesAt)) : ""}
+                  presetOpens={event.endAt ? toChinaLocalInput(new Date(event.endAt)) : toChinaLocalInput(new Date())}
                   windowLabel={
                     committeeEvalWindow === "open"
                       ? "Jendela pengisian sedang TERBUKA"
@@ -1568,6 +1566,11 @@ export default async function ConsoleEventDetailPage({ params }: { params: Promi
                   saveLabel="Simpan jendela"
                   clearConfirmNote="Status jendela dihitung otomatis dari waktu saat ini — panitia hanya bisa mengisi selama terbuka."
                 />
+                ) : (
+                  <p className="text-body-md text-on-surface-variant max-w-2xl">
+                    Acara ini sudah terkunci (14 hari setelah selesai): jendela pengisian hanya bisa diubah BPH Kabinet.
+                  </p>
+                )}
                 <EvaluationResults
                   eventId={id}
                   exportAudience="panitia"

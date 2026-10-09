@@ -121,6 +121,18 @@ export function EvaluationResults({
   /** Audiens tautan ekspor: "panitia" menambahkan ?audience=panitia (gerbangnya lebih ketat). */
   exportAudience?: "peserta" | "panitia";
 }) {
+  // Tab Panitia: keadaan kosongnya harus menunjuk tautan evaluasi PANITIA. Pesan
+  // kosong milik peserta (TemplateResults/CustomResults) menyuruh membagikan
+  // /events/<slug>/evaluasi ke grup peserta - kalau itu yang dibagikan ke grup
+  // panitia, jawaban panitia masuk ke rekap peserta.
+  if (exportAudience === "panitia" && evaluations.length === 0) {
+    return (
+      <p className="text-body-md text-on-surface-variant">
+        Belum ada respons panitia. Bagikan tautan pengisian di atas ke grup panitia acara ini selama jendela terbuka —
+        hanya panitia yang login yang bisa mengisi.
+      </p>
+    );
+  }
   const legacy = evaluations.filter(isLegacy);
   const custom = evaluations.filter((e) => !isLegacy(e));
   // Mode pertanyaan sendiri berlaku selama acara punya pertanyaan, atau sudah ada

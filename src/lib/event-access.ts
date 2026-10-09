@@ -156,6 +156,24 @@ export async function requireEventCapability(
 }
 
 /**
+ * Evaluasi panitia (kolektif): siapa yang boleh MEMBACA isi jawaban beserta nama
+ * pengisinya, dan siapa yang boleh MENGUBAH (jendela waktu, pertanyaan panitia,
+ * hapus respons). Satu tempat supaya halaman konsol, server action, dan route
+ * ekspor tidak bisa saling geser.
+ * - Baca: BPH Kabinet/Teknologi atau BPH Panitia acara ini — tetap boleh setelah
+ *   acara terkunci (rekap dibutuhkan untuk LPJ).
+ * - Ubah: sama, tapi BPH Panitia tunduk pada kunci kepanitiaan 14 hari setelah
+ *   acara (setelahnya hanya BPH Kabinet), sama seperti kapabilitas panitia lain.
+ */
+export function canReadCommitteeEvaluation(access: EventAccess): boolean {
+  return access.isFullAdmin || access.isBphPanitia;
+}
+
+export function canEditCommitteeEvaluation(access: EventAccess): boolean {
+  return access.isFullAdmin || (access.isBphPanitia && !access.locked);
+}
+
+/**
  * Untuk route handler (yang perlu balas 403, bukan redirect). Bool saja.
  */
 export async function hasEventCapabilityFor(

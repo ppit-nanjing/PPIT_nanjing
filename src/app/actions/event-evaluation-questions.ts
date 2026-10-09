@@ -5,7 +5,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { db } from "@/db";
 import { eventEvaluationAnswers, eventEvaluationQuestions, events } from "@/db/schema";
-import { requireEventCapability } from "@/lib/event-access";
+import { canEditCommitteeEvaluation, requireEventCapability } from "@/lib/event-access";
 import { id as idDictionary } from "@/lib/i18n/dictionaries/id";
 import { evaluationTemplateForSlug } from "@/lib/event-evaluation-template";
 import { committeeEvalTemplateQuestions } from "@/lib/committee-evaluation";
@@ -33,7 +33,7 @@ const CAPABILITY = "event.registrationForm" as const;
 // mengganti pertanyaannya, bahkan saat jendela pengisian sedang terbuka.
 async function requireQuestionAccess(eventId: string, audience: EvalAudience) {
   const access = await requireEventCapability(eventId, CAPABILITY);
-  if (audience === "panitia" && !access.isFullAdmin && !access.isBphPanitia) redirect("/console");
+  if (audience === "panitia" && !canEditCommitteeEvaluation(access)) redirect("/console");
   return access;
 }
 const MAX_QUESTIONS = 40;

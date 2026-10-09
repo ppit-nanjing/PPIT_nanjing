@@ -45,6 +45,8 @@ Dihitung dari waktu saat ini oleh `committeeEvalWindowState()` (`src/lib/committ
 
 BPH bisa override kapan pun: majukan/mundurkan waktu, kosongkan keduanya lalu simpan untuk melepas jadwal. Server action `submitCommitteeEvaluation` menghitung ulang status yang sama — halaman bukan kontrol aksesnya.
 
+**Zona waktu.** Nilai Buka/Tutup selalu dibaca dan ditampilkan sebagai **jam Tiongkok** (`parseChinaLocalInput` / `toChinaLocalInput` di `src/lib/datetime.ts`), bukan jam server. Fungsi Vercel berjalan di UTC, jadi `new Date(value)` biasa membuat jendela buka/tutup 8 jam lebih lambat dari yang diketik BPH (dan tidak terlihat di laptop pengembang yang zonanya CST). Halaman publik memformat tanggal dengan `timeZone: "Asia/Shanghai"`. Field waktu acara yang lain masih memakai konvensi lama (`toDateLocalInput`).
+
 ## Data model (`src/db/schema.ts`)
 
 - **`events`** — `committee_eval_opens_at`, `committee_eval_closes_at` (NULL = belum dipasang).
@@ -78,11 +80,21 @@ Form publik memberi tahu pengisi bahwa jawaban beserta namanya hanya bisa dibaca
 ## Keamanan & hak akses (B2)
 
 - Aksi kirim adalah batas permintaan publik: login, roster `event_committee`, dan status jendela dicek di dalam action. Bukan panitia yang sudah login dibedakan dari belum login (`not_committee` vs `login`); acara `cancelled` ditolak.
-- Mengelola jendela, menghapus respons, dan mengekspor = **BPH Kabinet/Teknologi atau BPH Panitia acara ini** (`isFullAdmin || isBphPanitia`) — dicek di server action DAN route ekspor, bukan cuma disembunyikan di UI. Penghapusan dicatat di audit log (`committee_evaluation.deleted`).
+- Membaca rekap/nama dan mengekspor = **BPH Kabinet/Teknologi atau BPH Panitia acara ini** (`canReadCommitteeEvaluation` di `src/lib/event-access.ts`), tetap boleh setelah acara terkunci.
+- Mengelola jendela, menyusun pertanyaan panitia, dan menghapus respons = sama, **tapi BPH Panitia ikut kunci kepanitiaan** 14 hari setelah acara (`canEditCommitteeEvaluation`); setelahnya hanya BPH Kabinet. Dicek di server action DAN route ekspor, bukan cuma disembunyikan di UI. Penghapusan dicatat di audit log (`committee_evaluation.deleted`) setelah barisnya benar-benar terhapus.
+- Template disalin ke DB dalam satu transaksi dengan advisory lock per acara, jadi dua BPH yang menyimpan jendela bersamaan tidak menggandakan pertanyaan.
 - Baris & jawaban audiens panitia (termasuk nama pengisi) TIDAK di-query untuk viewer non-pengelola; mereka hanya menerima angka agregat (jumlah pengisi + status dirinya).
 - Rekap peserta di tab Peserta menyaring `audience = 'peserta'` — jawaban panitia tidak ikut merusak rata-rata peserta, dan sebaliknya.
 - Teks dibatasi 2000 karakter; skala (rating/bintang) divalidasi ulang di server lewat `validateEvalAnswer`; respons + jawaban ditulis dalam satu batch.
 - `division_id` di-snapshot saat mengisi — agregat per divisi tetap benar walau penempatan berubah kemudian.
+
+## Help Center
+
+Artikel untuk pengurus: slug `evaluasi-panitia` di `src/db/seed-help-articles.ts`. Pasang tanpa menyentuh artikel lain:
+
+```bash
+npx tsx --env-file=.env src/db/seed-help-articles.ts evaluasi-panitia
+```
 
 ## Yang belum (follow-up)
 

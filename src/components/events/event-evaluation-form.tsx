@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useEffect, useRef, useState, type FormEvent } from "react";
+import { useActionState, useEffect, useRef, useState, useTransition, type FormEvent } from "react";
 import Link from "next/link";
 import { ArrowLeft, CheckCircle2, Star } from "lucide-react";
 import { submitEventEvaluation } from "@/app/actions/event-evaluations";
@@ -284,6 +284,7 @@ export function EventEvaluationForm({
     action ?? submitEventEvaluation,
     {},
   );
+  const [, startSubmit] = useTransition();
   const [anonymous, setAnonymous] = useState(false);
   const [token, setToken] = useState("");
   const [doneBefore, setDoneBefore] = useState(false);
@@ -351,10 +352,14 @@ export function EventEvaluationForm({
   // error DAN React mengosongkan seluruh form setelah aksi selesai - peserta kehilangan
   // semua jawabannya. Jadi pemeriksaan itu dilakukan di sini, sebelum aksi jalan.
   function onSubmit(e: FormEvent<HTMLFormElement>) {
-    if (preview) {
-      e.preventDefault();
-      return;
-    }
+    // Selalu dicegat: form dikirim lewat startTransition, BUKAN <form action>.
+    // Dengan <form action>, React mengosongkan semua field tak terkontrol begitu
+    // aksi selesai, termasuk saat server MENOLAK hal yang tak bisa dicek di sini
+    // (jendela keburu tutup, pertanyaan berubah, error jaringan) - pengisi
+    // kehilangan seluruh jawabannya. Validasi `required` bawaan browser tetap
+    // jalan sebelum event submit ini.
+    e.preventDefault();
+    if (preview) return;
     const form = e.currentTarget;
     const missing = (questions ?? []).some((q) => {
       if (!q.required) return false;
@@ -367,12 +372,13 @@ export function EventEvaluationForm({
       return false;
     });
     setClientMissing(missing);
-    if (missing) e.preventDefault();
+    if (missing) return;
+    const data = new FormData(form);
+    startSubmit(() => formAction(data));
   }
 
   return (
     <form
-      action={preview ? undefined : formAction}
       onSubmit={onSubmit}
       className="flex flex-col gap-5"
     >

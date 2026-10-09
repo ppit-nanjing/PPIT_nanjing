@@ -60,8 +60,14 @@ export default async function CommitteeEvaluationPage({ params }: { params: Prom
   // Acara dibatalkan tidak layak dievaluasi (K4) — sama dengan gerbang aksinya.
   if (!event || event.status === "draft" || event.status === "scheduled" || event.status === "cancelled") notFound();
 
+  // Jam Tiongkok, bukan jam server (UTC di Vercel): sama dengan cara konsol
+  // menyimpan jendela (parseChinaLocalInput) dan dengan zona pembacanya.
   const formatDateTime = (date: Date) =>
-    new Intl.DateTimeFormat(INTL_LOCALE[locale], { dateStyle: "full", timeStyle: "short" }).format(date);
+    new Intl.DateTimeFormat(INTL_LOCALE[locale], {
+      dateStyle: "full",
+      timeStyle: "short",
+      timeZone: "Asia/Shanghai",
+    }).format(date);
 
   const windowState = committeeEvalWindowState(event.committeeEvalOpensAt, event.committeeEvalClosesAt);
 
