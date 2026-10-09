@@ -41,9 +41,10 @@ export function EventCreateForm() {
             <TextField name="locationUrl2" label="Link peta 2 (opsional)" type="url" placeholder="mis. Baidu Maps" />
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <TextField name="startAt" label="Tanggal & jam mulai" type="datetime-local" hint="Kapan acara berlangsung." />
-            <TextField name="capacity" label="Kapasitas" type="number" min={1} />
+            <TextField name="startAt" label="Tanggal & jam mulai" type="datetime-local" hint="Kapan acara dimulai." />
+            <TextField name="endAt" label="Tanggal & jam selesai" type="datetime-local" hint="Kapan acara berakhir." />
           </div>
+          <TextField name="capacity" label="Kapasitas" type="number" min={1} />
           <ImageUploadCropper
             name="coverImageUrl"
             folder="events"
