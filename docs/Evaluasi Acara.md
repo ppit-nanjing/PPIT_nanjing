@@ -73,7 +73,7 @@ Skema DB tetap sama untuk kedua template (4 kolom rating + 6 kolom teks); yang b
 
 ## Operasional panitia
 
-1. **Sebar**: buka console acara → section **Tautan Pendaftaran & Evaluasi** → **Buat tautan pendek + QR** (slug otomatis `eval-<slug-acara>`, mis. `eval-wif-2026`; idempoten, tautan manual yang sudah ada dipakai ulang) → unduh QR → tempel ke grup WeChat. Modul Tautan (`/console/links`) tetap ada untuk tautan lain. Tombol "Isi Evaluasi" juga otomatis muncul di halaman acara setelah acara lewat.
+1. **Sebar**: buka console acara → section **Tautan Pendaftaran & Evaluasi** → **Buat tautan pendek + QR (keduanya)** — satu klik membuat tautan pendaftaran & evaluasi sekaligus (slug `daftar-<slug-acara>` / `eval-<slug-acara>`; tautan lama dengan path yang sama dipakai ulang, idempoten) → unduh QR → tempel ke grup WeChat. Target disimpan relatif (`/events/...`), jadi QR yang sudah tersebar tetap hidup walau situs pindah domain; QR juga tidak berubah saat acara diedit. Modul Tautan (`/console/links`) tetap ada untuk tautan lain. Tombol "Isi Evaluasi" juga otomatis muncul di halaman acara setelah acara lewat.
 2. **Pantau**: `/console/events/<id>` → section "Evaluasi Acara". Rata-rata masuk akal enggak, teksnya kebaca.
 3. **Rekap**: tombol **CSV** / **Excel** — untuk LPJ. Respons uji spam tinggal hapus per baris.
 4. Satu perangkat hanya bisa mengisi sekali; kalau ada yang isi keliru, minta hapus di console lalu isi ulang dari perangkat yang sama TIDAK bisa (token sudah terpakai) — hapus dulu barisnya baru orang itu bisa isi lagi.

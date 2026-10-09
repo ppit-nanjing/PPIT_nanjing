@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { Link2, Loader2 } from "lucide-react";
-import { ensureEventShortLink, type EventShortLinkKind } from "@/app/actions/short-links";
+import { ensureEventShortLinks } from "@/app/actions/short-links";
 import { CopyLinkButton } from "@/components/console/copy-link-button";
 import { LinkQrDisclosure } from "@/components/console/link-qr-disclosure";
 
@@ -18,8 +18,9 @@ export type EventShareLinkState = {
 /**
  * Dua tautan yang paling sering dibagikan panitia — pendaftaran & evaluasi —
  * langsung bisa dipendekkan + QR dari sini, tanpa membuka modul Tautan.
- * Slug dibuat server (`ensureEventShortLink`), idempoten: klik ulang memakai
- * tautan yang sudah ada (termasuk yang dibuat manual di /console/links).
+ * SATU klik membuat KEDUANYA (`ensureEventShortLinks`), idempoten: tautan yang
+ * sudah ada dipakai ulang (termasuk buatan manual di /console/links), dan
+ * targetnya disimpan relatif supaya QR tidak mati saat situs pindah domain.
  */
 export function EventShareLinks({
   eventId,
@@ -37,26 +38,29 @@ export function EventShareLinks({
   evaluasi: EventShareLinkState;
 }) {
   const [rows, setRows] = useState({ daftar, evaluasi });
-  const [pending, setPending] = useState<EventShortLinkKind | null>(null);
+  const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [, startTransition] = useTransition();
 
-  function create(kind: EventShortLinkKind) {
+  function create() {
     setError(null);
-    setPending(kind);
+    setPending(true);
     startTransition(async () => {
       try {
-        const res = await ensureEventShortLink(eventId, kind);
-        setRows((r) => ({ ...r, [kind]: { ...r[kind], slug: res.slug, qrDataUrl: res.qrDataUrl } }));
+        const res = await ensureEventShortLinks(eventId);
+        setRows((r) => ({
+          daftar: { ...r.daftar, slug: res.daftar.slug, qrDataUrl: res.daftar.qrDataUrl },
+          evaluasi: { ...r.evaluasi, slug: res.evaluasi.slug, qrDataUrl: res.evaluasi.qrDataUrl },
+        }));
       } catch (e) {
         setError(e instanceof Error ? e.message : "Gagal membuat tautan pendek");
       } finally {
-        setPending(null);
+        setPending(false);
       }
     });
   }
 
-  const items: { kind: EventShortLinkKind; label: string; description: string; state: EventShareLinkState }[] = [
+  const items: { kind: "daftar" | "evaluasi"; label: string; description: string; state: EventShareLinkState }[] = [
     {
       kind: "daftar",
       label: "Tautan Pendaftaran",
@@ -114,12 +118,13 @@ export function EventShareLinks({
           ) : (
             <button
               type="button"
-              onClick={() => create(kind)}
-              disabled={pending !== null}
+              onClick={create}
+              disabled={pending}
+              title="Sekali klik membuat tautan pendek pendaftaran & evaluasi"
               className="self-start inline-flex items-center gap-2 border border-outline-variant px-4 py-2 rounded-md text-label-caps uppercase tracking-wide hover:bg-surface-container-low transition-colors disabled:opacity-60"
             >
-              {pending === kind && <Loader2 size={14} className="animate-spin" aria-hidden="true" />} Buat tautan
-              pendek + QR
+              {pending && <Loader2 size={14} className="animate-spin" aria-hidden="true" />} Buat tautan pendek + QR
+              (keduanya)
             </button>
           )}
         </div>

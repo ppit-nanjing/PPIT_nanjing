@@ -295,7 +295,7 @@ Menghapus (Hapus) sebuah file memindahkannya ke sampah Drive dan menonaktifkan s
     content: `Setelah acara selesai, peserta bisa mengisi evaluasi lewat tautan publik /events/<slug>/evaluasi (tanpa perlu akun). Tombol "Isi Evaluasi" juga otomatis muncul di halaman acara begitu tanggal acara sudah lewat.
 
 Menyebarkan
-- Dari halaman console acara, buka section "Tautan Pendaftaran & Evaluasi" → klik "Buat tautan pendek + QR" di baris Tautan Evaluasi (slug otomatis eval-<slug-acara>; kalau sudah pernah dibuat, tautan yang sama dipakai ulang). Unduh QR-nya, tempel di grup WeChat. Modul Tautan tetap bisa dipakai untuk tautan lain.
+- Dari halaman console acara, buka section "Tautan Pendaftaran & Evaluasi" → klik "Buat tautan pendek + QR (keduanya)" — satu klik membuat tautan pendaftaran DAN evaluasi (slug otomatis daftar-<slug-acara> & eval-<slug-acara>; kalau sudah pernah dibuat, tautan yang sama dipakai ulang). Unduh QR-nya, tempel di grup WeChat. Targetnya relatif, jadi QR tetap hidup walau situs pindah domain. Modul Tautan tetap bisa dipakai untuk tautan lain.
 - Satu perangkat hanya bisa mengisi SEKALI. Kalau ada yang salah isi dan mau mengulang dari perangkat yang sama, hapus dulu barisnya di console (lihat di bawah), baru orang itu bisa isi lagi.
 
 Identitas

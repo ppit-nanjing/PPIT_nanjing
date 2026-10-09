@@ -1,4 +1,4 @@
-import { eq, and, desc, sql, inArray } from "drizzle-orm";
+import { eq, and, desc, like, or, sql, inArray } from "drizzle-orm";
 import { notFound } from "next/navigation";
 import QRCode from "qrcode";
 import { db } from "@/db";
@@ -63,11 +63,17 @@ export default async function ConsoleEventDetailPage({ params }: { params: Promi
 
   // Tautan pendek pendaftaran & evaluasi: URL absolut + baris short_links yang
   // sudah ada (dibuat dari section "Tautan Pendaftaran & Evaluasi" atau manual
-  // di modul Tautan). Query-nya ikut gelombang pertama di bawah.
+  // di modul Tautan). Pencocokan memakai AKHIRAN path supaya tautan lama
+  // (target absolute/domain lama) tetap dikenali. Query-nya ikut gelombang
+  // pertama di bawah.
   const shareOrigin = await getSiteOrigin();
+  const sharePaths = {
+    daftar: `/events/${event.slug}/register`,
+    evaluasi: `/events/${event.slug}/evaluasi`,
+  };
   const shareDirect = {
-    daftar: `${shareOrigin}/events/${event.slug}/register`,
-    evaluasi: `${shareOrigin}/events/${event.slug}/evaluasi`,
+    daftar: `${shareOrigin}${sharePaths.daftar}`,
+    evaluasi: `${shareOrigin}${sharePaths.evaluasi}`,
   };
 
   // Semua query di bawah hanya bergantung pada `id` dan hak akses, bukan satu
@@ -210,7 +216,12 @@ export default async function ConsoleEventDetailPage({ params }: { params: Promi
     db
       .select({ slug: shortLinks.slug, targetUrl: shortLinks.targetUrl })
       .from(shortLinks)
-      .where(inArray(shortLinks.targetUrl, [shareDirect.daftar, shareDirect.evaluasi])),
+      .where(
+        or(
+          like(shortLinks.targetUrl, `%${sharePaths.daftar}`),
+          like(shortLinks.targetUrl, `%${sharePaths.evaluasi}`),
+        ),
+      ),
   ]);
 
   // QR tautan pendek digenerate server-side (sama seperti /console/links);
@@ -222,8 +233,8 @@ export default async function ConsoleEventDetailPage({ params }: { params: Promi
       ),
     ),
   );
-  const daftarShareLink = shareLinkRows.find((l) => l.targetUrl === shareDirect.daftar) ?? null;
-  const evaluasiShareLink = shareLinkRows.find((l) => l.targetUrl === shareDirect.evaluasi) ?? null;
+  const daftarShareLink = shareLinkRows.find((l) => l.targetUrl.endsWith(sharePaths.daftar)) ?? null;
+  const evaluasiShareLink = shareLinkRows.find((l) => l.targetUrl.endsWith(sharePaths.evaluasi)) ?? null;
 
   const linkedAlbum = albums.find((a) => a.eventId === id) ?? null;
   // Jawaban yang sudah masuk per pertanyaan evaluasi: tipe pertanyaan dikunci bila > 0.
