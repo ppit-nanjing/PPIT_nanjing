@@ -98,6 +98,13 @@ export async function createEvent(_prev: EventFormState, formData: FormData): Pr
   if (locationUrl2Raw && !isValidHttpUrl(locationUrl2Raw)) {
     return { error: "Link lokasi (2) harus diawali http:// atau https://" };
   }
+  const startAt = formData.get("startAt") ? new Date(String(formData.get("startAt"))) : null;
+  const endAt = formData.get("endAt") ? new Date(String(formData.get("endAt"))) : null;
+  // Waktu selesai dipakai kunci kepanitiaan (isCommitteeLocked) dan status
+  // "sudah lewat"; selesai sebelum mulai membuat keduanya salah hitung.
+  if (startAt && endAt && endAt <= startAt) {
+    return { error: "Waktu selesai harus setelah waktu mulai." };
+  }
 
   const scheduledPublishAt = formData.get("scheduledPublishAt")
     ? new Date(String(formData.get("scheduledPublishAt")))
@@ -119,8 +126,8 @@ export async function createEvent(_prev: EventFormState, formData: FormData): Pr
       locationUrl: locationUrlRaw || null,
       locationUrl2: locationUrl2Raw || null,
       coverImageUrl: String(formData.get("coverImageUrl") ?? "").trim() || null,
-      startAt: formData.get("startAt") ? new Date(String(formData.get("startAt"))) : null,
-      endAt: formData.get("endAt") ? new Date(String(formData.get("endAt"))) : null,
+      startAt,
+      endAt,
       registrationDeadline: formData.get("registrationDeadline")
         ? new Date(String(formData.get("registrationDeadline")))
         : null,
@@ -174,6 +181,11 @@ export async function updateEventInfo(id: string, formData: FormData) {
   if (locationUrl2Raw && !isValidHttpUrl(locationUrl2Raw)) {
     throw new Error("Link lokasi (2) harus diawali http:// atau https://");
   }
+  const startAt = formData.get("startAt") ? new Date(String(formData.get("startAt"))) : null;
+  const endAt = formData.get("endAt") ? new Date(String(formData.get("endAt"))) : null;
+  if (startAt && endAt && endAt <= startAt) {
+    throw new Error("Waktu selesai harus setelah waktu mulai.");
+  }
 
   const [before] = await db
     .select({ status: events.status, slug: events.slug })
@@ -194,8 +206,8 @@ export async function updateEventInfo(id: string, formData: FormData) {
       locationUrl: locationUrlRaw || null,
       locationUrl2: locationUrl2Raw || null,
       coverImageUrl: String(formData.get("coverImageUrl") ?? "").trim() || null,
-      startAt: formData.get("startAt") ? new Date(String(formData.get("startAt"))) : null,
-      endAt: formData.get("endAt") ? new Date(String(formData.get("endAt"))) : null,
+      startAt,
+      endAt,
       registrationDeadline: formData.get("registrationDeadline")
         ? new Date(String(formData.get("registrationDeadline")))
         : null,

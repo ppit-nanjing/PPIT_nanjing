@@ -535,28 +535,32 @@ export default async function ConsoleEventDetailPage({ params }: { params: Promi
               </div>
               <p className="text-xs text-on-surface-variant -mt-2">Kalau diisi, teks Lokasi di halaman publik jadi tombol langsung ke petunjuk arah (dua tombol kalau dua-duanya diisi).</p>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div className="flex flex-col gap-1">
+                <label className="flex flex-col gap-1">
+                  <span className="text-label-caps uppercase tracking-wide text-on-surface-variant">Mulai</span>
                   <input
                     name="startAt"
                     type="datetime-local"
                     defaultValue={event.startAt ? toDateLocalInput(new Date(event.startAt)) : ""}
                     className="bg-soft-gray rounded-md p-3 text-body-md"
                   />
-                  <p className="text-xs text-on-surface-variant">Kapan acara dimulai.</p>
-                </div>
-                <div className="flex flex-col gap-1">
+                  <span className="text-xs text-on-surface-variant">Kapan acara dimulai.</span>
+                </label>
+                <label className="flex flex-col gap-1">
+                  <span className="text-label-caps uppercase tracking-wide text-on-surface-variant">Selesai</span>
                   <input
                     name="endAt"
                     type="datetime-local"
                     defaultValue={event.endAt ? toDateLocalInput(new Date(event.endAt)) : ""}
                     className="bg-soft-gray rounded-md p-3 text-body-md"
                   />
-                  <p className="text-xs text-on-surface-variant">Kapan acara berakhir.</p>
-                </div>
-                </div>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <input name="capacity" type="number" min={1} defaultValue={event.capacity ?? ""} placeholder="Kapasitas" className="bg-soft-gray rounded-md p-3 text-body-md" />
-                </div>
+                  <span className="text-xs text-on-surface-variant">
+                    Kapan acara berakhir. Dipakai untuk menghitung kunci kepanitiaan 14 hari setelah acara.
+                  </span>
+                </label>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <input name="capacity" type="number" min={1} defaultValue={event.capacity ?? ""} placeholder="Kapasitas" className="bg-soft-gray rounded-md p-3 text-body-md" />
+              </div>
               <ImageUploadCropper
                 name="coverImageUrl"
                 folder="events"
