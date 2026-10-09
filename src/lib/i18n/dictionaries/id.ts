@@ -229,6 +229,7 @@ export const id = {
   "events.upcoming": "Kegiatan Mendatang",
   "events.badgeUpcoming": "Mendatang",
   "events.others": "Kegiatan Lainnya",
+  "events.pastHeading": "Kegiatan Sebelumnya",
   "events.all": "Semua Kegiatan",
   "events.registerNow": "Daftar Sekarang",
   "events.branchQuestion": "Kamu dari cabang PPI mana?",

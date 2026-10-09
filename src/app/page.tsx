@@ -1,4 +1,4 @@
-import { eq, desc, asc, count } from "drizzle-orm";
+import { eq, desc, inArray, count } from "drizzle-orm";
 import Link from "next/link";
 import { auth } from "@/auth";
 import { hasCompletedSensus } from "@/lib/sensus-gate";
@@ -72,12 +72,20 @@ export default async function Home() {
   const session = await auth();
   const needsCensus = session?.user?.id ? !(await hasCompletedSensus(session.user.id)) : false;
 
-  const latestEvents = await db
+  // "Kegiatan Terbaru" memuat acara mendatang DAN yang baru selesai (WIF,
+  // Fun Hike, dst) - kalau hanya `published`, acara hilang begitu ditandai
+  // selesai. Urutan: mendatang terdekat dulu, lalu yang paling baru selesai.
+  const eventRows = await db
     .select()
     .from(events)
-    .where(eq(events.status, "published"))
-    .orderBy(asc(events.startAt))
-    .limit(3);
+    .where(inArray(events.status, ["published", "registration_closed", "completed"]));
+  const eventStartMs = (e: (typeof eventRows)[number]) =>
+    e.startAt ? new Date(e.startAt).getTime() : Number.POSITIVE_INFINITY;
+  const homeNow = new Date().getTime();
+  const latestEvents = [
+    ...eventRows.filter((e) => eventStartMs(e) >= homeNow).sort((a, b) => eventStartMs(a) - eventStartMs(b)),
+    ...eventRows.filter((e) => eventStartMs(e) < homeNow).sort((a, b) => eventStartMs(b) - eventStartMs(a)),
+  ].slice(0, 3);
   const latestNews = await db
     .select()
     .from(newsArticles)

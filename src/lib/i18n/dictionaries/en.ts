@@ -226,6 +226,7 @@ export const en = {
   "events.upcoming": "Upcoming Events",
   "events.badgeUpcoming": "Upcoming",
   "events.others": "Other Events",
+  "events.pastHeading": "Past Events",
   "events.all": "All Events",
   "events.registerNow": "Register Now",
   "events.branchQuestion": "Which PPI branch are you from?",

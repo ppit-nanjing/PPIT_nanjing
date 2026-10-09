@@ -31,6 +31,8 @@
 
 Halaman `/events/[slug]` punya dua wajah. Pemicunya: status `completed` **atau** tanggal mulai sudah lewat (`start_at < now`) — disamakan dengan penanda "lampau" di daftar acara, supaya kartu lampau tidak lagi mendarat di halaman yang masih "Daftar Sekarang".
 
+**Daftar publik `/events`** memuat acara berstatus `published`, `registration_closed`, dan `completed`: yang mendatang tampil seperti biasa (featured = yang terdekat), yang sudah lewat masuk section **Kegiatan Sebelumnya** sebagai kartu abu-abu "Selesai" — jadi acara tidak hilang begitu panitia menandainya selesai. Beranda memakai aturan yang sama untuk "Kegiatan Terbaru" (mendatang terdekat dulu, lalu yang paling baru selesai), dan tabel **Jangkauan** di `/catalogue/sponsorship` ikut menghitung kehadiran acara `completed`.
+
 - **Pra-acara**: kapasitas `X / Y` + bar + sisa slot, tombol daftar, agenda di sidebar, form volunteer.
 - **Pasca-acara**: bar kapasitas & tombol daftar hilang, diganti "Acara ini sudah selesai."; agenda sidebar disembunyikan (timeline di kolom kiri tetap sebagai arsip); muncul bagian **Dokumentasi & Materi**; dan kotak **Isi Evaluasi** menuju kuesioner pasca-acara.
 

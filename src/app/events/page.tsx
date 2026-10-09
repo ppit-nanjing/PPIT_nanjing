@@ -1,4 +1,4 @@
-import { asc, eq, and } from "drizzle-orm";
+import { eq, and, inArray } from "drizzle-orm";
 import { db } from "@/db";
 import { events } from "@/db/schema";
 import { publishDueEvents } from "@/lib/publish-events";
@@ -25,19 +25,23 @@ export default async function EventsPage({
   // Promote any event whose scheduled publish time has passed before listing.
   await publishDueEvents();
 
-  const conditions = [eq(events.status, "published")];
+  // Acara yang sudah lewat (completed) dan yang pendaftarannya ditutup tetap
+  // tampil di daftar publik - yang selesai masuk section "Kegiatan Sebelumnya"
+  // dengan kartu abu-abu, bukan hilang begitu panitia menandainya selesai.
+  const PUBLIC_STATUSES = ["published", "registration_closed", "completed"] as const;
+
+  const conditions = [inArray(events.status, [...PUBLIC_STATUSES])];
   if (category) conditions.push(eq(events.category, category));
 
   const list = await db
     .select()
     .from(events)
-    .where(and(...conditions))
-    .orderBy(asc(events.startAt));
+    .where(and(...conditions));
 
   const allPublished = await db
     .select({ category: events.category })
     .from(events)
-    .where(eq(events.status, "published"));
+    .where(inArray(events.status, [...PUBLIC_STATUSES]));
   const categories = [
     ...new Set(allPublished.map((e) => e.category).filter((c): c is string => !!c)),
   ];
@@ -53,8 +57,15 @@ export default async function EventsPage({
   ];
 
   const now = new Date();
-  const featured = list.find((e) => e.startAt && new Date(e.startAt) >= now) ?? null;
-  const rest = featured ? list.filter((e) => e.id !== featured.id) : list;
+  const startMs = (e: (typeof list)[number]) =>
+    e.startAt ? new Date(e.startAt).getTime() : Number.POSITIVE_INFINITY;
+  const isPastEvent = (e: (typeof list)[number]) =>
+    e.status === "completed" || startMs(e) < now.getTime();
+  // Mendatang: terdekat dulu; lalu: paling baru selesai dulu.
+  const upcoming = list.filter((e) => !isPastEvent(e)).sort((a, b) => startMs(a) - startMs(b));
+  const past = list.filter(isPastEvent).sort((a, b) => startMs(b) - startMs(a));
+  const featured = upcoming[0] ?? null;
+  const rest = featured ? upcoming.slice(1) : upcoming;
 
   return (
     <div className="min-h-screen bg-background text-on-background">
@@ -188,6 +199,34 @@ export default async function EventsPage({
                       key={e.id}
                       index={i}
                       isPast={e.startAt ? new Date(e.startAt) < now : false}
+                      event={{
+                        id: e.id,
+                        slug: e.slug,
+                        title: e.title,
+                        coverImageUrl: e.coverImageUrl,
+                        category: e.category,
+                        startAt: e.startAt,
+                        location: e.location,
+                      }}
+                    />
+                  ))}
+                </div>
+              </section>
+            )}
+
+            {past.length > 0 && (
+              <section className="flex flex-col gap-8">
+                <Reveal>
+                  <h2 className="text-headline-lg text-on-background border-b border-outline-variant pb-6">
+                    {t("events.pastHeading")}
+                  </h2>
+                </Reveal>
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                  {past.map((e, i) => (
+                    <EventCard
+                      key={e.id}
+                      index={i}
+                      isPast
                       event={{
                         id: e.id,
                         slug: e.slug,
