@@ -65,7 +65,7 @@ Acara seperti Fun Hike hanya menerima pendaftar yang sensusnya lengkap. Karena d
 
 ## Pertanyaan kustom
 
-Admin bisa menambah pertanyaan per acara (`event_questions`): teks, textarea, select, radio, multiselect, `file` (unggah satu berkas). Jawaban di `event_registrations.answers_json`, tampil ke admin di daftar pendaftar & ekspor.
+Admin bisa menambah pertanyaan per acara (`event_questions`): teks, textarea, select, radio, multiselect, `file` (unggah satu berkas). Jawaban di `event_registrations.answers_json`, tampil ke admin di daftar pendaftar & ekspor. Di console ada **Pratinjau form pendaftaran** (details di section Pertanyaan Pendaftaran) yang merender pertanyaan dengan komponen field yang sama dengan form publik (`src/components/events/event-question-fields.tsx`); semua kontrol nonaktif dan tidak ada data yang terkirim/tersimpan.
 
 ## Mode Latihan (uji form pendaftaran)
 

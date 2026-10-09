@@ -22,8 +22,8 @@ import { feeTierAt, amountForTier, hasEarlyBirdDiscount } from "@/lib/event-fee"
 import { SiteNav } from "@/components/site-nav";
 import { SiteFooter } from "@/components/site-footer";
 import { Select } from "@/components/console/form";
-import { FileUpload } from "@/components/upload/file-upload";
 import { EventBiodataFields, type BiodataDefaults } from "@/components/events/event-biodata-fields";
+import { EventQuestionFields } from "@/components/events/event-question-fields";
 import { EventRegisterFlow, type FlowStep } from "@/components/events/event-register-flow";
 import { EventThemeStyle } from "@/components/events/event-theme-style";
 import { registerForEvent, registerForEventPractice } from "@/app/actions/events";
@@ -143,9 +143,6 @@ export default async function EventRegisterPage({
     ? new Date(event.earlyBirdUntil).toLocaleDateString(INTL_LOCALE[locale], { day: "numeric", month: "long", year: "numeric" })
     : null;
 
-  const fieldClass =
-    "bg-soft-gray rounded-md p-3 text-body-md focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-container";
-
   const steps: FlowStep[] = [];
 
   if (biodata) {
@@ -185,56 +182,7 @@ export default async function EventRegisterPage({
               <span className="text-xs text-on-surface-variant">{t("events.branchHint")}</span>
             </label>
           )}
-          {questions.map((q) => {
-            const options = (q.options ?? "").split("\n").map((l) => l.trim()).filter(Boolean);
-            return (
-              <fieldset key={q.id} className="flex flex-col gap-2 text-left border-0 p-0 m-0">
-                <legend className="text-label-caps uppercase tracking-wide text-on-surface-variant p-0">
-                  {q.label}
-                  {q.required && <span className="text-error" aria-hidden="true"> *</span>}
-                </legend>
-                {q.type === "text" && <input name={q.id} required={q.required} className={fieldClass} />}
-                {q.type === "textarea" && (
-                  <textarea name={q.id} required={q.required} rows={3} className={`${fieldClass} resize-none`} />
-                )}
-                {q.type === "select" && (
-                  <Select name={q.id} required={q.required} defaultValue="" placeholder="—" className="w-full">
-                    {options.map((o) => (
-                      <option key={o} value={o}>
-                        {o}
-                      </option>
-                    ))}
-                  </Select>
-                )}
-                {q.type === "file" && (
-                  <FileUpload
-                    name={q.id}
-                    folder="event-doc"
-                    required={q.required}
-                    autoUpload
-                    accept="application/pdf,.doc,.docx,image/*"
-                    hint={t("events.fileHint")}
-                  />
-                )}
-                {(q.type === "radio" || q.type === "multiselect") &&
-                  options.map((o) => (
-                    <label
-                      key={o}
-                      className="flex items-center gap-2 bg-soft-gray rounded-md p-2.5 text-body-md cursor-pointer"
-                    >
-                      <input
-                        type={q.type === "radio" ? "radio" : "checkbox"}
-                        name={q.id}
-                        value={o}
-                        required={q.required && q.type === "radio"}
-                        className="h-4 w-4 accent-[var(--color-primary-container)]"
-                      />
-                      {o}
-                    </label>
-                  ))}
-              </fieldset>
-            );
-          })}
+          <EventQuestionFields questions={questions} fileHint={t("events.fileHint")} />
         </>
       ),
     });

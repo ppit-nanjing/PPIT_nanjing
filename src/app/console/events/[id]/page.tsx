@@ -14,6 +14,7 @@ import { listEventDivisions, takeOverEvent, addEventCredit, removeEventCredit } 
 import { CertificateRoster } from "@/components/console/certificate-roster";
 import { CertificateBulkForm } from "@/components/console/certificate-bulk-form";
 import { CertificateFolder } from "@/components/console/certificate-folder";
+import { EventQuestionFields } from "@/components/events/event-question-fields";
 import { EVENT_COMMITTEE_ROLE_LABEL } from "@/lib/event-capabilities";
 import { requireEventConsoleAccess } from "@/lib/event-access";
 import { EVENT_STATUS_LABEL as STATUS_LABEL } from "@/lib/event-status-labels";
@@ -38,7 +39,7 @@ import { toDateLocalInput } from "@/lib/datetime";
 import { ConfirmButton } from "@/components/console/confirm-button";
 import { FlashToast } from "@/components/console/flash-toast";
 import { SubmitButton } from "@/components/console/submit-button";
-import { Download, Images } from "lucide-react";
+import { Download, Eye, Images } from "lucide-react";
 
 const QUESTION_TYPE_LABELS: Record<string, string> = {
   text: "Teks Pendek",
@@ -716,6 +717,29 @@ export default async function ConsoleEventDetailPage({ params }: { params: Promi
             </SubmitButton>
           </div>
         </form>
+
+        {/* Pratinjau memakai komponen field yang SAMA dengan form pendaftaran
+            publik (event-question-fields) - tampilan persis, semua kontrol mati. */}
+        <details className="group mt-4 rounded-lg border border-outline-variant">
+          <summary className="flex cursor-pointer items-center gap-2 px-4 py-3 text-label-caps uppercase tracking-wide text-on-background">
+            <Eye size={16} aria-hidden="true" /> Pratinjau form pendaftaran
+          </summary>
+          <div className="flex flex-col gap-4 border-t border-outline-variant p-4">
+            <p role="note" className="rounded-lg border border-primary-container/40 bg-primary-container/10 px-4 py-3 text-body-md text-on-background">
+              Ini hanya pratinjau — tidak ada data yang terkirim atau tersimpan. Form aslinya ada di halaman pendaftaran
+              publik (<code>/events/{event.slug}/register</code>).
+            </p>
+            {questions.length === 0 ? (
+              <p className="text-body-md text-on-surface-variant">
+                Belum ada pertanyaan tambahan — pendaftar hanya mengisi form standar.
+              </p>
+            ) : (
+              <div className="flex max-w-xl flex-col gap-4">
+                <EventQuestionFields questions={questions} preview fileHint="Unggah berkas (pratinjau)" />
+              </div>
+            )}
+          </div>
+        </details>
       </CollapsibleSection>
       )}
 
