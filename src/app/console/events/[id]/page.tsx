@@ -1,7 +1,8 @@
 import { eq, and, desc, sql, inArray } from "drizzle-orm";
 import { notFound } from "next/navigation";
+import QRCode from "qrcode";
 import { db } from "@/db";
-import { auditLogs, certificates, coverageCities, events, eventCredits, eventDivisions, eventEvaluations, eventFeeOptions, eventQuestions, eventRegistrations, eventVolunteers, galleryAlbums, galleryPhotos, inventoryItems, itemReservations, newsArticles, sensusProfiles, users } from "@/db/schema";
+import { auditLogs, certificates, coverageCities, events, eventCredits, eventDivisions, eventEvaluations, eventFeeOptions, eventQuestions, eventRegistrations, eventVolunteers, galleryAlbums, galleryPhotos, inventoryItems, itemReservations, newsArticles, sensusProfiles, shortLinks, users } from "@/db/schema";
 import { MEMBERSHIP_LABEL, effectiveBranch, membershipStatus } from "@/lib/membership-status";
 import { updateEventInfo, updateEventContent, updateEventPostReport, setEventStatus, saveEventQuestion, deleteEventQuestion, saveFeeOption, deleteFeeOption } from "@/app/actions/admin-events";
 import { createEventGalleryAlbum } from "@/app/actions/admin-content";
@@ -15,6 +16,8 @@ import { CertificateRoster } from "@/components/console/certificate-roster";
 import { CertificateBulkForm } from "@/components/console/certificate-bulk-form";
 import { CertificateFolder } from "@/components/console/certificate-folder";
 import { EventQuestionFields } from "@/components/events/event-question-fields";
+import { EventShareLinks } from "@/components/console/event-share-links";
+import { getSiteOrigin } from "@/lib/site";
 import { EVENT_COMMITTEE_ROLE_LABEL } from "@/lib/event-capabilities";
 import { requireEventConsoleAccess } from "@/lib/event-access";
 import { EVENT_STATUS_LABEL as STATUS_LABEL } from "@/lib/event-status-labels";
@@ -58,6 +61,15 @@ export default async function ConsoleEventDetailPage({ params }: { params: Promi
   const [event] = await db.select().from(events).where(eq(events.id, id));
   if (!event) notFound();
 
+  // Tautan pendek pendaftaran & evaluasi: URL absolut + baris short_links yang
+  // sudah ada (dibuat dari section "Tautan Pendaftaran & Evaluasi" atau manual
+  // di modul Tautan). Query-nya ikut gelombang pertama di bawah.
+  const shareOrigin = await getSiteOrigin();
+  const shareDirect = {
+    daftar: `${shareOrigin}/events/${event.slug}/register`,
+    evaluasi: `${shareOrigin}/events/${event.slug}/evaluasi`,
+  };
+
   // Semua query di bawah hanya bergantung pada `id` dan hak akses, bukan satu
   // sama lain, jadi dijalankan serentak: satu putaran ke database alih-alih
   // belasan putaran berurutan (tiap putaran ~240 ms bila fungsi dan database
@@ -87,6 +99,7 @@ export default async function ConsoleEventDetailPage({ params }: { params: Promi
     evalAnswers, // jawaban untuk pertanyaan itu, semua respons acara ini
     cityRows, // untuk pratinjau form evaluasi, hanya bila viewer boleh menyusunnya
     [assetItems, assetReservations], // reservasi aset Inventaris, hanya untuk yang punya grant
+    shareLinkRows, // tautan pendek pendaftaran & evaluasi yang sudah dibuat
   ] = await Promise.all([
     db
       .select({
@@ -194,7 +207,23 @@ export default async function ConsoleEventDetailPage({ params }: { params: Promi
             .orderBy(desc(itemReservations.reservedFrom)),
         ])
       : Promise.resolve([[], []]),
+    db
+      .select({ slug: shortLinks.slug, targetUrl: shortLinks.targetUrl })
+      .from(shortLinks)
+      .where(inArray(shortLinks.targetUrl, [shareDirect.daftar, shareDirect.evaluasi])),
   ]);
+
+  // QR tautan pendek digenerate server-side (sama seperti /console/links);
+  // hanya untuk tautan yang memang sudah ada.
+  const shareQrBySlug = new Map(
+    await Promise.all(
+      shareLinkRows.map(
+        async (l) => [l.slug, await QRCode.toDataURL(`${shareOrigin}/l/${l.slug}`, { width: 160, margin: 1 })] as const,
+      ),
+    ),
+  );
+  const daftarShareLink = shareLinkRows.find((l) => l.targetUrl === shareDirect.daftar) ?? null;
+  const evaluasiShareLink = shareLinkRows.find((l) => l.targetUrl === shareDirect.evaluasi) ?? null;
 
   const linkedAlbum = albums.find((a) => a.eventId === id) ?? null;
   // Jawaban yang sudah masuk per pertanyaan evaluasi: tipe pertanyaan dikunci bila > 0.
@@ -364,6 +393,29 @@ export default async function ConsoleEventDetailPage({ params }: { params: Promi
           (volunteer, verifikasi bayar) menempel di kolom kanan. */}
       <div className="grid grid-cols-1 xl:grid-cols-[minmax(0,1fr)_400px] gap-6 items-start">
         <div className="flex flex-col gap-6 min-w-0">
+      {/* Tautan pendek pendaftaran & evaluasi — fitur DASAR: bisa dibuat
+          sekali klik di sini, tanpa membuka modul Tautan. */}
+      {can("event.editContent") && (
+      <CollapsibleSection
+        title="Tautan Pendaftaran & Evaluasi"
+        description="tautan pendek + QR untuk dibagikan (WeChat dsb)"
+      >
+        <EventShareLinks
+          eventId={id}
+          daftar={{
+            directUrl: shareDirect.daftar,
+            slug: daftarShareLink?.slug ?? null,
+            qrDataUrl: daftarShareLink ? shareQrBySlug.get(daftarShareLink.slug) ?? null : null,
+          }}
+          evaluasi={{
+            directUrl: shareDirect.evaluasi,
+            slug: evaluasiShareLink?.slug ?? null,
+            qrDataUrl: evaluasiShareLink ? shareQrBySlug.get(evaluasiShareLink.slug) ?? null : null,
+          }}
+        />
+      </CollapsibleSection>
+      )}
+
       {/* Deskripsi & agenda — fitur DASAR: semua panitia acara bisa. */}
       {can("event.editContent") && (
       <CollapsibleSection title="Deskripsi & Agenda" description="Teks yang tampil di halaman acara publik.">

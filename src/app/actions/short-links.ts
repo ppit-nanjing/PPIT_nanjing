@@ -3,10 +3,13 @@
 import { eq, ne, and, sql } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
+import QRCode from "qrcode";
 import { auth } from "@/auth";
 import { db } from "@/db";
-import { managementPeriods, shortLinks } from "@/db/schema";
+import { events, managementPeriods, shortLinks } from "@/db/schema";
 import { hasModuleAccess } from "@/lib/admin-scope-constants";
+import { requireEventCapability } from "@/lib/event-access";
+import { getSiteOrigin } from "@/lib/site";
 
 export type ShortLinkFormState = { error?: string };
 
@@ -230,4 +233,76 @@ export async function createManagementPeriod(
   revalidatePath("/console/links");
   revalidatePath("/console/links/new");
   return {};
+}
+
+// ---------- tautan pendek otomatis untuk acara ----------
+//
+// Panitia tidak perlu membuat tautan pendaftaran/evaluasi secara manual di
+// modul Tautan: dari halaman console acara, keduanya dibuat sekali klik
+// (slug `daftar-<slug-acara>` / `eval-<slug-acara>`, idempoten - klik kedua
+// mengembalikan tautan yang sama). Gerbangnya `event.editContent` (fitur dasar
+// semua panitia acara), bukan modul "links"; barisnya tetap tercatat di
+// /console/links seperti tautan lain.
+export type EventShortLinkKind = "daftar" | "evaluasi";
+
+export async function ensureEventShortLink(
+  eventId: string,
+  kind: EventShortLinkKind,
+): Promise<{ slug: string; shortUrl: string; qrDataUrl: string; created: boolean }> {
+  if (kind !== "daftar" && kind !== "evaluasi") throw new Error("Jenis tautan tidak valid");
+  const { session } = await requireEventCapability(eventId, "event.editContent");
+
+  const [event] = await db
+    .select({ slug: events.slug, title: events.title })
+    .from(events)
+    .where(eq(events.id, eventId));
+  if (!event) throw new Error("Acara tidak ditemukan");
+
+  const origin = await getSiteOrigin();
+  const targetUrl =
+    kind === "daftar" ? `${origin}/events/${event.slug}/register` : `${origin}/events/${event.slug}/evaluasi`;
+
+  // Sudah pernah dibuat untuk tujuan ini (slug apa pun - termasuk buatan manual
+  // di modul Tautan)? Pakai ulang, jangan bikin baris kedua.
+  const [existing] = await db
+    .select({ slug: shortLinks.slug })
+    .from(shortLinks)
+    .where(eq(shortLinks.targetUrl, targetUrl))
+    .limit(1);
+
+  let slug = existing?.slug ?? null;
+  let created = false;
+  if (!slug) {
+    const preferred = `${kind === "daftar" ? "daftar" : "eval"}-${slugify(event.slug)}`.slice(0, 60);
+    for (let i = 0; i < 20 && !slug; i += 1) {
+      const candidate = i === 0 ? preferred : `${preferred}-${i + 1}`;
+      if (!isValidSlug(candidate)) break;
+      const [collision] = await db
+        .select({ id: shortLinks.id })
+        .from(shortLinks)
+        .where(eq(shortLinks.slug, candidate))
+        .limit(1);
+      if (!collision) slug = candidate;
+    }
+    if (!slug) throw new Error("Tidak menemukan slug tautan yang bebas");
+
+    await db.insert(shortLinks).values({
+      slug,
+      targetUrl,
+      title: kind === "daftar" ? `Pendaftaran — ${event.title}` : `Evaluasi — ${event.title}`,
+      description: kind === "daftar" ? "Form pendaftaran peserta acara." : "Kuesioner evaluasi pasca-acara.",
+      category: "form",
+      createdBy: session.user.id,
+    });
+    created = true;
+    revalidatePath("/console/links");
+  }
+
+  revalidatePath(`/console/events/${eventId}`);
+  return {
+    slug,
+    shortUrl: `${origin}/l/${slug}`,
+    qrDataUrl: await QRCode.toDataURL(`${origin}/l/${slug}`, { width: 160, margin: 1 }),
+    created,
+  };
 }

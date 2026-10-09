@@ -49,7 +49,7 @@ Kuesioner pasca-acara untuk peserta di `/events/[slug]/evaluasi` — publik, **t
 
 - **Pertanyaan otomatis per acara**: template WIF (slug berawalan `wif`, termasuk sesi CGT) vs template umum (Registrasi, Fasilitas, Sesi & Materi, Acara & Panitia). Resolver di `src/lib/event-evaluation-template.ts` — tidak ada konfigurasi per acara di console; menambah template baru = tambah objek di file itu.
 - **Rekap di console**: section *Evaluasi Acara* di `/console/events/[id]` — ringkasan (jumlah respons, rata-rata, anonim) + tiga tab: **Grafik** (rata-rata & distribusi 1–10 tiap rating), **Jawaban** (preview per pertanyaan: distribusi nilai + semua jawaban teks), **Respons** (per orang + hapus respons spam). Ekspor **CSV / Excel** (kolom mengikuti template).
-- **Distribusi tautan**: tombol di halaman acara + short link/QR dari modul Tautan. Tidak ada flag buka/tutup — panitia berhenti membagikan tautannya saat periode evaluasi selesai.
+- **Distribusi tautan**: tombol di halaman acara, plus section **Tautan Pendaftaran & Evaluasi** di console acara — tautan pendek + QR dibuat sekali klik (`ensureEventShortLink`, slug `daftar-<slug>` / `eval-<slug>`); modul Tautan tetap ada untuk tautan lain. Tidak ada flag buka/tutup — panitia berhenti membagikan tautannya saat periode evaluasi selesai.
 
 ### Kepanitiaan per-acara
 

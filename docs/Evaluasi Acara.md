@@ -10,7 +10,7 @@ Kuesioner pasca-acara: peserta mengisi lewat tautan publik (tanpa akun), hasilny
 flowchart TD
     Event["/events/:slug (pasca-acara, isPast)"] --> CTA["Tombol 'Isi Evaluasi'"]
     CTA --> Form["/events/:slug/evaluasi"]
-    Share["Panitia: short link + QR di /console/links"] --> Form
+    Share["Panitia: tombol 'Buat tautan pendek + QR' di console acara"] --> Form
     Form --> Submit["Server Action submitEventEvaluation()"]
     Submit -->|semua wajib terisi (kecuali opsional) & token baru| DB[("event_evaluations")]
     Submit -->|token sudah pernah| Already["Layar 'sudah mengisi'"]
@@ -73,7 +73,7 @@ Skema DB tetap sama untuk kedua template (4 kolom rating + 6 kolom teks); yang b
 
 ## Operasional panitia
 
-1. **Sebar**: buat short link di `/console/links` (contoh slug `eval-wif26`, target `/events/wif-2026/evaluasi`) → unduh QR → tempel ke grup WeChat. Tombol "Isi Evaluasi" juga otomatis muncul di halaman acara setelah acara lewat.
+1. **Sebar**: buka console acara → section **Tautan Pendaftaran & Evaluasi** → **Buat tautan pendek + QR** (slug otomatis `eval-<slug-acara>`, mis. `eval-wif-2026`; idempoten, tautan manual yang sudah ada dipakai ulang) → unduh QR → tempel ke grup WeChat. Modul Tautan (`/console/links`) tetap ada untuk tautan lain. Tombol "Isi Evaluasi" juga otomatis muncul di halaman acara setelah acara lewat.
 2. **Pantau**: `/console/events/<id>` → section "Evaluasi Acara". Rata-rata masuk akal enggak, teksnya kebaca.
 3. **Rekap**: tombol **CSV** / **Excel** — untuk LPJ. Respons uji spam tinggal hapus per baris.
 4. Satu perangkat hanya bisa mengisi sekali; kalau ada yang isi keliru, minta hapus di console lalu isi ulang dari perangkat yang sama TIDAK bisa (token sudah terpakai) — hapus dulu barisnya baru orang itu bisa isi lagi.
