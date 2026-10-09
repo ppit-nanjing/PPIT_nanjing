@@ -23,10 +23,16 @@ export type EventShareLinkState = {
  */
 export function EventShareLinks({
   eventId,
+  status,
+  scheduledPublishLabel,
   daftar,
   evaluasi,
 }: {
   eventId: string;
+  /** Status acara — draft/scheduled: halaman publik belum aktif, beri catatan. */
+  status: string;
+  /** Jadwal tayang (label siap-tampil, zona Asia/Shanghai), bila ada. */
+  scheduledPublishLabel: string | null;
   daftar: EventShareLinkState;
   evaluasi: EventShareLinkState;
 }) {
@@ -67,6 +73,18 @@ export function EventShareLinks({
 
   return (
     <div className="flex flex-col gap-4">
+      {(status === "draft" || status === "scheduled") && (
+        <p
+          role="note"
+          className="rounded-lg border border-primary-container/40 bg-primary-container/10 px-4 py-3 text-body-md text-on-background"
+        >
+          Acara masih <b>{status === "draft" ? "draf" : "dijadwalkan tayang"}</b>
+          {scheduledPublishLabel ? ` (${scheduledPublishLabel})` : ""} — halaman pendaftaran & evaluasi baru terbuka
+          untuk umum setelah acara dipublikasikan; sementara ini halaman pendaftaran hanya bisa dibuka panitia
+          (mode uji coba) dan halaman evaluasi belum aktif. Tautan pendeknya boleh dibuat sekarang — otomatis
+          berfungsi begitu acara tayang.
+        </p>
+      )}
       {items.map(({ kind, label, description, state }) => (
         <div
           key={kind}

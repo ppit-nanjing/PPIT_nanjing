@@ -402,6 +402,16 @@ export default async function ConsoleEventDetailPage({ params }: { params: Promi
       >
         <EventShareLinks
           eventId={id}
+          status={event.status}
+          scheduledPublishLabel={
+            event.scheduledPublishAt
+              ? new Date(event.scheduledPublishAt).toLocaleString("id-ID", {
+                  dateStyle: "long",
+                  timeStyle: "short",
+                  timeZone: "Asia/Shanghai",
+                })
+              : null
+          }
           daftar={{
             directUrl: shareDirect.daftar,
             slug: daftarShareLink?.slug ?? null,
