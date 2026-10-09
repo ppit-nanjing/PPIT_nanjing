@@ -1685,5 +1685,3 @@ export const eventEvaluationAnswers = pgTable(
     index("event_evaluation_answers_question_idx").on(t.questionId),
   ],
 );
-
-

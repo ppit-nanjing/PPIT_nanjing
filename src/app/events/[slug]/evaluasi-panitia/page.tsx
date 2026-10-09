@@ -12,7 +12,7 @@ import { SiteFooter } from "@/components/site-footer";
 import { PageHeader } from "@/components/page-header";
 import { EventEvaluationForm } from "@/components/events/event-evaluation-form";
 import { submitCommitteeEvaluation } from "@/app/actions/committee-evaluation";
-import { committeeEvalTemplateQuestions, committeeEvalWindowState } from "@/lib/committee-evaluation";
+import { committeeEvalWindowState } from "@/lib/committee-evaluation";
 import { loadEvaluationQuestions } from "@/lib/event-evaluation-queries";
 import { getT } from "@/lib/i18n/server";
 import { INTL_LOCALE } from "@/lib/i18n/config";
@@ -151,22 +151,30 @@ export default async function CommitteeEvaluationPage({ params }: { params: Prom
             </div>
           );
         } else {
-          // Pertanyaan audiens panitia; kosong = template kolektif bawaan yang
-          // isinya sama dengan template di committee-evaluation.ts.
-          const customQuestions = await loadEvaluationQuestions(event.id, "panitia");
-          body = (
-            <EventEvaluationForm
-              slug={slug}
-              eventTitle={event.title}
-              cityOptions={[]}
-              sections={[]}
-              questions={customQuestions.length > 0 ? customQuestions : committeeEvalTemplateQuestions()}
-              audience="panitia"
-              action={submitCommitteeEvaluation}
-              userName={session.user.name ?? t("ceval.fallbackUserName")}
-              divisionName={membership.divisionName}
-            />
-          );
+          // Pertanyaan audiens panitia selalu baris DB: template kolektif disalin
+          // saat BPH memasang jendela. Kosong = BPH menghapus semua pertanyaan;
+          // aksi kirimnya juga menolak (not_ready), jadi jangan tampilkan form.
+          const questions = await loadEvaluationQuestions(event.id, "panitia");
+          body =
+            questions.length === 0 ? (
+              <LockCard
+                icon={<Lock className="text-on-surface-variant" size={32} aria-hidden="true" />}
+                title={t("ceval.notReadyTitle")}
+                body={t("ceval.notReadyBody")}
+              />
+            ) : (
+              <EventEvaluationForm
+                slug={slug}
+                eventTitle={event.title}
+                cityOptions={[]}
+                sections={[]}
+                questions={questions}
+                audience="panitia"
+                action={submitCommitteeEvaluation}
+                userName={session.user.name ?? t("ceval.fallbackUserName")}
+                divisionName={membership.divisionName}
+              />
+            );
         }
       }
     }

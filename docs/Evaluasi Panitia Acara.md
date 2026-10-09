@@ -1,6 +1,6 @@
 # Evaluasi Panitia Acara (Kolektif)
 
-> Diperbarui: **2026-10-09** (bangun ulang di atas builder pertanyaan evaluasi + aturan akses B2, hasil code review `feat/forms-and-evaluasi-panitia`). Fitur hasil diskusi dengan BPH: evaluasi panitia memang alaminya per-acara, tetapi sasarannya KOLEKTIF (divisi/kepanitiaan secara keseluruhan) — bukan skor per orang — dan pengisiannya dikontrol BPH lewat jendela waktu, mis. "buka 1 minggu setelah acara".
+> Diperbarui: **2026-10-10** (pertanyaan template disalin ke DB saat jendela dipasang; pertanyaan panitia hanya disusun BPH; pengisi diberi tahu siapa yang membaca jawabannya). Sebelumnya **2026-10-09**: bangun ulang di atas builder pertanyaan evaluasi + aturan akses B2, hasil code review `feat/forms-and-evaluasi-panitia`. Fitur hasil diskusi dengan BPH: evaluasi panitia memang alaminya per-acara, tetapi sasarannya KOLEKTIF (divisi/kepanitiaan secara keseluruhan) — bukan skor per orang — dan pengisiannya dikontrol BPH lewat jendela waktu, mis. "buka 1 minggu setelah acara".
 
 ## Ringkasan
 
@@ -22,7 +22,7 @@ Modul Formulir generik (`/evaluation/committee`, penilaian per orang tanpa login
 ```mermaid
 flowchart TD
     BPH["BPH di konsol acara"] -->|"tab Panitia: pasang jendela<br/>(pintasan 3/7/14 hari setelah acara)"| W["events.committee_eval_opens_at/closes_at"]
-    BPH -->|"tab Panitia (section Pertanyaan Evaluasi):<br/>susun pertanyaan — kosong = template kolektif"| Q["event_evaluation_questions<br/>audience = 'panitia'"]
+    BPH -->|"tab Panitia (section Pertanyaan Evaluasi):<br/>susun pertanyaan — kosong saat jendela disimpan = template kolektif disalin ke DB"| Q["event_evaluation_questions<br/>audience = 'panitia'"]
     BPH -->|"bagikan tautan<br/>/events/:slug/evaluasi-panitia"| P["Panitia acara"]
     P -->|"login (khusus)"| C["cek event_committee:<br/>panitia acara ini?"]
     C -->|"ya + jendela terbuka"| F["form pertanyaan panitia<br/>(identitas dari akun, satu orang sekali)"]
@@ -50,12 +50,16 @@ BPH bisa override kapan pun: majukan/mundurkan waktu, kosongkan keduanya lalu si
 - **`events`** — `committee_eval_opens_at`, `committee_eval_closes_at` (NULL = belum dipasang).
 - **`event_evaluation_questions.audience`** — `text NOT NULL DEFAULT 'peserta'`, CHECK `IN ('peserta','panitia')`; builder konsol menyusun per audiens.
 - **`event_evaluations`** — tambahan `audience` (default `'peserta'`, CHECK sama), `user_id` (set null, khusus panitia), `division_id` (**snapshot** divisi evaluator saat mengisi, set null). Dedup panitia: unique partial index `(event_id, user_id) WHERE audience = 'panitia'` + token `panitia:<userId>` yang menabrak unique `(event_id, responder_token)`.
-- **`event_evaluations_answers`** — sama seperti peserta; `question_id` NULL untuk jawaban pertanyaan template (label/tipe disalin).
+- **`event_evaluation_answers`** — sama seperti peserta. Untuk audiens panitia `question_id` selalu terisi, karena pertanyaannya selalu baris DB; `question_id` jadi NULL hanya bila pertanyaannya dihapus belakangan (label/tipe tetap tersalin di jawaban).
 - Migrasi: `drizzle/0046_committee_evaluation_on_builder.sql` (idempoten), pembersihan tabel lama: `drizzle/0047_drop_unused_form_tables.sql` (khusus database yang pernah menerima eksperimen modul Formulir — dijalankan Haikal setelah cadangan).
 
 ## Pertanyaan
 
-Sumber pertanyaan audiens panitia per acara: builder tab **Panitia** di section **Pertanyaan Evaluasi** konsol acara. Kalau belum ada satu pun, form publik & submit memakai template kolektif di `src/lib/committee-evaluation.ts` (`committeeEvalTemplateQuestions()`: lima pertanyaan Bintang 1–5 dari `COMMITTEE_EVAL_ASPECTS` + `COMMITTEE_EVAL_TEXT`). Tombol "Mulai dari template standar" di builder menyalinnya ke DB supaya bisa diedit. Label pertanyaan DB tidak diterjemahkan otomatis (konten DB, umumnya bahasa Indonesia).
+Sumber pertanyaan audiens panitia per acara: builder tab **Panitia** di section **Pertanyaan Evaluasi** konsol acara, **hanya untuk BPH Kabinet/Teknologi atau BPH Panitia acara ini** (anggota panitia lain melihat keterangan, bukan builder; gerbangnya `requireQuestionAccess` di `src/app/actions/event-evaluation-questions.ts`). Pertanyaan yang menilai kepanitiaan tidak boleh disusun ulang oleh orang yang ikut dinilai.
+
+Pertanyaan panitia **selalu baris DB**. Saat BPH menyimpan jendela waktu dan tab Panitia masih kosong, `saveCommitteeEvaluationWindow` menyalin template kolektif dari `src/lib/committee-evaluation.ts` (`committeeEvalTemplateQuestions()`: lima pertanyaan Bintang 1–5 dari `COMMITTEE_EVAL_ASPECTS` + `COMMITTEE_EVAL_TEXT`) ke `event_evaluation_questions`. Karena jendela wajib dipasang sebelum siapa pun bisa mengisi, setiap jawaban panitia menunjuk `question_id` asli, sehingga rekap dan ekspor membaca kolom yang benar. Kalau BPH kemudian menghapus semua pertanyaan, halaman publik menampilkan "Evaluasi belum disiapkan" dan `submitCommitteeEvaluation` menolak dengan `not_ready`. Template statis hanya dipakai untuk pratinjau di builder. Label pertanyaan DB tidak diterjemahkan otomatis (konten DB, umumnya bahasa Indonesia).
+
+Form publik memberi tahu pengisi bahwa jawaban beserta namanya hanya bisa dibaca BPH Panitia acara itu dan BPH Kabinet (`ceval.identityNote`).
 
 ## Tempat kode
 

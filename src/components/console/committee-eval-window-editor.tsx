@@ -52,7 +52,7 @@ export function CommitteeEvalWindowEditor({
   const [closes, setCloses] = useState(closesAt);
   const [presetDays, setPresetDays] = useState("7");
   const [state, formAction, isPending] = useActionState(saveCommitteeEvaluationWindow, {});
-  useActionToast(isPending, state.error, saveLabel);
+  useActionToast(isPending, state.error, "Jendela tersimpan.");
 
   return (
     <form action={formAction} className="flex flex-col gap-4">

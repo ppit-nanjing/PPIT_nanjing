@@ -66,7 +66,7 @@ const PRIVATE_FOLDERS = new Set<string>(["sensus", ...PRIVATE_FILE_FOLDERS]);
 // keras: bukti transfer, CV, dsb. tidak boleh diam-diam jadi URL publik.
 const PUBLIC_FALLBACK_FOLDERS = new Set(["sensus"]);
 
-// Folder yang boleh diunggah TANPA login. "borrow-doc": Pernyataan Peminjam
+// Folder yang boleh diunggah TANPA login. Cuma "borrow-doc": Pernyataan Peminjam
 // bertanda tangan di form peminjaman aset harus bisa diunggah peminjam PIHAK
 // LUAR yang memang tidak punya akun PPIT (SOP Peminjaman Aset). Semua pengaman
 // lain (allowlist tipe, batas 10 MB, cek origin, nama diacak) tetap berlaku.

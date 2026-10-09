@@ -2,6 +2,7 @@
 
 import { and, eq, sql } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
+import { redirect } from "next/navigation";
 import { db } from "@/db";
 import { eventEvaluationAnswers, eventEvaluationQuestions, events } from "@/db/schema";
 import { requireEventCapability } from "@/lib/event-access";
@@ -9,6 +10,7 @@ import { id as idDictionary } from "@/lib/i18n/dictionaries/id";
 import { evaluationTemplateForSlug } from "@/lib/event-evaluation-template";
 import { committeeEvalTemplateQuestions } from "@/lib/committee-evaluation";
 import {
+  type EvalAudience,
   type EvalQuestionType,
   isEvalAudience,
   isEvalQuestionType,
@@ -19,9 +21,21 @@ import {
 // Builder pertanyaan evaluasi per-acara. Pola sama dengan builder pertanyaan
 // pendaftaran (saveEventQuestion di admin-events.ts) dan digerbang kapabilitas
 // yang sama (`event.registrationForm`): siapa pun yang boleh menyusun form
-// pendaftaran boleh menyusun form evaluasi.
+// pendaftaran boleh menyusun form evaluasi PESERTA. Pertanyaan audiens panitia
+// dikecualikan, lihat requireQuestionAccess.
 
 const CAPABILITY = "event.registrationForm" as const;
+
+// Pertanyaan audiens panitia menilai kepanitiaan itu sendiri, jadi hanya BPH
+// Kabinet/Teknologi atau BPH Panitia acara ini yang boleh menyusun, mengubah,
+// atau menghapusnya. `event.registrationForm` adalah kapabilitas dasar SEMUA
+// panitia, sehingga tanpa pengecekan ini anggota yang ikut dinilai bisa
+// mengganti pertanyaannya, bahkan saat jendela pengisian sedang terbuka.
+async function requireQuestionAccess(eventId: string, audience: EvalAudience) {
+  const access = await requireEventCapability(eventId, CAPABILITY);
+  if (audience === "panitia" && !access.isFullAdmin && !access.isBphPanitia) redirect("/console");
+  return access;
+}
 const MAX_QUESTIONS = 40;
 const MAX_LABEL = 300;
 const MAX_OPTIONS = 30;
@@ -56,13 +70,13 @@ function parseOptions(formData: FormData, type: EvalQuestionType): string | null
 /** Tambah / ubah satu pertanyaan. Ada `id` = ubah; tanpa `id` = tambah di urutan terakhir. */
 export async function saveEventEvaluationQuestion(formData: FormData) {
   const eventId = String(formData.get("eventId") ?? "");
-  await requireEventCapability(eventId, CAPABILITY);
-
-  const label = String(formData.get("label") ?? "").trim();
-  const type = String(formData.get("type") ?? "rating");
   // Audiens pertanyaan: "peserta" default; "panitia" untuk builder evaluasi panitia.
   const audienceRaw = String(formData.get("audience") ?? "peserta");
   if (!isEvalAudience(audienceRaw)) throw new Error("Audiens pertanyaan tidak valid");
+  await requireQuestionAccess(eventId, audienceRaw);
+
+  const label = String(formData.get("label") ?? "").trim();
+  const type = String(formData.get("type") ?? "rating");
   if (!label) throw new Error("Teks pertanyaan wajib diisi");
   if (label.length > MAX_LABEL) throw new Error(`Pertanyaan maksimal ${MAX_LABEL} karakter`);
   if (!isEvalQuestionType(type)) throw new Error("Tipe pertanyaan tidak valid");
@@ -123,11 +137,13 @@ export async function saveEventEvaluationQuestion(formData: FormData) {
 export async function deleteEventEvaluationQuestion(formData: FormData) {
   const questionId = String(formData.get("id") ?? "");
   const [row] = await db
-    .select({ eventId: eventEvaluationQuestions.eventId })
+    .select({ eventId: eventEvaluationQuestions.eventId, audience: eventEvaluationQuestions.audience })
     .from(eventEvaluationQuestions)
     .where(eq(eventEvaluationQuestions.id, questionId));
   if (!row) return;
-  await requireEventCapability(row.eventId, CAPABILITY);
+  // Audiens dibaca dari barisnya, bukan dari form: nilai yang tidak dikenal
+  // diperlakukan sebagai yang paling ketat (panitia).
+  await requireQuestionAccess(row.eventId, isEvalAudience(row.audience) ? row.audience : "panitia");
   // Jawaban yang sudah terkumpul tetap ada (question_id jadi NULL, label disalin).
   await db.delete(eventEvaluationQuestions).where(eq(eventEvaluationQuestions.id, questionId));
   revalidateEvaluation(row.eventId, await eventSlug(row.eventId));
@@ -142,10 +158,9 @@ export async function deleteEventEvaluationQuestion(formData: FormData) {
  */
 export async function startEvaluationFromTemplate(formData: FormData) {
   const eventId = String(formData.get("eventId") ?? "");
-  await requireEventCapability(eventId, CAPABILITY);
-
   const audienceRaw = String(formData.get("audience") ?? "peserta");
   if (!isEvalAudience(audienceRaw)) throw new Error("Audiens pertanyaan tidak valid");
+  await requireQuestionAccess(eventId, audienceRaw);
 
   const slug = await eventSlug(eventId);
   if (!slug) return;

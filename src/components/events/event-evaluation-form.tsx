@@ -400,7 +400,9 @@ export function EventEvaluationForm({
                 ? t("ceval.errorWindow")
                 : state.error === "not_committee"
                   ? t("ceval.notCommitteeBody", { event: eventTitle })
-                  : state.error === "ratings"
+                  : state.error === "not_ready"
+                    ? t("ceval.notReadyBody")
+                    : state.error === "ratings"
                     ? t("ceval.errorRatings")
                     : state.error === "required"
                       ? t("ceval.errorRequired")

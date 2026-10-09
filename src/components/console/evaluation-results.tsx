@@ -158,7 +158,7 @@ function TemplateResults({
       <div className="flex flex-col gap-3">
         <p className="text-body-md text-on-surface-variant max-w-2xl">
           Belum ada respons. Bagikan tautan <code className="text-on-background">/events/&lt;slug&gt;/evaluasi</code> ke
-          grup peserta â€” buat short link + QR-nya di menu Tautan supaya gampang disebar di WeChat.
+          grup peserta — buat short link + QR-nya di menu Tautan supaya gampang disebar di WeChat.
         </p>
         <ExportLinks eventId={eventId} />
       </div>
@@ -219,7 +219,7 @@ function TemplateResults({
           {[...ratingQs, ...textQs].map((q) =>
             q.kind === "rating" ? (
               <div key={q.name} className="rounded-lg border border-outline-variant p-4">
-                <p className="text-label-caps uppercase tracking-wide text-on-surface-variant">{q.label} â€” penilaian 1â€“10</p>
+                <p className="text-label-caps uppercase tracking-wide text-on-surface-variant">{q.label} — penilaian 1–10</p>
                 <div className="mt-3 flex flex-wrap items-center gap-4">
                   <p className="text-body-md text-on-background">
                     rata-rata{" "}
@@ -235,10 +235,10 @@ function TemplateResults({
                 <p className="mt-3 text-body-sm text-on-surface-variant">
                   {Array.from({ length: 10 }, (_, i) => {
                     const n = valuesCount(evaluations, q.name, i + 1);
-                    return n > 0 ? `${i + 1}Ã—${n}` : null;
+                    return n > 0 ? `${i + 1}×${n}` : null;
                   })
                     .filter(Boolean)
-                    .join(" Â· ")}
+                    .join(" · ")}
                 </p>
               </div>
             ) : (
@@ -247,7 +247,7 @@ function TemplateResults({
                 {(() => {
                   const textAnswers = evaluations.filter((e) => e[q.name]);
                   if (textAnswers.length === 0) {
-                    return <p className="mt-3 text-body-sm text-on-surface-variant">â€” belum ada jawaban â€”</p>;
+                    return <p className="mt-3 text-body-sm text-on-surface-variant">— belum ada jawaban —</p>;
                   }
                   return (
                     <ul className="mt-3 flex flex-col gap-2">
@@ -255,7 +255,7 @@ function TemplateResults({
                         <li key={e.id} className="rounded-md bg-surface-container-low px-3 py-2">
                           <p className="text-body-md text-on-background whitespace-pre-wrap">{e[q.name]}</p>
                           <p className="mt-1 text-label-caps text-on-surface-variant">
-                            {respondentLabel(e)} Â· {formatWhen(e.createdAt)}
+                            {respondentLabel(e)} · {formatWhen(e.createdAt)}
                           </p>
                         </li>
                       ))}
@@ -350,14 +350,14 @@ function ChoiceBars({ counts }: { counts: { option: string; count: number }[] })
 }
 
 function average(values: number[]): string {
-  return values.length === 0 ? "â€“" : (values.reduce((s, v) => s + v, 0) / values.length).toFixed(1);
+  return values.length === 0 ? "–" : (values.reduce((s, v) => s + v, 0) / values.length).toFixed(1);
 }
 
 function ColumnTitle({ column, suffix }: { column: EvalColumn; suffix?: string }) {
   return (
     <p className="text-label-caps uppercase tracking-wide text-on-surface-variant">
       {column.label}
-      {suffix ? ` â€” ${suffix}` : ""}
+      {suffix ? ` — ${suffix}` : ""}
       {column.removed ? " (pertanyaan sudah dihapus)" : ""}
     </p>
   );
@@ -395,7 +395,7 @@ function CustomResults({
       <div className="flex flex-col gap-3">
         <p className="text-body-md text-on-surface-variant max-w-2xl">
           Belum ada respons untuk pertanyaan ini. Bagikan tautan{" "}
-          <code className="text-on-background">/events/&lt;slug&gt;/evaluasi</code> ke grup peserta â€” buat short link +
+          <code className="text-on-background">/events/&lt;slug&gt;/evaluasi</code> ke grup peserta — buat short link +
           QR-nya di menu Tautan supaya gampang disebar di WeChat.
         </p>
         {legacyNote}
@@ -428,9 +428,13 @@ function CustomResults({
               <b className="text-on-background">{average(chip.values)}</b>/{SCALE_MAX[chip.type]}
             </span>
           ))}
-          <span className="rounded-md bg-surface-container-low px-3 py-1.5 text-label-caps text-on-surface-variant">
-            <b className="text-on-background">{anonymousCount}</b> anonim
-          </span>
+          {/* Evaluasi panitia selalu tercatat atas nama akun pengisinya: hitungan
+              "anonim" hanya bermakna untuk respons peserta. */}
+          {exportAudience !== "panitia" && (
+            <span className="rounded-md bg-surface-container-low px-3 py-1.5 text-label-caps text-on-surface-variant">
+              <b className="text-on-background">{anonymousCount}</b> anonim
+            </span>
+          )}
         </div>
         <ExportLinks eventId={eventId} audience={exportAudience} />
       </div>
@@ -484,7 +488,7 @@ function CustomResults({
               const scale = SCALE_MAX[c.type];
               return (
                 <div key={c.key} className="rounded-lg border border-outline-variant p-4">
-                  <ColumnTitle column={c} suffix={c.type === "stars" ? "bintang 1â€“5" : "penilaian 1â€“10"} />
+                  <ColumnTitle column={c} suffix={c.type === "stars" ? "bintang 1–5" : "penilaian 1–10"} />
                   <div className="mt-3 flex flex-wrap items-center gap-4">
                     <p className="text-body-md text-on-background">
                       rata-rata <b>{average(values)}</b>/{scale} dari {values.length} jawaban
@@ -509,7 +513,7 @@ function CustomResults({
               <div key={c.key} className="rounded-lg border border-outline-variant p-4">
                 <ColumnTitle column={c} />
                 {withAnswer.length === 0 ? (
-                  <p className="mt-3 text-body-sm text-on-surface-variant">â€” belum ada jawaban â€”</p>
+                  <p className="mt-3 text-body-sm text-on-surface-variant">— belum ada jawaban —</p>
                 ) : (
                   <ul className="mt-3 flex flex-col gap-2">
                     {withAnswer.map((e) => (
@@ -518,7 +522,7 @@ function CustomResults({
                           {byEvaluation.get(e.id)?.get(c.key)?.valueText}
                         </p>
                         <p className="mt-1 text-label-caps text-on-surface-variant">
-                          {respondentLabel(e)} Â· {formatWhen(e.createdAt)}
+                          {respondentLabel(e)} · {formatWhen(e.createdAt)}
                         </p>
                       </li>
                     ))}
@@ -559,7 +563,7 @@ function CustomResults({
                       </div>
                     );
                   })}
-                  {!own && <p className="text-body-sm text-on-surface-variant">â€” semua pertanyaan dikosongkan â€”</p>}
+                  {!own && <p className="text-body-sm text-on-surface-variant">— semua pertanyaan dikosongkan —</p>}
                 </div>
               </li>
             );

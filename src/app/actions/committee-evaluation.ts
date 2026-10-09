@@ -1,6 +1,6 @@
 "use server";
 
-import { and, eq } from "drizzle-orm";
+import { and, eq, sql } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { auth } from "@/auth";
@@ -8,6 +8,7 @@ import { db } from "@/db";
 import {
   eventCommittee,
   eventEvaluationAnswers,
+  eventEvaluationQuestions,
   eventEvaluations,
   events,
 } from "@/db/schema";
@@ -90,20 +91,21 @@ export async function submitCommitteeEvaluation(
   // (K4) — bedakan jadi "not_committee".
   if (!member) return { error: "not_committee" };
 
-  // Pertanyaan audiens panitia; kalau BPH belum menyusun satu pun, pakai
-  // template bawaan yang isinya sama dengan template di committee-evaluation.ts.
-  const customQuestions = await loadEvaluationQuestions(event.id, "panitia");
-  const questions: EvalQuestionRow[] = customQuestions.length > 0 ? customQuestions : committeeEvalTemplateQuestions();
+  // Pertanyaan audiens panitia selalu baris DB: saveCommitteeEvaluationWindow
+  // menyalin template kolektif begitu jendela dipasang, dan jendela wajib ada
+  // sebelum siapa pun bisa mengisi. Tanpa baris = BPH menghapus semuanya; jangan
+  // jatuh ke template statis, karena jawabannya tidak akan cocok dengan kolom
+  // rekap/ekspor (questionId NULL dikunci per label, bukan per pertanyaan).
+  const questions: EvalQuestionRow[] = await loadEvaluationQuestions(event.id, "panitia");
+  if (questions.length === 0) return { error: "not_ready" };
 
-  const answers: { questionId: string | null; label: string; type: string; text: string | null; number: number | null }[] = [];
+  const answers: { questionId: string; label: string; type: string; text: string | null; number: number | null }[] = [];
   for (const q of questions) {
     const result = validateEvalAnswer(q, formData.getAll(`q_${q.id}`));
     if (!result.ok) return { error: result.reason === "required" ? "required" : "invalid" };
     if (result.answer) {
-      // Pertanyaan template bukan baris DB — questionId-nya NULL dan label/tipe
-      // disalin ke jawaban (pola yang sama untuk pertanyaan yang sudah dihapus).
       answers.push({
-        questionId: customQuestions.some((c) => c.id === q.id) ? q.id : null,
+        questionId: q.id,
         label: q.label,
         type: q.type,
         text: result.answer.text,
@@ -199,6 +201,30 @@ export async function saveCommitteeEvaluationWindow(
     .update(events)
     .set({ committeeEvalOpensAt: opensAt, committeeEvalClosesAt: closesAt })
     .where(eq(events.id, eventId));
+
+  // Begitu jendela dipasang, pastikan acara punya pertanyaan panitia sebagai
+  // baris DB (salinan template kolektif bila BPH belum menyusun sendiri). Jendela
+  // wajib ada sebelum siapa pun bisa mengisi, jadi setiap jawaban panitia selalu
+  // menunjuk questionId uuid yang asli dan rekap/ekspor membaca kolom yang benar.
+  if (opensAt || closesAt) {
+    const [{ n }] = await db
+      .select({ n: sql<number>`count(*)::int` })
+      .from(eventEvaluationQuestions)
+      .where(and(eq(eventEvaluationQuestions.eventId, eventId), eq(eventEvaluationQuestions.audience, "panitia")));
+    if (n === 0) {
+      await db.insert(eventEvaluationQuestions).values(
+        committeeEvalTemplateQuestions().map((q, i) => ({
+          eventId,
+          audience: "panitia",
+          label: q.label,
+          type: q.type,
+          options: null,
+          required: q.required,
+          orderIndex: i + 1,
+        })),
+      );
+    }
+  }
 
   revalidatePath(`/console/events/${eventId}`);
   revalidatePath(`/events/${event.slug}/evaluasi-panitia`);

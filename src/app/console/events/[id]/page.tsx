@@ -44,7 +44,8 @@ import { FlashToast } from "@/components/console/flash-toast";
 import { SubmitButton } from "@/components/console/submit-button";
 import { CommitteeEvalWindowEditor } from "@/components/console/committee-eval-window-editor";
 import { EvalAudienceTabs } from "@/components/console/eval-audience-tabs";
-import { committeeEvalTemplateQuestions, committeeEvalWindowState } from "@/lib/committee-evaluation";
+import { CopyButton } from "@/components/copy-button";
+import { committeeEvalWindowState } from "@/lib/committee-evaluation";
 import { Download, Eye, Images } from "lucide-react";
 
 const QUESTION_TYPE_LABELS: Record<string, string> = {
@@ -242,9 +243,10 @@ export default async function ConsoleEventDetailPage({ params }: { params: Promi
     // B2: isi jawaban evaluasi panitia hanya dibaca untuk pengelola; rekapnya
     // dirender dari sini, bukan dari daftar jawaban yang bocor ke semua orang.
     canManageCommitteeEval ? loadEvaluationAnswers(id, "panitia") : Promise.resolve([]),
-    // Hitungan jawaban per pertanyaan panitia: angka agregat tanpa isi/nama —
-    // cukup aman untuk semua, dan dibutuhkan builder untuk mengunci tipe.
-    canEditEvaluationQuestions
+    // Hitungan jawaban per pertanyaan panitia: angka agregat tanpa isi/nama,
+    // dibutuhkan builder panitia untuk mengunci tipe. Builder itu hanya untuk
+    // pengelola (lihat R4 di bawah), jadi query-nya ikut gerbang yang sama.
+    canManageCommitteeEval
       ? db
           .select({ questionId: eventEvaluationAnswers.questionId, n: sql<number>`count(*)::int` })
           .from(eventEvaluationAnswers)
@@ -436,8 +438,11 @@ export default async function ConsoleEventDetailPage({ params }: { params: Promi
 
   // ===== Evaluasi panitia (kolektif) — tab "Panitia" di section "Evaluasi Acara" =====
   const committeeEvalWindow = committeeEvalWindowState(event.committeeEvalOpensAt, event.committeeEvalClosesAt);
-  // Pertanyaan rekap panitia: milik acara bila ada, kalau tidak template kolektif.
-  const committeeQuestions = evalQuestionsPanitia.length > 0 ? evalQuestionsPanitia : committeeEvalTemplateQuestions();
+  // Pertanyaan rekap panitia = baris DB saja. Template kolektif disalin ke DB saat
+  // jendela dipasang (saveCommitteeEvaluationWindow), jadi setiap jawaban punya
+  // questionId asli; memakai template statis di sini justru membuat kolom rekap
+  // tidak cocok dengan jawabannya.
+  const committeeQuestions = evalQuestionsPanitia;
   // Respons panitia dipetakan ke bentuk yang dibaca EvaluationResults/CustomResults:
   // nama pengisi dari akun, divisi evaluator di posisi "kota". Data ini hanya
   // ada di memori viewer pengelola (query-nya sendiri sudah digerbang B2).
@@ -1469,17 +1474,29 @@ export default async function ConsoleEventDetailPage({ params }: { params: Promi
             />
           }
           panitia={
-            <EvaluationQuestionsBuilder
-              eventId={id}
-              slug={event.slug}
-              eventTitle={event.title}
-              audience="panitia"
-              questions={evalQuestionsPanitia}
-              answerCounts={committeeAnswerCountMap}
-              legacyResponseCount={0}
-              cityOptions={[]}
-              sections={[]}
-            />
+            // Pertanyaan yang menilai kepanitiaan disusun BPH, bukan anggota
+            // panitia yang ikut dinilai. Server action-nya memakai gerbang yang
+            // sama (requireQuestionAccess di actions/event-evaluation-questions.ts).
+            canManageCommitteeEval ? (
+              <EvaluationQuestionsBuilder
+                eventId={id}
+                slug={event.slug}
+                eventTitle={event.title}
+                audience="panitia"
+                questions={evalQuestionsPanitia}
+                answerCounts={committeeAnswerCountMap}
+                legacyResponseCount={0}
+                cityOptions={[]}
+                sections={[]}
+              />
+            ) : (
+              <p className="text-body-md text-on-surface-variant max-w-2xl">
+                Pertanyaan evaluasi panitia disusun oleh BPH Panitia atau BPH Kabinet.
+                {evalQuestionsPanitia.length > 0
+                  ? ` Saat ini ada ${evalQuestionsPanitia.length} pertanyaan.`
+                  : " Pertanyaannya disiapkan otomatis saat BPH memasang jendela pengisian."}
+              </p>
+            )
           }
         />
       </CollapsibleSection>
@@ -1516,6 +1533,18 @@ export default async function ConsoleEventDetailPage({ params }: { params: Promi
           panitia={
             canManageCommitteeEval ? (
               <div className="flex flex-col gap-8">
+                <div className="flex flex-col gap-2">
+                  <p className="text-label-caps uppercase tracking-wide text-on-surface-variant">Tautan pengisian untuk grup panitia</p>
+                  <div className="flex flex-wrap items-center gap-3">
+                    <code className="text-body-sm bg-surface-container-low px-2 py-1 rounded break-all">
+                      {`${shareOrigin}/events/${event.slug}/evaluasi-panitia`}
+                    </code>
+                    <CopyButton value={`${shareOrigin}/events/${event.slug}/evaluasi-panitia`} label="Salin tautan" />
+                  </div>
+                  <p className="text-body-sm text-on-surface-variant">
+                    Hanya panitia acara ini yang login yang bisa mengisi, dan hanya selama jendela di bawah terbuka.
+                  </p>
+                </div>
                 <CommitteeEvalWindowEditor
                   eventId={id}
                   opensAt={event.committeeEvalOpensAt ? toDateLocalInput(new Date(event.committeeEvalOpensAt)) : ""}
@@ -1530,7 +1559,7 @@ export default async function ConsoleEventDetailPage({ params }: { params: Promi
                           ? "Jendela pengisian sudah ditutup"
                           : "Jendela pengisian belum dipasang"
                   }
-                  windowNote="Waktu kosong: sebelum jendela mulai / tidak pernah menutup otomatis. Mengosongkan keduanya lalu simpan = melepas jadwal."
+                  windowNote="Waktu kosong: sebelum jendela mulai / tidak pernah menutup otomatis. Mengosongkan keduanya lalu simpan = melepas jadwal. Saat jendela pertama kali disimpan, pertanyaan template kolektif otomatis disiapkan bila tab Panitia di Pertanyaan Evaluasi masih kosong."
                   scheduleLabel="Durasi pintasan"
                   opensLabel="Buka"
                   closesLabel="Tutup"

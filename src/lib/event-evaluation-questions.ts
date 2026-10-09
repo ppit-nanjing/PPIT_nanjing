@@ -48,7 +48,7 @@ export const EVAL_SHORT_TEXT_MAX = 300;
 export type EvalFormState = {
   ok?: boolean;
   already?: boolean;
-  error?: "login" | "window" | "not_committee" | "ratings" | "required" | "invalid" | "generic";
+  error?: "login" | "window" | "not_committee" | "not_ready" | "ratings" | "required" | "invalid" | "generic";
 };
 
 /** Bentuk pertanyaan yang dikirim ke form publik dan builder (plain data, aman lintas batas RSC). */
