@@ -42,6 +42,7 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
 - `src/db/schema.ts`: canonical Drizzle schema. `src/db/index.ts` owns the Neon client.
 - `drizzle/`: reviewed SQL migrations. Do not infer deployed state solely from `drizzle/meta/_journal.json`.
 - `docs/`: product, flow, data-model, and design references. Update relevant docs when behavior or operational setup changes.
+- `.agents/skills/`: house writing skills (`humanizer`, `en-id-translator`). Binding for everyone, agents included. See "Writing rules" below.
 
 ## Architecture graph
 
@@ -109,11 +110,22 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
 - `CRON_SECRET` must protect scheduled publishing in production. External integrations should fail clearly and without corrupting local state when credentials are missing.
 - Treat uploads and external URLs as untrusted input. Keep authorization, same-origin checks, allowlists, size limits, sanitized names, and safe redirects at the server boundary.
 
+## Writing rules (MUST)
+
+Two skills in `.agents/skills/` govern all prose in this repo. Read the relevant one before writing text, not after.
+
+- `.agents/skills/en-id-translator/SKILL.md` decides the language. Docs in `docs/`, Help Center articles, user-facing copy, and release notes are Indonesian by default, written the way that skill describes: technical vocabulary, code, identifiers, file paths, SQL, and log output stay in English, and nothing inside a code block or JSON key gets translated. The skill also defines the `[ ID ]` prefix for translated files. If the user explicitly asks for another language, that request wins over the default.
+- `.agents/skills/humanizer/SKILL.md` decides the voice, in every language. It lists what makes text read as machine-written: significance padding, `-ing` clauses added for fake depth, forced triples, "not just X but Y", em dash spam, a bolded lead-in on every bullet, curly quotes, chatbot courtesies like "I hope this helps", and vague attributions like "experts say". Replace those with specifics: the real file, the real number, what was actually run and what came out.
+
+Scope: `docs/**`, Help Center articles written in `/console/docs`, `README.md`, PR descriptions, review comments, release notes, and any user-facing string. Out of scope: code, SQL, identifiers, log output, and commit subjects (those follow the conventional commit convention).
+
+A page that lists a feature without saying what it does, or that describes intent instead of current behavior, fails this rule as much as a page full of "seamless" and "robust" does.
+
 ## Documenting a shipped feature
 
 Every feature that changes what a pengurus does or what a member sees needs documentation as part of being "done". This project already has two documentation systems — do not create a third.
 
-1. Write/update `docs/<Nama Fitur>.md` (same pattern as `docs/Event Flow.md`) — for the next Divisi Teknologi. Add it to `docs/README.md` in the same commit.
+1. Write/update `docs/<Nama Fitur>.md` (same pattern as `docs/Event Flow.md`) — for the next Divisi Teknologi. Add it to `docs/README.md` in the same commit. Indonesian and humanized, per "Writing rules" above.
 2. Write/update an article in the Help Center (`/console/docs/new`) — for the next pengurus. Turn on "Tampilkan di halaman publik" if it's relevant to anggota.
 3. For complex/risky operational processes (e.g. equipment lending, payment verification) — download that article as Word and hand it to BPH/pusat as the official SOP. Do not maintain a separate Word document by hand.
 
