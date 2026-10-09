@@ -2,55 +2,32 @@
 
 import { and, eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
+import { redirect } from "next/navigation";
 import { auth } from "@/auth";
 import { db } from "@/db";
-import { eventCommittee, eventCommitteeEvaluations, events } from "@/db/schema";
-import { requireEventConsoleAccess } from "@/lib/event-access";
 import {
-  COMMITTEE_EVAL_ASPECTS,
-  COMMITTEE_EVAL_RATING_MAX,
-  COMMITTEE_EVAL_RATING_MIN,
-  COMMITTEE_EVAL_TEXT_MAX,
+  eventCommittee,
+  eventEvaluationAnswers,
+  eventEvaluations,
+  events,
+} from "@/db/schema";
+import { requireEventConsoleAccess } from "@/lib/event-access";
+import { type EvalFormState, validateEvalAnswer, type EvalQuestionRow } from "@/lib/event-evaluation-questions";
+import { loadEvaluationQuestions } from "@/lib/event-evaluation-queries";
+import {
+  committeeEvalTemplateQuestions,
   committeeEvalWindowState,
 } from "@/lib/committee-evaluation";
 
-// Evaluasi panitia per-acara (kolektif). Semua aksi di sini adalah batas
-// permintaan publik/konsol: gerbang keanggotaan + jendela waktu dicek DI SINI,
-// bukan cuma di halaman yang memanggilnya.
+// Evaluasi panitia per-acara (kolektif), dibangun di atas builder pertanyaan
+// evaluasi (PR #74) lewat kolom audience = "panitia" di event_evaluation_questions
+// dan event_evaluations. Semua aksi di sini adalah batas permintaan publik:
+// gerbang login + roster + jendela waktu dicek DI SINI, bukan cuma di halaman
+// yang memanggilnya.
 
-export type CommitteeEvaluationFormState = {
-  ok?: boolean;
-  already?: boolean;
-  error?: "login" | "window" | "ratings" | "required" | "invalid" | "generic";
-};
+export type CommitteeEvaluationFormState = EvalFormState;
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-
-function rating(formData: FormData, key: string): number | null {
-  const raw = formData.get(key);
-  const value = typeof raw === "string" ? Number.parseInt(raw, 10) : Number.NaN;
-  if (!Number.isInteger(value) || value < COMMITTEE_EVAL_RATING_MIN || value > COMMITTEE_EVAL_RATING_MAX) {
-    return null;
-  }
-  return value;
-}
-
-function requiredText(formData: FormData, key: string): string | null {
-  const raw = formData.get(key);
-  if (typeof raw !== "string") return null;
-  const value = raw.trim();
-  if (!value || value.length > COMMITTEE_EVAL_TEXT_MAX) return null;
-  return value;
-}
-
-function optionalText(formData: FormData, key: string): string | null {
-  const raw = formData.get(key);
-  if (typeof raw !== "string") return null;
-  const value = raw.trim();
-  if (!value) return null;
-  if (value.length > COMMITTEE_EVAL_TEXT_MAX) throw new Error("too_long");
-  return value;
-}
 
 function isUniqueViolation(error: unknown): boolean {
   let current: unknown = error;
@@ -74,7 +51,8 @@ function isUniqueViolation(error: unknown): boolean {
 // Kirim evaluasi panitia: HARUS login, HARUS tercatat di event_committee acara
 // ini, dan jendela (events.committee_eval_opens_at/closes_at) harus sedang
 // terbuka saat aksi dieksekusi. Identitas pengisi = akunnya (bukan isian bebas)
-// — unique (event_id, user_id) mencegah isi dobel.
+// — dedup-nya unique index (event_id, user_id) untuk audience 'panitia' plus
+// token `panitia:<userId>` yang menabrak unique (event_id, responder_token).
 export async function submitCommitteeEvaluation(
   _prev: CommitteeEvaluationFormState,
   formData: FormData,
@@ -95,8 +73,11 @@ export async function submitCommitteeEvaluation(
     })
     .from(events)
     .where(eq(events.slug, slug));
-  // Gerbang sama dengan halaman publiknya: draft/terjadwal tidak bisa dievaluasi.
-  if (!event || event.status === "draft" || event.status === "scheduled") return { error: "invalid" };
+  // Gerbang sama dengan halaman publiknya: draft/terjadwal tidak bisa dievaluasi,
+  // dan acara yang dibatalkan tidak layak dievaluasi (K4).
+  if (!event || event.status === "draft" || event.status === "scheduled" || event.status === "cancelled") {
+    return { error: "invalid" };
+  }
 
   if (committeeEvalWindowState(event.opensAt, event.closesAt) !== "open") return { error: "window" };
 
@@ -105,40 +86,60 @@ export async function submitCommitteeEvaluation(
     .select({ divisionId: eventCommittee.divisionId })
     .from(eventCommittee)
     .where(and(eq(eventCommittee.eventId, event.id), eq(eventCommittee.userId, userId)));
-  if (!member) return { error: "login" };
+  // Pesan "login" untuk orang yang sudah login tapi bukan panitia menyesatkan
+  // (K4) — bedakan jadi "not_committee".
+  if (!member) return { error: "not_committee" };
 
-  const values = { ratingCoordination: 0, ratingTeamwork: 0, ratingCommunication: 0, ratingWorkload: 0, ratingSatisfaction: 0 } as Record<
-    (typeof COMMITTEE_EVAL_ASPECTS)[number]["field"],
-    number | null
-  >;
-  for (const aspect of COMMITTEE_EVAL_ASPECTS) {
-    const value = rating(formData, aspect.field);
-    if (!value) return { error: "ratings" };
-    values[aspect.field] = value;
+  // Pertanyaan audiens panitia; kalau BPH belum menyusun satu pun, pakai
+  // template bawaan yang isinya sama dengan template di committee-evaluation.ts.
+  const customQuestions = await loadEvaluationQuestions(event.id, "panitia");
+  const questions: EvalQuestionRow[] = customQuestions.length > 0 ? customQuestions : committeeEvalTemplateQuestions();
+
+  const answers: { questionId: string | null; label: string; type: string; text: string | null; number: number | null }[] = [];
+  for (const q of questions) {
+    const result = validateEvalAnswer(q, formData.getAll(`q_${q.id}`));
+    if (!result.ok) return { error: result.reason === "required" ? "required" : "invalid" };
+    if (result.answer) {
+      // Pertanyaan template bukan baris DB — questionId-nya NULL dan label/tipe
+      // disalin ke jawaban (pola yang sama untuk pertanyaan yang sudah dihapus).
+      answers.push({
+        questionId: customQuestions.some((c) => c.id === q.id) ? q.id : null,
+        label: q.label,
+        type: q.type,
+        text: result.answer.text,
+        number: result.answer.number,
+      });
+    }
   }
 
-  let wentWell: string | null = null;
-  let toImprove: string | null = null;
-  let feedback: string | null = null;
-  try {
-    wentWell = requiredText(formData, "wentWell");
-    toImprove = requiredText(formData, "toImprove");
-    feedback = optionalText(formData, "feedback");
-  } catch {
-    return { error: "invalid" };
-  }
-  if (!wentWell || !toImprove) return { error: "required" };
+  const evaluationId = crypto.randomUUID();
+  const insertEvaluation = db.insert(eventEvaluations).values({
+    id: evaluationId,
+    eventId: event.id,
+    audience: "panitia",
+    userId,
+    divisionId: member.divisionId,
+    responderToken: `panitia:${userId}`,
+  });
 
   try {
-    await db.insert(eventCommitteeEvaluations).values({
-      eventId: event.id,
-      userId,
-      divisionId: member.divisionId,
-      ...values,
-      wentWell,
-      toImprove,
-      feedback,
-    } as typeof eventCommitteeEvaluations.$inferInsert);
+    if (answers.length > 0) {
+      await db.batch([
+        insertEvaluation,
+        db.insert(eventEvaluationAnswers).values(
+          answers.map((a) => ({
+            evaluationId,
+            questionId: a.questionId,
+            questionLabel: a.label,
+            questionType: a.type,
+            valueText: a.text,
+            valueNumber: a.number,
+          })),
+        ),
+      ]);
+    } else {
+      await insertEvaluation;
+    }
   } catch (error) {
     if (isUniqueViolation(error)) return { already: true };
     console.error("[committee-evaluation] insert failed:", error);
@@ -150,14 +151,28 @@ export async function submitCommitteeEvaluation(
   return { ok: true };
 }
 
-// Pasang/hapus jendela waktu. Ditujukan untuk tab "Evaluasi Panitia" di konsol
-// kegiatan: opensAt/closesAt datang sebagai nilai datetime-local (boleh
-// kosong). Kosong dua-duanya = jadwal dilepas (kembali "belum dijadwalkan").
-export async function saveCommitteeEvaluationWindow(formData: FormData): Promise<void> {
+// Gerbang pengelola evaluasi panitia (B2): BPH Kabinet/Teknologi atau BPH
+// Panitia acara ini. Peran panitia lain tidak boleh membaca isi jawaban, belum
+// lagi menghapus/mengekspor/mengubah jendela — aksi di bawah memakai ini, bukan
+// sekadar menyembunyikan tombolnya di UI.
+async function requireCommitteeEvalManager(eventId: string) {
+  const access = await requireEventConsoleAccess(eventId);
+  if (!access.isFullAdmin && !access.isBphPanitia) redirect("/console");
+  return access;
+}
+
+// Pasang/hapus jendela waktu. Ditujukan untuk tab "Panitia" di section
+// "Evaluasi Acara" konsol kegiatan: opensAt/closesAt datang sebagai nilai
+// datetime-local (boleh kosong). Kosong dua-duanya = jadwal dilepas (kembali
+// "belum dijadwalkan"). Salah isi DIBALAS sebagai error form state, bukan
+// diam-diam diabaikan — kalau tidak, tombol simpan tetap tampak berhasil (M4).
+export async function saveCommitteeEvaluationWindow(
+  _prev: CommitteeEvalWindowFormState,
+  formData: FormData,
+): Promise<CommitteeEvalWindowFormState> {
   const eventId = typeof formData.get("eventId") === "string" ? String(formData.get("eventId")).trim() : "";
-  if (!UUID_RE.test(eventId)) return;
-  // BPH Panitia acara ini (ketua/wakil/sekretaris/SC) + BPH Kabinet/Teknologi.
-  await requireEventConsoleAccess(eventId);
+  if (!UUID_RE.test(eventId)) return { error: "Acara tidak valid." };
+  await requireCommitteeEvalManager(eventId);
 
   function parseLocal(value: FormDataEntryValue | null): Date | null {
     if (typeof value !== "string" || !value.trim()) return null;
@@ -167,14 +182,18 @@ export async function saveCommitteeEvaluationWindow(formData: FormData): Promise
 
   const opensAt = parseLocal(formData.get("opensAt"));
   const closesAt = parseLocal(formData.get("closesAt"));
-  if (opensAt && closesAt && closesAt <= opensAt) return;
-  if (closesAt && !opensAt && closesAt.getTime() <= Date.now()) return;
+  if (opensAt && closesAt && closesAt <= opensAt) {
+    return { error: "Waktu tutup harus setelah waktu buka." };
+  }
+  if (closesAt && !opensAt && closesAt.getTime() <= Date.now()) {
+    return { error: "Waktu tutup sudah lewat — isi ulang atau kosongkan." };
+  }
 
   const [event] = await db
-    .select({ slug: events.slug, opensAt: events.committeeEvalOpensAt, closesAt: events.committeeEvalClosesAt })
+    .select({ slug: events.slug })
     .from(events)
     .where(eq(events.id, eventId));
-  if (!event) return;
+  if (!event) return { error: "Acara tidak ditemukan." };
 
   await db
     .update(events)
@@ -183,16 +202,10 @@ export async function saveCommitteeEvaluationWindow(formData: FormData): Promise
 
   revalidatePath(`/console/events/${eventId}`);
   revalidatePath(`/events/${event.slug}/evaluasi-panitia`);
+  return { ok: true };
 }
 
-// Hapus satu jawaban (BPH melihat rekap; jawaban salah isi bisa dibersihkan).
-export async function deleteCommitteeEvaluation(formData: FormData): Promise<void> {
-  const id = typeof formData.get("id") === "string" ? String(formData.get("id")).trim() : "";
-  const eventId = typeof formData.get("eventId") === "string" ? String(formData.get("eventId")).trim() : "";
-  if (!UUID_RE.test(id) || !UUID_RE.test(eventId)) return;
-  await requireEventConsoleAccess(eventId);
-  await db
-    .delete(eventCommitteeEvaluations)
-    .where(and(eq(eventCommitteeEvaluations.id, id), eq(eventCommitteeEvaluations.eventId, eventId)));
-  revalidatePath(`/console/events/${eventId}`);
-}
+export type CommitteeEvalWindowFormState = {
+  ok?: boolean;
+  error?: string;
+};

@@ -1,23 +1,35 @@
+import type { EvalQuestionRow } from "@/lib/event-evaluation-questions";
 import type { TKey } from "@/lib/i18n/dictionaries/id";
 
-// Evaluasi panitia PER-ACARA (kolektif) — satu-satunya sumber definisi
-// pertanyaan & status jendela. Berkas ini sengaja MURNI (tanpa @/db atau
-// @/auth) supaya boleh diimpor komponen klien, server, dan route handler.
-
-// PLACEHOLDER — ganti di sini saat BPH menetapkan pertanyaan aslinya. Sifatnya
-// KOLEKTIF: menilai divisi/kepanitiaan secara keseluruhan, bukan skor per
-// orang (keputusan BPH; apresiasi individu jalan lewat jalur lain). `label`
-// versi Indonesia dipakai untuk header ekspor CSV/Excel, `labelKey` untuk UI
+// Evaluasi panitia PER-ACARA (kolektif) — definisi pertanyaan template & status
+// jendela. Berkas ini sengaja MURNI (tanpa @/db atau @/auth) supaya boleh
+// diimpor komponen klien, server, dan route handler.
+//
+// Sejak dibangun ulang di atas builder pertanyaan evaluasi (PR #74 + audience),
+// pertanyaan panitia per-acara diatur BPH dari konsol (tabel
+// event_evaluation_questions, audience = "panitia"). Definisi di berkas ini
+// hanya TEMPLATE BAWAAN yang dipakai saat acara belum punya pertanyaan sendiri:
+// lima penilaian kolektif Bintang 1–5 + dua teks wajib + satu opsional —
+// sifatnya KOLEKTIF: menilai divisi/kepanitiaan secara keseluruhan, bukan skor
+// per orang (keputusan BPH; apresiasi individu jalan lewat jalur lain).
+// `label` versi Indonesia dipakai untuk isi DB/ekspor, `labelKey` untuk UI
 // (diterjemahkan lewat kamus, pola sama dengan event-evaluation-template).
-export type CommitteeEvalAspectField =
-  | "ratingCoordination"
-  | "ratingTeamwork"
-  | "ratingCommunication"
-  | "ratingWorkload"
-  | "ratingSatisfaction";
+
+// ID pertanyaan template. Menjadi nama field form (`q_<id>`) DAN kunci
+// validasi di server action — jangan diubah begitu ada jawaban tersimpan.
+export const COMMITTEE_TEMPLATE_IDS = {
+  coordination: "ceval-coordination",
+  teamwork: "ceval-teamwork",
+  communication: "ceval-communication",
+  workload: "ceval-workload",
+  satisfaction: "ceval-satisfaction",
+  wentWell: "ceval-went-well",
+  toImprove: "ceval-to-improve",
+  feedback: "ceval-feedback",
+} as const;
 
 export type CommitteeEvalAspect = {
-  field: CommitteeEvalAspectField;
+  id: string;
   labelKey: TKey;
   label: string;
   hintKey?: TKey;
@@ -25,43 +37,39 @@ export type CommitteeEvalAspect = {
 
 export const COMMITTEE_EVAL_ASPECTS: CommitteeEvalAspect[] = [
   {
-    field: "ratingCoordination",
+    id: COMMITTEE_TEMPLATE_IDS.coordination,
     labelKey: "ceval.qCoordination",
-    label: "Koordinasi antar divisi",
+    label: "Koordinasi antar divisi selama acara",
     hintKey: "ceval.qCoordinationHint",
   },
-  { field: "ratingTeamwork", labelKey: "ceval.qTeamwork", label: "Kerja sama & suasana tim" },
+  { id: COMMITTEE_TEMPLATE_IDS.teamwork, labelKey: "ceval.qTeamwork", label: "Kerja sama & suasana tim" },
   {
-    field: "ratingCommunication",
+    id: COMMITTEE_TEMPLATE_IDS.communication,
     labelKey: "ceval.qCommunication",
     label: "Komunikasi informasi dari panitia inti / BPH",
   },
-  { field: "ratingWorkload", labelKey: "ceval.qWorkload", label: "Pembagian tugas & beban kerja" },
+  { id: COMMITTEE_TEMPLATE_IDS.workload, labelKey: "ceval.qWorkload", label: "Pembagian tugas & beban kerja" },
   {
-    field: "ratingSatisfaction",
+    id: COMMITTEE_TEMPLATE_IDS.satisfaction,
     labelKey: "ceval.qSatisfaction",
-    label: "Kepuasan menjadi panitia acara ini",
+    label: "Kepuasanmu menjadi panitia acara ini",
   },
 ];
 
 // Dua teks wajib + satu opsional — menjaga rekap selalu punya bahan
-// kualitatif, bukan cuma angka. Kolom DB-nya tetap: went_well, to_improve,
-// feedback.
+// kualitatif, bukan cuma angka.
 export const COMMITTEE_EVAL_TEXT = {
-  wentWell: { name: "wentWell", labelKey: "ceval.wentWell", label: "Apa yang berjalan baik?", optional: false },
-  toImprove: { name: "toImprove", labelKey: "ceval.toImprove", label: "Apa yang perlu diperbaiki?", optional: false },
+  wentWell: { id: COMMITTEE_TEMPLATE_IDS.wentWell, labelKey: "ceval.wentWell", label: "Apa yang berjalan baik?", optional: false },
+  toImprove: { id: COMMITTEE_TEMPLATE_IDS.toImprove, labelKey: "ceval.toImprove", label: "Apa yang perlu diperbaiki?", optional: false },
   feedback: {
-    name: "feedback",
+    id: COMMITTEE_TEMPLATE_IDS.feedback,
     labelKey: "ceval.feedback",
     label: "Masukan tambahan untuk panitia acara berikutnya",
     optional: true,
   },
 } as const;
 
-// Batas angka penilaian & panjang teks — dipakai form klien dan aksi server
-// supaya validasi keduanya tidak bisa saling geser.
-export const COMMITTEE_EVAL_RATING_MIN = 1;
-export const COMMITTEE_EVAL_RATING_MAX = 5;
+/** Panjang maksimum jawaban teks panitia — dipakai validasi server & atribut form. */
 export const COMMITTEE_EVAL_TEXT_MAX = 2000;
 
 // Status jendela pengisian, dihitung dari waktu saat ini (tanpa cron):
@@ -94,4 +102,31 @@ export function committeeEvalPresetWindow(
     opensAt: base,
     closesAt: new Date(base.getTime() + durationDays * 24 * 60 * 60 * 1000),
   };
+}
+
+/**
+ * Pertanyaan template evaluasi panitia, dalam bentuk yang sama dengan baris DB
+ * (EvalQuestionRow) supaya form publik, builder, dan server action memakai
+ * satu bentuk data. Limanya Bintang 1–5, sisanya textarea. ID statis (bukan
+ * uuid DB) — field form-nya `q_ceval-*`.
+ */
+export function committeeEvalTemplateQuestions(): EvalQuestionRow[] {
+  return [
+    ...COMMITTEE_EVAL_ASPECTS.map((a, i) => ({
+      id: a.id,
+      label: a.label,
+      type: "stars" as const,
+      options: null,
+      required: true,
+      orderIndex: i + 1,
+    })),
+    ...Object.values(COMMITTEE_EVAL_TEXT).map((q, i) => ({
+      id: q.id,
+      label: q.label,
+      type: "textarea" as const,
+      options: null,
+      required: !q.optional,
+      orderIndex: COMMITTEE_EVAL_ASPECTS.length + i + 1,
+    })),
+  ];
 }

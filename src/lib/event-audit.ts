@@ -29,7 +29,8 @@ export type EventAuditAction =
   | "credit.added"
   | "credit.removed"
   | "asset.reserved"
-  | "asset.released";
+  | "asset.released"
+  | "committee_evaluation.deleted";
 
 export async function logEventAudit(
   actorId: string | null | undefined,
@@ -74,4 +75,5 @@ export const EVENT_AUDIT_ACTION_LABEL: Record<EventAuditAction, string> = {
   "credit.removed": "Kredit kepanitiaan dihapus",
   "asset.reserved": "Aset direservasi",
   "asset.released": "Reservasi aset dilepas",
+  "committee_evaluation.deleted": "Jawaban evaluasi panitia dihapus",
 };

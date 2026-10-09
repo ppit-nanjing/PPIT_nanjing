@@ -1,7 +1,7 @@
 import { eq, and, desc, sql, inArray } from "drizzle-orm";
 import { notFound } from "next/navigation";
 import { db } from "@/db";
-import { auditLogs, certificates, coverageCities, events, eventCommitteeEvaluations, eventCredits, eventDivisions, eventEvaluations, eventFeeOptions, eventQuestions, eventRegistrations, eventVolunteers, galleryAlbums, galleryPhotos, inventoryItems, itemReservations, newsArticles, sensusProfiles, users } from "@/db/schema";
+import { auditLogs, certificates, coverageCities, events, eventCredits, eventDivisions, eventEvaluations, eventEvaluationAnswers, eventFeeOptions, eventQuestions, eventRegistrations, eventVolunteers, galleryAlbums, galleryPhotos, inventoryItems, itemReservations, newsArticles, sensusProfiles, users } from "@/db/schema";
 import { MEMBERSHIP_LABEL, effectiveBranch, membershipStatus } from "@/lib/membership-status";
 import { updateEventInfo, updateEventContent, updateEventPostReport, setEventStatus, saveEventQuestion, deleteEventQuestion, saveFeeOption, deleteFeeOption } from "@/app/actions/admin-events";
 import { createEventGalleryAlbum } from "@/app/actions/admin-content";
@@ -39,8 +39,8 @@ import { ConfirmButton } from "@/components/console/confirm-button";
 import { FlashToast } from "@/components/console/flash-toast";
 import { SubmitButton } from "@/components/console/submit-button";
 import { CommitteeEvalWindowEditor } from "@/components/console/committee-eval-window-editor";
-import { deleteCommitteeEvaluation } from "@/app/actions/committee-evaluation";
-import { COMMITTEE_EVAL_ASPECTS, committeeEvalWindowState } from "@/lib/committee-evaluation";
+import { EvalAudienceTabs } from "@/components/console/eval-audience-tabs";
+import { committeeEvalTemplateQuestions, committeeEvalWindowState } from "@/lib/committee-evaluation";
 import { Download, Images } from "lucide-react";
 
 const QUESTION_TYPE_LABELS: Record<string, string> = {
@@ -60,6 +60,14 @@ export default async function ConsoleEventDetailPage({ params }: { params: Promi
   const [event] = await db.select().from(events).where(eq(events.id, id));
   if (!event) notFound();
 
+  // ===== Evaluasi panitia (kolektif, audiens "panitia" di event_evaluations) =====
+  // GERBANG B2 — dihitung SEBELUM Promise.all supaya jawaban beserta nama
+  // pengisinya TIDAK PERNAH diambil dari database untuk yang tidak berhak.
+  // Editor jendela waktu, rekap lengkap, dan ekspor hanya untuk BPH Kabinet/
+  // Teknologi atau BPH Panitia acara ini; panitia lain cukup melihat jumlah
+  // pengisi dan statusnya sendiri.
+  const canManageCommitteeEval = access.isFullAdmin || access.isBphPanitia;
+
   // Semua query di bawah hanya bergantung pada `id` dan hak akses, bukan satu
   // sama lain, jadi dijalankan serentak: satu putaran ke database alih-alih
   // belasan putaran berurutan (tiap putaran ~240 ms bila fungsi dan database
@@ -77,7 +85,7 @@ export default async function ConsoleEventDetailPage({ params }: { params: Promi
     { divisions, members: committee }, // struktur kepanitiaan acara ini (Departemen -> sub-tim)
     questions,
     feeOptions,
-    evaluations,
+    evaluations, // respons evaluasi audiens PESERTA (tab Peserta di section Evaluasi Acara)
     volunteerApps,
     candidates, // kandidat penugasan: SEMUA akun, kepanitiaan tidak terikat jabatan struktural
     albums, // album galeri untuk section "Setelah Acara"
@@ -85,10 +93,14 @@ export default async function ConsoleEventDetailPage({ params }: { params: Promi
     auditRows,
     credits,
     eventArticles,
-    evalQuestions, // pertanyaan evaluasi buatan panitia (kosong = template tetap)
-    evalAnswers, // jawaban untuk pertanyaan itu, semua respons acara ini
+    evalQuestions, // pertanyaan evaluasi buatan panitia, audiens peserta (kosong = template tetap)
+    evalAnswers, // jawaban pertanyaan itu, dari respons audiens peserta
+    evalQuestionsPanitia, // pertanyaan audiens panitia (kosong = template kolektif)
     cityRows, // untuk pratinjau form evaluasi, hanya bila viewer boleh menyusunnya
-    committeeEvals, // evaluasi panitia kolektif (jendela waktu diatur di section-nya)
+    committeeEvalRows, // respons audiens panitia + nama/divisi — HANYA untuk pengelola (B2)
+    committeeEvalAnswers, // jawaban audiens panitia — HANYA untuk pengelola (B2)
+    committeeAnswerCounts, // hitungan jawaban per pertanyaan panitia (angka saja, tanpa isi)
+    committeeEvalStats, // (non-pengelola) jumlah respons panitia + apakah dirinya sudah mengisi
     [assetItems, assetReservations], // reservasi aset Inventaris, hanya untuk yang punya grant
   ] = await Promise.all([
     db
@@ -123,10 +135,12 @@ export default async function ConsoleEventDetailPage({ params }: { params: Promi
       .from(eventFeeOptions)
       .where(eq(eventFeeOptions.eventId, id))
       .orderBy(eventFeeOptions.orderIndex, eventFeeOptions.id),
+    // Respons evaluasi audiens PESERTA saja — jawaban panitia (audience 'panitia')
+    // tampil di tab tersendiri dan tidak boleh ikut menghitung rata-rata peserta.
     db
       .select()
       .from(eventEvaluations)
-      .where(eq(eventEvaluations.eventId, id))
+      .where(and(eq(eventEvaluations.eventId, id), eq(eventEvaluations.audience, "peserta")))
       .orderBy(desc(eventEvaluations.createdAt)),
     db
       .select({
@@ -181,22 +195,55 @@ export default async function ConsoleEventDetailPage({ params }: { params: Promi
           .where(eq(newsArticles.eventId, id))
           .orderBy(desc(newsArticles.publishedAt))
       : Promise.resolve([]),
+    // Pertanyaan + jawaban audiens PESERTA (tab Peserta & builder-nya).
     loadEvaluationQuestions(id),
     loadEvaluationAnswers(id),
+    // Pertanyaan audiens panitia (builder + rekap panitia di tab masing-masing).
+    loadEvaluationQuestions(id, "panitia"),
     canEditEvaluationQuestions
       ? db.select({ label: coverageCities.label }).from(coverageCities)
       : Promise.resolve([]),
-    db
-      .select({
-        row: eventCommitteeEvaluations,
-        userName: users.name,
-        divisionName: eventDivisions.name,
-      })
-      .from(eventCommitteeEvaluations)
-      .leftJoin(users, eq(eventCommitteeEvaluations.userId, users.id))
-      .leftJoin(eventDivisions, eq(eventCommitteeEvaluations.divisionId, eventDivisions.id))
-      .where(eq(eventCommitteeEvaluations.eventId, id))
-      .orderBy(desc(eventCommitteeEvaluations.createdAt)),
+    // B2: baris evaluasi panitia beserta nama & divisinya hanya diambil untuk
+    // pengelola (BPH Kabinet/Teknologi atau BPH Panitia acara ini). Panitia lain
+    // tidak perlu isinya — cukup angka di committeeEvalStats di bawah.
+    canManageCommitteeEval
+      ? db
+          .select({
+            row: eventEvaluations,
+            userName: users.name,
+            divisionName: eventDivisions.name,
+          })
+          .from(eventEvaluations)
+          .leftJoin(users, eq(eventEvaluations.userId, users.id))
+          .leftJoin(eventDivisions, eq(eventEvaluations.divisionId, eventDivisions.id))
+          .where(and(eq(eventEvaluations.eventId, id), eq(eventEvaluations.audience, "panitia")))
+          .orderBy(desc(eventEvaluations.createdAt))
+      : Promise.resolve([]),
+    // B2: isi jawaban evaluasi panitia hanya dibaca untuk pengelola; rekapnya
+    // dirender dari sini, bukan dari daftar jawaban yang bocor ke semua orang.
+    canManageCommitteeEval ? loadEvaluationAnswers(id, "panitia") : Promise.resolve([]),
+    // Hitungan jawaban per pertanyaan panitia: angka agregat tanpa isi/nama —
+    // cukup aman untuk semua, dan dibutuhkan builder untuk mengunci tipe.
+    canEditEvaluationQuestions
+      ? db
+          .select({ questionId: eventEvaluationAnswers.questionId, n: sql<number>`count(*)::int` })
+          .from(eventEvaluationAnswers)
+          .innerJoin(eventEvaluations, eq(eventEvaluationAnswers.evaluationId, eventEvaluations.id))
+          .where(and(eq(eventEvaluations.eventId, id), eq(eventEvaluations.audience, "panitia")))
+          .groupBy(eventEvaluationAnswers.questionId)
+      : Promise.resolve([]),
+    // Non-pengelola: jumlah pengisi + apakah penampil sendiri sudah mengisi
+    // (status dirinya saja, bukan status orang lain).
+    canManageCommitteeEval
+      ? Promise.resolve({ total: 0, mine: 0 })
+      : db
+          .select({
+            total: sql<number>`count(*)::int`,
+            mine: sql<number>`count(*) filter (where ${eventEvaluations.userId} = ${access.session?.user?.id ?? "00000000-0000-0000-0000-000000000000"})::int`,
+          })
+          .from(eventEvaluations)
+          .where(and(eq(eventEvaluations.eventId, id), eq(eventEvaluations.audience, "panitia")))
+          .then((r) => r[0] ?? { total: 0, mine: 0 }),
     canBorrowAssets
       ? Promise.all([
           db.select({ id: inventoryItems.id, name: inventoryItems.name }).from(inventoryItems).orderBy(inventoryItems.name),
@@ -346,35 +393,22 @@ export default async function ConsoleEventDetailPage({ params }: { params: Promi
     }));
   const committeeCertCount = certCommittee.filter((p) => p.cert?.fileUrl).length;
 
-  // ===== Evaluasi panitia (kolektif) =====
-  // Editor jendela waktu = mengubah setelan acara — hanya BPH Panitia acara ini
-  // + BPH Kabinet/Teknologi. Rekapnya sendiri tampil untuk semua yang lolos
-  // gerbang konsol acara (sama seperti "Evaluasi Acara").
-  const canManageCommitteeEval = access.isFullAdmin || access.isBphPanitia;
+  // ===== Evaluasi panitia (kolektif) — tab "Panitia" di section "Evaluasi Acara" =====
   const committeeEvalWindow = committeeEvalWindowState(event.committeeEvalOpensAt, event.committeeEvalClosesAt);
-  const committeeEvalResponses = committeeEvals.map((r) => ({ ...r.row, userName: r.userName, divisionName: r.divisionName }));
-  const committeeEvalSummary = COMMITTEE_EVAL_ASPECTS.map((a) => {
-    const values = committeeEvalResponses
-      .map((r) => r[a.field])
-      .filter((v): v is number => typeof v === "number");
-    const avg = values.length > 0 ? values.reduce((s, v) => s + v, 0) / values.length : null;
-    return { field: a.field, label: a.label, avg, count: values.length };
-  });
-  // Rata-rata gabungan lima aspek per divisi evaluator — indikator cepat
-  // divisi mana yang merasa prosesnya paling berat/mulud.
-  const committeeEvalDivisionGroups = new Map<string, number[]>();
-  for (const r of committeeEvalResponses) {
-    const key = r.divisionName ?? "(tanpa divisi)";
-    const values = COMMITTEE_EVAL_ASPECTS.map((a) => r[a.field]).filter((v): v is number => typeof v === "number");
-    committeeEvalDivisionGroups.set(key, [...(committeeEvalDivisionGroups.get(key) ?? []), ...(values.length ? [values.reduce((s, v) => s + v, 0) / values.length] : [])]);
+  // Pertanyaan rekap panitia: milik acara bila ada, kalau tidak template kolektif.
+  const committeeQuestions = evalQuestionsPanitia.length > 0 ? evalQuestionsPanitia : committeeEvalTemplateQuestions();
+  // Respons panitia dipetakan ke bentuk yang dibaca EvaluationResults/CustomResults:
+  // nama pengisi dari akun, divisi evaluator di posisi "kota". Data ini hanya
+  // ada di memori viewer pengelola (query-nya sendiri sudah digerbang B2).
+  const committeeEvaluations = committeeEvalRows.map((r) => ({
+    ...r.row,
+    respondentName: r.userName,
+    respondentCity: r.divisionName,
+  }));
+  const committeeAnswerCountMap: Record<string, number> = {};
+  for (const a of committeeAnswerCounts) {
+    if (a.questionId) committeeAnswerCountMap[a.questionId] = a.n;
   }
-  const committeeEvalDivisionRows = [...committeeEvalDivisionGroups.entries()]
-    .map(([division, values]) => ({
-      division,
-      count: values.length,
-      avg: values.length > 0 ? values.reduce((s, v) => s + v, 0) / values.length : null,
-    }))
-    .sort((a, b) => (b.avg ?? 0) - (a.avg ?? 0));
 
   return (
     <div className="py-2">
@@ -1317,188 +1351,126 @@ export default async function ConsoleEventDetailPage({ params }: { params: Promi
       {canEditEvaluationQuestions && (
       <CollapsibleSection
         title="Pertanyaan Evaluasi"
-        description={evalQuestions.length > 0 ? `${evalQuestions.length} pertanyaan sendiri` : "template standar"}
+        description={
+          evalQuestions.length > 0 || evalQuestionsPanitia.length > 0
+            ? `${evalQuestions.length} peserta · ${evalQuestionsPanitia.length} panitia`
+            : "template standar"
+        }
       >
-        <EvaluationQuestionsBuilder
-          eventId={id}
-          slug={event.slug}
-          eventTitle={event.title}
-          questions={evalQuestions}
-          answerCounts={evalAnswerCounts}
-          legacyResponseCount={evaluations.filter((e) => e.ratingRegistration != null).length}
-          cityOptions={sortByCoverageOrder(cityRows, (row) => row.label).map((c) => c.label)}
-          sections={evaluationTemplateForSlug(event.slug).sections}
+        <EvalAudienceTabs
+          peserta={
+            <EvaluationQuestionsBuilder
+              eventId={id}
+              slug={event.slug}
+              eventTitle={event.title}
+              audience="peserta"
+              questions={evalQuestions}
+              answerCounts={evalAnswerCounts}
+              legacyResponseCount={evaluations.filter((e) => e.ratingRegistration != null).length}
+              cityOptions={sortByCoverageOrder(cityRows, (row) => row.label).map((c) => c.label)}
+              sections={evaluationTemplateForSlug(event.slug).sections}
+            />
+          }
+          panitia={
+            <EvaluationQuestionsBuilder
+              eventId={id}
+              slug={event.slug}
+              eventTitle={event.title}
+              audience="panitia"
+              questions={evalQuestionsPanitia}
+              answerCounts={committeeAnswerCountMap}
+              legacyResponseCount={0}
+              cityOptions={[]}
+              sections={[]}
+            />
+          }
         />
       </CollapsibleSection>
       )}
 
+      {/* Evaluasi peserta & panitia dalam SATU section (K7: tanpa section tambahan
+          di halaman konsol acara yang sudah panjang). Aturan B2 berlaku: isi
+          jawaban dan nama pengisi panitia hanya untuk pengelola (BPH Kabinet/
+          Teknologi atau BPH Panitia acara ini); panitia lain hanya melihat jumlah
+          pengisi dan statusnya sendiri. */}
       <CollapsibleSection
         title="Evaluasi Acara"
-        description={evaluations.length > 0 ? `${evaluations.length} respons` : "belum ada respons"}
-      >
-        <EvaluationResults
-          eventId={id}
-          evaluations={evaluations}
-          sections={evaluationTemplateForSlug(event.slug).sections}
-          questions={evalQuestions}
-          answers={evalAnswers}
-        />
-      </CollapsibleSection>
-
-      <CollapsibleSection
-        title="Evaluasi Panitia (Kolektif)"
         description={
-          committeeEvalWindow === "open"
-            ? `${committeeEvalResponses.length} respons · jendela terbuka`
-            : committeeEvalResponses.length > 0
-              ? `${committeeEvalResponses.length} respons · jendela ${committeeEvalWindow === "before" ? "belum dibuka" : "sudah tutup"}`
-              : "belum ada respons"
+          [
+            evaluations.length > 0 ? `${evaluations.length} respons peserta` : "peserta: belum ada respons",
+            canManageCommitteeEval
+              ? committeeEvaluations.length > 0
+                ? `${committeeEvaluations.length} respons panitia`
+                : "panitia: belum ada respons"
+              : `${committeeEvalStats.total} panitia sudah mengisi`,
+          ].join(" · ")
         }
       >
-        <p className="text-body-md text-on-surface-variant mb-4 max-w-2xl">
-          Evaluasi kolektif oleh panitia acara ini — menilai kerja sama divisi dan kepanitiaan
-          keseluruhan (bukan skor per orang). Pengisian dibuka dengan jendela waktu yang kamu tentukan:
-          panitia login, sistem cek roster, satu orang sekali mengisi.
-        </p>
-
-        {canManageCommitteeEval && (
-          <div className="mb-6">
-            <CommitteeEvalWindowEditor
+        <EvalAudienceTabs
+          peserta={
+            <EvaluationResults
               eventId={id}
-              opensAt={event.committeeEvalOpensAt ? toDateLocalInput(new Date(event.committeeEvalOpensAt)) : ""}
-              closesAt={event.committeeEvalClosesAt ? toDateLocalInput(new Date(event.committeeEvalClosesAt)) : ""}
-              presetOpens={event.endAt ? toDateLocalInput(new Date(event.endAt)) : toDateLocalInput(new Date())}
-              windowLabel={
-                committeeEvalWindow === "open"
-                  ? "Jendela pengisian sedang TERBUKA"
-                  : committeeEvalWindow === "before"
-                    ? "Jendela pengisian belum dibuka"
-                    : committeeEvalWindow === "closed"
-                      ? "Jendela pengisian sudah ditutup"
-                      : "Jendela pengisian belum dipasang"
-              }
-              windowNote="Waktu kosong: sebelum jendela mulai / tidak pernah menutup otomatis. Mengosongkan keduanya lalu simpan = melepas jadwal."
-              scheduleLabel="Durasi pintasan"
-              opensLabel="Buka"
-              closesLabel="Tutup"
-              presetLabel="Buka setelah acara"
-              clearLabel="Kosongkan jadwal"
-              saveLabel="Simpan jendela"
-              clearConfirmNote="Status jendela dihitung otomatis dari waktu saat ini — panitia hanya bisa mengisi selama terbuka."
+              evaluations={evaluations}
+              sections={evaluationTemplateForSlug(event.slug).sections}
+              questions={evalQuestions}
+              answers={evalAnswers}
             />
-          </div>
-        )}
-
-        <p className="text-label-caps uppercase tracking-wide text-on-surface-variant mb-2">
-          Rekap — {committeeEvalResponses.length} dari {committee.length} panitia sudah mengisi
-        </p>
-        {committeeEvalResponses.length > 0 ? (
-          <div className="flex flex-col gap-4">
-            <div className="flex flex-col gap-2">
-              {committeeEvalSummary.map((a) => (
-                <div key={a.field} className="flex flex-wrap items-center gap-3">
-                  <span className="text-body-md text-on-background min-w-[14rem] flex-1">{a.label}</span>
-                  <div className="h-1.5 flex-1 min-w-[6rem] bg-surface-container-high rounded overflow-hidden" role="presentation">
-                    <div
-                      className="h-full bg-primary-container rounded"
-                      style={{ width: `${((a.avg ?? 0) / 5) * 100}%` }}
-                    />
-                  </div>
-                  <span className="text-body-md font-semibold text-on-background tabular-nums w-10 text-right">
-                    {a.avg != null ? a.avg.toFixed(1) : "—"}
-                  </span>
-                </div>
-              ))}
-            </div>
-
-            {committeeEvalDivisionRows.length > 0 && (
-              <div>
-                <p className="text-label-caps uppercase tracking-wide text-on-surface-variant mb-2">Rata-rata per divisi evaluator</p>
-                <ul className="flex flex-col gap-1.5">
-                  {committeeEvalDivisionRows.map((d) => (
-                    <li key={d.division} className="flex items-baseline justify-between gap-4 border-b border-outline-variant/50 pb-1.5">
-                      <span className="text-body-md text-on-background">{d.division}</span>
-                      <span className="text-body-sm text-on-surface-variant tabular-nums">
-                        {d.count} pengisi · rata-rata {d.avg != null ? d.avg.toFixed(1) : "—"}/5
-                      </span>
-                    </li>
-                  ))}
-                </ul>
+          }
+          panitia={
+            canManageCommitteeEval ? (
+              <div className="flex flex-col gap-8">
+                <CommitteeEvalWindowEditor
+                  eventId={id}
+                  opensAt={event.committeeEvalOpensAt ? toDateLocalInput(new Date(event.committeeEvalOpensAt)) : ""}
+                  closesAt={event.committeeEvalClosesAt ? toDateLocalInput(new Date(event.committeeEvalClosesAt)) : ""}
+                  presetOpens={event.endAt ? toDateLocalInput(new Date(event.endAt)) : toDateLocalInput(new Date())}
+                  windowLabel={
+                    committeeEvalWindow === "open"
+                      ? "Jendela pengisian sedang TERBUKA"
+                      : committeeEvalWindow === "before"
+                        ? "Jendela pengisian belum dibuka"
+                        : committeeEvalWindow === "closed"
+                          ? "Jendela pengisian sudah ditutup"
+                          : "Jendela pengisian belum dipasang"
+                  }
+                  windowNote="Waktu kosong: sebelum jendela mulai / tidak pernah menutup otomatis. Mengosongkan keduanya lalu simpan = melepas jadwal."
+                  scheduleLabel="Durasi pintasan"
+                  opensLabel="Buka"
+                  closesLabel="Tutup"
+                  presetLabel="Buka setelah acara"
+                  clearLabel="Kosongkan jadwal"
+                  saveLabel="Simpan jendela"
+                  clearConfirmNote="Status jendela dihitung otomatis dari waktu saat ini — panitia hanya bisa mengisi selama terbuka."
+                />
+                <EvaluationResults
+                  eventId={id}
+                  exportAudience="panitia"
+                  evaluations={committeeEvaluations}
+                  sections={[]}
+                  questions={committeeQuestions}
+                  answers={committeeEvalAnswers}
+                />
               </div>
-            )}
-
-            <div>
-              <p className="text-label-caps uppercase tracking-wide text-on-surface-variant mb-2">Jawaban masuk</p>
-              <ul className="flex flex-col gap-3">
-                {committeeEvalResponses.map((r) => (
-                  <li key={r.id} className="bg-surface-container-low border border-outline-variant rounded-lg p-4 flex flex-col gap-2">
-                    <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
-                      <span className="text-body-md font-semibold text-on-background">{r.userName ?? "(tanpa nama)"}</span>
-                      {r.divisionName && <span className="text-label-caps text-on-surface-variant">{r.divisionName}</span>}
-                      <span className="text-body-sm text-on-surface-variant ml-auto">
-                        {new Date(r.createdAt).toLocaleString("id-ID", { dateStyle: "short", timeStyle: "short" })}
-                      </span>
-                      {canManageCommitteeEval && (
-                        <ConfirmButton
-                          title="Hapus evaluasi ini?"
-                          message={`Jawaban dari "${r.userName ?? "(tanpa nama)"}" dihapus permanen. Pengisinya bisa mengisi ulang selama jendela masih terbuka.`}
-                          action={deleteCommitteeEvaluation}
-                          payload={{ id: r.id, eventId: id }}
-                          className="text-label-caps uppercase tracking-wide text-error hover:bg-error-container/30 px-2 py-1 rounded-md"
-                        >
-                          Hapus
-                        </ConfirmButton>
-                      )}
-                    </div>
-                    <div className="flex flex-wrap gap-x-4 gap-y-1 text-body-sm text-on-surface-variant">
-                      {committeeEvalSummary.map((a) => (
-                        <span key={a.field}>
-                          {a.label.split(" ")[0]}: <strong className="text-on-background">{r[a.field]}</strong>
-                        </span>
-                      ))}
-                    </div>
-                    <p className="text-body-md text-on-background">
-                      <span className="text-label-caps text-on-surface-variant block">Berjalan baik</span>
-                      {r.wentWell}
-                    </p>
-                    <p className="text-body-md text-on-background">
-                      <span className="text-label-caps text-on-surface-variant block">Perlu diperbaiki</span>
-                      {r.toImprove}
-                    </p>
-                    {r.feedback && (
-                      <p className="text-body-md text-on-background">
-                        <span className="text-label-caps text-on-surface-variant block">Masukan tambahan</span>
-                        {r.feedback}
-                      </p>
-                    )}
-                  </li>
-                ))}
-              </ul>
-            </div>
-
-            {canManageCommitteeEval && (
-              <div className="flex flex-wrap gap-3">
-                {(["csv", "xlsx"] as const).map((fmt) => (
-                  <a
-                    key={fmt}
-                    href={`/api/console/events/${id}/committee-evaluation/export?format=${fmt}`}
-                    className="inline-flex items-center gap-2 border border-outline-variant text-on-background text-label-caps uppercase tracking-wide px-4 py-2 rounded-md hover:bg-surface-container-low transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-container focus-visible:ring-offset-2 focus-visible:ring-offset-background"
-                  >
-                    <Download size={16} aria-hidden="true" /> Unduh {fmt.toUpperCase()}
-                  </a>
-                ))}
+            ) : (
+              <div className="text-body-md text-on-surface-variant max-w-2xl flex flex-col gap-2">
+                <p>
+                  {committeeEvalStats.total > 0
+                    ? `${committeeEvalStats.total} dari ${committee.length} panitia sudah mengisi${
+                        committeeEvalStats.mine > 0 ? " — termasuk kamu. Terima kasih!" : "."
+                      }`
+                    : "Belum ada yang mengisi."}
+                </p>
+                <p>
+                  Rekap lengkap (nama &amp; jawaban) hanya tampil untuk BPH. Pengisian lewat{" "}
+                  <code className="text-body-sm bg-surface-container-low px-1.5 py-0.5 rounded">
+                    /events/{event.slug}/evaluasi-panitia
+                  </code>{" "}
+                  selama jendela terbuka.
+                </p>
               </div>
-            )}
-          </div>
-        ) : (
-          <p className="text-body-md text-on-surface-variant">
-            Belum ada jawaban. Pasang jendela waktu di atas lalu bagikan tautan{" "}
-            <code className="text-body-sm bg-surface-container-low px-1.5 py-0.5 rounded">
-              /events/{event.slug}/evaluasi-panitia
-            </code>{" "}
-            ke grup panitia.
-          </p>
-        )}
+            )
+          }
+        />
       </CollapsibleSection>
         </div>
 

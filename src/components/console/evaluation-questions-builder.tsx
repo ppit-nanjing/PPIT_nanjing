@@ -11,8 +11,10 @@ import {
 import {
   EVAL_QUESTION_TYPE_LABELS,
   EVAL_QUESTION_TYPES,
+  type EvalAudience,
   type EvalQuestionRow,
 } from "@/lib/event-evaluation-questions";
+import { committeeEvalTemplateQuestions } from "@/lib/committee-evaluation";
 import type { EvaluationSection } from "@/lib/event-evaluation-template";
 
 // Builder pertanyaan evaluasi per-acara + pratinjau form. Pola dan gaya sama
@@ -38,6 +40,7 @@ export function EvaluationQuestionsBuilder({
   eventId,
   slug,
   eventTitle,
+  audience = "peserta",
   questions,
   answerCounts,
   legacyResponseCount,
@@ -47,30 +50,58 @@ export function EvaluationQuestionsBuilder({
   eventId: string;
   slug: string;
   eventTitle: string;
+  /** Audiens pertanyaan yang disusun di builder ini. */
+  audience?: EvalAudience;
+  /** Pertanyaan audiens ini; kosong = form memakai template tetap audiensnya. */
   questions: EvalQuestionRow[];
   /** Jumlah jawaban yang sudah terkumpul per id pertanyaan (tipe dikunci kalau > 0). */
   answerCounts: Record<string, number>;
-  /** Respons format template tetap yang sudah masuk (hanya relevan saat belum ada pertanyaan sendiri). */
+  /** Respons format template tetap yang sudah masuk (hanya relevan untuk peserta). */
   legacyResponseCount: number;
   cityOptions: string[];
   sections: EvaluationSection[];
 }) {
+  const isCommittee = audience === "panitia";
+  const formPath = isCommittee ? `/events/${slug}/evaluasi-panitia` : `/events/${slug}/evaluasi`;
+  // Pratinjau meniru form publiknya: peserta tanpa pertanyaan sendiri melihat
+  // template tetap (sections), panitia tanpa pertanyaan sendiri melihat template
+  // kolektif di committee-evaluation.ts.
+  const previewQuestions = isCommittee
+    ? questions.length > 0
+      ? questions
+      : committeeEvalTemplateQuestions()
+    : questions.length > 0
+      ? questions
+      : undefined;
+
   return (
     <div className="flex flex-col gap-4">
       <p className="text-body-md text-on-surface-variant max-w-2xl">
-        Kosong = form evaluasi memakai <strong className="text-on-background">template standar</strong>{" "}
-        ({slug.startsWith("wif") ? "versi WIF 2026 X CGT" : "versi umum"}). Begitu ada satu pertanyaan di bawah,
-        form evaluasi publik memakai pertanyaan kamu saja. Peserta mengisinya lewat{" "}
-        <code className="text-on-background">/events/{slug}/evaluasi</code> (aktif setelah acara dipublikasikan).
+        {isCommittee ? (
+          <>
+            Kosong = form evaluasi panitia memakai <strong className="text-on-background">template kolektif</strong> (lima
+            penilaian Bintang 1–5 + pertanyaan teks). Begitu ada satu pertanyaan di bawah, form evaluasi panitia memakai
+            pertanyaan kamu saja. Panitia mengisinya lewat <code className="text-on-background">{formPath}</code> saat
+            jendela waktu dibuka.
+          </>
+        ) : (
+          <>
+            Kosong = form evaluasi memakai <strong className="text-on-background">template standar</strong>{" "}
+            ({slug.startsWith("wif") ? "versi WIF 2026 X CGT" : "versi umum"}). Begitu ada satu pertanyaan di bawah,
+            form evaluasi publik memakai pertanyaan kamu saja. Peserta mengisinya lewat{" "}
+            <code className="text-on-background">{formPath}</code> (aktif setelah acara dipublikasikan).
+          </>
+        )}
       </p>
 
       {questions.length === 0 && (
         <div className="flex flex-col gap-3 rounded-lg border border-outline-variant bg-surface-container-low p-4">
           <p className="text-body-md text-on-surface-variant">
-            Mau mengubah sebagian pertanyaan? Salin dulu template standar sebagai titik awal, lalu edit, hapus, atau
-            tambah sesukamu.
+            {isCommittee
+              ? "Mau menyesuaikan pertanyaannya? Salin dulu template kolektif sebagai titik awal, lalu edit, hapus, atau tambah sesukamu."
+              : "Mau mengubah sebagian pertanyaan? Salin dulu template standar sebagai titik awal, lalu edit, hapus, atau tambah sesukamu."}
           </p>
-          {legacyResponseCount > 0 && (
+          {!isCommittee && legacyResponseCount > 0 && (
             <p className="text-body-md text-on-background">
               Sudah ada <b>{legacyResponseCount}</b> respons dengan pertanyaan standar. Begitu kamu menambah pertanyaan
               sendiri, respons itu tidak lagi tampil di rekap, tapi tetap tersimpan dan ikut di ekspor CSV/Excel.
@@ -78,6 +109,7 @@ export function EvaluationQuestionsBuilder({
           )}
           <form action={startEvaluationFromTemplate} className="self-start">
             <input type="hidden" name="eventId" value={eventId} />
+            <input type="hidden" name="audience" value={audience} />
             <SubmitButton
               successMessage="Template disalin. Silakan edit pertanyaannya."
               className="border border-outline-variant px-4 py-2 rounded-md text-label-caps uppercase tracking-wide hover:bg-surface-container-lowest transition-colors"
@@ -99,6 +131,7 @@ export function EvaluationQuestionsBuilder({
             >
               <input type="hidden" name="id" value={q.id} />
               <input type="hidden" name="eventId" value={eventId} />
+              <input type="hidden" name="audience" value={audience} />
               <div className="grid grid-cols-1 sm:grid-cols-[1fr_auto] gap-3">
                 <label className="flex flex-col gap-1">
                   <span className={LABEL}>Pertanyaan {i + 1}</span>
@@ -158,6 +191,7 @@ export function EvaluationQuestionsBuilder({
         className="bg-surface-container-low border border-outline-variant rounded-lg p-4 flex flex-col gap-3"
       >
         <input type="hidden" name="eventId" value={eventId} />
+        <input type="hidden" name="audience" value={audience} />
         <p className="text-label-caps uppercase tracking-wide text-primary-container">+ Tambah Pertanyaan</p>
         <div className="grid grid-cols-1 sm:grid-cols-[1fr_auto] gap-3">
           <input
@@ -198,8 +232,9 @@ export function EvaluationQuestionsBuilder({
             eventTitle={eventTitle}
             cityOptions={cityOptions}
             sections={sections}
-            questions={questions}
+            questions={previewQuestions}
             preview
+            audience={audience}
           />
         </div>
       </details>

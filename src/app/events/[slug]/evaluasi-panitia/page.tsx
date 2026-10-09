@@ -6,12 +6,14 @@ import { and, eq } from "drizzle-orm";
 import { CalendarClock, CheckCircle2, Lock } from "lucide-react";
 import { auth } from "@/auth";
 import { db } from "@/db";
-import { eventCommittee, eventCommitteeEvaluations, eventDivisions, events } from "@/db/schema";
+import { eventCommittee, eventDivisions, eventEvaluations, events } from "@/db/schema";
 import { SiteNav } from "@/components/site-nav";
 import { SiteFooter } from "@/components/site-footer";
 import { PageHeader } from "@/components/page-header";
-import { CommitteeEvaluationForm } from "@/components/events/committee-evaluation-form";
-import { committeeEvalWindowState } from "@/lib/committee-evaluation";
+import { EventEvaluationForm } from "@/components/events/event-evaluation-form";
+import { submitCommitteeEvaluation } from "@/app/actions/committee-evaluation";
+import { committeeEvalTemplateQuestions, committeeEvalWindowState } from "@/lib/committee-evaluation";
+import { loadEvaluationQuestions } from "@/lib/event-evaluation-queries";
 import { getT } from "@/lib/i18n/server";
 import { INTL_LOCALE } from "@/lib/i18n/config";
 
@@ -55,7 +57,8 @@ export default async function CommitteeEvaluationPage({ params }: { params: Prom
   const { t, locale } = await getT();
 
   const [event] = await db.select().from(events).where(eq(events.slug, slug));
-  if (!event || event.status === "draft" || event.status === "scheduled") notFound();
+  // Acara dibatalkan tidak layak dievaluasi (K4) — sama dengan gerbang aksinya.
+  if (!event || event.status === "draft" || event.status === "scheduled" || event.status === "cancelled") notFound();
 
   const formatDateTime = (date: Date) =>
     new Intl.DateTimeFormat(INTL_LOCALE[locale], { dateStyle: "full", timeStyle: "short" }).format(date);
@@ -123,9 +126,15 @@ export default async function CommitteeEvaluationPage({ params }: { params: Prom
         );
       } else {
         const [existing] = await db
-          .select({ id: eventCommitteeEvaluations.id })
-          .from(eventCommitteeEvaluations)
-          .where(and(eq(eventCommitteeEvaluations.eventId, event.id), eq(eventCommitteeEvaluations.userId, session.user.id)));
+          .select({ id: eventEvaluations.id })
+          .from(eventEvaluations)
+          .where(
+            and(
+              eq(eventEvaluations.eventId, event.id),
+              eq(eventEvaluations.userId, session.user.id),
+              eq(eventEvaluations.audience, "panitia"),
+            ),
+          );
 
         if (existing) {
           body = (
@@ -142,10 +151,18 @@ export default async function CommitteeEvaluationPage({ params }: { params: Prom
             </div>
           );
         } else {
+          // Pertanyaan audiens panitia; kosong = template kolektif bawaan yang
+          // isinya sama dengan template di committee-evaluation.ts.
+          const customQuestions = await loadEvaluationQuestions(event.id, "panitia");
           body = (
-            <CommitteeEvaluationForm
+            <EventEvaluationForm
               slug={slug}
               eventTitle={event.title}
+              cityOptions={[]}
+              sections={[]}
+              questions={customQuestions.length > 0 ? customQuestions : committeeEvalTemplateQuestions()}
+              audience="panitia"
+              action={submitCommitteeEvaluation}
               userName={session.user.name ?? t("ceval.fallbackUserName")}
               divisionName={membership.divisionName}
             />

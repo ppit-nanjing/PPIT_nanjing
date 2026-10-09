@@ -7,8 +7,10 @@ import { eventEvaluationAnswers, eventEvaluationQuestions, events } from "@/db/s
 import { requireEventCapability } from "@/lib/event-access";
 import { id as idDictionary } from "@/lib/i18n/dictionaries/id";
 import { evaluationTemplateForSlug } from "@/lib/event-evaluation-template";
+import { committeeEvalTemplateQuestions } from "@/lib/committee-evaluation";
 import {
   type EvalQuestionType,
+  isEvalAudience,
   isEvalQuestionType,
   needsOptions,
   splitOptions,
@@ -32,7 +34,10 @@ async function eventSlug(eventId: string): Promise<string | null> {
 
 function revalidateEvaluation(eventId: string, slug: string | null) {
   revalidatePath(`/console/events/${eventId}`);
-  if (slug) revalidatePath(`/events/${slug}/evaluasi`);
+  if (slug) {
+    revalidatePath(`/events/${slug}/evaluasi`);
+    revalidatePath(`/events/${slug}/evaluasi-panitia`);
+  }
 }
 
 function parseOptions(formData: FormData, type: EvalQuestionType): string | null {
@@ -55,12 +60,16 @@ export async function saveEventEvaluationQuestion(formData: FormData) {
 
   const label = String(formData.get("label") ?? "").trim();
   const type = String(formData.get("type") ?? "rating");
+  // Audiens pertanyaan: "peserta" default; "panitia" untuk builder evaluasi panitia.
+  const audienceRaw = String(formData.get("audience") ?? "peserta");
+  if (!isEvalAudience(audienceRaw)) throw new Error("Audiens pertanyaan tidak valid");
   if (!label) throw new Error("Teks pertanyaan wajib diisi");
   if (label.length > MAX_LABEL) throw new Error(`Pertanyaan maksimal ${MAX_LABEL} karakter`);
   if (!isEvalQuestionType(type)) throw new Error("Tipe pertanyaan tidak valid");
 
   const values = {
     eventId,
+    audience: audienceRaw,
     label,
     type,
     options: parseOptions(formData, type),
@@ -74,7 +83,15 @@ export async function saveEventEvaluationQuestion(formData: FormData) {
     const [existing] = await db
       .select({ type: eventEvaluationQuestions.type })
       .from(eventEvaluationQuestions)
-      .where(and(eq(eventEvaluationQuestions.id, questionId), eq(eventEvaluationQuestions.eventId, eventId)));
+      .where(
+        and(
+          eq(eventEvaluationQuestions.id, questionId),
+          eq(eventEvaluationQuestions.eventId, eventId),
+          // `audience` ikut dicocokkan: memindahkan pertanyaan lintas audiens
+          // lewat form yang diutak-atik tidak boleh terjadi.
+          eq(eventEvaluationQuestions.audience, audienceRaw),
+        ),
+      );
     if (!existing) return;
     if (existing.type !== type) {
       // Jawaban lama disimpan menurut tipe lamanya (angka vs teks); mengubah tipe
@@ -96,7 +113,7 @@ export async function saveEventEvaluationQuestion(formData: FormData) {
         maxOrder: sql<number>`coalesce(max(${eventEvaluationQuestions.orderIndex}), 0)`,
       })
       .from(eventEvaluationQuestions)
-      .where(eq(eventEvaluationQuestions.eventId, eventId));
+      .where(and(eq(eventEvaluationQuestions.eventId, eventId), eq(eventEvaluationQuestions.audience, audienceRaw)));
     if (count >= MAX_QUESTIONS) throw new Error(`Maksimal ${MAX_QUESTIONS} pertanyaan evaluasi per acara`);
     await db.insert(eventEvaluationQuestions).values({ ...values, orderIndex: Number(maxOrder) + 1 });
   }
@@ -117,33 +134,58 @@ export async function deleteEventEvaluationQuestion(formData: FormData) {
 }
 
 /**
- * "Mulai dari template": menyalin pertanyaan template tetap acara ini (WIF atau
- * umum) menjadi pertanyaan buatan sendiri yang bisa diedit. Hanya jalan kalau
- * acara belum punya pertanyaan sendiri, supaya tidak menggandakan.
+ * "Mulai dari template": menyalin pertanyaan template bawaan audiens ini
+ * menjadi pertanyaan buatan sendiri yang bisa diedit. Peserta: template tetap
+ * acara (WIF atau umum). Panitia: template evaluasi kolektif di
+ * committee-evaluation.ts. Hanya jalan kalau audiens itu belum punya
+ * pertanyaan sendiri, supaya tidak menggandakan.
  */
 export async function startEvaluationFromTemplate(formData: FormData) {
   const eventId = String(formData.get("eventId") ?? "");
   await requireEventCapability(eventId, CAPABILITY);
+
+  const audienceRaw = String(formData.get("audience") ?? "peserta");
+  if (!isEvalAudience(audienceRaw)) throw new Error("Audiens pertanyaan tidak valid");
 
   const slug = await eventSlug(eventId);
   if (!slug) return;
   const [{ n }] = await db
     .select({ n: sql<number>`count(*)::int` })
     .from(eventEvaluationQuestions)
-    .where(eq(eventEvaluationQuestions.eventId, eventId));
+    .where(
+      and(
+        eq(eventEvaluationQuestions.eventId, eventId),
+        eq(eventEvaluationQuestions.audience, audienceRaw),
+      ),
+    );
   if (n > 0) return;
 
-  const dict = idDictionary as Record<string, string>;
-  const rows = evaluationTemplateForSlug(slug)
-    .sections.flatMap((section) => section.questions)
-    .map((q, i) => ({
-      eventId,
-      label: dict[q.labelKey] ?? q.label,
-      type: q.kind === "rating" ? ("rating" as const) : ("textarea" as const),
-      options: null,
-      required: q.kind === "rating" ? true : !q.optional,
-      orderIndex: i + 1,
-    }));
-  await db.insert(eventEvaluationQuestions).values(rows);
+  if (audienceRaw === "panitia") {
+    await db.insert(eventEvaluationQuestions).values(
+      committeeEvalTemplateQuestions().map((q, i) => ({
+        eventId,
+        audience: audienceRaw,
+        label: q.label,
+        type: q.type,
+        options: null,
+        required: q.required,
+        orderIndex: i + 1,
+      })),
+    );
+  } else {
+    const dict = idDictionary as Record<string, string>;
+    const rows = evaluationTemplateForSlug(slug)
+      .sections.flatMap((section) => section.questions)
+      .map((q, i) => ({
+        eventId,
+        audience: audienceRaw,
+        label: dict[q.labelKey] ?? q.label,
+        type: q.kind === "rating" ? ("rating" as const) : ("textarea" as const),
+        options: null,
+        required: q.kind === "rating" ? true : !q.optional,
+        orderIndex: i + 1,
+      }));
+    await db.insert(eventEvaluationQuestions).values(rows);
+  }
   revalidateEvaluation(eventId, slug);
 }

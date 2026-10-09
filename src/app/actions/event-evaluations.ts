@@ -2,17 +2,15 @@
 
 import { and, eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
+import { redirect } from "next/navigation";
 import { db } from "@/db";
 import { eventEvaluationAnswers, eventEvaluations, events } from "@/db/schema";
 import { requireEventConsoleAccess } from "@/lib/event-access";
-import { type EvalQuestionRow, validateEvalAnswer } from "@/lib/event-evaluation-questions";
+import { logEventAudit } from "@/lib/event-audit";
+import { type EvalFormState, type EvalQuestionRow, validateEvalAnswer } from "@/lib/event-evaluation-questions";
 import { loadEvaluationQuestions } from "@/lib/event-evaluation-queries";
 
-export type EventEvaluationFormState = {
-  ok?: boolean;
-  already?: boolean;
-  error?: "ratings" | "required" | "invalid" | "generic";
-};
+export type EventEvaluationFormState = EvalFormState;
 
 const TEXT_MAX = 2000;
 const NAME_MAX = 80;
@@ -122,6 +120,8 @@ export async function submitEventEvaluation(
   try {
     await db.insert(eventEvaluations).values({
       eventId: event.id,
+      // Respons template tetap selalu audiens peserta.
+      audience: "peserta",
       ratingRegistration,
       ratingFacilities,
       ratingCgt,
@@ -185,6 +185,7 @@ async function submitCustomEvaluation(
   const insertEvaluation = db.insert(eventEvaluations).values({
     id: evaluationId,
     eventId,
+    audience: "peserta",
     respondentName: name,
     respondentCity: city,
     anonymous,
@@ -223,7 +224,22 @@ export async function deleteEventEvaluation(formData: FormData): Promise<void> {
   const id = typeof formData.get("id") === "string" ? String(formData.get("id")) : "";
   const eventId = typeof formData.get("eventId") === "string" ? String(formData.get("eventId")) : "";
   if (!id || !eventId) return;
-  await requireEventConsoleAccess(eventId);
+  const access = await requireEventConsoleAccess(eventId);
+  // Respons audiens panitia memuat kritik bersama nama pengisinya (B2):
+  // menghapusnya hanya boleh BPH Kabinet/Teknologi atau BPH Panitia acara ini,
+  // dan wajib tercatat di audit log. Respons peserta mengikuti gerbang konsol
+  // acara seperti sebelumnya.
+  const [row] = await db
+    .select({ audience: eventEvaluations.audience })
+    .from(eventEvaluations)
+    .where(and(eq(eventEvaluations.id, id), eq(eventEvaluations.eventId, eventId)));
+  if (!row) return;
+  if (row.audience === "panitia") {
+    if (!access.isFullAdmin && !access.isBphPanitia) redirect("/console");
+    await logEventAudit(access.session.user.id, eventId, "committee_evaluation.deleted", {
+      after: { evaluationId: id },
+    });
+  }
   await db
     .delete(eventEvaluations)
     .where(and(eq(eventEvaluations.id, id), eq(eventEvaluations.eventId, eventId)));

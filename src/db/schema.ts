@@ -1405,48 +1405,6 @@ export const eventCommittee = pgTable(
   (t) => [uniqueIndex("event_committee_unique").on(t.eventId, t.userId)],
 );
 
-// Evaluasi panitia PER-ACARA, sifatnya KOLEKTIF: pengisi (panitia acara itu —
-// wajib login dan ada di event_committee) menilai kerja sama divisi dan
-// kepanitiaan secara keseluruhan, BUKAN skor per orang (sasaran per orang
-// sengaja dihindari; apresiasi individu lewat jalur lain). Satu jawaban per
-// pengisi per acara — unique (event_id, user_id), jadi tanpa token perangkat:
-// login yang jadi kunci dedupnya. Jendela pengisian diatur BPH lewat
-// events.committee_eval_opens_at / committee_eval_closes_at. Daftar
-// pertanyaannya tetap (placeholder, bisa diganti lewat satu berkas):
-// src/lib/committee-evaluation.ts.
-export const eventCommitteeEvaluations = pgTable(
-  "event_committee_evaluations",
-  {
-    id: uuid("id").defaultRandom().primaryKey(),
-    eventId: uuid("event_id")
-      .notNull()
-      .references(() => events.id, { onDelete: "cascade" }),
-    // Pengisi = panitia acara itu (baris event_committee). onDelete cascade:
-    // menghapus akun menghapus evaluasinya — ini umpan balik internal, bukan
-    // arsip keanggotaan (yang arsip ada di event_credits dengan snapshot nama).
-    userId: uuid("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
-    // Snapshot divisi evaluator SAAT MENGISI — agregat per divisi tetap benar
-    // walau penempatannya berubah kemudian. NULL = panitia inti tanpa divisi.
-    divisionId: uuid("division_id").references((): AnyPgColumn => eventDivisions.id, {
-      onDelete: "set null",
-    }),
-    // Lima penilaian kolektif, skala 1–5 (placeholder — lihat lib di atas).
-    ratingCoordination: integer("rating_coordination").notNull(),
-    ratingTeamwork: integer("rating_teamwork").notNull(),
-    ratingCommunication: integer("rating_communication").notNull(),
-    ratingWorkload: integer("rating_workload").notNull(),
-    ratingSatisfaction: integer("rating_satisfaction").notNull(),
-    // "Apa yang berjalan baik?" dan "Apa yang perlu diperbaiki?" — wajib,
-    // supaya rekap selalu punya bahan kualitatif, bukan cuma angka.
-    wentWell: text("went_well").notNull(),
-    toImprove: text("to_improve").notNull(),
-    // Masukan bebas tambahan — opsional.
-    feedback: text("feedback"),
-    createdAt: timestamp("created_at").notNull().defaultNow(),
-  },
-  (t) => [uniqueIndex("event_committee_evaluations_unique").on(t.eventId, t.userId)],
-);
-
 // Kredit / arsip kepanitiaan — FITUR TERPISAH dari event_committee (Spesifikasi
 // §10). Diisi Sekretaris saat LPJ sebagai daftar "siapa saja panitianya" untuk
 // ditampilkan di halaman acara publik. Mengisi baris di sini TIDAK memberi akses
@@ -1623,9 +1581,16 @@ export const designVotes = pgTable("design_votes", {
 });
 
 // ---------- Evaluasi acara (pasca-acara) ----------
-// Satu baris = satu respons evaluasi dari satu perangkat. Identitas boleh
-// kosong; `anonymous` menyembunyikan nama/kota di laporan. Token perangkat +
-// unique (event, token) mencegah isi dobel, tanpa perlu akun.
+// Satu baris = satu respons evaluasi. Dua audiens di satu tabel, dibedakan
+// `audience`:
+// - "peserta": respons peserta acara. Identitas boleh kosong; `anonymous`
+//   menyembunyikan nama/kota di laporan. Token perangkat + unique (event,
+//   token) mencegah isi dobel, tanpa perlu akun.
+// - "panitia": evaluasi kolektif panitia acara ini (wajib login + tercatat di
+//   event_committee). Identitasnya akun (userId), divisinya snapshot saat
+//   mengisi (divisionId), token `panitia:<userId>` = kunci dedup per orang.
+//   Jendela pengisiannya diatur BPH lewat events.committee_eval_opens_at /
+//   committee_eval_closes_at (lihat src/lib/committee-evaluation.ts).
 export const eventEvaluations = pgTable(
   "event_evaluations",
   {
@@ -1633,6 +1598,8 @@ export const eventEvaluations = pgTable(
     eventId: uuid("event_id")
       .notNull()
       .references(() => events.id, { onDelete: "cascade" }),
+    // Audiens respons; CHECK constraint-nya di drizzle/0046_committee_evaluation_on_builder.sql.
+    audience: text("audience").notNull().default("peserta"),
     // 4 penilaian bawaan (template WIF / umum). NULL untuk respons acara yang
     // memakai pertanyaan buatan panitia: jawabannya ada di eventEvaluationAnswers.
     // Dipakai juga sebagai pembeda: ratingRegistration IS NULL = respons kustom.
@@ -1650,15 +1617,31 @@ export const eventEvaluations = pgTable(
     respondentCity: text("respondent_city"),
     anonymous: boolean("anonymous").notNull().default(false),
     responderToken: text("responder_token").notNull(),
+    // Khusus audiens "panitia": pengisi (akun) + snapshot divisinya saat mengisi.
+    // NULL di respons peserta. onDelete set null: evaluasi tetap ada walau akun
+    // atau divisi dihapus — ini umpan balik internal, bukan arsip keanggotaan.
+    userId: uuid("user_id").references(() => users.id, { onDelete: "set null" }),
+    divisionId: uuid("division_id").references((): AnyPgColumn => eventDivisions.id, {
+      onDelete: "set null",
+    }),
     createdAt: timestamp("created_at").notNull().defaultNow(),
   },
-  (t) => [uniqueIndex("event_evaluations_event_token_idx").on(t.eventId, t.responderToken)],
+  (t) => [
+    uniqueIndex("event_evaluations_event_token_idx").on(t.eventId, t.responderToken),
+    // Satu orang satu evaluasi panitia per acara. Partial: respons peserta
+    // (userId NULL) tidak ikut aturan ini.
+    uniqueIndex("event_evaluations_committee_user_idx")
+      .on(t.eventId, t.userId)
+      .where(sql`${t.audience} = 'panitia'`),
+  ],
 );
 
 // Pertanyaan evaluasi buatan panitia (pola sama dengan eventQuestions untuk form
 // pendaftaran, tapi tabel terpisah supaya form pendaftaran tidak ikut berubah).
-// Acara tanpa baris di sini memakai template tetap (event-evaluation-template.ts).
-// `type`: rating (1-10) | stars (1-5) | text | textarea | select | radio | multiselect.
+// Acara tanpa baris di sini memakai template tetap (event-evaluation-template.ts
+// untuk peserta, committee-evaluation.ts untuk panitia). `type`: rating (1-10) |
+// stars (1-5) | text | textarea | select | radio | multiselect. `audience`
+// memisahkan form untuk peserta dan form untuk panitia pada acara yang sama.
 export const eventEvaluationQuestions = pgTable(
   "event_evaluation_questions",
   {
@@ -1666,6 +1649,8 @@ export const eventEvaluationQuestions = pgTable(
     eventId: uuid("event_id")
       .notNull()
       .references(() => events.id, { onDelete: "cascade" }),
+    // "peserta" | "panitia"; CHECK constraint-nya di drizzle/0046_committee_evaluation_on_builder.sql.
+    audience: text("audience").notNull().default("peserta"),
     label: text("label").notNull(),
     type: text("type").notNull(),
     // Pilihan untuk select/radio/multiselect, satu opsi per baris.
@@ -1701,89 +1686,4 @@ export const eventEvaluationAnswers = pgTable(
   ],
 );
 
-// ---------- Formulir template (pengganti Google Forms internal) ----------
-// Satu template = satu formulir mandiri dengan URL publik sendiri (mis.
-// /recruitment, /evaluation/committee). Struktur pertanyaannya disimpan sebagai
-// JSON `sections` supaya BPH bisa mengganti pertanyaan/label/deskripsi dari
-// console tanpa menyentuh kode — pola yang sama dengan membership_form_fields,
-// tapi multi-template. Jawaban mengikuti field id, jadi mengubah urutan/label
-// tidak merusak data lama; MENGHAPUS field id memang membuat jawaban lama tak
-// tampil lagi (label lama tetap tersimpan di baris ekspor yang sudah dibuat).
-export const formTemplateStatusEnum = pgEnum("form_template_status", ["draft", "published", "closed"]);
 
-export const formFieldTypeEnum = pgEnum("form_field_type", [
-  "short_text",
-  "paragraph",
-  "email",
-  "tel",
-  "number",
-  "date",
-  "select",
-  "radio",
-  "multiselect",
-  "scale",
-  "file",
-]);
-
-export type FormField = {
-  id: string;
-  type: (typeof formFieldTypeEnum.enumValues)[number];
-  label: string;
-  description?: string;
-  placeholder?: string;
-  required: boolean;
-  // Pilihan untuk select/radio/multiselect.
-  options?: string[];
-  // Untuk scale: nilai maksimum (default 5, selalu mulai dari 1).
-  scaleMax?: number;
-  lowLabel?: string;
-  highLabel?: string;
-};
-
-export type FormSection = {
-  id: string;
-  title: string;
-  description?: string;
-  fields: FormField[];
-};
-
-export type FormAnswers = Record<string, string | number | string[]>;
-
-export const formTemplates = pgTable("form_templates", {
-  id: uuid("id").defaultRandom().primaryKey(),
-  slug: text("slug").notNull().unique(),
-  title: text("title").notNull(),
-  description: text("description"),
-  status: formTemplateStatusEnum("status").notNull().default("draft"),
-  sections: jsonb("sections").$type<FormSection[]>().notNull().default([]),
-  // Pesan sukses kustom yang tampil setelah kirim; kosong = default bilingual.
-  successMessage: text("success_message"),
-  // Email admin opsional untuk notifikasi submission baru (no-op kalau kosong).
-  notifyEmail: text("notify_email"),
-  createdAt: timestamp("created_at").notNull().defaultNow(),
-  updatedAt: timestamp("updated_at").notNull().defaultNow(),
-});
-
-export const formSubmissions = pgTable(
-  "form_submissions",
-  {
-    id: uuid("id").defaultRandom().primaryKey(),
-    templateId: uuid("template_id")
-      .notNull()
-      .references(() => formTemplates.id, { onDelete: "cascade" }),
-    answers: jsonb("answers").$type<FormAnswers>().notNull(),
-    // Token perangkat anti isi dobel (pola event_evaluations) + pengisi yang
-    // kebetulan login ikut tercatat supaya mudah dihubungi kembali.
-    responderToken: text("responder_token").notNull(),
-    submitterUserId: uuid("submitter_user_id").references(() => users.id, { onDelete: "set null" }),
-    reviewed: boolean("reviewed").notNull().default(false),
-    reviewedBy: uuid("reviewed_by").references(() => users.id, { onDelete: "set null" }),
-    reviewedAt: timestamp("reviewed_at"),
-    internalNote: text("internal_note"),
-    createdAt: timestamp("created_at").notNull().defaultNow(),
-  },
-  (t) => [uniqueIndex("form_submissions_template_token_idx").on(t.templateId, t.responderToken)],
-);
-
-export type FormTemplateRow = typeof formTemplates.$inferSelect;
-export type FormSubmissionRow = typeof formSubmissions.$inferSelect;
