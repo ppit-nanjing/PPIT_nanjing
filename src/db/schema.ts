@@ -440,6 +440,13 @@ export const events = pgTable("events", {
   // 'published') once this time passes. Lets admins prepare an event fully and
   // have it go live automatically at a chosen moment.
   scheduledPublishAt: timestamp("scheduled_publish_at"),
+  // Jendela pengisian evaluasi panitia (kolom di tabel acara, bukan tabel
+  // terpisah — satu acara punya tepat satu jendela). Dua-duanya NULL = belum
+  // dijadwalkan. Status jendela dihitung dari waktu saat ini oleh
+  // committeeEvalWindowState() (src/lib/committee-evaluation.ts) — tidak butuh
+  // cron — dan BPH bisa membuka/menutup manual kapan pun lewat konsol kegiatan.
+  committeeEvalOpensAt: timestamp("committee_eval_opens_at"),
+  committeeEvalClosesAt: timestamp("committee_eval_closes_at"),
   departmentId: uuid("department_id").references(() => departments.id),
   createdBy: uuid("created_by").references(() => users.id),
   // The HTM ("berbayar") toggle itself - kept separate from feeCny because the
@@ -1574,9 +1581,16 @@ export const designVotes = pgTable("design_votes", {
 });
 
 // ---------- Evaluasi acara (pasca-acara) ----------
-// Satu baris = satu respons evaluasi dari satu perangkat. Identitas boleh
-// kosong; `anonymous` menyembunyikan nama/kota di laporan. Token perangkat +
-// unique (event, token) mencegah isi dobel, tanpa perlu akun.
+// Satu baris = satu respons evaluasi. Dua audiens di satu tabel, dibedakan
+// `audience`:
+// - "peserta": respons peserta acara. Identitas boleh kosong; `anonymous`
+//   menyembunyikan nama/kota di laporan. Token perangkat + unique (event,
+//   token) mencegah isi dobel, tanpa perlu akun.
+// - "panitia": evaluasi kolektif panitia acara ini (wajib login + tercatat di
+//   event_committee). Identitasnya akun (userId), divisinya snapshot saat
+//   mengisi (divisionId), token `panitia:<userId>` = kunci dedup per orang.
+//   Jendela pengisiannya diatur BPH lewat events.committee_eval_opens_at /
+//   committee_eval_closes_at (lihat src/lib/committee-evaluation.ts).
 export const eventEvaluations = pgTable(
   "event_evaluations",
   {
@@ -1584,6 +1598,8 @@ export const eventEvaluations = pgTable(
     eventId: uuid("event_id")
       .notNull()
       .references(() => events.id, { onDelete: "cascade" }),
+    // Audiens respons; CHECK constraint-nya di drizzle/0046_committee_evaluation_on_builder.sql.
+    audience: text("audience").notNull().default("peserta"),
     // 4 penilaian bawaan (template WIF / umum). NULL untuk respons acara yang
     // memakai pertanyaan buatan panitia: jawabannya ada di eventEvaluationAnswers.
     // Dipakai juga sebagai pembeda: ratingRegistration IS NULL = respons kustom.
@@ -1601,15 +1617,31 @@ export const eventEvaluations = pgTable(
     respondentCity: text("respondent_city"),
     anonymous: boolean("anonymous").notNull().default(false),
     responderToken: text("responder_token").notNull(),
+    // Khusus audiens "panitia": pengisi (akun) + snapshot divisinya saat mengisi.
+    // NULL di respons peserta. onDelete set null: evaluasi tetap ada walau akun
+    // atau divisi dihapus — ini umpan balik internal, bukan arsip keanggotaan.
+    userId: uuid("user_id").references(() => users.id, { onDelete: "set null" }),
+    divisionId: uuid("division_id").references((): AnyPgColumn => eventDivisions.id, {
+      onDelete: "set null",
+    }),
     createdAt: timestamp("created_at").notNull().defaultNow(),
   },
-  (t) => [uniqueIndex("event_evaluations_event_token_idx").on(t.eventId, t.responderToken)],
+  (t) => [
+    uniqueIndex("event_evaluations_event_token_idx").on(t.eventId, t.responderToken),
+    // Satu orang satu evaluasi panitia per acara. Partial: respons peserta
+    // (userId NULL) tidak ikut aturan ini.
+    uniqueIndex("event_evaluations_committee_user_idx")
+      .on(t.eventId, t.userId)
+      .where(sql`${t.audience} = 'panitia'`),
+  ],
 );
 
 // Pertanyaan evaluasi buatan panitia (pola sama dengan eventQuestions untuk form
 // pendaftaran, tapi tabel terpisah supaya form pendaftaran tidak ikut berubah).
-// Acara tanpa baris di sini memakai template tetap (event-evaluation-template.ts).
-// `type`: rating (1-10) | stars (1-5) | text | textarea | select | radio | multiselect.
+// Acara tanpa baris di sini memakai template tetap (event-evaluation-template.ts
+// untuk peserta, committee-evaluation.ts untuk panitia). `type`: rating (1-10) |
+// stars (1-5) | text | textarea | select | radio | multiselect. `audience`
+// memisahkan form untuk peserta dan form untuk panitia pada acara yang sama.
 export const eventEvaluationQuestions = pgTable(
   "event_evaluation_questions",
   {
@@ -1617,6 +1649,8 @@ export const eventEvaluationQuestions = pgTable(
     eventId: uuid("event_id")
       .notNull()
       .references(() => events.id, { onDelete: "cascade" }),
+    // "peserta" | "panitia"; CHECK constraint-nya di drizzle/0046_committee_evaluation_on_builder.sql.
+    audience: text("audience").notNull().default("peserta"),
     label: text("label").notNull(),
     type: text("type").notNull(),
     // Pilihan untuk select/radio/multiselect, satu opsi per baris.

@@ -2,17 +2,16 @@
 
 import { and, eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
+import { redirect } from "next/navigation";
 import { db } from "@/db";
 import { eventEvaluationAnswers, eventEvaluations, events } from "@/db/schema";
-import { requireEventConsoleAccess } from "@/lib/event-access";
-import { type EvalQuestionRow, validateEvalAnswer } from "@/lib/event-evaluation-questions";
+import { canEditCommitteeEvaluation, requireEventConsoleAccess } from "@/lib/event-access";
+import { isUniqueViolation } from "@/lib/db-errors";
+import { logEventAudit } from "@/lib/event-audit";
+import { type EvalFormState, type EvalQuestionRow, validateEvalAnswer } from "@/lib/event-evaluation-questions";
 import { loadEvaluationQuestions } from "@/lib/event-evaluation-queries";
 
-export type EventEvaluationFormState = {
-  ok?: boolean;
-  already?: boolean;
-  error?: "ratings" | "required" | "invalid" | "generic";
-};
+export type EventEvaluationFormState = EvalFormState;
 
 const TEXT_MAX = 2000;
 const NAME_MAX = 80;
@@ -34,25 +33,6 @@ function rating(formData: FormData, key: string): number | null {
   const value = typeof raw === "string" ? Number.parseInt(raw, 10) : Number.NaN;
   if (!Number.isInteger(value) || value < 1 || value > 10) return null;
   return value;
-}
-
-function isUniqueViolation(error: unknown): boolean {
-  let current: unknown = error;
-  for (let depth = 0; depth < 5 && current; depth += 1) {
-    if (
-      typeof current === "object" &&
-      current !== null &&
-      "code" in current &&
-      (current as { code?: unknown }).code === "23505"
-    ) {
-      return true;
-    }
-    current =
-      typeof current === "object" && current !== null && "cause" in current
-        ? (current as { cause?: unknown }).cause
-        : null;
-  }
-  return false;
 }
 
 export async function submitEventEvaluation(
@@ -122,6 +102,8 @@ export async function submitEventEvaluation(
   try {
     await db.insert(eventEvaluations).values({
       eventId: event.id,
+      // Respons template tetap selalu audiens peserta.
+      audience: "peserta",
       ratingRegistration,
       ratingFacilities,
       ratingCgt,
@@ -185,6 +167,7 @@ async function submitCustomEvaluation(
   const insertEvaluation = db.insert(eventEvaluations).values({
     id: evaluationId,
     eventId,
+    audience: "peserta",
     respondentName: name,
     respondentCity: city,
     anonymous,
@@ -223,9 +206,28 @@ export async function deleteEventEvaluation(formData: FormData): Promise<void> {
   const id = typeof formData.get("id") === "string" ? String(formData.get("id")) : "";
   const eventId = typeof formData.get("eventId") === "string" ? String(formData.get("eventId")) : "";
   if (!id || !eventId) return;
-  await requireEventConsoleAccess(eventId);
-  await db
-    .delete(eventEvaluations)
+  const access = await requireEventConsoleAccess(eventId);
+  // Respons audiens panitia memuat kritik bersama nama pengisinya (B2):
+  // menghapusnya hanya boleh BPH Kabinet/Teknologi atau BPH Panitia acara ini,
+  // dan wajib tercatat di audit log. Respons peserta mengikuti gerbang konsol
+  // acara seperti sebelumnya.
+  const [row] = await db
+    .select({ audience: eventEvaluations.audience })
+    .from(eventEvaluations)
     .where(and(eq(eventEvaluations.id, id), eq(eventEvaluations.eventId, eventId)));
+  if (!row) return;
+  // Respons panitia: gerbang ubah evaluasi panitia (ikut kunci kepanitiaan).
+  if (row.audience === "panitia" && !canEditCommitteeEvaluation(access)) redirect(`/console/events/${eventId}`);
+  const deleted = await db
+    .delete(eventEvaluations)
+    .where(and(eq(eventEvaluations.id, id), eq(eventEvaluations.eventId, eventId)))
+    .returning({ id: eventEvaluations.id });
+  // Audit SETELAH baris benar-benar terhapus: kalau DELETE gagal atau barisnya
+  // sudah dihapus orang lain lebih dulu, log tidak boleh mengklaim penghapusan.
+  if (row.audience === "panitia" && deleted.length > 0) {
+    await logEventAudit(access.session.user.id, eventId, "committee_evaluation.deleted", {
+      after: { evaluationId: id },
+    });
+  }
   revalidatePath(`/console/events/${eventId}`);
 }

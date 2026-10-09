@@ -1,7 +1,7 @@
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import { db } from "@/db";
 import { eventEvaluationAnswers, eventEvaluationQuestions, eventEvaluations } from "@/db/schema";
-import type { EvalQuestionRow } from "@/lib/event-evaluation-questions";
+import type { EvalAudience, EvalQuestionRow } from "@/lib/event-evaluation-questions";
 import type { EvalAnswerRow } from "@/lib/event-evaluation-results";
 
 // Pembacaan pertanyaan/jawaban evaluasi buatan panitia, satu tempat untuk halaman
@@ -44,21 +44,26 @@ async function tolerant<T>(read: () => Promise<T>, fallback: T): Promise<T> {
   }
 }
 
-/** Pertanyaan evaluasi buatan panitia untuk satu acara, berurutan. Kosong = pakai template tetap. */
-export function loadEvaluationQuestions(eventId: string): Promise<EvalQuestionRow[]> {
+/**
+ * Pertanyaan evaluasi buatan panitia untuk satu acara + audiens, berurutan.
+ * Kosong = pakai template tetap audiens itu. Default "peserta" supaya pemanggil
+ * lama (form publik peserta, submit, ekspor) tetap benar bahkan kalau lupa
+ * menyebut audiens — form panitia HARUS memanggilnya eksplisit.
+ */
+export function loadEvaluationQuestions(eventId: string, audience: EvalAudience = "peserta"): Promise<EvalQuestionRow[]> {
   return tolerant(
     async () =>
       (await db
         .select()
         .from(eventEvaluationQuestions)
-        .where(eq(eventEvaluationQuestions.eventId, eventId))
+        .where(and(eq(eventEvaluationQuestions.eventId, eventId), eq(eventEvaluationQuestions.audience, audience)))
         .orderBy(eventEvaluationQuestions.orderIndex, eventEvaluationQuestions.id)) as EvalQuestionRow[],
     [],
   );
 }
 
-/** Semua jawaban dari semua respons acara ini. */
-export function loadEvaluationAnswers(eventId: string): Promise<EvalAnswerRow[]> {
+/** Semua jawaban dari semua respons acara ini untuk satu audiens. */
+export function loadEvaluationAnswers(eventId: string, audience: EvalAudience = "peserta"): Promise<EvalAnswerRow[]> {
   return tolerant(
     () =>
       db
@@ -72,7 +77,7 @@ export function loadEvaluationAnswers(eventId: string): Promise<EvalAnswerRow[]>
         })
         .from(eventEvaluationAnswers)
         .innerJoin(eventEvaluations, eq(eventEvaluationAnswers.evaluationId, eventEvaluations.id))
-        .where(eq(eventEvaluations.eventId, eventId)),
+        .where(and(eq(eventEvaluations.eventId, eventId), eq(eventEvaluations.audience, audience))),
     [],
   );
 }

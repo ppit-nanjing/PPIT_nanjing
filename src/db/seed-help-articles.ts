@@ -311,6 +311,36 @@ Melihat hasil
 - Tombol hapus (ikon tempat sampah) di tiap respons untuk membuang jawaban spam/uji coba.`,
   },
   {
+    slug: "evaluasi-panitia",
+    section: SERING_BINGUNG,
+    title: "Evaluasi Panitia — Menilai Kerja Kepanitiaan Bersama",
+    content: `Evaluasi panitia dipakai setelah acara untuk menilai kerja sama divisi dan kepanitiaan secara keseluruhan, bukan menilai orang per orang. Yang mengisi hanya panitia acara itu sendiri, wajib login, dan masing-masing cukup sekali.
+
+Siapa yang mengatur
+- BPH Panitia acara itu (ketua, wakil, sekretaris, supervisor) dan BPH Kabinet.
+- Anggota panitia lain hanya melihat berapa orang yang sudah mengisi, tanpa nama dan tanpa isi jawaban.
+- 14 hari setelah acara selesai, acara terkunci: BPH Panitia hanya bisa membaca rekap; perubahan lewat BPH Kabinet.
+
+Membuka evaluasi
+1. Buka /console/events/<id> → section "Evaluasi Acara" → tab "Panitia".
+2. Isi jendela pengisian: "Buka" dan "Tutup" (jam Tiongkok). Tombol "Buka setelah acara" mengisi keduanya otomatis: buka saat acara selesai, tutup 3/7/14 hari kemudian.
+3. Klik "Simpan jendela". Saat pertama kali disimpan, pertanyaan template (lima penilaian bintang 1–5 + tiga pertanyaan teks) otomatis disiapkan.
+4. Salin "Tautan pengisian untuk grup panitia" lalu bagikan ke grup panitia. Jangan bagikan tautan evaluasi peserta ke grup panitia — itu form yang berbeda.
+
+Mengubah pertanyaan
+- Section "Pertanyaan Evaluasi" → tab "Panitia". Tambah, ubah, atau hapus pertanyaan seperti builder evaluasi peserta.
+- Tipe pertanyaan terkunci setelah ada jawaban.
+- Jangan hapus semua pertanyaan saat jendela terbuka: form panitia akan menampilkan "Evaluasi belum disiapkan".
+
+Siapa yang bisa membaca jawaban
+- Jawaban tercatat atas nama akun pengisi beserta divisinya. Yang bisa membaca nama dan isinya hanya BPH Panitia acara itu dan BPH Kabinet. Pengisi diberi tahu hal ini di form-nya.
+
+Melihat hasil
+- Tab "Panitia" di section "Evaluasi Acara": rata-rata tiap penilaian, grafik, dan semua jawaban teks.
+- Tombol CSV / Excel untuk rekap LPJ.
+- Respons bisa dihapus (misalnya salah isi); setiap penghapusan tercatat di Riwayat Audit acara.`,
+  },
+  {
     slug: "karier",
     section: SERING_BINGUNG,
     title: "Lowongan — Memasang, Memproses Lamaran, dan SOP Menerima Perusahaan",

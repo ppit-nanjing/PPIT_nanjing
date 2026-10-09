@@ -19,7 +19,7 @@ import { EventQuestionFields } from "@/components/events/event-question-fields";
 import { EventShareLinks } from "@/components/console/event-share-links";
 import { getSiteOrigin } from "@/lib/site";
 import { EVENT_COMMITTEE_ROLE_LABEL } from "@/lib/event-capabilities";
-import { requireEventConsoleAccess } from "@/lib/event-access";
+import { canEditCommitteeEvaluation, canReadCommitteeEvaluation, requireEventConsoleAccess } from "@/lib/event-access";
 import { EVENT_STATUS_LABEL as STATUS_LABEL } from "@/lib/event-status-labels";
 import { EVENT_AUDIT_ACTION_LABEL, type EventAuditAction } from "@/lib/event-audit";
 import { ImageUploadCropper } from "@/components/upload/image-upload-cropper";
@@ -38,10 +38,14 @@ import { loadEvaluationAnswers, loadEvaluationQuestions } from "@/lib/event-eval
 import { ReservationManager } from "@/components/console/reservation-manager";
 import { checkInBlockReason } from "@/lib/event-checkin";
 import { feeTierAt, amountForTier } from "@/lib/event-fee";
-import { toDateLocalInput } from "@/lib/datetime";
+import { toChinaLocalInput, toDateLocalInput } from "@/lib/datetime";
 import { ConfirmButton } from "@/components/console/confirm-button";
 import { FlashToast } from "@/components/console/flash-toast";
 import { SubmitButton } from "@/components/console/submit-button";
+import { CommitteeEvalWindowEditor } from "@/components/console/committee-eval-window-editor";
+import { EvalAudienceTabs } from "@/components/console/eval-audience-tabs";
+import { CopyButton } from "@/components/copy-button";
+import { committeeEvalWindowState } from "@/lib/committee-evaluation";
 import { Download, Eye, Images } from "lucide-react";
 
 const QUESTION_TYPE_LABELS: Record<string, string> = {
@@ -76,6 +80,17 @@ export default async function ConsoleEventDetailPage({ params }: { params: Promi
     evaluasi: `${shareOrigin}${sharePaths.evaluasi}`,
   };
 
+  // ===== Evaluasi panitia (kolektif, audiens "panitia" di event_evaluations) =====
+  // GERBANG B2 — dihitung SEBELUM Promise.all supaya jawaban beserta nama
+  // pengisinya TIDAK PERNAH diambil dari database untuk yang tidak berhak.
+  // Editor jendela waktu, rekap lengkap, dan ekspor hanya untuk BPH Kabinet/
+  // Teknologi atau BPH Panitia acara ini; panitia lain cukup melihat jumlah
+  // pengisi dan statusnya sendiri.
+  const canManageCommitteeEval = canReadCommitteeEvaluation(access);
+  // Mengubah (jendela, pertanyaan panitia, hapus respons) ikut kunci kepanitiaan:
+  // BPH Panitia hanya bisa membaca rekap setelah acara terkunci.
+  const canEditCommitteeEval = canEditCommitteeEvaluation(access);
+
   // Semua query di bawah hanya bergantung pada `id` dan hak akses, bukan satu
   // sama lain, jadi dijalankan serentak: satu putaran ke database alih-alih
   // belasan putaran berurutan (tiap putaran ~240 ms bila fungsi dan database
@@ -93,7 +108,7 @@ export default async function ConsoleEventDetailPage({ params }: { params: Promi
     { divisions, members: committee }, // struktur kepanitiaan acara ini (Departemen -> sub-tim)
     questions,
     feeOptions,
-    evaluations,
+    evaluations, // respons evaluasi audiens PESERTA (tab Peserta di section Evaluasi Acara)
     volunteerApps,
     candidates, // kandidat penugasan: SEMUA akun, kepanitiaan tidak terikat jabatan struktural
     albums, // album galeri untuk section "Setelah Acara"
@@ -101,9 +116,13 @@ export default async function ConsoleEventDetailPage({ params }: { params: Promi
     auditRows,
     credits,
     eventArticles,
-    evalQuestions, // pertanyaan evaluasi buatan panitia (kosong = template tetap)
-    evalAnswers, // jawaban untuk pertanyaan itu, semua respons acara ini
+    evalQuestions, // pertanyaan evaluasi buatan panitia, audiens peserta (kosong = template tetap)
+    evalAnswers, // jawaban pertanyaan itu, dari respons audiens peserta
+    evalQuestionsPanitia, // pertanyaan audiens panitia (kosong = template kolektif)
     cityRows, // untuk pratinjau form evaluasi, hanya bila viewer boleh menyusunnya
+    committeeEvalRows, // respons audiens panitia + nama/divisi — HANYA untuk pengelola (B2)
+    committeeEvalAnswers, // jawaban audiens panitia — HANYA untuk pengelola (B2)
+    committeeEvalStats, // (non-pengelola) jumlah respons panitia + apakah dirinya sudah mengisi
     [assetItems, assetReservations], // reservasi aset Inventaris, hanya untuk yang punya grant
     shareLinkRows, // tautan pendek pendaftaran & evaluasi yang sudah dibuat
   ] = await Promise.all([
@@ -139,10 +158,12 @@ export default async function ConsoleEventDetailPage({ params }: { params: Promi
       .from(eventFeeOptions)
       .where(eq(eventFeeOptions.eventId, id))
       .orderBy(eventFeeOptions.orderIndex, eventFeeOptions.id),
+    // Respons evaluasi audiens PESERTA saja — jawaban panitia (audience 'panitia')
+    // tampil di tab tersendiri dan tidak boleh ikut menghitung rata-rata peserta.
     db
       .select()
       .from(eventEvaluations)
-      .where(eq(eventEvaluations.eventId, id))
+      .where(and(eq(eventEvaluations.eventId, id), eq(eventEvaluations.audience, "peserta")))
       .orderBy(desc(eventEvaluations.createdAt)),
     db
       .select({
@@ -197,11 +218,45 @@ export default async function ConsoleEventDetailPage({ params }: { params: Promi
           .where(eq(newsArticles.eventId, id))
           .orderBy(desc(newsArticles.publishedAt))
       : Promise.resolve([]),
+    // Pertanyaan + jawaban audiens PESERTA (tab Peserta & builder-nya).
     loadEvaluationQuestions(id),
     loadEvaluationAnswers(id),
+    // Pertanyaan audiens panitia (builder + rekap panitia di tab masing-masing).
+    loadEvaluationQuestions(id, "panitia"),
     canEditEvaluationQuestions
       ? db.select({ label: coverageCities.label }).from(coverageCities)
       : Promise.resolve([]),
+    // B2: baris evaluasi panitia beserta nama & divisinya hanya diambil untuk
+    // pengelola (BPH Kabinet/Teknologi atau BPH Panitia acara ini). Panitia lain
+    // tidak perlu isinya — cukup angka di committeeEvalStats di bawah.
+    canManageCommitteeEval
+      ? db
+          .select({
+            row: eventEvaluations,
+            userName: users.name,
+            divisionName: eventDivisions.name,
+          })
+          .from(eventEvaluations)
+          .leftJoin(users, eq(eventEvaluations.userId, users.id))
+          .leftJoin(eventDivisions, eq(eventEvaluations.divisionId, eventDivisions.id))
+          .where(and(eq(eventEvaluations.eventId, id), eq(eventEvaluations.audience, "panitia")))
+          .orderBy(desc(eventEvaluations.createdAt))
+      : Promise.resolve([]),
+    // B2: isi jawaban evaluasi panitia hanya dibaca untuk pengelola; rekapnya
+    // dirender dari sini, bukan dari daftar jawaban yang bocor ke semua orang.
+    canManageCommitteeEval ? loadEvaluationAnswers(id, "panitia") : Promise.resolve([]),
+    // Non-pengelola: jumlah pengisi + apakah penampil sendiri sudah mengisi
+    // (status dirinya saja, bukan status orang lain).
+    canManageCommitteeEval
+      ? Promise.resolve({ total: 0, mine: 0 })
+      : db
+          .select({
+            total: sql<number>`count(*)::int`,
+            mine: sql<number>`count(*) filter (where ${eventEvaluations.userId} = ${access.session?.user?.id ?? "00000000-0000-0000-0000-000000000000"})::int`,
+          })
+          .from(eventEvaluations)
+          .where(and(eq(eventEvaluations.eventId, id), eq(eventEvaluations.audience, "panitia")))
+          .then((r) => r[0] ?? { total: 0, mine: 0 }),
     canBorrowAssets
       ? Promise.all([
           db.select({ id: inventoryItems.id, name: inventoryItems.name }).from(inventoryItems).orderBy(inventoryItems.name),
@@ -371,6 +426,28 @@ export default async function ConsoleEventDetailPage({ params }: { params: Promi
       cert: certByPerson.get(`panitia:${m.userId}`) ?? null,
     }));
   const committeeCertCount = certCommittee.filter((p) => p.cert?.fileUrl).length;
+
+  // ===== Evaluasi panitia (kolektif) — tab "Panitia" di section "Evaluasi Acara" =====
+  const committeeEvalWindow = committeeEvalWindowState(event.committeeEvalOpensAt, event.committeeEvalClosesAt);
+  // Pertanyaan rekap panitia = baris DB saja. Template kolektif disalin ke DB saat
+  // jendela dipasang (saveCommitteeEvaluationWindow), jadi setiap jawaban punya
+  // questionId asli; memakai template statis di sini justru membuat kolom rekap
+  // tidak cocok dengan jawabannya.
+  const committeeQuestions = evalQuestionsPanitia;
+  // Respons panitia dipetakan ke bentuk yang dibaca EvaluationResults/CustomResults:
+  // nama pengisi dari akun, divisi evaluator di posisi "kota". Data ini hanya
+  // ada di memori viewer pengelola (query-nya sendiri sudah digerbang B2).
+  const committeeEvaluations = committeeEvalRows.map((r) => ({
+    ...r.row,
+    respondentName: r.userName,
+    respondentCity: r.divisionName,
+  }));
+  // Hitungan jawaban per pertanyaan panitia (builder memakainya untuk mengunci
+  // tipe), diturunkan dari jawaban yang sudah dimuat — sama seperti evalAnswerCounts.
+  const committeeAnswerCountMap: Record<string, number> = {};
+  for (const a of committeeEvalAnswers) {
+    if (a.questionId) committeeAnswerCountMap[a.questionId] = (committeeAnswerCountMap[a.questionId] ?? 0) + 1;
+  }
 
   return (
     <div className="py-2">
@@ -1384,31 +1461,159 @@ export default async function ConsoleEventDetailPage({ params }: { params: Promi
       {canEditEvaluationQuestions && (
       <CollapsibleSection
         title="Pertanyaan Evaluasi"
-        description={evalQuestions.length > 0 ? `${evalQuestions.length} pertanyaan sendiri` : "template standar"}
+        description={
+          evalQuestions.length > 0 || evalQuestionsPanitia.length > 0
+            ? `${evalQuestions.length} peserta · ${evalQuestionsPanitia.length} panitia`
+            : "template standar"
+        }
       >
-        <EvaluationQuestionsBuilder
-          eventId={id}
-          slug={event.slug}
-          eventTitle={event.title}
-          questions={evalQuestions}
-          answerCounts={evalAnswerCounts}
-          legacyResponseCount={evaluations.filter((e) => e.ratingRegistration != null).length}
-          cityOptions={sortByCoverageOrder(cityRows, (row) => row.label).map((c) => c.label)}
-          sections={evaluationTemplateForSlug(event.slug).sections}
+        <EvalAudienceTabs
+          peserta={
+            <EvaluationQuestionsBuilder
+              eventId={id}
+              slug={event.slug}
+              eventTitle={event.title}
+              audience="peserta"
+              questions={evalQuestions}
+              answerCounts={evalAnswerCounts}
+              legacyResponseCount={evaluations.filter((e) => e.ratingRegistration != null).length}
+              cityOptions={sortByCoverageOrder(cityRows, (row) => row.label).map((c) => c.label)}
+              sections={evaluationTemplateForSlug(event.slug).sections}
+            />
+          }
+          panitia={
+            // Pertanyaan yang menilai kepanitiaan disusun BPH, bukan anggota
+            // panitia yang ikut dinilai. Server action-nya memakai gerbang yang
+            // sama (requireQuestionAccess di actions/event-evaluation-questions.ts).
+            canEditCommitteeEval ? (
+              <EvaluationQuestionsBuilder
+                eventId={id}
+                slug={event.slug}
+                eventTitle={event.title}
+                audience="panitia"
+                questions={evalQuestionsPanitia}
+                answerCounts={committeeAnswerCountMap}
+                legacyResponseCount={0}
+                cityOptions={[]}
+                sections={[]}
+              />
+            ) : (
+              <p className="text-body-md text-on-surface-variant max-w-2xl">
+                {canManageCommitteeEval
+                  ? "Acara ini sudah terkunci (14 hari setelah selesai): pertanyaan evaluasi panitia hanya bisa diubah BPH Kabinet."
+                  : "Pertanyaan evaluasi panitia disusun oleh BPH Panitia atau BPH Kabinet."}
+                {evalQuestionsPanitia.length > 0
+                  ? ` Saat ini ada ${evalQuestionsPanitia.length} pertanyaan.`
+                  : " Pertanyaannya disiapkan otomatis saat BPH memasang jendela pengisian."}
+              </p>
+            )
+          }
         />
       </CollapsibleSection>
       )}
 
+      {/* Evaluasi peserta & panitia dalam SATU section (K7: tanpa section tambahan
+          di halaman konsol acara yang sudah panjang). Aturan B2 berlaku: isi
+          jawaban dan nama pengisi panitia hanya untuk pengelola (BPH Kabinet/
+          Teknologi atau BPH Panitia acara ini); panitia lain hanya melihat jumlah
+          pengisi dan statusnya sendiri. */}
       <CollapsibleSection
         title="Evaluasi Acara"
-        description={evaluations.length > 0 ? `${evaluations.length} respons` : "belum ada respons"}
+        description={
+          [
+            evaluations.length > 0 ? `${evaluations.length} respons peserta` : "peserta: belum ada respons",
+            canManageCommitteeEval
+              ? committeeEvaluations.length > 0
+                ? `${committeeEvaluations.length} respons panitia`
+                : "panitia: belum ada respons"
+              : `${committeeEvalStats.total} panitia sudah mengisi`,
+          ].join(" · ")
+        }
       >
-        <EvaluationResults
-          eventId={id}
-          evaluations={evaluations}
-          sections={evaluationTemplateForSlug(event.slug).sections}
-          questions={evalQuestions}
-          answers={evalAnswers}
+        <EvalAudienceTabs
+          peserta={
+            <EvaluationResults
+              eventId={id}
+              evaluations={evaluations}
+              sections={evaluationTemplateForSlug(event.slug).sections}
+              questions={evalQuestions}
+              answers={evalAnswers}
+            />
+          }
+          panitia={
+            canManageCommitteeEval ? (
+              <div className="flex flex-col gap-8">
+                <div className="flex flex-col gap-2">
+                  <p className="text-label-caps uppercase tracking-wide text-on-surface-variant">Tautan pengisian untuk grup panitia</p>
+                  <div className="flex flex-wrap items-center gap-3">
+                    <code className="text-body-sm bg-surface-container-low px-2 py-1 rounded break-all">
+                      {`${shareOrigin}/events/${event.slug}/evaluasi-panitia`}
+                    </code>
+                    <CopyButton value={`${shareOrigin}/events/${event.slug}/evaluasi-panitia`} label="Salin tautan" />
+                  </div>
+                  <p className="text-body-sm text-on-surface-variant">
+                    Hanya panitia acara ini yang login yang bisa mengisi, dan hanya selama jendela di bawah terbuka.
+                  </p>
+                </div>
+                {canEditCommitteeEval ? (
+                <CommitteeEvalWindowEditor
+                  eventId={id}
+                  // Jam Tiongkok, bukan jam server: aksi simpannya membaca nilai
+                  // ini sebagai jam Tiongkok juga (parseChinaLocalInput).
+                  opensAt={event.committeeEvalOpensAt ? toChinaLocalInput(new Date(event.committeeEvalOpensAt)) : ""}
+                  closesAt={event.committeeEvalClosesAt ? toChinaLocalInput(new Date(event.committeeEvalClosesAt)) : ""}
+                  presetOpens={event.endAt ? toChinaLocalInput(new Date(event.endAt)) : toChinaLocalInput(new Date())}
+                  windowLabel={
+                    committeeEvalWindow === "open"
+                      ? "Jendela pengisian sedang TERBUKA"
+                      : committeeEvalWindow === "before"
+                        ? "Jendela pengisian belum dibuka"
+                        : committeeEvalWindow === "closed"
+                          ? "Jendela pengisian sudah ditutup"
+                          : "Jendela pengisian belum dipasang"
+                  }
+                  windowNote="Waktu kosong: sebelum jendela mulai / tidak pernah menutup otomatis. Mengosongkan keduanya lalu simpan = melepas jadwal. Saat jendela pertama kali disimpan, pertanyaan template kolektif otomatis disiapkan bila tab Panitia di Pertanyaan Evaluasi masih kosong."
+                  scheduleLabel="Durasi pintasan"
+                  opensLabel="Buka"
+                  closesLabel="Tutup"
+                  presetLabel="Buka setelah acara"
+                  clearLabel="Kosongkan jadwal"
+                  saveLabel="Simpan jendela"
+                  clearConfirmNote="Status jendela dihitung otomatis dari waktu saat ini — panitia hanya bisa mengisi selama terbuka."
+                />
+                ) : (
+                  <p className="text-body-md text-on-surface-variant max-w-2xl">
+                    Acara ini sudah terkunci (14 hari setelah selesai): jendela pengisian hanya bisa diubah BPH Kabinet.
+                  </p>
+                )}
+                <EvaluationResults
+                  eventId={id}
+                  exportAudience="panitia"
+                  evaluations={committeeEvaluations}
+                  sections={[]}
+                  questions={committeeQuestions}
+                  answers={committeeEvalAnswers}
+                />
+              </div>
+            ) : (
+              <div className="text-body-md text-on-surface-variant max-w-2xl flex flex-col gap-2">
+                <p>
+                  {committeeEvalStats.total > 0
+                    ? `${committeeEvalStats.total} dari ${committee.length} panitia sudah mengisi${
+                        committeeEvalStats.mine > 0 ? " — termasuk kamu. Terima kasih!" : "."
+                      }`
+                    : "Belum ada yang mengisi."}
+                </p>
+                <p>
+                  Rekap lengkap (nama &amp; jawaban) hanya tampil untuk BPH. Pengisian lewat{" "}
+                  <code className="text-body-sm bg-surface-container-low px-1.5 py-0.5 rounded">
+                    /events/{event.slug}/evaluasi-panitia
+                  </code>{" "}
+                  selama jendela terbuka.
+                </p>
+              </div>
+            )
+          }
         />
       </CollapsibleSection>
         </div>

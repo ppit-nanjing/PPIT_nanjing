@@ -5,6 +5,19 @@
 export const EVAL_QUESTION_TYPES = ["rating", "stars", "text", "textarea", "select", "radio", "multiselect"] as const;
 export type EvalQuestionType = (typeof EVAL_QUESTION_TYPES)[number];
 
+// Audiens pertanyaan/respons evaluasi per-acara:
+// - "peserta": kuesioner pasca-acara untuk peserta (/events/<slug>/evaluasi).
+// - "panitia": evaluasi kolektif panitia acara (/events/<slug>/evaluasi-panitia),
+//   wajib login + tercatat di event_committee, jendela waktu diatur BPH.
+// Dua form berbeda untuk acara yang sama; memisahkannya mencegah pertanyaan
+// panitia bocor ke form peserta (dan sebaliknya) saat satu sisi lupa menyaring.
+export const EVAL_AUDIENCES = ["peserta", "panitia"] as const;
+export type EvalAudience = (typeof EVAL_AUDIENCES)[number];
+
+export function isEvalAudience(value: string): value is EvalAudience {
+  return (EVAL_AUDIENCES as readonly string[]).includes(value);
+}
+
 // Dua tipe berskala angka. Skalanya berbeda, jadi rekapnya tidak boleh dicampur.
 export const SCALE_MAX = { rating: 10, stars: 5 } as const;
 export type ScaleType = keyof typeof SCALE_MAX;
@@ -25,6 +38,18 @@ export const EVAL_QUESTION_TYPE_LABELS: Record<EvalQuestionType, string> = {
 
 export const EVAL_TEXT_MAX = 2000;
 export const EVAL_SHORT_TEXT_MAX = 300;
+
+/**
+ * State form kirim evaluasi — union bersama untuk jalur peserta (submitEventEvaluation:
+ * ratings/required/invalid/generic) dan jalur panitia (submitCommitteeEvaluation:
+ * login/window/not_committee + subset peserta). Satu bentuk supaya komponen form
+ * yang sama bisa membawa aksi keduanya tanpa pengecoran tipe.
+ */
+export type EvalFormState = {
+  ok?: boolean;
+  already?: boolean;
+  error?: "login" | "window" | "not_committee" | "not_ready" | "ratings" | "required" | "invalid" | "generic";
+};
 
 /** Bentuk pertanyaan yang dikirim ke form publik dan builder (plain data, aman lintas batas RSC). */
 export type EvalQuestionRow = {
