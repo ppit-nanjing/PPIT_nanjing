@@ -542,8 +542,19 @@ export default async function ConsoleEventDetailPage({ params }: { params: Promi
                     defaultValue={event.startAt ? toDateLocalInput(new Date(event.startAt)) : ""}
                     className="bg-soft-gray rounded-md p-3 text-body-md"
                   />
-                  <p className="text-xs text-on-surface-variant">Kapan acara berlangsung (tanggal & jam mulai).</p>
+                  <p className="text-xs text-on-surface-variant">Kapan acara dimulai.</p>
                 </div>
+                <div className="flex flex-col gap-1">
+                  <input
+                    name="endAt"
+                    type="datetime-local"
+                    defaultValue={event.endAt ? toDateLocalInput(new Date(event.endAt)) : ""}
+                    className="bg-soft-gray rounded-md p-3 text-body-md"
+                  />
+                  <p className="text-xs text-on-surface-variant">Kapan acara berakhir.</p>
+                </div>
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <input name="capacity" type="number" min={1} defaultValue={event.capacity ?? ""} placeholder="Kapasitas" className="bg-soft-gray rounded-md p-3 text-body-md" />
                 </div>
               <ImageUploadCropper

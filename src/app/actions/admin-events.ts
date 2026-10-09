@@ -120,6 +120,7 @@ export async function createEvent(_prev: EventFormState, formData: FormData): Pr
       locationUrl2: locationUrl2Raw || null,
       coverImageUrl: String(formData.get("coverImageUrl") ?? "").trim() || null,
       startAt: formData.get("startAt") ? new Date(String(formData.get("startAt"))) : null,
+      endAt: formData.get("endAt") ? new Date(String(formData.get("endAt"))) : null,
       registrationDeadline: formData.get("registrationDeadline")
         ? new Date(String(formData.get("registrationDeadline")))
         : null,
@@ -194,6 +195,7 @@ export async function updateEventInfo(id: string, formData: FormData) {
       locationUrl2: locationUrl2Raw || null,
       coverImageUrl: String(formData.get("coverImageUrl") ?? "").trim() || null,
       startAt: formData.get("startAt") ? new Date(String(formData.get("startAt"))) : null,
+      endAt: formData.get("endAt") ? new Date(String(formData.get("endAt"))) : null,
       registrationDeadline: formData.get("registrationDeadline")
         ? new Date(String(formData.get("registrationDeadline")))
         : null,
