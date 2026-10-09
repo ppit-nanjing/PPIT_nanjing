@@ -47,6 +47,7 @@
 - [Organization & Regional Branches](./Organization%20&%20Regional%20Branches.md)
 - [Event Flow](./Event%20Flow.md)
 - [Evaluasi Acara](./Evaluasi%20Acara.md) — kuesioner pasca-acara (`/events/:slug/evaluasi`) + rekap & ekspor di console
+- [Evaluasi Panitia Acara](./Evaluasi%20Panitia%20Acara.md) — evaluasi kolektif antar panitia per-acara (`/events/:slug/evaluasi-panitia`), jendela waktu diatur BPH di konsol acara
 - [Content Pages](./Content%20Pages.md) (News, Gallery, Legal)
 - [Career Flow](./Career%20Flow.md) (Jobs, panduan, Mentorship, console lowongan, rencana akun perusahaan; `/career` dialihkan ke `/jobs`)
 - [Join Us Flow](./Join%20Us%20Flow.md)

@@ -3,10 +3,20 @@
 import { useActionState, useEffect, useRef, useState, type FormEvent } from "react";
 import Link from "next/link";
 import { ArrowLeft, CheckCircle2, Star } from "lucide-react";
-import { submitEventEvaluation, type EventEvaluationFormState } from "@/app/actions/event-evaluations";
+import { submitEventEvaluation } from "@/app/actions/event-evaluations";
 import { useT } from "@/lib/i18n/client";
 import type { EvaluationSection } from "@/lib/event-evaluation-template";
-import { type EvalQuestionRow, splitOptions } from "@/lib/event-evaluation-questions";
+import { type EvalFormState, type EvalQuestionRow, splitOptions } from "@/lib/event-evaluation-questions";
+
+// State & aksi form evaluasi dipakai bersama jalur peserta (submitEventEvaluation)
+// dan jalur panitia (submitCommitteeEvaluation) supaya satu komponen form bisa
+// membawa aksi keduanya tanpa pengecoran tipe.
+export type EvaluationFormState = EvalFormState;
+
+export type EvaluationFormAction = (
+  prev: EvaluationFormState,
+  formData: FormData,
+) => Promise<EvaluationFormState>;
 
 const CARD = "bg-surface-container-lowest border border-outline-variant rounded-xl p-5 sm:p-6 flex flex-col gap-5";
 const LABEL = "text-label-caps uppercase tracking-wide text-on-surface-variant";
@@ -244,6 +254,10 @@ export function EventEvaluationForm({
   sections,
   questions,
   preview = false,
+  audience = "peserta",
+  action,
+  userName,
+  divisionName,
 }: {
   slug: string;
   eventTitle: string;
@@ -253,17 +267,32 @@ export function EventEvaluationForm({
   questions?: EvalQuestionRow[];
   /** Pratinjau di konsol: tampilan sama persis, tapi tidak mengirim/menyimpan apa pun. */
   preview?: boolean;
+  /**
+   * "peserta" (bawaan): identitas diisi sendiri + token perangkat anti isi dobel.
+   * "panitia": pengisi sudah diverifikasi halaman induknya (login + roster), jadi
+   * identitasnya akun dan dedup-nya server — tanpa token perangkat.
+   */
+  audience?: "peserta" | "panitia";
+  /** Aksi kirim; bawaan submitEventEvaluation (audiens peserta). */
+  action?: EvaluationFormAction;
+  /** Identitas pengisi untuk audiens panitia (nama & divisi dari kepanitiaan). */
+  userName?: string;
+  divisionName?: string | null;
 }) {
   const t = useT();
-  const [state, formAction, isPending] = useActionState<EventEvaluationFormState, FormData>(submitEventEvaluation, {});
+  const [state, formAction, isPending] = useActionState<EvaluationFormState, FormData>(
+    action ?? submitEventEvaluation,
+    {},
+  );
   const [anonymous, setAnonymous] = useState(false);
   const [token, setToken] = useState("");
   const [doneBefore, setDoneBefore] = useState(false);
   const [clientMissing, setClientMissing] = useState(false);
 
   useEffect(() => {
-    // Pratinjau tidak menyentuh token/penanda "sudah mengisi" milik perangkat ini.
-    if (preview) return;
+    // Pratinjau tidak menyentuh token/penanda "sudah mengisi" milik perangkat ini;
+    // audiens panitia juga tidak — dedup-nya di server lewat akun.
+    if (preview || audience === "panitia") return;
     const timer = window.setTimeout(() => {
       let deviceToken = "";
       try {
@@ -282,23 +311,34 @@ export function EventEvaluationForm({
       setToken(deviceToken);
     }, 0);
     return () => window.clearTimeout(timer);
-  }, [slug, preview]);
+  }, [slug, preview, audience]);
 
   useEffect(() => {
+    if (audience === "panitia") return;
     if (state.ok) {
       try {
         localStorage.setItem("ppit_eval_done_" + slug, "1");
       } catch {}
     }
-  }, [state.ok, slug]);
+  }, [state.ok, slug, audience]);
 
-  if (!preview && (state.ok || state.already || doneBefore)) {
+  if (!preview && (state.ok || state.already || (audience !== "panitia" && doneBefore))) {
     const already = !state.ok;
     return (
       <div className={`${CARD} items-center py-10 text-center`}>
         <CheckCircle2 className="text-primary-container" size={40} aria-hidden="true" />
-        <h2 className="text-headline-md text-on-background">{already ? t("eval.alreadyTitle") : t("eval.thanksTitle")}</h2>
-        <p className="text-body-md text-on-surface-variant max-w-md">{already ? t("eval.alreadyBody") : t("eval.thanksBody")}</p>
+        <h2 className="text-headline-md text-on-background">
+          {already ? (audience === "panitia" ? t("ceval.alreadyTitle") : t("eval.alreadyTitle")) : t("eval.thanksTitle")}
+        </h2>
+        <p className="text-body-md text-on-surface-variant max-w-md">
+          {already
+            ? audience === "panitia"
+              ? t("ceval.alreadyBody")
+              : t("eval.alreadyBody")
+            : audience === "panitia"
+              ? t("ceval.thanksBody")
+              : t("eval.thanksBody")}
+        </p>
         <Link href={`/events/${slug}`} className={`${BTN} border border-outline-variant text-on-background hover:bg-surface-container-low`}>
           <ArrowLeft size={16} aria-hidden="true" /> {t("eval.backToEvent")}
         </Link>
@@ -337,7 +377,7 @@ export function EventEvaluationForm({
       className="flex flex-col gap-5"
     >
       <input type="hidden" name="slug" value={slug} />
-      <input type="hidden" name="token" value={token} />
+      {audience !== "panitia" && <input type="hidden" name="token" value={token} />}
 
       {clientMissing && (
         <p role="alert" className="rounded-lg bg-error-container/40 px-4 py-3 text-body-md text-on-error-container">
@@ -352,12 +392,24 @@ export function EventEvaluationForm({
       )}
 
       {state.error && (
-        <p className="rounded-lg bg-error-container/40 px-4 py-3 text-body-md text-on-error-container">
-          {state.error === "ratings"
-            ? t("eval.requiredRatings")
-            : state.error === "required"
-              ? t("eval.requiredTexts")
-              : t("eval.errorGeneric")}
+        <p role="alert" className="rounded-lg bg-error-container/40 px-4 py-3 text-body-md text-on-error-container">
+          {audience === "panitia"
+            ? state.error === "login"
+              ? t("ceval.errorLogin")
+              : state.error === "window"
+                ? t("ceval.errorWindow")
+                : state.error === "not_committee"
+                  ? t("ceval.notCommitteeBody", { event: eventTitle })
+                  : state.error === "ratings"
+                    ? t("ceval.errorRatings")
+                    : state.error === "required"
+                      ? t("ceval.errorRequired")
+                      : t("ceval.errorGeneric")
+            : state.error === "ratings"
+              ? t("eval.requiredRatings")
+              : state.error === "required"
+                ? t("eval.requiredTexts")
+                : t("eval.errorGeneric")}
         </p>
       )}
 
@@ -365,43 +417,59 @@ export function EventEvaluationForm({
         <span className="text-primary-container" aria-hidden="true">*</span> {t("eval.requiredNote")}
       </p>
 
-      <section className={CARD}>
-        <h2 className="text-headline-sm text-on-background">{t("eval.identity")}</h2>
-        {!anonymous && (
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-            <label className="flex flex-col gap-1.5">
-              <span className={LABEL}>{t("eval.name")}</span>
-              <input name="name" maxLength={80} autoComplete="name" className={INPUT} />
-              <span className="text-body-sm text-on-surface-variant">{t("eval.nameHint")}</span>
-            </label>
-            <label className="flex flex-col gap-1.5">
-              <span className={LABEL}>{t("eval.city")}</span>
-              <select name="city" defaultValue="" className={INPUT}>
-                <option value="">{t("eval.cityPlaceholder")}</option>
-                {cityOptions.map((c) => (
-                  <option key={c} value={c}>
-                    {c}
-                  </option>
-                ))}
-                <option value="Lainnya">{t("eval.cityOther")}</option>
-              </select>
-            </label>
-          </div>
-        )}
-        <label className="flex items-start gap-3">
-          <input
-            type="checkbox"
-            name="anonymous"
-            checked={anonymous}
-            onChange={(e) => setAnonymous(e.target.checked)}
-            className="mt-1 h-4 w-4 accent-primary-container"
-          />
-          <span>
-            <span className="text-body-md text-on-background">{t("eval.anonymous")}</span>
-            <span className="block text-body-sm text-on-surface-variant">{t("eval.anonymousHint")}</span>
-          </span>
-        </label>
-      </section>
+      {audience === "panitia" ? (
+        <section className={CARD}>
+          <h2 className="text-headline-sm text-on-background">{t("ceval.identity")}</h2>
+          <p className="text-body-md text-on-background">
+            <span className={LABEL}>{t("ceval.identityAs")}</span>
+            <span className="block mt-1 font-semibold">{userName ?? t("ceval.fallbackUserName")}</span>
+            {divisionName && (
+              <span className="block text-body-sm text-on-surface-variant">
+                {t("ceval.identityDivision", { division: divisionName })}
+              </span>
+            )}
+          </p>
+          <p className="text-body-sm text-on-surface-variant">{t("ceval.identityNote")}</p>
+        </section>
+      ) : (
+        <section className={CARD}>
+          <h2 className="text-headline-sm text-on-background">{t("eval.identity")}</h2>
+          {!anonymous && (
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              <label className="flex flex-col gap-1.5">
+                <span className={LABEL}>{t("eval.name")}</span>
+                <input name="name" maxLength={80} autoComplete="name" className={INPUT} />
+                <span className="text-body-sm text-on-surface-variant">{t("eval.nameHint")}</span>
+              </label>
+              <label className="flex flex-col gap-1.5">
+                <span className={LABEL}>{t("eval.city")}</span>
+                <select name="city" defaultValue="" className={INPUT}>
+                  <option value="">{t("eval.cityPlaceholder")}</option>
+                  {cityOptions.map((c) => (
+                    <option key={c} value={c}>
+                      {c}
+                    </option>
+                  ))}
+                  <option value="Lainnya">{t("eval.cityOther")}</option>
+                </select>
+              </label>
+            </div>
+          )}
+          <label className="flex items-start gap-3">
+            <input
+              type="checkbox"
+              name="anonymous"
+              checked={anonymous}
+              onChange={(e) => setAnonymous(e.target.checked)}
+              className="mt-1 h-4 w-4 accent-primary-container"
+            />
+            <span>
+              <span className="text-body-md text-on-background">{t("eval.anonymous")}</span>
+              <span className="block text-body-sm text-on-surface-variant">{t("eval.anonymousHint")}</span>
+            </span>
+          </label>
+        </section>
+      )}
 
       {questions && questions.length > 0 && (
         <section className={CARD}>
@@ -452,14 +520,14 @@ export function EventEvaluationForm({
 
       <button
         type="submit"
-        disabled={preview || isPending || !token}
+        disabled={preview || isPending || (audience !== "panitia" && !token)}
         className={`${BTN} deco-btn self-start bg-accent text-on-accent hover:brightness-95 disabled:opacity-60`}
       >
         {preview ? t("eval.previewSubmit") : isPending ? t("eval.submitting") : t("eval.submit")}
       </button>
 
       <p className="text-body-sm text-on-surface-variant">
-        {t("eval.footer", { event: eventTitle })}
+        {audience === "panitia" ? t("ceval.footer", { event: eventTitle }) : t("eval.footer", { event: eventTitle })}
       </p>
     </form>
   );

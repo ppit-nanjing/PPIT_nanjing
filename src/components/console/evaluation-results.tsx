@@ -47,16 +47,17 @@ function respondentLabel(e: Evaluation): string {
   return e.anonymous || !e.respondentName ? "Anonim" : e.respondentName;
 }
 
-function ExportLinks({ eventId }: { eventId: string }) {
+function ExportLinks({ eventId, audience = "peserta" }: { eventId: string; audience?: "peserta" | "panitia" }) {
   const base = `/api/console/events/${eventId}/evaluasi/export`;
+  const audienceParam = audience === "panitia" ? "&audience=panitia" : "";
   const cls =
     "inline-flex items-center gap-1.5 rounded-md border border-outline-variant px-3 py-2 text-label-caps uppercase tracking-wide text-on-background hover:bg-surface-container-low transition-colors";
   return (
     <div className="flex flex-wrap gap-2">
-      <a href={`${base}?format=csv`} className={cls}>
+      <a href={`${base}?format=csv${audienceParam}`} className={cls}>
         <Download size={14} aria-hidden="true" /> CSV
       </a>
-      <a href={`${base}?format=xlsx`} className={cls}>
+      <a href={`${base}?format=xlsx${audienceParam}`} className={cls}>
         <Download size={14} aria-hidden="true" /> Excel
       </a>
     </div>
@@ -109,6 +110,7 @@ export function EvaluationResults({
   sections,
   questions = [],
   answers = [],
+  exportAudience = "peserta",
 }: {
   eventId: string;
   evaluations: Evaluation[];
@@ -116,6 +118,8 @@ export function EvaluationResults({
   /** Pertanyaan buatan panitia (kosong = acara memakai template tetap). */
   questions?: EvalQuestionRow[];
   answers?: EvalAnswerRow[];
+  /** Audiens tautan ekspor: "panitia" menambahkan ?audience=panitia (gerbangnya lebih ketat). */
+  exportAudience?: "peserta" | "panitia";
 }) {
   const legacy = evaluations.filter(isLegacy);
   const custom = evaluations.filter((e) => !isLegacy(e));
@@ -129,6 +133,7 @@ export function EvaluationResults({
         questions={questions}
         answers={answers}
         legacyCount={legacy.length}
+        exportAudience={exportAudience}
       />
     );
   }
@@ -153,7 +158,7 @@ function TemplateResults({
       <div className="flex flex-col gap-3">
         <p className="text-body-md text-on-surface-variant max-w-2xl">
           Belum ada respons. Bagikan tautan <code className="text-on-background">/events/&lt;slug&gt;/evaluasi</code> ke
-          grup peserta — buat short link + QR-nya di menu Tautan supaya gampang disebar di WeChat.
+          grup peserta â€” buat short link + QR-nya di menu Tautan supaya gampang disebar di WeChat.
         </p>
         <ExportLinks eventId={eventId} />
       </div>
@@ -214,7 +219,7 @@ function TemplateResults({
           {[...ratingQs, ...textQs].map((q) =>
             q.kind === "rating" ? (
               <div key={q.name} className="rounded-lg border border-outline-variant p-4">
-                <p className="text-label-caps uppercase tracking-wide text-on-surface-variant">{q.label} — penilaian 1–10</p>
+                <p className="text-label-caps uppercase tracking-wide text-on-surface-variant">{q.label} â€” penilaian 1â€“10</p>
                 <div className="mt-3 flex flex-wrap items-center gap-4">
                   <p className="text-body-md text-on-background">
                     rata-rata{" "}
@@ -230,10 +235,10 @@ function TemplateResults({
                 <p className="mt-3 text-body-sm text-on-surface-variant">
                   {Array.from({ length: 10 }, (_, i) => {
                     const n = valuesCount(evaluations, q.name, i + 1);
-                    return n > 0 ? `${i + 1}×${n}` : null;
+                    return n > 0 ? `${i + 1}Ã—${n}` : null;
                   })
                     .filter(Boolean)
-                    .join(" · ")}
+                    .join(" Â· ")}
                 </p>
               </div>
             ) : (
@@ -242,7 +247,7 @@ function TemplateResults({
                 {(() => {
                   const textAnswers = evaluations.filter((e) => e[q.name]);
                   if (textAnswers.length === 0) {
-                    return <p className="mt-3 text-body-sm text-on-surface-variant">— belum ada jawaban —</p>;
+                    return <p className="mt-3 text-body-sm text-on-surface-variant">â€” belum ada jawaban â€”</p>;
                   }
                   return (
                     <ul className="mt-3 flex flex-col gap-2">
@@ -250,7 +255,7 @@ function TemplateResults({
                         <li key={e.id} className="rounded-md bg-surface-container-low px-3 py-2">
                           <p className="text-body-md text-on-background whitespace-pre-wrap">{e[q.name]}</p>
                           <p className="mt-1 text-label-caps text-on-surface-variant">
-                            {respondentLabel(e)} · {formatWhen(e.createdAt)}
+                            {respondentLabel(e)} Â· {formatWhen(e.createdAt)}
                           </p>
                         </li>
                       ))}
@@ -345,14 +350,14 @@ function ChoiceBars({ counts }: { counts: { option: string; count: number }[] })
 }
 
 function average(values: number[]): string {
-  return values.length === 0 ? "–" : (values.reduce((s, v) => s + v, 0) / values.length).toFixed(1);
+  return values.length === 0 ? "â€“" : (values.reduce((s, v) => s + v, 0) / values.length).toFixed(1);
 }
 
 function ColumnTitle({ column, suffix }: { column: EvalColumn; suffix?: string }) {
   return (
     <p className="text-label-caps uppercase tracking-wide text-on-surface-variant">
       {column.label}
-      {suffix ? ` — ${suffix}` : ""}
+      {suffix ? ` â€” ${suffix}` : ""}
       {column.removed ? " (pertanyaan sudah dihapus)" : ""}
     </p>
   );
@@ -364,12 +369,14 @@ function CustomResults({
   questions,
   answers,
   legacyCount,
+  exportAudience = "peserta",
 }: {
   eventId: string;
   evaluations: Evaluation[];
   questions: EvalQuestionRow[];
   answers: EvalAnswerRow[];
   legacyCount: number;
+  exportAudience?: "peserta" | "panitia";
 }) {
   const [tab, setTab] = useState<"grafik" | "jawaban" | "respons">("grafik");
   const columns = evalColumns(questions, answers);
@@ -388,11 +395,11 @@ function CustomResults({
       <div className="flex flex-col gap-3">
         <p className="text-body-md text-on-surface-variant max-w-2xl">
           Belum ada respons untuk pertanyaan ini. Bagikan tautan{" "}
-          <code className="text-on-background">/events/&lt;slug&gt;/evaluasi</code> ke grup peserta — buat short link +
+          <code className="text-on-background">/events/&lt;slug&gt;/evaluasi</code> ke grup peserta â€” buat short link +
           QR-nya di menu Tautan supaya gampang disebar di WeChat.
         </p>
         {legacyNote}
-        <ExportLinks eventId={eventId} />
+        <ExportLinks eventId={eventId} audience={exportAudience} />
       </div>
     );
   }
@@ -425,7 +432,7 @@ function CustomResults({
             <b className="text-on-background">{anonymousCount}</b> anonim
           </span>
         </div>
-        <ExportLinks eventId={eventId} />
+        <ExportLinks eventId={eventId} audience={exportAudience} />
       </div>
       {legacyNote}
 
@@ -477,7 +484,7 @@ function CustomResults({
               const scale = SCALE_MAX[c.type];
               return (
                 <div key={c.key} className="rounded-lg border border-outline-variant p-4">
-                  <ColumnTitle column={c} suffix={c.type === "stars" ? "bintang 1–5" : "penilaian 1–10"} />
+                  <ColumnTitle column={c} suffix={c.type === "stars" ? "bintang 1â€“5" : "penilaian 1â€“10"} />
                   <div className="mt-3 flex flex-wrap items-center gap-4">
                     <p className="text-body-md text-on-background">
                       rata-rata <b>{average(values)}</b>/{scale} dari {values.length} jawaban
@@ -502,7 +509,7 @@ function CustomResults({
               <div key={c.key} className="rounded-lg border border-outline-variant p-4">
                 <ColumnTitle column={c} />
                 {withAnswer.length === 0 ? (
-                  <p className="mt-3 text-body-sm text-on-surface-variant">— belum ada jawaban —</p>
+                  <p className="mt-3 text-body-sm text-on-surface-variant">â€” belum ada jawaban â€”</p>
                 ) : (
                   <ul className="mt-3 flex flex-col gap-2">
                     {withAnswer.map((e) => (
@@ -511,7 +518,7 @@ function CustomResults({
                           {byEvaluation.get(e.id)?.get(c.key)?.valueText}
                         </p>
                         <p className="mt-1 text-label-caps text-on-surface-variant">
-                          {respondentLabel(e)} · {formatWhen(e.createdAt)}
+                          {respondentLabel(e)} Â· {formatWhen(e.createdAt)}
                         </p>
                       </li>
                     ))}
@@ -552,7 +559,7 @@ function CustomResults({
                       </div>
                     );
                   })}
-                  {!own && <p className="text-body-sm text-on-surface-variant">— semua pertanyaan dikosongkan —</p>}
+                  {!own && <p className="text-body-sm text-on-surface-variant">â€” semua pertanyaan dikosongkan â€”</p>}
                 </div>
               </li>
             );

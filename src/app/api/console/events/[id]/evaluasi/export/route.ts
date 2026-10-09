@@ -1,14 +1,18 @@
-import { desc, eq } from "drizzle-orm";
+import { and, desc, eq } from "drizzle-orm";
 import { NextResponse } from "next/server";
 import { db } from "@/db";
-import { eventEvaluations, events } from "@/db/schema";
+import { eventDivisions, eventEvaluations, events, users } from "@/db/schema";
 import { getEventAccess } from "@/lib/event-access";
 import { evaluationTemplateForSlug, ratingQuestions, textQuestions } from "@/lib/event-evaluation-template";
 import { loadEvaluationAnswers, loadEvaluationQuestions } from "@/lib/event-evaluation-queries";
-import { isScaleType } from "@/lib/event-evaluation-questions";
+import { isEvalAudience, isScaleType } from "@/lib/event-evaluation-questions";
 import { answersByEvaluation, evalColumns, formatAnswer } from "@/lib/event-evaluation-results";
 import { datasetToCsv, datasetToXlsx, type ReportColumn, type ReportDataset } from "@/lib/report-export";
 
+// Ekspor evaluasi acara (CSV/Excel) — satu baris per respons. ?audience=panitia
+// mengekspor evaluasi panitia (kolektif) dan GERBANGNYA LEBIH KETAT (B2): hanya
+// BPH Kabinet/Teknologi atau BPH Panitia acara ini, karena barisnya membawa nama
+// pengisi. Audiens peserta memakai gerbang konsol acara seperti sebelumnya.
 export async function GET(request: Request, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const access = await getEventAccess(id);
@@ -21,21 +25,47 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
   if (format !== "csv" && format !== "xlsx") {
     return NextResponse.json({ error: "Format tidak didukung (csv|xlsx)" }, { status: 400 });
   }
+  const audienceParam = url.searchParams.get("audience") ?? "peserta";
+  const audience = isEvalAudience(audienceParam) ? audienceParam : null;
+  if (!audience) {
+    return NextResponse.json({ error: "Audiens tidak didukung (peserta|panitia)" }, { status: 400 });
+  }
+  if (audience === "panitia" && !access.isFullAdmin && !access.isBphPanitia) {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  }
 
   const [event] = await db.select({ title: events.title, slug: events.slug }).from(events).where(eq(events.id, id));
   if (!event) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
   const [rows, questions, answers] = await Promise.all([
-    db.select().from(eventEvaluations).where(eq(eventEvaluations.eventId, id)).orderBy(desc(eventEvaluations.createdAt)),
-    loadEvaluationQuestions(id),
-    loadEvaluationAnswers(id),
+    db
+      .select({
+        row: eventEvaluations,
+        userName: users.name,
+        divisionName: eventDivisions.name,
+      })
+      .from(eventEvaluations)
+      .leftJoin(users, eq(eventEvaluations.userId, users.id))
+      .leftJoin(eventDivisions, eq(eventEvaluations.divisionId, eventDivisions.id))
+      .where(and(eq(eventEvaluations.eventId, id), eq(eventEvaluations.audience, audience)))
+      .orderBy(desc(eventEvaluations.createdAt)),
+    loadEvaluationQuestions(id, audience),
+    loadEvaluationAnswers(id, audience),
   ]);
+
+  // Nama & divisi evaluator hanya relevan untuk audiens panitia — dan jalur itu
+  // sudah dipastikan hanya dijangkau pengelola.
+  const mapped = rows.map((r) =>
+    audience === "panitia"
+      ? { ...r.row, respondentName: r.userName, respondentCity: r.divisionName }
+      : r.row,
+  );
 
   // Respons bentuk template tetap punya keempat penilaian bawaan; respons dari
   // pertanyaan buatan panitia membiarkannya kosong (jawabannya di tabel jawaban).
-  const isTemplateRow = (r: (typeof rows)[number]) => r.ratingRegistration != null;
-  const hasTemplateRows = rows.some(isTemplateRow);
-  const customMode = questions.length > 0 || rows.some((r) => !isTemplateRow(r));
+  const isTemplateRow = (r: (typeof mapped)[number]) => r.ratingRegistration != null;
+  const hasTemplateRows = mapped.some(isTemplateRow);
+  const customMode = questions.length > 0 || mapped.some((r) => !isTemplateRow(r));
 
   const template = evaluationTemplateForSlug(event.slug);
   const templateColumns: ReportColumn[] = [
@@ -49,8 +79,10 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
   const columns: ReportColumn[] = [
     { header: "Waktu", key: "createdAt", type: "date" },
     { header: "Nama", key: "respondentName" },
-    { header: "Kota", key: "respondentCity" },
-    { header: "Anonim", key: "anonymousLabel" },
+    { header: audience === "panitia" ? "Divisi" : "Kota", key: "respondentCity" },
+    // Kolom anonim hanya berarti untuk respons peserta; evaluasi panitia selalu
+    // tercatat atas nama akunnya.
+    ...(audience === "panitia" ? [] : [{ header: "Anonim", key: "anonymousLabel" }]),
     // Mode pertanyaan sendiri: satu kolom per pertanyaan (yang sudah dihapus tapi
     // masih punya jawaban ikut, diberi tanda). Respons template lama, kalau ada,
     // tetap diekspor dengan kolom template-nya di belakang.
@@ -63,12 +95,12 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
   ];
 
   const dataset: ReportDataset = {
-    title: `Evaluasi ${event.title}`,
-    type: "event_evaluation",
+    title: audience === "panitia" ? `Evaluasi Panitia ${event.title}` : `Evaluasi ${event.title}`,
+    type: audience === "panitia" ? "event_committee_evaluation" : "event_evaluation",
     generatedAt: new Date(),
     filters: {},
     columns,
-    rows: rows.map((r) => {
+    rows: mapped.map((r) => {
       const own = byEvaluation.get(r.id);
       const customValues = Object.fromEntries(
         customColumns.map((c, i) => {
@@ -82,21 +114,26 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
         respondentCity: r.anonymous ? "" : r.respondentCity,
         anonymousLabel: r.anonymous ? "Ya" : "Tidak",
         ...customValues,
-        ratingRegistration: r.ratingRegistration,
-        ratingFacilities: r.ratingFacilities,
-        ratingCgt: r.ratingCgt,
-        ratingOverall: r.ratingOverall,
-        improveRegistration: r.improveRegistration,
-        improveFacilities: r.improveFacilities,
-        cgtMessage: r.cgtMessage,
-        improveService: r.improveService,
-        overallMessage: r.overallMessage,
-        heartwarming: r.heartwarming,
+        ...(audience === "panitia"
+          ? {}
+          : {
+              ratingRegistration: r.ratingRegistration,
+              ratingFacilities: r.ratingFacilities,
+              ratingCgt: r.ratingCgt,
+              ratingOverall: r.ratingOverall,
+              improveRegistration: r.improveRegistration,
+              improveFacilities: r.improveFacilities,
+              cgtMessage: r.cgtMessage,
+              improveService: r.improveService,
+              overallMessage: r.overallMessage,
+              heartwarming: r.heartwarming,
+            }),
       };
     }),
   };
 
-  const filename = `evaluasi-${event.title.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "").slice(0, 40)}`;
+  const prefix = audience === "panitia" ? "evaluasi-panitia" : "evaluasi";
+  const filename = `${prefix}-${event.title.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "").slice(0, 40)}`;
 
   if (format === "xlsx") {
     const buffer = await datasetToXlsx(dataset);
