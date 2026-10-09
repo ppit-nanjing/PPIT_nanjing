@@ -52,6 +52,7 @@
 - [Join Us Flow](./Join%20Us%20Flow.md)
 - [Equipment Lending Flow](./Equipment%20Lending%20Flow.md)
 - [Sensus Profile Flow](./Sensus%20Profile%20Flow.md)
+- [Guidebook Maba](./Guidebook%20Maba.md) — **rencana** (issue #65): panduan bertahap + checklist, isi dari PDF, jawaban AI hanya dari isi guidebook, jalur edit di console
 
 ## 🛠️ Screens — Admin Console
 

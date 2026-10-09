@@ -31,3 +31,20 @@
 ## Rekomendasi
 
 Jadikan `HELP_ARTICLE` **editable oleh Super Admin lewat UI** (bukan hardcode di kode aplikasi) — konsisten dengan alasan modul ini ada: supaya pengurus baru bisa mewariskan/memperbarui panduan tanpa bergantung developer.
+
+## Chatbot Help Center: jawaban hanya dari artikel publik
+
+Widget di `src/components/ai/help-center.tsx` (dipasang global di `src/app/layout.tsx`, tab chat hanya untuk yang login) sekarang **tidak menjawab dari pengetahuan umum model**. Alurnya:
+
+1. `chatWithAIAction` (`src/app/actions/ai.ts`) mengambil pertanyaan terakhir.
+2. `findGuideChunks` (`src/lib/guidebook-search.ts`) mencari artikel bantuan dengan **`is_public = true`** saja — pencarian leksikal: potongan kata kunci lewat `ILIKE` (kata asli + bentuk tanpa imbuhan, kata fungsi/sapaan dibuang), lalu skor di JS (judul ×4, bagian ×2, isi maks 3). Tanpa embedding: korpusnya masih puluhan artikel, jadi pencarian vektor hanya menambah vendor dan satu titik gagal baru.
+3. Potongan teratas (maks 4 artikel, ±7.000 karakter) masuk ke system prompt sebagai **satu-satunya sumber**; model dilarang menambah fakta, angka, biaya, atau tenggat dari luar sumber, dan diminta menyebut judul panduannya. Tidak ada yang cocok → model menjawab belum ada panduannya dan mengarahkan ke pengurus.
+
+Konsekuensi untuk pengurus:
+
+- **Artikel yang belum ditandai "Tampilkan di halaman publik" tidak akan pernah dipakai chatbot.** Itu disengaja: SOP console (isi internal) tidak boleh bocor ke jawaban anggota.
+- Menambah panduan baru = tulis artikel di `/console/docs` + nyalakan toggle publik. Tanpa deploy. Guidebook maba (issue #65) memakai jalur yang sama — rencananya di [Guidebook Maba](./Guidebook%20Maba.md).
+
+SOP singkat untuk artikel Help Center pengurus (buat di `/console/docs/new`, nyalakan tampilkan di halaman publik):
+
+> **Chatbot cuma bisa menjawab dari panduan yang sudah terbit.** Kalau chatbot bilang "belum ada panduannya", artinya belum ada artikel publik yang cocok — bukan chatbotnya rusak. Tulis/paskan panduannya di Dokumentasi & Bantuan, nyalakan "Tampilkan di halaman publik", lalu coba tanya lagi. Untuk topik visa, izin tinggal, biaya, dan tenggat, jawaban pengurus wajib ditinjau dulu sebelum diterbitkan: chatbot akan mengutip artikel itu apa adanya.
