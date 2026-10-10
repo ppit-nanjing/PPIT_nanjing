@@ -150,7 +150,7 @@ export async function upsertNewsArticle(
   redirect(withFlash(scoped && eventId ? `/console/events/${eventId}` : "/console/content", "Artikel tersimpan."));
 }
 
-// Hard delete - mirrors deleteEvent. For genuine mistakes / duplicates / spam;
+// Hard delete (kegiatan kini punya Sampah, artikel belum). For genuine mistakes / duplicates / spam;
 // retiring an article that should stay on record is setNewsArticleStatus(..,
 // "archived") instead. authorId has onDelete: no action but nothing references
 // newsArticles, so a plain delete is safe.

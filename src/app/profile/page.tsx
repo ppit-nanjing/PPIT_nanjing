@@ -1,4 +1,4 @@
-import { eq, desc, and, inArray } from "drizzle-orm";
+import { eq, desc, and, inArray, isNull } from "drizzle-orm";
 import { redirect } from "next/navigation";
 import { auth } from "@/auth";
 import { db } from "@/db";
@@ -94,7 +94,7 @@ export default async function ProfilePage({
     })
     .from(eventRegistrations)
     .innerJoin(events, eq(eventRegistrations.eventId, events.id))
-    .where(eq(eventRegistrations.userId, session.user.id))
+    .where(and(eq(eventRegistrations.userId, session.user.id), isNull(events.deletedAt)))
     .orderBy(desc(events.startAt));
   // Barang yang saat ini dipinjam / akan diambil - approved (menunggu
   // pengambilan), borrowed (di tangan peminjam), overdue (lewat jadwal).

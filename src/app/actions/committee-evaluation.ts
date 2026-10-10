@@ -1,6 +1,6 @@
 "use server";
 
-import { and, eq, sql } from "drizzle-orm";
+import { and, eq, sql, isNull } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { auth } from "@/auth";
@@ -55,7 +55,7 @@ export async function submitCommitteeEvaluation(
       closesAt: events.committeeEvalClosesAt,
     })
     .from(events)
-    .where(eq(events.slug, slug));
+    .where(and(eq(events.slug, slug), isNull(events.deletedAt)));
   // Gerbang sama dengan halaman publiknya: draft/terjadwal tidak bisa dievaluasi,
   // dan acara yang dibatalkan tidak layak dievaluasi (K4).
   if (!event || event.status === "draft" || event.status === "scheduled" || event.status === "cancelled") {

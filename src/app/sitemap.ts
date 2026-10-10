@@ -1,5 +1,5 @@
 import type { MetadataRoute } from "next";
-import { eq } from "drizzle-orm";
+import { eq, and, isNull } from "drizzle-orm";
 import { db } from "@/db";
 import { events, newsArticles, galleryAlbums, jobPostings } from "@/db/schema";
 import { isJobExpired } from "@/lib/job-application";
@@ -53,7 +53,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     db
       .select({ slug: events.slug, startAt: events.startAt })
       .from(events)
-      .where(eq(events.status, "published")),
+      .where(and(eq(events.status, "published"), isNull(events.deletedAt))),
     db
       .select({ slug: newsArticles.slug, publishedAt: newsArticles.publishedAt })
       .from(newsArticles)

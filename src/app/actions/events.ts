@@ -1,7 +1,7 @@
 "use server";
 
 import { randomUUID } from "crypto";
-import { eq, and, ne } from "drizzle-orm";
+import { eq, and, ne, isNull } from "drizzle-orm";
 import { redirect } from "next/navigation";
 import { auth } from "@/auth";
 import { db } from "@/db";
@@ -127,7 +127,8 @@ async function runRegistration(eventId: string, slugArg: string, formData: FormD
     redirect(`/login?returnTo=/events/${encodeURIComponent(slugArg)}${practice ? "/register?practice=1" : ""}`);
   }
 
-  const [event] = await db.select().from(events).where(eq(events.id, eventId));
+  // Acara di Sampah diperlakukan seperti tidak ada.
+  const [event] = await db.select().from(events).where(and(eq(events.id, eventId), isNull(events.deletedAt)));
   if (!event) redirect(`/events/${encodeURIComponent(slugArg)}`);
   const slug = event.slug;
   if (practice) {

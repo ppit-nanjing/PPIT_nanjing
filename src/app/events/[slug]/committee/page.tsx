@@ -1,4 +1,4 @@
-import { eq, and } from "drizzle-orm";
+import { eq, and, isNull } from "drizzle-orm";
 import { randomUUID } from "crypto";
 import QRCode from "qrcode";
 import { redirect, notFound } from "next/navigation";
@@ -35,7 +35,7 @@ export default async function CommitteeTicketPage({ params }: { params: Promise<
   const session = await auth();
   if (!session?.user?.id) redirect(`/login?returnTo=${encodeURIComponent(`/events/${slug}/committee`)}`);
 
-  const [event] = await db.select().from(events).where(eq(events.slug, slug));
+  const [event] = await db.select().from(events).where(and(eq(events.slug, slug), isNull(events.deletedAt)));
   if (!event) notFound();
 
   const [assignment] = await db
