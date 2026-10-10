@@ -144,7 +144,7 @@ export default async function GuidebookConsolePage() {
             ok={staleChunks.length === 0}
             value={
               staleChunks.length === 0
-                ? "Setiap topik berisi punya potongan"
+                ? "Setiap topik punya potongan"
                 : `${staleChunks.length}: ${names(staleChunks)} - simpan salah satu untuk membangun ulang`
             }
           />
