@@ -1,7 +1,7 @@
 # Guidebook Maba
 
 > Implementation plan for **issue #65 — "Guidebook untuk maba: AI atau interaktif"**.
-> Status: **plan; retrieval half shipped.** Branch `feat/chatbot` already merges the chatbot part of step 1 below: `src/lib/guidebook-search.ts` (new), changes to `src/app/actions/ai.ts` and `src/lib/groq.ts`, and the "Chatbot Help Center" section of [Documentation & Help Center](./Documentation%20&%20Help%20Center.md). Still to build: guidebook topics in the console, checklist progress per account, and the staged-guide UI.
+> Status: **plan; retrieval half shipped, P0–P2 done.** Branch `feat/chatbot` already merges the chatbot part of step 1 below: `src/lib/guidebook-search.ts` (new), changes to `src/app/actions/ai.ts` and `src/lib/groq.ts`, and the "Chatbot Help Center" section of [Documentation & Help Center](./Documentation%20&%20Help%20Center.md). P0 landed on the same branch (see the phase table). P1 added `drizzle/0046_guidebook.sql`, the schema mirror, `src/lib/guide-chunker.ts`, `src/lib/markdown-lite.tsx`, and `scripts/check-guidebook.ts`. P2 added the console side: `src/app/console/docs/guidebook/` (topic list + diagnostics), the topic form (`article-form.tsx`, `markdown-editor.tsx`), and topic actions in `src/app/actions/admin-docs.ts`. No migration has been applied to a real database yet, and no topic has been saved from a browser — see "Verification and Definition of Done" for what P2 has actually been run against. Still to build: P3–P4 — checklist progress per account, retrieval wiring, and the staged-guide UI.
 > Related: [Documentation & Help Center](./Documentation%20&%20Help%20Center.md), [Data Dictionary](./Data%20Dictionary.md), [Entity Relationship Diagram](./Entity%20Relationship%20Diagram.md), [Tech Stack](./Tech%20Stack.md), [Sensus Profile Flow](./Sensus%20Profile%20Flow.md), [Information Architecture](./Information%20Architecture.md).
 
 ## Summary
@@ -16,7 +16,7 @@ The principle: **content first, AI second.** AI answers are only as good as the 
 |---|---|---|
 | **Markdown is the text SSoT**, stored per **topic** in `help_articles.content` (Postgres) | It is the only format that is pleasant for a human to edit in the console, and the review unit must equal the retrieval unit (per topic) | Needs a markdown renderer; `seed-help-articles.ts:235` ("teks biasa, tidak ada markdown") must be updated |
 | **PDF is provenance, not SSoT** | The 5 PDFs are one-off parse input; pengurus edit the result | PDFs live in Drive plus a hash so re-parsing is reproducible |
-| **Parse output = JSON per page**, serialized into markdown carrying `[[p12]]` markers | Page numbers are machine data (must be exact for citations), prose is human text | The ingest script injects page markers, not the parser |
+| **Page numbers ride along as text markers**, not as structured JSON | Page numbers are machine data (must be exact for citations), prose is human text | The datalab extractor already emits one `{12}------------` rule per page; the chunker reads the range off it, and also honours a hand-written `[[p12]]` |
 | **No embeddings / no vector DB** | Groq has no embeddings endpoint → new vendor, new key, re-embed cost on every change | Lexical retrieval (Postgres FTS); the upgrade path is documented, not built now |
 | **`parsed_markdown` (upstream) ≠ `content` (live)** | Re-ingest must never overwrite pengurus corrections | Needs a per-topic merge panel in the console |
 | **Retrieval-only is a success path**, not an error | The free Groq quota (8.000 TPM) will be hit during maba season | The endpoint returns guide snippets + links whenever the LLM is unavailable |
@@ -80,7 +80,7 @@ CREATE TABLE guide_chunks (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   article_id uuid NOT NULL REFERENCES help_articles(id) ON DELETE CASCADE,
   ordinal integer NOT NULL, heading text,
-  page_from integer, page_to integer,             -- from the [[p12]] markers
+  page_from integer, page_to integer,             -- from the {N} page rules / [[pN]] markers
   text text NOT NULL,
   text_stemmed text NOT NULL DEFAULT '',          -- filled by the existing Indonesian affix normalization
   tsv tsvector GENERATED ALWAYS AS (
@@ -141,11 +141,13 @@ These three functions are used by both the write path and the read path, so they
 
 | Function | File | Responsibility |
 |---|---|---|
-| `chunkMarkdown(md) → Chunk[]` | `src/lib/guide-chunker.ts` | Split on `##` headings, keep table/list blocks intact, derive `page_from/page_to` from `[[pN]]`, cap at 300–800 tokens. **This is a move** of the per-request chunker that currently lives in `src/lib/guidebook-search.ts` (180 lines, `MAX_CHUNK_CHARS = 1800`, `MAX_CHUNKS = 4`): character slicing at request time cannot produce page numbers, cannot persist a `tsv`, and re-runs on every question. `guidebook-search.ts` keeps `searchTerms`/`rankArticles` |
+| `chunkMarkdown(md) → GuideChunkDraft[]` | `src/lib/guide-chunker.ts` (new) | Split on `##` headings, keep table/list blocks intact, derive `page_from/page_to` from the `{N}` page rules (and `[[pN]]`), cap at ~800 tokens. Not a move: `guidebook-search.ts` never chunked anything, it sliced one whole article into an 1800-char request context (`MAX_CHUNK_CHARS = 1800`, `MAX_CHUNKS = 4`). That path stays untouched for the chat; P4 builds the searchable corpus with this chunker instead. `guidebook-search.ts` keeps `searchTerms`/`rankArticles` |
 | `normalizeToken/ searchTerms` | `src/lib/guidebook-search.ts` (already exists) | Indonesian affix stemming + function-word removal |
-| `renderMarkdownLite(md) → ReactNode` | `src/lib/markdown-lite.tsx` | Headings, lists, tables, bold/italic, links, code. **No `dangerouslySetInnerHTML`**, no new dependency, tolerant of half-finished markdown |
+| `renderMarkdownLite(md) → ReactNode` | `src/lib/markdown-lite.tsx` (new) | Headings, lists, tables, bold/italic, links, code. **No `dangerouslySetInnerHTML`**, no new dependency, tolerant of half-finished markdown. Extras worth knowing: a `{12}------------` rule becomes an `<hr>`, an image becomes its alt text (assets are not hosted), and only `http(s):`/`mailto:`/relative hrefs become real links |
 
-`renderMarkdownLite` must survive: a table with no closing row, a code fence with no closing fence, an empty heading, a deleted `[[p12]]` marker. All of those render as literal text — the page must never error because a pengurus mistyped.
+`renderMarkdownLite` must survive: a table with no closing row, a code fence with no closing fence, an empty heading, a deleted `[[p12]]` marker. Nothing throws and nothing injects HTML: a broken table still renders as a table, an unclosed fence still renders as a code block, and an empty heading or a stray `[[p12]]` falls through as literal text.
+
+Both files are checked by `scripts/check-guidebook.ts` (`npm run check:guidebook`, 24 assertions, no env needed). It also accepts a path, which is how the chunker is checked against a real extraction: `npm run check:guidebook -- "tmp/datalab-output-Guide_to_南京_2026.md"`.
 
 ## Pengurus experience (editability)
 
@@ -321,9 +323,9 @@ Quota mitigations: answer cache (key = question hash + `corpus_version`), prewar
 
 | Phase | Content | Main files | Done when |
 |---|---|---|---|
-| **P0 — Hygiene** | `/help` selects only `(id, section, title, slug)`; `groq.ts` gets a 20 s timeout + stops the chain on 429; drop the unordered `.limit(40)`; log `usage` | `src/app/help/page.tsx:16`, `src/lib/groq.ts`, `src/lib/guidebook-search.ts` | The index page payload drops (no longer shipping every article body), no fetch is left without a timeout, a 429 no longer burns the next model's quota |
-| **P1 — Schema + pure functions** | SQL migration; `guide-chunker.ts` (chunker moved out of `guidebook-search.ts`); `markdown-lite.tsx`; chunker + renderer harness | `drizzle/*.sql`, `src/db/schema.ts`, `src/lib/*` | `tsc`/`lint` clean; the harness prints chunks + citations from a sample topic; the renderer survives broken markdown |
-| **P2 — Console (editability)** | Topic form (phase/order/review/expiry), preview, diagnostics, history + restore, merge panel | `src/app/console/docs/**`, `src/app/actions/admin-docs.ts` | A new topic shows up in the checklist and retrieval **with no deploy**; an edit bumps `corpus_version`; a concurrent save is rejected |
+| **P0 — Hygiene** *(done)* | `/help` selects only `(id, section, title, slug)`; `groq.ts` gets a 20 s timeout + stops the chain on 429; drop the unordered `.limit(40)`; log `usage` | `src/app/help/page.tsx:16`, `src/lib/groq.ts`, `src/lib/guidebook-search.ts` | The index page payload drops (no longer shipping every article body), no fetch is left without a timeout, a 429 no longer burns the next model's quota |
+| **P1 — Schema + pure functions** *(done)* | SQL migration `0046_guidebook.sql`; `guide-chunker.ts`; `markdown-lite.tsx`; harness `scripts/check-guidebook.ts` | `drizzle/0046_guidebook.sql`, `src/db/schema.ts`, `src/lib/guide-chunker.ts`, `src/lib/markdown-lite.tsx`, `scripts/check-guidebook.ts` | `tsc`/`npm run lint` clean; `npm run check:guidebook` 24/24 green; chunking the 5 real extractions gives 133 chunks with page ranges that match the PDFs (0–37, 0–68, …); migration applied and re-applied idempotently on a throwaway Postgres 16. The migration is **not applied to any real database yet** |
+| **P2 — Console (editability)** *(done; DB-side verified, not yet clicked through in a browser)* | Topic form (phase/order/review/expiry), preview, diagnostics, history + restore, merge panel | `src/app/console/docs/**`, `src/app/actions/admin-docs.ts`, `src/components/console/{article-form,markdown-editor,status-row}.tsx`, `src/lib/guidebook-topic.ts` | A new topic shows up in the checklist and retrieval **with no deploy**; an edit bumps `corpus_version`; a concurrent save is rejected |
 | **P3 — Ingest** | JSON-per-page → per-topic markdown → `parsed_markdown`; quality gate; first merge | `src/db/ingest-guide.ts`, `src/lib/guidebook-manifest.ts`, `src/lib/guidebook-faq.ts` | All 5 PDFs ingested, 10 random pages manually checked, no empty/conflicting pages, local edits not clobbered |
 | **P4 — Retrieval & UX** | FTS + refusal + retrieval-only + cache + quota + prewarm; `/guidebook`; chat wiring; docs + SOP | `src/app/api/guide/ask/route.ts`, `src/app/guidebook/**`, `src/lib/guidebook-search.ts`, `docs/**` | The golden set passes its targets; `/guidebook` works on mobile + dark mode; KPIs are measurable from `ai_query_log` |
 
@@ -335,6 +337,7 @@ P0 can be done right now without waiting on the parser; P2 deliberately precedes
 - Offline harness for the chunker/retrieval (not a new test framework).
 - Browser check: `/guidebook` on mobile + light/dark mode; check a progress box; one question that gets answered, one that is refused, and one with Groq disabled (kill switch).
 - Verify the migration separately: inspect the SQL, apply it through `apply-sql.ts` to the correct database; **never** use `db:push`.
+- What P2 has actually been run against (branch `feat/chatbot`, no `DATABASE_URL` on the machine that wrote it): `tsc`/`lint` clean; `npm run build` compiles and typechecks, then stops at `Failed to collect page data` because `src/db/index.ts` has no connection string — pre-existing, not from this phase; `npm run check:guidebook` 24/24; `drizzle/0046_guidebook.sql` applied twice to a throwaway Postgres 16, and the two P2 acceptance criteria ran there for real: `INSERT ... ON CONFLICT (one_row) DO UPDATE SET corpus_version = corpus_version + 1` moved 1 → 2 → 3 (upsert was run twice), and the second save carrying a stale `md5(title|section|content)` signature updated 0 rows while the first updated 1. The topic form and its markdown editor were driven through a real DOM (jsdom, throwaway) — preview tab, `<script>` not executed, opening preview and saving submits the full content, counter follows typing. **Not** run: saving a topic from the browser against a real database, and the console pages themselves.
 - A feature counts as done only when this doc exists (and is listed in `docs/README.md`) **and** a Help Center article exists as the pengurus SOP — see [Documentation & Help Center](./Documentation%20&%20Help%20Center.md).
 
 ## Operations and rollback

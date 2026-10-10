@@ -1,6 +1,6 @@
 import { db } from "@/db";
 import { helpArticles } from "@/db/schema";
-import { Plus, FileText, History } from "lucide-react";
+import { Plus, FileText, History, Map } from "lucide-react";
 import { CollapsibleSection } from "@/components/console/collapsible-section";
 import { GuideButton } from "@/components/console/guide-button";
 import Link from "next/link";
@@ -24,6 +24,12 @@ export default async function ConsoleDocsPage() {
         </div>
         <div className="flex flex-wrap gap-3 shrink-0">
           {guide && <GuideButton title={guide.title} content={guide.content ?? ""} />}
+          <Link
+            href="/console/docs/guidebook"
+            className="flex items-center gap-2 border border-outline-variant text-on-background text-label-caps uppercase tracking-wide px-5 py-3 rounded-md hover:bg-surface-container-low transition-colors"
+          >
+            <Map size={16} /> Guidebook Maba
+          </Link>
           <Link
             href="/console/docs/changelog"
             className="flex items-center gap-2 border border-outline-variant text-on-background text-label-caps uppercase tracking-wide px-5 py-3 rounded-md hover:bg-surface-container-low transition-colors"

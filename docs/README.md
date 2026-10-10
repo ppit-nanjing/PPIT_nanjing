@@ -52,7 +52,7 @@
 - [Join Us Flow](./Join%20Us%20Flow.md)
 - [Equipment Lending Flow](./Equipment%20Lending%20Flow.md)
 - [Sensus Profile Flow](./Sensus%20Profile%20Flow.md)
-- [Guidebook Maba](./Guidebook%20Maba.md) — **rencana** (issue #65): panduan bertahap + checklist, isi dari PDF, jawaban AI hanya dari isi guidebook, jalur edit di console
+- [Guidebook Maba](./Guidebook%20Maba.md) — **rencana + sebagian jadi** (issue #65): panduan bertahap + checklist, isi dari PDF, jawaban AI hanya dari isi guidebook, jalur edit di console. Yang sudah ada di branch `feat/chatbot`: skema `guide_chunks`/`guide_meta` (migrasi `0046_guidebook.sql`, belum dijalankan di database mana pun), chunker + renderer markdown, dan halaman console `/console/docs/guidebook` untuk menulis topik
 
 ## 🛠️ Screens — Admin Console
 
