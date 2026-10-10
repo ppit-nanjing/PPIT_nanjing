@@ -15,6 +15,11 @@ const GROQ_URL = "https://api.groq.com/openai/v1/chat/completions";
 // wired up yet.
 const GROQ_MODEL_CHAIN = ["openai/gpt-oss-120b", "openai/gpt-oss-20b", "qwen/qwen3.8-27b"];
 
+// Hard cap per attempt. Without a signal a stalled request keeps the Vercel
+// function alive until the platform limit, and the member stares at a spinner
+// the whole time. 20 s is roughly 10x a full 800-token reply.
+const GROQ_TIMEOUT_MS = 20_000;
+
 export type GroqRole = "system" | "user" | "assistant";
 export type GroqMessage = { role: GroqRole; content: string };
 
@@ -53,6 +58,7 @@ export async function groqChat(messages: GroqMessage[], opts: GroqOptions = {}):
           temperature: opts.temperature ?? 0.6,
           max_tokens: opts.maxTokens ?? 800,
         }),
+        signal: AbortSignal.timeout(GROQ_TIMEOUT_MS),
       });
     } catch (err) {
       lastError = err instanceof Error ? err : new Error(String(err));
@@ -64,12 +70,22 @@ export async function groqChat(messages: GroqMessage[], opts: GroqOptions = {}):
       // stop now instead of burning N requests to learn that N times.
       throw new Error(`Layanan AI sedang tidak tersedia (${res.status})`);
     }
+    if (res.status === 429) {
+      // Rate limit is per API key, not per model. Walking the chain would burn
+      // the next models' quota and 429 there too, so stop at the first one.
+      throw new Error("Layanan AI sedang sibuk, coba lagi sebentar lagi");
+    }
     if (!res.ok) {
       lastError = new Error(`Layanan AI sedang tidak tersedia (${res.status})`);
       continue; // this model specifically is unavailable - try the next one
     }
 
     const data = await res.json();
+    if (data?.usage) {
+      console.log(
+        `[groq] ${model} prompt=${data.usage.prompt_tokens} completion=${data.usage.completion_tokens} total=${data.usage.total_tokens}`,
+      );
+    }
     const content = data?.choices?.[0]?.message?.content;
     if (typeof content !== "string") {
       lastError = new Error("Respons AI tidak valid");

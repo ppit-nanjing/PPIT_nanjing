@@ -13,7 +13,18 @@ import { getT } from "@/lib/i18n/server";
 // operasional console. Sumbernya sama dengan /console/docs, cuma disaring.
 export default async function HelpPage() {
   const { t } = await getT();
-  const articles = await db.select().from(helpArticles).where(eq(helpArticles.isPublic, true));
+  // Hanya kolom yang dipakai daftar ini. `select()` tanpa argumen ikut mengirim
+  // `content` setiap artikel ke server render - payload halaman tumbuh seiring
+  // isi guidebook, padahal isinya belum ditampilkan di sini.
+  const articles = await db
+    .select({
+      id: helpArticles.id,
+      section: helpArticles.section,
+      title: helpArticles.title,
+      slug: helpArticles.slug,
+    })
+    .from(helpArticles)
+    .where(eq(helpArticles.isPublic, true));
   const bySection = articles.reduce<Record<string, typeof articles>>((acc, a) => {
     (acc[a.section] ??= []).push(a);
     return acc;

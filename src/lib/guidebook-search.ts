@@ -34,8 +34,10 @@ export const MAX_CHUNKS = 4;
 const MAX_CHUNK_CHARS = 1800;
 const MAX_CONTEXT_CHARS = 7000;
 
-/** Kandidat maksimum dari DB sebelum diskor - korpusnya kecil, tapi jangan biarkan kueri tumbuh tanpa batas. */
-const MAX_CANDIDATES = 40;
+// Tanpa batas LIMIT: skoringnya di JS, dan LIMIT tanpa ORDER BY membuang kandidat
+// secara acak - artikel terbaik bisa hilang sebelum sempat diskor. Korpusnya
+// masih puluhan artikel; kalau nanti membengkak, ganti ke FTS dengan peringkat di
+// DB (lihat rencana P1 di docs/Guidebook Maba.md), bukan menambah LIMIT lagi.
 
 const MAX_TERMS = 10;
 
@@ -104,6 +106,18 @@ export function searchTerms(question: string): string[] {
 }
 
 /**
+ * Isi kolom `guide_chunks.text_stemmed`: seluruh kata potongan, dinormalkan.
+ * Beda dengan searchTerms, di sini stopword TIDAK dibuang - kolom ini harus
+ * tetap bisa dicocokkan untuk kata apa pun yang diketik pengguna, dan kata
+ * fungsi baru dibuang di sisi pertanyaan. Duplikat dibiarkan; `to_tsvector`
+ * yang meringkasnya jadi lexeme.
+ */
+export function stemmedText(text: string): string {
+  const raw = (text ?? "").toLowerCase().match(/[a-z0-9]+/g) ?? [];
+  return raw.map(normalizeToken).join(" ");
+}
+
+/**
  * Skor sederhana: judul paling menentukan, lalu bagian, lalu isi (dibatasi 3
  * hitungan supaya artikel panjang tidak menang hanya karena panjang).
  * Query DB sudah menjamin minimal satu istilah cocok, jadi tidak ada
@@ -152,8 +166,7 @@ export async function findGuideChunks(question: string): Promise<GuideChunk[]> {
       content: helpArticles.content,
     })
     .from(helpArticles)
-    .where(and(eq(helpArticles.isPublic, true), or(...matches)))
-    .limit(MAX_CANDIDATES);
+    .where(and(eq(helpArticles.isPublic, true), or(...matches)));
 
   return rankArticles(
     terms,
