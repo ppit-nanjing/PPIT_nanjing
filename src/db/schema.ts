@@ -15,6 +15,7 @@ import {
   primaryKey,
   uniqueIndex,
   index,
+  customType,
   AnyPgColumn,
 } from "drizzle-orm/pg-core";
 
@@ -1670,9 +1671,12 @@ export const eventEvaluationAnswers = pgTable(
 );
 
 // ---------- Guidebook maba (issue #65, docs/Guidebook Maba.md) ----------
-// Migrasinya: drizzle/0046_guidebook.sql. Kolom guide_chunks.tsv (tsvector)
-// sengaja tidak dipetakan di sini - dibaca lewat fragmen sql mentah saat FTS
-// dipasang di P4.
+// Migrasinya: drizzle/0046_guidebook.sql. `tsv` ikut dipetakan di sini walau
+// tidak pernah dibaca lewat Drizzle: kalau tidak, `db:push` menganggapnya kolom
+// asing dan menawarkan DROP, sementara query FTS-nya (P4) masih memakainya.
+const tsvector = customType<{ data: string }>({
+  dataType: () => "tsvector",
+});
 
 // Provenance: PDF sumber tiap topik. Bukan sumber kebenaran, cuma jejak asal
 // dan hash supaya ingest ulang bisa melewati file yang tidak berubah.
@@ -1702,8 +1706,16 @@ export const guideChunks = pgTable(
     pageTo: integer("page_to"),
     text: text("text").notNull(),
     textStemmed: text("text_stemmed").notNull().default(""),
+    // Ekspresinya harus sama persis dengan drizzle/0046_guidebook.sql, kalau
+    // tidak `db:push` akan terus menganggap kolomnya berubah.
+    tsv: tsvector("tsv").generatedAlwaysAs(
+      sql`to_tsvector('simple'::regconfig, coalesce("heading", '') || ' ' || "text" || ' ' || "text_stemmed")`,
+    ),
   },
-  (t) => [uniqueIndex("guide_chunks_article_ordinal_idx").on(t.articleId, t.ordinal)],
+  (t) => [
+    uniqueIndex("guide_chunks_article_ordinal_idx").on(t.articleId, t.ordinal),
+    index("guide_chunks_tsv_idx").using("gin", t.tsv),
+  ],
 );
 
 // Satu baris (one_row selalu true). corpus_version = kunci cache jawaban,

@@ -33,9 +33,9 @@ CREATE TABLE IF NOT EXISTS "guide_documents" (
 );
 
 -- 3. Potongan untuk pencarian. Penanda [[pN]] di markdown jadi page_from/page_to.
---    `tsv` dibuat di sini, bukan lewat schema Drizzle (Drizzle belum punya tipe
---    tsvector) - dibaca lewat fragmen sql mentah saat FTS dipasang di P4.
---    to_tsvector(regconfig, text) bersifat immutable, jadi GENERATED ... STORED sah.
+--    `tsv` juga dipetakan di src/db/schema.ts (customType) supaya `db:push`
+--    tidak menawarkan DROP kolom ini. to_tsvector(regconfig, text) immutable,
+--    jadi GENERATED ... STORED sah.
 CREATE TABLE IF NOT EXISTS "guide_chunks" (
   "id" uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   "article_id" uuid NOT NULL REFERENCES "help_articles"("id") ON DELETE CASCADE,
@@ -49,6 +49,12 @@ CREATE TABLE IF NOT EXISTS "guide_chunks" (
     to_tsvector('simple'::regconfig, coalesce("heading", '') || ' ' || "text" || ' ' || "text_stemmed")
   ) STORED
 );
+-- Kalau tabelnya sudah ada tanpa `tsv` - misalnya dibuat `drizzle-kit push`
+-- sebelum kolom itu dipetakan di schema.ts - CREATE TABLE di atas dilewati dan
+-- indeks GIN di bawah akan gagal tanpa baris ini.
+ALTER TABLE "guide_chunks" ADD COLUMN IF NOT EXISTS "tsv" tsvector GENERATED ALWAYS AS (
+  to_tsvector('simple'::regconfig, coalesce("heading", '') || ' ' || "text" || ' ' || "text_stemmed")
+) STORED;
 CREATE UNIQUE INDEX IF NOT EXISTS "guide_chunks_article_ordinal_idx" ON "guide_chunks" ("article_id", "ordinal");
 CREATE INDEX IF NOT EXISTS "guide_chunks_tsv_idx" ON "guide_chunks" USING gin ("tsv");
 
