@@ -38,6 +38,7 @@
 ## 🔧 Operations & Migration
 
 - [Setup Env & Migrasi Akun.md](./Setup%20Env%20&%20Migrasi%20Akun.md) — daftar lengkap environment variable + urutan migrasi layanan (GitHub, Vercel, Neon, Google Cloud) ke akun Gmail organisasi
+- [Database Lokal Docker](./Database%20Lokal%20Docker.md) — menjalankan Postgres di mesin sendiri (`DB_DRIVER=pg`), urutan push → migrasi → seed, seed admin berpassword, port dev 3100, dan jebakan `drizzle-kit push` yang menerapkan tanpa konfirmasi
 - [Migrasi Akun ke PPIT Nanjing.md](./Migrasi%20Akun%20ke%20PPIT%20Nanjing.md) — kondisi tiap layanan sebelum dipindah dari akun pribadi
 - [Migrasi Subdomain ppitiongkok.md](./Migrasi%20Subdomain%20ppitiongkok.md) — status migrasi ke `nanjing.ppitiongkok.com`, menunggu DNS dari pusat
 
@@ -52,7 +53,7 @@
 - [Join Us Flow](./Join%20Us%20Flow.md)
 - [Equipment Lending Flow](./Equipment%20Lending%20Flow.md)
 - [Sensus Profile Flow](./Sensus%20Profile%20Flow.md)
-- [Guidebook Maba](./Guidebook%20Maba.md) — **rencana + sebagian jadi** (issue #65): panduan bertahap + checklist, isi dari PDF, jawaban AI hanya dari isi guidebook, jalur edit di console. Yang sudah ada di branch `feat/chatbot`: skema `guide_chunks`/`guide_meta` (migrasi `0046_guidebook.sql`, belum dijalankan di database mana pun), chunker + renderer markdown, dan halaman console `/console/docs/guidebook` untuk menulis topik
+- [Guidebook Maba](./Guidebook%20Maba.md) — **rencana + sebagian jadi** (issue #65): panduan bertahap + checklist, isi dari PDF, jawaban AI hanya dari isi guidebook, jalur edit di console. Yang sudah ada di branch `feat/chatbot`: skema `guide_chunks`/`guide_meta` (migrasi `0046_guidebook.sql`, sudah jalan di database lokal Docker, belum di Neon produksi), chunker + renderer markdown, halaman `/console/docs/guidebook` untuk menulis topik sekaligus diagnostik korpus, dan pencarian bantuan yang jawabannya cuma dari artikel publik
 
 ## 🛠️ Screens — Admin Console
 

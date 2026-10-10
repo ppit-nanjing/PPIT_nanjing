@@ -1,0 +1,22 @@
+# Postgres lokal buat `npm run dev`. Produksi pakai Neon, dan driver-nya beda
+# (`DB_DRIVER=pg` di .env.local). Penjelasan lengkap: docs/Database Lokal Docker.md
+services:
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ppit
+      POSTGRES_PASSWORD: ppit
+      POSTGRES_DB: ppit
+    ports:
+      - "5432:5432"
+    volumes:
+      - ppit-lokal:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ppit -d ppit"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+volumes:
+  ppit-lokal:
