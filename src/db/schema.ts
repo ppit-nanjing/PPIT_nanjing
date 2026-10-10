@@ -5,10 +5,12 @@ import {
   uuid,
   text,
   integer,
+  bigint,
   boolean,
   timestamp,
   date,
   jsonb,
+  real,
   doublePrecision,
   primaryKey,
   uniqueIndex,
@@ -1052,7 +1054,22 @@ export const helpArticles = pgTable("help_articles", {
   // umum - baru muncul di halaman publik /help. Default false = semua artikel
   // lama (panduan operasional console) tetap tertutup, tanpa migrasi data.
   isPublic: boolean("is_public").notNull().default(false),
-});
+  // --- Guidebook maba (docs/Guidebook Maba.md) ---
+  // Topik guidebook = artikel yang `phase`-nya terisi. `content` tetap yang
+  // disunting pengurus dan jadi sumber kebenaran; `parsed_markdown` cuma
+  // ditulis script ingest supaya panel merge bisa membandingkan versi PDF
+  // dengan versi yang sudah diedit.
+  phase: text("phase"),
+  sortOrder: integer("sort_order").notNull().default(0),
+  sourceLabel: text("source_label"),
+  sourceDocSlug: text("source_doc_slug"),
+  parsedMarkdown: text("parsed_markdown"),
+  reviewedAt: timestamp("reviewed_at"),
+  reviewedBy: uuid("reviewed_by").references(() => users.id),
+  expiresAt: timestamp("expires_at"),
+}, (t) => [
+  index("help_articles_phase_idx").on(t.phase, t.sortOrder),
+]);
 
 export const releaseNotes = pgTable("release_notes", {
   id: uuid("id").defaultRandom().primaryKey(),
@@ -1651,3 +1668,113 @@ export const eventEvaluationAnswers = pgTable(
     index("event_evaluation_answers_question_idx").on(t.questionId),
   ],
 );
+
+// ---------- Guidebook maba (issue #65, docs/Guidebook Maba.md) ----------
+// Migrasinya: drizzle/0046_guidebook.sql. Kolom guide_chunks.tsv (tsvector)
+// sengaja tidak dipetakan di sini - dibaca lewat fragmen sql mentah saat FTS
+// dipasang di P4.
+
+// Provenance: PDF sumber tiap topik. Bukan sumber kebenaran, cuma jejak asal
+// dan hash supaya ingest ulang bisa melewati file yang tidak berubah.
+export const guideDocuments = pgTable("guide_documents", {
+  slug: text("slug").primaryKey(),
+  title: text("title").notNull(),
+  sourceLabel: text("source_label").notNull(),
+  pdfUrl: text("pdf_url"),
+  pdfHash: text("pdf_hash"),
+  pageCount: integer("page_count"),
+  version: text("version"),
+  ingestedAt: timestamp("ingested_at").notNull().defaultNow(),
+});
+
+// Potongan artikel untuk pencarian. Ordinalnya stabil per artikel, jadi
+// chunker_version di guide_meta menandai kapan potongan lama perlu dibuang.
+export const guideChunks = pgTable(
+  "guide_chunks",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    articleId: uuid("article_id")
+      .notNull()
+      .references(() => helpArticles.id, { onDelete: "cascade" }),
+    ordinal: integer("ordinal").notNull(),
+    heading: text("heading"),
+    pageFrom: integer("page_from"),
+    pageTo: integer("page_to"),
+    text: text("text").notNull(),
+    textStemmed: text("text_stemmed").notNull().default(""),
+  },
+  (t) => [uniqueIndex("guide_chunks_article_ordinal_idx").on(t.articleId, t.ordinal)],
+);
+
+// Satu baris (one_row selalu true). corpus_version = kunci cache jawaban,
+// ai_enabled = kill switch tanpa deploy.
+export const guideMeta = pgTable("guide_meta", {
+  oneRow: boolean("one_row").primaryKey().default(true),
+  corpusVersion: bigint("corpus_version", { mode: "number" }).notNull().default(1),
+  chunkerVersion: integer("chunker_version").notNull().default(1),
+  aiEnabled: boolean("ai_enabled").notNull().default(true),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+});
+
+// Cache jawaban per versi korpus. Kuncinya menyertakan corpus_version, jadi
+// konten yang berubah tidak perlu menghapus baris lama.
+export const guideAnswers = pgTable(
+  "guide_answers",
+  {
+    questionHash: text("question_hash").notNull(),
+    corpusVersion: bigint("corpus_version", { mode: "number" }).notNull(),
+    question: text("question").notNull(),
+    answer: text("answer").notNull(),
+    chunkIds: uuid("chunk_ids").array().notNull(),
+    hits: integer("hits").notNull().default(0),
+    createdAt: timestamp("created_at").notNull().defaultNow(),
+  },
+  (t) => [primaryKey({ columns: [t.questionHash, t.corpusVersion] })],
+);
+
+// Kuota AI harian per akun.
+export const aiUsage = pgTable(
+  "ai_usage",
+  {
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    day: date("day").notNull(),
+    count: integer("count").notNull().default(0),
+  },
+  (t) => [primaryKey({ columns: [t.userId, t.day] })],
+);
+
+// Checklist maba: hanya langkah yang sudah selesai yang disimpan.
+export const guidebookProgress = pgTable(
+  "guidebook_progress",
+  {
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    articleId: uuid("article_id")
+      .notNull()
+      .references(() => helpArticles.id, { onDelete: "cascade" }),
+    doneAt: timestamp("done_at").notNull().defaultNow(),
+  },
+  (t) => [primaryKey({ columns: [t.userId, t.articleId] })],
+);
+
+// Log pertanyaan untuk KPI. question_redacted sudah disunting; teks mentahnya
+// tidak pernah disimpan.
+export const aiQueryLog = pgTable("ai_query_log", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  userId: uuid("user_id").references(() => users.id, { onDelete: "set null" }),
+  questionHash: text("question_hash").notNull(),
+  questionRedacted: text("question_redacted"),
+  chunkIds: uuid("chunk_ids").array(),
+  scores: real("scores").array(),
+  cacheHit: boolean("cache_hit").notNull().default(false),
+  usedLlm: boolean("used_llm").notNull().default(false),
+  degradedReason: text("degraded_reason"),
+  latencyMs: integer("latency_ms"),
+  model: text("model"),
+  promptTokens: integer("prompt_tokens"),
+  completionTokens: integer("completion_tokens"),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
