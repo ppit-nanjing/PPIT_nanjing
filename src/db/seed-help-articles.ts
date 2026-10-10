@@ -89,7 +89,11 @@ Bikin divisi acara (nama wajib, bisa punya sub-divisi), lalu tugaskan siapa saja
 Pertanyaan Pendaftaran
 Di halaman detail acara. Kosong = form pendaftaran standar. Tambahkan pertanyaan (Teks Pendek/Panjang, Dropdown, Pilihan, Pilih Banyak) bila acaranya butuh — mis. preferensi makanan atau ukuran kaos; centang "Wajib diisi" supaya tidak bisa dilewati. Jawabannya muncul di kolom Peserta pada Daftar Pendaftar. Menghapus pertanyaan tidak menghapus jawaban yang sudah tersimpan, cuma berhenti ditampilkan.
 
-Hapus kegiatan: album galeri terkait acara ini ikut terhapus, pendaftaran ikut terhapus otomatis.`,
+Hapus kegiatan & Sampah (khusus BPH Kabinet)
+- Tombol "Hapus" tidak langsung menghapus: kegiatan dipindah ke Sampah. Kegiatan di Sampah hilang dari situs publik, dari daftar kegiatan, dan dari akses panitia, tapi pendaftar, panitia, evaluasi, dan datanya tetap tersimpan.
+- Bagian "Sampah" ada di bawah Daftar Kegiatan. "Pulihkan" mengembalikan kegiatan dengan status semula — kalau statusnya publik, langsung tampil lagi di situs.
+- "Hapus Permanen" hanya bisa dari Sampah dan TIDAK bisa dibatalkan: pendaftar, panitia, evaluasi ikut terhapus. Album galeri yang tertaut tidak ikut terhapus, hanya dilepas tautannya. Sertifikat yang sudah terbit tetap ada.
+- Setiap pindah ke Sampah, pemulihan, dan hapus permanen tercatat di Log Audit.`,
   },
   {
     slug: "work-ledger",
