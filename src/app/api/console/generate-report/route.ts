@@ -1,4 +1,4 @@
-import { and, desc, eq, gte, inArray, lte } from "drizzle-orm";
+import { and, desc, eq, gte, inArray, lte, isNull } from "drizzle-orm";
 import { NextResponse } from "next/server";
 import { auth } from "@/auth";
 import { db } from "@/db";
@@ -88,7 +88,8 @@ export async function GET(request: Request) {
 
   switch (type as ReportType) {
     case "event_attendance": {
-      const conditions = [];
+      // Acara di Sampah tidak ikut laporan (sama seperti acara yang dihapus).
+      const conditions = [isNull(events.deletedAt)];
       if (departmentId) conditions.push(eq(events.departmentId, departmentId));
       if (dateFrom) conditions.push(gte(events.startAt, new Date(dateFrom)));
       if (dateTo) conditions.push(lte(events.startAt, new Date(dateTo)));

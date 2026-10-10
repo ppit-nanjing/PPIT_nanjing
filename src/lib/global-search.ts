@@ -1,4 +1,4 @@
-import { eq, ilike, and, or } from "drizzle-orm";
+import { eq, ilike, and, or, isNull } from "drizzle-orm";
 import { db } from "@/db";
 import { events, newsArticles, jobPostings, galleryAlbums, inventoryItems } from "@/db/schema";
 
@@ -27,7 +27,7 @@ export async function runGlobalSearch(q: string, hasSensus: boolean): Promise<Se
     db
       .select({ title: events.title, slug: events.slug, requiresSensus: events.requiresSensus })
       .from(events)
-      .where(and(eq(events.status, "published"), ilike(events.title, pattern)))
+      .where(and(eq(events.status, "published"), isNull(events.deletedAt), ilike(events.title, pattern)))
       .limit(5),
     db
       .select({ title: newsArticles.title, slug: newsArticles.slug })

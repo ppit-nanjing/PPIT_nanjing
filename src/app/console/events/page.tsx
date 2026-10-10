@@ -1,9 +1,9 @@
-import { sql, inArray, eq } from "drizzle-orm";
+import { sql, inArray, eq, and, desc, isNull, isNotNull } from "drizzle-orm";
 import { redirect } from "next/navigation";
 import { auth } from "@/auth";
 import { db } from "@/db";
-import { events, eventCommittee } from "@/db/schema";
-import { setEventStatus } from "@/app/actions/admin-events";
+import { events, eventCommittee, users } from "@/db/schema";
+import { setEventStatus, restoreEvent, deleteEventPermanently } from "@/app/actions/admin-events";
 import { publishDueEvents } from "@/lib/publish-events";
 import { DeleteEventButton } from "@/components/console/delete-event-button";
 import { hasModuleAccess } from "@/lib/admin-scope";
@@ -22,6 +22,9 @@ export default async function ConsoleEventsPage() {
   // Admin modul "events" -> semua acara + bisa buat/hapus. Kalau tidak, panitia:
   // hanya acara yang dia ikuti, tanpa tombol buat/hapus.
   const isEventsAdmin = hasModuleAccess(session.user.adminScope ?? null, "events");
+  // Hapus (pindah ke Sampah), pulihkan, dan hapus permanen: BPH "full" saja —
+  // sama dengan kapabilitas event.delete. Admin modul lain tidak melihat tombolnya.
+  const isFullAdmin = session.user.adminScope === "full";
   let committeeEventIds: string[] = [];
   if (!isEventsAdmin) {
     const rows = await db
@@ -36,18 +39,36 @@ export default async function ConsoleEventsPage() {
   // publish just flipped to 'published'. The independent reads then run
   // concurrently in one batch.
   if (isEventsAdmin) await publishDueEvents();
-  const [list, guide] = await Promise.all([
+  const [list, trash, guide] = await Promise.all([
     // Postgres DESC default = NULLS FIRST, which would float unscheduled
     // ("Belum dijadwalkan") events above everything - pin them to the bottom.
+    // Acara di Sampah tidak ikut daftar utama (lihat bagian Sampah di bawah).
     isEventsAdmin
-      ? db.select().from(events).orderBy(sql`${events.startAt} desc nulls last`)
+      ? db.select().from(events).where(isNull(events.deletedAt)).orderBy(sql`${events.startAt} desc nulls last`)
       : db
           .select()
           .from(events)
-          .where(inArray(events.id, committeeEventIds))
+          .where(and(inArray(events.id, committeeEventIds), isNull(events.deletedAt)))
           .orderBy(sql`${events.startAt} desc nulls last`),
+    isFullAdmin
+      ? db
+          .select({
+            id: events.id,
+            title: events.title,
+            status: events.status,
+            startAt: events.startAt,
+            deletedAt: events.deletedAt,
+            deletedByName: users.name,
+          })
+          .from(events)
+          .leftJoin(users, eq(events.deletedBy, users.id))
+          .where(isNotNull(events.deletedAt))
+          .orderBy(desc(events.deletedAt))
+      : Promise.resolve([]),
     getGuide("kegiatan"),
   ]);
+  const formatDateTime = (d: Date) =>
+    new Intl.DateTimeFormat("id-ID", { dateStyle: "medium", timeStyle: "short", timeZone: "Asia/Shanghai" }).format(d);
 
   return (
     <div className="px-3 py-4 sm:px-6 lg:px-8 lg:py-10">
@@ -112,13 +133,70 @@ export default async function ConsoleEventsPage() {
                        Jadikan Draft
                      </ConfirmButton>
                    )}
-                  <DeleteEventButton eventId={e.id} />
+                  {isFullAdmin && <DeleteEventButton eventId={e.id} />}
                 </div>
               )}
             </div>
           ))}
         </div>
       </CollapsibleSection>
+
+      {isFullAdmin && (
+        <div className="mt-6 sm:mt-8">
+          <CollapsibleSection
+            title={`Sampah${trash.length > 0 ? ` (${trash.length})` : ""}`}
+            description="Kegiatan yang dihapus. Tidak tampil di situs dan tidak bisa dibuka panitia, tapi datanya utuh. Pulihkan untuk mengembalikannya dengan status semula."
+            defaultOpen={false}
+          >
+            <div className="flex flex-col gap-2">
+              {trash.length === 0 && <p className="text-body-md text-on-surface-variant">Sampah kosong.</p>}
+              {trash.map((e) => (
+                <div
+                  key={e.id}
+                  className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between bg-surface-container-lowest border border-outline-variant rounded-lg px-4 py-3"
+                >
+                  <div className="min-w-0">
+                    <p className="text-body-md font-medium text-on-background truncate">{e.title}</p>
+                    <p className="text-body-sm text-on-surface-variant">
+                      Dihapus {e.deletedAt ? formatDateTime(new Date(e.deletedAt)) : ""}
+                      {e.deletedByName ? ` oleh ${e.deletedByName}` : ""} · status semula {STATUS_LABEL[e.status]}
+                    </p>
+                  </div>
+                  <div className="self-end sm:self-auto flex items-center gap-2 sm:shrink-0">
+                    <ConfirmButton
+                      title="Pulihkan kegiatan?"
+                      message={
+                        e.status === "draft"
+                          ? `"${e.title}" kembali ke Daftar Kegiatan sebagai draft.`
+                          : `"${e.title}" kembali ke Daftar Kegiatan dengan status ${STATUS_LABEL[e.status]} — langsung tampil lagi di situs publik bila statusnya publik.`
+                      }
+                      confirmLabel="Ya, pulihkan"
+                      action={restoreEvent}
+                      payload={{ eventId: e.id }}
+                      danger={false}
+                      successMessage="Kegiatan dipulihkan."
+                      className="text-label-caps uppercase tracking-wide px-2.5 py-1 sm:px-3 sm:py-1.5 rounded-md border border-outline-variant text-on-surface-variant hover:bg-surface-container-low transition-colors"
+                    >
+                      Pulihkan
+                    </ConfirmButton>
+                    <ConfirmButton
+                      title="Hapus permanen?"
+                      message={`"${e.title}" beserta semua pendaftar, panitia, evaluasi, dan datanya dihapus selamanya. Tindakan ini TIDAK bisa dibatalkan.`}
+                      confirmLabel="Ya, hapus permanen"
+                      action={deleteEventPermanently}
+                      payload={{ eventId: e.id }}
+                      successMessage="Kegiatan dihapus permanen."
+                      className="text-label-caps uppercase tracking-wide text-error hover:opacity-80 px-3 py-2 rounded-md hover:bg-error-container/30 transition-colors"
+                    >
+                      Hapus Permanen
+                    </ConfirmButton>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </CollapsibleSection>
+        </div>
+      )}
     </div>
   );
 }

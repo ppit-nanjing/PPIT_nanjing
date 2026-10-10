@@ -38,6 +38,10 @@ export type EventAccess = {
   isBphPanitia: boolean;
   // BPH Kabinet: adminScope "full" + setiap anggota Divisi Teknologi.
   isFullAdmin: boolean;
+  // Acara ada di Sampah (events.deleted_at terisi). Semua akses lain ditolak —
+  // termasuk BPH Kabinet: acara di Sampah dikelola dari /console/events
+  // (pulihkan / hapus permanen), bukan dari halaman acaranya.
+  trashed: boolean;
   // Jembatan transisi: punya scope modul "events" dan EVENT_RBAC_STRICT masih false.
   moduleBridge: boolean;
   // Kapabilitas yang dicentang untuk divisi orang ini (subset GRANTABLE_*).
@@ -53,6 +57,7 @@ const DENIED: EventAccess = {
   role: null,
   isBphPanitia: false,
   isFullAdmin: false,
+  trashed: false,
   moduleBridge: false,
   divisionGrants: [],
   locked: false,
@@ -81,6 +86,7 @@ export const getEventAccess = cache(async function getEventAccess(
   let role: EventCommitteeRole | null = null;
   let divisionGrants: string[] = [];
   let locked = false;
+  let trashed = false;
   if (UUID_RE.test(eventId)) {
     const [row] = await db
       .select({
@@ -89,6 +95,7 @@ export const getEventAccess = cache(async function getEventAccess(
         status: events.status,
         startAt: events.startAt,
         endAt: events.endAt,
+        deletedAt: events.deletedAt,
       })
       .from(eventCommittee)
       // divisi HARUS milik acara yang sama — kalau tidak, baris panitia yang
@@ -110,21 +117,31 @@ export const getEventAccess = cache(async function getEventAccess(
       role = (row.role as EventCommitteeRole | undefined) ?? null;
       divisionGrants = row.divisionGrants ?? [];
       locked = isCommitteeLocked({ status: row.status, startAt: row.startAt, endAt: row.endAt });
-    } else if (!isFullAdmin) {
-      // Bukan panitia (mis. moduleBridge) — tetap perlu tahu status kunci acara.
+      trashed = row.deletedAt != null;
+    } else {
+      // Bukan panitia (BPH Kabinet / moduleBridge) — tetap perlu tahu status
+      // kunci dan apakah acaranya di Sampah.
       const [ev] = await db
-        .select({ status: events.status, startAt: events.startAt, endAt: events.endAt })
+        .select({ status: events.status, startAt: events.startAt, endAt: events.endAt, deletedAt: events.deletedAt })
         .from(events)
         .where(eq(events.id, eventId));
-      if (ev) locked = isCommitteeLocked(ev);
+      if (ev) {
+        if (!isFullAdmin) locked = isCommitteeLocked(ev);
+        trashed = ev.deletedAt != null;
+      }
     }
   }
+
+  // Acara di Sampah: tolak semua kapabilitas untuk siapa pun. Sesi tetap
+  // dikembalikan supaya pemanggil membedakan "belum login" dari "ditolak".
+  if (trashed) return { ...DENIED, session, trashed: true };
 
   return {
     session,
     role,
     isBphPanitia: isBphPanitiaRole(role),
     isFullAdmin,
+    trashed: false,
     moduleBridge,
     divisionGrants,
     locked,
@@ -194,6 +211,8 @@ export async function requireEventConsoleAccess(
 ): Promise<EventAccess & { session: Session }> {
   const access = await getEventAccess(eventId);
   if (!access.session) redirect("/login");
+  // Acara di Sampah: kembali ke daftar Kegiatan (bagian Sampah ada di sana).
+  if (access.trashed) redirect("/console/events");
   if (!access.isFullAdmin && !access.moduleBridge && access.role == null) redirect("/console");
   return access as EventAccess & { session: Session };
 }

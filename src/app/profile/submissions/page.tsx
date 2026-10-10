@@ -1,4 +1,4 @@
-import { eq } from "drizzle-orm";
+import { eq, and, isNull } from "drizzle-orm";
 import { redirect } from "next/navigation";
 import { auth } from "@/auth";
 import { db } from "@/db";
@@ -72,7 +72,7 @@ export default async function SubmissionHistoryPage() {
       .select({ reg: eventRegistrations, eventTitle: events.title, eventSlug: events.slug })
       .from(eventRegistrations)
       .innerJoin(events, eq(eventRegistrations.eventId, events.id))
-      .where(eq(eventRegistrations.userId, userId)),
+      .where(and(eq(eventRegistrations.userId, userId), isNull(events.deletedAt))),
     db
       .select({ req: borrowRequests, itemName: inventoryItems.name })
       .from(borrowRequests)

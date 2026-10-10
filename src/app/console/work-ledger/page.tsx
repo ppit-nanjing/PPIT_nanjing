@@ -1,4 +1,4 @@
-import { asc, desc, eq, sql } from "drizzle-orm";
+import { asc, desc, eq, sql, isNull } from "drizzle-orm";
 import { db } from "@/db";
 import { events, users, certificates } from "@/db/schema";
 import { requireModuleAccess, hasModuleAccess } from "@/lib/admin-scope";
@@ -34,6 +34,7 @@ export default async function WorkLedgerPage() {
     db
       .select({ id: events.id, title: events.title, startAt: events.startAt })
       .from(events)
+      .where(isNull(events.deletedAt))
       // NULLS LAST keeps unscheduled events from crowding the dropdown top.
       .orderBy(sql`${events.startAt} desc nulls last`),
     db.select({ id: users.id, name: users.name, email: users.email }).from(users).orderBy(asc(users.name)),

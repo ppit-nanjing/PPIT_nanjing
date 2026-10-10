@@ -1,4 +1,4 @@
-import { desc, eq, sql } from "drizzle-orm";
+import { desc, eq, sql, isNull } from "drizzle-orm";
 import { db } from "@/db";
 import {
   eventRegistrations,
@@ -71,9 +71,9 @@ async function fetchDashboardCounts(startOfMonth: Date): Promise<DashboardCounts
       (select count(*) from users where status = 'active')::int as "activeUsers",
       (select count(*) from users where created_at >= ${startOfMonth})::int as "newUsers",
       (select count(*) from sensus_profiles where completion_status = 'complete')::int as "sensusComplete",
-      (select count(*) from events where status = 'published')::int as "publishedEvents",
-      (select count(*) from events where status = 'draft')::int as "draftEvents",
-      (select count(*) from events where status = 'published' and start_at >= now())::int as "upcomingEvents",
+      (select count(*) from events where status = 'published' and deleted_at is null)::int as "publishedEvents",
+      (select count(*) from events where status = 'draft' and deleted_at is null)::int as "draftEvents",
+      (select count(*) from events where status = 'published' and start_at >= now() and deleted_at is null)::int as "upcomingEvents",
       (select count(*) from event_registrations)::int as "totalRegs",
       (select count(*) from event_registrations where status = 'pending')::int as "pendingRegs",
       (select count(*) from event_registrations where status = 'attended')::int as "attendedRegs",
@@ -148,6 +148,7 @@ export default async function ConsoleDashboardPage() {
       .from(eventRegistrations)
       .leftJoin(events, eq(eventRegistrations.eventId, events.id))
       .leftJoin(users, eq(eventRegistrations.userId, users.id))
+      .where(isNull(events.deletedAt))
       .orderBy(desc(eventRegistrations.registeredAt))
       .limit(6),
     db
