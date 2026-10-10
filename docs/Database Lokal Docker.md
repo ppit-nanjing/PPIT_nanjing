@@ -80,9 +80,15 @@ Langkah 4 dan 5 diuji di database kosong: `push` membentuk 70 tabel lengkap deng
 
 - Skema: `docker compose exec db psql -U ppit -d ppit -c "\d guide_chunks"` — kolom `tsv` harus muncul sebagai `tsvector` dengan `generated`.
 - Login: buka `http://localhost:3100/login`, pakai email dan password dari `seed-local-admin.ts`. Login Google lokal cuma jalan kalau `http://localhost:3100/api/auth/callback/google` terdaftar di OAuth client.
-- Halaman console bisa diuji tanpa klik manual: jalankan skrip Playwright di container, misalnya
-  `docker run --rm --network host -v /tmp/uji:/work -w /work mcr.microsoft.com/playwright:latest node cek.mjs`,
-  dengan skrip yang login, membuka `/console/docs/guidebook`, lalu mencetak satu baris `[ok]`/`[!!]` per pemeriksaan. Dipakai waktu menguji guidebook tahap P1.
+- Halaman console bisa diuji tanpa klik manual. Image `mcr.microsoft.com/playwright` hanya berisi browser-nya, tidak berisi paketnya, jadi pasang dulu `playwright-core` dengan revisi yang cocok: image itu memuat `chromium-1129`, dan itu revisi milik `playwright-core@1.46.0` (`node -e "console.log(require('playwright-core/browsers.json').browsers.find(b => b.name === 'chromium').revision)"` untuk memastikan).
+
+  ```
+  mkdir -p /tmp/uji && cd /tmp/uji
+  docker run --rm -v /tmp/uji:/work -w /work mcr.microsoft.com/playwright:latest npm i playwright-core@1.46.0
+  docker run --rm --network host -v /tmp/uji:/work -w /work -e BASE=http://localhost:3100 mcr.microsoft.com/playwright:latest node cek.mjs
+  ```
+
+  Skripnya login lewat `/login`, lalu membuka `/console/docs/guidebook` atau satu topik dan mencetak satu baris `[ok]`/`[!!]` per pemeriksaan. Tulis `import("playwright-core")`, bukan `import("playwright")`.
 
 ## Lihat juga
 
