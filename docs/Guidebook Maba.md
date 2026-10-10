@@ -360,14 +360,18 @@ P0 can be done right now without waiting on the parser; P2 deliberately precedes
 | Free-form markdown breaks the page | Public page error | Tolerant renderer + mandatory preview in the editor |
 | Vercel Hobby is non-commercial | Unexpected cost if forced to upgrade | Record as a financial risk, not a technical one |
 
-## Open questions (need pengurus answers)
+## Decisions (answered 2026-10-11)
 
-1. Who is the official reviewer for visa/residence-permit topics — BPH, pusat, or both? (determines who may press "Tinjau & terbitkan")
-2. Default topic validity: 6 months, 1 year, or per semester?
-3. May the original PDFs be publicly downloadable, or only an internal Drive link?
-4. May user questions (after redaction) be stored for 90 days for evaluation, or must only hashes be kept?
-5. Who owns `guidebook-manifest.ts` (the page → topic mapping) when the PDFs are updated next year?
-6. Do we need a dedicated admin module (`guidebook`) separate from the current `isAdmin` gate? (every admin today can write Help Center content)
+Pengurus answered the six questions. P3 and P4 follow these answers; anything not listed here is still open.
+
+| Question | Answer | What changes in the code |
+|---|---|---|
+| Who reviews visa/residence-permit topics | **BPH or pusat, either one** | No per-user reviewer list. The review button is gated by the `guidebook` module, which BPH and pusat hold, and the gate stays the `reviewed_at` timestamp |
+| Default validity for volatile topics | **6 months** | `EXPIRY_OPTIONS` (`src/components/console/article-form.tsx`) keeps `keep` for ordinary articles, but a topic that gets a phase is preselected to 6 months, so `expires_at` is filled on the first save instead of staying empty |
+| Original PDFs publicly downloadable | **No, internal Drive link only** | `guide_documents` stores the Drive id and `pdf_hash`; no public download route, and `/guidebook` renders `help_articles.content` only |
+| Store user questions for 90 days | **Yes, redacted only** | Already implemented: `ai_query_log.question_redacted` gets the redacted text, the raw question is never written, pruning after 90 days |
+| Owner of `guidebook-manifest.ts` | **Divisi Teknologi** | The page to topic map stays in the repo and changes through a PR. Re-mapping after the PDFs are replaced next year is a Teknologi task, not something an editor does from the console |
+| Dedicated admin module | **Yes, a `guidebook` module** | Today `src/app/actions/admin-docs.ts` only checks `session.user.isAdmin`, so every admin can publish visa advice. The module key goes into `src/lib/admin-scope.ts` and `admin-scope-constants.ts`, and the docs console pages, actions and export check it instead of the blanket admin flag |
 
 ## Related
 
