@@ -25,7 +25,13 @@
 // /console/sensus in a LIMITED view — name, campus, completeness, student-card
 // photo only, no passport/contact/export/edit. A holder of full "sensus" is
 // unaffected (they see everything).
-export type AdminModule = "users" | "organization" | "events" | "inventory" | "reports" | "sensus" | "sensus-ranting" | "sensus-verify" | "content" | "feedback" | "membership" | "notifications" | "links" | "documents" | "career";
+// "guidebook" gates the Help Center console (/console/docs/*): writing topics
+// for the maba guidebook, marking visa/residence-permit topics as reviewed, and
+// the help articles that share the same editor. Pengurus decided (issue #65,
+// 2026-10-11) that BPH or pusat may hold it, and that it stays separate from
+// "content" (news). Before this key existed those pages only checked
+// user.isAdmin, so any scoped admin could publish visa advice.
+export type AdminModule = "users" | "organization" | "events" | "inventory" | "reports" | "sensus" | "sensus-ranting" | "sensus-verify" | "content" | "guidebook" | "feedback" | "membership" | "notifications" | "links" | "documents" | "career";
 
 const MODULE_ALIASES: Partial<Record<AdminModule, string[]>> = {
   content: ["content", "gallery"],
@@ -46,6 +52,7 @@ export const ASSIGNABLE_SCOPE_KEYS: { key: string; label: string }[] = [
   { key: "sensus", label: "Sensus (data & bukti mahasiswa per orang — sensitif)" },
   { key: "sensus-verify", label: "Verifikasi mahasiswa (sensus: nama + kampus + bukti KTM saja)" },
   { key: "content", label: "Konten (berita)" },
+  { key: "guidebook", label: "Guidebook Maba & Help Center (fase, topik, tinjauan, artikel bantuan)" },
   { key: "gallery", label: "Galeri" },
   { key: "users", label: "Pengguna (sensitif — hanya BPH)" },
   { key: "organization", label: "Organisasi (sensitif — hanya BPH)" },

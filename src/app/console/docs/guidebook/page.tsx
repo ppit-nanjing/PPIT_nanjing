@@ -7,6 +7,7 @@ import { CollapsibleSection } from "@/components/console/collapsible-section";
 import { StatusRow } from "@/components/console/status-row";
 import { CHUNKER_VERSION } from "@/lib/guide-chunker";
 import { GUIDE_PHASES, expiryStatus } from "@/lib/guidebook-topic";
+import { requireModuleAccess } from "@/lib/admin-scope";
 
 const NAME_CAP = 5;
 
@@ -17,6 +18,8 @@ const NAME_CAP = 5;
  * Angka-angka inilah yang dipakai untuk memutuskan apa yang dikerjakan minggu ini.
  */
 export default async function GuidebookConsolePage() {
+  await requireModuleAccess("guidebook");
+
   const topics = await db
     .select({
       id: helpArticles.id,

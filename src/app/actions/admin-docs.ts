@@ -3,16 +3,20 @@
 import { and, eq, sql } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import { auth } from "@/auth";
+import { requireModuleAccess } from "@/lib/admin-scope";
 import { db } from "@/db";
 import { auditLogs, guideChunks, guideMeta, helpArticles, releaseNotes } from "@/db/schema";
 import { CHUNKER_VERSION, chunkMarkdown } from "@/lib/guide-chunker";
 import { stemmedText } from "@/lib/guidebook-search";
 import { articleSignatureSql, isGuidePhase } from "@/lib/guidebook-topic";
 
+// Setiap aksi di berkas ini menyentuh Help Center atau topik guidebook, jadi
+// gerbangnya modul "guidebook" (pengurus memisahkannya dari "content" pada
+// 2026-10-11, issue #65). requireModuleAccess melempar redirect, dan itu
+// memang cara server action menolak: pengguna yang tidak berhak tidak melihat
+// halaman /console/docs sama sekali.
 async function requireAdmin() {
-  const session = await auth();
-  if (!session?.user?.isAdmin) throw new Error("Forbidden");
+  const session = await requireModuleAccess("guidebook");
   return session.user.id;
 }
 
@@ -113,6 +117,9 @@ async function bumpCorpusVersion(): Promise<void> {
 }
 
 const EXPIRY_MONTHS: Record<string, number> = { "3": 3, "6": 6, "12": 12 };
+
+/** Topik guidebook yang baru dibuat tanpa pilihan lain dapat 6 bulan (keputusan pengurus, 2026-10-11). */
+const DEFAULT_TOPIC_EXPIRY = "6";
 
 /** "keep" = biarkan, "none" = cabut masa berlaku, sisanya = bulan dari sekarang. */
 function resolveExpiry(choice: string, current: Date | null): Date | null {
@@ -238,6 +245,12 @@ export async function upsertHelpArticle(existingId: string | null, formData: For
     if (phase || existing.phase) await bumpCorpusVersion();
   } else {
     slug = slugify(title) + "-" + Math.random().toString(36).slice(2, 6);
+    // Artikel baru tidak punya tanggal sebelumnya, jadi "keep" di sini berarti
+    // "belum memilih": topik baru dapat 6 bulan. Suntingan topik lama tetap
+    // menghormati pilihan "cabut masa berlaku" yang sudah tersimpan.
+    const createdExpiresAt = phase
+      ? resolveExpiry(expiresIn === "keep" ? DEFAULT_TOPIC_EXPIRY : expiresIn, null)
+      : null;
     const [created] = await db
       .insert(helpArticles)
       .values({
@@ -248,13 +261,14 @@ export async function upsertHelpArticle(existingId: string | null, formData: For
         isPublic,
         authorId: actorId,
         ...guideFields,
+        expiresAt: createdExpiresAt,
       })
       .returning({ id: helpArticles.id });
 
     if (created && phase) {
       await rebuildChunks(created.id, content || null);
       await logArticleAudit(actorId, created.id, "article.created", {
-        after: snapshot({ title, section, content: content || null, isPublic, ...guideFields, reviewedAt: null, reviewedBy: null, expiresAt: null }),
+        after: snapshot({ title, section, content: content || null, isPublic, ...guideFields, reviewedAt: null, reviewedBy: null, expiresAt: createdExpiresAt }),
       });
       await bumpCorpusVersion();
     }

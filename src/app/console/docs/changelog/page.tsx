@@ -2,11 +2,14 @@ import { desc } from "drizzle-orm";
 import { db } from "@/db";
 import { releaseNotes } from "@/db/schema";
 import { publishReleaseNote } from "@/app/actions/admin-docs";
+import { requireModuleAccess } from "@/lib/admin-scope";
 import { CollapsibleSection } from "@/components/console/collapsible-section";
 import { SubmitButton } from "@/components/console/submit-button";
 import { Plus } from "lucide-react";
 
 export default async function ChangelogPage() {
+  await requireModuleAccess("guidebook");
+
   const notes = await db.select().from(releaseNotes).orderBy(desc(releaseNotes.publishedAt));
 
   return (

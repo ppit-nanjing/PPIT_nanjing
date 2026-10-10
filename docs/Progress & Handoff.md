@@ -2,7 +2,7 @@
 
 > Living status doc — updated as the project moves. If you're picking this up in a new AI session or as a new dev, start here, then [README.md](./README.md) for full documentation.
 
-**Last updated:** 2026-09-29
+**Last updated:** 2026-10-11
 **Repo:** https://github.com/Fx-4/PPIT_nanjing (branch `master`, repo root = the app)
 **Live:** deployed on Vercel by the project owner (project `ppit-nanjing`). Auto-deploy on push **is** connected (every commit → READY production deploy in ~2 min). ⚠️ Watch the commit-author email: Vercel rejects deploys whose tip-commit author isn't verified on the GitHub account — local `git config user.email` must stay `Haikalhelmy13@Gmail.com`.
 
@@ -61,6 +61,8 @@ Layout gates on "any admin access"; each page + its server actions additionally 
 **Uploads** — site-wide WebP pipeline, stream-based Drive media upload with a 4 MB guard, camera-permission policy fix.
 
 **Ops** — `publish-events` cron scheduled (then the stray 15-min cron removed), CSP `unsafe-eval` restricted to dev.
+
+**Akses Help Center jadi modul `guidebook`** (2026-10-11) — halaman `/console/docs` dan aksinya berhenti memakai `isAdmin` longgar. Sekarang ada kunci modul `guidebook` yang bisa dicentang per divisi di Organization Management (BPH/pusat, keputusan issue #65), rute ekspor docx menjawab 403 untuk admin yang tidak memegangnya, tautan sidebar ikut hilang, dan topik guidebook yang baru dibuat otomatis dapat masa berlaku 6 bulan. Detail + hasil uji: [Documentation & Help Center.md](./Documentation%20&%20Help%20Center.md), [Guidebook Maba.md](./Guidebook%20Maba.md).
 
 ## Known gaps — do these next
 

@@ -134,7 +134,7 @@ export function ArticleForm({
             label="Masa berlaku"
             defaultValue="keep"
             options={[{ value: "keep", label: expiryKeepLabel }, ...EXPIRY_OPTIONS.slice(1)]}
-            hint="Aturan yang bisa berubah (imigrasi, KIP, bank) diberi masa berlaku; topik yang lewat tanggalnya masuk daftar tinjau ulang."
+            hint="Aturan yang bisa berubah (imigrasi, KIP, bank) diberi masa berlaku; topik yang lewat tanggalnya masuk daftar tinjau ulang. Topik baru tanpa pilihan lain otomatis dapat 6 bulan - pilih 'Cabut masa berlaku' kalau memang tidak mau ada tanggal."
           />
         </div>
       </CollapsibleSection>

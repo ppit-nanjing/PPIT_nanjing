@@ -4,8 +4,11 @@ import { Plus, FileText, History, Map } from "lucide-react";
 import { CollapsibleSection } from "@/components/console/collapsible-section";
 import { GuideButton } from "@/components/console/guide-button";
 import Link from "next/link";
+import { requireModuleAccess } from "@/lib/admin-scope";
 
 export default async function ConsoleDocsPage() {
+  await requireModuleAccess("guidebook");
+
   const articles = await db.select().from(helpArticles);
   const guide = articles.find((a) => a.slug === "dokumentasi");
   const bySection = articles.reduce<Record<string, typeof articles>>((acc, a) => {

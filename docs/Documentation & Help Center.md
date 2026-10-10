@@ -32,6 +32,34 @@
 
 Jadikan `HELP_ARTICLE` **editable oleh Super Admin lewat UI** (bukan hardcode di kode aplikasi) — konsisten dengan alasan modul ini ada: supaya pengurus baru bisa mewariskan/memperbarui panduan tanpa bergantung developer.
 
+## Siapa yang boleh membuka (modul `guidebook`)
+
+Sampai 2026-10-10 semua admin bisa membuka `/console/docs` dan menerbitkan artikel: halaman dan aksinya cuma memeriksa `session.user.isAdmin`. Sejak 2026-10-11 gerbangnya kunci modul **`guidebook`** (keputusan pengurus di issue #65), terpisah dari `content` yang mengurus berita.
+
+| Yang digerbangi | Caranya |
+|---|---|
+| `/console/docs`, `/console/docs/new`, `/console/docs/[slug]`, `/console/docs/guidebook`, `/console/docs/changelog` | `requireModuleAccess("guidebook")` di awal komponen halaman → dialihkan ke `/console` |
+| Semua aksi di `src/app/actions/admin-docs.ts` (simpan, hapus, pulihkan, gabung, changelog) | `requireModuleAccess("guidebook")` di dalam `requireAdmin()`, jadi aksi tidak bisa dipanggil dari luar halaman |
+| `GET /api/console/docs/[slug]/export` (unduh docx) | `hasModuleAccess` → **403**, bukan redirect: route handler tidak boleh melempar pengalihan halaman |
+| Tautan "Dokumentasi" di sidebar | item menu diberi `module: "guidebook"`, jadi admin tanpa modul itu tidak melihat tautan ke halaman yang pasti ditolak |
+
+Dua hal yang perlu diingat saat mengurus akses:
+
+- Modul ini **bukan** `content`. Mengurus berita tidak otomatis memberi hak menulis panduan visa. Memberikannya lewat `/console/organization` → centang *Guidebook Maba & Help Center* pada divisi yang bersangkutan (BPH atau pusat, sesuai keputusan pengurus).
+- Menyembunyikan menu bukan pengaman. Yang menahan adalah pemeriksaan di halaman, di setiap aksi, dan di rute ekspor — menu hanya ikut menyesuaikan.
+
+### Masa berlaku topik
+
+Aturan yang gampang berubah (imigrasi, KIP, bank) diberi tanggal tinjau ulang. Pilihan di formulir topik: *Biarkan / 3 bulan / 6 bulan / 12 bulan / Cabut masa berlaku*.
+
+- **Topik baru** (artikel yang punya fase) yang dibiarkan di pilihan "Biarkan" langsung dapat **6 bulan**, bukan tanpa tanggal. Defaultnya di `DEFAULT_TOPIC_EXPIRY` (`src/app/actions/admin-docs.ts`).
+- Default itu hanya berlaku saat pembuatan. Kalau pengurus sudah menekan *Cabut masa berlaku*, suntingan berikutnya tidak diam-diam memasang tanggal lagi.
+- Artikel Help Center biasa (tanpa fase) tetap tanpa masa berlaku kecuali pengurus memilihnya sendiri.
+
+Teks untuk artikel Help Center pengurus (tulis di `/console/docs/new`, nyalakan tampilkan di halaman publik):
+
+> **Halaman Dokumentasi & Bantuan hanya terbuka untuk admin yang punya modul Guidebook.** Kalau menu "Dokumentasi" tidak muncul, minta BPH atau pusat mencentang *Guidebook Maba & Help Center* untuk divisimu lewat Organization Management. Topik guidebook yang baru dibuat otomatis dapat masa berlaku **6 bulan**; kalau aturannya memang tidak akan berubah, pilih *Cabut masa berlaku* supaya tidak masuk daftar tinjau ulang. Untuk topik visa, izin tinggal, biaya, dan tenggat, pakai *Tandai sudah ditinjau* setelah isinya dicek — chatbot mengutip artikel itu apa adanya.
+
 ## Chatbot Help Center: jawaban hanya dari artikel publik
 
 Widget di `src/components/ai/help-center.tsx` (dipasang global di `src/app/layout.tsx`, tab chat hanya untuk yang login) sekarang **tidak menjawab dari pengetahuan umum model**. Alurnya:

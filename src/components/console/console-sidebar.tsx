@@ -41,7 +41,9 @@ type NavItem = {
 };
 
 // `module: null` = always visible to anyone who got past the layout gate
-// (Dashboard, Documentation are meta/support, not sensitive management).
+// (Dashboard is meta/support, not sensitive management). Dokumentasi pindah ke
+// modul "guidebook" pada 2026-10-11 supaya tautannya tidak muncul untuk admin
+// yang halaman /console/docs-nya memang sudah ditolak.
 // `module: "users"/"organization"/"feedback"` aren't delegable via
 // adminModuleScope (no seed row lists them) - full tier only.
 const GROUPS: { title: string; items: NavItem[] }[] = [
@@ -70,7 +72,7 @@ const GROUPS: { title: string; items: NavItem[] }[] = [
     items: [
       { href: "/console/reports", label: "Laporan", icon: FileBarChart, module: "reports" },
       { href: "/console/notifications", label: "Notifikasi", icon: BellRing, module: "notifications" },
-      { href: "/console/docs", label: "Dokumentasi", icon: BookOpen, module: null },
+      { href: "/console/docs", label: "Dokumentasi", icon: BookOpen, module: "guidebook" },
       { href: "/console/feedback", label: "Masukan Pengguna", icon: MessageSquare, module: "feedback" },
       { href: "/console/links", label: "Tautan", icon: Link2, module: "links" },
       { href: "/console/documents", label: "Dokumen", icon: Folder, module: "documents" },

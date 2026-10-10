@@ -12,8 +12,11 @@ import { StatusRow } from "@/components/console/status-row";
 import { ghostBtn } from "@/components/console/form";
 import { CHUNKER_VERSION } from "@/lib/guide-chunker";
 import { articleSignatureSql, expiryStatus, guidePhaseLabel } from "@/lib/guidebook-topic";
+import { requireModuleAccess } from "@/lib/admin-scope";
 
 export default async function HelpArticlePage({ params }: { params: Promise<{ slug: string }> }) {
+  await requireModuleAccess("guidebook");
+
   const { slug } = await params;
   const [row] = await db
     .select({ article: helpArticles, authorName: users.name, signature: articleSignatureSql })

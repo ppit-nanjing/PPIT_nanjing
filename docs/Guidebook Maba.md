@@ -329,7 +329,7 @@ Quota mitigations: answer cache (key = question hash + `corpus_version`), prewar
 | **P3 — Ingest** | JSON-per-page → per-topic markdown → `parsed_markdown`; quality gate; first merge | `src/db/ingest-guide.ts`, `src/lib/guidebook-manifest.ts`, `src/lib/guidebook-faq.ts` | All 5 PDFs ingested, 10 random pages manually checked, no empty/conflicting pages, local edits not clobbered |
 | **P4 — Retrieval & UX** | FTS + refusal + retrieval-only + cache + quota + prewarm; `/guidebook`; chat wiring; docs + SOP | `src/app/api/guide/ask/route.ts`, `src/app/guidebook/**`, `src/lib/guidebook-search.ts`, `docs/**` | The golden set passes its targets; `/guidebook` works on mobile + dark mode; KPIs are measurable from `ai_query_log` |
 
-P0 can be done right now without waiting on the parser; P2 deliberately precedes P3 so the edit path is proven before 150 pages land.
+P0 can be done right now without waiting on the parser; P2 deliberately precedes P3 so the edit path is proven before 150 pages land. The `guidebook` module key and the 6-month default for new topics shipped with P2 (2026-10-11) — see [Decisions](#decisions-answered-2026-10-11).
 
 ## Verification and Definition of Done
 
@@ -367,11 +367,17 @@ Pengurus answered the six questions. P3 and P4 follow these answers; anything no
 | Question | Answer | What changes in the code |
 |---|---|---|
 | Who reviews visa/residence-permit topics | **BPH or pusat, either one** | No per-user reviewer list. The review button is gated by the `guidebook` module, which BPH and pusat hold, and the gate stays the `reviewed_at` timestamp |
-| Default validity for volatile topics | **6 months** | `EXPIRY_OPTIONS` (`src/components/console/article-form.tsx`) keeps `keep` for ordinary articles, but a topic that gets a phase is preselected to 6 months, so `expires_at` is filled on the first save instead of staying empty |
+| Default validity for volatile topics | **6 months** | `EXPIRY_OPTIONS` (`src/components/console/article-form.tsx`) keeps `keep` for ordinary articles; on a **new** topic, a phase plus the untouched "Biarkan" choice is saved as `+6 months` (`DEFAULT_TOPIC_EXPIRY` in `src/app/actions/admin-docs.ts`), so `expires_at` is filled on the first save instead of staying empty. A later edit leaves a saved "Cabut masa berlaku" (`expires_at = null`) alone |
 | Original PDFs publicly downloadable | **No, internal Drive link only** | `guide_documents` stores the Drive id and `pdf_hash`; no public download route, and `/guidebook` renders `help_articles.content` only |
 | Store user questions for 90 days | **Yes, redacted only** | Already implemented: `ai_query_log.question_redacted` gets the redacted text, the raw question is never written, pruning after 90 days |
 | Owner of `guidebook-manifest.ts` | **Divisi Teknologi** | The page to topic map stays in the repo and changes through a PR. Re-mapping after the PDFs are replaced next year is a Teknologi task, not something an editor does from the console |
 | Dedicated admin module | **Yes, a `guidebook` module** | Today `src/app/actions/admin-docs.ts` only checks `session.user.isAdmin`, so every admin can publish visa advice. The module key goes into `src/lib/admin-scope.ts` and `admin-scope-constants.ts`, and the docs console pages, actions and export check it instead of the blanket admin flag |
+
+### Module and validity shipped (2026-10-11)
+
+- `guidebook` is a real key in `src/lib/admin-scope-constants.ts` (`AdminModule`, `ASSIGNABLE_SCOPE_KEYS`, which is the list the Organization Management checkbox renders from, so it appears as *Guidebook Maba & Help Center* and is not in `SENSITIVE_SCOPE_KEYS`). It gates the five `/console/docs/**` pages, every action in `src/app/actions/admin-docs.ts`, `GET /api/console/docs/[slug]/export`, and the sidebar link — see [Documentation & Help Center](./Documentation%20&%20Help%20Center.md).
+- The export route answers **403** instead of redirecting, because a route handler cannot throw a page redirect; the pages use `requireModuleAccess`, which redirects to `/console`.
+- Checked against `npm run dev -- -p 3100` and the local Docker database with `curl` (no browser): an admin holding only `["events"]` got `NEXT_REDIRECT;replace;/console;307` on `/console/docs`, `/console/docs/new`, `/console/docs/guidebook`, `/console/docs/changelog` and a topic detail page, with no article title anywhere in the response body and no `/console/docs` link in the sidebar; the export route returned `403`; the create action returned `303 → /console` and wrote no row. A `"full"` admin created four articles in the same run: phase + untouched expiry → `+6 months`, `3` → `+3 months`, *Cabut* → `null`, and an article without a phase → `null`; editing the `null` topic with `reviewState=mark` set `reviewed_at` and left `expires_at` at `null`. All smoke articles, chunks, audit rows and the two test admins were deleted afterwards. Not exercised: ticking the box in the Organization Management UI (the page loads, but the per-division form is client-expanded and no browser was used) — the scope array itself was set by hand, which is what that form writes.
 
 ## Related
 
