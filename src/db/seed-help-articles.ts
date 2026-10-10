@@ -67,16 +67,18 @@ Setiap perubahan di sini (buat/ubah/urutkan) otomatis tercatat di Log Audit (lin
     slug: "kegiatan",
     section: SERING_DIPAKAI,
     title: "Kegiatan — Buat & Kelola Acara",
-    content: `Field Buat/Edit Kegiatan
+    content: `Field Buat/Edit Kegiatan (form "Info & Pengaturan Acara" terbagi 2 bagian; tiap field ada label + keterangan)
 - Judul: wajib.
-- Kategori, Lokasi: teks bebas.
-- Tanggal & jam mulai: wajib.
-- Kapasitas: angka, minimal 1.
+- Kategori, Lokasi: teks bebas. Kategori jadi tab filter di /events; untuk acara online, tulis platformnya di Lokasi (mis. "Zoom Meeting (Online)").
+- Link peta 1/2: opsional, untuk acara offline — teks Lokasi di halaman publik jadi tombol petunjuk arah.
+- Tanggal & jam mulai: wajib. Jam selesai: opsional tapi isi — dipakai sebagai penanda "sudah lewat" dan awal penguncian panitia (14 hari setelahnya).
+- Kapasitas: angka, minimal 1; kosong = tanpa batas.
 - "Hanya peserta yang sensusnya lengkap": centang kalau mau membatasi pendaftar.
 - Gambar Sampul: upload atau tempel URL, rasio 16:9.
 - Batas Pendaftaran: opsional — lewat tanggal ini, pendaftaran otomatis ditutup. Kosongkan kalau tidak ada batas.
 - Jadwal Rilis Publikasi: opsional — kalau diisi, acara tetap tersembunyi ("Terjadwal") sampai tanggal itu, lalu terbit otomatis. Kosongkan kalau mau tetap Draft sampai dipublikasikan manual.
 - Agenda: teks bebas, satu baris per item.
+- Info Setelah Daftar + QR Kontak: tampil di halaman tiket peserta SETELAH mendaftar (bukan di halaman publik) — taruh di sini tautan masuk acara online (Zoom dll.) atau ajakan masuk grup WeChat.
 
 Soal status (draft/terjadwal/terbit/dst)
 - Tombol "Buat & Lanjut Edit" mengikuti Jadwal Rilis Publikasi (kalau diisi → terjadwal, kalau kosong → draft).

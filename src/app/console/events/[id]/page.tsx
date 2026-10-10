@@ -589,28 +589,50 @@ export default async function ConsoleEventDetailPage({ params }: { params: Promi
               1 · Info Acara
             </summary>
             <div className="px-4 pb-4 flex flex-col gap-4">
-              <input id="event-title" name="title" defaultValue={event.title} required className="bg-soft-gray rounded-md p-3 text-body-md" />
+              <p className="text-body-sm text-on-surface-variant">
+                Isi lengkap supaya pengurus berikutnya paham konteks acaranya. Bagian ini menentukan tampilan di
+                halaman publik dan kartu di /events.
+              </p>
+              <label className="flex flex-col gap-1.5">
+                <span className="text-label-caps uppercase tracking-wide text-on-surface-variant">Judul acara *</span>
+                <input id="event-title" name="title" defaultValue={event.title} required placeholder="mis. Nanjing Diaries" className="bg-soft-gray rounded-md p-3 text-body-md" />
+                <span className="text-xs text-on-surface-variant">Tampil sebagai judul di halaman acara publik dan kartu daftar /events.</span>
+              </label>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <input id="event-category" name="category" defaultValue={event.category ?? ""} placeholder="Kategori" className="bg-soft-gray rounded-md p-3 text-body-md" />
-                <input id="event-location" name="location" defaultValue={event.location ?? ""} placeholder="Lokasi" className="bg-soft-gray rounded-md p-3 text-body-md" />
+                <label className="flex flex-col gap-1.5">
+                  <span className="text-label-caps uppercase tracking-wide text-on-surface-variant">Kategori</span>
+                  <input id="event-category" name="category" defaultValue={event.category ?? ""} placeholder="mis. Webinar / Lomba / Sosialisasi" className="bg-soft-gray rounded-md p-3 text-body-md" />
+                  <span className="text-xs text-on-surface-variant">Jadi tab filter di /events. Boleh dikosongkan.</span>
+                </label>
+                <label className="flex flex-col gap-1.5">
+                  <span className="text-label-caps uppercase tracking-wide text-on-surface-variant">Lokasi (teks)</span>
+                  <input id="event-location" name="location" defaultValue={event.location ?? ""} placeholder="mis. Zoom Meeting (Online)" className="bg-soft-gray rounded-md p-3 text-body-md" />
+                  <span className="text-xs text-on-surface-variant">Untuk acara online tulis platformnya; tautan masuk (Zoom dll.) taruh di &ldquo;Info Setelah Daftar&rdquo;.</span>
+                </label>
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <input
-                  name="locationUrl"
-                  type="url"
-                  defaultValue={event.locationUrl ?? ""}
-                  placeholder="Link peta 1 (mis. Amap) — opsional"
-                  className="bg-soft-gray rounded-md p-3 text-body-md"
-                />
-                <input
-                  name="locationUrl2"
-                  type="url"
-                  defaultValue={event.locationUrl2 ?? ""}
-                  placeholder="Link peta 2 (mis. Baidu Maps) — opsional"
-                  className="bg-soft-gray rounded-md p-3 text-body-md"
-                />
+                <label className="flex flex-col gap-1.5">
+                  <span className="text-label-caps uppercase tracking-wide text-on-surface-variant">Link peta 1 (opsional)</span>
+                  <input
+                    name="locationUrl"
+                    type="url"
+                    defaultValue={event.locationUrl ?? ""}
+                    placeholder="https://… (Amap)"
+                    className="bg-soft-gray rounded-md p-3 text-body-md"
+                  />
+                </label>
+                <label className="flex flex-col gap-1.5">
+                  <span className="text-label-caps uppercase tracking-wide text-on-surface-variant">Link peta 2 (opsional)</span>
+                  <input
+                    name="locationUrl2"
+                    type="url"
+                    defaultValue={event.locationUrl2 ?? ""}
+                    placeholder="https://… (Baidu Maps)"
+                    className="bg-soft-gray rounded-md p-3 text-body-md"
+                  />
+                </label>
               </div>
-              <p className="text-xs text-on-surface-variant -mt-2">Kalau diisi, teks Lokasi di halaman publik jadi tombol langsung ke petunjuk arah (dua tombol kalau dua-duanya diisi).</p>
+              <p className="text-xs text-on-surface-variant -mt-2">Kalau salah satu/semuanya diisi, teks Lokasi di halaman publik jadi tombol petunjuk arah. Untuk acara online, kosongkan saja.</p>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <label className="flex flex-col gap-1">
                   <span className="text-label-caps uppercase tracking-wide text-on-surface-variant">Mulai</span>
@@ -636,7 +658,11 @@ export default async function ConsoleEventDetailPage({ params }: { params: Promi
                 </label>
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <input name="capacity" type="number" min={1} defaultValue={event.capacity ?? ""} placeholder="Kapasitas" className="bg-soft-gray rounded-md p-3 text-body-md" />
+                <label className="flex flex-col gap-1">
+                  <span className="text-label-caps uppercase tracking-wide text-on-surface-variant">Kapasitas</span>
+                  <input name="capacity" type="number" min={1} defaultValue={event.capacity ?? ""} placeholder="mis. 60" className="bg-soft-gray rounded-md p-3 text-body-md" />
+                  <span className="text-xs text-on-surface-variant">Batas jumlah pendaftar (sisa kuota tampil di halaman publik). Kosong = tanpa batas.</span>
+                </label>
               </div>
               <ImageUploadCropper
                 name="coverImageUrl"
@@ -664,14 +690,24 @@ export default async function ConsoleEventDetailPage({ params }: { params: Promi
               2 · Pendaftaran, Biaya &amp; Jadwal Rilis
             </summary>
             <div className="px-4 pb-4 flex flex-col gap-4">
-              <CheckField name="requiresSensus" defaultChecked={event.requiresSensus} label="Hanya untuk peserta yang sudah lengkap mengisi sensus (mahasiswa Indo di China)" />
+              <CheckField
+                name="requiresSensus"
+                defaultChecked={event.requiresSensus}
+                label="Hanya untuk peserta yang sudah lengkap mengisi sensus (mahasiswa Indo di China)"
+                hint="Pendaftar wajib sudah melengkapi sensus; kota/kampus/WeChat otomatis diambil dari data sensus, tidak ditanya ulang di form."
+              />
               <CheckField
                 name="requiresBiodata"
                 defaultChecked={event.requiresBiodata}
                 label="Kumpulkan biodata lengkap peserta saat mendaftar (WIF dsb.)"
                 hint="Nama, paspor, WeChat, no. HP China, kota/ranting, universitas, angkatan, bukti mahasiswa aktif. Peserta yang sensusnya lengkap tidak mengetik ulang — datanya diambil dari sensus."
               />
-              <CheckField name="certificateForParticipants" defaultChecked={event.certificateForParticipants} label="Peserta mendapat e-sertifikat kehadiran" />
+              <CheckField
+                name="certificateForParticipants"
+                defaultChecked={event.certificateForParticipants}
+                label="Peserta mendapat e-sertifikat kehadiran"
+                hint="Saklar ketersediaan: kalau nyala, panitia bisa menerbitkan e-sertifikat (tautan berkas wajib) untuk peserta yang tercatat hadir."
+              />
               <CheckField
                 name="volunteerSignupOpen"
                 defaultChecked={event.volunteerSignupOpen}
@@ -696,21 +732,21 @@ export default async function ConsoleEventDetailPage({ params }: { params: Promi
                 </p>
               )}
               <div className="flex flex-col gap-1">
+                <span className="text-label-caps uppercase tracking-wide text-on-surface-variant">Batas pendaftaran</span>
                 <input
                   name="registrationDeadline"
                   type="datetime-local"
                   defaultValue={event.registrationDeadline ? toDateLocalInput(new Date(event.registrationDeadline)) : ""}
-                  placeholder="Batas Pendaftaran"
                   className="bg-soft-gray rounded-md p-3 text-body-md"
                 />
                 <p className="text-xs text-on-surface-variant">Batas waktu peserta boleh mendaftar. Lewat dari ini tombol daftar tertutup otomatis. Kosongkan bila tak ada batas.</p>
               </div>
               <div className="flex flex-col gap-1">
+                <span className="text-label-caps uppercase tracking-wide text-on-surface-variant">Jadwal rilis publikasi (opsional)</span>
                 <input
                   name="scheduledPublishAt"
                   type="datetime-local"
                   defaultValue={event.scheduledPublishAt ? toDateLocalInput(new Date(event.scheduledPublishAt)) : ""}
-                  placeholder="Jadwal Rilis Publikasi (opsional)"
                   className="bg-soft-gray rounded-md p-3 text-body-md"
                 />
                 <p className="text-xs text-on-surface-variant">Isi bila acara mau tampil ke publik hanya SETELAH tanggal/waktu ini (status &quot;Terjadwal&quot; dulu, rilis sendiri nanti). Kosongkan = tetap Draf, rilis saat kamu klik Publikasikan.</p>
