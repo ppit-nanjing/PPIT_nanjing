@@ -135,7 +135,7 @@ export async function GET(req: NextRequest, ctx: { params: Promise<{ formId: str
   };
 
   const date = new Date().toISOString().slice(0, 10);
-  const filename = `formulir-${form.kind}-${date}.${format}`;
+  const filename = `formulir-${form.kind}-${form.id.slice(0, 8)}-${date}.${format}`;
 
   if (format === "xlsx") {
     const buffer = await datasetToXlsx(dataset);

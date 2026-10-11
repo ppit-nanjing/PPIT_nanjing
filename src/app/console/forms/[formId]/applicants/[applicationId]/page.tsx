@@ -3,7 +3,7 @@ import { ArrowLeft, ExternalLink } from "lucide-react";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { db } from "@/db";
-import { auditLogs, eventDivisions, events, formApplications, formFields, users } from "@/db/schema";
+import { auditLogs, eventDivisions, events, formApplications, formFields, sensusProfiles, users } from "@/db/schema";
 import { updateApplicationNote, updateApplicationPlacement } from "@/app/actions/forms";
 import { requireFormManage } from "@/lib/form-access";
 import { CheckboxField, SelectField, TextAreaField } from "@/components/console/form";
@@ -63,10 +63,15 @@ export default async function FormApplicantPage({
       .where(and(eq(auditLogs.entityType, "form_application"), eq(auditLogs.entityId, app.id)))
       .orderBy(desc(auditLogs.createdAt))
       .limit(10),
-    db.select({ email: users.email }).from(users).where(eq(users.id, app.userId)),
+    db
+      .select({ email: users.email, wechatId: sensusProfiles.wechatId })
+      .from(users)
+      .leftJoin(sensusProfiles, eq(sensusProfiles.userId, users.id))
+      .where(eq(users.id, app.userId)),
   ]);
   const eventTitle = eventRows[0]?.title ?? null;
   const email = applicantRows[0]?.email ?? null;
+  const wechatId = applicantRows[0]?.wechatId ?? null;
   const divisionNameById = new Map(divisionRows.map((r) => [r.id, r.name]));
   const status = app.status as FormApplicationStatus;
 
@@ -128,6 +133,12 @@ export default async function FormApplicantPage({
             <div>
               <dt className="text-label-caps uppercase tracking-wide text-on-surface-variant">Email</dt>
               <dd className="text-on-background break-all">{email}</dd>
+            </div>
+          )}
+          {wechatId && (
+            <div>
+              <dt className="text-label-caps uppercase tracking-wide text-on-surface-variant">WeChat</dt>
+              <dd className="text-on-background break-all">{wechatId}</dd>
             </div>
           )}
           {app.positionApplied && (

@@ -55,7 +55,11 @@ export async function datasetToXlsx(ds: ReportDataset): Promise<ArrayBuffer> {
   wb.created = ds.generatedAt;
   wb.modified = ds.generatedAt;
 
-  const ws = wb.addWorksheet(ds.title.slice(0, 31));
+  // ExcelJS melempar error kalau nama sheet mengandung : \ / ? * [ ] (atau
+  // kosong) — judul dataset kini bisa berisi input pengurus (mis. judul form),
+  // jadi bersihkan dulu. Dipakai semua pemanggil datasetToXlsx.
+  const sheetName = ds.title.replace(/[*?:\/\\[\]]/g, "-").trim().slice(0, 31) || "Laporan";
+  const ws = wb.addWorksheet(sheetName);
 
   const filterText = Object.entries(ds.filters)
     .filter(([, v]) => v)

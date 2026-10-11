@@ -50,8 +50,8 @@ export function FormAnalyticsView({ analytics, kind }: { analytics: FormAnalytic
       {analytics.questionItems.length > 0 && (
         <div className="flex flex-col gap-6">
           <h3 className="text-body-md font-semibold text-on-background">Ringkasan Pertanyaan Pilihan</h3>
-          {analytics.questionItems.map((q) => (
-            <div key={q.label}>
+          {analytics.questionItems.map((q, i) => (
+            <div key={`${i}-${q.label}`}>
               <p className="text-label-caps uppercase tracking-wide text-on-surface-variant mb-2">{q.label}</p>
               {q.items.length <= 6 ? <DonutChart items={q.items} /> : <SummaryList items={q.items} />}
             </div>

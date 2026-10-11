@@ -909,6 +909,8 @@ export async function setEventResponsibleDepartments(formData: FormData) {
   const eventId = String(formData.get("eventId") ?? "");
   const { session } = await requireEventCapability(eventId, "event.editInfo");
   if (!UUID_RE.test(eventId)) redirect("/console/events");
+  const [eventExists] = await db.select({ id: events.id }).from(events).where(eq(events.id, eventId));
+  if (!eventExists) redirect("/console/events");
 
   const rawIds = formData
     .getAll("departmentId")

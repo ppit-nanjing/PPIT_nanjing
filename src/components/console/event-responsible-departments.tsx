@@ -48,7 +48,8 @@ export function EventResponsibleDepartments({
         ))}
       </div>
       <p className="text-body-sm text-on-surface-variant">
-        Biasanya satu divisi (acara proker divisi itu). Centang lebih dari satu untuk proker gabungan.
+        Biasanya satu divisi (acara proker divisi itu). Centang lebih dari satu untuk proker gabungan. Pilih divisi
+        spesifik — memilih departemen induk tidak otomatis mencakup divisi di bawahnya.
       </p>
       <SubmitButton
         successMessage="Divisi penanggung jawab tersimpan."

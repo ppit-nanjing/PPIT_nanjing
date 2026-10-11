@@ -18,6 +18,7 @@ import { hasModuleAccess } from "@/lib/admin-scope";
 import { HOME_BRANCH_FILTER, HOME_BRANCHES, MEMBERSHIP_LABEL, membershipStatus } from "@/lib/membership-status";
 import { datasetToCsv, datasetToXlsx, type ReportDataset } from "@/lib/report-export";
 import { SENSUS_EXPORT_COLUMNS_FULL, sensusExportRowFull } from "@/lib/sensus-export";
+import { UUID_RE } from "@/lib/uuid";
 
 type ReportType = (typeof reportTypeEnum.enumValues)[number];
 
@@ -52,7 +53,9 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: "Format tidak didukung (csv|xlsx)" }, { status: 400 });
   }
 
-  const departmentId = url.searchParams.get("departmentId") || null;
+  // UUID ngawur dari query = filter diabaikan (bukan 500 syntax error Postgres).
+  const departmentIdRaw = url.searchParams.get("departmentId");
+  const departmentId = departmentIdRaw && UUID_RE.test(departmentIdRaw) ? departmentIdRaw : null;
   const dateFrom = url.searchParams.get("dateFrom") || null;
   const dateTo = url.searchParams.get("dateTo") || null;
   const note = url.searchParams.get("note") || null;

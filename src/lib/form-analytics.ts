@@ -1,4 +1,3 @@
-import type { FormKind } from "@/lib/form-types";
 import type { MembershipFieldDef } from "@/lib/membership-form";
 
 // Analitik per formulir (pemilu/oprek): agregasi murni tanpa server import,
@@ -90,7 +89,7 @@ export function buildFormAnalytics({
           }
         } else if (f.type === "checkbox") {
           if (value === true || value === "true") counts.set("Ya", (counts.get("Ya") ?? 0) + 1);
-          else if (value !== undefined) counts.set("Tidak", (counts.get("Tidak") ?? 0) + 1);
+          else if (value === false || value === "false") counts.set("Tidak", (counts.get("Tidak") ?? 0) + 1);
         } else if (typeof value === "string" && value.trim()) {
           counts.set(value.trim(), (counts.get(value.trim()) ?? 0) + 1);
         }
@@ -113,5 +112,3 @@ export function buildFormAnalytics({
     questionItems,
   };
 }
-
-export type { FormKind };
