@@ -1,8 +1,8 @@
-import { eq, and, desc, like, or, sql, inArray } from "drizzle-orm";
+import { eq, and, asc, desc, like, or, sql, inArray } from "drizzle-orm";
 import { notFound } from "next/navigation";
 import QRCode from "qrcode";
 import { db } from "@/db";
-import { auditLogs, certificates, coverageCities, events, eventCredits, eventDivisions, eventEvaluations, eventFeeOptions, eventQuestions, eventRegistrations, eventVolunteers, galleryAlbums, galleryPhotos, inventoryItems, itemReservations, newsArticles, sensusProfiles, shortLinks, users } from "@/db/schema";
+import { auditLogs, certificates, coverageCities, departments, events, eventCredits, eventDivisions, eventEvaluations, eventFeeOptions, eventQuestions, eventRegistrations, eventResponsibleDepartments, eventVolunteers, galleryAlbums, galleryPhotos, inventoryItems, itemReservations, newsArticles, sensusProfiles, shortLinks, users } from "@/db/schema";
 import { MEMBERSHIP_LABEL, effectiveBranch, membershipStatus } from "@/lib/membership-status";
 import { updateEventInfo, updateEventContent, updateEventPostReport, setEventStatus, saveEventQuestion, deleteEventQuestion, saveFeeOption, deleteFeeOption } from "@/app/actions/admin-events";
 import { createEventGalleryAlbum } from "@/app/actions/admin-content";
@@ -11,6 +11,7 @@ import { publishDueEvents } from "@/lib/publish-events";
 import { DeleteEventButton } from "@/components/console/delete-event-button";
 import { RegistrationList } from "@/components/console/registration-list";
 import { EventCommitteeStructure } from "@/components/console/event-committee-structure";
+import { EventResponsibleDepartments } from "@/components/console/event-responsible-departments";
 import { listEventDivisions, takeOverEvent, addEventCredit, removeEventCredit } from "@/app/actions/committee";
 import { CertificateRoster } from "@/components/console/certificate-roster";
 import { CertificateBulkForm } from "@/components/console/certificate-bulk-form";
@@ -277,6 +278,19 @@ export default async function ConsoleEventDetailPage({ params }: { params: Promi
           like(shortLinks.targetUrl, `%${sharePaths.evaluasi}`),
         ),
       ),
+  ]);
+
+  // Divisi kabinet penanggung jawab acara (proker) — tabel kecil, dimuat untuk
+  // semua yang bisa membuka konsol acara (read-only bila tak boleh mengubah).
+  const [allDepartments, responsibleRows] = await Promise.all([
+    db
+      .select({ id: departments.id, name: departments.name, parentId: departments.parentDepartmentId })
+      .from(departments)
+      .orderBy(asc(departments.orderIndex)),
+    db
+      .select({ departmentId: eventResponsibleDepartments.departmentId })
+      .from(eventResponsibleDepartments)
+      .where(eq(eventResponsibleDepartments.eventId, id)),
   ]);
 
   // QR tautan pendek digenerate server-side (sama seperti /console/links);
@@ -1066,6 +1080,19 @@ export default async function ConsoleEventDetailPage({ params }: { params: Promi
         </form>
       </CollapsibleSection>
       )}
+
+      <CollapsibleSection
+        title="Divisi Penanggung Jawab"
+        description="Divisi kabinet yang bertanggung jawab atas acara/proker ini. Boleh lebih dari satu untuk proker gabungan."
+        defaultOpen={false}
+      >
+        <EventResponsibleDepartments
+          eventId={id}
+          departments={allDepartments}
+          selected={responsibleRows.map((r) => r.departmentId)}
+          canEdit={can("event.editInfo")}
+        />
+      </CollapsibleSection>
 
       {can("event.manageCommittee") && (
       <CollapsibleSection

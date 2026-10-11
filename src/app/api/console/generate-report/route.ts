@@ -5,6 +5,7 @@ import { db } from "@/db";
 import {
   departmentMembers,
   eventRegistrations,
+  eventResponsibleDepartments,
   events,
   inventoryAuditLogs,
   inventoryItems,
@@ -89,7 +90,19 @@ export async function GET(request: Request) {
   switch (type as ReportType) {
     case "event_attendance": {
       const conditions = [];
-      if (departmentId) conditions.push(eq(events.departmentId, departmentId));
+      if (departmentId) {
+        // Divisi penanggung jawab acara (event_responsible_departments) — kolom
+        // lama events.department_id tidak pernah diisi, jadi jangan dipakai.
+        conditions.push(
+          inArray(
+            events.id,
+            db
+              .select({ id: eventResponsibleDepartments.eventId })
+              .from(eventResponsibleDepartments)
+              .where(eq(eventResponsibleDepartments.departmentId, departmentId)),
+          ),
+        );
+      }
       if (dateFrom) conditions.push(gte(events.startAt, new Date(dateFrom)));
       if (dateTo) conditions.push(lte(events.startAt, new Date(dateTo)));
 
