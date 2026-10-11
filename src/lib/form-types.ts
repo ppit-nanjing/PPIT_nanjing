@@ -1,0 +1,66 @@
+// Label & konstanta murni modul Formulir (Pemilu, Oprek BPH Acara, Oprek
+// Kepanitiaan) — aman diimpor dari komponen klien maupun server, tanpa @/auth
+// atau @/db. Dokumentasi: docs/Formulir & Oprek.md.
+
+import type { EventCommitteeRole } from "@/lib/event-capabilities";
+
+export type FormKind = "pemilu" | "oprek_bph_acara" | "oprek_kepanitiaan";
+
+export type FormApplicationStatus =
+  | "pending"
+  | "accepted"
+  | "accepted_choice1"
+  | "accepted_choice2"
+  | "reassigned"
+  | "rejected";
+
+export const FORM_KIND_LABEL: Record<FormKind, string> = {
+  pemilu: "Pemilu",
+  oprek_bph_acara: "Oprek BPH Acara",
+  oprek_kepanitiaan: "Oprek Kepanitiaan",
+};
+
+// Posisi BPH Acara yang boleh dibuka di Oprek BPH (subset label
+// event_committee_role, sama dengan BPH_PANITIA_ROLES di event-capabilities).
+export const BPH_FORM_ROLES: EventCommitteeRole[] = ["ketua", "wakil", "sekretaris", "bendahara", "supervisor"];
+
+export const BPH_FORM_ROLE_LABEL: Record<string, string> = {
+  ketua: "Ketua Pelaksana",
+  wakil: "Wakil Ketua",
+  sekretaris: "Sekretaris",
+  bendahara: "Bendahara",
+  supervisor: "Supervisor",
+};
+
+export const FORM_STATUS_LABEL: Record<FormApplicationStatus, string> = {
+  pending: "Menunggu",
+  accepted: "Diterima",
+  accepted_choice1: "Diterima — Pilihan 1",
+  accepted_choice2: "Diterima — Pilihan 2",
+  reassigned: "Dipindah divisi",
+  rejected: "Ditolak",
+};
+
+export const FORM_STATUS_TONE: Record<FormApplicationStatus, string> = {
+  pending: "bg-surface-container-low text-on-surface-variant",
+  accepted: "bg-primary-container/15 text-primary-container",
+  accepted_choice1: "bg-primary-container/15 text-primary-container",
+  accepted_choice2: "bg-primary-container/15 text-primary-container",
+  reassigned: "bg-gold-ink/15 text-gold-ink",
+  rejected: "bg-error-container/30 text-error",
+};
+
+// Role yang boleh dipilih reviewer saat menempatkan pelamar kepanitiaan
+// (semua label event_committee_role; default anggota).
+export const PLACEMENT_ROLE_OPTIONS: EventCommitteeRole[] = [
+  "anggota",
+  "humas",
+  "acara",
+  "logistik",
+  "dokumentasi",
+  "bendahara",
+  "sekretaris",
+  "wakil",
+  "ketua",
+  "supervisor",
+];

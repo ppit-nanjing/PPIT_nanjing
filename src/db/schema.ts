@@ -1685,3 +1685,177 @@ export const eventEvaluationAnswers = pgTable(
     index("event_evaluation_answers_question_idx").on(t.questionId),
   ],
 );
+
+// ---------- Formulir kabinet (Pemilu, Oprek BPH Acara, Oprek Kepanitiaan) ----------
+// Bukan modul "Formulir generik" lama (form_templates — sudah dihapus, lihat
+// drizzle/0047). Formulir di sini khusus pengurus kabinet: wajib login + punya
+// baris department_members + akun tidak suspended. Form Oprek terikat SATU
+// acara (events.id) dan keputusan "diterima" menulis penugasan ke
+// event_committee. Dokumentasi: docs/Formulir & Oprek.md.
+
+export const formKindEnum = pgEnum("form_kind", ["pemilu", "oprek_bph_acara", "oprek_kepanitiaan"]);
+
+export const formApplicationStatusEnum = pgEnum("form_application_status", [
+  "pending",
+  "accepted",
+  "accepted_choice1",
+  "accepted_choice2",
+  "reassigned",
+  "rejected",
+]);
+
+export const forms = pgTable(
+  "forms",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    kind: formKindEnum("kind").notNull(),
+    // Wajib untuk oprek_bph_acara & oprek_kepanitiaan (ditegakkan di Server
+    // Action, bukan constraint); NULL untuk pemilu yang tidak terikat acara.
+    eventId: uuid("event_id").references(() => events.id, { onDelete: "cascade" }),
+    title: text("title").notNull(),
+    description: text("description"),
+    // Buka/tutup manual + rentang tanggal sebagai informasi. Penegakan hanya
+    // lewat isOpen (seperti recruitment_periods) — tanggal tidak menutup sendiri.
+    isOpen: boolean("is_open").notNull().default(false),
+    opensAt: timestamp("opens_at"),
+    closesAt: timestamp("closes_at"),
+    confirmationMessage: text("confirmation_message")
+      .notNull()
+      .default("Terima kasih! Jawabanmu sudah kami terima."),
+    // Posisi BPH Acara yang dibuka (oprek_bph_acara), subset label
+    // event_committee_role: ketua/wakil/sekretaris/bendahara/supervisor.
+    bphRoles: text("bph_roles").array().notNull().default([]),
+    createdBy: uuid("created_by").references(() => users.id, { onDelete: "set null" }),
+    createdAt: timestamp("created_at").notNull().defaultNow(),
+    updatedAt: timestamp("updated_at").notNull().defaultNow(),
+  },
+  (t) => [index("forms_kind_idx").on(t.kind), index("forms_event_idx").on(t.eventId)],
+);
+
+export const formFields = pgTable(
+  "form_fields",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    formId: uuid("form_id")
+      .notNull()
+      .references(() => forms.id, { onDelete: "cascade" }),
+    key: text("key").notNull(),
+    label: text("label").notNull(),
+    // Enum yang sama dengan membership_form_fields: tipe pertanyaan sudah
+    // lengkap di sana (19 tipe, termasuk section/grid) dan builder-nya dipakai ulang.
+    type: membershipFieldTypeEnum("type").notNull().default("text"),
+    placeholder: text("placeholder"),
+    helpText: text("help_text"),
+    required: boolean("required").notNull().default(false),
+    options: text("options"),
+    config: jsonb("config"),
+    orderIndex: integer("order_index").notNull().default(0),
+  },
+  (t) => [uniqueIndex("form_fields_form_key_idx").on(t.formId, t.key)],
+);
+
+export const formApplications = pgTable(
+  "form_applications",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    formId: uuid("form_id")
+      .notNull()
+      .references(() => forms.id, { onDelete: "cascade" }),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    // Snapshot identitas saat mengirim: nama panjang (sensus.fullName ??
+    // users.name) + nama divisi kabinet asal. Disalin, bukan dibaca live,
+    // supaya arsip lamaran utuh walau orangnya pindah divisi.
+    fullName: text("full_name").notNull(),
+    cabinetDivision: text("cabinet_division").notNull(),
+    // Posisi yang dilamar (oprek_bph_acara), label event_committee_role.
+    positionApplied: text("position_applied"),
+    // Oprek kepanitiaan: pilihan divisi 1 & 2 dari event_divisions acara, plus
+    // divisi hasil penempatan (pilihan/reassign).
+    choice1DivisionId: uuid("choice1_division_id").references((): AnyPgColumn => eventDivisions.id, {
+      onDelete: "set null",
+    }),
+    choice2DivisionId: uuid("choice2_division_id").references((): AnyPgColumn => eventDivisions.id, {
+      onDelete: "set null",
+    }),
+    assignedDivisionId: uuid("assigned_division_id").references((): AnyPgColumn => eventDivisions.id, {
+      onDelete: "set null",
+    }),
+    // Role penempatan yang ditulis ke event_committee (default anggota untuk
+    // kepanitiaan; untuk BPH = posisi yang dilamar). Reviewer bisa mengubahnya.
+    assignedRole: eventCommitteeRoleEnum("assigned_role"),
+    status: formApplicationStatusEnum("status").notNull().default("pending"),
+    note: text("note"),
+    // Jawaban pertanyaan kustom, satu nilai per form_fields.key (grid disimpan
+    // sebagai objek {rowIndex: value}). Kolom sistem di atas TIDAK ikut di sini.
+    responses: jsonb("responses"),
+    submittedAt: timestamp("submitted_at").notNull().defaultNow(),
+    reviewedAt: timestamp("reviewed_at"),
+  },
+  (t) => [
+    // Satu orang satu kiriman per form (pola yang sama dengan lamaran lain).
+    uniqueIndex("form_applications_form_user_idx").on(t.formId, t.userId),
+    index("form_applications_form_idx").on(t.formId, t.submittedAt),
+  ],
+);
+
+// Divisi kabinet penanggung jawab acara (proker). Biasanya satu; proker
+// gabungan boleh beberapa baris. Terpisah dari event_divisions (divisi
+// KEPANITIAAN di dalam acara) — jangan tertukar.
+export const eventResponsibleDepartments = pgTable(
+  "event_responsible_departments",
+  {
+    eventId: uuid("event_id")
+      .notNull()
+      .references(() => events.id, { onDelete: "cascade" }),
+    departmentId: uuid("department_id")
+      .notNull()
+      .references(() => departments.id, { onDelete: "cascade" }),
+    createdAt: timestamp("created_at").notNull().defaultNow(),
+  },
+  (t) => [primaryKey({ columns: [t.eventId, t.departmentId] })],
+);
+
+export const formsRelations = relations(forms, ({ one, many }) => ({
+  event: one(events, { fields: [forms.eventId], references: [events.id] }),
+  creator: one(users, { fields: [forms.createdBy], references: [users.id] }),
+  fields: many(formFields),
+  applications: many(formApplications),
+}));
+
+export const formFieldsRelations = relations(formFields, ({ one }) => ({
+  form: one(forms, { fields: [formFields.formId], references: [forms.id] }),
+}));
+
+export const formApplicationsRelations = relations(formApplications, ({ one }) => ({
+  form: one(forms, { fields: [formApplications.formId], references: [forms.id] }),
+  user: one(users, { fields: [formApplications.userId], references: [users.id] }),
+  choice1Division: one(eventDivisions, {
+    fields: [formApplications.choice1DivisionId],
+    references: [eventDivisions.id],
+    relationName: "applicationChoice1",
+  }),
+  choice2Division: one(eventDivisions, {
+    fields: [formApplications.choice2DivisionId],
+    references: [eventDivisions.id],
+    relationName: "applicationChoice2",
+  }),
+  assignedDivision: one(eventDivisions, {
+    fields: [formApplications.assignedDivisionId],
+    references: [eventDivisions.id],
+    relationName: "applicationAssigned",
+  }),
+}));
+
+export const eventResponsibleDepartmentsRelations = relations(eventResponsibleDepartments, ({ one }) => ({
+  event: one(events, { fields: [eventResponsibleDepartments.eventId], references: [events.id] }),
+  department: one(departments, {
+    fields: [eventResponsibleDepartments.departmentId],
+    references: [departments.id],
+  }),
+}));
+
+export type FormRow = typeof forms.$inferSelect;
+export type FormFieldRow = typeof formFields.$inferSelect;
+export type FormApplicationRow = typeof formApplications.$inferSelect;

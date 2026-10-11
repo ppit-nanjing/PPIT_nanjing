@@ -68,7 +68,10 @@ type SessionContext = {
   roleName: string | null;
   emailSubscribed: boolean | null;
   locale: string | null;
-  memberships: { grants: boolean; scope: string[] }[];
+  // Kepala unit (departments.head_user_id = user ini) — dipakai isCoordinator
+  // supaya Koordinator Divisi (role scoped) tetap dapat akses menu Formulir.
+  isHead: boolean | null;
+  memberships: { grants: boolean; scope: string[]; position: string | null }[];
 };
 
 async function loadSessionContext(userId: string): Promise<SessionContext | null> {
@@ -77,8 +80,9 @@ async function loadSessionContext(userId: string): Promise<SessionContext | null
            r.name as "roleName",
            u.email_subscribed as "emailSubscribed",
            u.locale as "locale",
+           coalesce(bool_or(d.head_user_id = u.id), false) as "isHead",
            coalesce(
-             json_agg(json_build_object('grants', d.grants_full_admin_access, 'scope', d.admin_module_scope))
+             json_agg(json_build_object('grants', d.grants_full_admin_access, 'scope', d.admin_module_scope, 'position', dm.position))
                filter (where d.id is not null),
              '[]'::json
            ) as "memberships"
@@ -91,6 +95,17 @@ async function loadSessionContext(userId: string): Promise<SessionContext | null
     limit 1
   `);
   return result.rows[0] ?? null;
+}
+
+// "Koordinator Divisi" (atau kepala unit) dikenali dari nama role, posisi di
+// department_members, atau kolom head departments — sama seperti pola
+// name-matching role ranting di resolveAdminScope(). Dipakai modul Formulir
+// (koor boleh bikin form Oprek BPH untuk prokernya) tanpa memberi mereka
+// modul admin lain.
+function isCabinetCoordinator(ctx: SessionContext): boolean {
+  if (ctx.roleName === "Koordinator Divisi") return true;
+  if (ctx.isHead) return true;
+  return ctx.memberships.some((m) => (m.position ?? "").toLowerCase().includes("koordinator"));
 }
 
 function resolveAdminScope(ctx: SessionContext): "full" | string[] | null {
@@ -255,6 +270,7 @@ const { handlers, auth: uncachedAuth, signIn, signOut } = NextAuth({
         session.user.image = null;
         session.user.adminScope = null;
         session.user.isAdmin = false;
+        session.user.isCoordinator = false;
         session.user.rantingCode = null;
         session.user.emailSubscribed = null;
         session.user.locale = null;
@@ -263,6 +279,8 @@ const { handlers, auth: uncachedAuth, signIn, signOut } = NextAuth({
       const scope = resolveAdminScope(ctx);
       session.user.adminScope = scope;
       session.user.isAdmin = scope === "full" || (Array.isArray(scope) && scope.length > 0);
+      // Koor/kepala unit — dipakai menu & gerbang modul Formulir (src/lib/form-access.ts).
+      session.user.isCoordinator = isCabinetCoordinator(ctx);
       // Which ranting a ranting-role user belongs to; null for everyone else.
       // Drives the campus filter on /console/ranting/sensus.
       session.user.rantingCode = (rantingCodeFromRoleName(ctx.roleName) as RantingCode | null) ?? null;
