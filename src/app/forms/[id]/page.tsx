@@ -20,6 +20,11 @@ import { UUID_RE } from "@/lib/uuid";
 export async function generateMetadata({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   if (!UUID_RE.test(id)) return { title: "Formulir" };
+  const session = await auth();
+  const membership = session?.user?.id ? await getCabinetMembership(session.user.id) : null;
+  // Judul form hanya untuk anggota kabinet — pengunjung non-anggota melihat
+  // layar "khusus pengurus" dan tidak perlu tahu judul formulirnya.
+  if (!membership?.isCabinetMember) return { title: "Formulir", robots: { index: false, follow: false } };
   const [form] = await db.select({ title: forms.title }).from(forms).where(eq(forms.id, id));
   // Formulir internal kabinet — jangan pernah diindeks mesin pencari.
   return { title: form?.title ?? "Formulir", robots: { index: false, follow: false } };

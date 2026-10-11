@@ -17,6 +17,7 @@ import { requireFormManage } from "@/lib/form-access";
 import { CollapsibleSection } from "@/components/console/collapsible-section";
 import { ConfirmButton } from "@/components/console/confirm-button";
 import { CopyButton } from "@/components/copy-button";
+import { ShareButton } from "@/components/share-button";
 import { FormFieldEditor } from "@/components/console/form-field-editor";
 import { FormRenderer, type FormDivisionOption } from "@/components/forms/form-renderer";
 import { QuestionBank } from "@/components/console/question-bank";
@@ -88,6 +89,12 @@ export default async function FormManagePage({ params }: { params: Promise<{ for
         </Link>
         <div className="flex items-center gap-3">
           <CopyButton value={`${getSiteUrl()}/forms/${form.id}`} label="Salin tautan" />
+          <ShareButton
+            title={form.title}
+            url={`${getSiteUrl()}/forms/${form.id}`}
+            labelKey="forms.share"
+            copiedKey="forms.shareCopied"
+          />
           <span className="text-label-caps uppercase tracking-wide text-on-surface-variant">{applicantCount} pendaftar</span>
         </div>
       </div>

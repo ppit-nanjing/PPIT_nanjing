@@ -116,15 +116,16 @@ export async function canReadPrivateFile(
     }
 
     case "form-file": {
-      // Lampiran formulir kabinet: dibaca pemegang modul "forms" dan manajer
-      // form yang menyimpan berkas itu (koor pembuat / BPH Acara acaranya).
+      // Lampiran formulir kabinet: jalur pemilik (segmen <userId> di path)
+      // sudah ditangani di atas. Di sini hanya manajer form terkait — pemilik
+      // baris TIDAK otomatis boleh membaca URL milik orang lain, dan jawaban
+      // teks sudah disaring scrubForeignPrivateUrl saat submit.
       if (hasModuleAccess(scope, "forms")) return true;
       const rows = await db
-        .select({ formId: formApplications.formId, userId: formApplications.userId })
+        .select({ formId: formApplications.formId })
         .from(formApplications)
         .where(jsonContains(formApplications.responses, url))
         .limit(MAX_MATCHING_ROWS);
-      if (rows.some((r) => r.userId === userId)) return true;
       for (const formId of new Set(rows.map((r) => r.formId))) {
         const [form] = await db
           .select({ kind: forms.kind, eventId: forms.eventId, createdBy: forms.createdBy })

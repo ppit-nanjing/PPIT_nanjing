@@ -395,22 +395,29 @@ export async function submitFormApplication(formData: FormData) {
     if (GRID_TYPES.includes(f.type)) {
       const rows = (f.config as { rows?: string[] } | null)?.rows ?? [];
       const map: Record<string, string | string[]> = {};
-      let missing = rows.length === 0;
+      let missing = false;
       for (let i = 0; i < rows.length; i++) {
-        const entries = formData.getAll(`${f.key}::${i}`).map(String).filter(Boolean);
+        const entries = formData
+          .getAll(`${f.key}::${i}`)
+          .map((entry) => scrubForeignPrivateUrl(String(entry), "form-file", userId))
+          .filter(Boolean);
         if (entries.length === 0) {
           missing = true;
           continue;
         }
         map[String(i)] = f.type === "grid_checkbox" ? entries : entries[0];
       }
-      if (f.required && missing) redirect(`${back}?error=submit`);
+      // Grid tanpa baris terkonfigurasi dianggap belum diatur — bukan wajib.
+      if (f.required && rows.length > 0 && missing) redirect(`${back}?error=submit`);
       if (Object.keys(map).length > 0) responses[f.key] = map;
       continue;
     }
 
     if (f.type === "multiselect") {
-      const vals = formData.getAll(f.key).map(String).filter(Boolean);
+      const vals = formData
+        .getAll(f.key)
+        .map((entry) => scrubForeignPrivateUrl(String(entry), "form-file", userId))
+        .filter(Boolean);
       if (f.required && vals.length === 0) redirect(`${back}?error=submit`);
       if (vals.length > 0) responses[f.key] = vals;
       continue;
@@ -432,20 +439,25 @@ export async function submitFormApplication(formData: FormData) {
     }
 
     const raw = String(formData.get(f.key) ?? "").trim();
-    if (f.required && !raw) redirect(`${back}?error=submit`);
+    // Semua jawaban teks ikut disaring: URL berkas privat milik orang lain yang
+    // ditempel ke pertanyaan bebas tidak boleh tersimpan (kalau tersimpan,
+    // pemilik baris jadi "berhak" membacanya lewat jalur pemilik).
+    const safe = scrubForeignPrivateUrl(raw, "form-file", userId);
+    if (f.required && !safe) redirect(`${back}?error=submit`);
     const validations = (f.config as { validations?: { min?: number; max?: number; minLength?: number } } | null)
       ?.validations;
-    if (validations && raw) {
+    if (validations && safe) {
       if (f.type === "number") {
-        const num = Number(raw);
+        const num = Number(safe);
+        if (!Number.isFinite(num)) redirect(`${back}?error=submit`);
         if ((validations.min != null && num < validations.min) || (validations.max != null && num > validations.max)) {
           redirect(`${back}?error=submit`);
         }
-      } else if (typeof validations.minLength === "number" && raw.length < validations.minLength) {
+      } else if (typeof validations.minLength === "number" && safe.length < validations.minLength) {
         redirect(`${back}?error=submit`);
       }
     }
-    if (raw) responses[f.key] = raw;
+    if (safe) responses[f.key] = safe;
   }
 
   await db

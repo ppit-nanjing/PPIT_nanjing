@@ -91,6 +91,9 @@ export function FormRenderer({
       return;
     }
     const next: Record<string, string> = {};
+    // Nilai unggahan tidak hidup di state (komponen unggah mengisi hidden input
+    // sendiri), jadi dibaca langsung dari form saat submit.
+    const liveData = new FormData(e.currentTarget);
 
     if (kind === "oprek_bph_acara" && !position) next.sys_position = t("forms.form.errRequired");
     if (kind === "oprek_kepanitiaan") {
@@ -101,6 +104,12 @@ export function FormRenderer({
     for (const f of fields) {
       if (f.type === "section") continue;
       const v = values[f.key] ?? "";
+
+      if (f.type === "file" || f.type === "image") {
+        const uploaded = String(liveData.get(f.key) ?? "").trim();
+        if (f.required && !uploaded) next[f.key] = t("forms.form.errRequired");
+        continue;
+      }
 
       if (GRID_TYPES.includes(f.type)) {
         if (f.required) {
@@ -148,8 +157,10 @@ export function FormRenderer({
       e.preventDefault();
       setErrors(next);
       const firstKey = Object.keys(next)[0];
-      const el = formRef.current?.querySelector<HTMLElement>(`#field-${CSS.escape(firstKey)}`);
-      el?.focus();
+      const wrapper = formRef.current?.querySelector<HTMLElement>(`#field-${CSS.escape(firstKey)}`);
+      // Wrapper-nya <div>/<fieldset> yang tidak fokusabel — fokuskan kontrol
+      // pertama di dalamnya (input/select/textarea/button).
+      wrapper?.querySelector<HTMLElement>("input, select, textarea, button")?.focus();
       return;
     }
     setErrors({});
@@ -274,11 +285,32 @@ export function FormRenderer({
           );
         }
 
+        // Grup pilihan (radio/multiselect/checkbox/rating/grid) memakai
+        // fieldset+legend supaya terbaca screen reader; input teks memakai
+        // label htmlFor biasa.
+        const isGroup =
+          GRID_TYPES.includes(f.type) ||
+          f.type === "radio" ||
+          f.type === "multiselect" ||
+          f.type === "checkbox" ||
+          f.type === "rating" ||
+          f.type === "linear_scale";
+        const Wrapper: "fieldset" | "div" = isGroup ? "fieldset" : "div";
+        const labelContent = (
+          <>
+            {f.label} {f.required && <span className="text-error">*</span>}
+          </>
+        );
+
         return (
-          <div key={f.id ?? f.key} id={fieldId}>
-            <label className="block text-body-md text-on-background mb-2" htmlFor={`${fieldId}-input`}>
-              {f.label} {f.required && <span className="text-error">*</span>}
-            </label>
+          <Wrapper key={f.id ?? f.key} id={fieldId} className={isGroup ? "min-w-0" : undefined}>
+            {isGroup ? (
+              <legend className="block text-body-md text-on-background mb-2">{labelContent}</legend>
+            ) : (
+              <label className="block text-body-md text-on-background mb-2" htmlFor={`${fieldId}-input`}>
+                {labelContent}
+              </label>
+            )}
             {f.helpText && <p className="text-body-sm text-on-surface-variant mb-2">{f.helpText}</p>}
 
             {GRID_TYPES.includes(f.type) ? (
@@ -341,6 +373,7 @@ export function FormRenderer({
             ) : f.type === "rating" || f.type === "linear_scale" ? (
               <RatingInput
                 fieldKey={f.key}
+                label={f.label}
                 value={values[f.key] ?? ""}
                 config={f.config}
                 disabled={preview}
@@ -403,7 +436,7 @@ export function FormRenderer({
                 <AlertCircle size={13} aria-hidden /> {errors[f.key]}
               </p>
             )}
-          </div>
+          </Wrapper>
         );
       })}
 
@@ -414,6 +447,7 @@ export function FormRenderer({
 
 function RatingInput({
   fieldKey,
+  label,
   value,
   config,
   disabled,
@@ -421,6 +455,7 @@ function RatingInput({
   onChange,
 }: {
   fieldKey: string;
+  label: string;
   value: string;
   config?: { min?: number; max?: number; lowLabel?: string; highLabel?: string };
   disabled?: boolean;
@@ -431,7 +466,7 @@ function RatingInput({
   const max = config?.max ?? 5;
   const steps = Array.from({ length: max - min + 1 }, (_, i) => min + i);
   return (
-    <div className="flex flex-wrap items-center gap-3 mt-1" role="radiogroup" aria-label={fieldKey}>
+    <div className="flex flex-wrap items-center gap-3 mt-1" role="radiogroup" aria-label={label}>
       {config?.lowLabel && <span className="text-label-caps text-on-surface-variant">{config.lowLabel}</span>}
       {steps.map((n) => {
         const active = value === String(n);
@@ -528,6 +563,7 @@ function GridInput({
                       type={multi ? "checkbox" : "radio"}
                       name={`${fieldKey}::${rIdx}`}
                       value={c}
+                      aria-label={`${r} — ${c}`}
                       checked={checked}
                       disabled={disabled}
                       onChange={(e) => handle(rIdx, c, e.target.checked)}
