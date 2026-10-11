@@ -525,7 +525,6 @@ function roleLabelFor(kind: FormKind, role: string | null): string {
 async function notifyFormApplicant(input: {
   applicationId: string;
   userId: string;
-  formTitle: string;
   key: NotificationTemplateKey;
   variables: Record<string, string>;
 }): Promise<string> {
@@ -543,8 +542,10 @@ async function notifyFormApplicant(input: {
       .from(notificationTemplates)
       .where(eq(notificationTemplates.key, input.key))
       .limit(1);
-    const subject = renderTemplate(row?.subject?.trim() || def.defaultSubject, input.variables);
-    const body = renderTemplate(row?.bodyTemplate?.trim() || def.defaultBody, input.variables);
+    // Variabel yang kosong (mis. details untuk penolakan) menyisakan baris
+    // kosong ganda — rapatkan supaya tidak ada paragraf hampa di email.
+    const subject = renderTemplate(row?.subject?.trim() || def.defaultSubject, input.variables).replace(/\n{3,}/g, "\n\n");
+    const body = renderTemplate(row?.bodyTemplate?.trim() || def.defaultBody, input.variables).replace(/\n{3,}/g, "\n\n");
 
     await createTemplatedNotification({
       userId: input.userId,
@@ -588,7 +589,6 @@ export async function updateApplicationPlacement(formData: FormData) {
   if (!statusAllowed(form.kind, status)) throw new Error("Status tidak berlaku untuk formulir ini.");
 
   const notifyApplicant = formData.get("notifyApplicant") !== null;
-  const note = String(formData.get("note") ?? "").trim();
 
   // Role penempatan per jenis form.
   let role: string | null = null;
@@ -623,14 +623,19 @@ export async function updateApplicationPlacement(formData: FormData) {
       assignedDivisionId = app.choice1DivisionId;
     }
   }
+  const acceptedNow = ACCEPTED_STATUSES.includes(status);
+  // Status non-diterima tidak menyimpan penempatan — kalau tidak, halaman
+  // detail menampilkan "Penempatan saat ini" di bawah badge "Ditolak".
+  const nextRole = acceptedNow && form.kind !== "pemilu" ? (role as EventCommitteeRole | null) : null;
+  const nextDivisionId = acceptedNow ? assignedDivisionId : null;
 
   // Perubahan yang menyentuh event_committee butuh izin penempatan (acara tidak terkunci).
   const touchingCommittee = form.kind !== "pemilu";
-  const willAssign = touchingCommittee && ACCEPTED_STATUSES.includes(status);
+  const willAssign = touchingCommittee && acceptedNow;
   const willRemove =
-    touchingCommittee && !ACCEPTED_STATUSES.includes(status) && ACCEPTED_STATUSES.includes(app.status as AppStatus);
+    touchingCommittee && !acceptedNow && ACCEPTED_STATUSES.includes(app.status as AppStatus);
   if (willAssign || willRemove) {
-    if (!(await canPlaceApplicant(form.eventId, access))) {
+    if (!(await canPlaceApplicant(form, access))) {
       throw new Error("Acara ini terkunci atau kamu tidak berhak mengubah penugasan.");
     }
   }
@@ -641,9 +646,8 @@ export async function updateApplicationPlacement(formData: FormData) {
     .update(formApplications)
     .set({
       status,
-      assignedRole: form.kind === "pemilu" ? null : (role as EventCommitteeRole | null),
-      assignedDivisionId,
-      note: note || null,
+      assignedRole: nextRole,
+      assignedDivisionId: nextDivisionId,
       reviewedAt: new Date(),
     })
     .where(eq(formApplications.id, app.id));
@@ -651,7 +655,7 @@ export async function updateApplicationPlacement(formData: FormData) {
   // Sinkronisasi penugasan kepanitiaan: satu baris per (acara, user).
   if (touchingCommittee && form.eventId) {
     const [existing] = await db
-      .select({ id: eventCommittee.id, role: eventCommittee.role })
+      .select({ id: eventCommittee.id, role: eventCommittee.role, note: eventCommittee.note })
       .from(eventCommittee)
       .where(and(eq(eventCommittee.eventId, form.eventId), eq(eventCommittee.userId, app.userId)));
 
@@ -680,52 +684,57 @@ export async function updateApplicationPlacement(formData: FormData) {
           .onConflictDoNothing();
       }
     } else if (willRemove) {
-      // Hapus baris panitia hanya kalau tidak ada penerimaan lain di acara yang sama.
-      const others = await db
-        .select({ id: formApplications.id })
-        .from(formApplications)
-        .innerJoin(forms, eq(forms.id, formApplications.formId))
-        .where(
-          and(
-            eq(formApplications.userId, app.userId),
-            eq(forms.eventId, form.eventId),
-            ne(formApplications.id, app.id),
-            inArray(formApplications.status, ["accepted", "accepted_choice1", "accepted_choice2", "reassigned"]),
-          ),
-        );
-      if (others.length === 0) {
-        await db
-          .delete(eventCommittee)
-          .where(and(eq(eventCommittee.eventId, form.eventId), eq(eventCommittee.userId, app.userId)));
+      // Hapus baris panitia hanya kalau (a) baris itu memang dibuat Oprek
+      // (note "Oprek: …" — baris yang ditugaskan manual tidak boleh hilang),
+      // dan (b) tidak ada penerimaan lain di acara yang sama.
+      const oprekCreated = (existing?.note ?? "").startsWith("Oprek:");
+      if (existing && oprekCreated) {
+        const others = await db
+          .select({ id: formApplications.id })
+          .from(formApplications)
+          .innerJoin(forms, eq(forms.id, formApplications.formId))
+          .where(
+            and(
+              eq(formApplications.userId, app.userId),
+              eq(forms.eventId, form.eventId),
+              ne(formApplications.id, app.id),
+              inArray(formApplications.status, ["accepted", "accepted_choice1", "accepted_choice2", "reassigned"]),
+            ),
+          );
+        if (others.length === 0) {
+          await db
+            .delete(eventCommittee)
+            .where(and(eq(eventCommittee.eventId, form.eventId), eq(eventCommittee.userId, app.userId)));
+        }
       }
     }
   }
 
   // Notifikasi hanya saat ada perubahan nyata (simpan ulang tidak mengirim lagi).
-  const changed =
-    before.status !== status || before.role !== (role ?? null) || before.divisionId !== assignedDivisionId;
+  const changed = before.status !== status || before.role !== nextRole || before.divisionId !== nextDivisionId;
   let decisionEmail: string | null = null;
   if (changed && notifyApplicant) {
+    const wasAccepted = ACCEPTED_STATUSES.includes(before.status as AppStatus);
     let key: NotificationTemplateKey | null = null;
-    if (ACCEPTED_STATUSES.includes(status)) key = "oprek_accepted";
-    else if (status === "rejected") key = "oprek_rejected";
-    else if (ACCEPTED_STATUSES.includes(before.status as AppStatus)) key = "oprek_placement_changed";
+    if (acceptedNow && !wasAccepted) key = "oprek_accepted";
+    else if (status === "rejected" && before.status !== "rejected") key = "oprek_rejected";
+    else if (wasAccepted) key = "oprek_placement_changed";
 
     if (key) {
       const [eventRow] = form.eventId
         ? await db.select({ title: events.title }).from(events).where(eq(events.id, form.eventId))
         : [];
       let divisionName: string | null = null;
-      if (assignedDivisionId) {
+      if (nextDivisionId) {
         const [div] = await db
           .select({ name: eventDivisions.name })
           .from(eventDivisions)
-          .where(eq(eventDivisions.id, assignedDivisionId));
+          .where(eq(eventDivisions.id, nextDivisionId));
         divisionName = div?.name ?? null;
       }
-      const roleLabel = roleLabelFor(form.kind, role);
+      const roleLabel = roleLabelFor(form.kind, acceptedNow ? role : nextRole);
       let details = "";
-      if (ACCEPTED_STATUSES.includes(status)) {
+      if (key === "oprek_accepted") {
         if (form.kind === "oprek_bph_acara") {
           details = `Kamu tercatat sebagai ${roleLabel} (BPH Acara)${eventRow?.title ? ` untuk acara "${eventRow.title}"` : ""}.`;
         } else if (form.kind === "oprek_kepanitiaan") {
@@ -733,17 +742,20 @@ export async function updateApplicationPlacement(formData: FormData) {
         } else {
           details = "Kamu tercatat sebagai calon pada periode berikutnya.";
         }
-      } else if (status === "rejected") {
+      } else if (key === "oprek_rejected") {
         details = "";
-      } else {
+      } else if (acceptedNow) {
         details = divisionName
           ? `Penempatanmu sekarang: ${roleLabel ? `${roleLabel} — ` : ""}${divisionName}.`
-          : `Role kamu sekarang: ${roleLabel}.`;
+          : roleLabel
+            ? `Penempatanmu sekarang: ${roleLabel}.`
+            : "Penempatanmu sudah diperbarui.";
+      } else {
+        details = "Status lamaranmu kembali menjadi menunggu dan penempatan sementaranya dibatalkan.";
       }
       decisionEmail = await notifyFormApplicant({
         applicationId: app.id,
         userId: app.userId,
-        formTitle: form.title,
         key,
         variables: { fullName: app.fullName, formTitle: form.title, details },
       });
@@ -756,14 +768,16 @@ export async function updateApplicationPlacement(formData: FormData) {
     actorUserId: access.userId,
     entityType: "form_application",
     entityId: app.id,
-    action: ACCEPTED_STATUSES.includes(status) ? `decision_${status}` : status === "rejected" ? "decision_rejected" : "status_changed",
+    action: acceptedNow ? `decision_${status}` : status === "rejected" ? "decision_rejected" : "status_changed",
     beforeJson: before,
-    afterJson: { status, role, divisionId: assignedDivisionId, decisionEmail },
+    afterJson: { status, role: nextRole, divisionId: nextDivisionId, decisionEmail },
   });
 
   revalidatePath(`/console/forms/${form.id}`);
   revalidatePath(`/console/forms/${form.id}/applicants/${app.id}`);
   revalidatePath(FORM_TAB_PATH[form.kind]);
+  if (touchingCommittee) revalidatePath("/console/work-ledger");
+  if (form.eventId) revalidatePath(`/console/events/${form.eventId}`);
 }
 
 // Simpan catatan internal saja (tanpa menyentuh status/penempatan) — dipisah
@@ -775,9 +789,11 @@ export async function updateApplicationNote(formData: FormData) {
   const { form } = await requireFormManage(formId);
   if (!UUID_RE.test(applicationId)) notFound();
   const note = String(formData.get("note") ?? "").trim();
-  await db
+  const updated = await db
     .update(formApplications)
     .set({ note: note || null })
-    .where(and(eq(formApplications.id, applicationId), eq(formApplications.formId, form.id)));
+    .where(and(eq(formApplications.id, applicationId), eq(formApplications.formId, form.id)))
+    .returning({ id: formApplications.id });
+  if (updated.length === 0) notFound();
   revalidatePath(`/console/forms/${form.id}/applicants/${applicationId}`);
 }

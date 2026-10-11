@@ -146,7 +146,7 @@ export default async function FormApplicantPage({
               </dd>
             </div>
           )}
-          {app.assignedRole && (
+          {["accepted", "accepted_choice1", "accepted_choice2", "reassigned"].includes(status) && app.assignedRole && (
             <div>
               <dt className="text-label-caps uppercase tracking-wide text-on-surface-variant">Penempatan Saat Ini</dt>
               <dd className="text-on-background">
@@ -314,6 +314,12 @@ function AnswerValue({ field, value }: { field: MembershipFieldDef; value: unkno
 
   if (field.type === "file" || field.type === "image") {
     const url = String(value);
+    // Hanya lampiran privat internal atau URL http(s) yang dirender sebagai
+    // tautan — nilai lain (mis. skema aneh) tampil teks saja.
+    const safeLink = url.startsWith("/api/files/") || /^https?:\/\//i.test(url);
+    if (!safeLink) {
+      return <p className="text-body-md text-on-background break-all">{url}</p>;
+    }
     return (
       <a
         href={url}

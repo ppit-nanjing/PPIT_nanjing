@@ -130,15 +130,20 @@ export async function requireFormManage(formId: string): Promise<{ form: FormRow
 
 // Penulisan penempatan (event_committee) menghormati kunci acara 14 hari:
 // setelah acara selesai+batas, panitia biasa tidak boleh menulis lagi —
-// hanya BPH Kabinet/Divisi Teknologi. Dipakai aksi Oprek saat menetapkan
-// "diterima/dipindah" (bukan sekadar membaca respons).
+// hanya BPH Kabinet/Divisi Teknologi. Yang boleh menempatkan: BPH Acara acara
+// itu, ATAU koor/pembuat form (mereka yang menjalankan rekrutmen BPH sebelum
+// kepanitiaan terbentuk), ATAU pemegang modul forms/full.
 export async function canPlaceApplicant(
-  eventId: string | null,
+  form: Pick<FormRow, "eventId" | "createdBy">,
   access: FormsAccess,
 ): Promise<boolean> {
   if (access.isFull || access.canForms) return true;
-  if (!eventId) return false;
-  const eventAccess = await getEventAccess(eventId);
+  if (!form.eventId) return false;
+  if (form.createdBy && form.createdBy === access.userId) {
+    const eventAccess = await getEventAccess(form.eventId);
+    return !eventAccess.locked;
+  }
+  const eventAccess = await getEventAccess(form.eventId);
   if (!eventAccess.isBphPanitia) return false;
   return !eventAccess.locked;
 }
