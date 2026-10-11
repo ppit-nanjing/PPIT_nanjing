@@ -5,9 +5,19 @@ import { useRouter } from "next/navigation";
 import { ChevronDown, ChevronRight, GripVertical, MoreVertical, Copy } from "lucide-react";
 import type { MembershipFieldDef } from "@/lib/membership-form";
 import { OPTION_TYPES, SCALE_TYPES, CHOICE_TYPES, GRID_TYPES, FIELD_TYPE_LABELS, isSectionType, canDeleteField } from "@/lib/membership-form";
-import { updateFormField, deleteFormField, moveFormField, duplicateFormField } from "@/app/actions/membership";
 import { Select, CheckboxField } from "@/components/console/form";
 import { SubmitButton } from "@/components/console/submit-button";
+
+// Aksi-aksi penyimpanan dikirim sebagai prop supaya komponen yang sama dipakai
+// dua modul: Pendaftaran Anggota (/console/membership) dan Formulir
+// (/console/forms) — masing-masing punya Server Action-nya sendiri yang
+// mengecek modul/form-nya (lihat src/app/actions/forms.ts).
+export type FormFieldActions = {
+  update: (formData: FormData) => void | Promise<void>;
+  remove: (formData: FormData) => void | Promise<void>;
+  move: (id: string, to: number) => void | Promise<void>;
+  duplicate: (id: string) => void | Promise<void>;
+};
 
 const ALL_TYPES: MembershipFieldDef["type"][] = [
   "text", "textarea", "email", "tel", "number", "select", "radio", "multiselect", "date", "checkbox", "rating", "image", "url", "section", "time", "linear_scale",   "grid_radio", "grid_checkbox", "file",
@@ -41,7 +51,19 @@ function summary(f: MembershipFieldDef): string {
   return parts.join(" · ");
 }
 
-export function FormFieldEditor({ field, index, sectionLabel, isQuiz }: { field: MembershipFieldDef; index: number; sectionLabel?: string; isQuiz?: boolean }) {
+export function FormFieldEditor({
+  field,
+  index,
+  sectionLabel,
+  isQuiz,
+  actions,
+}: {
+  field: MembershipFieldDef;
+  index: number;
+  sectionLabel?: string;
+  isQuiz?: boolean;
+  actions: FormFieldActions;
+}) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [type, setType] = useState<MembershipFieldDef["type"]>(field.type);
@@ -78,7 +100,7 @@ export function FormFieldEditor({ field, index, sectionLabel, isQuiz }: { field:
     if (!sourceId || from < 0) return;
     let to = before ? index : index + 1;
     if (from < to) to -= 1;
-    await moveFormField(sourceId, to);
+    await actions.move(sourceId, to);
     router.refresh();
   }
 
@@ -170,7 +192,7 @@ export function FormFieldEditor({ field, index, sectionLabel, isQuiz }: { field:
                     type="button"
                     onClick={async () => {
                       setMenuOpen(false);
-                      await duplicateFormField(field.id ?? "");
+                      await actions.duplicate(field.id ?? "");
                       router.refresh();
                     }}
                     className="flex items-center gap-2 w-full text-left px-4 py-2 text-body-md text-on-background hover:bg-soft-gray"
@@ -191,7 +213,7 @@ export function FormFieldEditor({ field, index, sectionLabel, isQuiz }: { field:
                   </button>
                 ) : (
                   <p className="px-4 py-2 text-label-caps text-on-surface-variant border-t border-outline-variant/60 mt-1">
-                    Tidak bisa dihapus &mdash; nama &amp; email dipakai sebagai identitas pendaftar.
+                    Tidak bisa dihapus &mdash; pertanyaan ini dipakai sebagai identitas pengisi.
                   </p>
                 )}
               </div>
@@ -202,7 +224,7 @@ export function FormFieldEditor({ field, index, sectionLabel, isQuiz }: { field:
 
       {open && (
         <div className="px-4 pb-4 pt-1 border-t border-outline-variant">
-          <form action={updateFormField} className="flex flex-col gap-4 mt-4">
+          <form action={actions.update} className="flex flex-col gap-4 mt-4">
             <input type="hidden" name="id" value={field.id ?? ""} />
             <input type="hidden" name="config" value={configStr} />
             <div className="flex flex-col gap-2">
@@ -356,7 +378,7 @@ export function FormFieldEditor({ field, index, sectionLabel, isQuiz }: { field:
           </form>
 
           {deletable && confirmDelete && (
-            <form action={deleteFormField} className="flex items-center gap-2 mt-3">
+            <form action={actions.remove} className="flex items-center gap-2 mt-3">
               <input type="hidden" name="id" value={field.id ?? ""} />
               <SubmitButton successMessage="Pertanyaan dihapus." className="bg-error text-on-error text-label-caps uppercase tracking-wide px-4 py-2.5 rounded-md">Yakin hapus?</SubmitButton>
               <button type="button" onClick={() => setConfirmDelete(false)} className="text-label-caps uppercase tracking-wide px-3 py-2.5">Batal</button>

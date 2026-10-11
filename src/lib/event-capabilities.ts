@@ -60,10 +60,14 @@ export type EventCommitteeRole =
 
 // TINGKAT 3 — BPH Panitia. Jabatan pelaksana inti yang otomatis pegang SEMUA
 // fitur acaranya (kecuali event.delete / event.takeOver — itu BPH Kabinet).
+// bendahara ikut di sini sejak modul Formulir/Oprek (2026-10): alur kepanitiaan
+// PPIT menempatkan bendahara sebagai bagian BPH Acara (ketua → wakil/sekretaris/
+// bendahara), jadi hasil Oprek BPH yang diterima harus dapat izin kelola acara.
 export const BPH_PANITIA_ROLES: EventCommitteeRole[] = [
   "ketua",
   "wakil",
   "sekretaris",
+  "bendahara",
   "supervisor",
 ];
 

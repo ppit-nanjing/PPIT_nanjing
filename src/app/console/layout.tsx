@@ -1,9 +1,6 @@
-import { eq } from "drizzle-orm";
 import { redirect } from "next/navigation";
 import { Toaster } from "sonner";
 import { auth } from "@/auth";
-import { db } from "@/db";
-import { eventCommittee } from "@/db/schema";
 import { ConsoleSidebar } from "@/components/console/console-sidebar";
 
 // Every /console/* page is gated here - the route being named /console instead of
@@ -15,18 +12,13 @@ export default async function ConsoleLayout({ children }: { children: React.Reac
   const session = await auth();
   if (!session) redirect("/login");
 
-  // Kabinet admin (module scope) ATAU panitia di minimal satu acara. Panitia
-  // non-admin masuk untuk mengurus acaranya sendiri; sidebar-nya cuma
-  // menampilkan "Kegiatan" (yang di dalamnya sudah disaring ke acara dia).
-  let onCommittee = false;
-  if (!session.user.isAdmin) {
-    const [row] = await db
-      .select({ id: eventCommittee.id })
-      .from(eventCommittee)
-      .where(eq(eventCommittee.userId, session.user.id))
-      .limit(1);
-    onCommittee = !!row;
-    if (!onCommittee) redirect("/");
+  // Kabinet admin (module scope) ATAU panitia di minimal satu acara ATAU
+  // koordinator divisi (menu Formulir/Oprek). Panitia non-admin masuk untuk
+  // mengurus acaranya sendiri; sidebar-nya cuma menampilkan "Kegiatan"
+  // (yang di dalamnya sudah disaring ke acara dia). Semua flag ini sudah
+  // dihitung di sesi (satu query gabungan) - tidak ada query tambahan di sini.
+  if (!session.user.isAdmin && !session.user.isCoordinator && !session.user.isCommittee) {
+    redirect("/");
   }
 
   return (
@@ -40,7 +32,9 @@ export default async function ConsoleLayout({ children }: { children: React.Reac
         <ConsoleSidebar
           userName={session.user.name ?? "Admin"}
           scope={session.user.adminScope}
-          isCommittee={onCommittee}
+          isCommittee={session.user.isCommittee}
+          isBphCommittee={session.user.isBphCommittee}
+          isCoordinator={session.user.isCoordinator}
         />
       </div>
       {/* Fluid, bukan max-width terpusat: begitu sidebar dilipat, konten ikut

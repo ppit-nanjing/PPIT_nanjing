@@ -7,7 +7,17 @@ import { CollapsibleSection } from "@/components/console/collapsible-section";
 import { FormFieldEditor } from "@/components/console/form-field-editor";
 import { QuestionBank } from "@/components/console/question-bank";
 import { MembershipApplicationForm } from "@/components/membership/membership-application-form";
-import { createFormField, initFormFields, getFormMeta, updateFormMeta } from "@/app/actions/membership";
+import {
+  createFormField,
+  createFormFieldFromTemplate,
+  deleteFormField,
+  duplicateFormField,
+  getFormMeta,
+  initFormFields,
+  moveFormField,
+  updateFormField,
+  updateFormMeta,
+} from "@/app/actions/membership";
 import { FIELD_TYPE_LABELS, type MembershipFieldDef } from "@/lib/membership-form";
 import { Select, ToggleSwitch } from "@/components/console/form";
 import { SubmitButton } from "@/components/console/submit-button";
@@ -185,7 +195,7 @@ export default async function MembershipFormPage() {
         className="mb-8"
         defaultOpen={false}
       >
-        <QuestionBank />
+        <QuestionBank action={createFormFieldFromTemplate} />
       </CollapsibleSection>
 
       <CollapsibleSection
@@ -203,7 +213,21 @@ export default async function MembershipFormPage() {
                 break;
               }
             }
-            return <FormFieldEditor key={f.id} field={f} index={i} sectionLabel={sectionLabel} isQuiz={meta.isQuiz} />;
+            return (
+              <FormFieldEditor
+                key={f.id}
+                field={f}
+                index={i}
+                sectionLabel={sectionLabel}
+                isQuiz={meta.isQuiz}
+                actions={{
+                  update: updateFormField,
+                  remove: deleteFormField,
+                  move: moveFormField,
+                  duplicate: duplicateFormField,
+                }}
+              />
+            );
           })}
         </div>
       </CollapsibleSection>

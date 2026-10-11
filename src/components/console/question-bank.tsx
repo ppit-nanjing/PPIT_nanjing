@@ -3,10 +3,19 @@
 import { useState } from "react";
 import { Plus, Search } from "lucide-react";
 import { QUESTION_BANK, FIELD_TYPE_LABELS, type QuestionTemplate } from "@/lib/membership-form";
-import { createFormFieldFromTemplate } from "@/app/actions/membership";
 import { SubmitButton } from "@/components/console/submit-button";
 
-export function QuestionBank() {
+// `action` dikirim sebagai prop supaya bank pertanyaan yang sama dipakai modul
+// Pendaftaran Anggota dan modul Formulir (masing-masing punya Server Action
+// sendiri yang mengecek hak aksesnya). `hiddenFields` mengisi field tambahan
+// yang dibutuhkan action tujuan (mis. formId di modul Formulir).
+export function QuestionBank({
+  action,
+  hiddenFields,
+}: {
+  action: (formData: FormData) => void | Promise<void>;
+  hiddenFields?: Record<string, string>;
+}) {
   const [query, setQuery] = useState("");
   const q = query.trim().toLowerCase();
 
@@ -39,7 +48,7 @@ export function QuestionBank() {
             <ul className="flex flex-col gap-2">
               {cat.templates.map((t) => (
                 <li key={t.key}>
-                  <AddTemplateButton template={t} />
+                  <AddTemplateButton template={t} action={action} hiddenFields={hiddenFields} />
                 </li>
               ))}
             </ul>
@@ -50,9 +59,21 @@ export function QuestionBank() {
   );
 }
 
-function AddTemplateButton({ template }: { template: QuestionTemplate }) {
+function AddTemplateButton({
+  template,
+  action,
+  hiddenFields,
+}: {
+  template: QuestionTemplate;
+  action: (formData: FormData) => void | Promise<void>;
+  hiddenFields?: Record<string, string>;
+}) {
   return (
-    <form action={createFormFieldFromTemplate} className="flex items-center justify-between gap-3 bg-soft-gray rounded-md px-4 py-3">
+    <form action={action} className="flex items-center justify-between gap-3 bg-soft-gray rounded-md px-4 py-3">
+      {hiddenFields &&
+        Object.entries(hiddenFields).map(([name, value]) => (
+          <input key={name} type="hidden" name={name} value={value} />
+        ))}
       <div className="min-w-0">
         <p className="text-body-md text-on-background truncate">{template.label}</p>
         <p className="text-label-caps text-on-surface-variant">{FIELD_TYPE_LABELS[template.type]}</p>

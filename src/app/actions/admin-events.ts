@@ -1,11 +1,11 @@
 "use server";
 
-import { eq, and, or, ilike, isNull, sql } from "drizzle-orm";
+import { eq, and, or, ilike, isNull, inArray, sql } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { auth } from "@/auth";
 import { db } from "@/db";
-import { events, eventRegistrations, eventQuestions, eventCommittee, eventFeeOptions, eventDivisions, galleryAlbums, users, sensusProfiles } from "@/db/schema";
+import { events, eventRegistrations, eventQuestions, eventCommittee, eventFeeOptions, eventDivisions, eventResponsibleDepartments, departments, galleryAlbums, users, sensusProfiles } from "@/db/schema";
 import { hasModuleAccess } from "@/lib/admin-scope";
 import { getEventAccess, requireEventCapability } from "@/lib/event-access";
 import { logEventAudit } from "@/lib/event-audit";
@@ -899,4 +899,50 @@ export async function deleteEvent(eventId: string) {
   revalidatePath("/console/content");
   revalidatePath("/gallery");
   redirect("/console/events");
+}
+
+
+// Divisi kabinet penanggung jawab acara (proker). Satu acara biasanya milik satu
+// divisi; proker gabungan boleh lebih dari satu. Menyentuh tabel terpisah
+// (event_responsible_departments) — events.department_id lama dibiarkan.
+export async function setEventResponsibleDepartments(formData: FormData) {
+  const eventId = String(formData.get("eventId") ?? "");
+  const { session } = await requireEventCapability(eventId, "event.editInfo");
+  if (!UUID_RE.test(eventId)) redirect("/console/events");
+  const [eventExists] = await db.select({ id: events.id }).from(events).where(eq(events.id, eventId));
+  if (!eventExists) redirect("/console/events");
+
+  const rawIds = formData
+    .getAll("departmentId")
+    .map((v) => String(v))
+    .filter((v) => UUID_RE.test(v));
+  const valid = rawIds.length
+    ? await db.select({ id: departments.id }).from(departments).where(inArray(departments.id, rawIds))
+    : [];
+  const ids = valid.map((d) => d.id);
+
+  const before = await db
+    .select({ departmentId: eventResponsibleDepartments.departmentId })
+    .from(eventResponsibleDepartments)
+    .where(eq(eventResponsibleDepartments.eventId, eventId));
+
+  // neon-http tidak mendukung transaction interaktif — delete+insert dibungkus
+  // db.batch (satu transaksi implisit; kalau tidak ada pilihan, cukup delete).
+  if (ids.length > 0) {
+    await db.batch([
+      db.delete(eventResponsibleDepartments).where(eq(eventResponsibleDepartments.eventId, eventId)),
+      db
+        .insert(eventResponsibleDepartments)
+        .values(ids.map((departmentId) => ({ eventId, departmentId })))
+        .onConflictDoNothing(),
+    ]);
+  } else {
+    await db.delete(eventResponsibleDepartments).where(eq(eventResponsibleDepartments.eventId, eventId));
+  }
+
+  await logEventAudit(session.user.id, eventId, "event.responsible_departments", {
+    before: { departments: before.map((r) => r.departmentId) },
+    after: { departments: ids },
+  });
+  revalidatePath(`/console/events/${eventId}`);
 }

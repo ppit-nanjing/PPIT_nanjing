@@ -23,6 +23,7 @@ import {
   BellRing,
   Link2,
   Folder,
+  FileText,
   PanelLeftClose,
   PanelLeftOpen,
 } from "lucide-react";
@@ -38,6 +39,13 @@ type NavItem = {
   module: AdminModule | AdminModule[] | null;
   // Juga tampil untuk panitia acara (non-admin) walau tidak punya modul-nya.
   committeeToo?: boolean;
+  // Khusus BPH Acara (ketua/wakil/sekretaris/bendahara/supervisor) — menu
+  // Formulir/Oprek Kepanitiaan. Panitia biasa tidak dapat menu ini.
+  bphCommitteeToo?: boolean;
+  // Juga tampil untuk Koordinator Divisi (role scoped) — mis. menu Formulir,
+  // supaya tiap koor bisa bikin form Oprek BPH untuk prokernya. Flag ini
+  // hanya visibilitas; gerbang sebenarnya ada di page/action masing-masing.
+  coordinatorToo?: boolean;
 };
 
 // `module: null` = always visible to anyone who got past the layout gate
@@ -58,6 +66,7 @@ const GROUPS: { title: string; items: NavItem[] }[] = [
       { href: "/console/work-ledger", label: "Work Ledger", icon: ClipboardList, module: "events" },
       { href: "/console/inventory", label: "Inventaris", icon: Package, module: "inventory" },
       { href: "/console/membership", label: "Pendaftaran", icon: UserPlus, module: "membership" },
+      { href: "/console/forms", label: "Formulir", icon: FileText, module: "forms", bphCommitteeToo: true, coordinatorToo: true },
       { href: "/console/jobs", label: "Lowongan", icon: Briefcase, module: "career" },
       { href: "/console/sensus", label: "Sensus", icon: ClipboardCheck, module: ["sensus", "sensus-verify"] },
       { href: "/console/ranting/sensus", label: "Sensus Ranting", icon: ClipboardCheck, module: "sensus-ranting" },
@@ -83,12 +92,16 @@ const COLLAPSE_KEY = "console.sidebar.collapsed";
 function NavContent({
   scope,
   isCommittee = false,
+  isBphCommittee = false,
+  isCoordinator = false,
   pathname,
   onNavigate,
   collapsed = false,
 }: {
   scope: "full" | string[] | null;
   isCommittee?: boolean;
+  isBphCommittee?: boolean;
+  isCoordinator?: boolean;
   pathname: string;
   onNavigate: () => void;
   collapsed?: boolean;
@@ -105,7 +118,9 @@ function NavContent({
             (Array.isArray(i.module)
               ? i.module.some((m) => hasModuleAccess(scope, m))
               : hasModuleAccess(scope, i.module)) ||
-            (i.committeeToo && isCommittee),
+            (i.committeeToo && isCommittee) ||
+            (i.bphCommitteeToo && isBphCommittee) ||
+            (i.coordinatorToo && isCoordinator),
         );
         if (items.length === 0) return null;
         return (
@@ -152,10 +167,14 @@ export function ConsoleSidebar({
   userName,
   scope,
   isCommittee = false,
+  isBphCommittee = false,
+  isCoordinator = false,
 }: {
   userName: string;
   scope: "full" | string[] | null;
   isCommittee?: boolean;
+  isBphCommittee?: boolean;
+  isCoordinator?: boolean;
 }) {
   const [open, setOpen] = useState(false);
   // Lipat = rail ikon saja di desktop. Pilihan diingat per browser supaya
@@ -203,7 +222,7 @@ export function ConsoleSidebar({
             {collapsed ? <PanelLeftOpen size={18} /> : <PanelLeftClose size={18} />}
           </button>
         </div>
-        <NavContent scope={scope} isCommittee={isCommittee} pathname={pathname} onNavigate={() => {}} collapsed={collapsed} />
+        <NavContent scope={scope} isCommittee={isCommittee} isBphCommittee={isBphCommittee} isCoordinator={isCoordinator} pathname={pathname} onNavigate={() => {}} collapsed={collapsed} />
         <Link
           href="/"
           title={collapsed ? "Kembali ke Situs" : undefined}
@@ -237,7 +256,7 @@ export function ConsoleSidebar({
                 <X size={22} />
               </button>
             </div>
-            <NavContent scope={scope} isCommittee={isCommittee} pathname={pathname} onNavigate={() => setOpen(false)} />
+            <NavContent scope={scope} isCommittee={isCommittee} isBphCommittee={isBphCommittee} isCoordinator={isCoordinator} pathname={pathname} onNavigate={() => setOpen(false)} />
             <Link
               href="/"
               onClick={() => setOpen(false)}
