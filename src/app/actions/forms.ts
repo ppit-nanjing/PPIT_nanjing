@@ -797,3 +797,75 @@ export async function updateApplicationNote(formData: FormData) {
   if (updated.length === 0) notFound();
   revalidatePath(`/console/forms/${form.id}/applicants/${applicationId}`);
 }
+
+// Hapus satu lamaran (mis. salah orang / minta isi ulang). Kalau lamaran itu
+// sedang diterima, penugasan panitianya ikut dilepas dengan aturan yang sama
+// seperti penolakan (provenance "Oprek:" + tidak ada penerimaan lain). Setelah
+// dihapus, orangnya bisa mengirim ulang (unique form_id+user_id kembali bebas).
+export async function deleteFormApplication(formData: FormData) {
+  const formId = String(formData.get("formId") ?? "");
+  const applicationId = String(formData.get("applicationId") ?? "");
+  const { form, access } = await requireFormManage(formId);
+  if (!UUID_RE.test(applicationId)) notFound();
+
+  const [app] = await db
+    .select()
+    .from(formApplications)
+    .where(and(eq(formApplications.id, applicationId), eq(formApplications.formId, form.id)));
+  if (!app) notFound();
+
+  const wasAccepted = ACCEPTED_STATUSES.includes(app.status as AppStatus);
+  if (form.kind !== "pemilu" && wasAccepted) {
+    if (!(await canPlaceApplicant(form, access))) {
+      throw new Error("Acara ini terkunci atau kamu tidak berhak melepas penugasan.");
+    }
+    if (form.eventId) {
+      const [existing] = await db
+        .select({ id: eventCommittee.id, note: eventCommittee.note })
+        .from(eventCommittee)
+        .where(and(eq(eventCommittee.eventId, form.eventId), eq(eventCommittee.userId, app.userId)));
+      const oprekCreated = (existing?.note ?? "").startsWith("Oprek:");
+      if (existing && oprekCreated) {
+        const others = await db
+          .select({ id: formApplications.id })
+          .from(formApplications)
+          .innerJoin(forms, eq(forms.id, formApplications.formId))
+          .where(
+            and(
+              eq(formApplications.userId, app.userId),
+              eq(forms.eventId, form.eventId),
+              ne(formApplications.id, app.id),
+              inArray(formApplications.status, ["accepted", "accepted_choice1", "accepted_choice2", "reassigned"]),
+            ),
+          );
+        if (others.length === 0) {
+          await db
+            .delete(eventCommittee)
+            .where(and(eq(eventCommittee.eventId, form.eventId), eq(eventCommittee.userId, app.userId)));
+        }
+      }
+    }
+  }
+
+  await db.delete(formApplications).where(eq(formApplications.id, app.id));
+
+  await db.insert(auditLogs).values({
+    actorUserId: access.userId,
+    entityType: "form_application",
+    entityId: app.id,
+    action: "deleted",
+    beforeJson: {
+      fullName: app.fullName,
+      status: app.status,
+      role: app.assignedRole,
+      divisionId: app.assignedDivisionId,
+    },
+    afterJson: null,
+  });
+
+  revalidatePath(`/console/forms/${form.id}`);
+  revalidatePath(FORM_TAB_PATH[form.kind]);
+  if (form.eventId) revalidatePath(`/console/events/${form.eventId}`);
+  if (form.kind !== "pemilu") revalidatePath("/console/work-ledger");
+  redirect(`/console/forms/${form.id}`);
+}

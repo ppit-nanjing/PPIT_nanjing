@@ -391,6 +391,44 @@ Aturan data pelamar
   2. Klik Hapus Lamaran. Jangan hapus lowongannya, karena itu membuang lamaran orang lain juga.
   3. Berkas CV-nya TIDAK ikut terhapus, karena disimpan terpisah di Vercel Blob (folder "resume"). Minta Divisi Teknologi menghapus berkas dari tautan yang tadi disalin. Kalau CV-nya tautan Drive milik pelamar sendiri, tidak ada yang perlu dihapus.`,
   },
+  {
+    slug: "oprek",
+    section: SERING_BINGUNG,
+    title: "Formulir & Oprek — Pemilu, BPH Acara, dan Kepanitiaan",
+    content: `Apa ini
+Menu Formulir untuk rekrutmen internal kabinet. Semua form di sini hanya bisa diisi pengurus kabinet (terdaftar di Struktur Organisasi): Pemilu (pendaftaran calon periode berikutnya), Oprek BPH Acara (rekrut BPH untuk satu acara), dan Oprek Kepanitiaan (rekrut panitia acara per divisi). Form Pendaftaran PPIT (publik) tetap di menu Pendaftaran.
+
+Siapa yang bisa akses
+- BPH Inti + Divisi Teknologi: semua tab, semua acara.
+- Koordinator Divisi: tab Oprek BPH Acara — setiap koor boleh membuat form untuk proker divisinya.
+- BPH Acara (ketua/wakil/sekretaris/bendahara/supervisor hasil Oprek): tab Oprek Kepanitiaan untuk acaranya.
+- Anggota kabinet biasa: hanya MENGISI form; tidak melihat hasil pelamar.
+
+Alur Oprek BPH Acara
+1. Pastikan acaranya sudah dibuat lebih dulu di menu Kegiatan.
+2. Formulir → Oprek BPH Acara → isi judul, pilih acara, centang posisi yang dibuka (minimal satu).
+3. Susun pertanyaan (Tambah Pertanyaan / Bank Pertanyaan), lalu nyalakan "Buka untuk pengisian".
+4. Bagikan tautannya (Salin tautan / Bagikan) ke grup. Penerima wajib login sebagai pengurus kabinet.
+5. Tinjau di bagian Pendaftar → klik pelamar: jawaban lengkap, atur status (Menunggu/Diterima/Ditolak) dan role, lalu Simpan Penempatan. Yang DITERIMA otomatis tercatat sebagai panitia acara itu.
+6. Analitik dan ekspor CSV/Excel ada di halaman form yang sama.
+
+Alur Oprek Kepanitiaan
+1. Dibuat oleh BPH Acara acara tersebut (atau BPH Inti/Tech) setelah BPH-nya terbentuk.
+2. Pelamar memilih Divisi Pilihan 1 (wajib) dan Pilihan 2 (opsional, harus beda) — daftarnya diambil dari Struktur Kepanitiaan acara.
+3. Status penempatan: Menunggu → Diterima Pilihan 1 / Diterima Pilihan 2 / Dipindah divisi (pilih divisi) / Ditolak.
+4. Diterima atau dipindah otomatis masuk Kepanitiaan acara (divisi + role, default anggota). Role dan divisi bisa diubah lewat dropdown, dan perubahannya mengirim notifikasi ke pelamar.
+5. Menolak pelamar yang sebelumnya diterima menghapus baris panitianya — KECUALI dia masih diterima lewat form lain untuk acara yang sama, atau baris panitianya ditugaskan manual (bukan dari Oprek).
+
+Pemilu
+Form pendaftaran calon untuk kepengurusan periode berikutnya, khusus kabinet. Hanya BPH Inti + Divisi Teknologi yang mengelola.
+
+Catatan penting
+- Semua form kabinet: satu orang satu kiriman per form, dan jawaban TIDAK bisa diedit sendiri — pelamar yang perlu mengubah jawaban harus menghubungi pengurus formnya (hapus lamarannya lewat tombol Hapus di halaman pelamar, lalu minta isi ulang).
+- Lampiran file/gambar disimpan privat: hanya pemilik, pengelola form, dan BPH Inti/Divisi Teknologi yang bisa membuka.
+- 14 hari setelah acara selesai, BPH Acara tidak bisa lagi mengubah penempatan (acara terkunci); hubungi BPH Kabinet/Divisi Teknologi.
+- Notifikasi keputusan (diterima/ditolak/perubahan penempatan) dikirim in-app + email. Teksnya bisa diedit di menu Notifikasi → grup "Formulir & Oprek".
+- Divisi Penanggung Jawab tiap acara diatur di halaman acara (menu Kegiatan) dan dipakai untuk filter laporan per divisi.`,
+  },
 ];
 
 async function main() {

@@ -4,9 +4,10 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { db } from "@/db";
 import { auditLogs, eventDivisions, events, formApplications, formFields, sensusProfiles, users } from "@/db/schema";
-import { updateApplicationNote, updateApplicationPlacement } from "@/app/actions/forms";
+import { updateApplicationNote, updateApplicationPlacement, deleteFormApplication } from "@/app/actions/forms";
 import { requireFormManage } from "@/lib/form-access";
 import { CheckboxField, SelectField, TextAreaField } from "@/components/console/form";
+import { ConfirmButton } from "@/components/console/confirm-button";
 import { SubmitButton } from "@/components/console/submit-button";
 import { EVENT_COMMITTEE_ROLE_LABEL } from "@/lib/event-capabilities";
 import {
@@ -108,9 +109,20 @@ export default async function FormApplicantPage({
 
       <div className="flex flex-wrap items-center justify-between gap-3 mb-2">
         <h1 className="text-headline-md sm:text-headline-lg text-on-background">{app.fullName}</h1>
-        <span className={`text-label-caps uppercase tracking-wide px-2 py-1 rounded ${FORM_STATUS_TONE[status]}`}>
-          {FORM_STATUS_LABEL[status]}
-        </span>
+        <div className="flex items-center gap-3">
+          <span className={`text-label-caps uppercase tracking-wide px-2 py-1 rounded ${FORM_STATUS_TONE[status]}`}>
+            {FORM_STATUS_LABEL[status]}
+          </span>
+          <ConfirmButton
+            title="Hapus lamaran ini?"
+            message={`Lamaran "${app.fullName}" dihapus permanen. Kalau dia sedang diterima, penugasan panitianya juga dilepas (kecuali masih diterima lewat form lain di acara yang sama). Setelah dihapus, dia bisa mengisi ulang form ini.`}
+            action={deleteFormApplication}
+            payload={{ formId: form.id, applicationId: app.id }}
+            className="text-label-caps uppercase tracking-wide text-error hover:opacity-80 px-2 py-1 rounded-md hover:bg-error-container/30 transition-colors"
+          >
+            Hapus
+          </ConfirmButton>
+        </div>
       </div>
       <p className="text-body-sm text-on-surface-variant mb-8">
         {FORM_KIND_LABEL[form.kind]}
