@@ -44,8 +44,8 @@ Gerbang tunggal: `src/lib/form-access.ts`.
 ## Status fase
 
 - [x] Fase 1 — fondasi: migrasi 0049, modul `forms`, sesi koor/panitia, hub + 4 tab (gerbang server).
-- [ ] Fase 2 — builder (parameterisasi FormFieldEditor/QuestionBank) + CRUD form + pratinjau.
-- [ ] Fase 3 — halaman isi `/forms/[id]` + share.
+- [x] Fase 2 — builder bersama (FormFieldEditor/QuestionBank parameterisasi) + CRUD form + setelan + daftar per tab.
+- [ ] Fase 3 — halaman isi `/forms/[id]` + submit + share + pratinjau di halaman kelola.
 - [ ] Fase 4 — Pemilu end-to-end.
 - [ ] Fase 5 — Oprek BPH Acara (posisi, auto-assign, notifikasi, divisi penanggung jawab di form acara).
 - [ ] Fase 6 — Oprek Kepanitiaan (divisi pilihan 1/2, penempatan, pindah/role).

@@ -5,6 +5,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { db } from "@/db";
 import { events, formFields, forms } from "@/db/schema";
+import { parseChinaLocalInput } from "@/lib/datetime";
 import { getFormsAccess, requireFormManage } from "@/lib/form-access";
 import { BPH_FORM_ROLES, FORM_TAB_PATH, type FormKind } from "@/lib/form-types";
 import { FIELD_TYPE_LABELS, QUESTION_BY_KEY, type MembershipFieldDef } from "@/lib/membership-form";
@@ -32,10 +33,9 @@ function revalidateFormPaths(formId: string, kind: FormKind) {
 }
 
 function parseLocalDate(value: FormDataEntryValue | null): Date | null {
-  const raw = String(value ?? "").trim();
-  if (!raw) return null;
-  const d = new Date(raw);
-  return Number.isNaN(d.getTime()) ? null : d;
+  // Nilai datetime-local dibaca sebagai jam Tiongkok (server Vercel di UTC) —
+  // helper yang sama dengan jendela evaluasi panitia.
+  return parseChinaLocalInput(String(value ?? ""));
 }
 
 function randomKey(prefix: string): string {
@@ -84,6 +84,7 @@ export async function createForm(formData: FormData) {
           .map((r) => String(r))
           .filter((r) => (BPH_FORM_ROLES as string[]).includes(r))
       : [];
+  if (kind === "oprek_bph_acara" && bphRoles.length === 0) redirect(`${back}?error=roles`);
 
   const [created] = await db
     .insert(forms)
@@ -106,20 +107,23 @@ export async function updateFormSettings(formData: FormData) {
   const opensAt = parseLocalDate(formData.get("opensAt"));
   const closesAt = parseLocalDate(formData.get("closesAt"));
 
-  const bphRoles =
+  const openedRoles =
     form.kind === "oprek_bph_acara"
       ? formData
           .getAll("bphRole")
           .map((r) => String(r))
           .filter((r) => (BPH_FORM_ROLES as string[]).includes(r))
       : form.bphRoles;
+  // Form BPH tanpa posisi apa pun tidak bisa dipakai — kalau semua centang
+  // dilepas, pertahankan setelan sebelumnya.
+  const bphRoles = form.kind === "oprek_bph_acara" && openedRoles.length === 0 ? form.bphRoles : openedRoles;
 
   await db
     .update(forms)
     .set({
       title: titleInput || form.title,
       description: description || null,
-      confirmationMessage: confirmationMessage || form.confirmationMessage,
+      confirmationMessage: confirmationMessage || "Terima kasih! Jawabanmu sudah kami terima.",
       isOpen,
       opensAt,
       closesAt,
@@ -218,7 +222,9 @@ export async function updateFormField(formData: FormData) {
   if (configRaw) {
     try {
       const parsed = JSON.parse(configRaw);
-      if (parsed && typeof parsed === "object") config = parsed as MembershipFieldDef["config"];
+      if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) {
+        config = parsed as MembershipFieldDef["config"];
+      }
     } catch {
       // config rusak diabaikan (pola sama dengan membership)
     }
@@ -276,26 +282,38 @@ export async function duplicateFormField(id: string) {
   if (!src) return;
   const { form } = await requireFormManage(src.formId);
 
-  await db.insert(formFields).values({
-    formId: form.id,
-    key: randomKey("custom"),
-    label: `${src.label} (salinan)`,
-    type: src.type,
-    placeholder: src.placeholder,
-    helpText: src.helpText,
-    required: src.required,
-    options: src.options,
-    config: src.config,
-    orderIndex: src.orderIndex + 0.5,
-  });
+  // orderIndex = integer: JANGAN menyisipkan nilai pecahan (0.5) — Postgres
+  // menolaknya. Sisipkan di posisi integer berikutnya, lalu susun ulang seluruh
+  // daftar secara eksplisit: klon diletakkan tepat setelah sumbernya.
+  const [created] = await db
+    .insert(formFields)
+    .values({
+      formId: form.id,
+      key: randomKey("custom"),
+      label: `${src.label} (salinan)`,
+      type: src.type,
+      placeholder: src.placeholder,
+      helpText: src.helpText,
+      required: src.required,
+      options: src.options,
+      config: src.config,
+      orderIndex: src.orderIndex + 1,
+    })
+    .returning({ id: formFields.id });
+
   const all = await db
-    .select()
+    .select({ id: formFields.id })
     .from(formFields)
     .where(eq(formFields.formId, form.id))
     .orderBy(asc(formFields.orderIndex));
+  const ids = all.map((r) => r.id).filter((rowId) => rowId !== created.id);
+  const srcIdx = ids.indexOf(src.id);
+  if (srcIdx >= 0) ids.splice(srcIdx + 1, 0, created.id);
+  else ids.push(created.id);
+
   await db.transaction(async (tx) => {
-    for (let i = 0; i < all.length; i++) {
-      await tx.update(formFields).set({ orderIndex: i }).where(eq(formFields.id, all[i].id));
+    for (let i = 0; i < ids.length; i++) {
+      await tx.update(formFields).set({ orderIndex: i }).where(eq(formFields.id, ids[i]));
     }
   });
   revalidateFormPaths(form.id, form.kind);

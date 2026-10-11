@@ -1,4 +1,4 @@
-import { count, desc, eq, inArray, sql } from "drizzle-orm";
+import { and, count, desc, eq, inArray, sql } from "drizzle-orm";
 import { db } from "@/db";
 import { events, formApplications, forms } from "@/db/schema";
 import { FormCreate } from "@/components/console/forms/form-create";
@@ -22,27 +22,35 @@ export default async function FormsOprekKepanitiaanPage({
     .from(events)
     .orderBy(sql`${events.startAt} desc nulls last`);
 
+  const canSeeAllForms = canCreateForAnyEvent || access.bphEventIds.length === 0;
+  const rowsBase = db
+    .select({
+      id: forms.id,
+      title: forms.title,
+      kind: forms.kind,
+      isOpen: forms.isOpen,
+      eventTitle: events.title,
+      applicants: count(formApplications.id),
+    })
+    .from(forms)
+    .leftJoin(events, eq(events.id, forms.eventId))
+    .leftJoin(formApplications, eq(formApplications.formId, forms.id));
+  const rowsQuery = (
+    canSeeAllForms
+      ? rowsBase.where(eq(forms.kind, "oprek_kepanitiaan"))
+      : rowsBase.where(and(eq(forms.kind, "oprek_kepanitiaan"), inArray(forms.eventId, access.bphEventIds)))
+  )
+    .groupBy(forms.id, events.title)
+    .orderBy(desc(forms.createdAt));
+
   const [eventOptions, rows] = await Promise.all([
     canCreateForAnyEvent
       ? eventQuery
       : access.bphEventIds.length > 0
         ? eventQuery.where(inArray(events.id, access.bphEventIds))
         : Promise.resolve([] as { id: string; title: string; status: string }[]),
-    db
-      .select({
-        id: forms.id,
-        title: forms.title,
-        kind: forms.kind,
-        isOpen: forms.isOpen,
-        eventTitle: events.title,
-        applicants: count(formApplications.id),
-      })
-      .from(forms)
-      .leftJoin(events, eq(events.id, forms.eventId))
-      .leftJoin(formApplications, eq(formApplications.formId, forms.id))
-      .where(eq(forms.kind, "oprek_kepanitiaan"))
-      .groupBy(forms.id, events.title)
-      .orderBy(desc(forms.createdAt)),
+    // BPH Acara hanya melihat rekrutmen acaranya sendiri; full/modul melihat semua.
+    rowsQuery,
   ]);
 
   return (

@@ -6,6 +6,7 @@ import { BPH_FORM_ROLE_LABEL, BPH_FORM_ROLES, FORM_KIND_LABEL, type FormKind } f
 const ERROR_TEXT: Record<string, string> = {
   title: "Judul wajib diisi.",
   event: "Pilih acara dulu.",
+  roles: "Pilih minimal satu posisi BPH Acara yang dibuka.",
 };
 
 const PLACEHOLDER: Record<FormKind, string> = {

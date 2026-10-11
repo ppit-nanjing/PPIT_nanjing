@@ -469,22 +469,35 @@ export async function duplicateFormField(id: string) {
   await requireModuleAccess("membership");
   const [src] = await db.select().from(membershipFormFields).where(eq(membershipFormFields.id, id));
   if (!src) return;
-  await db.insert(membershipFormFields).values({
-    key: src.key,
-    label: `${src.label} (salinan)`,
-    type: src.type,
-    placeholder: src.placeholder,
-    helpText: src.helpText,
-    required: src.required,
-    options: src.options,
-    config: src.config,
-    isCore: false,
-    orderIndex: src.orderIndex + 0.5,
-  });
-  const all = await db.select().from(membershipFormFields).orderBy(asc(membershipFormFields.orderIndex));
+  // Key baru (key lama unik per tabel) + orderIndex integer, bukan pecahan:
+  // menyisipkan 0.5 ke kolom integer ditolak Postgres. Klon disisipkan di
+  // integer berikutnya lalu seluruh daftar disusun ulang secara eksplisit.
+  const [created] = await db
+    .insert(membershipFormFields)
+    .values({
+      key: `custom_${Math.random().toString(36).slice(2, 10)}`,
+      label: `${src.label} (salinan)`,
+      type: src.type,
+      placeholder: src.placeholder,
+      helpText: src.helpText,
+      required: src.required,
+      options: src.options,
+      config: src.config,
+      isCore: false,
+      orderIndex: src.orderIndex + 1,
+    })
+    .returning({ id: membershipFormFields.id });
+  const all = await db
+    .select({ id: membershipFormFields.id })
+    .from(membershipFormFields)
+    .orderBy(asc(membershipFormFields.orderIndex));
+  const ids = all.map((r) => r.id).filter((rowId) => rowId !== created.id);
+  const srcIdx = ids.indexOf(src.id);
+  if (srcIdx >= 0) ids.splice(srcIdx + 1, 0, created.id);
+  else ids.push(created.id);
   await db.transaction(async (tx) => {
-    for (let i = 0; i < all.length; i++) {
-      await tx.update(membershipFormFields).set({ orderIndex: i }).where(eq(membershipFormFields.id, all[i].id));
+    for (let i = 0; i < ids.length; i++) {
+      await tx.update(membershipFormFields).set({ orderIndex: i }).where(eq(membershipFormFields.id, ids[i]));
     }
   });
   revalidatePath("/console/membership/form");

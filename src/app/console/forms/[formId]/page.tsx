@@ -21,6 +21,7 @@ import { QuestionBank } from "@/components/console/question-bank";
 import { CheckboxField, Select, TextAreaField, TextField, ToggleSwitch } from "@/components/console/form";
 import { SubmitButton } from "@/components/console/submit-button";
 import { BPH_FORM_ROLE_LABEL, BPH_FORM_ROLES, FORM_KIND_LABEL, FORM_TAB_PATH } from "@/lib/form-types";
+import { toChinaLocalInput } from "@/lib/datetime";
 import { FIELD_TYPE_LABELS, type MembershipFieldDef } from "@/lib/membership-form";
 
 export const metadata = { title: "Kelola Formulir" };
@@ -28,14 +29,6 @@ export const metadata = { title: "Kelola Formulir" };
 const ADD_TYPES: MembershipFieldDef["type"][] = [
   "text", "textarea", "email", "tel", "number", "select", "radio", "multiselect", "date", "checkbox", "rating", "image", "url",
 ];
-
-// datetime-local butuh "YYYY-MM-DDTHH:mm" (waktu lokal server; tanggal di modul
-// ini hanya informasi — penegakan buka/tutup lewat toggle is_open).
-function toLocalInput(d: Date | null | undefined): string {
-  if (!d) return "";
-  const pad = (n: number) => String(n).padStart(2, "0");
-  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
-}
 
 export default async function FormManagePage({ params }: { params: Promise<{ formId: string }> }) {
   const { formId } = await params;
@@ -134,15 +127,15 @@ export default async function FormManagePage({ params }: { params: Promise<{ for
               name="opensAt"
               type="datetime-local"
               label="Buka pada (opsional)"
-              defaultValue={toLocalInput(form.opensAt)}
-              hint="Hanya informasi; membuka form tetap lewat toggle di atas."
+              defaultValue={form.opensAt ? toChinaLocalInput(form.opensAt) : ""}
+              hint="Hanya informasi; membuka form tetap lewat toggle di atas. Jam Tiongkok."
             />
             <TextField
               name="closesAt"
               type="datetime-local"
               label="Tutup pada (opsional)"
-              defaultValue={toLocalInput(form.closesAt)}
-              hint="Hanya informasi; menutup form tetap lewat toggle di atas."
+              defaultValue={form.closesAt ? toChinaLocalInput(form.closesAt) : ""}
+              hint="Hanya informasi; menutup form tetap lewat toggle di atas. Jam Tiongkok."
             />
           </div>
 
@@ -188,6 +181,7 @@ export default async function FormManagePage({ params }: { params: Promise<{ for
               options={ADD_TYPES.map((t) => ({ value: t, label: FIELD_TYPE_LABELS[t] }))}
               className="sm:w-56"
             />
+            <CheckboxField name="required" label="Wajib diisi" className="sm:pb-3 text-body-md text-on-background" />
             <SubmitButton className="bg-primary-container text-on-primary text-label-caps uppercase tracking-wide px-5 py-2.5 rounded-md hover:bg-primary transition-colors disabled:opacity-60">
               Tambah
             </SubmitButton>
