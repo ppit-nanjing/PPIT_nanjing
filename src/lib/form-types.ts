@@ -20,6 +20,13 @@ export const FORM_KIND_LABEL: Record<FormKind, string> = {
   oprek_kepanitiaan: "Oprek Kepanitiaan",
 };
 
+// Rute tab per jenis form (dipakai navigasi console & revalidate).
+export const FORM_TAB_PATH: Record<FormKind, string> = {
+  pemilu: "/console/forms/pemilu",
+  oprek_bph_acara: "/console/forms/oprek-bph",
+  oprek_kepanitiaan: "/console/forms/oprek-kepanitiaan",
+};
+
 // Posisi BPH Acara yang boleh dibuka di Oprek BPH — SATU sumber dengan
 // BPH_PANITIA_ROLES (event-capabilities) supaya tidak drift.
 export const BPH_FORM_ROLES: EventCommitteeRole[] = BPH_PANITIA_ROLES;
