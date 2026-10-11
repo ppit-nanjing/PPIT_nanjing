@@ -49,7 +49,7 @@ Gerbang tunggal: `src/lib/form-access.ts`.
 - [x] Fase 4-6 — respons + detail pelamar + penempatan/auto-assign `event_committee` + notifikasi `oprek_*` (semua jenis form).
 - [x] Fase 4b — Divisi Penanggung Jawab acara (boleh >1) di konsol acara + filter laporan `event_attendance`.
 - [x] Fase 7 — analitik per form + ekspor CSV/XLSX.
-- [ ] Fase 8 — Help Center + review akhir.
+- [x] Fase 8 — artikel Help Center slug `oprek` (di-seed ke database) + review akhir + merge.
 
 ## Terkait
 
