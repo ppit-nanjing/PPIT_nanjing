@@ -2,7 +2,7 @@ import { asc, count, eq } from "drizzle-orm";
 import { ArrowLeft } from "lucide-react";
 import Link from "next/link";
 import { db } from "@/db";
-import { events, formApplications, formFields } from "@/db/schema";
+import { eventDivisions, events, formApplications, formFields } from "@/db/schema";
 import {
   createFormField,
   createFormFieldFromTemplate,
@@ -16,13 +16,16 @@ import {
 import { requireFormManage } from "@/lib/form-access";
 import { CollapsibleSection } from "@/components/console/collapsible-section";
 import { ConfirmButton } from "@/components/console/confirm-button";
+import { CopyButton } from "@/components/copy-button";
 import { FormFieldEditor } from "@/components/console/form-field-editor";
+import { FormRenderer, type FormDivisionOption } from "@/components/forms/form-renderer";
 import { QuestionBank } from "@/components/console/question-bank";
 import { CheckboxField, Select, TextAreaField, TextField, ToggleSwitch } from "@/components/console/form";
 import { SubmitButton } from "@/components/console/submit-button";
 import { BPH_FORM_ROLE_LABEL, BPH_FORM_ROLES, FORM_KIND_LABEL, FORM_TAB_PATH } from "@/lib/form-types";
 import { toChinaLocalInput } from "@/lib/datetime";
 import { FIELD_TYPE_LABELS, type MembershipFieldDef } from "@/lib/membership-form";
+import { getSiteUrl } from "@/lib/site-url";
 
 export const metadata = { title: "Kelola Formulir" };
 
@@ -34,7 +37,7 @@ export default async function FormManagePage({ params }: { params: Promise<{ for
   const { formId } = await params;
   const { form } = await requireFormManage(formId);
 
-  const [fields, eventRows, applicantCountRows] = await Promise.all([
+  const [fields, eventRows, applicantCountRows, divisionRows] = await Promise.all([
     db.select().from(formFields).where(eq(formFields.formId, form.id)).orderBy(asc(formFields.orderIndex)),
     form.eventId
       ? db
@@ -43,10 +46,23 @@ export default async function FormManagePage({ params }: { params: Promise<{ for
           .where(eq(events.id, form.eventId))
       : Promise.resolve([] as { id: string; title: string; status: string }[]),
     db.select({ n: count() }).from(formApplications).where(eq(formApplications.formId, form.id)),
+    form.kind === "oprek_kepanitiaan" && form.eventId
+      ? db
+          .select({ id: eventDivisions.id, name: eventDivisions.name, parentId: eventDivisions.parentDivisionId })
+          .from(eventDivisions)
+          .where(eq(eventDivisions.eventId, form.eventId))
+          .orderBy(asc(eventDivisions.orderIndex))
+      : Promise.resolve([] as { id: string; name: string; parentId: string | null }[]),
   ]);
   const event = eventRows[0] ?? null;
   const applicantCount = applicantCountRows[0]?.n ?? 0;
   const back = FORM_TAB_PATH[form.kind];
+
+  const divisionNameById = new Map(divisionRows.map((r) => [r.id, r.name]));
+  const previewDivisions: FormDivisionOption[] = divisionRows.map((r) => ({
+    id: r.id,
+    name: r.parentId && divisionNameById.has(r.parentId) ? `${divisionNameById.get(r.parentId)} · ${r.name}` : r.name,
+  }));
 
   const fieldDefs: MembershipFieldDef[] = fields.map((r) => ({
     id: r.id,
@@ -70,7 +86,10 @@ export default async function FormManagePage({ params }: { params: Promise<{ for
         >
           <ArrowLeft size={16} /> Kembali
         </Link>
-        <span className="text-label-caps uppercase tracking-wide text-on-surface-variant">{applicantCount} pendaftar</span>
+        <div className="flex items-center gap-3">
+          <CopyButton value={`${getSiteUrl()}/forms/${form.id}`} label="Salin tautan" />
+          <span className="text-label-caps uppercase tracking-wide text-on-surface-variant">{applicantCount} pendaftar</span>
+        </div>
       </div>
 
       <div className="flex flex-wrap items-center justify-between gap-3 mb-6">
@@ -99,11 +118,16 @@ export default async function FormManagePage({ params }: { params: Promise<{ for
       </div>
 
       {event && (
-        <p className="text-body-md text-on-surface-variant mb-6">
+        <p className="text-body-md text-on-surface-variant mb-2">
           Acara: <span className="text-on-background">{event.title}</span>
           {event.status === "completed" || event.status === "cancelled" ? " (selesai)" : ""}
         </p>
       )}
+      <p className="text-body-sm text-on-surface-variant mb-6">
+        {form.isOpen
+          ? "Bagikan tautan halaman isi ke grup — penerima wajib login sebagai pengurus kabinet."
+          : "Form masih ditutup; halaman isinya hanya menampilkan keterangan ditutup. Jangan bagikan dulu."}
+      </p>
 
       <CollapsibleSection title="Setelan" description="Judul, deskripsi, masa buka, dan pesan setelah mengirim.">
         <form action={updateFormSettings} className="flex flex-col gap-4">
@@ -245,6 +269,25 @@ export default async function FormManagePage({ params }: { params: Promise<{ for
             })}
           </div>
         )}
+      </CollapsibleSection>
+
+      <CollapsibleSection
+        title="Pratinjau Formulir"
+        description="Tampilan yang dilihat pelamar (kolom identitas memakai contoh). Belum bisa dikirim."
+        className="mt-8"
+        defaultOpen={false}
+      >
+        <div className="bg-surface-container-lowest border border-outline-variant rounded-xl p-6 max-w-2xl">
+          <FormRenderer
+            formId={form.id}
+            kind={form.kind}
+            fields={fieldDefs}
+            bphRoles={form.bphRoles}
+            divisions={previewDivisions}
+            prefill={{ fullName: "Nama Pengurus (contoh)", divisionName: "Divisi Asal (contoh)" }}
+            preview
+          />
+        </div>
       </CollapsibleSection>
     </div>
   );

@@ -1,0 +1,545 @@
+"use client";
+
+import { useRef, useState, type FormEvent } from "react";
+import { useFormStatus } from "react-dom";
+import { AlertCircle, Info, Loader2, Star } from "lucide-react";
+import type { MembershipFieldDef } from "@/lib/membership-form";
+import { GRID_TYPES, isSectionType } from "@/lib/membership-form";
+import { ImageUploadCropper } from "@/components/upload/image-upload-cropper";
+import { FileUploadField } from "@/components/upload/file-upload-field";
+import { Select } from "@/components/console/form";
+import { useT } from "@/lib/i18n/client";
+import { BPH_FORM_ROLE_LABEL, type FormKind } from "@/lib/form-types";
+
+export type FormDivisionOption = { id: string; name: string };
+
+type Props = {
+  formId: string;
+  kind: FormKind;
+  fields: MembershipFieldDef[];
+  // Oprek BPH: posisi yang dibuka (label event_committee_role).
+  bphRoles?: string[];
+  // Oprek Kepanitiaan: divisi dari Struktur Kepanitiaan acara.
+  divisions?: FormDivisionOption[];
+  // Identitas pengurus (read-only) dari sesi + Struktur Organisasi.
+  prefill?: { fullName: string; divisionName: string | null };
+  action?: (formData: FormData) => void;
+  preview?: boolean;
+};
+
+function isEmpty(f: MembershipFieldDef, value: string, multi: string[]): boolean {
+  if (f.type === "checkbox") return value !== "true";
+  if (f.type === "multiselect") return multi.length === 0;
+  return !value.trim();
+}
+
+function SubmitButton({ preview }: { preview?: boolean }) {
+  const t = useT();
+  const { pending } = useFormStatus();
+  return (
+    <button
+      type="submit"
+      disabled={preview || pending}
+      className="deco-btn bg-accent text-on-accent text-label-caps uppercase py-3.5 rounded-md hover:brightness-95 transition-[filter] flex items-center justify-center gap-2 disabled:opacity-60 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-container focus-visible:ring-offset-2 focus-visible:ring-offset-surface-container-lowest"
+    >
+      {pending && !preview && <Loader2 size={16} className="animate-spin" />}
+      {preview ? t("forms.form.previewBtn") : pending ? t("forms.form.submitting") : t("forms.form.submit")}
+    </button>
+  );
+}
+
+// Renderer formulir kabinet (Pemilu/Oprek) — kolom sistem (identitas, posisi,
+// divisi pilihan) dirender dari sini, pertanyaan kustom mengikuti builder yang
+// sama dengan Pendaftaran Anggota. Dipakai halaman isi publik DAN pratinjau
+// console (mode preview: tombol kirim mati, unggahan diganti placeholder).
+export function FormRenderer({
+  formId,
+  kind,
+  fields,
+  bphRoles = [],
+  divisions = [],
+  prefill,
+  action,
+  preview,
+}: Props) {
+  const t = useT();
+  const [values, setValues] = useState<Record<string, string>>({});
+  const [multi, setMulti] = useState<Record<string, string[]>>({});
+  const [position, setPosition] = useState("");
+  const [choice1, setChoice1] = useState("");
+  const [choice2, setChoice2] = useState("");
+  const [errors, setErrors] = useState<Record<string, string>>({});
+  const formRef = useRef<HTMLFormElement>(null);
+
+  function update(key: string, value: string) {
+    setValues((v) => ({ ...v, [key]: value }));
+    setErrors((e) => (e[key] ? { ...e, [key]: "" } : e));
+  }
+
+  function toggleMulti(key: string, option: string) {
+    setMulti((m) => {
+      const cur = m[key] ?? [];
+      const next = cur.includes(option) ? cur.filter((o) => o !== option) : [...cur, option];
+      return { ...m, [key]: next };
+    });
+    setErrors((e) => (e[key] ? { ...e, [key]: "" } : e));
+  }
+
+  function handleSubmit(e: FormEvent<HTMLFormElement>) {
+    if (preview) {
+      e.preventDefault();
+      return;
+    }
+    const next: Record<string, string> = {};
+
+    if (kind === "oprek_bph_acara" && !position) next.sys_position = t("forms.form.errRequired");
+    if (kind === "oprek_kepanitiaan") {
+      if (!choice1) next.sys_choice1 = t("forms.form.errRequired");
+      if (choice1 && choice2 && choice1 === choice2) next.sys_choice2 = t("forms.form.errSameDivision");
+    }
+
+    for (const f of fields) {
+      if (f.type === "section") continue;
+      const v = values[f.key] ?? "";
+
+      if (GRID_TYPES.includes(f.type)) {
+        if (f.required) {
+          const rows = f.config?.rows ?? [];
+          let answeredAll = true;
+          try {
+            const map = JSON.parse(v || "{}") as Record<string, unknown>;
+            for (let i = 0; i < rows.length; i++) {
+              const ans = map[String(i)];
+              if (f.type === "grid_checkbox") {
+                if (!Array.isArray(ans) || ans.length === 0) answeredAll = false;
+              } else if (!ans) answeredAll = false;
+              if (!answeredAll) break;
+            }
+          } catch {
+            answeredAll = false;
+          }
+          if (!answeredAll) next[f.key] = t("forms.form.errGridRows");
+        }
+        continue;
+      }
+
+      if (f.required && isEmpty(f, v, multi[f.key] ?? [])) {
+        next[f.key] =
+          f.type === "checkbox"
+            ? t("forms.form.errCheckbox")
+            : f.type === "multiselect"
+              ? t("forms.form.errMultiselect")
+              : t("forms.form.errRequired");
+        continue;
+      }
+      const val = f.config?.validations;
+      if (val && !isEmpty(f, v, multi[f.key] ?? [])) {
+        if (f.type === "number") {
+          const num = Number(v);
+          if (val.min != null && num < val.min) next[f.key] = t("forms.form.errMin", { n: val.min });
+          else if (val.max != null && num > val.max) next[f.key] = t("forms.form.errMax", { n: val.max });
+        } else if (typeof val.minLength === "number" && v.trim().length < val.minLength) {
+          next[f.key] = t("forms.form.errMinLength", { n: val.minLength });
+        }
+      }
+    }
+
+    if (Object.keys(next).length > 0) {
+      e.preventDefault();
+      setErrors(next);
+      const firstKey = Object.keys(next)[0];
+      const el = formRef.current?.querySelector<HTMLElement>(`#field-${CSS.escape(firstKey)}`);
+      el?.focus();
+      return;
+    }
+    setErrors({});
+  }
+
+  const errorBox = (key: string) =>
+    errors[key] ? (
+      <p className="text-body-sm text-error mt-1" role="alert">
+        {errors[key]}
+      </p>
+    ) : null;
+
+  return (
+    <form ref={formRef} action={preview ? undefined : action} onSubmit={handleSubmit} className="flex flex-col gap-6" noValidate>
+      <input type="hidden" name="formId" value={formId} />
+
+      {/* Kolom sistem — identitas read-only dari akun + Struktur Organisasi */}
+      {prefill && (
+        <section className="bg-surface-container-lowest border border-outline-variant rounded-xl p-5">
+          <h2 className="text-label-caps uppercase tracking-wide text-on-surface-variant mb-3">
+            {t("forms.form.identityHeading")}
+          </h2>
+          <dl className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <dt className="text-label-caps uppercase tracking-wide text-on-surface-variant">{t("forms.form.fullName")}</dt>
+              <dd className="text-body-lg text-on-background">{prefill.fullName || "—"}</dd>
+            </div>
+            <div>
+              <dt className="text-label-caps uppercase tracking-wide text-on-surface-variant">
+                {t("forms.form.cabinetDivision")}
+              </dt>
+              <dd className="text-body-lg text-on-background">{prefill.divisionName ?? "—"}</dd>
+            </div>
+          </dl>
+          <p className="text-body-sm text-on-surface-variant mt-3">{t("forms.form.identityNote")}</p>
+        </section>
+      )}
+
+      {/* Posisi BPH Acara */}
+      {kind === "oprek_bph_acara" && bphRoles.length > 0 && (
+        <div id="field-sys_position">
+          <label htmlFor="sys_position" className="block text-body-md text-on-background mb-2">
+            {t("forms.form.position")} <span className="text-error">*</span>
+          </label>
+          <Select
+            id="sys_position"
+            name="sys_position"
+            required
+            placeholder={t("forms.form.positionPlaceholder")}
+            value={position}
+            onChange={(e) => {
+              setPosition(e.target.value);
+              setErrors((er) => (er.sys_position ? { ...er, sys_position: "" } : er));
+            }}
+            options={bphRoles.map((r) => ({ value: r, label: BPH_FORM_ROLE_LABEL[r] ?? r }))}
+            className="w-full sm:max-w-sm"
+          />
+          {errorBox("sys_position")}
+        </div>
+      )}
+
+      {/* Divisi pilihan kepanitiaan */}
+      {kind === "oprek_kepanitiaan" && divisions.length > 0 && (
+        <div className="flex flex-col gap-4">
+          <div id="field-sys_choice1">
+            <label htmlFor="sys_choice1" className="block text-body-md text-on-background mb-2">
+              {t("forms.form.choice1")} <span className="text-error">*</span>
+            </label>
+            <Select
+              id="sys_choice1"
+              name="sys_choice1"
+              required
+              placeholder={t("forms.form.choicePlaceholder")}
+              value={choice1}
+              onChange={(e) => {
+                setChoice1(e.target.value);
+                setErrors((er) => (er.sys_choice1 ? { ...er, sys_choice1: "" } : er));
+              }}
+              options={divisions.map((d) => ({ value: d.id, label: d.name }))}
+              className="w-full sm:max-w-sm"
+            />
+            {errorBox("sys_choice1")}
+          </div>
+          <div id="field-sys_choice2">
+            <label htmlFor="sys_choice2" className="block text-body-md text-on-background mb-2">
+              {t("forms.form.choice2")}
+            </label>
+            <Select
+              id="sys_choice2"
+              name="sys_choice2"
+              placeholder={t("forms.form.choicePlaceholder")}
+              value={choice2}
+              onChange={(e) => {
+                setChoice2(e.target.value);
+                setErrors((er) => (er.sys_choice2 ? { ...er, sys_choice2: "" } : er));
+              }}
+              options={divisions
+                .filter((d) => d.id !== choice1)
+                .map((d) => ({ value: d.id, label: d.name }))}
+              className="w-full sm:max-w-sm"
+            />
+            {errorBox("sys_choice2")}
+          </div>
+          <p className="flex items-start gap-2 text-body-sm text-on-surface-variant bg-surface-container-low rounded-md px-3 py-2">
+            <Info size={15} className="shrink-0 mt-0.5 text-primary-container" aria-hidden />
+            {t("forms.form.divisionDisclaimer")}
+          </p>
+        </div>
+      )}
+
+      {/* Pertanyaan kustom */}
+      {fields.map((f) => {
+        const fieldId = `field-${f.key}`;
+        const invalid = Boolean(errors[f.key]);
+
+        if (isSectionType(f.type)) {
+          return (
+            <div key={f.id ?? f.key} className="bg-secondary-container/20 border border-outline-variant rounded-xl p-5 mt-2">
+              <h3 className="text-headline-md text-on-background">{f.label}</h3>
+              {f.helpText && <p className="text-body-sm text-on-surface-variant mt-1">{f.helpText}</p>}
+            </div>
+          );
+        }
+
+        return (
+          <div key={f.id ?? f.key} id={fieldId}>
+            <label className="block text-body-md text-on-background mb-2" htmlFor={`${fieldId}-input`}>
+              {f.label} {f.required && <span className="text-error">*</span>}
+            </label>
+            {f.helpText && <p className="text-body-sm text-on-surface-variant mb-2">{f.helpText}</p>}
+
+            {GRID_TYPES.includes(f.type) ? (
+              <GridInput
+                fieldKey={f.key}
+                multi={f.type === "grid_checkbox"}
+                rows={f.config?.rows ?? []}
+                cols={f.options ?? []}
+                value={values[f.key] ?? ""}
+                onChange={(v) => update(f.key, v)}
+                disabled={preview}
+              />
+            ) : f.type === "radio" ? (
+              <div role="radiogroup" aria-label={f.label} className="flex flex-col gap-2">
+                {(f.options ?? []).map((opt) => (
+                  <label key={opt} className="inline-flex items-center gap-2 text-body-md text-on-background">
+                    <input
+                      type="radio"
+                      name={f.key}
+                      value={opt}
+                      checked={values[f.key] === opt}
+                      onChange={() => update(f.key, opt)}
+                      disabled={preview}
+                      className="h-4 w-4 accent-[color:var(--color-primary-container)]"
+                    />
+                    {opt}
+                  </label>
+                ))}
+              </div>
+            ) : f.type === "multiselect" ? (
+              <div className="flex flex-col gap-2">
+                {(f.options ?? []).map((opt) => (
+                  <label key={opt} className="inline-flex items-center gap-2 text-body-md text-on-background">
+                    <input
+                      type="checkbox"
+                      name={f.key}
+                      value={opt}
+                      checked={(multi[f.key] ?? []).includes(opt)}
+                      onChange={() => toggleMulti(f.key, opt)}
+                      disabled={preview}
+                      className="h-4 w-4 accent-[color:var(--color-primary-container)]"
+                    />
+                    {opt}
+                  </label>
+                ))}
+              </div>
+            ) : f.type === "checkbox" ? (
+              <label className="inline-flex items-center gap-2 text-body-md text-on-background">
+                <input
+                  type="checkbox"
+                  name={f.key}
+                  value="true"
+                  checked={values[f.key] === "true"}
+                  onChange={(e) => update(f.key, e.target.checked ? "true" : "false")}
+                  disabled={preview}
+                  className="h-4 w-4 accent-[color:var(--color-primary-container)]"
+                />
+                {f.placeholder ?? "Ya"}
+              </label>
+            ) : f.type === "rating" || f.type === "linear_scale" ? (
+              <RatingInput
+                fieldKey={f.key}
+                value={values[f.key] ?? ""}
+                config={f.config}
+                disabled={preview}
+                invalid={invalid}
+                onChange={(v) => update(f.key, v)}
+              />
+            ) : f.type === "select" ? (
+              <Select
+                id={`${fieldId}-input`}
+                name={f.key}
+                value={values[f.key] ?? ""}
+                onChange={(e) => update(f.key, e.target.value)}
+                disabled={preview}
+                placeholder={f.placeholder ?? "—"}
+                options={(f.options ?? []).map((opt) => ({ value: opt, label: opt }))}
+                className="w-full sm:max-w-sm"
+              />
+            ) : f.type === "image" ? (
+              preview ? (
+                <p className="text-body-sm text-on-surface-variant bg-soft-gray rounded-md px-3 py-2">
+                  Unggah gambar — tersedia saat form dibuka.
+                </p>
+              ) : (
+                <ImageUploadCropper name={f.key} folder="form-file" />
+              )
+            ) : f.type === "file" ? (
+              preview ? (
+                <p className="text-body-sm text-on-surface-variant bg-soft-gray rounded-md px-3 py-2">
+                  Unggah berkas — tersedia saat form dibuka.
+                </p>
+              ) : (
+                <FileUploadField name={f.key} folder="form-file" required={f.required} />
+              )
+            ) : f.type === "textarea" ? (
+              <textarea
+                id={`${fieldId}-input`}
+                name={f.key}
+                rows={4}
+                value={values[f.key] ?? ""}
+                placeholder={f.placeholder}
+                onChange={(e) => update(f.key, e.target.value)}
+                disabled={preview}
+                className={`w-full bg-soft-gray rounded-md p-3 text-body-md resize-y ${invalid ? "ring-2 ring-error" : ""}`}
+              />
+            ) : (
+              <input
+                id={`${fieldId}-input`}
+                type={f.type === "time" ? "time" : f.type}
+                name={f.key}
+                value={values[f.key] ?? ""}
+                placeholder={f.placeholder}
+                onChange={(e) => update(f.key, e.target.value)}
+                disabled={preview}
+                className={`w-full sm:max-w-sm bg-soft-gray rounded-md p-3 text-body-md ${invalid ? "ring-2 ring-error" : ""}`}
+              />
+            )}
+
+            {errors[f.key] && (
+              <p className="flex items-center gap-1.5 text-body-sm text-error mt-1" role="alert">
+                <AlertCircle size={13} aria-hidden /> {errors[f.key]}
+              </p>
+            )}
+          </div>
+        );
+      })}
+
+      <SubmitButton preview={preview} />
+    </form>
+  );
+}
+
+function RatingInput({
+  fieldKey,
+  value,
+  config,
+  disabled,
+  invalid,
+  onChange,
+}: {
+  fieldKey: string;
+  value: string;
+  config?: { min?: number; max?: number; lowLabel?: string; highLabel?: string };
+  disabled?: boolean;
+  invalid?: boolean;
+  onChange: (v: string) => void;
+}) {
+  const min = config?.min ?? 1;
+  const max = config?.max ?? 5;
+  const steps = Array.from({ length: max - min + 1 }, (_, i) => min + i);
+  return (
+    <div className="flex flex-wrap items-center gap-3 mt-1" role="radiogroup" aria-label={fieldKey}>
+      {config?.lowLabel && <span className="text-label-caps text-on-surface-variant">{config.lowLabel}</span>}
+      {steps.map((n) => {
+        const active = value === String(n);
+        return (
+          <button
+            key={n}
+            type="button"
+            disabled={disabled}
+            aria-pressed={active}
+            aria-label={`${n}`}
+            onClick={() => onChange(String(n))}
+            className={`rounded-md p-2 transition-colors ${
+              active ? "bg-primary-container text-on-primary" : "bg-soft-gray text-on-surface-variant hover:bg-surface-container"
+            } ${invalid ? "ring-2 ring-error" : ""}`}
+          >
+            <Star size={20} className={active ? "fill-current" : ""} />
+          </button>
+        );
+      })}
+      {config?.highLabel && <span className="text-label-caps text-on-surface-variant">{config.highLabel}</span>}
+      <input type="hidden" name={fieldKey} value={value} />
+    </div>
+  );
+}
+
+function GridInput({
+  fieldKey,
+  multi,
+  rows,
+  cols,
+  value,
+  disabled,
+  onChange,
+}: {
+  fieldKey: string;
+  multi: boolean;
+  rows: string[];
+  cols: string[];
+  value: string;
+  disabled?: boolean;
+  onChange: (v: string) => void;
+}) {
+  const t = useT();
+  const parse = (): Record<string, string | string[]> => {
+    try {
+      const o = JSON.parse(value || "{}");
+      if (o && typeof o === "object") return o as Record<string, string | string[]>;
+    } catch {
+      /* ignore */
+    }
+    return {};
+  };
+  const map = parse();
+
+  function handle(rowIdx: number, col: string, checked: boolean) {
+    const next: Record<string, string | string[]> = { ...map };
+    if (multi) {
+      const cur = Array.isArray(next[rowIdx]) ? (next[rowIdx] as string[]) : [];
+      next[rowIdx] = checked ? [...cur, col] : cur.filter((c) => c !== col);
+    } else {
+      next[rowIdx] = col;
+    }
+    onChange(JSON.stringify(next));
+  }
+
+  if (rows.length === 0 || cols.length === 0) {
+    return <p className="text-label-caps text-on-surface-variant">{t("forms.form.gridNotConfigured")}</p>;
+  }
+
+  return (
+    <div className="overflow-x-auto">
+      <table className="w-full border-collapse text-body-md">
+        <thead>
+          <tr>
+            <th className="text-left p-2 border-b border-outline-variant" />
+            {cols.map((c) => (
+              <th key={c} className="text-center p-2 border-b border-outline-variant text-label-caps uppercase tracking-wide text-on-surface-variant font-medium">
+                {c}
+              </th>
+            ))}
+          </tr>
+        </thead>
+        <tbody>
+          {rows.map((r, rIdx) => (
+            <tr key={rIdx} className="border-b border-outline-variant/60">
+              <th scope="row" className="text-left p-2 pr-4 font-normal text-on-background align-top">
+                {r}
+              </th>
+              {cols.map((c) => {
+                const checked = multi ? Array.isArray(map[rIdx]) && (map[rIdx] as string[]).includes(c) : map[rIdx] === c;
+                return (
+                  <td key={c} className="text-center p-2">
+                    <input
+                      type={multi ? "checkbox" : "radio"}
+                      name={`${fieldKey}::${rIdx}`}
+                      value={c}
+                      checked={checked}
+                      disabled={disabled}
+                      onChange={(e) => handle(rIdx, c, e.target.checked)}
+                      className="h-5 w-5 accent-[color:var(--color-primary-container)] focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-container"
+                    />
+                  </td>
+                );
+              })}
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}

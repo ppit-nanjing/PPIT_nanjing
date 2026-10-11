@@ -1,14 +1,16 @@
 "use server";
 
-import { asc, eq } from "drizzle-orm";
+import { and, asc, eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
+import { auth } from "@/auth";
 import { db } from "@/db";
-import { events, formFields, forms } from "@/db/schema";
+import { eventDivisions, events, formApplications, formFields, forms } from "@/db/schema";
 import { parseChinaLocalInput } from "@/lib/datetime";
-import { getFormsAccess, requireFormManage } from "@/lib/form-access";
+import { getCabinetMembership, getFormsAccess, requireFormManage } from "@/lib/form-access";
 import { BPH_FORM_ROLES, FORM_TAB_PATH, type FormKind } from "@/lib/form-types";
-import { FIELD_TYPE_LABELS, QUESTION_BY_KEY, type MembershipFieldDef } from "@/lib/membership-form";
+import { FIELD_TYPE_LABELS, GRID_TYPES, QUESTION_BY_KEY, type MembershipFieldDef } from "@/lib/membership-form";
+import { scrubForeignPrivateUrl } from "@/lib/private-files";
 import { UUID_RE } from "@/lib/uuid";
 
 // Server Actions modul Formulir (Pemilu, Oprek BPH Acara, Oprek Kepanitiaan).
@@ -317,4 +319,150 @@ export async function duplicateFormField(id: string) {
     }
   });
   revalidateFormPaths(form.id, form.kind);
+}
+
+// ---- Pengisian (halaman /forms/[id]) ----
+
+// Aksi submit formulir kabinet. Semua pengecekan diulang di server: login,
+// keanggotaan kabinet (bukan cuma halaman), status buka, posisi BPH dari daftar
+// yang dibuka, divisi benar milik acara, dan pertanyaan wajib.
+export async function submitFormApplication(formData: FormData) {
+  const formId = String(formData.get("formId") ?? "");
+  if (!UUID_RE.test(formId)) redirect("/console");
+
+  const session = await auth();
+  const userId = session?.user?.id;
+  if (!userId) redirect(`/login?returnTo=${encodeURIComponent(`/forms/${formId}`)}`);
+
+  const [form] = await db.select().from(forms).where(eq(forms.id, formId));
+  if (!form) redirect("/console");
+  const back = `/forms/${form.id}`;
+
+  const membership = await getCabinetMembership(userId);
+  if (!membership || !membership.isCabinetMember) redirect(`${back}?error=forbidden`);
+
+  const [existing] = await db
+    .select({ id: formApplications.id })
+    .from(formApplications)
+    .where(and(eq(formApplications.formId, form.id), eq(formApplications.userId, userId)));
+  if (existing) redirect(`${back}/submitted`);
+  // Cek setelah existing supaya orang yang sudah pernah kirim tetap bisa lihat
+  // statusnya walau formnya sudah ditutup.
+  if (!form.isOpen) redirect(`${back}?error=closed`);
+
+  // Kolom sistem per jenis form.
+  let positionApplied: string | null = null;
+  let choice1: string | null = null;
+  let choice2: string | null = null;
+
+  async function divisionBelongsToEvent(divisionId: string): Promise<boolean> {
+    if (!form.eventId) return false;
+    const rows = await db
+      .select({ id: eventDivisions.id })
+      .from(eventDivisions)
+      .where(and(eq(eventDivisions.id, divisionId), eq(eventDivisions.eventId, form.eventId)));
+    return rows.length > 0;
+  }
+
+  if (form.kind === "oprek_bph_acara") {
+    const pos = String(formData.get("sys_position") ?? "").trim();
+    if (!pos || !(form.bphRoles as string[]).includes(pos)) redirect(`${back}?error=submit`);
+    positionApplied = pos;
+  }
+  if (form.kind === "oprek_kepanitiaan") {
+    const c1 = String(formData.get("sys_choice1") ?? "").trim();
+    const c2 = String(formData.get("sys_choice2") ?? "").trim();
+    if (!c1 || !UUID_RE.test(c1) || !(await divisionBelongsToEvent(c1))) redirect(`${back}?error=submit`);
+    choice1 = c1;
+    if (c2) {
+      if (!UUID_RE.test(c2) || c2 === c1 || !(await divisionBelongsToEvent(c2))) redirect(`${back}?error=submit`);
+      choice2 = c2;
+    }
+  }
+
+  // Pertanyaan kustom — bentuk penyimpanan mengikuti konvensi membership:
+  // grid = objek {rowIndex: value|string[]}, multiselect = array, checkbox boolean.
+  const fields = await db
+    .select()
+    .from(formFields)
+    .where(eq(formFields.formId, form.id))
+    .orderBy(asc(formFields.orderIndex));
+  const responses: Record<string, unknown> = {};
+
+  for (const f of fields) {
+    if (f.type === "section") continue;
+
+    if (GRID_TYPES.includes(f.type)) {
+      const rows = (f.config as { rows?: string[] } | null)?.rows ?? [];
+      const map: Record<string, string | string[]> = {};
+      let missing = rows.length === 0;
+      for (let i = 0; i < rows.length; i++) {
+        const entries = formData.getAll(`${f.key}::${i}`).map(String).filter(Boolean);
+        if (entries.length === 0) {
+          missing = true;
+          continue;
+        }
+        map[String(i)] = f.type === "grid_checkbox" ? entries : entries[0];
+      }
+      if (f.required && missing) redirect(`${back}?error=submit`);
+      if (Object.keys(map).length > 0) responses[f.key] = map;
+      continue;
+    }
+
+    if (f.type === "multiselect") {
+      const vals = formData.getAll(f.key).map(String).filter(Boolean);
+      if (f.required && vals.length === 0) redirect(`${back}?error=submit`);
+      if (vals.length > 0) responses[f.key] = vals;
+      continue;
+    }
+
+    if (f.type === "checkbox") {
+      const checked = formData.get(f.key) === "true";
+      if (f.required && !checked) redirect(`${back}?error=submit`);
+      responses[f.key] = checked;
+      continue;
+    }
+
+    if (f.type === "file" || f.type === "image") {
+      const raw = String(formData.get(f.key) ?? "").trim();
+      const safe = scrubForeignPrivateUrl(raw, "form-file", userId);
+      if (f.required && !safe) redirect(`${back}?error=submit`);
+      if (safe) responses[f.key] = safe;
+      continue;
+    }
+
+    const raw = String(formData.get(f.key) ?? "").trim();
+    if (f.required && !raw) redirect(`${back}?error=submit`);
+    const validations = (f.config as { validations?: { min?: number; max?: number; minLength?: number } } | null)
+      ?.validations;
+    if (validations && raw) {
+      if (f.type === "number") {
+        const num = Number(raw);
+        if ((validations.min != null && num < validations.min) || (validations.max != null && num > validations.max)) {
+          redirect(`${back}?error=submit`);
+        }
+      } else if (typeof validations.minLength === "number" && raw.length < validations.minLength) {
+        redirect(`${back}?error=submit`);
+      }
+    }
+    if (raw) responses[f.key] = raw;
+  }
+
+  await db
+    .insert(formApplications)
+    .values({
+      formId: form.id,
+      userId,
+      fullName: membership.displayName || session?.user?.name || "",
+      cabinetDivision: membership.divisionName ?? "-",
+      positionApplied,
+      choice1DivisionId: choice1,
+      choice2DivisionId: choice2,
+      responses,
+    })
+    .onConflictDoNothing();
+
+  revalidatePath(`/console/forms/${form.id}`);
+  revalidatePath(FORM_TAB_PATH[form.kind]);
+  redirect(`${back}/submitted`);
 }

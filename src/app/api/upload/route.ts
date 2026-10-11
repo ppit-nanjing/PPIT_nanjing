@@ -50,6 +50,9 @@ const FOLDER_MODULE: Record<string, AdminModule | null> = {
   inventory: "inventory",
   events: "events",
   membership: null,
+  // Lampiran formulir kabinet (Pemilu/Oprek) — pengunggahnya pengurus yang
+  // login, pembacanya manajer form terkait (modul forms / koor / BPH Acara).
+  "form-file": null,
   catalog: "content",
   donation: "organization",
 };

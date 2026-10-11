@@ -4,11 +4,14 @@ import { db } from "@/db";
 import {
   borrowRequests,
   eventRegistrations,
+  formApplications,
+  forms,
   jobApplications,
   membershipApplications,
 } from "@/db/schema";
 import { hasModuleAccess } from "@/lib/admin-scope";
 import { getEventAccess } from "@/lib/event-access";
+import { canManageForm } from "@/lib/form-access";
 import { type PrivateFileFolder, privateFileUrl } from "@/lib/private-files";
 
 // Siapa boleh membaca berkas di store Blob private (lihat private-files.ts).
@@ -108,6 +111,26 @@ export async function canReadPrivateFile(
       if (rows.some((r) => r.userId === userId)) return true;
       for (const eventId of new Set(rows.map((r) => r.eventId))) {
         if ((await getEventAccess(eventId)).can("event.viewRegistrants")) return true;
+      }
+      return false;
+    }
+
+    case "form-file": {
+      // Lampiran formulir kabinet: dibaca pemegang modul "forms" dan manajer
+      // form yang menyimpan berkas itu (koor pembuat / BPH Acara acaranya).
+      if (hasModuleAccess(scope, "forms")) return true;
+      const rows = await db
+        .select({ formId: formApplications.formId, userId: formApplications.userId })
+        .from(formApplications)
+        .where(jsonContains(formApplications.responses, url))
+        .limit(MAX_MATCHING_ROWS);
+      if (rows.some((r) => r.userId === userId)) return true;
+      for (const formId of new Set(rows.map((r) => r.formId))) {
+        const [form] = await db
+          .select({ kind: forms.kind, eventId: forms.eventId, createdBy: forms.createdBy })
+          .from(forms)
+          .where(eq(forms.id, formId));
+        if (form && (await canManageForm(form))) return true;
       }
       return false;
     }
