@@ -1,4 +1,4 @@
-import { asc, count, eq } from "drizzle-orm";
+import { asc, count, desc, eq } from "drizzle-orm";
 import { ArrowLeft } from "lucide-react";
 import Link from "next/link";
 import { db } from "@/db";
@@ -23,10 +23,11 @@ import { FormRenderer, type FormDivisionOption } from "@/components/forms/form-r
 import { QuestionBank } from "@/components/console/question-bank";
 import { CheckboxField, Select, TextAreaField, TextField, ToggleSwitch } from "@/components/console/form";
 import { SubmitButton } from "@/components/console/submit-button";
-import { BPH_FORM_ROLE_LABEL, BPH_FORM_ROLES, FORM_KIND_LABEL, FORM_TAB_PATH } from "@/lib/form-types";
+import { BPH_FORM_ROLE_LABEL, BPH_FORM_ROLES, FORM_KIND_LABEL, FORM_STATUS_LABEL, FORM_STATUS_TONE, FORM_TAB_PATH } from "@/lib/form-types";
 import { toChinaLocalInput } from "@/lib/datetime";
 import { FIELD_TYPE_LABELS, type MembershipFieldDef } from "@/lib/membership-form";
 import { getSiteUrl } from "@/lib/site-url";
+import type { FormApplicationStatus } from "@/lib/form-types";
 
 export const metadata = { title: "Kelola Formulir" };
 
@@ -38,7 +39,7 @@ export default async function FormManagePage({ params }: { params: Promise<{ for
   const { formId } = await params;
   const { form } = await requireFormManage(formId);
 
-  const [fields, eventRows, applicantCountRows, divisionRows] = await Promise.all([
+  const [fields, eventRows, applicantCountRows, divisionRows, applications] = await Promise.all([
     db.select().from(formFields).where(eq(formFields.formId, form.id)).orderBy(asc(formFields.orderIndex)),
     form.eventId
       ? db
@@ -54,6 +55,20 @@ export default async function FormManagePage({ params }: { params: Promise<{ for
           .where(eq(eventDivisions.eventId, form.eventId))
           .orderBy(asc(eventDivisions.orderIndex))
       : Promise.resolve([] as { id: string; name: string; parentId: string | null }[]),
+    db
+      .select({
+        id: formApplications.id,
+        fullName: formApplications.fullName,
+        cabinetDivision: formApplications.cabinetDivision,
+        positionApplied: formApplications.positionApplied,
+        choice1DivisionId: formApplications.choice1DivisionId,
+        choice2DivisionId: formApplications.choice2DivisionId,
+        status: formApplications.status,
+        submittedAt: formApplications.submittedAt,
+      })
+      .from(formApplications)
+      .where(eq(formApplications.formId, form.id))
+      .orderBy(desc(formApplications.submittedAt)),
   ]);
   const event = eventRows[0] ?? null;
   const applicantCount = applicantCountRows[0]?.n ?? 0;
@@ -192,6 +207,52 @@ export default async function FormManagePage({ params }: { params: Promise<{ for
             Simpan Setelan
           </SubmitButton>
         </form>
+      </CollapsibleSection>
+
+      <CollapsibleSection
+        title={`Pendaftar (${applicantCount})`}
+        description="Klik satu pelamar untuk meninjau jawaban dan mengatur penempatan."
+        className="mt-8"
+      >
+        {applications.length === 0 ? (
+          <p className="text-body-md text-on-surface-variant">Belum ada yang mendaftar.</p>
+        ) : (
+          <ul className="flex flex-col gap-2">
+            {applications.map((a) => {
+              const status = a.status as FormApplicationStatus;
+              const positionLabel = a.positionApplied
+                ? (BPH_FORM_ROLE_LABEL[a.positionApplied] ?? a.positionApplied)
+                : null;
+              const choiceNames = [a.choice1DivisionId, a.choice2DivisionId]
+                .map((cid) => (cid ? divisionNameById.get(cid) : null))
+                .filter(Boolean)
+                .join(" / ");
+              const summary = positionLabel ?? (choiceNames || null);
+              return (
+                <li key={a.id}>
+                  <Link
+                    href={`/console/forms/${form.id}/applicants/${a.id}`}
+                    className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between border border-outline-variant rounded-lg px-4 py-3 hover:bg-surface-container-low transition-colors"
+                  >
+                    <span className="min-w-0">
+                      <span className="block text-body-md text-on-background truncate">{a.fullName}</span>
+                      <span className="block text-body-sm text-on-surface-variant truncate">
+                        {a.cabinetDivision}
+                        {summary ? ` · ${summary}` : ""} &middot;{" "}
+                        {new Date(a.submittedAt).toLocaleDateString("id-ID", { dateStyle: "medium" })}
+                      </span>
+                    </span>
+                    <span
+                      className={`text-label-caps uppercase tracking-wide px-2 py-1 rounded shrink-0 ${FORM_STATUS_TONE[status]}`}
+                    >
+                      {FORM_STATUS_LABEL[status]}
+                    </span>
+                  </Link>
+                </li>
+              );
+            })}
+          </ul>
+        )}
       </CollapsibleSection>
 
       <CollapsibleSection

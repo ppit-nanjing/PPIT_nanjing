@@ -1,14 +1,29 @@
 "use server";
 
-import { and, asc, eq } from "drizzle-orm";
+import { and, asc, eq, inArray, ne } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
-import { redirect } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { auth } from "@/auth";
 import { db } from "@/db";
-import { eventDivisions, events, formApplications, formFields, forms } from "@/db/schema";
+import {
+  auditLogs,
+  eventCommittee,
+  eventDivisions,
+  events,
+  formApplications,
+  formFields,
+  forms,
+  notificationTemplates,
+  users,
+} from "@/db/schema";
 import { parseChinaLocalInput } from "@/lib/datetime";
-import { getCabinetMembership, getFormsAccess, requireFormManage } from "@/lib/form-access";
-import { BPH_FORM_ROLES, FORM_TAB_PATH, type FormKind } from "@/lib/form-types";
+import { sendEmail } from "@/lib/email";
+import { getTemplateDef, renderTemplate, type NotificationTemplateKey } from "@/lib/notification-templates";
+import { createTemplatedNotification } from "@/lib/notifications";
+import { renderMembershipEmail, renderMembershipEmailText } from "@/lib/membership-email";
+import { canPlaceApplicant, getCabinetMembership, getFormsAccess, requireFormManage } from "@/lib/form-access";
+import { EVENT_COMMITTEE_ROLE_LABEL, isBphPanitiaRole, type EventCommitteeRole } from "@/lib/event-capabilities";
+import { BPH_FORM_ROLE_LABEL, BPH_FORM_ROLES, FORM_TAB_PATH, PLACEMENT_ROLE_OPTIONS, type FormKind } from "@/lib/form-types";
 import { FIELD_TYPE_LABELS, GRID_TYPES, QUESTION_BY_KEY, type MembershipFieldDef } from "@/lib/membership-form";
 import { scrubForeignPrivateUrl } from "@/lib/private-files";
 import { UUID_RE } from "@/lib/uuid";
@@ -477,4 +492,292 @@ export async function submitFormApplication(formData: FormData) {
   revalidatePath(`/console/forms/${form.id}`);
   revalidatePath(FORM_TAB_PATH[form.kind]);
   redirect(`${back}/submitted`);
+}
+
+// ---- Penempatan & keputusan (halaman detail pelamar) ----
+
+const APPLICATION_STATUSES = [
+  "pending",
+  "accepted",
+  "accepted_choice1",
+  "accepted_choice2",
+  "reassigned",
+  "rejected",
+] as const;
+type AppStatus = (typeof APPLICATION_STATUSES)[number];
+
+const ACCEPTED_STATUSES: AppStatus[] = ["accepted", "accepted_choice1", "accepted_choice2", "reassigned"];
+
+function statusAllowed(kind: FormKind, status: AppStatus): boolean {
+  if (kind === "oprek_kepanitiaan") return true;
+  return status === "pending" || status === "accepted" || status === "rejected";
+}
+
+function roleLabelFor(kind: FormKind, role: string | null): string {
+  if (!role) return "";
+  if (kind === "oprek_bph_acara") return BPH_FORM_ROLE_LABEL[role] ?? role;
+  return EVENT_COMMITTEE_ROLE_LABEL[role as EventCommitteeRole] ?? role;
+}
+
+// Kirim keputusan ke pelamar: in-app (kalau punya akun — selalu, karena form ini
+// kabinet) + email. Kegagalan tidak boleh membatalkan simpanan pengurus; hasilnya
+// dicatat di audit log (pola yang sama dengan keputusan membership).
+async function notifyFormApplicant(input: {
+  applicationId: string;
+  userId: string;
+  formTitle: string;
+  key: NotificationTemplateKey;
+  variables: Record<string, string>;
+}): Promise<string> {
+  try {
+    const [applicant] = await db
+      .select({ email: users.email })
+      .from(users)
+      .where(eq(users.id, input.userId));
+    if (!applicant) return "skipped";
+
+    const def = getTemplateDef(input.key);
+    if (!def) return "skipped";
+    const [row] = await db
+      .select()
+      .from(notificationTemplates)
+      .where(eq(notificationTemplates.key, input.key))
+      .limit(1);
+    const subject = renderTemplate(row?.subject?.trim() || def.defaultSubject, input.variables);
+    const body = renderTemplate(row?.bodyTemplate?.trim() || def.defaultBody, input.variables);
+
+    await createTemplatedNotification({
+      userId: input.userId,
+      templateKey: input.key,
+      variables: input.variables,
+      relatedEntityType: "form_application",
+      relatedEntityId: input.applicationId,
+    });
+
+    const result = await sendEmail({
+      to: applicant.email,
+      subject,
+      html: renderMembershipEmail({ heading: subject, body }),
+      text: renderMembershipEmailText({ heading: subject, body }),
+    });
+    return result.ok ? "sent" : `failed: ${result.reason ?? "unknown"}`;
+  } catch (err) {
+    console.error("[forms] failed to announce placement:", err);
+    return `failed: ${err instanceof Error ? err.message : "unknown error"}`;
+  }
+}
+
+// Keputusan/penempatan satu pelamar. Semua validasi diulang di server; saat
+// penempatan menyentuh event_committee, kunci acara (14 hari) dihormati lewat
+// canPlaceApplicant — hanya BPH Kabinet/Divisi Teknologi yang bisa menembusnya.
+export async function updateApplicationPlacement(formData: FormData) {
+  const formId = String(formData.get("formId") ?? "");
+  const applicationId = String(formData.get("applicationId") ?? "");
+  const { form, access } = await requireFormManage(formId);
+  if (!UUID_RE.test(applicationId)) notFound();
+
+  const [app] = await db
+    .select()
+    .from(formApplications)
+    .where(and(eq(formApplications.id, applicationId), eq(formApplications.formId, form.id)));
+  if (!app) notFound();
+
+  const statusRaw = String(formData.get("status") ?? "pending");
+  if (!APPLICATION_STATUSES.includes(statusRaw as AppStatus)) throw new Error("Status tidak valid.");
+  const status = statusRaw as AppStatus;
+  if (!statusAllowed(form.kind, status)) throw new Error("Status tidak berlaku untuk formulir ini.");
+
+  const notifyApplicant = formData.get("notifyApplicant") !== null;
+  const note = String(formData.get("note") ?? "").trim();
+
+  // Role penempatan per jenis form.
+  let role: string | null = null;
+  if (form.kind === "oprek_bph_acara") {
+    const inputRole = String(formData.get("assignedRole") ?? "").trim();
+    const fallback = app.positionApplied ?? (form.bphRoles as string[])[0] ?? null;
+    role = (BPH_FORM_ROLES as string[]).includes(inputRole) ? inputRole : fallback;
+  } else if (form.kind === "oprek_kepanitiaan") {
+    const inputRole = String(formData.get("assignedRole") ?? "").trim();
+    role = (PLACEMENT_ROLE_OPTIONS as string[]).includes(inputRole) ? inputRole : "anggota";
+  }
+
+  // Divisi penempatan (kepanitiaan). accepted/pending/rejected tanpa divisi.
+  let assignedDivisionId: string | null = null;
+  if (form.kind === "oprek_kepanitiaan" && ACCEPTED_STATUSES.includes(status)) {
+    if (status === "accepted_choice1") {
+      assignedDivisionId = app.choice1DivisionId;
+    } else if (status === "accepted_choice2") {
+      assignedDivisionId = app.choice2DivisionId;
+    } else if (status === "reassigned") {
+      const picked = String(formData.get("assignedDivisionId") ?? "").trim();
+      if (picked && form.eventId) {
+        const rows = await db
+          .select({ id: eventDivisions.id })
+          .from(eventDivisions)
+          .where(and(eq(eventDivisions.id, picked), eq(eventDivisions.eventId, form.eventId)));
+        if (rows.length === 0) throw new Error("Divisi itu tidak ada di acara ini.");
+        assignedDivisionId = picked;
+      }
+      if (!assignedDivisionId) throw new Error("Pilih divisi penempatan dulu.");
+    } else {
+      assignedDivisionId = app.choice1DivisionId;
+    }
+  }
+
+  // Perubahan yang menyentuh event_committee butuh izin penempatan (acara tidak terkunci).
+  const touchingCommittee = form.kind !== "pemilu";
+  const willAssign = touchingCommittee && ACCEPTED_STATUSES.includes(status);
+  const willRemove =
+    touchingCommittee && !ACCEPTED_STATUSES.includes(status) && ACCEPTED_STATUSES.includes(app.status as AppStatus);
+  if (willAssign || willRemove) {
+    if (!(await canPlaceApplicant(form.eventId, access))) {
+      throw new Error("Acara ini terkunci atau kamu tidak berhak mengubah penugasan.");
+    }
+  }
+
+  const before = { status: app.status, role: app.assignedRole, divisionId: app.assignedDivisionId };
+
+  await db
+    .update(formApplications)
+    .set({
+      status,
+      assignedRole: form.kind === "pemilu" ? null : (role as EventCommitteeRole | null),
+      assignedDivisionId,
+      note: note || null,
+      reviewedAt: new Date(),
+    })
+    .where(eq(formApplications.id, app.id));
+
+  // Sinkronisasi penugasan kepanitiaan: satu baris per (acara, user).
+  if (touchingCommittee && form.eventId) {
+    const [existing] = await db
+      .select({ id: eventCommittee.id, role: eventCommittee.role })
+      .from(eventCommittee)
+      .where(and(eq(eventCommittee.eventId, form.eventId), eq(eventCommittee.userId, app.userId)));
+
+    if (willAssign) {
+      if (existing) {
+        // Jangan turunkan BPH Acara jadi anggota hanya karena diterima di
+        // form kepanitiaan — role BPH yang menang, divisinya tetap diperbarui.
+        const keepBph = form.kind === "oprek_kepanitiaan" && isBphPanitiaRole(existing.role);
+        await db
+          .update(eventCommittee)
+          .set({
+            role: (keepBph ? existing.role : ((role ?? "anggota") as EventCommitteeRole)),
+            divisionId: assignedDivisionId,
+          })
+          .where(eq(eventCommittee.id, existing.id));
+      } else {
+        await db
+          .insert(eventCommittee)
+          .values({
+            eventId: form.eventId,
+            userId: app.userId,
+            role: (role ?? "anggota") as EventCommitteeRole,
+            divisionId: assignedDivisionId,
+            note: `Oprek: ${form.title}`,
+          })
+          .onConflictDoNothing();
+      }
+    } else if (willRemove) {
+      // Hapus baris panitia hanya kalau tidak ada penerimaan lain di acara yang sama.
+      const others = await db
+        .select({ id: formApplications.id })
+        .from(formApplications)
+        .innerJoin(forms, eq(forms.id, formApplications.formId))
+        .where(
+          and(
+            eq(formApplications.userId, app.userId),
+            eq(forms.eventId, form.eventId),
+            ne(formApplications.id, app.id),
+            inArray(formApplications.status, ["accepted", "accepted_choice1", "accepted_choice2", "reassigned"]),
+          ),
+        );
+      if (others.length === 0) {
+        await db
+          .delete(eventCommittee)
+          .where(and(eq(eventCommittee.eventId, form.eventId), eq(eventCommittee.userId, app.userId)));
+      }
+    }
+  }
+
+  // Notifikasi hanya saat ada perubahan nyata (simpan ulang tidak mengirim lagi).
+  const changed =
+    before.status !== status || before.role !== (role ?? null) || before.divisionId !== assignedDivisionId;
+  let decisionEmail: string | null = null;
+  if (changed && notifyApplicant) {
+    let key: NotificationTemplateKey | null = null;
+    if (ACCEPTED_STATUSES.includes(status)) key = "oprek_accepted";
+    else if (status === "rejected") key = "oprek_rejected";
+    else if (ACCEPTED_STATUSES.includes(before.status as AppStatus)) key = "oprek_placement_changed";
+
+    if (key) {
+      const [eventRow] = form.eventId
+        ? await db.select({ title: events.title }).from(events).where(eq(events.id, form.eventId))
+        : [];
+      let divisionName: string | null = null;
+      if (assignedDivisionId) {
+        const [div] = await db
+          .select({ name: eventDivisions.name })
+          .from(eventDivisions)
+          .where(eq(eventDivisions.id, assignedDivisionId));
+        divisionName = div?.name ?? null;
+      }
+      const roleLabel = roleLabelFor(form.kind, role);
+      let details = "";
+      if (ACCEPTED_STATUSES.includes(status)) {
+        if (form.kind === "oprek_bph_acara") {
+          details = `Kamu tercatat sebagai ${roleLabel} (BPH Acara)${eventRow?.title ? ` untuk acara "${eventRow.title}"` : ""}.`;
+        } else if (form.kind === "oprek_kepanitiaan") {
+          details = `Kamu ditempatkan di ${divisionName ?? "divisi terpilih"} sebagai ${roleLabel}.`;
+        } else {
+          details = "Kamu tercatat sebagai calon pada periode berikutnya.";
+        }
+      } else if (status === "rejected") {
+        details = "";
+      } else {
+        details = divisionName
+          ? `Penempatanmu sekarang: ${roleLabel ? `${roleLabel} — ` : ""}${divisionName}.`
+          : `Role kamu sekarang: ${roleLabel}.`;
+      }
+      decisionEmail = await notifyFormApplicant({
+        applicationId: app.id,
+        userId: app.userId,
+        formTitle: form.title,
+        key,
+        variables: { fullName: app.fullName, formTitle: form.title, details },
+      });
+    } else {
+      decisionEmail = "skipped";
+    }
+  }
+
+  await db.insert(auditLogs).values({
+    actorUserId: access.userId,
+    entityType: "form_application",
+    entityId: app.id,
+    action: ACCEPTED_STATUSES.includes(status) ? `decision_${status}` : status === "rejected" ? "decision_rejected" : "status_changed",
+    beforeJson: before,
+    afterJson: { status, role, divisionId: assignedDivisionId, decisionEmail },
+  });
+
+  revalidatePath(`/console/forms/${form.id}`);
+  revalidatePath(`/console/forms/${form.id}/applicants/${app.id}`);
+  revalidatePath(FORM_TAB_PATH[form.kind]);
+}
+
+// Simpan catatan internal saja (tanpa menyentuh status/penempatan) — dipisah
+// supaya mengetik catatan tidak diam-diam mengembalikan status yang baru diubah
+// pengurus lain (pola yang sama dengan lamaran lowongan).
+export async function updateApplicationNote(formData: FormData) {
+  const formId = String(formData.get("formId") ?? "");
+  const applicationId = String(formData.get("applicationId") ?? "");
+  const { form } = await requireFormManage(formId);
+  if (!UUID_RE.test(applicationId)) notFound();
+  const note = String(formData.get("note") ?? "").trim();
+  await db
+    .update(formApplications)
+    .set({ note: note || null })
+    .where(and(eq(formApplications.id, applicationId), eq(formApplications.formId, form.id)));
+  revalidatePath(`/console/forms/${form.id}/applicants/${applicationId}`);
 }
