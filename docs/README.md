@@ -51,6 +51,7 @@
 - [Content Pages](./Content%20Pages.md) (News, Gallery, Legal)
 - [Career Flow](./Career%20Flow.md) (Jobs, panduan, Mentorship, console lowongan, rencana akun perusahaan; `/career` dialihkan ke `/jobs`)
 - [Join Us Flow](./Join%20Us%20Flow.md)
+- [Formulir & Oprek](./Formulir%20&%20Oprek.md) — modul console: Pemilu, Oprek BPH Acara, Oprek Kepanitiaan (formulir internal kabinet) + riwayat modul Formulir lama
 - [Equipment Lending Flow](./Equipment%20Lending%20Flow.md)
 - [Sensus Profile Flow](./Sensus%20Profile%20Flow.md)
 

@@ -2,7 +2,7 @@
 // Kepanitiaan) — aman diimpor dari komponen klien maupun server, tanpa @/auth
 // atau @/db. Dokumentasi: docs/Formulir & Oprek.md.
 
-import type { EventCommitteeRole } from "@/lib/event-capabilities";
+import { BPH_PANITIA_ROLES, type EventCommitteeRole } from "@/lib/event-capabilities";
 
 export type FormKind = "pemilu" | "oprek_bph_acara" | "oprek_kepanitiaan";
 
@@ -20,9 +20,9 @@ export const FORM_KIND_LABEL: Record<FormKind, string> = {
   oprek_kepanitiaan: "Oprek Kepanitiaan",
 };
 
-// Posisi BPH Acara yang boleh dibuka di Oprek BPH (subset label
-// event_committee_role, sama dengan BPH_PANITIA_ROLES di event-capabilities).
-export const BPH_FORM_ROLES: EventCommitteeRole[] = ["ketua", "wakil", "sekretaris", "bendahara", "supervisor"];
+// Posisi BPH Acara yang boleh dibuka di Oprek BPH — SATU sumber dengan
+// BPH_PANITIA_ROLES (event-capabilities) supaya tidak drift.
+export const BPH_FORM_ROLES: EventCommitteeRole[] = BPH_PANITIA_ROLES;
 
 export const BPH_FORM_ROLE_LABEL: Record<string, string> = {
   ketua: "Ketua Pelaksana",

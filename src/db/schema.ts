@@ -1748,7 +1748,9 @@ export const formFields = pgTable(
     helpText: text("help_text"),
     required: boolean("required").notNull().default(false),
     options: text("options"),
-    config: jsonb("config"),
+    // Extra per-tipe settings (skala, baris grid, kunci jawaban kuis) — bentuknya
+    // sama dengan membership_form_fields.config karena buildernya dipakai ulang.
+    config: jsonb("config").$type<Record<string, unknown>>(),
     orderIndex: integer("order_index").notNull().default(0),
   },
   (t) => [uniqueIndex("form_fields_form_key_idx").on(t.formId, t.key)],
@@ -1789,7 +1791,7 @@ export const formApplications = pgTable(
     note: text("note"),
     // Jawaban pertanyaan kustom, satu nilai per form_fields.key (grid disimpan
     // sebagai objek {rowIndex: value}). Kolom sistem di atas TIDAK ikut di sini.
-    responses: jsonb("responses"),
+    responses: jsonb("responses").$type<Record<string, unknown>>(),
     submittedAt: timestamp("submitted_at").notNull().defaultNow(),
     reviewedAt: timestamp("reviewed_at"),
   },

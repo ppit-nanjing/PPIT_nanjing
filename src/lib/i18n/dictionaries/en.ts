@@ -1366,7 +1366,7 @@ export const en = {
   "ceval.identity": "Identity",
   "ceval.identityAs": "Submitting as",
   "ceval.identityDivision": "Division: {{division}}",
-  "ceval.identityNote": "Your name & division are recorded automatically from this event's committee roster. Your answers and your name can only be read by this event's core committee (chair, vice chair, secretary, supervisor) and the PPIT Nanjing cabinet board.",
+  "ceval.identityNote": "Your name & division are recorded automatically from this event's committee roster. Your answers and your name can only be read by this event's core committee (chair, vice chair, secretary, treasurer, supervisor) and the PPIT Nanjing cabinet board.",
   "ceval.notReadyTitle": "Evaluation not ready yet",
   "ceval.notReadyBody": "The committee evaluation questions for this event haven't been prepared yet. Try again later or contact the event chair.",
   "ceval.aspectsTitle": "Collective Ratings (1–5)",

@@ -319,7 +319,7 @@ Melihat hasil
     content: `Evaluasi panitia dipakai setelah acara untuk menilai kerja sama divisi dan kepanitiaan secara keseluruhan, bukan menilai orang per orang. Yang mengisi hanya panitia acara itu sendiri, wajib login, dan masing-masing cukup sekali.
 
 Siapa yang mengatur
-- BPH Panitia acara itu (ketua, wakil, sekretaris, supervisor) dan BPH Kabinet.
+- BPH Panitia acara itu (ketua, wakil, sekretaris, bendahara, supervisor) dan BPH Kabinet.
 - Anggota panitia lain hanya melihat berapa orang yang sudah mengisi, tanpa nama dan tanpa isi jawaban.
 - 14 hari setelah acara selesai, acara terkunci: BPH Panitia hanya bisa membaca rekap; perubahan lewat BPH Kabinet.
 

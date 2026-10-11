@@ -1,13 +1,14 @@
 import { cache } from "react";
-import { redirect } from "next/navigation";
-import { eq } from "drizzle-orm";
+import { notFound, redirect } from "next/navigation";
+import { asc, eq } from "drizzle-orm";
 import { auth } from "@/auth";
 import { db } from "@/db";
-import { departmentMembers, departments, eventCommittee, sensusProfiles, users } from "@/db/schema";
+import { departmentMembers, departments, eventCommittee, forms, sensusProfiles, users } from "@/db/schema";
 import type { FormRow } from "@/db/schema";
 import { hasModuleAccess } from "@/lib/admin-scope";
 import { isBphPanitiaRole } from "@/lib/event-capabilities";
 import { getEventAccess } from "@/lib/event-access";
+import { UUID_RE } from "@/lib/uuid";
 
 // Gerbang server tunggal untuk modul Formulir (Pemilu, Oprek BPH Acara, Oprek
 // Kepanitiaan). Dipakai SEMUA halaman, Server Action, dan route ekspor —
@@ -114,6 +115,34 @@ export async function canManageForm(
   return false;
 }
 
+// Gerbang wajib untuk halaman/aksi/ekspor PER FORM (bukan requireFormsHub yang
+// sengaja longgar). Memuat baris form, 404 kalau id ngawur/tidak ada, dan
+// 404 juga kalau tidak berhak — jangan bocorkan keberadaan form.
+export async function requireFormManage(formId: string): Promise<{ form: FormRow; access: FormsAccess }> {
+  const access = await getFormsAccess();
+  if (!access) redirect("/login");
+  if (!UUID_RE.test(formId)) notFound();
+  const [form] = await db.select().from(forms).where(eq(forms.id, formId));
+  if (!form) notFound();
+  if (!(await canManageForm(form, access))) notFound();
+  return { form, access };
+}
+
+// Penulisan penempatan (event_committee) menghormati kunci acara 14 hari:
+// setelah acara selesai+batas, panitia biasa tidak boleh menulis lagi —
+// hanya BPH Kabinet/Divisi Teknologi. Dipakai aksi Oprek saat menetapkan
+// "diterima/dipindah" (bukan sekadar membaca respons).
+export async function canPlaceApplicant(
+  eventId: string | null,
+  access: FormsAccess,
+): Promise<boolean> {
+  if (access.isFull || access.canForms) return true;
+  if (!eventId) return false;
+  const eventAccess = await getEventAccess(eventId);
+  if (!eventAccess.isBphPanitia) return false;
+  return !eventAccess.locked;
+}
+
 export type CabinetMembership = {
   status: string;
   // Nama panjang untuk snapshot: sensus_profiles.full_name kalau ada,
@@ -133,12 +162,16 @@ export const getCabinetMembership = cache(async (userId: string): Promise<Cabine
       accountName: users.name,
       fullName: sensusProfiles.fullName,
       divisionName: departments.name,
+      joinedAt: departmentMembers.joinedAt,
     })
     .from(users)
     .leftJoin(sensusProfiles, eq(sensusProfiles.userId, users.id))
     .leftJoin(departmentMembers, eq(departmentMembers.userId, users.id))
     .leftJoin(departments, eq(departments.id, departmentMembers.departmentId))
-    .where(eq(users.id, userId));
+    .where(eq(users.id, userId))
+    // Deterministik kalau (seharusnya tidak terjadi, tapi) user punya lebih
+    // dari satu baris department_members: divisi terlama yang dipakai.
+    .orderBy(asc(departmentMembers.joinedAt));
   if (rows.length === 0) return null;
 
   const first = rows[0];

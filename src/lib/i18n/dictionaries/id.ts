@@ -1369,7 +1369,7 @@ export const id = {
   "ceval.identity": "Identitas",
   "ceval.identityAs": "Mengisi sebagai",
   "ceval.identityDivision": "Divisi {{division}}",
-  "ceval.identityNote": "Nama & divisimu tercatat otomatis dari kepanitiaan acara ini. Jawabanmu beserta namamu hanya bisa dibaca BPH Panitia acara ini (ketua, wakil, sekretaris, supervisor) dan BPH Kabinet PPIT Nanjing.",
+  "ceval.identityNote": "Nama & divisimu tercatat otomatis dari kepanitiaan acara ini. Jawabanmu beserta namamu hanya bisa dibaca BPH Panitia acara ini (ketua, wakil, sekretaris, bendahara, supervisor) dan BPH Kabinet PPIT Nanjing.",
   "ceval.notReadyTitle": "Evaluasi belum disiapkan",
   "ceval.notReadyBody": "Pertanyaan evaluasi panitia untuk acara ini belum disiapkan BPH. Coba lagi nanti atau hubungi Ketua Pelaksana.",
   "ceval.aspectsTitle": "Penilaian Kolektif (1–5)",
