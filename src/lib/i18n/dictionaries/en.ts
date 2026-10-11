@@ -1386,4 +1386,16 @@ export const en = {
   "ceval.errorGeneric": "Failed to submit the evaluation. Please try again shortly.",
   "ceval.footer": "Evaluation for {{event}} — only read by the PPIT Nanjing committee.",
 
+  "recruit.metaTitle": "Join Committee {{event}}",
+  "recruit.kicker": "Committee Recruitment",
+  "recruit.title": "Join Committee {{event}}",
+  "recruit.intro": "Fill out this form to apply as a committee member for {{event}}. Your answers will be reviewed by BPH.",
+  "recruit.closedTitle": "Recruitment closed",
+  "recruit.closedBody": "Committee recruitment for this event is currently closed. Follow PPIT Nanjing social media for upcoming events.",
+  "recruit.loginTitle": "Please sign in first",
+  "recruit.loginBody": "Apply as a committee member with your PPIT Nanjing account.",
+  "recruit.loginButton": "Sign in",
+  "recruit.alreadyTitle": "You have already applied",
+  "recruit.alreadyBody": "Your application has been received and will be reviewed by BPH. Stay tuned for updates.",
+  "recruit.backToEvent": "Back to event page",
 } satisfies Dictionary;

@@ -1,7 +1,7 @@
 import { eq, and, desc, sql, inArray } from "drizzle-orm";
 import { notFound } from "next/navigation";
 import { db } from "@/db";
-import { auditLogs, certificates, coverageCities, events, eventCredits, eventDivisions, eventEvaluations, eventEvaluationAnswers, eventFeeOptions, eventQuestions, eventRegistrations, eventVolunteers, galleryAlbums, galleryPhotos, inventoryItems, itemReservations, newsArticles, sensusProfiles, users } from "@/db/schema";
+import { auditLogs, certificates, coverageCities, events, eventCredits, eventDivisions, eventEvaluations, eventEvaluationAnswers, eventFeeOptions, eventQuestions, eventRegistrations, eventVolunteers, eventRecruitmentQuestions, eventRecruitmentApplications, galleryAlbums, galleryPhotos, inventoryItems, itemReservations, newsArticles, sensusProfiles, users } from "@/db/schema";
 import { MEMBERSHIP_LABEL, effectiveBranch, membershipStatus } from "@/lib/membership-status";
 import { updateEventInfo, updateEventContent, updateEventPostReport, setEventStatus, saveEventQuestion, deleteEventQuestion, saveFeeOption, deleteFeeOption } from "@/app/actions/admin-events";
 import { createEventGalleryAlbum } from "@/app/actions/admin-content";
@@ -31,6 +31,7 @@ import { evaluationTemplateForSlug } from "@/lib/event-evaluation-template";
 import { EvaluationQuestionsBuilder } from "@/components/console/evaluation-questions-builder";
 import { sortByCoverageOrder } from "@/lib/coverage-cities";
 import { loadEvaluationAnswers, loadEvaluationQuestions } from "@/lib/event-evaluation-queries";
+import type { RecruitQuestionRow } from "@/lib/event-recruitment-questions";
 import { ReservationManager } from "@/components/console/reservation-manager";
 import { checkInBlockReason } from "@/lib/event-checkin";
 import { feeTierAt, amountForTier } from "@/lib/event-fee";
@@ -41,6 +42,9 @@ import { SubmitButton } from "@/components/console/submit-button";
 import { CommitteeEvalWindowEditor } from "@/components/console/committee-eval-window-editor";
 import { EvalAudienceTabs } from "@/components/console/eval-audience-tabs";
 import { committeeEvalTemplateQuestions, committeeEvalWindowState } from "@/lib/committee-evaluation";
+import { RecruitmentQuestionsBuilder } from "@/components/console/recruitment-questions-builder";
+import { RecruitmentApplicationList, type RecruitmentApplication } from "@/components/console/recruitment-application-list";
+import { setRecruitEnabled } from "@/app/actions/event-recruitment";
 import { Download, Images } from "lucide-react";
 
 const QUESTION_TYPE_LABELS: Record<string, string> = {
@@ -101,6 +105,8 @@ export default async function ConsoleEventDetailPage({ params }: { params: Promi
     committeeEvalAnswers, // jawaban audiens panitia — HANYA untuk pengelola (B2)
     committeeAnswerCounts, // hitungan jawaban per pertanyaan panitia (angka saja, tanpa isi)
     committeeEvalStats, // (non-pengelola) jumlah respons panitia + apakah dirinya sudah mengisi
+    recruitQuestions, // pertanyaan rekrutmen panitia
+    recruitApplications, // lamaran rekrutmen panitia
     [assetItems, assetReservations], // reservasi aset Inventaris, hanya untuk yang punya grant
   ] = await Promise.all([
     db
@@ -244,6 +250,24 @@ export default async function ConsoleEventDetailPage({ params }: { params: Promi
           .from(eventEvaluations)
           .where(and(eq(eventEvaluations.eventId, id), eq(eventEvaluations.audience, "panitia")))
           .then((r) => r[0] ?? { total: 0, mine: 0 }),
+// Rekrutmen panitia
+    db
+      .select()
+      .from(eventRecruitmentQuestions)
+      .where(eq(eventRecruitmentQuestions.eventId, id))
+      .orderBy(eventRecruitmentQuestions.orderIndex),
+    can("event.manageCommittee")
+      ? db
+          .select({
+            app: eventRecruitmentApplications,
+            userName: users.name,
+            userEmail: users.email,
+          })
+          .from(eventRecruitmentApplications)
+          .leftJoin(users, eq(eventRecruitmentApplications.userId, users.id))
+          .where(eq(eventRecruitmentApplications.eventId, id))
+          .orderBy(desc(eventRecruitmentApplications.createdAt))
+      : Promise.resolve([]),
     canBorrowAssets
       ? Promise.all([
           db.select({ id: inventoryItems.id, name: inventoryItems.name }).from(inventoryItems).orderBy(inventoryItems.name),
@@ -944,6 +968,62 @@ export default async function ConsoleEventDetailPage({ params }: { params: Promi
           candidates={candidates}
           certifiedUserIds={committeeCertUserIds}
         />
+      </CollapsibleSection>
+      )}
+
+      {can("event.manageCommittee") && (
+      <CollapsibleSection
+        title="Rekrutmen Panitia"
+        description={`${recruitQuestions.length} pertanyaan · ${recruitApplications.length} lamaran`}
+      >
+        <div className="flex flex-col gap-4">
+          <p className="text-body-md text-on-surface-variant max-w-2xl">
+            Buka pendaftaran panitia untuk anggota PPIT. Mereka mengisi form lewat{" "}
+            <code className="text-on-background">/events/{event.slug}/daftar-panitia</code>.
+          </p>
+
+          <form action={setRecruitEnabled.bind(null, id, !event.recruitEnabled)} className="self-start">
+            <SubmitButton
+              successMessage={event.recruitEnabled ? "Pendaftaran panitia ditutup." : "Pendaftaran panitia dibuka."}
+              className={`border ${event.recruitEnabled ? "border-error text-error" : "border-primary-container text-primary-container"} px-4 py-2 rounded-md text-label-caps uppercase tracking-wide hover:brightness-95 transition-colors`}
+            >
+              {event.recruitEnabled ? "Tutup Pendaftaran Panitia" : "Buka Pendaftaran Panitia"}
+            </SubmitButton>
+          </form>
+
+          {event.recruitEnabled && canEditEvaluationQuestions && (
+            <details className="border border-outline-variant rounded-lg bg-surface-container-low">
+              <summary className="px-4 py-3 cursor-pointer text-label-caps uppercase tracking-wide text-primary-container">
+                Atur Pertanyaan Rekrutmen
+              </summary>
+              <div className="px-4 pb-4">
+                <RecruitmentQuestionsBuilder
+                  eventId={id}
+                  questions={recruitQuestions as RecruitQuestionRow[]}
+                />
+              </div>
+            </details>
+          )}
+
+          {recruitApplications.length > 0 && (
+            <RecruitmentApplicationList
+              applications={recruitApplications.map((r) => {
+                const qLabels: Record<string, string> = {};
+                for (const q of recruitQuestions) qLabels[q.id] = q.label;
+                return {
+                  id: r.app.id,
+                  userName: r.userName,
+                  userEmail: r.userEmail,
+                  answersJson: r.app.answersJson as Record<string, string> | null,
+                  questionLabels: qLabels,
+                  status: r.app.status as "pending" | "approved" | "rejected",
+                  reviewNote: r.app.reviewNote,
+                  createdAt: r.app.createdAt.toISOString(),
+                } satisfies RecruitmentApplication;
+              })}
+            />
+          )}
+        </div>
       </CollapsibleSection>
       )}
 

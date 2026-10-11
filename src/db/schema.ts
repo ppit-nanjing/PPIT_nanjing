@@ -483,6 +483,9 @@ export const events = pgTable("events", {
   // halaman acara tanpa akun; admin yang menerima, barulah dibuatkan akun
   // undangan + ditugaskan ke divisinya.
   volunteerSignupOpen: boolean("volunteer_signup_open").notNull().default(false),
+  // Buka pendaftaran rekrutmen panitia: anggota PPIT bisa melamar lewat
+  // form publik; BPH yang meninjau dan menyetujui.
+  recruitEnabled: boolean("recruit_enabled").notNull().default(false),
   // Kumpulkan biodata lengkap peserta saat mendaftar (nama, paspor, WeChat, no.
   // HP Tiongkok, kota/ranting, universitas, angkatan, bukti mahasiswa aktif) -
   // dipakai acara seperti WIF yang perlu menyetor daftar peserta lengkap.
@@ -1579,6 +1582,55 @@ export const designVotes = pgTable("design_votes", {
   note: text("note"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
+
+// ---------- Rekrutmen panitia ----------
+// Satu baris = satu lamaran dari anggota PPIT untuk menjadi panitia acara.
+// Jawaban disimpan sebagai JSONB (question_id → answer string) agar tidak
+// perlu tabel jawaban terpisah — rekrutmen tidak butuh agregasi kompleks.
+export const recruitStatusEnum = pgEnum("recruit_status", ["pending", "approved", "rejected"]);
+
+export const eventRecruitmentApplications = pgTable(
+  "event_recruitment_applications",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    eventId: uuid("event_id")
+      .notNull()
+      .references(() => events.id, { onDelete: "cascade" }),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    // Jawaban: { "<question_id>": "<answer>" } — multiselect pakai "\n" separator.
+    answersJson: jsonb("answers_json"),
+    status: recruitStatusEnum("status").notNull().default("pending"),
+    reviewNote: text("review_note"),
+    createdAt: timestamp("created_at").notNull().defaultNow(),
+  },
+  (t) => [
+    // Satu anggota satu lamaran per acara.
+    uniqueIndex("event_recruitment_application_unique").on(t.eventId, t.userId),
+    index("event_recruitment_application_event_idx").on(t.eventId),
+  ],
+);
+
+// Pertanyaan rekrutmen buatan BPH. Acara tanpa baris = form standar (nama+motivasi+divisi minat).
+export const eventRecruitmentQuestions = pgTable(
+  "event_recruitment_questions",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    eventId: uuid("event_id")
+      .notNull()
+      .references(() => events.id, { onDelete: "cascade" }),
+    label: text("label").notNull(),
+    // text | textarea | select | radio | multiselect
+    type: text("type").notNull(),
+    // Pilihan untuk select/radio/multiselect, satu opsi per baris.
+    options: text("options"),
+    required: boolean("required").notNull().default(true),
+    orderIndex: integer("order_index").notNull().default(0),
+    createdAt: timestamp("created_at").notNull().defaultNow(),
+  },
+  (t) => [index("event_recruitment_questions_event_idx").on(t.eventId, t.orderIndex)],
+);
 
 // ---------- Evaluasi acara (pasca-acara) ----------
 // Satu baris = satu respons evaluasi. Dua audiens di satu tabel, dibedakan

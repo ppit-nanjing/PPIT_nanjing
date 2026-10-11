@@ -1389,6 +1389,18 @@ export const id = {
   "ceval.errorGeneric": "Gagal mengirim evaluasi. Coba lagi sebentar lagi.",
   "ceval.footer": "Evaluasi untuk {{event}} — hanya dibaca pengurus PPIT Nanjing.",
 
+  "recruit.metaTitle": "Daftar Panitia {{event}}",
+  "recruit.kicker": "Rekrutmen Panitia",
+  "recruit.title": "Daftar Panitia {{event}}",
+  "recruit.intro": "Isi form ini untuk mendaftar sebagai panitia {{event}}. Jawabanmu akan ditinjau oleh BPH.",
+  "recruit.closedTitle": "Pendaftaran ditutup",
+  "recruit.closedBody": "Pendaftaran panitia untuk acara ini sudah ditutup. Pantau terus media sosial PPIT Nanjing untuk informasi acara selanjutnya.",
+  "recruit.loginTitle": "Masuk dulu, ya",
+  "recruit.loginBody": "Daftar sebagai panitia dengan akun PPIT Nanjing-mu.",
+  "recruit.loginButton": "Masuk",
+  "recruit.alreadyTitle": "Kamu sudah mendaftar",
+  "recruit.alreadyBody": "Lamaranmu sudah diterima dan akan ditinjau oleh BPH. Pantau terus untuk info selanjutnya.",
+  "recruit.backToEvent": "Kembali ke halaman acara",
 };
 
 // No `as const` - that would make every VALUE a string literal too, and then
