@@ -456,11 +456,13 @@ export async function moveFormField(id: string, toIndex: number) {
   const [moved] = rows.splice(from, 1);
   const clamped = Math.max(0, Math.min(toIndex, rows.length));
   rows.splice(clamped, 0, moved);
-  await db.transaction(async (tx) => {
-    for (let i = 0; i < rows.length; i++) {
-      await tx.update(membershipFormFields).set({ orderIndex: i }).where(eq(membershipFormFields.id, rows[i].id));
-    }
-  });
+  // neon-http tidak mendukung transaction interaktif — pakai db.batch
+  // (satu transaksi implisit, pola yang sama dengan committee.ts). db.batch
+  // menuntut tuple non-kosong; daftar ini selalu berisi minimal field yang dipindah.
+  const updates = rows.map((row, i) =>
+    db.update(membershipFormFields).set({ orderIndex: i }).where(eq(membershipFormFields.id, row.id)),
+  );
+  await db.batch([updates[0], ...updates.slice(1)]);
   revalidatePath("/console/membership/form");
 }
 
@@ -495,11 +497,10 @@ export async function duplicateFormField(id: string) {
   const srcIdx = ids.indexOf(src.id);
   if (srcIdx >= 0) ids.splice(srcIdx + 1, 0, created.id);
   else ids.push(created.id);
-  await db.transaction(async (tx) => {
-    for (let i = 0; i < ids.length; i++) {
-      await tx.update(membershipFormFields).set({ orderIndex: i }).where(eq(membershipFormFields.id, ids[i]));
-    }
-  });
+  const updates = ids.map((rowId, i) =>
+    db.update(membershipFormFields).set({ orderIndex: i }).where(eq(membershipFormFields.id, rowId)),
+  );
+  await db.batch([updates[0], ...updates.slice(1)]);
   revalidatePath("/console/membership/form");
 }
 

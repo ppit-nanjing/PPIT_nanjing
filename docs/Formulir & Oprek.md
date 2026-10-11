@@ -8,7 +8,7 @@ Modul **Formulir** di console adalah rumah empat alur formulir internal kabinet:
 |---|---|---|
 | **Pendaftaran PPIT** | Pintasan ke modul `/console/membership` yang sudah ada (form publik Join Us) | pemegang modul `membership` |
 | **Pemilu** | Pendaftaran calon untuk kepengurusan periode berikutnya | BPH Inti + Divisi Teknologi (modul `forms`) |
-| **Oprek BPH Acara** | Rekrutmen BPH Acara (ketua/wakil/sekretaris/bendahara/supervisor) untuk **satu acara/proker** | Koor divisi mana pun (proker divisinya) + BPH Inti/Tech |
+| **Oprek BPH Acara** | Rekrutmen BPH Acara (ketua/wakil/sekretaris/bendahara/supervisor) untuk **satu acara/proker** | Koor divisi mana pun (praktiknya untuk proker divisinya) + BPH Inti/Tech |
 | **Oprek Kepanitiaan** | Rekrutmen panitia acara per divisi, dibuka setelah BPH Acara terbentuk | BPH Acara acara itu + BPH Inti/Tech |
 
 ## Riwayat: jangan tertukar dengan modul Formulir lama

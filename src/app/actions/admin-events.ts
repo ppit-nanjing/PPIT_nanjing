@@ -926,15 +926,19 @@ export async function setEventResponsibleDepartments(formData: FormData) {
     .from(eventResponsibleDepartments)
     .where(eq(eventResponsibleDepartments.eventId, eventId));
 
-  await db.transaction(async (tx) => {
-    await tx.delete(eventResponsibleDepartments).where(eq(eventResponsibleDepartments.eventId, eventId));
-    if (ids.length > 0) {
-      await tx
+  // neon-http tidak mendukung transaction interaktif — delete+insert dibungkus
+  // db.batch (satu transaksi implisit; kalau tidak ada pilihan, cukup delete).
+  if (ids.length > 0) {
+    await db.batch([
+      db.delete(eventResponsibleDepartments).where(eq(eventResponsibleDepartments.eventId, eventId)),
+      db
         .insert(eventResponsibleDepartments)
         .values(ids.map((departmentId) => ({ eventId, departmentId })))
-        .onConflictDoNothing();
-    }
-  });
+        .onConflictDoNothing(),
+    ]);
+  } else {
+    await db.delete(eventResponsibleDepartments).where(eq(eventResponsibleDepartments.eventId, eventId));
+  }
 
   await logEventAudit(session.user.id, eventId, "event.responsible_departments", {
     before: { departments: before.map((r) => r.departmentId) },
