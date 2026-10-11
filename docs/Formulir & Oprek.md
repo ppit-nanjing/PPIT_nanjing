@@ -46,10 +46,9 @@ Gerbang tunggal: `src/lib/form-access.ts`.
 - [x] Fase 1 — fondasi: migrasi 0049, modul `forms`, sesi koor/panitia, hub + 4 tab (gerbang server).
 - [x] Fase 2 — builder bersama (FormFieldEditor/QuestionBank parameterisasi) + CRUD form + setelan + daftar per tab.
 - [x] Fase 3 — halaman isi `/forms/[id]` + submit + share + pratinjau di halaman kelola (lampiran folder privat `form-file`).
-- [ ] Fase 4 — Pemilu end-to-end.
-- [ ] Fase 5 — Oprek BPH Acara (posisi, auto-assign, notifikasi, divisi penanggung jawab di form acara).
-- [ ] Fase 6 — Oprek Kepanitiaan (divisi pilihan 1/2, penempatan, pindah/role).
-- [ ] Fase 7 — analitik + ekspor CSV/XLSX.
+- [x] Fase 4-6 — respons + detail pelamar + penempatan/auto-assign `event_committee` + notifikasi `oprek_*` (semua jenis form).
+- [x] Fase 4b — Divisi Penanggung Jawab acara (boleh >1) di konsol acara + filter laporan `event_attendance`.
+- [x] Fase 7 — analitik per form + ekspor CSV/XLSX.
 - [ ] Fase 8 — Help Center + review akhir.
 
 ## Terkait

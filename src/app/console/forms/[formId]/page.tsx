@@ -19,10 +19,13 @@ import { ConfirmButton } from "@/components/console/confirm-button";
 import { CopyButton } from "@/components/copy-button";
 import { ShareButton } from "@/components/share-button";
 import { FormFieldEditor } from "@/components/console/form-field-editor";
+import { FormAnalyticsView } from "@/components/console/forms/form-analytics-view";
 import { FormRenderer, type FormDivisionOption } from "@/components/forms/form-renderer";
 import { QuestionBank } from "@/components/console/question-bank";
 import { CheckboxField, Select, TextAreaField, TextField, ToggleSwitch } from "@/components/console/form";
 import { SubmitButton } from "@/components/console/submit-button";
+import { EVENT_COMMITTEE_ROLE_LABEL } from "@/lib/event-capabilities";
+import { buildFormAnalytics } from "@/lib/form-analytics";
 import { BPH_FORM_ROLE_LABEL, BPH_FORM_ROLES, FORM_KIND_LABEL, FORM_STATUS_LABEL, FORM_STATUS_TONE, FORM_TAB_PATH } from "@/lib/form-types";
 import { toChinaLocalInput } from "@/lib/datetime";
 import { FIELD_TYPE_LABELS, type MembershipFieldDef } from "@/lib/membership-form";
@@ -63,6 +66,8 @@ export default async function FormManagePage({ params }: { params: Promise<{ for
         positionApplied: formApplications.positionApplied,
         choice1DivisionId: formApplications.choice1DivisionId,
         choice2DivisionId: formApplications.choice2DivisionId,
+        assignedDivisionId: formApplications.assignedDivisionId,
+        responses: formApplications.responses,
         status: formApplications.status,
         submittedAt: formApplications.submittedAt,
       })
@@ -79,7 +84,6 @@ export default async function FormManagePage({ params }: { params: Promise<{ for
     id: r.id,
     name: r.parentId && divisionNameById.has(r.parentId) ? `${divisionNameById.get(r.parentId)} · ${r.name}` : r.name,
   }));
-
   const fieldDefs: MembershipFieldDef[] = fields.map((r) => ({
     id: r.id,
     key: r.key,
@@ -92,6 +96,20 @@ export default async function FormManagePage({ params }: { params: Promise<{ for
     config: (r.config as MembershipFieldDef["config"]) ?? undefined,
     isCore: false,
   }));
+  const roleLabels: Record<string, string> = { ...BPH_FORM_ROLE_LABEL, ...EVENT_COMMITTEE_ROLE_LABEL };
+  const analytics = buildFormAnalytics({
+    applications: applications.map((a) => ({
+      status: a.status,
+      positionApplied: a.positionApplied,
+      choice1DivisionId: a.choice1DivisionId,
+      choice2DivisionId: a.choice2DivisionId,
+      responses: a.responses,
+    })),
+    fields: fieldDefs.map((f) => ({ key: f.key, label: f.label, type: f.type })),
+    divisionNameById,
+    statusLabel: (s) => FORM_STATUS_LABEL[s as FormApplicationStatus] ?? s,
+    roleLabel: (r) => roleLabels[r] ?? r,
+  });
 
   return (
     <div className="px-4 py-6 sm:px-6 lg:px-8 lg:py-10 max-w-3xl">
@@ -110,6 +128,22 @@ export default async function FormManagePage({ params }: { params: Promise<{ for
             labelKey="forms.share"
             copiedKey="forms.shareCopied"
           />
+          {applicantCount > 0 && (
+            <>
+              <a
+                href={`/api/console/forms/${form.id}/export?format=csv`}
+                className="text-label-caps uppercase tracking-wide text-primary-container hover:text-primary"
+              >
+                CSV
+              </a>
+              <a
+                href={`/api/console/forms/${form.id}/export?format=xlsx`}
+                className="text-label-caps uppercase tracking-wide text-primary-container hover:text-primary"
+              >
+                Excel
+              </a>
+            </>
+          )}
           <span className="text-label-caps uppercase tracking-wide text-on-surface-variant">{applicantCount} pendaftar</span>
         </div>
       </div>
@@ -253,6 +287,15 @@ export default async function FormManagePage({ params }: { params: Promise<{ for
             })}
           </ul>
         )}
+      </CollapsibleSection>
+
+      <CollapsibleSection
+        title="Analitik"
+        description="Ringkasan status, posisi/divisi pilihan, dan pertanyaan pilihan."
+        className="mt-8"
+        defaultOpen={false}
+      >
+        <FormAnalyticsView analytics={analytics} kind={form.kind} />
       </CollapsibleSection>
 
       <CollapsibleSection
