@@ -41,7 +41,7 @@ flowchart TD
 | Rute | Isi |
 |---|---|
 | `/jobs` | Halaman publik tunggal untuk karir ("Career Opportunities in Nanjing"): listing loker/magang **aktif** (hanya `status = open` dan belum lewat batas lamaran), filter tipe (`internship`/`full_time`/`part_time`/`volunteer`) + lokasi. Lowongan yang **lewat batas** tetap tampil **abu-abu tanpa tombol lamar**, dibatasi `EXPIRED_VISIBLE_LIMIT` (3) yang paling baru; tautan ke `/jobs/archive` muncul bila ada isi arsip. Lalu bagian **Panduan** (`#panduan`, sampai 4 artikel terbaru) dan ajakan mentorship |
-| `/jobs/:id` | Detail lowongan. Tombol lamar hanya muncul bila `open` **dan belum lewat batas**; lewat batas → keterangan `jobs.expiredNote` + badge "Lewat batas"; `closed` → keterangan ditutup |
+| `/jobs/:id` | Detail lowongan. Tombol lamar hanya muncul bila `open` **dan belum lewat batas**; lewat batas → keterangan `jobs.expiredNote` + badge "Lewat batas"; `closed` → keterangan ditutup. Ada tombol **Bagikan** (menu berbagi bawaan perangkat di HP, salin tautan di desktop) |
 | `/jobs/:id/apply` | Form lamaran: resume (URL Drive atau unggah PDF) + cover letter opsional. **Lowongan yang sudah ditutup, lewat batas lamaran, atau yang `apply_url`-nya terisi, dialihkan ke `/jobs/:id`** |
 | `/jobs/:id/apply-external` | Route handler (GET) untuk lowongan yang melamar di situs perusahaan. Wajib login + sensus lengkap, menambah `external_clicks`, lalu mengalihkan ke `apply_url`. Lowongan lewat batas lamaran juga ditolak di sini. Tujuan dibaca dari database, bukan dari request |
 | `/jobs/archive` | Arsip lowongan publik: semua yang `closed` atau lewat batas lamaran, abu-abu, tanpa tombol lamar (hanya bisa dibaca) |
@@ -52,7 +52,7 @@ flowchart TD
 | `/career/mentorship/success` | Konfirmasi; matching mentor & tindak lanjut lewat email |
 | `/console/jobs` | Daftar semua lowongan (open + closed) dengan thumbnail poster, jumlah pelamar, dan penanda "Lewat batas" bila `applicationDeadline` sudah lewat |
 | `/console/jobs/new` | Form lowongan baru, termasuk "Cara melamar" (form PPIT atau tautan situs perusahaan) dan unggah **poster** opsional. Kotak "Langsung buka" mati = tersimpan `closed` (tidak tampil di daftar, tidak bisa dilamar, tapi halaman `/jobs/:id`-nya tetap terbaca lewat tautan) |
-| `/console/jobs/:id` | Ubah lowongan (termasuk poster), Tutup/Buka lagi, Hapus, dan daftar pelamar |
+| `/console/jobs/:id` | Ubah lowongan (termasuk poster), Tutup/Buka lagi, Hapus, dan daftar pelamar. Saat lowongan `open`: tombol **Salin tautan** + **Lihat publik** untuk membagikan tautannya |
 | `/console/jobs/:id/applicants/:applicationId` | Tinjau satu pelamar: email, CV, cover letter, ubah status, catatan, riwayat status, hapus lamaran |
 
 ## Akses
@@ -82,6 +82,7 @@ flowchart TD
 - **Masalah reset yang sama masih ada di form console lain** (`NewsArticleForm` dan lainnya) yang memakai `useActionState` + `{ error }`. Perbaikan yang lebih umum adalah satu komponen form bersama yang mengirim lewat `onSubmit` + `startTransition(() => formAction(new FormData(form)))`, yang tidak memicu reset otomatis; belum dikerjakan.
 - **Perubahan `apply_url` dicatat di `audit_logs`** (`job_posting`, action `apply_url_changed`, nilai sebelum dan sesudah), karena tombol berlogo PPIT mengirim anggota ke sana. Edit lowongan lainnya belum diaudit.
 - **Syarat masuk `apply-external` sama dengan melamar lewat PPIT** (login + sensus lengkap): lowongan di halaman ini untuk anggota, dan itu sekaligus menjaga `external_clicks` dari robot dan pengunjung anonim. Ini keputusan produk yang mudah dibalik bila tautan perlu terbuka untuk umum.
+- **Tautan per lowongan bisa dibagikan.** Halaman `/jobs/:id` punya tombol `Bagikan` (`src/components/jobs/share-job-button.tsx`): memakai Web Share API di perangkat yang mendukung (membuka menu berbagi WhatsApp/WeChat), dan di desktop menyalin tautan dengan umpan balik "Tautan tersalin" — pola yang sama dengan `ShareEventButton` di halaman acara dan `ArticleShare` di berita. Di console, `/console/jobs/:id` punya `Salin tautan` + `Lihat publik` yang muncul hanya saat lowongan `open`, sejalan dengan peringatan "jangan bagikan tautannya sebelum dibuka" di form.
 
 ## Batasan yang diketahui
 

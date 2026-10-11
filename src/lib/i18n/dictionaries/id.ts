@@ -413,6 +413,8 @@ export const id = {
   "jobs.mentorshipDesc": "Terhubung dengan alumni untuk bimbingan karir",
   "jobs.backToListAria": "Kembali ke daftar lowongan",
   "jobs.listLabel": "Lowongan",
+  "jobs.share": "Bagikan",
+  "jobs.shareCopied": "Tautan tersalin",
   "jobs.closingSoon": "Segera ditutup",
   "jobs.deadline": "Batas: {{date}}",
   "jobs.descriptionHeading": "Deskripsi",

@@ -361,6 +361,7 @@ Memasang lowongan (/console/jobs → Tambah Lowongan)
 - Lokasi, Batas lamaran, Deskripsi, Persyaratan: opsional.
 - Poster (opsional): unggah gambar poster di kolom "Poster / gambar lowongan". Gambar diunggah apa adanya (tidak dipotong), tampil di samping kanan halaman lowongan dan sebagai thumbnail di daftar Lowongan (publik dan console) — poster potret paling pas. Tautan yang kamu tempel di Deskripsi/Persyaratan otomatis bisa diklik pembaca.
 - Kotak "Langsung buka untuk pelamar": kalau dicentang, lowongan langsung tampil di halaman Jobs (/jobs, "Career Opportunities in Nanjing"). Kalau dikosongkan, lowongan tersimpan tertutup: tidak tampil di daftar dan tidak bisa dilamar, tapi halamannya TETAP bisa dibaca siapa pun yang punya tautannya. Jadi bukan draf rahasia, dan jangan bagikan tautannya sebelum dibuka.
+- Membagikan tautan lowongan: buka lowongannya di console, lalu klik "Salin tautan" (tombol "Lihat publik" membuka halamannya langsung) — tempel tautan itu ke grup atau chat. Pembaca juga bisa memakai tombol "Bagikan" di halaman lowongan: di HP membuka menu berbagi (WhatsApp/WeChat), di komputer menyalin tautan.
 - Batas lamaran DITEGAKKAN otomatis: begitu tanggalnya lewat, lowongan tidak bisa dilamar lagi (tombol lamar diganti keterangan) dan tampil abu-abu. Paling banyak 3 lowongan lewat batas yang tetap tampil abu-abu di /jobs; sisanya pindah ke halaman Arsip (/jobs/archive), bersama lowongan yang kamu tutup manual.
 
 Cara melamar (pilih satu per lowongan)

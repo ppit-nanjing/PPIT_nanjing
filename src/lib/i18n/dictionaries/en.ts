@@ -410,6 +410,8 @@ export const en = {
   "jobs.mentorshipDesc": "Connect with alumni for career guidance",
   "jobs.backToListAria": "Back to job listings",
   "jobs.listLabel": "Jobs",
+  "jobs.share": "Share",
+  "jobs.shareCopied": "Link copied",
   "jobs.closingSoon": "Closing soon",
   "jobs.deadline": "Deadline: {{date}}",
   "jobs.descriptionHeading": "Description",
