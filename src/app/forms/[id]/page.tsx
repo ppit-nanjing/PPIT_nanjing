@@ -55,6 +55,13 @@ export default async function FormFillPage({
   const [form] = await db.select().from(forms).where(eq(forms.id, id));
   if (!form) notFound();
 
+  // Formulir yang terikat acara yang sudah di Sampah tidak bisa dibuka lagi
+  // (acara di Sampah hanya dikelola dari bagian Sampah di menu Kegiatan).
+  if (form.eventId) {
+    const [ev] = await db.select({ deletedAt: events.deletedAt }).from(events).where(eq(events.id, form.eventId));
+    if (!ev || ev.deletedAt) notFound();
+  }
+
   const session = await auth();
   if (!session?.user?.id) {
     redirect(`/login?returnTo=${encodeURIComponent(`/forms/${form.id}`)}`);

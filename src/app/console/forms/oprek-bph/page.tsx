@@ -1,4 +1,4 @@
-import { count, desc, eq, sql } from "drizzle-orm";
+import { and, count, desc, eq, isNull, sql } from "drizzle-orm";
 import { db } from "@/db";
 import { events, formApplications, forms } from "@/db/schema";
 import { FormCreate } from "@/components/console/forms/form-create";
@@ -20,6 +20,8 @@ export default async function FormsOprekBphPage({
     db
       .select({ id: events.id, title: events.title, status: events.status })
       .from(events)
+      // Acara di Sampah tidak bisa dipilih lagi (form Oprek-nya ikut mati).
+      .where(isNull(events.deletedAt))
       .orderBy(sql`${events.startAt} desc nulls last`),
     db
       .select({
@@ -33,7 +35,7 @@ export default async function FormsOprekBphPage({
       .from(forms)
       .leftJoin(events, eq(events.id, forms.eventId))
       .leftJoin(formApplications, eq(formApplications.formId, forms.id))
-      .where(eq(forms.kind, "oprek_bph_acara"))
+      .where(and(eq(forms.kind, "oprek_bph_acara"), isNull(events.deletedAt)))
       .groupBy(forms.id, events.title)
       .orderBy(desc(forms.createdAt)),
   ]);

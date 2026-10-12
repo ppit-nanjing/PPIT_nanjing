@@ -352,6 +352,13 @@ export async function submitFormApplication(formData: FormData) {
   if (!form) redirect("/console");
   const back = `/forms/${form.id}`;
 
+  // Acara di Sampah: form Oprek-nya tidak menerima jawaban baru (halaman isi
+  // juga 404). Form tanpa acara (Pemilu) tidak terpengaruh.
+  if (form.eventId) {
+    const [ev] = await db.select({ deletedAt: events.deletedAt }).from(events).where(eq(events.id, form.eventId));
+    if (!ev || ev.deletedAt) redirect(`${back}?error=closed`);
+  }
+
   const membership = await getCabinetMembership(userId);
   if (!membership || !membership.isCabinetMember) redirect(`${back}?error=forbidden`);
 

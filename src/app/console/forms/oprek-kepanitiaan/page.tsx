@@ -1,4 +1,4 @@
-import { and, count, desc, eq, inArray, sql } from "drizzle-orm";
+import { and, count, desc, eq, inArray, isNull, sql } from "drizzle-orm";
 import { db } from "@/db";
 import { events, formApplications, forms } from "@/db/schema";
 import { FormCreate } from "@/components/console/forms/form-create";
@@ -37,17 +37,23 @@ export default async function FormsOprekKepanitiaanPage({
     .leftJoin(formApplications, eq(formApplications.formId, forms.id));
   const rowsQuery = (
     canSeeAllForms
-      ? rowsBase.where(eq(forms.kind, "oprek_kepanitiaan"))
-      : rowsBase.where(and(eq(forms.kind, "oprek_kepanitiaan"), inArray(forms.eventId, access.bphEventIds)))
+      ? rowsBase.where(and(eq(forms.kind, "oprek_kepanitiaan"), isNull(events.deletedAt)))
+      : rowsBase.where(
+          and(
+            eq(forms.kind, "oprek_kepanitiaan"),
+            inArray(forms.eventId, access.bphEventIds),
+            isNull(events.deletedAt),
+          ),
+        )
   )
     .groupBy(forms.id, events.title)
     .orderBy(desc(forms.createdAt));
 
   const [eventOptions, rows] = await Promise.all([
     canCreateForAnyEvent
-      ? eventQuery
+      ? eventQuery.where(isNull(events.deletedAt))
       : access.bphEventIds.length > 0
-        ? eventQuery.where(inArray(events.id, access.bphEventIds))
+        ? eventQuery.where(and(inArray(events.id, access.bphEventIds), isNull(events.deletedAt)))
         : Promise.resolve([] as { id: string; title: string; status: string }[]),
     // BPH Acara hanya melihat rekrutmen acaranya sendiri; full/modul melihat semua.
     rowsQuery,
