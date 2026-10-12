@@ -1,6 +1,7 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { useSession } from "next-auth/react";
 import { X, Bot, MessageSquarePlus } from "lucide-react";
 import { ChatbotPanel } from "@/components/ai/ai-chatbot";
 import { FeedbackPanel } from "@/components/feedback/feedback-widget";
@@ -11,8 +12,18 @@ type Tab = "chat" | "feedback";
 
 export function HelpCenter({ authed }: { authed: boolean }) {
   const t = useT();
+  // Prop `authed` berasal dari render layout di server. Setelah login lewat
+  // Server Action, navigasi klien bisa masih memakai payload layout yang guest,
+  // dan tab chat tetap terkunci sampai halaman dimuat ulang — jadi sesi di sisi
+  // klien ikut dibaca (SessionResync di providers.tsx menyamakannya dengan
+  // server begitu keduanya berbeda).
+  const { status } = useSession();
+  const canChat = authed || status === "authenticated";
   const [open, setOpen] = useState(false);
-  const [tab, setTab] = useState<Tab>(authed ? "chat" : "feedback");
+  const [tab, setTab] = useState<Tab>(canChat ? "chat" : "feedback");
+  useEffect(() => {
+    if (canChat) setTab("chat");
+  }, [canChat]);
   const launcherRef = useRef<HTMLButtonElement>(null);
   const panelRef = useRef<HTMLDivElement>(null);
   const panelHeaderRef = useRef<HTMLDivElement>(null);
@@ -28,7 +39,7 @@ export function HelpCenter({ authed }: { authed: boolean }) {
   });
 
   function toggle() {
-    if (!open && !authed) setTab("feedback");
+    if (!open && !canChat) setTab("feedback");
     setOpen((o) => !o);
   }
 
@@ -66,13 +77,13 @@ export function HelpCenter({ authed }: { authed: boolean }) {
           >
             <div className="flex items-center gap-1">
               <button
-                onClick={() => authed && setTab("chat")}
-                disabled={!authed}
+                onClick={() => canChat && setTab("chat")}
+                disabled={!canChat}
                 className={`flex items-center gap-1.5 text-label-caps uppercase tracking-wide px-2 py-1 rounded-md transition-colors ${
                   tab === "chat"
                     ? "text-primary-container bg-primary-container/10"
                     : "text-secondary hover:text-on-background"
-                } ${!authed ? "opacity-40 cursor-not-allowed" : ""}`}
+                } ${!canChat ? "opacity-40 cursor-not-allowed" : ""}`}
               >
                 <Bot size={16} /> {t("help.tabChat")}
               </button>
@@ -92,7 +103,7 @@ export function HelpCenter({ authed }: { authed: boolean }) {
             </button>
           </div>
 
-          {authed && tab === "chat" ? <ChatbotPanel /> : <FeedbackPanel />}
+          {canChat && tab === "chat" ? <ChatbotPanel /> : <FeedbackPanel />}
         </div>
       )}
     </>

@@ -3,6 +3,7 @@
 import { AuthError } from "next-auth";
 import { eq } from "drizzle-orm";
 import { redirect, unstable_rethrow } from "next/navigation";
+import { revalidatePath } from "next/cache";
 import { cookies, headers } from "next/headers";
 import { db } from "@/db";
 import { users } from "@/db/schema";
@@ -96,6 +97,14 @@ async function credentialsSignIn(
   try {
     const url = await signIn("credentials", { ...fields, redirect: false });
     if (typeof url === "string" && /[?&]error=/.test(url)) return "bad-credentials";
+    // Sesi baru mengubah render SELURUH layout: navbar dan HelpCenter membaca
+    // auth() di src/app/layout.tsx. Tanpa ini, redirect() di pemanggil hanya
+    // navigasi klien dan bisa memakai payload `/` hasil prefetch saat
+    // pengunjung masih anonim - navbar tetap "Login" (tab chat juga mati)
+    // sampai halaman dimuat ulang. revalidatePath di dalam Server Action
+    // membatalkan cache router klien, jadi payload-nya diambil ulang lengkap
+    // dengan cookie sesi yang baru saja di-set.
+    revalidatePath("/", "layout");
     return "ok";
   } catch (error) {
     unstable_rethrow(error);
