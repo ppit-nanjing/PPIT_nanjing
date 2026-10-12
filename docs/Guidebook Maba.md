@@ -193,6 +193,12 @@ Binding rules:
 3. Answers produced by the degradation path or by a refusal are **never cached** (otherwise one Groq outage would poison every later answer with an empty one).
 4. The endpoint is a Route Handler `/api/guide/ask` (so it can return clear 200/429/503); the checklist stays a Server Action.
 
+What shipped against these rules (2026-10-12):
+
+- Rules 1–3 hold: `askGuide` (`src/lib/guide-answer.ts`) builds citations from the stored `chunk_ids`, makes no LLM call when retrieval returns nothing, and caches nothing from the refusal or degradation paths.
+- **Rule 4 was deliberately not built.** The chat widget is the only caller, and it reaches the server through the Server Action (`chatWithAIAction` → `askGuide`), which already returns the degraded answer as content instead of throwing. A `/api/guide/ask` handler with no consumer would be dead code; the answer core is a plain module, so adding the handler later is ~40 lines. Revisit if something other than the widget needs the answer path (email digest, WeChat bot, status codes for a client).
+- Retrieval is **not** FTS over `guide_chunks`: `findGuideChunks` matches tokens against `help_articles` with `ILIKE` and ranks in JS. `guide_chunks` still holds the excerpts, page ranges, and citation ids. The stemmed index (`guide_chunks.text_stemmed`) exists but is unused so far — see the risk note under [Evaluation](#evaluation-golden-set).
+
 ### Token and quota budget
 
 | Prompt part | Budget |
@@ -311,6 +317,15 @@ Quota mitigations: answer cache (key = question hash + `corpus_version`), prewar
 - Full answer evaluation (with the LLM) runs manually once per prompt change, at most ~30 calls.
 - Questions from `ai_query_log` (failures/refusals) become golden-set candidates each month.
 
+What the harness actually contains (2026-10-12):
+
+- 38 questions: 6 about the one reviewed topic (transportasi), 26 marked `pending_review` (their topics are still drafts, so the gate must return **zero chunks** for all of them), 6 `must_refuse` (small talk, jokes, "who won the 2026 World Cup", bitcoin). All 8 corpus topics are covered, and every `expected_slug` was checked to exist with `is_public = true`, so no case is unanswerable by construction.
+- Exit code 1 when recall@4 < 0,80 or when any `pending_review`/`must_refuse` question returns a chunk. The 0,80 in the harness is the push gate; the 0,85 in the KPI table above is the post-maintenance target — the difference is written in the harness header so nobody loosens it silently.
+- The `pending_review` mark in the JSON is **manual**: when a topic gets reviewed, delete its questions from that group in the same commit. The harness prints that reminder on every run, so a forgotten flag shows up as a red harness instead of a silent one.
+- Run `npx tsx --env-file=.env.local src/db/eval-guidebook.ts` (the command reads the DB, so `.env.local`, not `.env`).
+
+**Known risk: recall is measured against one reviewed topic.** Lexical `ILIKE` matching plus the relevance floor works at today's corpus size (recall@4 6/6 = 1.000, see [Verification](#verification-and-definition-of-done)). Once the other seven topics are reviewed, recall@4 is the number that says whether the matching holds up. If it drops below 0,80, the next step is the stemmed index that already exists (`guide_chunks.text_stemmed`) with `to_tsvector`/`websearch_to_tsquery` instead of `ILIKE` — not embeddings, which would add a vendor.
+
 ## Security, privacy, i18n
 
 - **Never send personal data to Groq** (repo rule): guide excerpts must be free of personal data; the user question is redacted before logging (`question_redacted`), the raw text is not stored.
@@ -327,7 +342,7 @@ Quota mitigations: answer cache (key = question hash + `corpus_version`), prewar
 | **P1 — Schema + pure functions** *(done)* | SQL migration `0046_guidebook.sql`; `guide-chunker.ts`; `markdown-lite.tsx`; harness `scripts/check-guidebook.ts` | `drizzle/0046_guidebook.sql`, `src/db/schema.ts`, `src/lib/guide-chunker.ts`, `src/lib/markdown-lite.tsx`, `scripts/check-guidebook.ts` | `tsc`/`npm run lint` clean; `npm run check:guidebook` 24/24 green; chunking the 5 real extractions gives 133 chunks with page ranges that match the PDFs (0–37, 0–68, …); migration applied and re-applied idempotently on a throwaway Postgres 16 and on the local Docker database ([Database Lokal Docker](./Database%20Lokal%20Docker.md)). The migration is **not applied to the Neon production database yet** |
 | **P2 — Console (editability)** *(done; the three acceptance points below were clicked through in a browser on 2026-10-10)* | Topic form (phase/order/review/expiry), preview, diagnostics, history + restore, merge panel | `src/app/console/docs/**`, `src/app/actions/admin-docs.ts`, `src/components/console/{article-form,markdown-editor,status-row}.tsx`, `src/lib/guidebook-topic.ts` | A new topic shows up in the checklist and retrieval **with no deploy**; an edit bumps `corpus_version`; a concurrent save is rejected |
 | **P3 — Ingest** *(script + 5 topik jalan; spot-check & panel merge belum)* | JSON-per-page → per-topic markdown → `parsed_markdown`; quality gate; first merge | `src/db/ingest-guide.ts`, `src/lib/guidebook-manifest.ts`, `src/lib/guidebook-faq.ts` | All 5 PDFs ingested, 10 random pages manually checked, no empty/conflicting pages, local edits not clobbered |
-| **P4 — Retrieval & UX** | FTS + refusal + retrieval-only + cache + quota + prewarm; `/guidebook`; chat wiring; docs + SOP | `src/app/api/guide/ask/route.ts`, `src/app/guidebook/**`, `src/lib/guidebook-search.ts`, `docs/**` | The golden set passes its targets; `/guidebook` works on mobile + dark mode; KPIs are measurable from `ai_query_log` |
+| **P4 — Retrieval & UX** *(done 2026-10-12, except the Route Handler in rule 4 — see "What shipped against these rules")* | Lexical retrieval + review/expiry gate + relevance floor + refusal + cache per `corpus_version` + daily quota + retrieval-only degradation + prewarm; `/guidebook` page + checklist action; chat wiring; docs + SOP | `src/lib/guide-answer.ts`, `src/lib/guidebook-search.ts`, `src/lib/guidebook-faq.ts`, `scripts/prewarm-guide.ts`, `src/app/guidebook/**`, `src/app/actions/guidebook-progress.ts`, `src/db/eval-guidebook.ts`, `docs/**` | Golden set passes (`LULUS`, recall@4 1.000, 0 leaks); `/guidebook` verified over HTTP including the no-JavaScript form (`docs` entry under Verification); SOP article exists in `src/db/seed-help-articles.ts` under slug `panduan-maba` and is seeded onto the target DB with `npx tsx --env-file=.env src/db/seed-help-articles.ts panduan-maba`; KPIs are measurable from `ai_query_log` |
 
 P0 can be done right now without waiting on the parser; P2 deliberately precedes P3 so the edit path is proven before 150 pages land. The `guidebook` module key and the 6-month default for new topics shipped with P2 (2026-10-11) — see [Decisions](#decisions-answered-2026-10-11).
 
@@ -392,12 +407,65 @@ Yang berubah karena ini: pertanyaan Inggris sebelumnya tidak menemukan apa pun, 
 
 `npm run check:guidebook` 31/31 hijau. Tujuh pemeriksaan barunya soal kata kunci, bukan chunker: pertanyaan Inggris dapat istilah Indonesia, sinonim tidak menendang kata asli, kata fungsi Inggris dibuang, jumlah kata kunci dibatasi, pertanyaan entitas tidak menyisakan kata kunci, entitasnya tetap dikenali untuk pencarian cadangan, dan sapaan tidak jadi kata kunci. Harness ini jalan tanpa database karena logikanya dipisah ke `src/lib/guidebook-terms.ts`.
 
+### Halaman `/guidebook` dan centang progres (2026-10-12)
+
+`/guidebook` menampilkan delapan topik yang sudah terbit, dikelompokkan per fase (`GUIDE_PHASES`: sebelum berangkat, kedatangan, minggu pertama, bulan pertama). Tiap baris menautkan artikelnya di `/help`, menyebut label sumbernya, dan menandai topik yang belum ditinjau pengurus atau sedang ditinjau ulang. Anggota yang login dapat kotak centang per topik; pengunjung anonim hanya dapat kalimat "Masuk dulu kalau mau menyimpan progres".
+
+Diuji terhadap database Docker lokal, lewat `curl` dan bukan browser (Chromium di mesin ini tidak bisa start, `libnss3` tidak ada):
+
+| Yang diuji | Hasil |
+|---|---|
+| `GET /guidebook` tanpa login | 200, 0 kotak centang, label "Belum ditinjau pengurus" muncul 15 kali (delapan topik, sebagian diulang di payload RSC) |
+| `POST /guidebook` tanpa login | 303 ke `/login?returnTo=/guidebook`, tidak ada baris ditulis |
+| Login kredensial lalu `GET /guidebook` | 200, 8 kotak centang, tombolnya `aria-pressed="false"` |
+| Kirim formulir tanpa JavaScript (multipart berisi `$ACTION_ID_*`, `articleId`, `done=true`) | 200, halaman berikutnya menampilkan "1 dari 8 langkah selesai" dan `aria-pressed="true"`, barisnya ada di `guidebook_progress` |
+| Kirim ulang dengan `done=false` | barisnya terhapus, kembali 0 baris |
+| `articleId` artikel non-publik (`Kartu Transportasi Kampus`) | 303 kembali ke `/guidebook`, tidak ada baris ditulis |
+
+Formulirnya tetap bisa dipakai kalau JavaScript mati, karena action-nya dirender sebagai `<form method="POST">` dengan hidden `$ACTION_ID_*` — bukan hanya `onClick`. Yang belum diuji: tampilan ponsel dan mode gelap di browser sungguhan, dan badge "kedaluwarsa" (hanya "belum ditinjau" yang terlihat di data lokal).
+
+### Gerbang tinjauan, lantai relevansi, dan jalur degradasi (2026-10-12)
+
+Gerbangnya satu definisi: `RETRIEVABLE_ARTICLE` di `src/lib/guidebook-search.ts` (publik **dan** sudah ditinjau **dan** belum kedaluwarsa). Dipakai tiga tempat: `findGuideChunks`, `findEntityChunks`, dan pembacaan potongan dari cache di `src/lib/guide-answer.ts` — kalau gerbangnya hanya di jalur pencarian, topik yang dicabut tinjauannya masih bisa terbit lewat jawaban cache yang sudah tersimpan.
+
+Angka harness (`npx tsx --env-file=.env.local src/db/eval-guidebook.ts`, 38 pertanyaan, tanpa satu pun panggilan model):
+
+| Tahap | `pending_review` yang nol potongan | Recall@4 |
+|---|---|---|
+| Awal (pencocokan substring) | 7/26 | 6/6 = 1.000 |
+| Setelah kata utuh + lantai 2 kata | 22/26 | 6/6 = 1.000 |
+| Setelah kata dihitung per akar + lantai "3 konsep, atau 2 konsep dengan cakupan ≥50%" | **26/26** | 6/6 = 1.000 |
+
+Keluarannya exit 0 dan baris terakhir `LULUS: recall@4 >= 0.8, pending_review dan must_refuse semuanya nol potongan.` `must_refuse` 6/6 nol potongan di ketiga tahap. Empat kebocoran yang tersisa di tahap kedua bukan lagi efek substring: pertanyaannya menyerempet dua kata umum yang memang ada di satu-satunya artikel yang sudah ditinjau (transportasi), sementara artikel yang benar (profil PPIT, tempat tinggal, visa, aplikasi pembayaran) masih draf dan disaring gerbang. Setelah lantainya diperketat, keempatnya dijawab penolakan tetap sampai topik aslinya ditinjau.
+
+Harness-nya read-only: `ai_usage` / `ai_query_log` / `guide_answers` tetap 0/0/0 setelah delapan kali dijalankan berturut-turut.
+
+Jalur yang tidak butuh model diuji langsung ke database Docker lokal (script sementara, sudah dihapus):
+
+| Kasus | Hasil |
+|---|---|
+| Sakelar mati (`guide_meta.ai_enabled = false`) | `degraded: true`, alasan `ai_nonaktif`, jawabannya potongan panduan + "Asisten AI sedang dimatikan sementara oleh pengurus" |
+| Kuota habis (`ai_usage.count` sudah 15) | `degraded: true`, alasan `kuota_harian`, kutipan tetap keluar, baris kuota tidak bertambah |
+| Pertanyaan yang jawabannya sudah ada di cache | `cacheHit: true`, jawaban dari cache, kutipan dibaca dari `chunk_ids` yang tersimpan, **tanpa** menulis baris `ai_usage` |
+| Tinjauan artikel itu dicabut, cache-nya masih ada | penolakan tetap ("Belum ada panduan yang cocok…"), kutipan nol — cache tidak menerbitkan topik yang sudah dicabut |
+| Artikelnya dibuat kedaluwarsa | sama: penolakan tetap, kutipan nol |
+| Semua dikembalikan | cache jalan lagi, jawaban cache muncul utuh |
+
+Baris `ai_query_log` dari uji itu menunjukkan rantainya apa adanya: dua baris degradasi (`used_llm: false`, `chunk_ids` 3), satu cache hit, dua penolakan dengan `chunk_ids` kosong, lalu cache hit lagi. Artinya KPI "kutipan sah" (`used_llm` true tapi `chunk_ids` kosong) memang bisa dihitung dari tabel itu.
+
+Yang belum diuji di sini: panggilan Groq yang sungguhan — `api.groq.com` menjawab 403 dari mesin lokal, jadi jalur jawaban model dan penulisan cache baru hanya bisa dibuktikan di deployment (lihat entri chatbot di atas). `scripts/prewarm-guide.ts` sendiri jalan sampai selesai: 21 baris FAQ, exit 0, hasilnya `failed 4` (semuanya 403 Groq), `skipped 17`, `cached 0`. Angka "skipped" itu bukan kegagalan: topiknya belum ditinjau, jadi memang tidak boleh dijawab.
+
 ## Operations and rollback
 
 - All schema changes are additive → app rollback is safe without dropping columns.
 - AI kill switch: `guide_meta.ai_enabled = false` (no deploy).
 - Deleting a topic is destructive → requires `ConfirmButton` (`src/components/console/confirm-button.tsx`).
 - Re-ingest is always repeatable; the raw input is stored in Drive plus `guide_documents.pdf_hash`.
+- Cache prewarm, run before maba season or after a corpus bump: `npx tsx --env-file=.env.local scripts/prewarm-guide.ts`. Reads `GUIDE_FAQ` (`src/lib/guidebook-faq.ts`), one line per question with `cached` / `skipped` / `failed`; `skipped` means no retrievable chunks (the topic is unreviewed, expired, or empty) and is the expected result for drafts.
+- Quality gate after any retrieval or prompt change: `npx tsx --env-file=.env.local src/db/eval-guidebook.ts`. Exit 0 = recall@4 ≥ 0,80 with zero chunks from `pending_review` and `must_refuse` questions. It calls no model, so it is safe to run against a real database.
+- Console SOP article for pengurus lives in `src/db/seed-help-articles.ts` (slug `panduan-maba`, section "Sering Dipakai", `is_public` stays false so the chatbot can never quote it). Publish it to a database with `npx tsx --env-file=.env src/db/seed-help-articles.ts panduan-maba` — the slug argument keeps every other article untouched.
+- Quota counters live in `ai_usage` (one row per user per Asia/Shanghai day). To lift the 15/day limit, change `DAILY_QUESTION_LIMIT` in `src/lib/guide-answer.ts`; to clear today's counters, delete the rows for that day.
+- Dropping the embarrassingly-stale answers: bumping the corpus already invalidates them (`bumpCorpusVersion` on every save). `guide_answers` rows can be deleted wholesale without breaking anything — the next question rebuilds them.
 
 ## Risks and mitigations
 

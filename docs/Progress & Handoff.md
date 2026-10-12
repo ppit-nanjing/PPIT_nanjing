@@ -64,6 +64,8 @@ Layout gates on "any admin access"; each page + its server actions additionally 
 
 **Akses Help Center jadi modul `guidebook`** (2026-10-11) — halaman `/console/docs` dan aksinya berhenti memakai `isAdmin` longgar. Sekarang ada kunci modul `guidebook` yang bisa dicentang per divisi di Organization Management (BPH/pusat, keputusan issue #65), rute ekspor docx menjawab 403 untuk admin yang tidak memegangnya, tautan sidebar ikut hilang, dan topik guidebook yang baru dibuat otomatis dapat masa berlaku 6 bulan. Detail + hasil uji: [Documentation & Help Center.md](./Documentation%20&%20Help%20Center.md), [Guidebook Maba.md](./Guidebook%20Maba.md).
 
+**Panduan maba jalan penuh** (2026-10-12) — halaman publik `/guidebook` (checklist tiga fase + centang progres per akun) dan chatbot Help Center yang hanya mengutip topik yang sudah ditinjau dan belum kedaluwarsa. Satu gerbang `RETRIEVABLE_ARTICLE` dipakai jalur pencarian maupun pembacaan cache, ditambah lantai relevansi (kata utuh, minimal tiga konsep atau dua konsep dengan cakupan separuh) supaya pertanyaan di luar korpus dijawab penolakan tetap, bukan tebakan. Ada kuota 15 pertanyaan sehari per akun, cache per `corpus_version`, jalur degradasi tanpa model, sakelar `guide_meta.ai_enabled`, harness mutu 38 pertanyaan, dan artikel SOP untuk pengurus. Hasil uji: [Guidebook Maba.md](./Guidebook%20Maba.md), alur chatbot: [Documentation & Help Center.md](./Documentation%20&%20Help%20Center.md).
+
 ## Known gaps — do these next
 
 Ordered roughly by who's blocked on what.
