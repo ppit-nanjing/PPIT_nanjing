@@ -354,17 +354,22 @@ Jalur jawaban diuji di Chromium pada deployment pratinjau (`ppit-nanjing-preview
 
 ### Guidebook maba masuk korpus (2026-10-12)
 
-Lima topik pertama sudah benar-benar ada di database lokal, bukan cuma di dokumen rencana. Sumbernya markdown di `docs/guidebook/`, dipetakan per topik oleh `src/lib/guidebook-manifest.ts` (judul, bagian, fase, urutan, label sumber), lalu ditulis `src/db/ingest-guide.ts`:
+Delapan topik sudah benar-benar ada di database lokal, bukan cuma di dokumen rencana. Sumbernya markdown di `docs/guidebook/`, dipetakan per topik oleh `src/lib/guidebook-manifest.ts` (judul, bagian, fase, urutan, label sumber), lalu ditulis `src/db/ingest-guide.ts`:
 
 | Topik | Fase | Urutan | Karakter |
 |---|---|---|---|
 | Sering Dipakai - Transportasi dari Bandara ke Kampus | arrival | 5 | 1.157 |
-| Tentang PPIT - Profil PPIT Nanjing | pre-arrival | 10 | 2.664 |
+| Tentang PPIT - Profil PPIT Nanjing | pre-arrival | 10 | 4.168 |
 | Tentang Nanjing - Kota Nanjing | pre-arrival | 20 | 3.114 |
 | Sebelum Berangkat - Dokumen dan Berkas Awal Datang | pre-arrival | 30 | 2.772 |
 | Kedatangan - Visa dan Izin Tinggal | arrival | 40 | 3.220 |
+| Sering Dipakai - Aplikasi, Pembayaran, dan Kartu SIM | first-week | 50 | 3.995 |
+| Kedatangan - Tempat Tinggal: Asrama dan Kos | first-week | 60 | 3.968 |
+| Sering Dipakai - Biaya Hidup Bulan Pertama | first-month | 70 | 3.994 |
 
-Semuanya terbit (`is_public = true`), total 12.927 karakter, 23 potongan di `guide_chunks`, `corpus_version` naik dari 14 ke 19. `content` yang sudah disunting pengurus tidak ditimpa: ingest cuma memperbarui metadata dan membiarkan isinya, kecuali `--force`.
+Semuanya terbit (`is_public = true`), total 26.388 karakter, 40 potongan di `guide_chunks`, `corpus_version` naik dari 14 ke 24. Tiga topik terakhir ditulis batch kedua (2026-10-12) dari dua sumber yang sama: *China Student Starter Guide VER4* (bagian Canteens and daily meals, Core expenses, Managing your first-month budget, international vs domestic dorms) dan *A Guide to Nanjing 2026* (penyedia kartu SIM, aplikasi transportasi). Tidak ada tabel di ketiganya, dan setiap angka biaya sudah dicocokkan ulang ke baris sumbernya.
+
+`content` yang sudah disunting pengurus tidak ditimpa: ingest cuma memperbarui metadata dan membiarkan isinya, kecuali `--force`. Profil PPIT Nanjing naik dari 2.664 ke 4.168 karakter dengan cara itu, bukan lewat ingest ulang.
 
 Pencariannya diuji lewat skrip sekali-pakai terhadap database lokal, karena `api.groq.com` menolak IP mesin ini (403, sama seperti sebelumnya) sehingga langkah modelnya tidak bisa dijalankan di sini:
 
@@ -376,6 +381,10 @@ Pencariannya diuji lewat skrip sekali-pakai terhadap database lokal, karena `api
 | "where is nanjing at?" | Kota Nanjing |
 | "kartu transportasi kampus itu apa?" | Transportasi dari Bandara ke Kampus |
 | "cara perpanjang paspor bagaimana?" | Dokumen dan Berkas Awal Datang |
+| "berapa biaya hidup di Nanjing per bulan?" | Biaya Hidup Bulan Pertama |
+| "bagaimana cara isi pulsa kartu SIM?" | Aplikasi, Pembayaran, dan Kartu SIM |
+| "apakah asrama kampus dijamin untuk mahasiswa internasional?" | Tempat Tinggal: Asrama dan Kos |
+| "aplikasi apa yang dipakai untuk pesan makanan?" | Aplikasi, Pembayaran, dan Kartu SIM |
 
 Yang berubah karena ini: pertanyaan Inggris sebelumnya tidak menemukan apa pun, karena artikelnya Indonesia dan tidak ada satu kata pun yang cocok. `SYNONYMS` di `src/lib/guidebook-terms.ts` memetakan istilah Inggris ke kata yang dipakai korpus, dan `questionEntities` menangani pertanyaan yang isinya cuma nama. Artikel non-publik tetap tidak ikut: `findGuideChunks("Bagaimana cara isi ulang kartu Yikatong?")` mengembalikan 0 potongan (artikel Yikatong-nya internal).
 
