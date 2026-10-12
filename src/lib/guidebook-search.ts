@@ -47,7 +47,7 @@ import { questionEntities, searchTerms } from "./guidebook-terms";
  * Query DB sudah menjamin minimal satu istilah cocok, jadi tidak ada
  * penapisan ulang di sini.
  */
-export function rankArticles(terms: string[], rows: GuideRow[]): GuideChunk[] {
+export function rankArticles(terms: string[], rows: GuideRow[], entityTerms: string[] = []): GuideChunk[] {
   const scored = rows.map((row) => {
     const title = row.title.toLowerCase();
     const section = row.section.toLowerCase();
@@ -58,6 +58,13 @@ export function rankArticles(terms: string[], rows: GuideRow[]): GuideChunk[] {
       if (section.includes(term)) score += 2;
       const hits = content.split(term).length - 1;
       if (hits > 0) score += Math.min(hits, 3);
+    }
+    // Nama entitas ("ppit", "nanjing") tidak masuk kata kunci karena muncul di
+    // hampir semua artikel. Judul dan bagian tetap dinilai: di situ namanya
+    // memang menunjukkan topik artikelnya.
+    for (const term of entityTerms) {
+      if (title.includes(term)) score += 4;
+      if (section.includes(term)) score += 2;
     }
     return { row, score };
   });
@@ -72,6 +79,7 @@ export function rankArticles(terms: string[], rows: GuideRow[]): GuideChunk[] {
 /** Kandidat dari DB: artikel yang sudah ditandai publik dan memuat minimal satu kata kunci. */
 export async function findGuideChunks(question: string): Promise<GuideChunk[]> {
   const terms = searchTerms(question);
+  const entities = questionEntities(question);
   if (terms.length === 0) return findEntityChunks(question);
 
   const matches: SQL[] = [];
@@ -80,6 +88,15 @@ export async function findGuideChunks(question: string): Promise<GuideChunk[]> {
     matches.push(ilike(helpArticles.title, pattern));
     matches.push(ilike(helpArticles.section, pattern));
     matches.push(ilike(helpArticles.content, pattern));
+  }
+  // Entitas tetap jadi kandidat walau ada kata kunci lain: "apa bedanya PPIT
+  // dan PPIT Nanjing" hanya menyisakan kata "beda" sebagai kata kunci, padahal
+  // topiknya jelas. Isi artikel tidak dicocokkan untuk entitas - "nanjing" ada
+  // di hampir semua topik.
+  for (const entity of entities) {
+    const pattern = `%${entity}%`;
+    matches.push(ilike(helpArticles.title, pattern));
+    matches.push(ilike(helpArticles.section, pattern));
   }
 
   const rows = await db
@@ -95,6 +112,7 @@ export async function findGuideChunks(question: string): Promise<GuideChunk[]> {
   return rankArticles(
     terms,
     rows.map((row) => ({ ...row, content: row.content ?? "" })),
+    entities,
   );
 }
 
