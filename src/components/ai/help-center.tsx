@@ -34,19 +34,20 @@ function Bubble({ icon: Icon, label, open, onToggle, disabled }: BubbleProps) {
         pop: { scale: [1, 0.85, 1.12, 1], transition: { duration: 0.35, times: [0, 0.25, 0.6, 1] } },
       }}
       animate={open ? "pop" : "idle"}
-      // Hover dan tap punya spring sendiri yang cepat. Sebelumnya keduanya ikut
-      // memakai transisi pop (350 ms + `times` keyframe), jadi kursor yang
-      // berhenti di atas bola terasa menyendat.
-      whileHover={disabled ? undefined : { scale: 1.06, transition: { type: "spring", stiffness: 600, damping: 30, mass: 0.5 } }}
-      whileTap={disabled ? undefined : { scale: 0.92, transition: { type: "spring", stiffness: 700, damping: 28, mass: 0.5 } }}
-      transition={{ type: "spring", stiffness: 500, damping: 30, mass: 0.6 }}
-      className={`pointer-events-auto rounded-full p-4 shadow-lg transition-colors duration-150 will-change-transform ${
+      transition={{ duration: 0.2, ease: "easeOut" }}
+      // Hover dan tap sengaja pakai transisi CSS seperti tombol "Jelajahi
+      // Kegiatan" (MovingArrow), bukan spring Motion: transform-nya jalan di
+      // compositor, jadi tidak ikut tersendat saat main thread sibuk. Motion
+      // hanya dipakai untuk pop saat panel dibuka.
+      className={`group pointer-events-auto rounded-full p-4 shadow-lg transition-[filter,background-color] duration-200 ease-out hover:brightness-95 motion-reduce:transition-none ${
         open
           ? "bg-primary text-on-primary ring-2 ring-primary-container/50"
-          : "bg-primary-container text-on-primary hover:bg-primary"
+          : "bg-primary-container text-on-primary"
       } ${disabled ? "opacity-40 cursor-not-allowed" : ""}`}
     >
-      <Icon size={22} />
+      <span className="flex transition-transform duration-200 ease-out group-hover:scale-110 group-active:scale-90 motion-reduce:transition-none motion-reduce:group-hover:scale-100 motion-reduce:group-active:scale-100">
+        <Icon size={22} />
+      </span>
     </motion.button>
   );
 }
