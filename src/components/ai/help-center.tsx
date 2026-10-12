@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useRef, useState } from "react";
 import { useSession } from "next-auth/react";
 import { X, Bot, MessageSquarePlus } from "lucide-react";
 import { ChatbotPanel } from "@/components/ai/ai-chatbot";
@@ -21,9 +21,14 @@ export function HelpCenter({ authed }: { authed: boolean }) {
   const canChat = authed || status === "authenticated";
   const [open, setOpen] = useState(false);
   const [tab, setTab] = useState<Tab>(canChat ? "chat" : "feedback");
-  useEffect(() => {
-    if (canChat) setTab("chat");
-  }, [canChat]);
+  // Tab yang dipilih pengguna dipegang; sisanya saat widget dibuka tab mengikuti
+  // status sesi terbaru, jadi payload layout yang tertinggal guest tidak
+  // mengunci tab chat.
+  const [tabChosen, setTabChosen] = useState(false);
+  function pickTab(next: Tab) {
+    setTab(next);
+    setTabChosen(true);
+  }
   const launcherRef = useRef<HTMLButtonElement>(null);
   const panelRef = useRef<HTMLDivElement>(null);
   const panelHeaderRef = useRef<HTMLDivElement>(null);
@@ -39,7 +44,7 @@ export function HelpCenter({ authed }: { authed: boolean }) {
   });
 
   function toggle() {
-    if (!open && !canChat) setTab("feedback");
+    if (!open && !tabChosen) setTab(canChat ? "chat" : "feedback");
     setOpen((o) => !o);
   }
 
@@ -77,7 +82,7 @@ export function HelpCenter({ authed }: { authed: boolean }) {
           >
             <div className="flex items-center gap-1">
               <button
-                onClick={() => canChat && setTab("chat")}
+                onClick={() => canChat && pickTab("chat")}
                 disabled={!canChat}
                 className={`flex items-center gap-1.5 text-label-caps uppercase tracking-wide px-2 py-1 rounded-md transition-colors ${
                   tab === "chat"
@@ -88,7 +93,7 @@ export function HelpCenter({ authed }: { authed: boolean }) {
                 <Bot size={16} /> {t("help.tabChat")}
               </button>
               <button
-                onClick={() => setTab("feedback")}
+                onClick={() => pickTab("feedback")}
                 className={`flex items-center gap-1.5 text-label-caps uppercase tracking-wide px-2 py-1 rounded-md transition-colors ${
                   tab === "feedback"
                     ? "text-primary-container bg-primary-container/10"
