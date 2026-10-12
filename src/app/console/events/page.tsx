@@ -1,12 +1,13 @@
-import { sql, inArray, eq } from "drizzle-orm";
+import { sql, inArray, eq, asc } from "drizzle-orm";
 import { redirect } from "next/navigation";
 import { auth } from "@/auth";
 import { db } from "@/db";
-import { events, eventCommittee } from "@/db/schema";
+import { departments, events, eventCommittee } from "@/db/schema";
 import { setEventStatus } from "@/app/actions/admin-events";
 import { publishDueEvents } from "@/lib/publish-events";
 import { DeleteEventButton } from "@/components/console/delete-event-button";
 import { hasModuleAccess } from "@/lib/admin-scope";
+import { getScopedEventIds } from "@/lib/event-access";
 import { EVENT_STATUS_LABEL as STATUS_LABEL } from "@/lib/event-status-labels";
 import { CollapsibleSection } from "@/components/console/collapsible-section";
 import { GuideButton } from "@/components/console/guide-button";
@@ -19,33 +20,53 @@ import { ConfirmButton } from "@/components/console/confirm-button";
 export default async function ConsoleEventsPage() {
   const session = await auth();
   if (!session?.user?.id) redirect("/login");
-  // Admin modul "events" -> semua acara + bisa buat/hapus. Kalau tidak, panitia:
-  // hanya acara yang dia ikuti, tanpa tombol buat/hapus.
-  const isEventsAdmin = hasModuleAccess(session.user.adminScope ?? null, "events");
-  let committeeEventIds: string[] = [];
-  if (!isEventsAdmin) {
-    const rows = await db
-      .select({ eventId: eventCommittee.eventId })
-      .from(eventCommittee)
-      .where(eq(eventCommittee.userId, session.user.id));
-    committeeEventIds = [...new Set(rows.map((r) => r.eventId))];
-    if (committeeEventIds.length === 0) redirect("/console");
-  }
+
+  // Full admin (BPH Kabinet + Divisi Teknologi): semua acara.
+  // Pemegang modul "events" non-full: boleh MEMBUAT acara, dan hanya melihat
+  // acara yang dia buat ∪ divisinya jadi Divisi Penanggung Jawab ∪ acara tempat
+  // dia panitia (scope per-acara; lihat getScopedEventIds/getEventAccess).
+  // Panitia tanpa modul: hanya acara yang dia ikuti, tanpa tombol buat/hapus.
+  const isFullAdmin = session.user.adminScope === "full";
+  const canManageEvents = hasModuleAccess(session.user.adminScope ?? null, "events");
+
+  const committeeRows = await db
+    .select({ eventId: eventCommittee.eventId })
+    .from(eventCommittee)
+    .where(eq(eventCommittee.userId, session.user.id));
+  const committeeEventIds = [...new Set(committeeRows.map((r) => r.eventId))];
+
+  if (!canManageEvents && committeeEventIds.length === 0) redirect("/console");
+
+  const scopedIds = isFullAdmin || !canManageEvents ? [] : (await getScopedEventIds()) ?? [];
+  // Full admin = semua; pemegang modul = acara hasil scope (buat ∪ divisi PJ ∪
+  // kepanitiaan); panitia tanpa modul = acara kepanitiaannya saja.
+  const visibleEventIds: string[] | null = isFullAdmin ? null : canManageEvents ? scopedIds : committeeEventIds;
+  const scopedIdSet = new Set(scopedIds);
 
   // Kept sequential on purpose: the list below must reflect events this
   // publish just flipped to 'published'. The independent reads then run
   // concurrently in one batch.
-  if (isEventsAdmin) await publishDueEvents();
-  const [list, guide] = await Promise.all([
+  if (canManageEvents) await publishDueEvents();
+  const [list, departmentOptions, guide] = await Promise.all([
     // Postgres DESC default = NULLS FIRST, which would float unscheduled
     // ("Belum dijadwalkan") events above everything - pin them to the bottom.
-    isEventsAdmin
+    isFullAdmin
       ? db.select().from(events).orderBy(sql`${events.startAt} desc nulls last`)
-      : db
-          .select()
-          .from(events)
-          .where(inArray(events.id, committeeEventIds))
-          .orderBy(sql`${events.startAt} desc nulls last`),
+      : visibleEventIds && visibleEventIds.length > 0
+        ? db
+            .select()
+            .from(events)
+            .where(inArray(events.id, visibleEventIds))
+            .orderBy(sql`${events.startAt} desc nulls last`)
+        : Promise.resolve([] as (typeof events.$inferSelect)[]),
+    // Pilihan Divisi Penanggung Jawab di form buat acara — hanya dirender untuk
+    // yang boleh membuat acara.
+    canManageEvents
+      ? db
+          .select({ id: departments.id, name: departments.name, parentId: departments.parentDepartmentId })
+          .from(departments)
+          .orderBy(asc(departments.orderIndex))
+      : Promise.resolve([] as { id: string; name: string; parentId: string | null }[]),
     getGuide("kegiatan"),
   ]);
 
@@ -53,28 +74,36 @@ export default async function ConsoleEventsPage() {
     <div className="px-3 py-4 sm:px-6 lg:px-8 lg:py-10">
       <div className="flex flex-wrap items-start justify-between gap-3 mb-4 sm:mb-6 lg:mb-8">
         <h1 className="text-headline-md sm:text-headline-lg text-on-background">
-          {isEventsAdmin ? "Manajemen Kegiatan" : "Acara Kepanitiaan Saya"}
+          {canManageEvents ? "Manajemen Kegiatan" : "Acara Kepanitiaan Saya"}
         </h1>
         {guide && <GuideButton title={guide.title} content={guide.content} docSlug="kegiatan" />}
       </div>
 
-      {isEventsAdmin && (
+      {canManageEvents && (
         <details className="mb-6 sm:mb-8 bg-surface-container-lowest border border-outline-variant rounded-xl">
           <summary className="flex items-center gap-2 px-4 py-3 sm:px-6 sm:py-4 cursor-pointer text-label-caps text-primary-container uppercase tracking-wide">
             <Plus size={16} /> Buat Kegiatan Baru
           </summary>
-          <EventCreateForm />
+          <EventCreateForm departments={departmentOptions} />
         </details>
       )}
 
       <CollapsibleSection
         title="Daftar Kegiatan"
-        description={isEventsAdmin ? "Semua kegiatan yang dibuat." : "Acara yang kamu ikuti sebagai panitia."}
+        description={
+          isFullAdmin
+            ? "Semua acara di sistem."
+            : canManageEvents
+              ? "Acara yang kamu buat atau yang divisimu menjadi penanggung jawabnya, plus acara kepanitiaanmu."
+              : "Acara yang kamu ikuti sebagai panitia."
+        }
       >
         <div className="flex flex-col gap-2">
           {list.length === 0 && (
             <p className="text-body-md text-on-surface-variant">
-              {isEventsAdmin ? "Belum ada kegiatan dibuat." : "Kamu belum ditugaskan di acara mana pun."}
+              {canManageEvents
+                ? "Belum ada kegiatan. Buat lewat panel di atas."
+                : "Kamu belum ditugaskan di acara mana pun."}
             </p>
           )}
           {list.map((e) => (
@@ -96,7 +125,7 @@ export default async function ConsoleEventsPage() {
                   {STATUS_LABEL[e.status]}
                 </span>
               </Link>
-              {isEventsAdmin && (
+              {canManageEvents && (isFullAdmin || scopedIdSet.has(e.id)) && (
                 <div className="self-end sm:self-auto flex items-center gap-2 sm:shrink-0">
                    {e.status !== "draft" && (
                      // Unpublishing a live event is user-visible - confirm first.
@@ -112,7 +141,9 @@ export default async function ConsoleEventsPage() {
                        Jadikan Draft
                      </ConfirmButton>
                    )}
-                  <DeleteEventButton eventId={e.id} />
+                  {/* Hapus acara = kapabilitas full-admin-only (event.delete) —
+                      jangan tampilkan tombol yang pasti gagal untuk scoped admin. */}
+                  {isFullAdmin && <DeleteEventButton eventId={e.id} />}
                 </div>
               )}
             </div>

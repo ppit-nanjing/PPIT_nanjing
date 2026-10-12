@@ -23,6 +23,8 @@
 - **Manage Registrations** — lihat & kelola pendaftar, ubah status (`pending`/`confirmed`/`cancelled`), lakukan check-in manual.
 - **Akses data pendaftar** — semua panitia acara (`event.viewRegistrants`, fitur dasar) melihat daftar **ringkas**: nama, **kota asal, kampus, WeChat**, tarif, status — kota/kampus/WeChat diisi otomatis dari sensus untuk acara tanpa blok biodata (mis. Fun Hike `requiresSensus`). **Biodata lengkap + jawaban kustom + ekspor CSV** tampil untuk BPH Kabinet, Divisi Teknologi, dan **BPH Panitia acara ini** (ketua/wakil/sekretaris/SC).
 - **Pertanyaan Pendaftaran** — opsional per acara: tambah pertanyaan kustom (teks pendek/panjang, dropdown, pilihan, pilih banyak) yang muncul di form publik; kosong = form standar. Jawaban tampil di Daftar Pendaftar.
+- **Divisi Penanggung Jawab (per acara, boleh >1)** — `event_responsible_departments`; diisi dari form Buat Acara atau section di `/console/events/[id]`. Efeknya: anggota divisi itu otomatis **melihat & mengelola acara tsb** di menu Kegiatan — **selama divisinya memegang centang "Kegiatan" di Organisasi** (baris PJ menyempitkan akses pemegang modul ke acara divisinya, bukan memberi modul baru). Hanya full admin (BPH Kabinet + Divisi Teknologi) yang boleh mengubah field ini.
+- **Akses modul "Kegiatan" kini spesifik per acara** (`getEventAccess` di `src/lib/event-access.ts`): pemegang scope `events` non-full hanya tembus acara yang **dia buat** ∪ **divisinya jadi Divisi PJ** ∪ acara tempat dia panitia. Acara tanpa PJ = full admin + pembuatnya. Work Ledger ikut dibatasi (`getScopedEventIds`). `EVENT_RBAC_STRICT=true` mematikan jembatan modul sepenuhnya (hanya full admin + panitia acara).
 - **Volunteer publik** — toggle *"Buka pendaftaran volunteer"*: orang luar PPIT melamar sendiri dari halaman acara (tanpa akun). Seksi *Pendaftar Volunteer* di konsol untuk menerima/menolak — diterima = akun undangan dibuatkan otomatis + langsung ditugaskan ke divisi pilihannya.
 - **QR Check-in** — scan `EVENT_REGISTRATION.qr_code_token` di lokasi acara (`/console/events/[id]/scan`), bukan sekadar dekorasi tiket.
 - **Attendance Report** — agregat kehadiran vs pendaftaran per acara, untuk evaluasi/laporan kegiatan.
@@ -36,7 +38,7 @@ Halaman `/events/[slug]` punya dua wajah. Pemicunya: status `completed` **atau**
 - **Pra-acara**: kapasitas `X / Y` + bar + sisa slot, tombol daftar, agenda di sidebar, form volunteer.
 - **Pasca-acara**: bar kapasitas & tombol daftar hilang, diganti "Acara ini sudah selesai."; agenda sidebar disembunyikan (timeline di kolom kiri tetap sebagai arsip); muncul bagian **Dokumentasi & Materi**; dan kotak **Isi Evaluasi** menuju kuesioner pasca-acara.
 
-Yang diisi panitia lewat form Edit acara → seksi **"4 · Setelah Acara"** (scope `events`, jadi humas bisa mengisi):
+Yang diisi panitia lewat form Edit acara → seksi **"4 · Setelah Acara"** (fitur dasar semua panitia acara; pemegang modul Kegiatan yang sudah di-scope ke acara itu juga bisa):
 
 - **Jumlah Hadir (Final)** (`events.final_attendee_count`) — diketik manual, bukan dari check-in QR (acara Zoom/webinar sering tanpa pendaftaran portal). Kosong = halaman tetap memakai angka terdaftar.
 - **Rincian Kehadiran** (`events.attendance_note`) — teks bebas mis. "80 online · 40 offline".

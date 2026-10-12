@@ -1,7 +1,8 @@
-import { asc, desc, eq, sql } from "drizzle-orm";
+import { asc, desc, eq, inArray, isNull, or, sql } from "drizzle-orm";
 import { db } from "@/db";
 import { events, users, certificates } from "@/db/schema";
 import { requireModuleAccess, hasModuleAccess } from "@/lib/admin-scope";
+import { getScopedEventIds } from "@/lib/event-access";
 import { CollapsibleSection } from "@/components/console/collapsible-section";
 import { GuideButton } from "@/components/console/guide-button";
 import { getGuide } from "@/lib/guides";
@@ -29,13 +30,23 @@ export default async function WorkLedgerPage() {
   // everyone with ordinary "events" access should see proof/status here.
   const canVerifyPayments = hasModuleAccess(session.user.adminScope, "organization");
 
+  // Akses modul Kegiatan kini spesifik per acara: pemegang scope "events"
+  // non-full hanya melihat acara yang dia buat / divisinya jadi PJ. Work Ledger
+  // ikut dibatasi supaya tidak jadi jalan pintas lintas-acara.
+  const scopedEventIds = await getScopedEventIds();
+  const eventListQuery = db
+    .select({ id: events.id, title: events.title, startAt: events.startAt })
+    .from(events)
+    // NULLS LAST keeps unscheduled events from crowding the dropdown top.
+    .orderBy(sql`${events.startAt} desc nulls last`);
+
   const [ledger, eventList, userList, payments, certRows] = await Promise.all([
     getWorkLedger(),
-    db
-      .select({ id: events.id, title: events.title, startAt: events.startAt })
-      .from(events)
-      // NULLS LAST keeps unscheduled events from crowding the dropdown top.
-      .orderBy(sql`${events.startAt} desc nulls last`),
+    scopedEventIds === null
+      ? eventListQuery
+      : scopedEventIds.length > 0
+        ? eventListQuery.where(inArray(events.id, scopedEventIds))
+        : Promise.resolve([] as { id: string; title: string; startAt: Date | null }[]),
     db.select({ id: users.id, name: users.name, email: users.email }).from(users).orderBy(asc(users.name)),
     canVerifyPayments ? listPendingPayments() : Promise.resolve([]),
     db
@@ -51,6 +62,13 @@ export default async function WorkLedgerPage() {
       .from(certificates)
       .leftJoin(users, eq(certificates.userId, users.id))
       .leftJoin(events, eq(certificates.eventId, events.id))
+      // Sertifikat tanpa acara (lama/manual) tetap tampil; yang terikat acara
+      // dibatasi ke acara yang boleh dilihat.
+      .where(
+        scopedEventIds === null
+          ? undefined
+          : or(isNull(certificates.eventId), inArray(certificates.eventId, scopedEventIds)),
+      )
       .orderBy(desc(certificates.issuedAt)),
   ]);
 

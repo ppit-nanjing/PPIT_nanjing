@@ -155,6 +155,26 @@ export async function createEvent(_prev: EventFormState, formData: FormData): Pr
     })
     .returning();
 
+  // Divisi Penanggung Jawab (opsional dari form buat acara). Divalidasi ke
+  // tabel departments supaya id karangan tidak jadi FK error; baris PJ-lah yang
+  // memberi divisi itu akses otomatis ke acara ini (event-access.ts).
+  const requestedDeptIds = formData
+    .getAll("departmentId")
+    .map((v) => String(v))
+    .filter((v) => UUID_RE.test(v));
+  if (requestedDeptIds.length > 0) {
+    const validDepts = await db
+      .select({ id: departments.id })
+      .from(departments)
+      .where(inArray(departments.id, requestedDeptIds));
+    if (validDepts.length > 0) {
+      await db
+        .insert(eventResponsibleDepartments)
+        .values(validDepts.map((d) => ({ eventId: created.id, departmentId: d.id })))
+        .onConflictDoNothing();
+    }
+  }
+
   redirect(`/console/events/${created.id}`);
 }
 
@@ -905,9 +925,17 @@ export async function deleteEvent(eventId: string) {
 // Divisi kabinet penanggung jawab acara (proker). Satu acara biasanya milik satu
 // divisi; proker gabungan boleh lebih dari satu. Menyentuh tabel terpisah
 // (event_responsible_departments) — events.department_id lama dibiarkan.
+//
+// HANYA full admin (BPH Kabinet + Divisi Teknologi): kolom ini yang menentukan
+// siapa yang mendapat akses ke acara (event-access.ts), jadi tidak boleh
+// diubah oleh pemegang jembatan modul yang justru diatur olehnya.
 export async function setEventResponsibleDepartments(formData: FormData) {
+  const session = await auth();
+  if (!session?.user?.id) redirect("/login");
+  if (session.user.adminScope !== "full") {
+    throw new Error("Hanya BPH Kabinet/Divisi Teknologi yang bisa mengubah Divisi Penanggung Jawab.");
+  }
   const eventId = String(formData.get("eventId") ?? "");
-  const { session } = await requireEventCapability(eventId, "event.editInfo");
   if (!UUID_RE.test(eventId)) redirect("/console/events");
   const [eventExists] = await db.select({ id: events.id }).from(events).where(eq(events.id, eventId));
   if (!eventExists) redirect("/console/events");
