@@ -109,7 +109,7 @@ Tugaskan Panitia
 Menugaskan orang yang sama di acara yang sama cuma mengganti perannya, tidak bikin baris dobel.
 
 Beban Kepanitiaan
-Daftar baca-saja. Yang sudah jadi panitia di 3 acara atau lebih ditandai peringatan (bukan larangan, cuma pengingat beban). Tombol "Lepas" hanya melepas satu penugasan itu.
+Daftar baca-saja. Hitungan dan peringatan beban (3 acara atau lebih) hanya dihitung dari kepanitiaan AKTIF — acara yang sudah selesai/dibatalkan atau tanggal mulainya sudah lewat ditandai "Selesai" dan tidak menambah beban, tapi tetap tampil sebagai riwayat. Tombol "Lepas" hanya melepas satu penugasan itu.
 
 Verifikasi Pembayaran
 Bagian ini hanya terlihat oleh akun ber-scope ORGANISASI — catatan finansial sengaja tidak dibuka ke semua admin acara, jadi bendahara acara harus punya scope itu dulu. Daftar di sini cuma penunjuk lintas-acara; verifikasi sesungguhnya ada di halaman detail Kegiatannya (konteks biaya + kolom catatan ada di sana). Sebelum menekan Terverifikasi, cocokkan nominal, nama pengirim, dan waktu transfer dengan mutasi Alipay/rekening — bukti diunggah sendiri oleh peserta, belum tentu benar.
