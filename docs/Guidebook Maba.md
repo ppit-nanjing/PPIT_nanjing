@@ -455,6 +455,20 @@ Baris `ai_query_log` dari uji itu menunjukkan rantainya apa adanya: dua baris de
 
 Yang belum diuji di sini: panggilan Groq yang sungguhan — `api.groq.com` menjawab 403 dari mesin lokal, jadi jalur jawaban model dan penulisan cache baru hanya bisa dibuktikan di deployment (lihat entri chatbot di atas). `scripts/prewarm-guide.ts` sendiri jalan sampai selesai: 21 baris FAQ, exit 0, hasilnya `failed 4` (semuanya 403 Groq), `skipped 17`, `cached 0`. Angka "skipped" itu bukan kegagalan: topiknya belum ditinjau, jadi memang tidak boleh dijawab.
 
+### Markdown yang tadinya tampil mentah (2026-10-12)
+
+Halaman artikel publik `/help/[slug]` memecah isi artikel per baris kosong, jadi `**Tentang PPIT…**`, `##` judul, dan `-` daftar terlihat apa adanya di halaman yang dibaca maba — dan hal yang sama terjadi di halaman baca console serta modal "panduan" yang dipakai pengurus di setiap modul. Isi artikel memang markdown sejak awal (lihat `src/components/console/markdown-editor.tsx`, tab Pratinjau), hanya halaman bacanya yang belum memakai renderer itu.
+
+Sekarang ketiganya memakai `renderMarkdownLite` (`src/lib/markdown-lite.tsx`), renderer yang sama dengan tab Pratinjau editor:
+
+| Permukaan | Sebelum | Sesudah |
+|---|---|---|
+| `/help/[slug]` publik | dipecah per baris kosong | markdown dirender |
+| `/console/docs/[slug]` | `<p>` dengan `whitespace-pre-wrap` | markdown dirender, `whitespace-pre-wrap` tetap supaya baris baru di dalam paragraf tidak hilang |
+| Modal `GuideButton` di halaman modul console | teks apa adanya | markdown dirender, `whitespace-pre-wrap` tetap dengan alasan yang sama |
+
+Diuji lewat HTTP ke `npm run dev` di port 3100 atas lima artikel guidebook yang publik: tidak ada lagi `**`, `##`, `](`, atau `|---` di dalam `<article>`; yang muncul `<h2>` 4-7, `<li>` 3-17, `<strong>` 0-2 per artikel. Teks yang dilaporkan pengurus (`**Tentang PPIT - Profil PPIT Nanjing** PPIT (Perhimpunan…)`) dirender jadi satu paragraf dengan `<strong>` di depan, termasuk tanda hubung non-standar `awal‑nya` yang terbawa dari PDF. Halaman console dicek dengan sesi admin sementara (kata sandinya dikembalikan setelah uji): blok isi artikel 5.439 byte, nol penanda markdown yang tersisa.
+
 ## Operations and rollback
 
 - All schema changes are additive → app rollback is safe without dropping columns.

@@ -9,6 +9,7 @@ import { ArrowLeft } from "lucide-react";
 import Link from "next/link";
 import { getT } from "@/lib/i18n/server";
 import { INTL_LOCALE } from "@/lib/i18n/config";
+import { renderMarkdownLite } from "@/lib/markdown-lite";
 
 export default async function HelpArticleDetailPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
@@ -23,10 +24,10 @@ export default async function HelpArticleDetailPage({ params }: { params: Promis
     .where(and(eq(helpArticles.slug, slug), eq(helpArticles.isPublic, true)));
   if (!article) notFound();
 
-  const paragraphs = (article.content ?? "")
-    .split(/\n{2,}/)
-    .map((p) => p.trim())
-    .filter(Boolean);
+  // Isi artikel itu markdown (lihat src/lib/markdown-lite.tsx). Dulu halaman ini
+  // memecahnya per baris kosong, jadi **tebal**, ## judul, dan - daftar tampil
+  // apa adanya di halaman publik.
+  const content = article.content ?? "";
 
   return (
     <div className="min-h-screen bg-background text-on-background">
@@ -54,11 +55,7 @@ export default async function HelpArticleDetailPage({ params }: { params: Promis
         </p>
 
         <article lang={locale} className="flex flex-col gap-5 text-body-lg text-on-surface-variant leading-relaxed text-pretty">
-          {paragraphs.length > 0 ? (
-            paragraphs.map((p, i) => <p key={i}>{p}</p>)
-          ) : (
-            <p>{t("help.noContent")}</p>
-          )}
+          {content.trim() ? renderMarkdownLite(content) : <p>{t("help.noContent")}</p>}
         </article>
       </main>
 

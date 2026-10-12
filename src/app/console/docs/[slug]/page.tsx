@@ -10,6 +10,7 @@ import { ConfirmButton } from "@/components/console/confirm-button";
 import { PrintButton } from "@/components/console/print-button";
 import { StatusRow } from "@/components/console/status-row";
 import { ghostBtn } from "@/components/console/form";
+import { renderMarkdownLite } from "@/lib/markdown-lite";
 import { CHUNKER_VERSION } from "@/lib/guide-chunker";
 import { articleSignatureSql, expiryStatus, guidePhaseLabel } from "@/lib/guidebook-topic";
 import { requireModuleAccess } from "@/lib/admin-scope";
@@ -96,7 +97,10 @@ export default async function HelpArticlePage({ params }: { params: Promise<{ sl
       </p>
 
       {article.content && (
-        <p className="text-body-lg text-on-surface-variant whitespace-pre-wrap mb-10">{article.content}</p>
+        // whitespace-pre-wrap dipertahankan seperti sebelumnya: baris baru di
+        // dalam satu paragraf tetap terlihat di sini, walau markdown-nya kini
+        // dirender (blok heading/daftar/tabel tetap dapat bentuknya).
+        <div className="text-body-lg text-on-surface-variant whitespace-pre-wrap mb-10">{renderMarkdownLite(article.content)}</div>
       )}
 
       {/* print:hidden - Fase 2: dua sumber (Word/PDF) diturunkan dari artikel
