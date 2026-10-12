@@ -1,4 +1,4 @@
-import { and, count, desc, eq, isNull, sql } from "drizzle-orm";
+import { and, count, desc, eq, isNotNull, isNull, notInArray, sql } from "drizzle-orm";
 import { db } from "@/db";
 import { events, formApplications, forms } from "@/db/schema";
 import { FormCreate } from "@/components/console/forms/form-create";
@@ -20,8 +20,21 @@ export default async function FormsOprekBphPage({
     db
       .select({ id: events.id, title: events.title, status: events.status })
       .from(events)
-      // Acara di Sampah tidak bisa dipilih lagi (form Oprek-nya ikut mati).
-      .where(isNull(events.deletedAt))
+      .where(
+        and(
+          // Acara di Sampah tidak bisa dipilih lagi (form Oprek-nya ikut mati).
+          isNull(events.deletedAt),
+          // Satu acara = satu form Oprek BPH: acara yang sudah punya form
+          // tidak muncul lagi (hapus form lamanya kalau mau mengulang).
+          notInArray(
+            events.id,
+            db
+              .select({ eventId: forms.eventId })
+              .from(forms)
+              .where(and(eq(forms.kind, "oprek_bph_acara"), isNotNull(forms.eventId))),
+          ),
+        ),
+      )
       .orderBy(sql`${events.startAt} desc nulls last`),
     db
       .select({

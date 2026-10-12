@@ -7,6 +7,8 @@ const ERROR_TEXT: Record<string, string> = {
   title: "Judul wajib diisi.",
   event: "Pilih acara dulu.",
   roles: "Pilih minimal satu posisi BPH Acara yang dibuka.",
+  exists:
+    "Acara ini sudah punya formulir untuk jenis ini. Buka formulir yang sudah ada, atau hapus dulu kalau memang mau membuat ulang.",
 };
 
 const PLACEHOLDER: Record<FormKind, string> = {
@@ -51,18 +53,25 @@ export function FormCreate({
 
         <TextField name="title" label="Judul formulir" required placeholder={PLACEHOLDER[kind]} />
 
-        {events && (
-          <SelectField
-            name="eventId"
-            label="Acara"
-            required
-            placeholder="Pilih acara"
-            options={events.map((e) => ({
-              value: e.id,
-              label: e.status === "completed" || e.status === "cancelled" ? `${e.title} (selesai)` : e.title,
-            }))}
-          />
-        )}
+        {events &&
+          (events.length > 0 ? (
+            <SelectField
+              name="eventId"
+              label="Acara"
+              required
+              placeholder="Pilih acara"
+              options={events.map((e) => ({
+                value: e.id,
+                label: e.status === "completed" || e.status === "cancelled" ? `${e.title} (selesai)` : e.title,
+              }))}
+            />
+          ) : (
+            <p className="text-body-md text-on-surface-variant bg-surface-container-low rounded-md px-4 py-3">
+              Tidak ada acara yang bisa dipilih: acara yang bisa kamu kelola sudah punya formulir{" "}
+              {FORM_KIND_LABEL[kind]}, atau kamu belum punya acara yang bisa dikelola. Buka formulir yang ada di daftar
+              bawah, atau hapus dulu formulir lamanya kalau memang mau membuat ulang.
+            </p>
+          ))}
 
         {kind === "oprek_bph_acara" && (
           <fieldset className="flex flex-col gap-2">
@@ -85,9 +94,11 @@ export function FormCreate({
           </fieldset>
         )}
 
-        <SubmitButton className="self-start bg-primary-container text-on-primary text-label-caps uppercase tracking-wide px-6 py-2.5 rounded-md hover:bg-primary transition-colors disabled:opacity-60">
-          Buat Formulir
-        </SubmitButton>
+        {(!events || events.length > 0) && (
+          <SubmitButton className="self-start bg-primary-container text-on-primary text-label-caps uppercase tracking-wide px-6 py-2.5 rounded-md hover:bg-primary transition-colors disabled:opacity-60">
+            Buat Formulir
+          </SubmitButton>
+        )}
       </form>
     </div>
   );

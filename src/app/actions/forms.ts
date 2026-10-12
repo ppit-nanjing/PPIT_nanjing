@@ -1,6 +1,6 @@
 "use server";
 
-import { and, asc, eq, inArray, ne } from "drizzle-orm";
+import { and, asc, eq, inArray, isNull, ne } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { notFound, redirect } from "next/navigation";
 import { auth } from "@/auth";
@@ -17,6 +17,7 @@ import {
   users,
 } from "@/db/schema";
 import { parseChinaLocalInput } from "@/lib/datetime";
+import { isUniqueViolation } from "@/lib/db-errors";
 import { sendEmail } from "@/lib/email";
 import { getTemplateDef, renderTemplate, type NotificationTemplateKey } from "@/lib/notification-templates";
 import { createTemplatedNotification } from "@/lib/notifications";
@@ -81,9 +82,14 @@ export async function createForm(formData: FormData) {
   if (kind !== "pemilu") {
     eventId = String(formData.get("eventId") ?? "").trim() || null;
     if (!eventId || !UUID_RE.test(eventId)) redirect(`${back}?error=event`);
-    const [event] = await db.select({ id: events.id }).from(events).where(eq(events.id, eventId));
+    // Acara harus ada dan tidak sedang di Sampah (form-nya ikut mati di sana).
+    const [event] = await db
+      .select({ id: events.id })
+      .from(events)
+      .where(and(eq(events.id, eventId), isNull(events.deletedAt)));
     if (!event) redirect(`${back}?error=event`);
     // Oprek Kepanitiaan hanya untuk acara tempat dia BPH Acara (kecuali full/modul).
+    // Dicek SEBELUM cek duplikat supaya tidak bocor keberadaan form acara lain.
     if (
       kind === "oprek_kepanitiaan" &&
       !access.isFull &&
@@ -92,6 +98,14 @@ export async function createForm(formData: FormData) {
     ) {
       redirect("/console/forms");
     }
+    // Satu acara = satu form Oprek BPH dan satu form Oprek Kepanitiaan (alur:
+    // BPH dulu → kepanitiaan). Cegah form dobel untuk acara yang sama; index
+    // unik parsial di DB (migrasi 0050) menjaga balapan POST bersamaan.
+    const [duplicate] = await db
+      .select({ id: forms.id })
+      .from(forms)
+      .where(and(eq(forms.kind, kind), eq(forms.eventId, eventId)));
+    if (duplicate) redirect(`${back}?error=exists`);
   }
 
   const bphRoles =
@@ -103,14 +117,23 @@ export async function createForm(formData: FormData) {
       : [];
   if (kind === "oprek_bph_acara" && bphRoles.length === 0) redirect(`${back}?error=roles`);
 
-  const [created] = await db
-    .insert(forms)
-    .values({ kind, eventId, title, bphRoles, createdBy: access.userId })
-    .returning({ id: forms.id });
+  let createdId: string;
+  try {
+    const [created] = await db
+      .insert(forms)
+      .values({ kind, eventId, title, bphRoles, createdBy: access.userId })
+      .returning({ id: forms.id });
+    createdId = created.id;
+  } catch (err) {
+    // Balapan dua POST bersamaan untuk acara yang sama: index unik parsial
+    // (kind, event_id) yang menangkap — balas dengan pesan yang sama.
+    if (isUniqueViolation(err)) redirect(`${back}?error=exists`);
+    throw err;
+  }
 
   revalidatePath("/console/forms");
   revalidatePath(back);
-  redirect(`/console/forms/${created.id}`);
+  redirect(`/console/forms/${createdId}`);
 }
 
 export async function updateFormSettings(formData: FormData) {
