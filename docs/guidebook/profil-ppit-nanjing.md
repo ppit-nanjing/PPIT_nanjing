@@ -6,6 +6,17 @@ Organisasi ini dibentuk pada 28 Oktober 2008, bertepatan dengan hari Sumpah Pemu
 
 Sifat organisasinya disebutkan terbuka, berlandaskan semangat persaudaraan dan nasionalisme. PPIT Cabang Nanjing tidak memihak dan tidak terikat pada organisasi politik mana pun, berorientasi pada kerja sosial, dan tidak mengutamakan perolehan keuntungan. Organisasi ini juga berupaya meningkatkan kapasitas keilmuan dan potensi anggotanya.
 
+## PPIT pusat dan cabang lain
+
+PPIT Cabang Nanjing bukan kantor pusat. PPIT (Perhimpunan Pelajar Indonesia Tiongkok) adalah organisasi tingkat Tiongkok yang terpisah, dengan pengurus, sekretariat, dan programnya sendiri; Nanjing adalah salah satu cabangnya. Urusan tingkat Tiongkok (surat menyurat pusat, program nasional, data cabang lain) jangan dialamatkan ke PPIT Nanjing.
+
+- Situs resmi PPIT: <https://www.ppitiongkok.com/>.
+- Direktori cabang: buka situs PPIT lalu tekan tombol **View All Branches**. Di situ ada daftar cabang per provinsi dan kota beserta kontak dan media sosial tiap cabang.
+- Media sosial PPIT (pusat, bukan kanal cabang): [Instagram @ppitiongkok](https://www.instagram.com/ppitiongkok/), [X @ppi_tiongkok](https://x.com/ppi_tiongkok), [Facebook](https://www.facebook.com/PerhimpunanPelajarIndonesiaTiongkok), dan [YouTube @PPITiongkok](https://www.youtube.com/@PPITiongkok).
+- Media sosial tiap cabang, termasuk Nanjing, ada di direktori cabang (tombol **View All Branches**), bukan di daftar kanal pusat di atas.
+- Kontak cabang Nanjing yang dicantumkan di direktori PPIT: ppitnanjing.partnership@gmail.com (Sekretaris Eksternal).
+- Alamat situs tiap cabang memakai pola `https://www.<nama-cabang>.ppitiongkok.com`. Subdomain cabang sedang disiapkan; selama belum aktif, pakai direktori cabang di situs PPIT.
+
 ## Siapa yang dinaungi
 
 Saat buku panduan disusun, PPIT Cabang Nanjing mewadahi lebih dari 600 pelajar dan mahasiswa Indonesia yang tersebar di seluruh Kota Nanjing.
@@ -25,6 +36,6 @@ Isi buku panduan meliputi profil singkat PPIT Cabang Nanjing, informasi transpor
 
 ## Bagaimana menghubungi PPIT Nanjing
 
-Sumber yang dipakai untuk artikel ini tidak mencantumkan kanal kontak resmi PPIT Nanjing, seperti WeChat, Instagram, atau email organisasi. Yang tercantum di bagian "Nomor Penting" hanya nomor darurat dan kontak perwakilan RI: Polisi 110, Pemadam Kebakaran 119, Kecelakaan Lalu Lintas 122, Pertolongan Pertama 120, KBRI (86-10) 6532-5486 dan 6532-5488, serta KJRI Shanghai (86-21) 52402321 dan 32516022.
+Sumber yang dipakai untuk artikel ini tidak mencantumkan kanal kontak resmi PPIT Nanjing, seperti WeChat, Instagram, atau email organisasi. Untuk urusan cabang, pakai kontak yang dipublikasikan PPIT di bagian "PPIT pusat dan cabang lain"; untuk urusan tingkat Tiongkok, pakai kanal PPIT di situs resminya. Yang tercantum di bagian "Nomor Penting" hanya nomor darurat dan kontak perwakilan RI: Polisi 110, Pemadam Kebakaran 119, Kecelakaan Lalu Lintas 122, Pertolongan Pertama 120, KBRI (86-10) 6532-5486 dan 6532-5488, serta KJRI Shanghai (86-21) 52402321 dan 32516022.
 
 Jalur yang jelas ada di sumber adalah ranting kampus, yaitu INA di NUIST dan JIA di JSAHVC. Konfirmasi ke pengurus sebelum dipakai.
