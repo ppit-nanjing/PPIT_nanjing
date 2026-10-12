@@ -12,7 +12,7 @@ S1 bertemu **Line 1 dan Line 3** di 南京南站 Nanjing South Railway Station, 
 
 ## Sampai ke Kampus
 
-Kampus-kampus di Nanjing tersebar di beberapa kawasan, misalnya Jiangning, Xianlin, dan Gulou, dan rute metronya berbeda-beda. Pakai 百度地图 Baidu Maps untuk rute pintu ke pintu, lalu tanyakan rute yang biasa dipakai mahasiswa ke pengurus kampusmu.
+Kampus-kampus di Nanjing tersebar di beberapa kawasan, misalnya Jiangning, Xianlin, dan Gulou, dan rute metronya berbeda-beda. Pakai 高德地图 AMap (Gaode Maps) untuk rute pintu ke pintu, lalu tanyakan rute yang biasa dipakai mahasiswa ke pengurus kampusmu.
 
 Untuk perjalanan pertama, metro lebih mudah diikuti daripada bus: nomor jalurnya jelas, dan nama stasiun tertulis dalam aksara Tionghoa dan pinyin.
 

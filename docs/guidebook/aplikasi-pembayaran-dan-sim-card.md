@@ -12,7 +12,7 @@ Jangan pasang semua aplikasi sekaligus. Urutan yang praktis: aplikasi pesan, pem
 
 Untuk chat dan pembayaran ada 微信 Wechat dan 支付宝 Alipay. Wechat dan QQ kadang minta verifikasi kode QR tambahan saat pendaftaran dengan nomor asing atau pemulihan akun, jadi mahasiswa biasanya minta bantuan teman yang sudah di Tiongkok.
 
-Peta dan transportasi: 百度地图 Baidu Map, 地铁通 Metroman yang mendukung bahasa Inggris, 高德地图 AMap, dan 弟弟出行 Didi Taxi untuk kedatangan malam atau bawaan banyak.
+Peta dan transportasi: 地铁通 Metroman yang mendukung bahasa Inggris, 高德地图 AMap, dan 弟弟出行 Didi Taxi untuk kedatangan malam atau bawaan banyak.
 
 Belanja: 淘宝 Taobao, 拼多多 Pinduoduo untuk pilihan murah dari penjual tepercaya, 闲鱼 Xianyu untuk barang bekas, dan 1688. Pesan makanan pakai 美团 Meituan (外卖).
 
