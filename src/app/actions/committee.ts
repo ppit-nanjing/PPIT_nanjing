@@ -225,6 +225,8 @@ export async function getWorkLedger() {
       eventId: events.id,
       eventTitle: events.title,
       eventStartAt: events.startAt,
+      eventEndAt: events.endAt,
+      eventStatus: events.status,
       role: eventCommittee.role,
       note: eventCommittee.note,
     })
