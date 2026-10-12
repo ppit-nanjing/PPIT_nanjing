@@ -386,6 +386,8 @@ Pencariannya diuji lewat skrip sekali-pakai terhadap database lokal, karena `api
 | "apakah asrama kampus dijamin untuk mahasiswa internasional?" | Tempat Tinggal: Asrama dan Kos |
 | "aplikasi apa yang dipakai untuk pesan makanan?" | Aplikasi, Pembayaran, dan Kartu SIM |
 
+Halaman publiknya juga dicek di deployment pratinjau: `/help` sudah memuat ketiga judul baru, dan `/help/biaya-hidup-bulan-pertama`, `/help/tempat-tinggal-asrama-dan-kos`, `/help/aplikasi-pembayaran-dan-sim-card` menjawab 200 dengan isi yang benar ("Perkiraan total bulan pertama", 转接头, "Top-up Credit"). Langkah model tidak diuji ulang di sini: alasan Groq 403 masih sama, dan Chromium di mesin ini gagal start karena `libnss3` tidak ada. Yang belum diverifikasi: jawaban model sesungguhnya untuk topik baru di deployment, satu pertanyaan lewat chat setelah login.
+
 Yang berubah karena ini: pertanyaan Inggris sebelumnya tidak menemukan apa pun, karena artikelnya Indonesia dan tidak ada satu kata pun yang cocok. `SYNONYMS` di `src/lib/guidebook-terms.ts` memetakan istilah Inggris ke kata yang dipakai korpus, dan `questionEntities` menangani pertanyaan yang isinya cuma nama. Artikel non-publik tetap tidak ikut: `findGuideChunks("Bagaimana cara isi ulang kartu Yikatong?")` mengembalikan 0 potongan (artikel Yikatong-nya internal).
 
 `npm run check:guidebook` 31/31 hijau. Tujuh pemeriksaan barunya soal kata kunci, bukan chunker: pertanyaan Inggris dapat istilah Indonesia, sinonim tidak menendang kata asli, kata fungsi Inggris dibuang, jumlah kata kunci dibatasi, pertanyaan entitas tidak menyisakan kata kunci, entitasnya tetap dikenali untuk pencarian cadangan, dan sapaan tidak jadi kata kunci. Harness ini jalan tanpa database karena logikanya dipisah ke `src/lib/guidebook-terms.ts`.
