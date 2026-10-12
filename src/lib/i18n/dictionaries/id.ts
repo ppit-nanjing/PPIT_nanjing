@@ -1215,7 +1215,6 @@ export const id = {
   "submissions.status.offered": "Ditawari",
 
   // Help centre: AI assistant + feedback (floating widget)
-  "help.launcherAria": "Bantuan & Masukan",
   "help.tabChat": "Asisten AI",
   "help.tabFeedback": "Masukan",
   "chat.greeting": "Halo! Saya asisten PPIT Nanjing. Tanya apa saja seputar kegiatan, cara bergabung, atau kehidupan mahasiswa Indonesia di Nanjing. Saya juga bisa membantu mengubah data profilmu.",

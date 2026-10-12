@@ -1212,7 +1212,6 @@ export const en = {
   "submissions.status.offered": "Offered",
 
   // Help centre: AI assistant + feedback (floating widget)
-  "help.launcherAria": "Help & Feedback",
   "help.tabChat": "AI Assistant",
   "help.tabFeedback": "Feedback",
   "chat.greeting": "Hi! I'm the PPIT Nanjing assistant. Ask me anything about our events, how to join, or student life in Nanjing. I can also help you update your profile.",

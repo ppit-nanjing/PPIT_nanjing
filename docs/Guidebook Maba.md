@@ -350,7 +350,7 @@ Jalur jawaban diuji di Chromium pada deployment pratinjau (`ppit-nanjing-preview
 - Pertanyaan Inggris yang tidak punya sumber ("How much does a residence permit renewal cost this year?") dijawab menolak dengan sopan dan mengarahkan ke pengurus, dalam Bahasa Inggris; tidak ada angka yang dikarang.
 - Tidak ada error di console browser. Kunci Groq di mesin lokal menjawab 403 di `api.groq.com`, jadi uji bahasa memang hanya bisa jalan di deployment.
 - Filter artikel non-publik diuji terpisah terhadap database lokal: `findGuideChunks("Bagaimana cara isi ulang kartu Yikatong?")` mengembalikan 0 potongan, padahal artikel "Kartu Transportasi" (non-publik, satu-satunya yang menyebut Yikatong) ada di tabel yang sama. Tidak ada judul atau isi artikel non-publik yang masuk konteks.
-- Sesi setelah login lewat form sekarang langsung terpakai tanpa muat ulang: alamat beranda menampilkan "Admin Lokal" dan tab chat Help Center sudah aktif pada render pertama; tab masukan baru muncul kalau pengguna memang anonim.
+- Sesi setelah login lewat form sekarang langsung terpakai tanpa muat ulang: alamat beranda menampilkan "Admin Lokal" dan bola Asisten AI sudah bisa diklik pada render pertama, sementara bagi pengguna anonim bola itu redup (`disabled`) dan hanya bola Masukan yang aktif.
 
 ## Operations and rollback
 

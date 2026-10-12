@@ -62,11 +62,13 @@ Teks untuk artikel Help Center pengurus (tulis di `/console/docs/new`, nyalakan 
 
 ## Chatbot Help Center: jawaban hanya dari artikel publik
 
-Widget di `src/components/ai/help-center.tsx` (dipasang global di `src/app/layout.tsx`, tab chat hanya untuk yang login) sekarang **tidak menjawab dari pengetahuan umum model**. Alurnya:
+Widget di `src/components/ai/help-center.tsx` (dipasang global di `src/app/layout.tsx`, bola chat hanya untuk yang login) sekarang **tidak menjawab dari pengetahuan umum model**. Alurnya:
 
 1. `chatWithAIAction` (`src/app/actions/ai.ts`) mengambil pertanyaan terakhir.
 2. `findGuideChunks` (`src/lib/guidebook-search.ts`) mencari artikel bantuan dengan **`is_public = true`** saja — pencarian leksikal: potongan kata kunci lewat `ILIKE` (kata asli + bentuk tanpa imbuhan, kata fungsi/sapaan dibuang), lalu skor di JS (judul ×4, bagian ×2, isi maks 3). Tanpa embedding: korpusnya masih puluhan artikel, jadi pencarian vektor hanya menambah vendor dan satu titik gagal baru.
 3. Potongan teratas (maks 4 artikel, ±7.000 karakter) masuk ke system prompt sebagai **satu-satunya sumber**; model dilarang menambah fakta, angka, biaya, atau tenggat dari luar sumber, dan diminta menyebut judul panduannya. Tidak ada yang cocok → model menjawab belum ada panduannya dan mengarahkan ke pengurus.
+
+Tampilannya sejak 2026-10-12 dua bola terpisah di sudut kanan bawah — **Asisten AI** dan **Masukan** — masing-masing membuka panelnya sendiri, dan hanya satu panel yang bisa terbuka sekaligus. Tombolnya tetap terlihat saat panelnya terbuka (klik lagi untuk menutup), bisa digeser, dan posisinya disimpan per perangkat di `localStorage` (`ppitn_help_launcher`, `ppitn_help_panel`, `ppitn_feedback_launcher`, `ppitn_feedback_panel`). Buka/tutup panel dianimasikan Motion lewat `AnimatePresence`, dan `MotionConfig reducedMotion="user"` di `src/components/providers.tsx` mematikan gerak itu kalau pengguna memintanya. Sebelumnya keduanya berbagi satu bola dengan dua tab.
 
 **Bahasa jawaban mengikuti bahasa pertanyaan.** Pertanyaan Bahasa Inggris dijawab Bahasa Inggris, Bahasa Indonesia dijawab Bahasa Indonesia, sapaan campur dijawab Bahasa Indonesia. Judul panduan tetap dikutip apa adanya supaya sumbernya masih bisa ditelusuri. Sampai 2026-10-12 prompt-nya mengunci "Balas ramah dan ringkas dalam Bahasa Indonesia", jadi anggota yang bertanya Bahasa Inggris tetap dibalas Indonesia meskipun UI-nya sedang Bahasa Inggris.
 
