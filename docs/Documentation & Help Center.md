@@ -79,7 +79,15 @@ Konsekuensi untuk pengurus:
 
 Sudah diuji langsung (2026-10-11, `findGuideChunks` dipanggil dari skrip sekali-pakai terhadap database Docker lokal): pertanyaan yang cocok dengan artikel publik mengembalikan artikel itu, istilah yang hanya ada di artikel non-publik mengembalikan daftar kosong, pertanyaan yang tidak nyambung juga kosong, dan konteks yang dikirim ke model tidak pernah memuat artikel internal.
 
-Jawaban akhir dari model belum pernah terlihat. Kuncinya sudah dipasang di `.env.local`, tapi dari jaringan mesin ini `api.groq.com` menolak semua permintaan dengan `403 {"error":{"message":"Forbidden"}}` — sama persis saat tanpa kunci sama sekali, jadi yang diblokir IP-nya, bukan kuncinya. Yang tetap bisa dibuktikan dari sini: aksi chatbot jalan sampai `groqChat`, dan prompt sistem yang disusunnya sudah benar — untuk pertanyaan yang cocok, isi artikel publik ikut terkirim sementara isi artikel non-publik tidak; untuk pertanyaan yang tidak cocok, prompt dikirim tanpa bagian panduan sama sekali, jadi instruksi "belum punya panduannya, arahkan ke pengurus" yang berlaku.
+Jawaban akhir dari model sudah terlihat di deployment pratinjau, belum di mesin lokal. Kunci Groq lokal menjawab `403 {"error":{"message":"Forbidden"}}` — sama persis saat tanpa kunci sama sekali, jadi yang diblokir IP-nya, bukan kuncinya. Karena itu jalur jawaban diuji di Chromium pada `ppit-nanjing-preview.vercel.app` (2026-10-12, dua kali oleh dua sesi berbeda: `admin@ppit-local.test` dan satu akun anggota biasa hasil daftar sendiri), pertanyaan diketik langsung di widget Help Center:
+
+| Pertanyaan | Jawaban yang keluar |
+| --- | --- |
+| EN, ada sumber: "How do I get from Lukou airport to the campus?" | Bahasa Inggris, menyebut angkutan di terminal 2 |
+| EN, tanpa sumber: "How much does a residence permit renewal cost this year?" | Bahasa Inggris, menolak dan mengarahkan ke pengurus, tanpa angka karangan |
+| ID, ada sumber: "Bagaimana cara dari bandara menuju kampus?" | Bahasa Indonesia, bus S1 / taksi resmi, menyebut sumber *Sering Dipakai - Transportasi dari Bandara ke Kampus* |
+
+Tidak ada error di console browser. Yang bisa dibuktikan dari mesin lokal tetap: aksi chatbot jalan sampai `groqChat`, dan prompt sistem yang disusunnya sudah benar — untuk pertanyaan yang cocok, isi artikel publik ikut terkirim sementara isi artikel non-publik tidak; untuk pertanyaan yang tidak cocok, prompt dikirim tanpa bagian panduan sama sekali, jadi instruksi "belum punya panduannya, arahkan ke pengurus" yang berlaku. Bahasa yang dipilih `detectAnswerLanguage` juga diuji di sini lewat skrip sekali-pakai terhadap sepuluh pertanyaan (Inggris, Indonesia, sapaan, satu kata, pertanyaan pendek seperti "visa?"): semuanya jatuh ke bahasa yang benar, dan `buildChatSystemPrompt` menaruh perintah bahasanya di ujung prompt — menempel pada paragraf pengecualian ubah profil, dipisah satu spasi.
 
 SOP singkat untuk artikel Help Center pengurus (buat di `/console/docs/new`, nyalakan tampilkan di halaman publik):
 
