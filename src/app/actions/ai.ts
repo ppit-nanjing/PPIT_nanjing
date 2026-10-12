@@ -2,7 +2,7 @@
 
 import { auth } from "@/auth";
 import { hasModuleAccess, type AdminModule } from "@/lib/admin-scope";
-import { buildChatSystemPrompt, improveIndonesianText, groqChat, type ImproveContext, type GroqMessage } from "@/lib/groq";
+import { buildChatSystemPrompt, detectAnswerLanguage, improveIndonesianText, groqChat, type ImproveContext, type GroqMessage } from "@/lib/groq";
 import { buildGuideContext, findGuideChunks } from "@/lib/guidebook-search";
 import { eq } from "drizzle-orm";
 import { db } from "@/db";
@@ -79,7 +79,7 @@ export async function chatWithAIAction(history: { role: "user" | "assistant"; co
   const question = [...recent].reverse().find((m) => m.role === "user")?.content ?? "";
   const chunks = await findGuideChunks(question);
   const messages: GroqMessage[] = [
-    { role: "system", content: buildChatSystemPrompt(buildGuideContext(chunks)) },
+    { role: "system", content: buildChatSystemPrompt(buildGuideContext(chunks), detectAnswerLanguage(question)) },
     ...recent,
   ];
   const raw = await groqChat(messages, { temperature: 0.5, maxTokens: 500 });

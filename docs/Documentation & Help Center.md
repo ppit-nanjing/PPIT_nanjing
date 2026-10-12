@@ -68,6 +68,10 @@ Widget di `src/components/ai/help-center.tsx` (dipasang global di `src/app/layou
 2. `findGuideChunks` (`src/lib/guidebook-search.ts`) mencari artikel bantuan dengan **`is_public = true`** saja — pencarian leksikal: potongan kata kunci lewat `ILIKE` (kata asli + bentuk tanpa imbuhan, kata fungsi/sapaan dibuang), lalu skor di JS (judul ×4, bagian ×2, isi maks 3). Tanpa embedding: korpusnya masih puluhan artikel, jadi pencarian vektor hanya menambah vendor dan satu titik gagal baru.
 3. Potongan teratas (maks 4 artikel, ±7.000 karakter) masuk ke system prompt sebagai **satu-satunya sumber**; model dilarang menambah fakta, angka, biaya, atau tenggat dari luar sumber, dan diminta menyebut judul panduannya. Tidak ada yang cocok → model menjawab belum ada panduannya dan mengarahkan ke pengurus.
 
+**Bahasa jawaban mengikuti bahasa pertanyaan.** Pertanyaan Bahasa Inggris dijawab Bahasa Inggris, Bahasa Indonesia dijawab Bahasa Indonesia, sapaan campur dijawab Bahasa Indonesia. Judul panduan tetap dikutip apa adanya supaya sumbernya masih bisa ditelusuri. Sampai 2026-10-12 prompt-nya mengunci "Balas ramah dan ringkas dalam Bahasa Indonesia", jadi anggota yang bertanya Bahasa Inggris tetap dibalas Indonesia meskipun UI-nya sedang Bahasa Inggris.
+
+Bahasa itu ditentukan di kode, bukan diserahkan ke model. `detectAnswerLanguage` (`src/lib/groq.ts`) menghitung kata fungsi khas tiap bahasa di pertanyaan terakhir, lalu `buildChatSystemPrompt` menerima hasilnya dan menaruh satu perintah terakhir "Aturan bahasa yang mengikat: balas dalam ...". Prompt yang tahu dua bahasa tidak cukup: seluruh isi panduan berbahasa Indonesia, dan `openai/gpt-oss-120b` (model pertama di `GROQ_MODEL_CHAIN`) menjawab satu pertanyaan Inggris dengan paragraf Indonesia ketika aturan bahasanya cuma satu kalimat di tengah prompt. Seri atau pertanyaan tanpa penanda bahasa sama sekali ("visa?", "halo") dijawab Bahasa Indonesia.
+
 Konsekuensi untuk pengurus:
 
 - **Artikel yang belum ditandai "Tampilkan di halaman publik" tidak akan pernah dipakai chatbot.** Itu disengaja: SOP console (isi internal) tidak boleh bocor ke jawaban anggota.

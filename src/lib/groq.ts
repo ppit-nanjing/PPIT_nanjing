@@ -240,10 +240,31 @@ export async function translateFields(fields: Record<string, string>): Promise<R
  * `guideContext` kosong = tidak ada artikel publik yang cocok; prompt-nya
  * tetap dikirim supaya protokol ubah profil di bawah tetap jalan.
  */
-export function buildChatSystemPrompt(guideContext: string): string {
+export type AnswerLanguage = "id" | "en";
+
+// Deteksi bahasa pertanyaan di kode, bukan diserahkan ke model. Model
+// (gpt-oss-120b) menyerahkan keputusan ini ke konteks: seluruh prompt dan
+// seluruh isi panduan berbahasa Indonesia, jadi pertanyaan Inggris yang singkat
+// tetap dijawab Bahasa Indonesia walaupun prompt menyuruh sebaliknya. Karena
+// itu bahasanya dihitung di sini lalu dikirim sebagai satu perintah terakhir.
+// Skornya sederhana: kata fungsi khas tiap bahasa, bukan tebak-tebakan imbuhan.
+// Seri atau tanpa penanda sama sekali (sapaan, satu kata) -> Bahasa Indonesia.
+const ID_WORDS =
+  /\b(yang|dan|atau|tidak|belum|sudah|apa|apakah|bagaimana|gimana|cara|kapan|dimana|berapa|siapa|kenapa|mengapa|untuk|dengan|dari|saya|aku|kamu|bisa|harus|perlu|ada|itu|ini|kalau|jika|tolong|mohon|terima|kasih|halo|hai|selamat|pagi|siang|malam|biaya|syarat|berkas|paspor|izin|tinggal|jam|hari|bulan|tahun|kota)\b/gi;
+const EN_WORDS =
+  /\b(the|a|an|how|what|where|when|why|which|who|whose|do|does|did|can|could|should|must|i|my|me|you|your|is|are|was|were|to|from|of|and|or|not|no|need|needed|get|got|go|going|apply|cost|price|time|there|have|has|with|for|about|this|that|it|permit|document|documents|airport|campus|dorm|phone|work|study|student)\b/gi;
+
+export function detectAnswerLanguage(text: string): AnswerLanguage {
+  const idHits = (text.match(ID_WORDS) ?? []).length;
+  const enHits = (text.match(EN_WORDS) ?? []).length;
+  return enHits > idHits ? "en" : "id";
+}
+
+export function buildChatSystemPrompt(guideContext: string, answerLanguage: AnswerLanguage = "id"): string {
   return (
     "Kamu asisten virtual PPIT Nanjing, organisasi mahasiswa Indonesia di Nanjing, Tiongkok. " +
-    "Balas ramah dan ringkas dalam Bahasa Indonesia, 1-3 paragraf pendek. " +
+    "Balas ramah dan ringkas, 1-3 paragraf pendek. " +
+    "Judul panduan dan istilah resmi tetap dikutip apa adanya (biasanya Bahasa Indonesia). " +
     "Jawab HANYA dari sumber di bawah. JANGAN memakai pengetahuan umummu sendiri dan JANGAN menebak " +
     "angka, biaya, tenggat, syarat, atau prosedur. Kalau sumber tidak memuat jawabannya - termasuk " +
     "pertanyaan soal visa, izin tinggal, biaya, dan tenggat - katakan terus terang bahwa kamu belum " +
@@ -259,6 +280,11 @@ export function buildChatSystemPrompt(guideContext: string): string {
     "Pengecualian dari aturan di atas: jika pengguna secara eksplisit meminta mengubah data profilnya " +
     "(nama, nomor telepon, WeChat, atau tautan LinkedIn/Instagram/GitHub/Spotify/TikTok/foto profil), " +
     "balas HANYA dengan format berikut dan jangan tambahkan teks lain: " +
-    '<<PROFILE_EDIT:{"field":"<satu dari: name, phone, wechatId, linkedinUrl, instagramUrl, githubUrl, spotifyUrl, tiktokUrl, avatarUrl>","value":"<nilai baru>"}>>.'
+    '<<PROFILE_EDIT:{"field":"<satu dari: name, phone, wechatId, linkedinUrl, instagramUrl, githubUrl, spotifyUrl, tiktokUrl, avatarUrl>","value":"<nilai baru>"}>>. ' +
+    // Perintah bahasa ditaruh paling akhir dan berdiri sendiri: instruksi di
+    // tengah prompt kalah oleh seluruh isi panduan yang berbahasa Indonesia.
+    (answerLanguage === "en"
+      ? "Aturan bahasa yang mengikat: balas dalam Bahasa Inggris, jangan pakai Bahasa Indonesia kecuali judul panduan dan istilah resmi."
+      : "Aturan bahasa yang mengikat: balas dalam Bahasa Indonesia.")
   );
 }
