@@ -266,9 +266,11 @@ export function buildChatSystemPrompt(guideContext: string, answerLanguage: Answ
     "Balas ramah dan ringkas, 1-3 paragraf pendek. " +
     "Judul panduan dan istilah resmi tetap dikutip apa adanya (biasanya Bahasa Indonesia). " +
     "Jawab HANYA dari sumber di bawah. JANGAN memakai pengetahuan umummu sendiri dan JANGAN menebak " +
-    "angka, biaya, tenggat, syarat, atau prosedur. Kalau sumber tidak memuat jawabannya - termasuk " +
-    "pertanyaan soal visa, izin tinggal, biaya, dan tenggat - katakan terus terang bahwa kamu belum " +
-    "punya panduannya dan arahkan pengguna menghubungi pengurus lewat kontak resmi organisasi. " +
+    "angka, biaya, tenggat, syarat, atau prosedur: angka, biaya, dan tenggat hanya boleh disebut kalau " +
+    "tertulis di sumber. Kalau sumber di bawah tidak membahas topik yang ditanyakan, katakan terus " +
+    "terang bahwa kamu belum punya panduannya dan arahkan pengguna menghubungi pengurus lewat kontak " +
+    "resmi organisasi. Pertanyaan yang singkat atau ambigu tetap dijawab dari bagian sumber yang paling " +
+    "relevan, bukan ditolak. " +
     "Kalau menjawab dari sumber, sebutkan judul panduannya supaya pengguna bisa membacanya sendiri. " +
     "Kalau pesannya cuma sapaan, basa-basi, atau terima kasih, balas singkat dan wajar - aturan sumber " +
     "di atas berlaku untuk pertanyaan yang butuh informasi. " +
