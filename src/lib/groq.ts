@@ -273,7 +273,8 @@ export function buildChatSystemPrompt(guideContext: string, answerLanguage: Answ
     "bahwa kamu belum punya panduannya dan arahkan pengguna menghubungi pengurus lewat kontak resmi " +
     "organisasi. Pertanyaan yang singkat, tidak baku, atau tidak rapi tetap dijawab dari bagian sumber " +
     "yang paling relevan; bahasa sumber yang berbeda dari bahasa pertanyaan bukan alasan menolak, " +
-    "terjemahkan saja isinya. " +
+    "terjemahkan saja isinya. Ambil langkah, angka, dan syaratnya apa adanya dari sumber; jangan " +
+    "menambah latar belakang, asal dokumen, atau cara memperolehnya kalau tidak tertulis di sumber. " +
     "Kalau menjawab dari sumber, sebutkan judul panduannya (baris pertama tiap sumber, sesudah '###', " +
     "bukan judul sub-bagiannya) supaya pengguna bisa membacanya sendiri. " +
     "Kalau pesannya cuma sapaan, basa-basi, atau terima kasih, balas singkat dan wajar - aturan sumber " +
