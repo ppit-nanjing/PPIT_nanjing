@@ -30,11 +30,14 @@ export default async function ConsoleEventsPage() {
   const canManageEvents = hasModuleAccess(session.user.adminScope ?? null, "events");
 
   // Acara di Sampah tidak dihitung: pemegang modul mengelolanya dari bagian Sampah.
-  const committeeRows = await db
-    .select({ eventId: eventCommittee.eventId })
-    .from(eventCommittee)
-    .innerJoin(events, eq(events.id, eventCommittee.eventId))
-    .where(and(eq(eventCommittee.userId, session.user.id), isNull(events.deletedAt)));
+  // Query ini tidak diperlukan untuk full admin (daftarnya semua acara).
+  const committeeRows = isFullAdmin
+    ? []
+    : await db
+        .select({ eventId: eventCommittee.eventId })
+        .from(eventCommittee)
+        .innerJoin(events, eq(events.id, eventCommittee.eventId))
+        .where(and(eq(eventCommittee.userId, session.user.id), isNull(events.deletedAt)));
   const committeeEventIds = [...new Set(committeeRows.map((r) => r.eventId))];
 
   if (!canManageEvents && committeeEventIds.length === 0) redirect("/console");

@@ -105,6 +105,12 @@ export async function canManageForm(
 ): Promise<boolean> {
   const acc = access === undefined ? await getFormsAccess() : access;
   if (!acc) return false;
+  // Acara di Sampah: form-nya terkunci untuk SEMUA orang — pulihkan dulu
+  // acaranya dari bagian Sampah. getEventAccess() cached, jadi ini murah.
+  if (form.eventId) {
+    const eventAccess = await getEventAccess(form.eventId);
+    if (eventAccess.trashed) return false;
+  }
   if (acc.isFull || acc.canForms) return true;
   if (form.kind === "pemilu") return false;
   if (form.createdBy && form.createdBy === acc.userId) return true;
@@ -137,13 +143,15 @@ export async function canPlaceApplicant(
   form: Pick<FormRow, "eventId" | "createdBy">,
   access: FormsAccess,
 ): Promise<boolean> {
-  if (access.isFull || access.canForms) return true;
+  // Form tanpa acara (Pemilu) tidak menyentuh kepanitiaan sama sekali.
   if (!form.eventId) return false;
+  const eventAccess = await getEventAccess(form.eventId);
+  // Acara di Sampah: penempatan dikunci untuk semua orang (pulihkan dulu).
+  if (eventAccess.trashed) return false;
+  if (access.isFull || access.canForms) return true;
   if (form.createdBy && form.createdBy === access.userId) {
-    const eventAccess = await getEventAccess(form.eventId);
     return !eventAccess.locked;
   }
-  const eventAccess = await getEventAccess(form.eventId);
   if (!eventAccess.isBphPanitia) return false;
   return !eventAccess.locked;
 }

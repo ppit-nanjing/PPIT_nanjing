@@ -352,13 +352,6 @@ export async function submitFormApplication(formData: FormData) {
   if (!form) redirect("/console");
   const back = `/forms/${form.id}`;
 
-  // Acara di Sampah: form Oprek-nya tidak menerima jawaban baru (halaman isi
-  // juga 404). Form tanpa acara (Pemilu) tidak terpengaruh.
-  if (form.eventId) {
-    const [ev] = await db.select({ deletedAt: events.deletedAt }).from(events).where(eq(events.id, form.eventId));
-    if (!ev || ev.deletedAt) redirect(`${back}?error=closed`);
-  }
-
   const membership = await getCabinetMembership(userId);
   if (!membership || !membership.isCabinetMember) redirect(`${back}?error=forbidden`);
 
@@ -367,6 +360,13 @@ export async function submitFormApplication(formData: FormData) {
     .from(formApplications)
     .where(and(eq(formApplications.formId, form.id), eq(formApplications.userId, userId)));
   if (existing) redirect(`${back}/submitted`);
+  // Acara di Sampah: form Oprek-nya tidak menerima jawaban baru (halaman isi
+  // juga 404). Ditaruh SETELAH cek "sudah kirim" supaya pelamar lama tetap
+  // bisa melihat statusnya. Form tanpa acara (Pemilu) tidak terpengaruh.
+  if (form.eventId) {
+    const [ev] = await db.select({ deletedAt: events.deletedAt }).from(events).where(eq(events.id, form.eventId));
+    if (!ev || ev.deletedAt) redirect(`${back}?error=closed`);
+  }
   // Cek setelah existing supaya orang yang sudah pernah kirim tetap bisa lihat
   // statusnya walau formnya sudah ditutup.
   if (!form.isOpen) redirect(`${back}?error=closed`);
