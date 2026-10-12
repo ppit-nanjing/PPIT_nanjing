@@ -1737,7 +1737,15 @@ export const forms = pgTable(
     createdAt: timestamp("created_at").notNull().defaultNow(),
     updatedAt: timestamp("updated_at").notNull().defaultNow(),
   },
-  (t) => [index("forms_kind_idx").on(t.kind), index("forms_event_idx").on(t.eventId)],
+  (t) => [
+    index("forms_kind_idx").on(t.kind),
+    index("forms_event_idx").on(t.eventId),
+    // Satu acara = satu form per jenis (Oprek BPH / Oprek Kepanitiaan);
+    // event_id NULL (Pemilu) dikecualikan. Migrasi: 0050.
+    uniqueIndex("forms_kind_event_unique_idx")
+      .on(t.kind, t.eventId)
+      .where(sql`${t.eventId} IS NOT NULL`),
+  ],
 );
 
 export const formFields = pgTable(

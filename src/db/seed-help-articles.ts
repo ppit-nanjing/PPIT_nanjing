@@ -430,6 +430,7 @@ Pemilu
 Form pendaftaran calon untuk kepengurusan periode berikutnya, khusus kabinet. Hanya BPH Inti + Divisi Teknologi yang mengelola.
 
 Catatan penting
+- Satu acara hanya punya SATU form Oprek BPH dan SATU form Oprek Kepanitiaan. Setelah form BPH dibuat, acaranya tidak muncul lagi di pilihan "Buat Formulir" Oprek BPH — lanjut ke Oprek Kepanitiaan setelah BPH-nya terbentuk. Kalau perlu mengulang rekrutmen, hapus dulu formulir lamanya (lamaran lama ikut terhapus).
 - Semua form kabinet: satu orang satu kiriman per form, dan jawaban TIDAK bisa diedit sendiri — pelamar yang perlu mengubah jawaban harus menghubungi pengurus formnya (hapus lamarannya lewat tombol Hapus di halaman pelamar, lalu minta isi ulang).
 - Lampiran file/gambar disimpan privat: hanya pemilik, pengelola form, dan BPH Inti/Divisi Teknologi yang bisa membuka.
 - 14 hari setelah acara selesai, BPH Acara tidak bisa lagi mengubah penempatan (acara terkunci); hubungi BPH Kabinet/Divisi Teknologi.

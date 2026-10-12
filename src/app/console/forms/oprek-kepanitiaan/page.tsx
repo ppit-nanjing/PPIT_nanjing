@@ -1,4 +1,4 @@
-import { and, count, desc, eq, inArray, isNull, sql } from "drizzle-orm";
+import { and, count, desc, eq, inArray, isNotNull, isNull, notInArray, sql } from "drizzle-orm";
 import { db } from "@/db";
 import { events, formApplications, forms } from "@/db/schema";
 import { FormCreate } from "@/components/console/forms/form-create";
@@ -51,9 +51,33 @@ export default async function FormsOprekKepanitiaanPage({
 
   const [eventOptions, rows] = await Promise.all([
     canCreateForAnyEvent
-      ? eventQuery.where(isNull(events.deletedAt))
+      ? eventQuery.where(
+          and(
+            isNull(events.deletedAt),
+            // Satu acara = satu form Oprek Kepanitiaan.
+            notInArray(
+              events.id,
+              db
+                .select({ eventId: forms.eventId })
+                .from(forms)
+                .where(and(eq(forms.kind, "oprek_kepanitiaan"), isNotNull(forms.eventId))),
+            ),
+          ),
+        )
       : access.bphEventIds.length > 0
-        ? eventQuery.where(and(inArray(events.id, access.bphEventIds), isNull(events.deletedAt)))
+        ? eventQuery.where(
+            and(
+              inArray(events.id, access.bphEventIds),
+              isNull(events.deletedAt),
+              notInArray(
+                events.id,
+                db
+                  .select({ eventId: forms.eventId })
+                  .from(forms)
+                  .where(and(eq(forms.kind, "oprek_kepanitiaan"), isNotNull(forms.eventId))),
+              ),
+            ),
+          )
         : Promise.resolve([] as { id: string; title: string; status: string }[]),
     // BPH Acara hanya melihat rekrutmen acaranya sendiri; full/modul melihat semua.
     rowsQuery,
@@ -70,14 +94,10 @@ export default async function FormsOprekKepanitiaanPage({
         showKepanitiaan={access.canKepanitiaanTab}
       />
 
-      {eventOptions.length > 0 ? (
-        <FormCreate kind="oprek_kepanitiaan" events={eventOptions} error={error ?? null} />
-      ) : (
-        <p className="text-body-md text-on-surface-variant rounded-lg bg-surface-container-low px-4 py-3 mb-8">
-          Kamu belum tercatat sebagai BPH Acara di acara mana pun. Formulir Oprek Kepanitiaan dibuat oleh BPH Acara
-          setelah terbentuk lewat Oprek BPH.
-        </p>
-      )}
+      {/* Selalu render FormCreate: requireKepanitiaanTab sudah menjamin akses
+          (full/modul atau BPH Acara). Kalau picker kosong, FormCreate sendiri
+          menampilkan catatan "semua acara sudah punya formulir". */}
+      <FormCreate kind="oprek_kepanitiaan" events={eventOptions} error={error ?? null} />
 
       <FormList rows={rows} emptyText="Belum ada formulir Oprek Kepanitiaan." />
     </div>
