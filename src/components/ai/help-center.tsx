@@ -29,12 +29,18 @@ function Bubble({ icon: Icon, label, open, onToggle, disabled }: BubbleProps) {
       title={label}
       aria-label={label}
       aria-expanded={open}
-      variants={{ idle: { scale: 1 }, pop: { scale: [1, 0.85, 1.12, 1] } }}
+      variants={{
+        idle: { scale: 1 },
+        pop: { scale: [1, 0.85, 1.12, 1], transition: { duration: 0.35, times: [0, 0.25, 0.6, 1] } },
+      }}
       animate={open ? "pop" : "idle"}
-      whileHover={disabled ? undefined : { scale: 1.08 }}
-      whileTap={disabled ? undefined : { scale: 0.9 }}
-      transition={{ duration: 0.35, times: [0, 0.25, 0.6, 1] }}
-      className={`pointer-events-auto rounded-full p-4 shadow-lg ${
+      // Hover dan tap punya spring sendiri yang cepat. Sebelumnya keduanya ikut
+      // memakai transisi pop (350 ms + `times` keyframe), jadi kursor yang
+      // berhenti di atas bola terasa menyendat.
+      whileHover={disabled ? undefined : { scale: 1.06, transition: { type: "spring", stiffness: 600, damping: 30, mass: 0.5 } }}
+      whileTap={disabled ? undefined : { scale: 0.92, transition: { type: "spring", stiffness: 700, damping: 28, mass: 0.5 } }}
+      transition={{ type: "spring", stiffness: 500, damping: 30, mass: 0.6 }}
+      className={`pointer-events-auto rounded-full p-4 shadow-lg transition-colors duration-150 will-change-transform ${
         open
           ? "bg-primary text-on-primary ring-2 ring-primary-container/50"
           : "bg-primary-container text-on-primary hover:bg-primary"
