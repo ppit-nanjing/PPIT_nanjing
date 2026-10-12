@@ -7,7 +7,7 @@ import { auth } from "@/auth";
 import { db } from "@/db";
 import { eventCommittee, eventCredits, eventDivisions, certificates, events, users, eventRegistrations, sensusProfiles } from "@/db/schema";
 import { requireModuleAccess } from "@/lib/admin-scope";
-import { requireEventCapability, requireEventConsoleAccess } from "@/lib/event-access";
+import { requireEventCapability, requireEventConsoleAccess, getScopedEventIds } from "@/lib/event-access";
 import { EVENT_COMMITTEE_ROLE_LABEL, GRANTABLE_CAPABILITIES, type EventCommitteeRole } from "@/lib/event-capabilities";
 import { logEventAudit } from "@/lib/event-audit";
 import { getStructureTemplate } from "@/lib/event-structure-templates";
@@ -206,9 +206,16 @@ export async function removeEventCredit(formData: FormData) {
 /**
  * The work ledger BPH actually asked for: one row per person with how many
  * committees they sit on, so nobody quietly ends up on eight at once.
+ *
+ * Scope dihitung DI DALAM action (boundary server — Server Action = endpoint
+ * publik, tidak boleh percaya pemanggil): full admin = semua acara, selain itu
+ * hanya acara yang boleh diaksesnya (getScopedEventIds: dibuat ∪ divisi PJ ∪
+ * tempat dia panitia).
  */
 export async function getWorkLedger() {
   await requireModuleAccess("events");
+  const scopeEventIds = await getScopedEventIds();
+  if (scopeEventIds !== null && scopeEventIds.length === 0) return [];
   const rows = await db
     .select({
       assignmentId: eventCommittee.id,
@@ -224,6 +231,7 @@ export async function getWorkLedger() {
     .from(eventCommittee)
     .leftJoin(users, eq(eventCommittee.userId, users.id))
     .leftJoin(events, eq(eventCommittee.eventId, events.id))
+    .where(scopeEventIds !== null ? inArray(eventCommittee.eventId, scopeEventIds) : undefined)
     .orderBy(desc(events.startAt));
 
   const byPerson = new Map<string, { name: string; email: string; assignments: typeof rows }>();

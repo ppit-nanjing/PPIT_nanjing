@@ -88,16 +88,19 @@ Soal status (draft/terjadwal/terbit/dst)
 Struktur Kepanitiaan
 Bikin divisi acara (nama wajib, bisa punya sub-divisi), lalu tugaskan siapa saja (tidak harus anggota departemen tertentu) + peran + divisi. Menugaskan ulang orang yang sama di acara yang sama cuma mengganti perannya, bukan bikin baris dobel.
 
+Divisi Penanggung Jawab
+Field di halaman detail acara: divisi kabinet pemilik acara/proker ini (boleh lebih dari satu untuk proker gabungan). Efeknya: anggota divisi itu otomatis melihat & mengelola acara tersebut di menu Kegiatan — ASAL divisinya sudah dicentang modul "Kegiatan" oleh admin penuh di Organisasi → edit divisi. Baris PJ ini menyempitkan akses pemegang modul ke acara divisinya, bukan memberi modul baru; kalau divisi PJ belum punya centang "Kegiatan" (mis. Humas untuk acara Sosialisasi), mintakan dulu ke admin penuh. Hanya BPH Kabinet/Divisi Teknologi (admin penuh) yang boleh mengubah field ini. Acara yang belum punya Divisi Penanggung Jawab hanya terlihat admin penuh dan pembuatnya.
+
 Pertanyaan Pendaftaran
 Di halaman detail acara. Kosong = form pendaftaran standar. Tambahkan pertanyaan (Teks Pendek/Panjang, Dropdown, Pilihan, Pilih Banyak) bila acaranya butuh — mis. preferensi makanan atau ukuran kaos; centang "Wajib diisi" supaya tidak bisa dilewati. Jawabannya muncul di kolom Peserta pada Daftar Pendaftar. Menghapus pertanyaan tidak menghapus jawaban yang sudah tersimpan, cuma berhenti ditampilkan.
 
-Hapus kegiatan: album galeri terkait acara ini ikut terhapus, pendaftaran ikut terhapus otomatis.`,
+Hapus kegiatan: pendaftaran & kepanitiaannya ikut terhapus otomatis. Album galeri yang tertaut TIDAK ikut terhapus — hanya dilepas dari acara (albumnya tetap ada di Galeri).`,
   },
   {
     slug: "work-ledger",
     section: SERING_BINGUNG,
     title: "Work Ledger — Beban Kepanitiaan, Pembayaran, Sertifikat",
-    content: `Halaman ini BUKAN pengganti halaman Kegiatan — ini tampilan lintas-acara supaya kelihatan siapa kebanyakan jadi panitia, plus dua alat tambahan: verifikasi pembayaran dan sertifikat.
+    content: `Halaman ini BUKAN pengganti halaman Kegiatan — ini tampilan lintas-acara supaya kelihatan siapa kebanyakan jadi panitia, plus dua alat tambahan: verifikasi pembayaran dan sertifikat. Sejak akses Kegiatan dibuat spesifik per acara, Work Ledger hanya menampilkan acara yang boleh kamu lihat (BPH Kabinet/Divisi Teknologi tetap melihat semua).
 
 Tugaskan Panitia
 - Acara, Pengurus (siapa saja): wajib pilih.

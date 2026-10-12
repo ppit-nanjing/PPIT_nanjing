@@ -1083,14 +1083,14 @@ export default async function ConsoleEventDetailPage({ params }: { params: Promi
 
       <CollapsibleSection
         title="Divisi Penanggung Jawab"
-        description="Divisi kabinet yang bertanggung jawab atas acara/proker ini. Boleh lebih dari satu untuk proker gabungan."
+        description="Divisi kabinet yang bertanggung jawab atas acara/proker ini (boleh lebih dari satu). Anggota divisi ini otomatis bisa mengelola acaranya di menu Kegiatan selama divisinya memegang centang &quot;Kegiatan&quot; di Organisasi. Hanya admin penuh yang bisa mengubahnya."
         defaultOpen={false}
       >
         <EventResponsibleDepartments
           eventId={id}
           departments={allDepartments}
           selected={responsibleRows.map((r) => r.departmentId)}
-          canEdit={can("event.editInfo")}
+          canEdit={access.isFullAdmin}
         />
       </CollapsibleSection>
 
