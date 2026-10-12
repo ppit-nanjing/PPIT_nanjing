@@ -46,6 +46,7 @@ export const id = {
   "footer.about": "Tentang",
   "footer.aboutLinks.structure": "Struktur Organisasi",
   "footer.aboutLinks.sensus": "Isi Sensus",
+  "footer.aboutLinks.guidebook": "Panduan Maba",
   "footer.aboutLinks.help": "Pusat Bantuan",
   "footer.aboutLinks.terms": "Ketentuan",
   "footer.aboutLinks.privacy": "Privasi",
@@ -357,6 +358,22 @@ export const id = {
   "help.back": "Kembali ke Pusat Bantuan",
   "help.updated": "Diperbarui {{date}}",
   "help.noContent": "Isi panduan ini belum ditulis.",
+  "help.guidebookCta": "Baru sampai di Nanjing? Urutan langkah dari sebelum berangkat sampai bulan pertama ada di Panduan Maba.",
+
+  // Guidebook maba (/guidebook) - urutan langkah, isinya tetap di Help Center
+  "guidebook.title": "Panduan Maba",
+  "guidebook.intro": "Urutan langkah dari sebelum berangkat sampai bulan pertama di Nanjing. Centang yang sudah kamu lakukan supaya sisa urusannya kelihatan.",
+  "guidebook.empty": "Belum ada topik panduan yang dipublikasikan.",
+  "guidebook.progress": "{{done}} dari {{total}} langkah selesai",
+  "guidebook.phaseProgress": "{{done}}/{{total}} selesai",
+  "guidebook.anonymous": "Masuk dulu kalau mau menyimpan progres centangmu.",
+  "guidebook.anonymousCta": "Masuk",
+  "guidebook.chatHint": "Ada pertanyaan yang belum ada di daftar ini?",
+  "guidebook.chatHintCta": "Tanya asisten panduan",
+  "guidebook.markDone": "Tandai sudah dilakukan",
+  "guidebook.markUndone": "Batalkan tanda selesai",
+  "guidebook.unreviewed": "Belum ditinjau pengurus",
+  "guidebook.reviewing": "Sedang ditinjau ulang",
 
   // Gallery
   "gallery.title": "Galeri",

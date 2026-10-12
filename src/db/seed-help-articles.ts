@@ -358,6 +358,43 @@ Aturan data pelamar
   2. Klik Hapus Lamaran. Jangan hapus lowongannya, karena itu membuang lamaran orang lain juga.
   3. Berkas CV-nya TIDAK ikut terhapus, karena disimpan terpisah di Vercel Blob (folder "resume"). Minta Divisi Teknologi menghapus berkas dari tautan yang tadi disalin. Kalau CV-nya tautan Drive milik pelamar sendiri, tidak ada yang perlu dihapus.`,
   },
+  {
+    slug: "panduan-maba",
+    section: SERING_DIPAKAI,
+    title: "Panduan Maba — Menulis, Meninjau, dan Merawat Topiknya",
+    content: `Panduan Maba adalah delapan artikel bantuan yang isinya guidebook untuk maba (hasil ekstraksi PDF pusat). Maba melihatnya di dua tempat: halaman **/guidebook** (daftar topik per fase, ada kotak centang kalau dia login) dan chatbot Help Center. Chatbot hanya boleh mengutip topik yang **sudah ditinjau dan belum kedaluwarsa** — ini yang paling sering bikin bingung, jadi baca bagian "Aturan yang mengikat" di bawah.
+
+Dari mana isinya datang
+- Sumber mentahnya markdown di docs/guidebook/ (satu berkas per topik), hasil ekstraksi PDF. Ada di repo, bukan di database.
+- Jalur masuknya: npx tsx --env-file=.env src/db/ingest-guide.ts [slug]. Perintah ini menulis versi sumber ke parsed_markdown, mengisi Isi Panduan kalau masih kosong, membangun ulang potongan pencarian, dan menaikkan corpus_version supaya cache jawaban lama tidak dipakai lagi. Tanpa slug, semua topik diproses. Tambah --force hanya kalau memang mau menimpa isi yang sudah disunting pengurus.
+- Yang disunting pengurus adalah **Isi Panduan** (kolom content). Jangan menyunting parsed_markdown: itu baseline panel merge. Panel merge bisa mengembalikan satu bagian ke versi sumber kalau suntinganmu kacau.
+
+Mengisi satu topik (/console/docs → pilih topiknya)
+- Judul, Isi Panduan (markdown + tab pratinjau).
+- Fase dan Urutan dalam fase: dua kolom ini yang menentukan urutan di /guidebook.
+- Tampilkan di halaman publik (/help): nyalakan kalau artikelnya untuk anggota juga.
+- Status tinjauan: "Tandai sudah ditinjau hari ini" menulis tanggalnya; "Batalkan tinjauan" menghapusnya kembali.
+- Masa berlaku: topik baru otomatis dapat 6 bulan kalau pilihan "Biarkan" dibiarkan. Isi yang aturannya bisa berubah (imigrasi, KIP, bank) memang sebaiknya punya tanggal.
+- Di bawah form ada panel "Status Topik Guidebook": tinjauan, masa berlaku, jumlah potongan pencarian, dan versi chunker. Kalau "Potongan pencarian" nol, topiknya tidak akan pernah ketemu chatbot walau isinya panjang.
+
+Aturan yang mengikat
+- **Belum ditinjau = draf.** Chatbot tidak mengutipnya sama sekali, dan di /guidebook topiknya bertanda "Belum ditinjau pengurus". Maba yang bertanya soal topik itu akan menerima "Belum ada panduan yang cocok" — bukan jawaban karangan.
+- **Kedaluwarsa = sama tidak dipakai.** Lewat tanggalnya, topik itu keluar dari pencarian chatbot sampai ditinjau ulang dan tanggalnya diperbarui.
+- Isi visa dan izin tinggal wajib ditinjau orang yang tahu aturannya (BPH atau pusat). Salah tanggal di topik ini artinya chatbot mengutip aturan lama.
+- **Jangan menaruh data pribadi** (nomor paspor, nomor telepon, alamat rumah) di artikel panduan. Isinya bisa ikut terkirim ke penyedia model saat chatbot menjawab.
+
+Chatbot-nya sendiri
+- Batas 15 pertanyaan per pengguna per hari, dihitung per tanggal Asia/Shanghai. Habis kuota, sakelar mati, atau Groq error: jawabannya tetap potongan panduan yang paling relevan plus kalimat penjelas, bukan halaman error.
+- Sakelar darurat ada di database, tanpa deploy: set guide_meta.ai_enabled = false.
+- Cache jawaban diikat ke corpus_version, jadi menyimpan satu topik otomatis menyegarkan jawaban lama untuk pertanyaan yang sama.
+- Prewarm (opsional, menjelang musim maba): npx tsx --env-file=.env.local scripts/prewarm-guide.ts menjawab daftar FAQ di src/lib/guidebook-faq.ts lebih dulu, supaya maba pertama tidak menunggu.
+- Uji mutu: npx tsx --env-file=.env.local src/db/eval-guidebook.ts menjalankan 38 pertanyaan dari docs/guidebook-golden.json. Tanda pending_review di berkas itu diisi tangan; hapus tanda itu begitu topiknya ditinjau, kalau tidak harness-nya tetap merah.
+
+Kalau chatbot bilang "Belum ada panduan yang cocok"
+1. Cek topiknya di /console/docs: sudah ditinjau? belum kedaluwarsa? potongan pencariannya ada?
+2. Cek istilah yang dipakai pertanyaannya. Artikel panduan memakai kata Indonesia, sedangkan maba sering bertanya dalam bahasa Inggris; padanannya ada di SYNONYMS di src/lib/guidebook-terms.ts. Kalau istilah barunya belum ada di sana, tambahkan dulu.
+3. Kalau pertanyaannya memang belum ada topiknya, itu jawaban yang benar — catat pertanyaannya dan ajukan topik baru, jangan mengarang isi.`,
+  },
 ];
 
 async function main() {

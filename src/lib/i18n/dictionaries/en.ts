@@ -43,6 +43,7 @@ export const en = {
   "footer.about": "About",
   "footer.aboutLinks.structure": "Organization Structure",
   "footer.aboutLinks.sensus": "Fill Census",
+  "footer.aboutLinks.guidebook": "Newcomer Guide",
   "footer.aboutLinks.help": "Help Center",
   "footer.aboutLinks.terms": "Terms",
   "footer.aboutLinks.privacy": "Privacy",
@@ -354,6 +355,22 @@ export const en = {
   "help.back": "Back to Help Center",
   "help.updated": "Updated {{date}}",
   "help.noContent": "This guide has no content yet.",
+  "help.guidebookCta": "New to Nanjing? The steps from before you fly until your first month are in the Newcomer Guide.",
+
+  // Guidebook maba (/guidebook) - step order; the content stays in the Help Center
+  "guidebook.title": "Newcomer Guide",
+  "guidebook.intro": "The steps from before you fly until your first month in Nanjing. Tick off what you have done so you can see what is left.",
+  "guidebook.empty": "No guidebook topics are published yet.",
+  "guidebook.progress": "{{done}} of {{total}} steps done",
+  "guidebook.phaseProgress": "{{done}}/{{total}} done",
+  "guidebook.anonymous": "Sign in to keep your progress.",
+  "guidebook.anonymousCta": "Sign in",
+  "guidebook.chatHint": "A question that is not on this list?",
+  "guidebook.chatHintCta": "Ask the guide assistant",
+  "guidebook.markDone": "Mark as done",
+  "guidebook.markUndone": "Unmark done",
+  "guidebook.unreviewed": "Not reviewed by an admin yet",
+  "guidebook.reviewing": "Under review",
 
   // Gallery
   "gallery.title": "Gallery",

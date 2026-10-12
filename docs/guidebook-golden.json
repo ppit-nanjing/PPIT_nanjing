@@ -1,0 +1,218 @@
+[
+  {
+    "question": "Bagaimana cara dari Bandara Lukou ke kampus pakai metro?",
+    "expected_slug": "transportasi-dari-bandara-ke-kampus-uvd9",
+    "must_refuse": false
+  },
+  {
+    "question": "Mendarat malam sambil bawa koper banyak, sebaiknya naik apa dari bandara?",
+    "expected_slug": "transportasi-dari-bandara-ke-kampus-uvd9",
+    "must_refuse": false
+  },
+  {
+    "question": "Metro line apa dari bandara ke pusat kota dan keluar lewat exit berapa?",
+    "expected_slug": "transportasi-dari-bandara-ke-kampus-uvd9",
+    "must_refuse": false
+  },
+  {
+    "question": "how to get to campus from Lukou airport?",
+    "expected_slug": "transportasi-dari-bandara-ke-kampus-uvd9",
+    "must_refuse": false
+  },
+  {
+    "question": "Di stasiun mana Line S1 bertemu Line 1 dan Line 3?",
+    "expected_slug": "transportasi-dari-bandara-ke-kampus-uvd9",
+    "must_refuse": false
+  },
+  {
+    "question": "Kampus saya di Jiangning, rutenya dari bandara lewat mana?",
+    "expected_slug": "transportasi-dari-bandara-ke-kampus-uvd9",
+    "must_refuse": false
+  },
+  {
+    "question": "PPIT Cabang Nanjing itu organisasi apa dan kapan dibentuk?",
+    "expected_slug": "profil-ppit-nanjing",
+    "must_refuse": false,
+    "pending_review": true
+  },
+  {
+    "question": "Apa bedanya PPIT pusat dengan PPIT Cabang Nanjing?",
+    "expected_slug": "profil-ppit-nanjing",
+    "must_refuse": false,
+    "pending_review": true
+  },
+  {
+    "question": "Kontak dan media sosial PPIT Nanjing di mana?",
+    "expected_slug": "profil-ppit-nanjing",
+    "must_refuse": false,
+    "pending_review": true
+  },
+  {
+    "question": "PPIT Nanjing menaungi mahasiswa di kota mana saja selain Nanjing?",
+    "expected_slug": "profil-ppit-nanjing",
+    "must_refuse": false,
+    "pending_review": true
+  },
+  {
+    "question": "Nanjing itu kota apa dan berapa lama naik kereta cepat ke Shanghai?",
+    "expected_slug": "kota-nanjing",
+    "must_refuse": false,
+    "pending_review": true
+  },
+  {
+    "question": "Musim panas di Nanjing suhunya berapa dan apa yang perlu dibawa?",
+    "expected_slug": "kota-nanjing",
+    "must_refuse": false,
+    "pending_review": true
+  },
+  {
+    "question": "Tempat wisata apa saja yang direkomendasikan di Nanjing?",
+    "expected_slug": "kota-nanjing",
+    "must_refuse": false,
+    "pending_review": true
+  },
+  {
+    "question": "Tempat makan halal di Nanjing di mana dan kisarannya berapa?",
+    "expected_slug": "kota-nanjing",
+    "must_refuse": false,
+    "pending_review": true
+  },
+  {
+    "question": "Dokumen apa saja yang dibawa untuk registrasi sekolah setelah tiba?",
+    "expected_slug": "dokumen-dan-berkas-awal-datang",
+    "must_refuse": false,
+    "pending_review": true
+  },
+  {
+    "question": "Syarat perpanjangan paspor dan di mana tempat mengurusnya?",
+    "expected_slug": "dokumen-dan-berkas-awal-datang",
+    "must_refuse": false,
+    "pending_review": true
+  },
+  {
+    "question": "Bagaimana cara mengajukan Surat Keterangan Belajar dan berapa biayanya?",
+    "expected_slug": "dokumen-dan-berkas-awal-datang",
+    "must_refuse": false,
+    "pending_review": true
+  },
+  {
+    "question": "Dokumen apa yang disiapkan untuk verifikasi ijazah?",
+    "expected_slug": "dokumen-dan-berkas-awal-datang",
+    "must_refuse": false,
+    "pending_review": true
+  },
+  {
+    "question": "Tahun pertama sebaiknya tinggal di asrama kampus atau kos di luar?",
+    "expected_slug": "tempat-tinggal-asrama-dan-kos",
+    "must_refuse": false,
+    "pending_review": true
+  },
+  {
+    "question": "Apakah kamar asrama dijamin dapat dan bagaimana cara memesannya?",
+    "expected_slug": "tempat-tinggal-asrama-dan-kos",
+    "must_refuse": false,
+    "pending_review": true
+  },
+  {
+    "question": "Apa saja yang perlu diperiksa saat pertama kali masuk kamar asrama?",
+    "expected_slug": "tempat-tinggal-asrama-dan-kos",
+    "must_refuse": false,
+    "pending_review": true
+  },
+  {
+    "question": "Bagaimana kalau paket saya datang, kurir boleh masuk sampai kamar?",
+    "expected_slug": "tempat-tinggal-asrama-dan-kos",
+    "must_refuse": false,
+    "pending_review": true
+  },
+  {
+    "question": "Berapa lama saya punya waktu untuk mengurus residence permit setelah tiba di China?",
+    "expected_slug": "visa-dan-izin-tinggal",
+    "must_refuse": false,
+    "pending_review": true
+  },
+  {
+    "question": "Dokumen apa saja yang dibawa untuk lapor di imigrasi saat baru sampai?",
+    "expected_slug": "visa-dan-izin-tinggal",
+    "must_refuse": false,
+    "pending_review": true
+  },
+  {
+    "question": "Bagaimana cara buat appointment medical check-up dan berapa biayanya?",
+    "expected_slug": "visa-dan-izin-tinggal",
+    "must_refuse": false,
+    "pending_review": true
+  },
+  {
+    "question": "How do I apply for my residence permit after arriving?",
+    "expected_slug": "visa-dan-izin-tinggal",
+    "must_refuse": false,
+    "pending_review": true
+  },
+  {
+    "question": "Asuransi mahasiswa 800 RMB per tahun dibayar pakai apa?",
+    "expected_slug": "visa-dan-izin-tinggal",
+    "must_refuse": false,
+    "pending_review": true
+  },
+  {
+    "question": "Perkiraan biaya hidup bulanan mahasiswa di Nanjing berapa?",
+    "expected_slug": "biaya-hidup-bulan-pertama",
+    "must_refuse": false,
+    "pending_review": true
+  },
+  {
+    "question": "Berapa sewa asrama kampus dan sewa kos di luar kampus per bulan?",
+    "expected_slug": "biaya-hidup-bulan-pertama",
+    "must_refuse": false,
+    "pending_review": true
+  },
+  {
+    "question": "Berapa harga paket kartu SIM mahasiswa dan dokumen apa yang diperlukan?",
+    "expected_slug": "aplikasi-pembayaran-dan-sim-card",
+    "must_refuse": false,
+    "pending_review": true
+  },
+  {
+    "question": "Aplikasi apa yang dipakai buat bayar dan belanja sehari-hari?",
+    "expected_slug": "aplikasi-pembayaran-dan-sim-card",
+    "must_refuse": false,
+    "pending_review": true
+  },
+  {
+    "question": "how much money do I need for my first month?",
+    "expected_slug": "biaya-hidup-bulan-pertama",
+    "must_refuse": false,
+    "pending_review": true
+  },
+  {
+    "question": "Halo kak, makasih ya",
+    "expected_slug": null,
+    "must_refuse": true
+  },
+  {
+    "question": "Ceritakan lelucon lucu",
+    "expected_slug": null,
+    "must_refuse": true
+  },
+  {
+    "question": "Film apa yang bagus ditonton pekan ini?",
+    "expected_slug": null,
+    "must_refuse": true
+  },
+  {
+    "question": "Siapa pemenang Piala Dunia 2026?",
+    "expected_slug": null,
+    "must_refuse": true
+  },
+  {
+    "question": "Cariin jodoh, kak",
+    "expected_slug": null,
+    "must_refuse": true
+  },
+  {
+    "question": "Bitcoin worth it nggak?",
+    "expected_slug": null,
+    "must_refuse": true
+  }
+]

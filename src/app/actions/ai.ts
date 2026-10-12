@@ -2,8 +2,8 @@
 
 import { auth } from "@/auth";
 import { hasModuleAccess, type AdminModule } from "@/lib/admin-scope";
-import { buildChatSystemPrompt, detectAnswerLanguage, improveIndonesianText, groqChat, type ImproveContext, type GroqMessage } from "@/lib/groq";
-import { buildGuideContext, findGuideChunks } from "@/lib/guidebook-search";
+import { improveIndonesianText, groqChat, type ImproveContext } from "@/lib/groq";
+import { askGuide } from "@/lib/guide-answer";
 import { eq } from "drizzle-orm";
 import { db } from "@/db";
 import { users } from "@/db/schema";
@@ -72,17 +72,13 @@ export async function chatWithAIAction(history: { role: "user" | "assistant"; co
   const recent = history.slice(-12).map((m) => ({ role: m.role, content: m.content }));
   if (recent.length === 0) throw new Error("Pesan kosong");
 
-  // Sumber jawaban: artikel bantuan yang sudah diterbitkan pengurus, dicari
-  // dengan pertanyaan terakhir. Tidak ada yang cocok -> prompt tetap dikirim
-  // tanpa panduan, dan instruksinya membuat model menjawab "belum ada
-  // panduannya" alih-alih mengarang.
+  // Jawaban diambil lewat askGuide (src/lib/guide-answer.ts): retrieval dari
+  // artikel yang sudah ditinjau, cache per corpus_version, kuota harian, baru
+  // Groq. Kalau AI-nya mati, kuotanya habis, atau Groq menolak, jawabannya
+  // panduan yang paling relevan, bukan pesan error.
   const question = [...recent].reverse().find((m) => m.role === "user")?.content ?? "";
-  const chunks = await findGuideChunks(question);
-  const messages: GroqMessage[] = [
-    { role: "system", content: buildChatSystemPrompt(buildGuideContext(chunks), detectAnswerLanguage(question)) },
-    ...recent,
-  ];
-  const raw = await groqChat(messages, { temperature: 0.5, maxTokens: 500 });
+  const answer = await askGuide({ userId: session.user.id, question, history: recent });
+  const raw = answer.reply;
 
   const marker = raw.match(/<<PROFILE_EDIT:([\s\S]*?)>>/);
   if (marker) {
