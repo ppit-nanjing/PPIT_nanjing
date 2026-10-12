@@ -2,7 +2,8 @@ import { createHash } from "node:crypto";
 import { and, eq, inArray, sql } from "drizzle-orm";
 import { db } from "@/db";
 import { aiQueryLog, aiUsage, guideAnswers, guideChunks, guideMeta, helpArticles } from "@/db/schema";
-import { buildChatSystemPrompt, detectAnswerLanguage, groqChat, type GroqMessage } from "./groq";
+import { buildChatSystemPrompt, detectAnswerLanguage, type GroqMessage } from "./groq";
+import { assistantChat } from "./assistant";
 import { buildGuideContext, findGuideChunks, RETRIEVABLE_ARTICLE, type GuideChunk } from "./guidebook-search";
 import { questionEntities, searchTerms } from "./guidebook-terms";
 
@@ -315,7 +316,7 @@ export async function askGuide(input: {
 
   let reply: string;
   try {
-    reply = await groqChat(messages, { temperature: 0.5, maxTokens: 400 });
+    reply = await assistantChat(messages, { temperature: 0.5, maxTokens: 400 });
   } catch (err) {
     return degraded(degradedReasonFromError(err), true);
   }
@@ -368,7 +369,7 @@ export async function warmCacheForQuestion(question: string): Promise<"cached" |
   if (!aiEnabled) return "skipped";
 
   try {
-    const reply = await groqChat(
+    const reply = await assistantChat(
       [
         { role: "system", content: buildChatSystemPrompt(buildGuideContext(articles), detectAnswerLanguage(normalized)) },
         { role: "user", content: normalized },
