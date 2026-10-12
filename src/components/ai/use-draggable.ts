@@ -22,6 +22,7 @@ export function useDraggable<T extends HTMLElement = HTMLElement>(
   const start = useRef<Point>({ x: 0, y: 0 });
   const offset = useRef<Point>({ x: 0, y: 0 });
   const posRef = useRef<Point | null>(null);
+  const capture = useRef<Element | null>(null);
 
   useEffect(() => {
     posRef.current = pos;
@@ -67,7 +68,17 @@ export function useDraggable<T extends HTMLElement = HTMLElement>(
       moved.current = false;
       start.current = { x: e.clientX, y: e.clientY };
       offset.current = { x: e.clientX - current.x, y: e.clientY - current.y };
-      el.setPointerCapture(e.pointerId);
+      // Tangkap pointer di elemen yang benar-benar ditekan, bukan di handle-nya.
+      // Kalau capture dipasang di handle, event `click` ikut dialihkan ke handle
+      // dan tombol di dalamnya tidak pernah menerima kliknya.
+      const node = (e.target as Element | null) ?? el;
+      capture.current = node;
+      try {
+        node.setPointerCapture(e.pointerId);
+      } catch {
+        el.setPointerCapture(e.pointerId);
+        capture.current = el;
+      }
     };
 
     const onMove = (e: PointerEvent) => {
@@ -82,10 +93,11 @@ export function useDraggable<T extends HTMLElement = HTMLElement>(
       if (!dragging.current) return;
       dragging.current = false;
       try {
-        el.releasePointerCapture(e.pointerId);
+        (capture.current ?? el).releasePointerCapture(e.pointerId);
       } catch {
         // pointer already released
       }
+      capture.current = null;
       const next = posRef.current;
       if (next && storageKey) {
         try {
