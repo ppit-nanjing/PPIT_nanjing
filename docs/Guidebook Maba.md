@@ -1,7 +1,7 @@
 # Guidebook Maba
 
 > Implementation plan for **issue #65 — "Guidebook untuk maba: AI atau interaktif"**.
-> Status: **plan; P0–P2 done, chatbot half browser-verified (2026-10-12, lihat Verification).** Branch `feat/chatbot` is pushed to `origin` and merges the chatbot part of step 1 below: `src/lib/guidebook-search.ts` (new), changes to `src/app/actions/ai.ts` and `src/lib/groq.ts`, and the "Chatbot Help Center" section of [Documentation & Help Center](./Documentation%20&%20Help%20Center.md). P0 landed on the same branch (see the phase table). P1 added `drizzle/0046_guidebook.sql`, the schema mirror, `src/lib/guide-chunker.ts`, `src/lib/markdown-lite.tsx`, and `scripts/check-guidebook.ts`. P2 added the console side: `src/app/console/docs/guidebook/` (topic list + diagnostics), the topic form (`article-form.tsx`, `markdown-editor.tsx`), and topic actions in `src/app/actions/admin-docs.ts`. No migration has been applied to Neon production yet (the local Docker database does have it), and P2 topics have been saved from a browser — see "Verification and Definition of Done" for what was actually run. Still to build: P3–P4 — checklist progress per account, retrieval wiring, and the staged-guide UI.
+> Status: **plan; P0–P2 done, chatbot half browser-verified (2026-10-12, lihat Verification).** Branch `feat/chatbot` is pushed to `origin` and merges the chatbot part of step 1 below: `src/lib/guidebook-search.ts` (new), changes to `src/app/actions/ai.ts` and `src/lib/groq.ts`, and the "Chatbot Help Center" section of [Documentation & Help Center](./Documentation%20&%20Help%20Center.md). P0 landed on the same branch (see the phase table). P1 added `drizzle/0046_guidebook.sql`, the schema mirror, `src/lib/guide-chunker.ts`, `src/lib/markdown-lite.tsx`, and `scripts/check-guidebook.ts`. P2 added the console side: `src/app/console/docs/guidebook/` (topic list + diagnostics), the topic form (`article-form.tsx`, `markdown-editor.tsx`), and topic actions in `src/app/actions/admin-docs.ts`. No migration has been applied to Neon production yet (the local Docker database does have it), and P2 topics have been saved from a browser — see "Verification and Definition of Done" for what was actually run. P3 sudah mulai (2026-10-12): `src/db/ingest-guide.ts` + `src/lib/guidebook-manifest.ts` memasukkan hasil ekstraksi PDF per topik ke `content` dan `parsed_markdown`, dan 5 topik pertama sudah ada di database lokal (12.927 karakter, 23 potongan, `corpus_version` 19) — lihat "Guidebook maba masuk korpus" di bawah. Sisa yang belum dibangun: bagian lain P3 (spot-check 10 halaman, panel merge) dan P4 — progres checklist per akun, halaman `/guidebook`, dan UI panduan bertahap.
 > Related: [Documentation & Help Center](./Documentation%20&%20Help%20Center.md), [Data Dictionary](./Data%20Dictionary.md), [Entity Relationship Diagram](./Entity%20Relationship%20Diagram.md), [Tech Stack](./Tech%20Stack.md), [Sensus Profile Flow](./Sensus%20Profile%20Flow.md), [Information Architecture](./Information%20Architecture.md).
 
 ## Summary
@@ -326,7 +326,7 @@ Quota mitigations: answer cache (key = question hash + `corpus_version`), prewar
 | **P0 — Hygiene** *(done)* | `/help` selects only `(id, section, title, slug)`; `groq.ts` gets a 20 s timeout + stops the chain on 429; drop the unordered `.limit(40)`; log `usage` | `src/app/help/page.tsx:16`, `src/lib/groq.ts`, `src/lib/guidebook-search.ts` | The index page payload drops (no longer shipping every article body), no fetch is left without a timeout, a 429 no longer burns the next model's quota |
 | **P1 — Schema + pure functions** *(done)* | SQL migration `0046_guidebook.sql`; `guide-chunker.ts`; `markdown-lite.tsx`; harness `scripts/check-guidebook.ts` | `drizzle/0046_guidebook.sql`, `src/db/schema.ts`, `src/lib/guide-chunker.ts`, `src/lib/markdown-lite.tsx`, `scripts/check-guidebook.ts` | `tsc`/`npm run lint` clean; `npm run check:guidebook` 24/24 green; chunking the 5 real extractions gives 133 chunks with page ranges that match the PDFs (0–37, 0–68, …); migration applied and re-applied idempotently on a throwaway Postgres 16 and on the local Docker database ([Database Lokal Docker](./Database%20Lokal%20Docker.md)). The migration is **not applied to the Neon production database yet** |
 | **P2 — Console (editability)** *(done; the three acceptance points below were clicked through in a browser on 2026-10-10)* | Topic form (phase/order/review/expiry), preview, diagnostics, history + restore, merge panel | `src/app/console/docs/**`, `src/app/actions/admin-docs.ts`, `src/components/console/{article-form,markdown-editor,status-row}.tsx`, `src/lib/guidebook-topic.ts` | A new topic shows up in the checklist and retrieval **with no deploy**; an edit bumps `corpus_version`; a concurrent save is rejected |
-| **P3 — Ingest** | JSON-per-page → per-topic markdown → `parsed_markdown`; quality gate; first merge | `src/db/ingest-guide.ts`, `src/lib/guidebook-manifest.ts`, `src/lib/guidebook-faq.ts` | All 5 PDFs ingested, 10 random pages manually checked, no empty/conflicting pages, local edits not clobbered |
+| **P3 — Ingest** *(script + 5 topik jalan; spot-check & panel merge belum)* | JSON-per-page → per-topic markdown → `parsed_markdown`; quality gate; first merge | `src/db/ingest-guide.ts`, `src/lib/guidebook-manifest.ts`, `src/lib/guidebook-faq.ts` | All 5 PDFs ingested, 10 random pages manually checked, no empty/conflicting pages, local edits not clobbered |
 | **P4 — Retrieval & UX** | FTS + refusal + retrieval-only + cache + quota + prewarm; `/guidebook`; chat wiring; docs + SOP | `src/app/api/guide/ask/route.ts`, `src/app/guidebook/**`, `src/lib/guidebook-search.ts`, `docs/**` | The golden set passes its targets; `/guidebook` works on mobile + dark mode; KPIs are measurable from `ai_query_log` |
 
 P0 can be done right now without waiting on the parser; P2 deliberately precedes P3 so the edit path is proven before 150 pages land. The `guidebook` module key and the 6-month default for new topics shipped with P2 (2026-10-11) — see [Decisions](#decisions-answered-2026-10-11).
@@ -351,6 +351,35 @@ Jalur jawaban diuji di Chromium pada deployment pratinjau (`ppit-nanjing-preview
 - Tidak ada error di console browser. Kunci Groq di mesin lokal menjawab 403 di `api.groq.com`, jadi uji bahasa memang hanya bisa jalan di deployment.
 - Filter artikel non-publik diuji terpisah terhadap database lokal: `findGuideChunks("Bagaimana cara isi ulang kartu Yikatong?")` mengembalikan 0 potongan, padahal artikel "Kartu Transportasi" (non-publik, satu-satunya yang menyebut Yikatong) ada di tabel yang sama. Tidak ada judul atau isi artikel non-publik yang masuk konteks.
 - Sesi setelah login lewat form sekarang langsung terpakai tanpa muat ulang: alamat beranda menampilkan "Admin Lokal" dan bola Asisten AI sudah bisa diklik pada render pertama, sementara bagi pengguna anonim bola itu redup (`disabled`) dan hanya bola Masukan yang aktif.
+
+### Guidebook maba masuk korpus (2026-10-12)
+
+Lima topik pertama sudah benar-benar ada di database lokal, bukan cuma di dokumen rencana. Sumbernya markdown di `docs/guidebook/`, dipetakan per topik oleh `src/lib/guidebook-manifest.ts` (judul, bagian, fase, urutan, label sumber), lalu ditulis `src/db/ingest-guide.ts`:
+
+| Topik | Fase | Urutan | Karakter |
+|---|---|---|---|
+| Sering Dipakai - Transportasi dari Bandara ke Kampus | arrival | 5 | 1.157 |
+| Tentang PPIT - Profil PPIT Nanjing | pre-arrival | 10 | 2.664 |
+| Tentang Nanjing - Kota Nanjing | pre-arrival | 20 | 3.114 |
+| Sebelum Berangkat - Dokumen dan Berkas Awal Datang | pre-arrival | 30 | 2.772 |
+| Kedatangan - Visa dan Izin Tinggal | arrival | 40 | 3.220 |
+
+Semuanya terbit (`is_public = true`), total 12.927 karakter, 23 potongan di `guide_chunks`, `corpus_version` naik dari 14 ke 19. `content` yang sudah disunting pengurus tidak ditimpa: ingest cuma memperbarui metadata dan membiarkan isinya, kecuali `--force`.
+
+Pencariannya diuji lewat skrip sekali-pakai terhadap database lokal, karena `api.groq.com` menolak IP mesin ini (403, sama seperti sebelumnya) sehingga langkah modelnya tidak bisa dijalankan di sini:
+
+| Pertanyaan | Artikel yang terambil |
+|---|---|
+| "how to NUAA from airport" | Transportasi dari Bandara ke Kampus |
+| "how is the visa work?" | Visa dan Izin Tinggal |
+| "what is PPIT" | Profil PPIT Nanjing |
+| "where is nanjing at?" | Kota Nanjing |
+| "kartu transportasi kampus itu apa?" | Transportasi dari Bandara ke Kampus |
+| "cara perpanjang paspor bagaimana?" | Dokumen dan Berkas Awal Datang |
+
+Yang berubah karena ini: pertanyaan Inggris sebelumnya tidak menemukan apa pun, karena artikelnya Indonesia dan tidak ada satu kata pun yang cocok. `SYNONYMS` di `src/lib/guidebook-terms.ts` memetakan istilah Inggris ke kata yang dipakai korpus, dan `questionEntities` menangani pertanyaan yang isinya cuma nama. Artikel non-publik tetap tidak ikut: `findGuideChunks("Bagaimana cara isi ulang kartu Yikatong?")` mengembalikan 0 potongan (artikel Yikatong-nya internal).
+
+`npm run check:guidebook` 31/31 hijau. Tujuh pemeriksaan barunya soal kata kunci, bukan chunker: pertanyaan Inggris dapat istilah Indonesia, sinonim tidak menendang kata asli, kata fungsi Inggris dibuang, jumlah kata kunci dibatasi, pertanyaan entitas tidak menyisakan kata kunci, entitasnya tetap dikenali untuk pencarian cadangan, dan sapaan tidak jadi kata kunci. Harness ini jalan tanpa database karena logikanya dipisah ke `src/lib/guidebook-terms.ts`.
 
 ## Operations and rollback
 

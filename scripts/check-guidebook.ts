@@ -11,6 +11,7 @@ import { readFileSync } from "node:fs";
 import { renderToStaticMarkup } from "react-dom/server";
 import { CHUNKER_VERSION, chunkMarkdown } from "../src/lib/guide-chunker";
 import { renderMarkdownLite } from "../src/lib/markdown-lite";
+import { questionEntities, searchTerms } from "../src/lib/guidebook-terms";
 
 const MAX_CHUNK_CHARS = 3200;
 
@@ -148,6 +149,48 @@ if (path) {
   for (const h of headings.slice(0, 12)) console.log(`    - ${h}`);
   if (headings.length > 12) console.log(`    ... ${headings.length - 12} lagi`);
 }
+
+// ---------- kata kunci pertanyaan ----------
+// Bagian yang paling gampang rusak diam-diam: pengguna bertanya dalam bahasa
+// Inggris, artikelnya bahasa Indonesia. Kalau sinonimnya putus, chatbot hanya
+// menjawab "belum ada panduan" dan tidak ada yang error.
+const airportTerms = searchTerms("how to NUAA from airport");
+check(
+  "kata kunci: pertanyaan Inggris dapat istilah Indonesia",
+  airportTerms.includes("nuaa") && airportTerms.includes("bandara"),
+  airportTerms.join(","),
+);
+check(
+  "kata kunci: sinonim tidak menendang kata asli pengguna",
+  airportTerms.indexOf("nuaa") < airportTerms.indexOf("bandara"),
+  airportTerms.join(","),
+);
+const visaTerms = searchTerms("how is the visa work?");
+check(
+  "kata kunci: kata fungsi Inggris dibuang, isi pertanyaan tetap",
+  visaTerms.includes("visa") && visaTerms.includes("kerja") && !visaTerms.some((t) => ["is", "the", "how"].includes(t)),
+  visaTerms.join(","),
+);
+check(
+  "kata kunci: kata kunci dibatasi",
+  searchTerms("bagaimana cara mengurus visa paspor asrama kampus bank rekening telepon internet").length <= 10,
+);
+const entityTerms = searchTerms("where is nanjing at?");
+check(
+  "kata kunci: pertanyaan entitas tidak menyisakan kata kunci",
+  entityTerms.length === 0,
+  entityTerms.join(","),
+);
+check(
+  "kata kunci: entitas dikenali untuk pencarian cadangan",
+  questionEntities("where is nanjing at?").join(",") === "nanjing",
+  questionEntities("where is nanjing at?").join(","),
+);
+check(
+  "kata kunci: sapaan tidak jadi kata kunci",
+  searchTerms("halo kak").length === 0,
+  searchTerms("halo kak").join(","),
+);
 
 // ---------- laporan ----------
 for (const c of checks) console.log(`${c.ok ? "ok  " : "FAIL"} ${c.name}${c.detail && !c.ok ? ` -> ${c.detail}` : ""}`);

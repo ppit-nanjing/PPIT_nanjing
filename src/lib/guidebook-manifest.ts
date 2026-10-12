@@ -1,0 +1,89 @@
+import type { GuidePhase } from "@/lib/guidebook-topic";
+
+// Daftar topik guidebook maba yang isinya hidup di repo (docs/guidebook/*.md).
+// Sumbernya materi PPIT sendiri: buku "A Guide to Nanjing" 2026 dan deck
+// sosialisasi Nanjing 101 (lihat docs/Guidebook Maba.md). Script
+// src/db/ingest-guide.ts membaca daftar ini; panel merge di /console/docs hanya
+// membandingkan hasilnya dengan suntingan pengurus, jadi menambah topik =
+// menambah file markdown + satu entri di bawah.
+//
+// `slug` sengaja yang sudah beredar (mis. transportasi-dari-bandara-ke-kampus)
+// supaya tautan /help/<slug> yang pernah dibagikan tetap hidup.
+
+export type GuidebookTopic = {
+  slug: string;
+  title: string;
+  section: string;
+  phase: GuidePhase;
+  sortOrder: number;
+  isPublic: boolean;
+  /** Label yang dibaca pengurus di /console/docs untuk tahu asal isinya. */
+  sourceLabel: string;
+  sourceDocSlug: string;
+  /** Jalur relatif dari akar repo. */
+  file: string;
+  /**
+   * Isi lama boleh ditimpa walau `content` di DB sudah berisi sesuatu. Dipakai
+   * untuk baris yang isinya masih penanda halaman ekstraksi (mis. "[[p12]]").
+   */
+  replaceStub?: boolean;
+};
+
+export const GUIDEBOOK_TOPICS: GuidebookTopic[] = [
+  {
+    slug: "transportasi-dari-bandara-ke-kampus-uvd9",
+    title: "Transportasi dari Bandara ke Kampus",
+    section: "Sering Dipakai",
+    phase: "arrival",
+    sortOrder: 5,
+    isPublic: true,
+    sourceLabel: "A Guide to Nanjing 2026; Sosialisasi Nanjing 101",
+    sourceDocSlug: "guide-to-nanjing-2026",
+    file: "docs/guidebook/transportasi-dari-bandara-ke-kampus.md",
+    replaceStub: true,
+  },
+  {
+    slug: "profil-ppit-nanjing",
+    title: "Profil PPIT Nanjing",
+    section: "Tentang PPIT",
+    phase: "pre-arrival",
+    sortOrder: 10,
+    isPublic: true,
+    sourceLabel: "A Guide to Nanjing 2026 (Kata Sambutan & Profil PPIT Nanjing)",
+    sourceDocSlug: "guide-to-nanjing-2026",
+    file: "docs/guidebook/profil-ppit-nanjing.md",
+  },
+  {
+    slug: "kota-nanjing",
+    title: "Kota Nanjing",
+    section: "Tentang Nanjing",
+    phase: "pre-arrival",
+    sortOrder: 20,
+    isPublic: true,
+    sourceLabel: "A Guide to Nanjing 2026; Sosialisasi Nanjing 101 (Perkenalan Kota Nanjing)",
+    sourceDocSlug: "guide-to-nanjing-2026",
+    file: "docs/guidebook/kota-nanjing.md",
+  },
+  {
+    slug: "dokumen-dan-berkas-awal-datang",
+    title: "Dokumen dan Berkas Awal Datang",
+    section: "Sebelum Berangkat",
+    phase: "pre-arrival",
+    sortOrder: 30,
+    isPublic: true,
+    sourceLabel: "A Guide to Nanjing 2026 (paspor, surat keterangan belajar); Sosialisasi Nanjing 101 (Pre-Arrival)",
+    sourceDocSlug: "guide-to-nanjing-2026",
+    file: "docs/guidebook/dokumen-dan-berkas-awal-datang.md",
+  },
+  {
+    slug: "visa-dan-izin-tinggal",
+    title: "Visa dan Izin Tinggal",
+    section: "Kedatangan",
+    phase: "arrival",
+    sortOrder: 40,
+    isPublic: true,
+    sourceLabel: "A Guide to Nanjing 2026 (Imigrasi, Residence Permit); Sosialisasi Nanjing 101 (What to do after arriving)",
+    sourceDocSlug: "guide-to-nanjing-2026",
+    file: "docs/guidebook/visa-dan-izin-tinggal.md",
+  },
+];

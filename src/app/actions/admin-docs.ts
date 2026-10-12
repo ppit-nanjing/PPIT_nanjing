@@ -1,13 +1,12 @@
 "use server";
 
-import { and, eq, sql } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { requireModuleAccess } from "@/lib/admin-scope";
 import { db } from "@/db";
-import { auditLogs, guideChunks, guideMeta, helpArticles, releaseNotes } from "@/db/schema";
-import { CHUNKER_VERSION, chunkMarkdown } from "@/lib/guide-chunker";
-import { stemmedText } from "@/lib/guidebook-search";
+import { auditLogs, guideChunks, helpArticles, releaseNotes } from "@/db/schema";
+import { bumpCorpusVersion, rebuildChunks } from "@/lib/guidebook-index";
 import { articleSignatureSql, isGuidePhase } from "@/lib/guidebook-topic";
 
 // Setiap aksi di berkas ini menyentuh Help Center atau topik guidebook, jadi
@@ -70,50 +69,6 @@ async function logArticleAudit(
   } catch (err) {
     console.error(`[audit] help_article ${action} failed:`, err);
   }
-}
-
-/**
- * Potongan pencarian dibangun ulang setiap isi disimpan. Baris lama dibuang
- * dulu karena (article_id, ordinal) unik dan chunker menomori dari 0.
- * Isi kosong = nol potongan, artinya topik hilang dari pencarian tapi tetap ada
- * di checklist.
- */
-async function rebuildChunks(articleId: string, content: string | null): Promise<number> {
-  await db.delete(guideChunks).where(eq(guideChunks.articleId, articleId));
-  const drafts = chunkMarkdown(content ?? "");
-  if (drafts.length === 0) return 0;
-  await db.insert(guideChunks).values(
-    drafts.map((d) => ({
-      articleId,
-      ordinal: d.ordinal,
-      heading: d.heading,
-      pageFrom: d.pageFrom,
-      pageTo: d.pageTo,
-      text: d.text,
-      textStemmed: stemmedText(d.text),
-    })),
-  );
-  return drafts.length;
-}
-
-/**
- * corpus_version adalah kunci cache guide_answers: naik satu langkah setiap
- * korpus berubah, jadi jawaban lama berhenti dicocokkan tanpa ada yang dihapus.
- * chunker_version ditulis di sini juga supaya script ingest tahu potongan lama
- * mana yang perlu dibangun ulang kalau aturan pemotongan berubah.
- */
-async function bumpCorpusVersion(): Promise<void> {
-  await db
-    .insert(guideMeta)
-    .values({ oneRow: true, corpusVersion: 1, chunkerVersion: CHUNKER_VERSION })
-    .onConflictDoUpdate({
-      target: guideMeta.oneRow,
-      set: {
-        corpusVersion: sql`${guideMeta.corpusVersion} + 1`,
-        chunkerVersion: CHUNKER_VERSION,
-        updatedAt: new Date(),
-      },
-    });
 }
 
 const EXPIRY_MONTHS: Record<string, number> = { "3": 3, "6": 6, "12": 12 };

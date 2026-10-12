@@ -39,83 +39,7 @@ const MAX_CONTEXT_CHARS = 7000;
 // masih puluhan artikel; kalau nanti membengkak, ganti ke FTS dengan peringkat di
 // DB (lihat rencana P1 di docs/Guidebook Maba.md), bukan menambah LIMIT lagi.
 
-const MAX_TERMS = 10;
-
-// Kata fungsi + istilah yang muncul di hampir semua artikel (nama organisasi,
-// kota). Kata seperti "ppit"/"nanjing" kalau ikut dicari akan mencocokkan semua
-// artikel dan membuat peringkat tidak berarti.
-const STOPWORDS: Record<string, true> = {
-  yang: true, dan: true, untuk: true, dengan: true, dari: true, pada: true, dalam: true, atau: true,
-  kalau: true, jika: true, agar: true, supaya: true, ini: true, itu: true, ada: true, adalah: true,
-  apa: true, apakah: true, bagaimana: true, gimana: true, dimana: true, kapan: true, siapa: true,
-  mengapa: true, kenapa: true, bisa: true, boleh: true, harus: true, saya: true, aku: true, kamu: true,
-  kami: true, kita: true, anda: true, nya: true, tidak: true, bukan: true, belum: true, sudah: true,
-  juga: true, saja: true, mau: true, ingin: true, butuh: true, tolong: true, minta: true, tanya: true,
-  cara: true, info: true, informasi: true, dong: true, ya: true, kah: true, sih: true, the: true,
-  and: true, for: true, with: true, how: true, what: true, where: true, when: true, who: true, can: true,
-  ppit: true, nanjing: true, tiongkok: true, china: true,
-  // Sapaan dan terima kasih: kalau ikut dicari, "halo kak" jadi kata kunci dan
-  // memaksa satu kueri DB yang pasti tidak ada hasilnya.
-  halo: true, hai: true, hi: true, hello: true, kak: true, bang: true, min: true, pagi: true, siang: true,
-  sore: true, malam: true, assalamualaikum: true, salam: true, kenal: true, terima: true, kasih: true,
-  makasih: true, thanks: true, thank: true, banget: true,
-};
-
-// Imbuhan Indonesia yang paling sering membuat kata kunci pengguna tidak
-// persis sama dengan kata di artikel ("membuka rekening" vs "buka rekening").
-// Kosongkan awalan saja yang aman: mencocokkan lewat ILIKE bersifat substring,
-// jadi sisa kata yang terlalu pendek justru menambah pencocokan palsu, bukan
-// mengurangi yang benar. Kata aslinya tetap dicari juga (lihat searchTerms).
-const PREFIXES = ["meng", "meny", "mem", "men", "me", "di", "ter", "ber"];
-const SUFFIXES = ["nya", "kan", "an"];
-
-function normalizeToken(token: string): string {
-  let s = token;
-  for (const suffix of SUFFIXES) {
-    if (s.length - suffix.length >= 4 && s.endsWith(suffix)) {
-      s = s.slice(0, -suffix.length);
-      break;
-    }
-  }
-  for (const prefix of PREFIXES) {
-    if (s.length - prefix.length >= 4 && s.startsWith(prefix)) {
-      s = s.slice(prefix.length);
-      break;
-    }
-  }
-  return s;
-}
-
-/**
- * Kata kunci dari pertanyaan pengguna: kata asli + bentuk tanpa imbuhan, tanpa
- * kata fungsi. Kosong = pertanyaan tidak punya kata yang bisa dicari (mis.
- * "halo"), dan pemanggil akan menjawab "tidak tahu" - bukan mencari ke korpus.
- */
-export function searchTerms(question: string): string[] {
-  const raw = (question ?? "").toLowerCase().match(/[a-z0-9]+/g) ?? [];
-  const terms = new Set<string>();
-  for (const token of raw) {
-    if (token.length < 3) continue;
-    if (STOPWORDS[token] === true) continue;
-    terms.add(token);
-    const stem = normalizeToken(token);
-    if (stem !== token && stem.length >= 3 && STOPWORDS[stem] !== true) terms.add(stem);
-    if (terms.size >= MAX_TERMS) break;
-  }
-  return [...terms].slice(0, MAX_TERMS);
-}
-
-/**
- * Isi kolom `guide_chunks.text_stemmed`: seluruh kata potongan, dinormalkan.
- * Beda dengan searchTerms, di sini stopword TIDAK dibuang - kolom ini harus
- * tetap bisa dicocokkan untuk kata apa pun yang diketik pengguna, dan kata
- * fungsi baru dibuang di sisi pertanyaan. Duplikat dibiarkan; `to_tsvector`
- * yang meringkasnya jadi lexeme.
- */
-export function stemmedText(text: string): string {
-  const raw = (text ?? "").toLowerCase().match(/[a-z0-9]+/g) ?? [];
-  return raw.map(normalizeToken).join(" ");
-}
+import { questionEntities, searchTerms } from "./guidebook-terms";
 
 /**
  * Skor sederhana: judul paling menentukan, lalu bagian, lalu isi (dibatasi 3
@@ -148,7 +72,7 @@ export function rankArticles(terms: string[], rows: GuideRow[]): GuideChunk[] {
 /** Kandidat dari DB: artikel yang sudah ditandai publik dan memuat minimal satu kata kunci. */
 export async function findGuideChunks(question: string): Promise<GuideChunk[]> {
   const terms = searchTerms(question);
-  if (terms.length === 0) return [];
+  if (terms.length === 0) return findEntityChunks(question);
 
   const matches: SQL[] = [];
   for (const term of terms) {
@@ -170,6 +94,38 @@ export async function findGuideChunks(question: string): Promise<GuideChunk[]> {
 
   return rankArticles(
     terms,
+    rows.map((row) => ({ ...row, content: row.content ?? "" })),
+  );
+}
+
+/**
+ * Cadangan untuk pertanyaan yang seluruh katanya kata fungsi ("apa itu PPIT",
+ * "where is nanjing at?"). Hanya judul dan bagian yang dicocokkan: kalau isi
+ * artikel ikut dicari, "nanjing" ada di hampir semua artikel guidebook dan
+ * peringkatnya jadi tidak berarti.
+ */
+async function findEntityChunks(question: string): Promise<GuideChunk[]> {
+  const entities = questionEntities(question);
+  if (entities.length === 0) return [];
+
+  const matches: SQL[] = [];
+  for (const entity of entities) {
+    matches.push(ilike(helpArticles.title, `%${entity}%`));
+    matches.push(ilike(helpArticles.section, `%${entity}%`));
+  }
+
+  const rows = await db
+    .select({
+      slug: helpArticles.slug,
+      section: helpArticles.section,
+      title: helpArticles.title,
+      content: helpArticles.content,
+    })
+    .from(helpArticles)
+    .where(and(eq(helpArticles.isPublic, true), or(...matches)));
+
+  return rankArticles(
+    entities,
     rows.map((row) => ({ ...row, content: row.content ?? "" })),
   );
 }
