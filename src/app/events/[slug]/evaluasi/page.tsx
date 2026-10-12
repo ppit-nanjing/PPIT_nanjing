@@ -1,4 +1,4 @@
-import { eq } from "drizzle-orm";
+import { eq, and, isNull } from "drizzle-orm";
 import { notFound } from "next/navigation";
 import { db } from "@/db";
 import { coverageCities, events } from "@/db/schema";
@@ -14,7 +14,7 @@ import { getT } from "@/lib/i18n/server";
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
   const { t } = await getT();
-  const [event] = await db.select({ title: events.title }).from(events).where(eq(events.slug, slug));
+  const [event] = await db.select({ title: events.title }).from(events).where(and(eq(events.slug, slug), isNull(events.deletedAt)));
   return { title: t("eval.metaTitle", { event: event?.title ?? slug }) };
 }
 
@@ -22,7 +22,7 @@ export default async function EventEvaluationPage({ params }: { params: Promise<
   const { slug } = await params;
   const { t } = await getT();
 
-  const [event] = await db.select().from(events).where(eq(events.slug, slug));
+  const [event] = await db.select().from(events).where(and(eq(events.slug, slug), isNull(events.deletedAt)));
   if (!event || event.status === "draft" || event.status === "scheduled") notFound();
 
   // Kota (urutan kanonik) dan pertanyaan buatan panitia tidak saling bergantung.

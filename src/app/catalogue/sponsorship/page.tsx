@@ -1,4 +1,4 @@
-import { asc, desc, eq, inArray, sql, count } from "drizzle-orm";
+import { asc, desc, eq, inArray, sql, count, and, isNull } from "drizzle-orm";
 import Image from "next/image";
 import { Handshake, ExternalLink } from "lucide-react";
 import { db } from "@/db";
@@ -41,7 +41,7 @@ export default async function SponsorshipPage() {
       // yang hadir - dokumen ide meminta "gak hanya peserta tapi panit yg dtng juga".
       // Acara `completed` ikut dihitung: jangkauan nyata justru datang dari acara
       // yang sudah selesai.
-      .where(inArray(events.status, ["published", "registration_closed", "completed"]))
+      .where(and(inArray(events.status, ["published", "registration_closed", "completed"]), isNull(events.deletedAt)))
       .groupBy(events.id, events.title, events.startAt)
       .orderBy(desc(events.startAt))
       .limit(12),

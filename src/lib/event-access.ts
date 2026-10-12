@@ -1,7 +1,7 @@
 import type { Session } from "next-auth";
 import { cache } from "react";
 import { redirect } from "next/navigation";
-import { and, eq, sql } from "drizzle-orm";
+import { and, eq, isNull, sql } from "drizzle-orm";
 import { auth } from "@/auth";
 import { db } from "@/db";
 import { departmentMembers, eventCommittee, eventDivisions, eventResponsibleDepartments, events } from "@/db/schema";
@@ -39,6 +39,10 @@ export type EventAccess = {
   isBphPanitia: boolean;
   // BPH Kabinet: adminScope "full" + setiap anggota Divisi Teknologi.
   isFullAdmin: boolean;
+  // Acara ada di Sampah (events.deleted_at terisi). Semua akses lain ditolak —
+  // termasuk BPH Kabinet: acara di Sampah dikelola dari /console/events
+  // (pulihkan / hapus permanen), bukan dari halaman acaranya.
+  trashed: boolean;
   // Jembatan modul yang sudah di-scope: scope "events" + (pembuat acara ATAU
   // divisinya jadi PJ acara ini), selama EVENT_RBAC_STRICT masih false.
   // Full admin selalu true (tidak terpengaruh scoping).
@@ -56,6 +60,7 @@ const DENIED: EventAccess = {
   role: null,
   isBphPanitia: false,
   isFullAdmin: false,
+  trashed: false,
   moduleBridge: false,
   divisionGrants: [],
   locked: false,
@@ -85,6 +90,7 @@ export const getEventAccess = cache(async function getEventAccess(
   let role: EventCommitteeRole | null = null;
   let divisionGrants: string[] = [];
   let locked = false;
+  let trashed = false;
   let scopedBridge: boolean | null = null;
 
   // "Pemakai ini anggota divisi PJ acara ini?" — satu ekspresi SQL yang sama
@@ -104,6 +110,7 @@ export const getEventAccess = cache(async function getEventAccess(
         status: events.status,
         startAt: events.startAt,
         endAt: events.endAt,
+        deletedAt: events.deletedAt,
       })
       .from(eventCommittee)
       // divisi HARUS milik acara yang sama — kalau tidak, baris panitia yang
@@ -125,27 +132,34 @@ export const getEventAccess = cache(async function getEventAccess(
       role = (row.role as EventCommitteeRole | undefined) ?? null;
       divisionGrants = row.divisionGrants ?? [];
       locked = isCommitteeLocked({ status: row.status, startAt: row.startAt, endAt: row.endAt });
-    } else if (!isFullAdmin) {
-      // Bukan panitia (mis. pemegang modul) — tetap perlu tahu status kunci
-      // acara + (untuk scoping) pembuat & kecocokan divisi PJ.
+      trashed = row.deletedAt != null;
+    } else {
+      // Bukan panitia (BPH Kabinet / pemegang modul) — tetap perlu tahu status
+      // kunci, apakah acaranya di Sampah, dan (untuk scoping) pembuat & PJ.
       const [ev] = await db
         .select({
           status: events.status,
           startAt: events.startAt,
           endAt: events.endAt,
+          deletedAt: events.deletedAt,
           createdBy: events.createdBy,
           pjMatch: pjMatchExpr,
         })
         .from(events)
         .where(eq(events.id, eventId));
       if (ev) {
-        locked = isCommitteeLocked(ev);
+        if (!isFullAdmin) locked = isCommitteeLocked(ev);
+        trashed = ev.deletedAt != null;
         if (needScopedBridge) {
           scopedBridge = ev.createdBy === session.user.id || ev.pjMatch === true;
         }
       }
     }
   }
+
+  // Acara di Sampah: tolak semua kapabilitas untuk siapa pun. Sesi tetap
+  // dikembalikan supaya pemanggil membedakan "belum login" dari "ditolak".
+  if (trashed) return { ...DENIED, session, trashed: true };
 
   // Panitia yang JUGA pemegang modul: jembatannya tetap dibatasi scope yang
   // sama (kepanitiaan memberinya kapabilitas peran sendiri, bukan akses buta).
@@ -164,6 +178,7 @@ export const getEventAccess = cache(async function getEventAccess(
     role,
     isBphPanitia: isBphPanitiaRole(role),
     isFullAdmin,
+    trashed: false,
     moduleBridge,
     divisionGrants,
     locked,
@@ -195,7 +210,11 @@ export const getScopedEventIds = cache(async function getScopedEventIds(): Promi
   if (session.user.adminScope === "full") return null;
   const userId = session.user.id;
   const [createdRows, pjRows, committeeRows] = await Promise.all([
-    db.select({ id: events.id }).from(events).where(eq(events.createdBy, userId)),
+    // Acara di Sampah tidak pernah masuk scope (dikelola dari Sampah).
+    db
+      .select({ id: events.id })
+      .from(events)
+      .where(and(eq(events.createdBy, userId), isNull(events.deletedAt))),
     db
       .selectDistinct({ id: eventResponsibleDepartments.eventId })
       .from(eventResponsibleDepartments)
@@ -203,8 +222,13 @@ export const getScopedEventIds = cache(async function getScopedEventIds(): Promi
         departmentMembers,
         eq(departmentMembers.departmentId, eventResponsibleDepartments.departmentId),
       )
-      .where(eq(departmentMembers.userId, userId)),
-    db.select({ id: eventCommittee.eventId }).from(eventCommittee).where(eq(eventCommittee.userId, userId)),
+      .innerJoin(events, eq(events.id, eventResponsibleDepartments.eventId))
+      .where(and(eq(departmentMembers.userId, userId), isNull(events.deletedAt))),
+    db
+      .select({ id: eventCommittee.eventId })
+      .from(eventCommittee)
+      .innerJoin(events, eq(events.id, eventCommittee.eventId))
+      .where(and(eq(eventCommittee.userId, userId), isNull(events.deletedAt))),
   ]);
   return [
     ...new Set([
@@ -269,6 +293,8 @@ export async function requireEventConsoleAccess(
 ): Promise<EventAccess & { session: Session }> {
   const access = await getEventAccess(eventId);
   if (!access.session) redirect("/login");
+  // Acara di Sampah: kembali ke daftar Kegiatan (bagian Sampah ada di sana).
+  if (access.trashed) redirect("/console/events");
   if (!access.isFullAdmin && !access.moduleBridge && access.role == null) redirect("/console");
   return access as EventAccess & { session: Session };
 }

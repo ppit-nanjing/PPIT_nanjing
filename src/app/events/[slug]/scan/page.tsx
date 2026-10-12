@@ -1,4 +1,4 @@
-import { eq, and } from "drizzle-orm";
+import { eq, and, isNull } from "drizzle-orm";
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import { db } from "@/db";
@@ -34,7 +34,7 @@ export default async function EventScanPage({
   // discan, tanpa risiko ke data kehadiran/kapasitas sungguhan.
   const practiceMode = practice === "1";
 
-  const [event] = await db.select().from(events).where(eq(events.slug, slug));
+  const [event] = await db.select().from(events).where(and(eq(events.slug, slug), isNull(events.deletedAt)));
   if (!event) notFound();
 
   // requireEventCapability sudah menggerbangi ini lebih ketat daripada gerbang

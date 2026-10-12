@@ -1,4 +1,4 @@
-import { eq, desc, inArray, count } from "drizzle-orm";
+import { eq, desc, inArray, count, and, isNull } from "drizzle-orm";
 import Link from "next/link";
 import { auth } from "@/auth";
 import { hasCompletedSensus } from "@/lib/sensus-gate";
@@ -78,7 +78,7 @@ export default async function Home() {
   const eventRows = await db
     .select()
     .from(events)
-    .where(inArray(events.status, ["published", "registration_closed", "completed"]));
+    .where(and(inArray(events.status, ["published", "registration_closed", "completed"]), isNull(events.deletedAt)));
   const eventStartMs = (e: (typeof eventRows)[number]) =>
     e.startAt ? new Date(e.startAt).getTime() : Number.POSITIVE_INFINITY;
   const homeNow = new Date().getTime();

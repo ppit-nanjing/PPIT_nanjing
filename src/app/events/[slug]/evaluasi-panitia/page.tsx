@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import type { ReactNode } from "react";
 import { notFound } from "next/navigation";
-import { and, eq } from "drizzle-orm";
+import { and, eq, isNull } from "drizzle-orm";
 import { CalendarClock, CheckCircle2, Lock } from "lucide-react";
 import { auth } from "@/auth";
 import { db } from "@/db";
@@ -48,7 +48,7 @@ function LockCard({
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
   const { slug } = await params;
   const { t } = await getT();
-  const [event] = await db.select({ title: events.title }).from(events).where(eq(events.slug, slug));
+  const [event] = await db.select({ title: events.title }).from(events).where(and(eq(events.slug, slug), isNull(events.deletedAt)));
   return { title: t("ceval.metaTitle", { event: event?.title ?? slug }) };
 }
 
@@ -56,7 +56,7 @@ export default async function CommitteeEvaluationPage({ params }: { params: Prom
   const { slug } = await params;
   const { t, locale } = await getT();
 
-  const [event] = await db.select().from(events).where(eq(events.slug, slug));
+  const [event] = await db.select().from(events).where(and(eq(events.slug, slug), isNull(events.deletedAt)));
   // Acara dibatalkan tidak layak dievaluasi (K4) — sama dengan gerbang aksinya.
   if (!event || event.status === "draft" || event.status === "scheduled" || event.status === "cancelled") notFound();
 

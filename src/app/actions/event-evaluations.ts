@@ -1,6 +1,6 @@
 "use server";
 
-import { and, eq } from "drizzle-orm";
+import { and, eq, isNull } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { db } from "@/db";
@@ -45,7 +45,7 @@ export async function submitEventEvaluation(
   const [event] = await db
     .select({ id: events.id, status: events.status })
     .from(events)
-    .where(eq(events.slug, slug));
+    .where(and(eq(events.slug, slug), isNull(events.deletedAt)));
   // Sama dengan halaman publiknya (404 untuk draft/terjadwal): aksi ini juga bisa
   // dipanggil langsung tanpa halaman, jadi gerbangnya harus ada di sini juga.
   if (!event || event.status === "draft" || event.status === "scheduled") return { error: "invalid" };

@@ -1,4 +1,4 @@
-import { asc, desc, eq, inArray, isNull, or, sql } from "drizzle-orm";
+import { and, asc, desc, eq, inArray, isNull, or, sql } from "drizzle-orm";
 import { db } from "@/db";
 import { events, users, certificates } from "@/db/schema";
 import { requireModuleAccess, hasModuleAccess } from "@/lib/admin-scope";
@@ -34,18 +34,23 @@ export default async function WorkLedgerPage() {
   // non-full hanya melihat acara yang dia buat / divisinya jadi PJ. Work Ledger
   // ikut dibatasi supaya tidak jadi jalan pintas lintas-acara.
   const scopedEventIds = await getScopedEventIds();
-  const eventListQuery = db
-    .select({ id: events.id, title: events.title, startAt: events.startAt })
-    .from(events)
-    // NULLS LAST keeps unscheduled events from crowding the dropdown top.
-    .orderBy(sql`${events.startAt} desc nulls last`);
 
   const [ledger, eventList, userList, payments, certRows] = await Promise.all([
     getWorkLedger(),
+    // Dropdown acara untuk menugaskan panitia: hanya acara yang tidak di
+    // Sampah, dan (untuk non-full) yang boleh dilihat pemakai ini.
     scopedEventIds === null
-      ? eventListQuery
+      ? db
+          .select({ id: events.id, title: events.title, startAt: events.startAt })
+          .from(events)
+          .where(isNull(events.deletedAt))
+          .orderBy(sql`${events.startAt} desc nulls last`)
       : scopedEventIds.length > 0
-        ? eventListQuery.where(inArray(events.id, scopedEventIds))
+        ? db
+            .select({ id: events.id, title: events.title, startAt: events.startAt })
+            .from(events)
+            .where(and(inArray(events.id, scopedEventIds), isNull(events.deletedAt)))
+            .orderBy(sql`${events.startAt} desc nulls last`)
         : Promise.resolve([] as { id: string; title: string; startAt: Date | null }[]),
     db.select({ id: users.id, name: users.name, email: users.email }).from(users).orderBy(asc(users.name)),
     canVerifyPayments ? listPendingPayments() : Promise.resolve([]),

@@ -1,7 +1,7 @@
 "use server";
 
 import { randomUUID } from "crypto";
-import { and, desc, eq, inArray, isNotNull, sql as raw } from "drizzle-orm";
+import { and, desc, eq, inArray, isNotNull, sql as raw, isNull } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { auth } from "@/auth";
 import { db } from "@/db";
@@ -233,7 +233,13 @@ export async function getWorkLedger() {
     .from(eventCommittee)
     .leftJoin(users, eq(eventCommittee.userId, users.id))
     .leftJoin(events, eq(eventCommittee.eventId, events.id))
-    .where(scopeEventIds !== null ? inArray(eventCommittee.eventId, scopeEventIds) : undefined)
+    .where(
+      and(
+        scopeEventIds !== null ? inArray(eventCommittee.eventId, scopeEventIds) : undefined,
+        // Kepanitiaan di acara yang ada di Sampah tidak dihitung sebagai beban kerja.
+        isNull(events.deletedAt),
+      ),
+    )
     .orderBy(desc(events.startAt));
 
   const byPerson = new Map<string, { name: string; email: string; assignments: typeof rows }>();
@@ -740,7 +746,7 @@ export async function listPendingPayments(eventId?: string) {
     .from(eventRegistrations)
     .leftJoin(users, eq(eventRegistrations.userId, users.id))
     .leftJoin(events, eq(eventRegistrations.eventId, events.id))
-    .where(where)
+    .where(and(where, isNull(events.deletedAt)))
     .orderBy(desc(eventRegistrations.registeredAt));
 }
 

@@ -447,6 +447,14 @@ export const events = pgTable("events", {
   // cron — dan BPH bisa membuka/menutup manual kapan pun lewat konsol kegiatan.
   committeeEvalOpensAt: timestamp("committee_eval_opens_at"),
   committeeEvalClosesAt: timestamp("committee_eval_closes_at"),
+  // Sampah (soft delete). Terisi = acara dipindah ke Sampah oleh BPH Kabinet:
+  // hilang dari situs publik, daftar konsol, dan akses panitia, tapi semua
+  // datanya (pendaftar, panitia, evaluasi, dst.) tetap utuh sampai dipulihkan
+  // atau dihapus permanen dari bagian Sampah di /console/events. Setiap query
+  // yang menampilkan/menerima acara harus menyaring isNull(events.deletedAt);
+  // status acara TIDAK diubah, jadi pemulihan mengembalikan status semula.
+  deletedAt: timestamp("deleted_at"),
+  deletedBy: uuid("deleted_by").references(() => users.id, { onDelete: "set null" }),
   departmentId: uuid("department_id").references(() => departments.id),
   createdBy: uuid("created_by").references(() => users.id),
   // The HTM ("berbayar") toggle itself - kept separate from feeCny because the

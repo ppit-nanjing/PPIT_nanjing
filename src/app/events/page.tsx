@@ -1,4 +1,4 @@
-import { eq, and, inArray } from "drizzle-orm";
+import { eq, and, inArray, isNull } from "drizzle-orm";
 import { db } from "@/db";
 import { events } from "@/db/schema";
 import { publishDueEvents } from "@/lib/publish-events";
@@ -30,7 +30,8 @@ export default async function EventsPage({
   // dengan kartu abu-abu, bukan hilang begitu panitia menandainya selesai.
   const PUBLIC_STATUSES = ["published", "registration_closed", "completed"] as const;
 
-  const conditions = [inArray(events.status, [...PUBLIC_STATUSES])];
+  // Acara di Sampah (deleted_at terisi) tidak pernah tampil di publik.
+  const conditions = [inArray(events.status, [...PUBLIC_STATUSES]), isNull(events.deletedAt)];
   if (category) conditions.push(eq(events.category, category));
 
   const list = await db
@@ -41,7 +42,7 @@ export default async function EventsPage({
   const allPublished = await db
     .select({ category: events.category })
     .from(events)
-    .where(inArray(events.status, [...PUBLIC_STATUSES]));
+    .where(and(inArray(events.status, [...PUBLIC_STATUSES]), isNull(events.deletedAt)));
   const categories = [
     ...new Set(allPublished.map((e) => e.category).filter((c): c is string => !!c)),
   ];
