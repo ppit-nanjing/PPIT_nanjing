@@ -19,7 +19,10 @@ const TABLE_ROW = /^\s*\|/;
 const TABLE_SEP = /^\s*\|?[\s:|-]*-[\s:|-]*\|?\s*$/;
 
 const INLINE =
-  /(`[^`\n]+`|\*\*[^*\n]+\*\*|__[^_\n]+__|\*[^*\n]+\*|_[^_\n]+_|!\[[^\]]*\]\([^)\s]*\)|\[[^\]]+\]\([^)\s]*\))/g;
+  /(`[^`\n]+`|\*\*[^*\n]+\*\*|__[^_\n]+__|\*[^*\n]+\*|_[^_\n]+_|!\[[^\]]*\]\([^)\s]*\)|\[[^\]]+\]\([^)\s]*\)|<(?:https?:\/\/|mailto:)[^<>\s]+>)/g;
+
+/** Autolink markdown: `<https://contoh.test>` dan `<mailto:a@b.test>`. */
+const AUTOLINK = /^<((?:https?:\/\/|mailto:)[^<>\s]+)>$/;
 
 /** Hanya tautan yang aman yang jadi <a>; sisanya ditampilkan apa adanya. */
 const SAFE_HREF = /^(https?:|mailto:|\/|#)/i;
@@ -68,6 +71,15 @@ function renderInline(text: string): ReactNode[] {
       } else {
         out.push(token);
       }
+      continue;
+    }
+    const auto = token.match(AUTOLINK);
+    if (auto) {
+      out.push(
+        <a key={k++} href={auto[1]} className={LINK_CLASS} target="_blank" rel="noreferrer">
+          {auto[1]}
+        </a>,
+      );
       continue;
     }
     if (token.startsWith("`")) {
