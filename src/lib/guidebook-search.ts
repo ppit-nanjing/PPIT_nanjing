@@ -213,8 +213,9 @@ async function findEntityChunks(question: string): Promise<GuideChunk[]> {
     .where(and(RETRIEVABLE_ARTICLE, or(...matches)));
 
   return rankArticles(
-    entities,
+    [],
     rows.map((row) => ({ ...row, content: row.content ?? "" })),
+    entities,
   );
 }
 

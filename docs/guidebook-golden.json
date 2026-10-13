@@ -33,25 +33,25 @@
     "question": "PPIT Cabang Nanjing itu organisasi apa dan kapan dibentuk?",
     "expected_slug": "profil-ppit-nanjing",
     "must_refuse": false,
-    "pending_review": true
+    "pending_review": false
   },
   {
     "question": "Apa bedanya PPIT pusat dengan PPIT Cabang Nanjing?",
     "expected_slug": "profil-ppit-nanjing",
     "must_refuse": false,
-    "pending_review": true
+    "pending_review": false
   },
   {
     "question": "Kontak dan media sosial PPIT Nanjing di mana?",
     "expected_slug": "profil-ppit-nanjing",
     "must_refuse": false,
-    "pending_review": true
+    "pending_review": false
   },
   {
     "question": "PPIT Nanjing menaungi mahasiswa di kota mana saja selain Nanjing?",
     "expected_slug": "profil-ppit-nanjing",
     "must_refuse": false,
-    "pending_review": true
+    "pending_review": false
   },
   {
     "question": "Nanjing itu kota apa dan berapa lama naik kereta cepat ke Shanghai?",
@@ -214,5 +214,15 @@
     "question": "Bitcoin worth it nggak?",
     "expected_slug": null,
     "must_refuse": true
+  },
+  {
+    "question": "who is PPIT",
+    "expected_slug": "profil-ppit-tiongkok",
+    "must_refuse": false
+  },
+  {
+    "question": "Apa itu PPIT Tiongkok?",
+    "expected_slug": "profil-ppit-tiongkok",
+    "must_refuse": false
   }
 ]

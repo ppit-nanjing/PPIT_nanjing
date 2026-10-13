@@ -43,6 +43,17 @@ export const GUIDEBOOK_TOPICS: GuidebookTopic[] = [
     replaceStub: true,
   },
   {
+    slug: "profil-ppit-tiongkok",
+    title: "Profil PPIT Tiongkok",
+    section: "Tentang PPIT",
+    phase: "pre-arrival",
+    sortOrder: 9,
+    isPublic: true,
+    sourceLabel: "A Guide to Nanjing 2026 (Profil PPIT Tiongkok)",
+    sourceDocSlug: "guide-to-nanjing-2026",
+    file: "docs/guidebook/profil-ppit-tiongkok.md",
+  },
+  {
     slug: "profil-ppit-nanjing",
     title: "Profil PPIT Nanjing",
     section: "Tentang PPIT",
