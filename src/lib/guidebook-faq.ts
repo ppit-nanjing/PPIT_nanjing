@@ -1,4 +1,6 @@
-// Pertanyaan pemancing cache (lihat scripts/prewarm-guide.ts). Isinya kalimat
+// Pertanyaan pemancing cache (lihat scripts/prewarm-guide.ts) sekaligus sumber
+// saran pertanyaan lanjutan di widget chat waktu model tidak mengirim saran
+// sendiri (fallbackFollowUps di src/lib/guide-answer.ts). Isinya kalimat
 // yang benar-benar diketik maba di chatbot, bukan judul artikel, dan tiap topik
 // di korpus guidebook terwakili minimal satu pertanyaan. `topic` = slug
 // help_articles yang jadi rujukannya, supaya penambahan topik baru gampang
@@ -42,4 +44,14 @@ export const GUIDE_FAQ: GuideFaq[] = [
   // biaya-hidup-bulan-pertama
   { question: "berapa biaya hidup mahasiswa di Nanjing per bulan?", topic: "biaya-hidup-bulan-pertama" },
   { question: "uang saku bulan pertama sebaiknya berapa?", topic: "biaya-hidup-bulan-pertama" },
+];
+
+// Pertanyaan pembuka widget chat: dipakai waktu jawabannya tidak punya satu pun
+// sumber (pertanyaan ambigu atau di luar korpus), supaya maba tetap punya jalan
+// masuk ke panduan. Isinya pertanyaan yang benar-benar ditanyakan, bukan judul
+// artikel, dan ketiga topic-nya ada di GUIDE_FAQ di atas.
+export const GUIDE_STARTER_QUESTIONS: string[] = [
+  "apa itu PPIT Nanjing?",
+  "dokumen apa saja yang harus dibawa saat pertama datang ke China?",
+  "berapa biaya hidup mahasiswa di Nanjing per bulan?",
 ];

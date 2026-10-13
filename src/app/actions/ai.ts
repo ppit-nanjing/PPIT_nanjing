@@ -4,9 +4,10 @@ import { auth } from "@/auth";
 import { hasModuleAccess, type AdminModule } from "@/lib/admin-scope";
 import { improveIndonesianText, groqChat, type ImproveContext } from "@/lib/groq";
 import { askGuide } from "@/lib/guide-answer";
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import { db } from "@/db";
-import { users } from "@/db/schema";
+import { aiQueryLog, users } from "@/db/schema";
+import { UUID_RE } from "@/lib/uuid";
 
 // event/news/gallery edits are gated by the matching admin module.
 // feedback text improvement is open to any signed-in user (they improve their own draft).
@@ -60,9 +61,16 @@ const FIELD_MAX: Record<ProfileField, number> = {
   avatarUrl: 2000,
 };
 
+export type ChatCitation = { title: string; slug: string | null; pageFrom: number | null; pageTo: number | null };
+
 export type ChatResult = {
   reply: string;
   profileEdit?: { field: ProfileField; value: string };
+  // Sumber jawaban, pertanyaan lanjutan, dan id baris log untuk tombol
+  // suka/tidak suka. Widget chat menampilkan ketiganya di bawah balasan.
+  citations: ChatCitation[];
+  followUps: string[];
+  logId: string;
 };
 
 export async function chatWithAIAction(history: { role: "user" | "assistant"; content: string }[]): Promise<ChatResult> {
@@ -87,13 +95,34 @@ export async function chatWithAIAction(history: { role: "user" | "assistant"; co
       const field = parsed.field as ProfileField;
       const value = String(parsed.value ?? "").trim();
       if ((PROFILE_FIELDS as readonly string[]).includes(field) && value && value.length <= FIELD_MAX[field]) {
-        return { reply: "", profileEdit: { field, value } };
+        return { reply: "", profileEdit: { field, value }, citations: [], followUps: [], logId: answer.logId };
       }
     } catch {
       // fall through to normal reply
     }
   }
-  return { reply: raw };
+  return { reply: raw, citations: answer.citations, followUps: answer.followUps, logId: answer.logId };
+}
+
+/**
+ * Suara pengguna atas satu jawaban (tombol suka/tidak suka di widget chat).
+ * Ditulis ke baris ai_query_log yang memang milik pemanggilnya: id baris itu
+ * dikirim klien, jadi tanpa syarat user_id orang lain bisa menilai jawaban
+ * orang lain. Id-nya disaring dulu - Postgres melempar error sintaks (bukan 0
+ * baris) untuk teks yang bukan UUID.
+ */
+export async function rateAnswerAction(logId: string, vote: "up" | "down"): Promise<void> {
+  const session = await auth();
+  if (!session?.user?.id) throw new Error("Kamu harus masuk");
+  if (vote !== "up" && vote !== "down") throw new Error("Nilai masukan tidak dikenal");
+  if (typeof logId !== "string" || !UUID_RE.test(logId)) throw new Error("Jawaban tidak dikenal");
+
+  const updated = await db
+    .update(aiQueryLog)
+    .set({ feedback: vote })
+    .where(and(eq(aiQueryLog.id, logId), eq(aiQueryLog.userId, session.user.id)))
+    .returning({ id: aiQueryLog.id });
+  if (updated.length === 0) throw new Error("Jawaban tidak dikenal");
 }
 
 /**

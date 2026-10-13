@@ -104,6 +104,9 @@ export const feedbackCategoryEnum = pgEnum("feedback_category", ["bug", "design"
 export const feedbackStatusEnum = pgEnum("feedback_status", ["new", "in_review", "resolved"]);
 // See docs/Data Dictionary.md "Admin Access Rule" - sourced from the 2026/2027 recruitment guidebook.
 export const accessTierEnum = pgEnum("access_tier", ["full", "scoped", "advisory"]);
+// Suka/tidak suka atas satu jawaban chatbot. Satu baris ai_query_log = satu
+// jawaban yang benar-benar dilihat pengguna, jadi cache hit pun bisa dinilai.
+export const aiFeedbackVoteEnum = pgEnum("ai_feedback_vote", ["up", "down"]);
 
 // ---------- 1. Identity & Access ----------
 
@@ -1788,5 +1791,9 @@ export const aiQueryLog = pgTable("ai_query_log", {
   model: text("model"),
   promptTokens: integer("prompt_tokens"),
   completionTokens: integer("completion_tokens"),
+  // Suara pengguna atas jawaban yang dibalas baris ini (tombol suka/tidak suka
+  // di widget chat). NULL = belum dinilai. Ditulis hanya lewat rateAnswerAction,
+  // dan hanya oleh pemilik barisnya (user_id).
+  feedback: aiFeedbackVoteEnum("feedback"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });

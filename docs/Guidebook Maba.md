@@ -118,6 +118,8 @@ CREATE TABLE guidebook_progress (
   PRIMARY KEY (user_id, article_id)
 );
 
+CREATE TYPE ai_feedback_vote AS ENUM ('up', 'down');
+
 CREATE TABLE ai_query_log (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id uuid REFERENCES users(id) ON DELETE SET NULL,
@@ -125,6 +127,9 @@ CREATE TABLE ai_query_log (
   chunk_ids uuid[], scores real[], cache_hit boolean NOT NULL DEFAULT false,
   used_llm boolean NOT NULL DEFAULT false, degraded_reason text,
   latency_ms integer, model text, prompt_tokens integer, completion_tokens integer,
+  -- Vote on the answer this row logged (drizzle/0047_ai_answer_feedback.sql).
+  -- NULL = not voted, which is also what every pre-2026-10-13 row carries.
+  feedback ai_feedback_vote,
   created_at timestamp NOT NULL DEFAULT now()
 );
 ```
@@ -181,9 +186,10 @@ graph TD
   F -->|hit| G[cached answer + citations]
   F -->|miss| H{per-user daily quota?}
   H -->|exhausted| I[Retrieval-only: snippets + links]
-  H -->|available| J[Groq, abort 20 s, max_tokens 400]
+  H -->|available| J[Groq, abort 20 s, max_tokens 540]
   J -->|429 / timeout / 5xx| I
-  J -->|ok| K[answer + citations + cache + log]
+  J -->|ok| K[answer + citations + follow-up suggestions + cache + log]
+  K --> L[user vote: thumbs up/down on the log row]
 ```
 
 Binding rules:
@@ -199,6 +205,18 @@ What shipped against these rules (2026-10-12):
 - **Rule 4 was deliberately not built.** The chat widget is the only caller, and it reaches the server through the Server Action (`chatWithAIAction` → `askGuide`), which already returns the degraded answer as content instead of throwing. A `/api/guide/ask` handler with no consumer would be dead code; the answer core is a plain module, so adding the handler later is ~40 lines. Revisit if something other than the widget needs the answer path (email digest, WeChat bot, status codes for a client).
 - Retrieval is **not** FTS over `guide_chunks`: `findGuideChunks` matches tokens against `help_articles` with `ILIKE` and ranks in JS. `guide_chunks` still holds the excerpts, page ranges, and citation ids. The stemmed index (`guide_chunks.text_stemmed`) exists but is unused so far — see the risk note under [Evaluation](#evaluation-golden-set).
 
+### Follow-up suggestions, sources, and votes (2026-10-13)
+
+Three things the chat widget shows under every answer, and where each one comes from:
+
+| Element | Source | Rule |
+|---|---|---|
+| Source pills | `GuideAnswer.citations`, built from `chunk_ids` | Label = guide title + page range; the pill is a link to `/guidebook/<slug>`, opened in a new tab. Never built from model text |
+| Follow-up questions (max 3) | `<<FOLLOWUPS:["…","…","…"]>>` on the last line of the model answer, stripped before the text is stored | If the model sends nothing, `fallbackFollowUps` fills in from `GUIDE_FAQ` for the topics retrieval actually returned, most relevant first. Refusals use `GUIDE_STARTER_QUESTIONS`, and the question the user just asked is never suggested back |
+| Thumbs up/down | `feedback` on the `ai_query_log` row (`GuideAnswer.logId`) | One vote per answer, changeable; the action checks the log row belongs to the session user before writing. Signed-out users never see the buttons |
+
+The marker lives in `src/lib/groq.ts` (prompt) and is parsed in `parseAnswer` (`src/lib/guide-answer.ts`), which runs on both the live path and the cache read, so prewarmed answers keep their suggestions. `max_tokens` went from 400 to 540 for this: the marker costs ~40 tokens, and a reply truncated before it loses the suggestions (they would silently fall back to the FAQ list).
+
 ### Token and quota budget
 
 | Prompt part | Budget |
@@ -206,8 +224,8 @@ What shipped against these rules (2026-10-12):
 | system + instructions | ~150 tokens |
 | guide excerpts (max 7.000 characters) | ~2.000 tokens |
 | 12-message history (trimmed by length) | ≤1.000 tokens |
-| output (`max_tokens: 400`) | 400 tokens |
-| **total per question** | **~3.500 tokens → ≈2 questions/minute** |
+| output (`max_tokens: 540`) | 540 tokens |
+| **total per question** | **~3.650 tokens → ≈2 questions/minute** |
 
 | Resource | Free limit | Impact on the feature |
 |---|---|---|
@@ -217,7 +235,7 @@ What shipped against these rules (2026-10-12):
 | Vercel Hobby | 1M invocations, 4 CPU-hours, 100 GB transfer, cron at daily granularity | Non-issue; **do not** rely on frequent cron for prewarming |
 | Paid pricing | $0,15/$0,60 per 1M tokens | ~$0,0008 per retrieval answer; full corpus ~$0,02 (20×) |
 
-Quota mitigations: answer cache (key = question hash + `corpus_version`), prewarm ~20 FAQs at ingest time (`src/lib/guidebook-faq.ts`), quota of 15 questions/user/day, `guide_meta.ai_enabled` kill switch.
+Quota mitigations: answer cache (key = question hash + `corpus_version`), prewarm ~20 FAQs at ingest time (`src/lib/guidebook-faq.ts`, 12→22 entries on 2026-10-13), quota of 15 questions/user/day, `guide_meta.ai_enabled` kill switch.
 
 ## Edge cases
 
@@ -305,6 +323,7 @@ Quota mitigations: answer cache (key = question hash + `corpus_version`), prewar
 | p95 latency (cache hit) | ≤800 ms | `ai_query_log.latency_ms` | Percentile |
 | p95 latency (LLM path) | ≤6 s | `ai_query_log.latency_ms` | Percentile |
 | Degradation rate (retrieval-only) | ≤5% | `ai_query_log.degraded_reason` | Ratio |
+| Voted answers judged unhelpful | ≤15% of votes | `ai_query_log.feedback` | `feedback = 'down'` / all rows with `feedback IS NOT NULL`; a topic with a run of `down` votes is the review queue for the corpus |
 | Published topics that are reviewed | 100% before release | `help_articles.reviewed_at` | Console query |
 | Expired topics still being answered | 0 | `guide_chunks` × `help_articles.expires_at` | Harness regression check |
 | Content fix time (spot typo → live) | <10 minutes, no deploy | `audit_logs` (edit) + `guide_meta.updated_at` | Manual sample of the first 5 edits |
@@ -468,6 +487,39 @@ Sekarang ketiganya memakai `renderMarkdownLite` (`src/lib/markdown-lite.tsx`), r
 | Modal `GuideButton` di halaman modul console | teks apa adanya | markdown dirender, `whitespace-pre-wrap` tetap dengan alasan yang sama |
 
 Diuji lewat HTTP ke `npm run dev` di port 3100 atas lima artikel guidebook yang publik: tidak ada lagi `**`, `##`, `](`, atau `|---` di dalam `<article>`; yang muncul `<h2>` 4-7, `<li>` 3-17, `<strong>` 0-2 per artikel. Teks yang dilaporkan pengurus (`**Tentang PPIT - Profil PPIT Nanjing** PPIT (Perhimpunan…)`) dirender jadi satu paragraf dengan `<strong>` di depan, termasuk tanda hubung non-standar `awal‑nya` yang terbawa dari PDF. Halaman console dicek dengan sesi admin sementara (kata sandinya dikembalikan setelah uji): blok isi artikel 5.439 byte, nol penanda markdown yang tersisa.
+
+### Saran lanjutan, sitasi yang bisa diklik, dan suara pengguna (2026-10-13)
+
+Yang diminta: tombol saran pertanyaan lanjutan di bawah jawaban, tombol suka/tidak suka, dan daftar sumber yang bisa diklik. Rujukannya tampilan Grok.
+
+Yang benar-benar dijalankan di mesin lokal (database Docker `ppit`, port 3100):
+
+| Langkah | Hasil |
+|---|---|
+| `npx tsx --env-file=.env.local src/db/apply-sql.ts drizzle/0047_ai_answer_feedback.sql` | 3 pernyataan: `CREATE TYPE ai_feedback_vote`, `ALTER TABLE ai_query_log ADD COLUMN IF NOT EXISTS feedback`, `CREATE INDEX ai_query_log_feedback_idx` (parsial, `WHERE feedback IS NOT NULL`) |
+| Jawaban nyata lewat `askGuide` dengan akun uji (`uji-chat-2601@ppit-local.test`), pertanyaan "apa itu PPIT Nanjing?" | Jawaban dari model (`cache_hit false`), 2 sitasi (`profil-ppit-tiongkok`, `profil-ppit-nanjing`), saran dari model sendiri ("Apa perbedaan PPIT pusat dan PPIT Nanjing?", "Bagaimana kontak resmi PPIT Tiongkok?", "Di mana daftar cabang PPIT per kota?"), `logId` uuid, tidak ada sisa `<<` di teks |
+| Refusal tanpa kata kunci ("halo") | 0 sitasi, tetap 3 saran (`GUIDE_STARTER_QUESTIONS`), `logId` uuid |
+| Cache dibaca ulang setelah jawaban di cache disisipi penanda buatan | `cache_hit true`, saran terbaca dari penanda, penanda hilang dari teks |
+| Kill switch `guide_meta.ai_enabled = false`, pertanyaan "berapa banyak mahasiswa Indonesia di Nanjing?" | `degraded true`, 3 sitasi, saran jatuh ke FAQ topik yang terambil, `logId` uuid; kill switch dikembalikan ke `true` |
+| Tulisan suara lewat drizzle (jalur yang sama dengan `rateAnswerAction`) | `user_id` lain → 0 baris berubah; pemilik baris → 1 baris, kolom `feedback` terbaca `down` |
+
+Jalur LLM lokal ini jalan sekarang karena jalur jawaban memakai endpoint OpenAI-compatible (`OPENAI_BASE_URL`/`OPENAI_API_KEY` di `src/lib/assistant.ts`), bukan `api.groq.com` yang menjawab 403 dari mesin ini (lihat entri 2026-10-12 di atas). Satu temuan dari uji ini: dengan `max_tokens 400` jawaban model pernah berhenti tepat di batas token sebelum penanda saran sempat ditulis — karena itu batasnya dinaikkan ke 540 dan dipakai bersama jalur prewarm.
+
+Widget-nya sendiri ditelusuri di Chromium (Playwright headless, sesi admin uji `uji-chat-2601@ppit-local.test`, `http://localhost:3100/help`):
+
+| Yang diklik | Yang terlihat |
+|---|---|
+| Pertanyaan "apa itu PPIT Nanjing?" | Jawaban dari cache (jawaban model yang tersimpan tadi), pil **"2 SUMBER"** dengan `aria-expanded` berubah saat diklik |
+| Pil sumber | Dua tautan `Profil PPIT Tiongkok` → `/help/profil-ppit-tiongkok` dan `Profil PPIT Nanjing` → `/help/profil-ppit-nanjing`, keduanya `target="_blank"` |
+| Saran lanjutan | Tiga baris dari model: "Apa perbedaan PPIT pusat dan PPIT Nanjing?", "Bagaimana kontak resmi PPIT Tiongkok?", "Di mana daftar cabang PPIT per kota?" |
+| Tombol suara | Dua tombol `aria-label` "Jawaban ini membantu" / "Jawaban ini tidak membantu", keduanya `aria-pressed="false"` |
+| Klik "membantu" | Baris log terbaru (id `b5837765-…`, `feedback` masih `null` sebelum klik) jadi `feedback='up'`, tombolnya `aria-pressed="true"` |
+| Klik saran pertama | Pertanyaannya masuk sebagai pesan pengguna (dua gelembung pengguna, isi terakhir persis teks saran) |
+
+Dua catatan dari uji ini:
+
+- Jawaban atas saran itu sendiri **ditolak** retrieval ("Belum ada panduan yang cocok"), karena di database lokal baru tiga topik yang ditinjau sementara `kota-nanjing` dan `visa-dan-izin-tinggal` masih draf. Saran dari model memang bisa menunjuk topik yang belum ditinjau; yang menahannya tetap gerbang tinjauan, bukan widget. Di produksi seluruh topik ditinjau sebelum rilis, jadi jalur ini hanya muncul kalau ada topik baru.
+- Dev server di port 3100 harus dibuka lewat `localhost`, bukan `127.0.0.1`: `AUTH_URL` menyebut `localhost`, dan lewat `127.0.0.1` Next menolak chunk JS-nya dengan 403 sehingga halaman tampil tapi tidak ter-hidrasi — klik apa pun tidak bereaksi. Ini yang bikin penelusuran pertama terlihat seperti tombol rusak.
 
 ## Operations and rollback
 

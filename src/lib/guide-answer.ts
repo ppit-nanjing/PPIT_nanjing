@@ -6,6 +6,7 @@ import { buildChatSystemPrompt, detectAnswerLanguage, type GroqMessage } from ".
 import { assistantChat } from "./assistant";
 import { buildGuideContext, findGuideChunks, RETRIEVABLE_ARTICLE, type GuideChunk } from "./guidebook-search";
 import { questionEntities, searchTerms } from "./guidebook-terms";
+import { GUIDE_FAQ, GUIDE_STARTER_QUESTIONS } from "./guidebook-faq";
 
 // Jalur jawaban guidebook maba (docs/Guidebook Maba.md, bagian "AI answer path",
 // "Token and quota budget", dan "Edge cases"). Bukan Server Action: dipakai
@@ -50,12 +51,25 @@ const DEGRADED_HEADER_DEFAULT = "Asisten AI sedang tidak bisa dipakai. Ini pandu
 // pengguna lain yang menanyakan kalimat sama akan menerima usulan edit itu.
 const PROFILE_EDIT_MARKER = "<<PROFILE_EDIT:";
 
+// Batas token keluaran jawaban. Dinaikkan dari 400 waktu penanda saran
+// lanjutan masuk: penanda itu ikut dihitung, dan kalau jawabannya kepotong di
+// tengah, penandanya hilang sehingga saran jatuh ke daftar FAQ. Angka ini
+// dipakai jalur jawaban biasa maupun prewarm supaya cache tidak terisi
+// jawaban yang lebih pendek dari jalur live.
+const ANSWER_MAX_TOKENS = 540;
+
 export type GuideAnswer = {
   reply: string;
   citations: { title: string; slug: string | null; pageFrom: number | null; pageTo: number | null }[];
+  // Pertanyaan lanjutan yang bisa diklik di widget chat: dari model kalau ada,
+  // kalau tidak dari daftar FAQ yang topiknya ikut terambil.
+  followUps: string[];
   cacheHit: boolean;
   degraded: boolean;
   degradedReason: string | null;
+  // Baris ai_query_log jawaban ini. Widget chat memakainya sebagai id pesan
+  // waktu pengguna menekan suka/tidak suka.
+  logId: string;
 };
 
 type ChunkRow = {
@@ -158,6 +172,59 @@ function citationsFrom(chunks: ChunkRow[]): GuideAnswer["citations"] {
   return [...bySlug.values()];
 }
 
+// Penanda pertanyaan lanjutan, sama polanya dengan PROFILE_EDIT di
+// buildChatSystemPrompt: satu balasan saja, jadi tiga baris saran tidak perlu
+// panggilan Groq kedua (dan tidak memakan kuota harian).
+const FOLLOWUPS_MARKER = /<<FOLLOWUPS:([\s\S]*?)>>/;
+const MAX_FOLLOWUPS = 3;
+const MAX_FOLLOWUP_CHARS = 160;
+
+/**
+ * Pisahkan penanda pertanyaan lanjutan dari teks jawaban. Teks mentah - penanda
+ * ikut di dalamnya - yang disimpan di cache, dan cache hit dibaca lewat fungsi
+ * yang sama, jadi saran tidak hilang pada jawaban yang datang dari cache.
+ */
+function parseAnswer(raw: string): { reply: string; followUps: string[] } {
+  const match = raw.match(FOLLOWUPS_MARKER);
+  if (!match) return { reply: raw.trim(), followUps: [] };
+  const reply = raw.replace(FOLLOWUPS_MARKER, "").trim();
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(match[1]);
+  } catch {
+    return { reply, followUps: [] };
+  }
+  if (!Array.isArray(parsed)) return { reply, followUps: [] };
+  return {
+    reply,
+    followUps: parsed
+      .filter((q): q is string => typeof q === "string")
+      .map((q) => q.replace(/\s+/g, " ").trim())
+      .filter((q) => q.length > 0 && q.length <= MAX_FOLLOWUP_CHARS)
+      .slice(0, MAX_FOLLOWUPS),
+  };
+}
+
+/**
+ * Saran cadangan waktu model tidak mengirim penanda: jalur degradasi, jawaban
+ * refusal, atau penanda yang kepotong batas token. Pertanyaannya diambil dari
+ * GUIDE_FAQ untuk topik yang sumbernya benar-benar terambil, bukan dikarang.
+ * `slugs` diisi urutan relevansi hasil retrieval, jadi saran pertama datang
+ * dari artikel yang paling relevan.
+ */
+function fallbackFollowUps(slugs: (string | null)[], question: string): string[] {
+  const topics = new Set(slugs.filter((slug): slug is string => slug !== null));
+  const asked = normalizeQuestion(question);
+  const out: string[] = [];
+  for (const faq of GUIDE_FAQ) {
+    if (!topics.has(faq.topic)) continue;
+    if (normalizeQuestion(faq.question) === asked || out.includes(faq.question)) continue;
+    out.push(faq.question);
+    if (out.length === MAX_FOLLOWUPS) break;
+  }
+  return out;
+}
+
 /** Satu paragraf pendek per topik, cukup untuk jawaban cadangan tanpa LLM. */
 function excerpt(text: string, max = 220): string {
   const flat = text.replace(/\s+/g, " ").trim();
@@ -201,18 +268,22 @@ type LogInput = {
   latencyMs: number;
 };
 
-async function logQuery(input: LogInput): Promise<void> {
+async function logQuery(input: LogInput): Promise<string> {
   const redacted = redactQuestion(input.question);
-  await db.insert(aiQueryLog).values({
-    userId: input.userId,
-    questionHash: questionHash(redacted),
-    questionRedacted: redacted,
-    chunkIds: input.chunkIds,
-    cacheHit: input.cacheHit,
-    usedLlm: input.usedLlm,
-    degradedReason: input.degradedReason,
-    latencyMs: input.latencyMs,
-  });
+  const [row] = await db
+    .insert(aiQueryLog)
+    .values({
+      userId: input.userId,
+      questionHash: questionHash(redacted),
+      questionRedacted: redacted,
+      chunkIds: input.chunkIds,
+      cacheHit: input.cacheHit,
+      usedLlm: input.usedLlm,
+      degradedReason: input.degradedReason,
+      latencyMs: input.latencyMs,
+    })
+    .returning({ id: aiQueryLog.id });
+  return row.id;
 }
 
 /**
@@ -238,7 +309,7 @@ export async function askGuide(input: {
 
   // Fixed refusal: tanpa kata kunci, jawabannya tidak dicari dan tidak di-cache.
   const refuse = async (reply: string): Promise<GuideAnswer> => {
-    await logQuery({
+    const logId = await logQuery({
       userId: input.userId,
       question,
       chunkIds: [],
@@ -247,7 +318,15 @@ export async function askGuide(input: {
       degradedReason: null,
       latencyMs: Date.now() - started,
     });
-    return { reply, citations: [], cacheHit: false, degraded: false, degradedReason: null };
+    return {
+      reply,
+      citations: [],
+      followUps: GUIDE_STARTER_QUESTIONS,
+      cacheHit: false,
+      degraded: false,
+      degradedReason: null,
+      logId,
+    };
   };
 
   if (searchTerms(question).length === 0 && questionEntities(question).length === 0) {
@@ -273,7 +352,7 @@ export async function askGuide(input: {
     : [];
   if (cached && cachedChunks.length > 0) {
     await bumpHits(hash, corpusVersion);
-    await logQuery({
+    const logId = await logQuery({
       userId: input.userId,
       question,
       chunkIds: cached.chunkIds,
@@ -282,17 +361,21 @@ export async function askGuide(input: {
       degradedReason: null,
       latencyMs: Date.now() - started,
     });
+    const cachedCitations = citationsFrom(cachedChunks);
+    const parsed = parseAnswer(cached.answer);
     return {
-      reply: cached.answer,
-      citations: citationsFrom(cachedChunks),
+      reply: parsed.reply,
+      citations: cachedCitations,
+      followUps: parsed.followUps.length > 0 ? parsed.followUps : fallbackFollowUps(cachedCitations.map((c) => c.slug), question),
       cacheHit: true,
       degraded: false,
       degradedReason: null,
+      logId,
     };
   }
 
   const degraded = async (reason: string, usedLlm: boolean): Promise<GuideAnswer> => {
-    await logQuery({
+    const logId = await logQuery({
       userId: input.userId,
       question,
       chunkIds,
@@ -301,7 +384,15 @@ export async function askGuide(input: {
       degradedReason: reason,
       latencyMs: Date.now() - started,
     });
-    return { reply: retrievalReply(reason, chunks), citations, cacheHit: false, degraded: true, degradedReason: reason };
+    return {
+      reply: retrievalReply(reason, chunks),
+      citations,
+      followUps: fallbackFollowUps(articles.map((a) => a.slug), question),
+      cacheHit: false,
+      degraded: true,
+      degradedReason: reason,
+      logId,
+    };
   };
 
   if (!aiEnabled) return degraded("ai_nonaktif", false);
@@ -316,13 +407,13 @@ export async function askGuide(input: {
 
   let reply: string;
   try {
-    reply = await assistantChat(messages, { temperature: 0.5, maxTokens: 400 });
+    reply = await assistantChat(messages, { temperature: 0.5, maxTokens: ANSWER_MAX_TOKENS });
   } catch (err) {
     return degraded(degradedReasonFromError(err), true);
   }
 
   if (!reply.includes(PROFILE_EDIT_MARKER)) await writeCache(hash, corpusVersion, redacted, reply, chunkIds);
-  await logQuery({
+  const logId = await logQuery({
     userId: input.userId,
     question,
     chunkIds,
@@ -331,7 +422,16 @@ export async function askGuide(input: {
     degradedReason: null,
     latencyMs: Date.now() - started,
   });
-  return { reply, citations, cacheHit: false, degraded: false, degradedReason: null };
+  const parsed = parseAnswer(reply);
+  return {
+    reply: parsed.reply,
+    citations,
+    followUps: parsed.followUps.length > 0 ? parsed.followUps : fallbackFollowUps(articles.map((a) => a.slug), question),
+    cacheHit: false,
+    degraded: false,
+    degradedReason: null,
+    logId,
+  };
 }
 
 /**
@@ -374,7 +474,7 @@ export async function warmCacheForQuestion(question: string): Promise<"cached" |
         { role: "system", content: buildChatSystemPrompt(buildGuideContext(articles), detectAnswerLanguage(normalized)) },
         { role: "user", content: normalized },
       ],
-      { temperature: 0.5, maxTokens: 400 },
+      { temperature: 0.5, maxTokens: ANSWER_MAX_TOKENS },
     );
     await writeCache(hash, corpusVersion, redacted, reply, chunkIds);
     await logQuery({

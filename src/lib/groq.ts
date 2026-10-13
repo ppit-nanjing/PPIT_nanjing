@@ -288,6 +288,14 @@ export function buildChatSystemPrompt(guideContext: string, answerLanguage: Answ
     "(nama, nomor telepon, WeChat, atau tautan LinkedIn/Instagram/GitHub/Spotify/TikTok/foto profil), " +
     "balas HANYA dengan format berikut dan jangan tambahkan teks lain: " +
     '<<PROFILE_EDIT:{"field":"<satu dari: name, phone, wechatId, linkedinUrl, instagramUrl, githubUrl, spotifyUrl, tiktokUrl, avatarUrl>","value":"<nilai baru>"}>>. ' +
+    // Saran lanjutan ditumpangkan di balasan yang sama (bukan panggilan Groq
+    // kedua): widget chat memakainya sebagai tombol. Dua belas kata cukup untuk
+    // satu baris tombol dan mencegah model menulis satu paragraf.
+    "Sesudah jawabannya, tutup dengan tiga pertanyaan lanjutan yang mungkin ditanyakan pengguna " +
+    "berikutnya, masing-masing maksimal 12 kata dan diambil dari topik panduan di atas, dalam format: " +
+    '<<FOLLOWUPS:["pertanyaan pertama","pertanyaan kedua","pertanyaan ketiga"]>>. ' +
+    "Jangan menulis apa pun sesudah penanda itu. Jangan pakai penanda ini kalau balasannya cuma " +
+    "pengecualian perubahan data profil di atas. " +
     // Perintah bahasa ditaruh paling akhir dan berdiri sendiri: instruksi di
     // tengah prompt kalah oleh seluruh isi panduan yang berbahasa Indonesia.
     (answerLanguage === "en"

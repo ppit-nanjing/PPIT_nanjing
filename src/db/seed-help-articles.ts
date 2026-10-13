@@ -384,6 +384,9 @@ Aturan yang mengikat
 - **Jangan menaruh data pribadi** (nomor paspor, nomor telepon, alamat rumah) di artikel panduan. Isinya bisa ikut terkirim ke penyedia model saat chatbot menjawab.
 
 Chatbot-nya sendiri
+- Jawaban di widget membawa tiga hal tambahan: daftar **Sumber** yang bisa diklik (tiap baris menuju halaman artikelnya di /help, jadi maba bisa membaca aslinya), tiga **saran pertanyaan lanjutan**, dan tombol **suka/tidak suka**.
+- Suara itu tersimpan di ai_query_log.feedback (satu suara per jawaban, bisa diganti). Yang banyak "tidak membantu" adalah daftar periksa isi topik: biasanya potongannya kurang, bukan modelnya salah. Angka targetnya di docs/Guidebook Maba.md bagian KPI.
+- Saran lanjutan datang dari model. Kalau model tidak mengirimkannya (jawaban terpotong, atau jalur degradasi tanpa model), widget mengambil dari daftar FAQ di src/lib/guidebook-faq.ts untuk topik yang ikut terambil — daftar itu juga yang dipakai prewarm, jadi menambah baris di sana sekaligus memperbaiki saran cadangan.
 - Batas 15 pertanyaan per pengguna per hari, dihitung per tanggal Asia/Shanghai. Habis kuota, sakelar mati, atau Groq error: jawabannya tetap potongan panduan yang paling relevan plus kalimat penjelas, bukan halaman error.
 - Sakelar darurat ada di database, tanpa deploy: set guide_meta.ai_enabled = false.
 - Cache jawaban diikat ke corpus_version, jadi menyimpan satu topik otomatis menyegarkan jawaban lama untuk pertanyaan yang sama.
