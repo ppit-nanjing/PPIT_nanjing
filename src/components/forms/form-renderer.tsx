@@ -33,13 +33,13 @@ function isEmpty(f: MembershipFieldDef, value: string, multi: string[]): boolean
   return !value.trim();
 }
 
-function SubmitButton({ preview }: { preview?: boolean }) {
+function SubmitButton({ preview, blocked }: { preview?: boolean; blocked?: boolean }) {
   const t = useT();
   const { pending } = useFormStatus();
   return (
     <button
       type="submit"
-      disabled={preview || pending}
+      disabled={preview || pending || blocked}
       className="deco-btn bg-accent text-on-accent text-label-caps uppercase py-3.5 rounded-md hover:brightness-95 transition-[filter] flex items-center justify-center gap-2 disabled:opacity-60 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-container focus-visible:ring-offset-2 focus-visible:ring-offset-surface-container-lowest"
     >
       {pending && !preview && <Loader2 size={16} className="animate-spin" />}
@@ -70,6 +70,12 @@ export function FormRenderer({
   const [choice2, setChoice2] = useState("");
   const [errors, setErrors] = useState<Record<string, string>>({});
   const formRef = useRef<HTMLFormElement>(null);
+  // Oprek Kepanitiaan butuh minimal satu divisi acara untuk dipilih. Tanpa
+  // divisi, pilihan divisi tidak dirender tapi tetap wajib (klien & server),
+  // jadi form dulu diam-diam tidak bisa dikirim — sekarang dijelaskan dan
+  // tombolnya dimatikan.
+  const noDivisions = kind === "oprek_kepanitiaan" && divisions.length === 0;
+  const errorCount = Object.values(errors).filter(Boolean).length;
 
   function update(key: string, value: string) {
     setValues((v) => ({ ...v, [key]: value }));
@@ -271,6 +277,22 @@ export function FormRenderer({
         </div>
       )}
 
+      {noDivisions && (
+        <div
+          id="field-sys_choice1"
+          className="flex items-start gap-2 bg-error-container/30 border border-outline-variant rounded-xl px-4 py-3"
+          role="note"
+        >
+          <AlertCircle size={18} className="shrink-0 mt-0.5 text-error" aria-hidden />
+          <div>
+            <p className="text-body-md text-on-background">{t("forms.form.noDivisionsTitle")}</p>
+            <p className="text-body-sm text-on-surface-variant">
+              {t(preview ? "forms.form.noDivisionsPreview" : "forms.form.noDivisionsBody")}
+            </p>
+          </div>
+        </div>
+      )}
+
       {/* Pertanyaan kustom */}
       {fields.map((f) => {
         const fieldId = `field-${f.key}`;
@@ -440,7 +462,14 @@ export function FormRenderer({
         );
       })}
 
-      <SubmitButton preview={preview} />
+      {/* Ringkasan error di dekat tombol: kalau kolom yang bermasalah ada jauh
+          di atas (atau tidak terlihat), pengisi tetap tahu kenapa tidak terkirim. */}
+      {errorCount > 0 && (
+        <p className="flex items-center gap-1.5 text-body-sm text-error" role="alert">
+          <AlertCircle size={14} aria-hidden /> {t("forms.form.errSummary", { n: errorCount })}
+        </p>
+      )}
+      <SubmitButton preview={preview} blocked={noDivisions} />
     </form>
   );
 }
