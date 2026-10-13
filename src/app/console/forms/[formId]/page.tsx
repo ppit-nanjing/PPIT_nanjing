@@ -1,5 +1,5 @@
 import { asc, count, desc, eq } from "drizzle-orm";
-import { ArrowLeft } from "lucide-react";
+import { AlertCircle, ArrowLeft } from "lucide-react";
 import Link from "next/link";
 import { db } from "@/db";
 import { eventDivisions, events, formApplications, formFields } from "@/db/schema";
@@ -112,7 +112,9 @@ export default async function FormManagePage({ params }: { params: Promise<{ for
   });
 
   return (
-    <div className="px-4 py-6 sm:px-6 lg:px-8 lg:py-10 max-w-3xl">
+    // Lebih lebar dari halaman console biasa: Bank Pertanyaan & daftar pertanyaan
+    // butuh ruang supaya label panjang tidak terpotong.
+    <div className="px-4 py-6 sm:px-6 lg:px-8 lg:py-10 max-w-5xl">
       <div className="flex items-center justify-between gap-3 mb-4">
         <Link
           href={back}
@@ -184,6 +186,25 @@ export default async function FormManagePage({ params }: { params: Promise<{ for
           ? "Bagikan tautan halaman isi ke grup — penerima wajib login sebagai pengurus kabinet."
           : "Form masih ditutup; halaman isinya hanya menampilkan keterangan ditutup. Jangan bagikan dulu."}
       </p>
+
+      {form.kind === "oprek_kepanitiaan" && previewDivisions.length === 0 && (
+        // Tanpa divisi kepanitiaan, pelamar tidak punya pilihan divisi dan form
+        // tidak bisa dikirim — ingatkan pengelola sebelum tautannya disebar.
+        <div className="flex items-start gap-2 bg-error-container/30 border border-outline-variant rounded-xl px-4 py-3 mb-6">
+          <AlertCircle size={18} className="shrink-0 mt-0.5 text-error" aria-hidden />
+          <p className="text-body-md text-on-background">
+            Acara ini belum punya divisi kepanitiaan, jadi pelamar belum bisa mengirim formulir ini. Buat divisinya dulu di{" "}
+            {form.eventId ? (
+              <Link href={`/console/events/${form.eventId}`} className="text-primary-container underline">
+                halaman acara → Struktur Kepanitiaan
+              </Link>
+            ) : (
+              "halaman acara → Struktur Kepanitiaan"
+            )}
+            .
+          </p>
+        </div>
+      )}
 
       <CollapsibleSection title="Setelan" description="Judul, deskripsi, masa buka, dan pesan setelah mengirim.">
         <form action={updateFormSettings} className="flex flex-col gap-4">
