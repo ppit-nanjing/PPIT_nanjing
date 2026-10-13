@@ -1254,6 +1254,8 @@ export const id = {
   "chat.rateUp": "Jawaban ini membantu",
   "chat.rateDown": "Jawaban ini tidak membantu",
   "chat.rateFailed": "Masukan tidak terkirim. Coba lagi.",
+  "chat.copy": "Salin jawaban",
+  "chat.rateThanks": "Terima kasih atas masukannya.",
   "feedback.catBug": "Bug",
   "feedback.catDesign": "Desain",
   "feedback.catFeature": "Ide",

@@ -217,6 +217,15 @@ Three things the chat widget shows under every answer, and where each one comes 
 
 The marker lives in `src/lib/groq.ts` (prompt) and is parsed in `parseAnswer` (`src/lib/guide-answer.ts`), which runs on both the live path and the cache read, so prewarmed answers keep their suggestions. `max_tokens` went from 400 to 540 for this: the marker costs ~40 tokens, and a reply truncated before it loses the suggestions (they would silently fall back to the FAQ list).
 
+Refinements since then (2026-10-13, same day):
+
+- **Saran selalu bisa dijawab.** `resolveFollowUps` menjalankan `retrieve()` pada tiap saran model dan membuang yang tidak mengembalikan potongan; sisanya diisi `fallbackFollowUps` (FAQ topik yang terambil). Sebelumnya saran model seperti "apa beda PPIT pusat dan PPIT Nanjing?" lolos tampil tapi berakhir refusal waktu diklik. Saran yang lolos validasi ditulis balik ke cache (`withFollowUps`), jadi jawaban cache juga membawa saran yang sudah terverifikasi.
+- **Kunci cache berversi.** `answerCacheKey` mencampur `ANSWER_FORMAT_VERSION` ke hash; menaikkan angka itu otomatis membatalkan semua jawaban cache lama (prompt/format berubah), setara menaikkan `corpus_version` tanpa butuh akses database.
+- **Sapaan dijawab, bukan ditolak.** `isSmallTalk` mendeteksi "hi"/"halo kak"/"makasih" murni dan `greet()` membalas ramah tanpa LLM/kuota, dengan `GUIDE_STARTER_QUESTIONS` sebagai tombol lanjutan. Pesan yang memuat satu kata isi pun ("halo, tanya visa") tetap masuk retrieval.
+- **Jawaban lebih pendek.** Prompt meminta 1–2 paragraf tanpa pembuka/penutup, melarang sejarah/asal-usul kecuali ditanya, dan mengarahkan info terkait yang tidak ditanya menjadi pertanyaan lanjutan.
+- **Tombol salin + umpan balik suara.** Setiap jawaban punya tombol salin (ikhtisar teks ke clipboard), dan klik suara menampilkan "terima kasih atas masukannya".
+- **Lantai relevansi dilonggarkan.** Satu kata kunci yang cocok persis dengan judul artikel kini dianggap relevan (`titleHit` di `rankArticles`), jadi pertanyaan pendek seperti "cuaca" tidak langsung ditolak kalau ada artikel berjudul sesuai.
+
 ### Token and quota budget
 
 | Prompt part | Budget |

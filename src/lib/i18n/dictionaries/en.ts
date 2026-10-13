@@ -1251,6 +1251,8 @@ export const en = {
   "chat.rateUp": "This answer helped",
   "chat.rateDown": "This answer did not help",
   "chat.rateFailed": "Feedback was not sent. Try again.",
+  "chat.copy": "Copy answer",
+  "chat.rateThanks": "Thanks for your feedback.",
   "feedback.catBug": "Bug",
   "feedback.catDesign": "Design",
   "feedback.catFeature": "Idea",

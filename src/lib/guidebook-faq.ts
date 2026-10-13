@@ -18,6 +18,11 @@ export const GUIDE_FAQ: GuideFaq[] = [
   { question: "PPIT Nanjing itu organisasinya buat apa?", topic: "profil-ppit-nanjing" },
   { question: "berapa banyak mahasiswa Indonesia di Nanjing?", topic: "profil-ppit-nanjing" },
 
+  // profil-ppit-tiongkok
+  { question: "PPIT Tiongkok itu apa?", topic: "profil-ppit-tiongkok" },
+  { question: "PPIT pusat bedanya sama PPIT Nanjing apa?", topic: "profil-ppit-tiongkok" },
+  { question: "kontak resmi PPIT Tiongkok apa saja?", topic: "profil-ppit-tiongkok" },
+
   // kota-nanjing
   { question: "Nanjing itu kota seperti apa?", topic: "kota-nanjing" },
   { question: "cuaca di Nanjing tiap musim bagaimana?", topic: "kota-nanjing" },

@@ -2,7 +2,7 @@ import { createHash } from "node:crypto";
 import { and, eq, inArray, sql } from "drizzle-orm";
 import { db } from "@/db";
 import { aiQueryLog, aiUsage, guideAnswers, guideChunks, guideMeta, helpArticles } from "@/db/schema";
-import { buildChatSystemPrompt, detectAnswerLanguage, type GroqMessage } from "./groq";
+import { buildChatSystemPrompt, detectAnswerLanguage, type AnswerLanguage, type GroqMessage } from "./groq";
 import { assistantChat } from "./assistant";
 import { buildGuideContext, findGuideChunks, RETRIEVABLE_ARTICLE, type GuideChunk } from "./guidebook-search";
 import { questionEntities, searchTerms } from "./guidebook-terms";
@@ -45,6 +45,29 @@ const DEGRADED_HEADER: Record<string, string> = {
 };
 
 const DEGRADED_HEADER_DEFAULT = "Asisten AI sedang tidak bisa dipakai. Ini panduan yang paling relevan:";
+
+// Sapaan murni ("hi", "halo kak", "makasih") tidak punya kata kunci, jadi dulu
+// jatuh ke refusal "pertanyaan belum jelas". Balasannya kini ramah dan tetap
+// tanpa panggilan LLM/kuota: pertanyaan pembuka di GUIDE_STARTER_QUESTIONS jadi
+// tombol lanjutannya, semua sudah pasti bisa dijawab retrieval.
+const GREETING_TOKENS = new Set([
+  "halo", "hai", "haii", "hallo", "hello", "helo", "hi", "hey", "hei",
+  "pagi", "siang", "sore", "malam", "selamat",
+  "assalamualaikum", "assalamu'alaikum", "salam", "salamnya", "kenal", "kenalan",
+  "thanks", "thank", "thankyou", "makasih", "makasi", "terima", "terimakasih", "trims",
+  "kak", "bang", "min", "mbak", "mas",
+]);
+
+const GREETING_REPLY: Record<AnswerLanguage, string> = {
+  id: "Halo! Ada yang bisa saya bantu seputar PPIT Nanjing? Kamu bisa tanya kegiatan, cara bergabung, transportasi, visa, atau kehidupan mahasiswa Indonesia di Nanjing.",
+  en: "Hi! How can I help with PPIT Nanjing? You can ask about events, how to join, transport, visas, or student life in Nanjing.",
+};
+
+// True hanya kalau seluruh pesan adalah sapaan/terima kasih - kalau ada satu
+// kata isi pun ("halo, mau tanya visa"), retrieval yang jalan, bukan ini.
+function isSmallTalk(question: string): boolean {
+  return normalizeQuestion(question).split(/\s+/).some((t) => GREETING_TOKENS.has(t));
+}
 
 // Penanda profil di system prompt (lihat buildChatSystemPrompt). Jawaban yang
 // memuatnya bergantung pada data satu pengguna, jadi jangan pernah masuk cache:
@@ -107,6 +130,17 @@ function redactQuestion(text: string): string {
 // data pribadi siapa pun.
 function questionHash(redacted: string): string {
   return createHash("sha256").update(redacted).digest("hex");
+}
+
+// Kunci cache jawaban. Versi formatnya ikut di-hash supaya perubahan prompt,
+// panjang jawaban, atau aturan saran lanjutan otomatis membatalkan cache lama
+// (jawaban yang tersimpan sebelum perubahan tetap berperilaku lama). Naikkan
+// angka ini setiap kali bentuk jawaban berubah - setara menaikkan corpus_version
+// lewat ingest, tapi tanpa butuh akses database.
+const ANSWER_FORMAT_VERSION = 2;
+
+function answerCacheKey(redacted: string): string {
+  return questionHash(`${redacted}\u0000v${ANSWER_FORMAT_VERSION}`);
 }
 
 function shanghaiDay(): string {
@@ -225,6 +259,32 @@ function fallbackFollowUps(slugs: (string | null)[], question: string): string[]
   return out;
 }
 
+/**
+ * Pertanyaan lanjutan yang benar-benar bisa dijawab. Saran model dipakai hanya
+ * kalau retrieval-nya mengembalikan potongan (kalau tidak, klik saran itu cuma
+ * berakhir refusal). Sisanya diisi FAQ dari topik yang terambil, jadi tiap
+ * tombol selalu menuju jawaban dan tetap seputar topik yang dibahas.
+ */
+async function resolveFollowUps(modelFollowUps: string[], slugs: (string | null)[], question: string): Promise<string[]> {
+  const out: string[] = [];
+  for (const q of modelFollowUps) {
+    if (out.length === MAX_FOLLOWUPS) break;
+    if (out.includes(q)) continue;
+    if ((await retrieve(q)) !== null) out.push(q);
+  }
+  for (const q of fallbackFollowUps(slugs, question)) {
+    if (out.length === MAX_FOLLOWUPS) break;
+    if (!out.includes(q)) out.push(q);
+  }
+  return out;
+}
+
+/** Tulis ulang penanda saran di jawaban mentah supaya cache menyimpan saran yang sudah lolos validasi. */
+function withFollowUps(reply: string, followUps: string[]): string {
+  const base = reply.replace(FOLLOWUPS_MARKER, "").trim();
+  return followUps.length > 0 ? `${base}\n\n<<FOLLOWUPS:${JSON.stringify(followUps)}>>` : base;
+}
+
 /** Satu paragraf pendek per topik, cukup untuk jawaban cadangan tanpa LLM. */
 function excerpt(text: string, max = 220): string {
   const flat = text.replace(/\s+/g, " ").trim();
@@ -329,8 +389,29 @@ export async function askGuide(input: {
     };
   };
 
+  const greet = async (): Promise<GuideAnswer> => {
+    const logId = await logQuery({
+      userId: input.userId,
+      question,
+      chunkIds: [],
+      cacheHit: false,
+      usedLlm: false,
+      degradedReason: null,
+      latencyMs: Date.now() - started,
+    });
+    return {
+      reply: GREETING_REPLY[detectAnswerLanguage(question)],
+      citations: [],
+      followUps: GUIDE_STARTER_QUESTIONS,
+      cacheHit: false,
+      degraded: false,
+      degradedReason: null,
+      logId,
+    };
+  };
+
   if (searchTerms(question).length === 0 && questionEntities(question).length === 0) {
-    return refuse(REFUSAL_NO_KEYWORDS);
+    return isSmallTalk(question) ? greet() : refuse(REFUSAL_NO_KEYWORDS);
   }
 
   const retrieved = await retrieve(question);
@@ -340,7 +421,7 @@ export async function askGuide(input: {
   const chunkIds = chunks.map((c) => c.id);
   const citations = citationsFrom(chunks);
   const redacted = redactQuestion(question);
-  const hash = questionHash(redacted);
+  const hash = answerCacheKey(redacted);
   const { corpusVersion, aiEnabled } = await loadMeta();
 
   // Cache hit tidak memakan kuota. Sitasinya tetap dibaca dari baris potongan,
@@ -412,7 +493,11 @@ export async function askGuide(input: {
     return degraded(degradedReasonFromError(err), true);
   }
 
-  if (!reply.includes(PROFILE_EDIT_MARKER)) await writeCache(hash, corpusVersion, redacted, reply, chunkIds);
+  const parsed = parseAnswer(reply);
+  const followUps = await resolveFollowUps(parsed.followUps, articles.map((a) => a.slug), question);
+  if (!reply.includes(PROFILE_EDIT_MARKER)) {
+    await writeCache(hash, corpusVersion, redacted, withFollowUps(parsed.reply, followUps), chunkIds);
+  }
   const logId = await logQuery({
     userId: input.userId,
     question,
@@ -422,11 +507,10 @@ export async function askGuide(input: {
     degradedReason: null,
     latencyMs: Date.now() - started,
   });
-  const parsed = parseAnswer(reply);
   return {
     reply: parsed.reply,
     citations,
-    followUps: parsed.followUps.length > 0 ? parsed.followUps : fallbackFollowUps(articles.map((a) => a.slug), question),
+    followUps,
     cacheHit: false,
     degraded: false,
     degradedReason: null,
@@ -462,7 +546,7 @@ export async function warmCacheForQuestion(question: string): Promise<"cached" |
   const { articles, chunks } = retrieved;
   const chunkIds = chunks.map((c) => c.id);
   const redacted = redactQuestion(normalized);
-  const hash = questionHash(redacted);
+  const hash = answerCacheKey(redacted);
   const { corpusVersion, aiEnabled } = await loadMeta();
 
   if (await findCachedAnswer(hash, corpusVersion)) return "cached";
@@ -476,7 +560,9 @@ export async function warmCacheForQuestion(question: string): Promise<"cached" |
       ],
       { temperature: 0.5, maxTokens: ANSWER_MAX_TOKENS },
     );
-    await writeCache(hash, corpusVersion, redacted, reply, chunkIds);
+    const parsed = parseAnswer(reply);
+    const followUps = await resolveFollowUps(parsed.followUps, articles.map((a) => a.slug), normalized);
+    await writeCache(hash, corpusVersion, redacted, withFollowUps(parsed.reply, followUps), chunkIds);
     await logQuery({
       userId: null,
       question: normalized,

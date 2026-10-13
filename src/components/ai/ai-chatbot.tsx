@@ -12,6 +12,7 @@ import {
   CornerDownRight,
   BookOpenText,
   ExternalLink,
+  Copy,
 } from "lucide-react";
 import { chatWithAIAction, rateAnswerAction, updateProfileFieldAction, type ChatCitation } from "@/app/actions/ai";
 import { renderMarkdownLite } from "@/lib/markdown-lite";
@@ -72,6 +73,10 @@ export function ChatbotPanel() {
   // sama.
   const [openSources, setOpenSources] = useState<number | null>(null);
   const [rating, setRating] = useState<number | null>(null);
+  // Indeks pesan yang terakhir disalin / disukai: dipakai menampilkan centang
+  // "tersalin" dan ucapan terima kasih, lalu hilang sendiri.
+  const [copied, setCopied] = useState<number | null>(null);
+  const [thanked, setThanked] = useState<number | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -121,6 +126,7 @@ export function ChatbotPanel() {
     setMessages((m) => m.map((msg, i) => (i === index ? { ...msg, vote } : msg)));
     try {
       await rateAnswerAction(target.logId, vote);
+      setThanked(index);
     } catch {
       // Kembalikan pilihannya: suara yang tidak sampai ke server jangan tampak
       // tersimpan di layar.
@@ -128,6 +134,18 @@ export function ChatbotPanel() {
       setError(t("chat.rateFailed"));
     } finally {
       setRating(null);
+    }
+  }
+
+  async function copyAnswer(index: number) {
+    const text = messages[index]?.content;
+    if (!text) return;
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopied(index);
+      setTimeout(() => setCopied((c) => (c === index ? null : c)), 2000);
+    } catch {
+      // Clipboard diblokir (izin/peramban lama) - biarkan saja tanpa mengganggu.
     }
   }
 
@@ -193,24 +211,23 @@ export function ChatbotPanel() {
                 {renderMarkdownLite(m.content)}
               </div>
 
-              {(sources.length > 0 || m.logId) && (
-                <div className="flex items-center gap-1 text-on-surface-variant">
-                  {sources.length > 0 && (
-                    <button
-                      type="button"
-                      onClick={() => setOpenSources(openSources === i ? null : i)}
-                      aria-expanded={openSources === i}
-                      className="flex items-center gap-1.5 rounded-full border border-outline-variant px-2.5 py-1 text-label-caps uppercase tracking-wide hover:text-on-background"
-                    >
-                      <BookOpenText size={14} />
-                      {t("chat.sources", { count: sources.length })}
-                      <ChevronDown
-                        size={14}
-                        className={"transition-transform motion-reduce:transition-none " + (openSources === i ? "rotate-180" : "")}
-                      />
-                    </button>
-                  )}
-                  {m.logId && (
+              <div className="flex items-center gap-1 text-on-surface-variant">
+                {sources.length > 0 && (
+                  <button
+                    type="button"
+                    onClick={() => setOpenSources(openSources === i ? null : i)}
+                    aria-expanded={openSources === i}
+                    className="flex items-center gap-1.5 rounded-full border border-outline-variant px-2.5 py-1 text-label-caps uppercase tracking-wide hover:text-on-background"
+                  >
+                    <BookOpenText size={14} />
+                    {t("chat.sources", { count: sources.length })}
+                    <ChevronDown
+                      size={14}
+                      className={"transition-transform motion-reduce:transition-none " + (openSources === i ? "rotate-180" : "")}
+                    />
+                  </button>
+                )}
+                {m.logId && (
                     <>
                       <button
                         type="button"
@@ -242,8 +259,22 @@ export function ChatbotPanel() {
                       </button>
                     </>
                   )}
+                  <button
+                    type="button"
+                    onClick={() => copyAnswer(i)}
+                    aria-label={t("chat.copy")}
+                    title={t("chat.copy")}
+                    className="rounded-md p-1.5 hover:text-on-background"
+                  >
+                    {copied === i ? <Check size={15} className="text-primary-container" /> : <Copy size={15} />}
+                  </button>
+                  {thanked === i && (
+                    <span className="flex items-center gap-1 pl-1 text-label-caps text-primary-container">
+                      <Check size={13} />
+                      {t("chat.rateThanks")}
+                    </span>
+                  )}
                 </div>
-              )}
 
               {sources.length > 0 && openSources === i && (
                 <ul className="w-full max-w-[90%] rounded-lg border border-outline-variant p-2">

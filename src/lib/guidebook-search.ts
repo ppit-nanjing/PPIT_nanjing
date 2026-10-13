@@ -98,12 +98,14 @@ export function rankArticles(terms: string[], rows: GuideRow[], entityTerms: str
     const section = row.section.toLowerCase();
     const content = (row.content ?? "").toLowerCase();
     let score = 0;
+    let titleHit = false;
     const matchedStems = new Set<string>();
     for (const { stem, re } of termRes) {
       let hit = false;
       if (re.test(title)) {
         score += 4;
         hit = true;
+        titleHit = true;
       }
       if (re.test(section)) {
         score += 2;
@@ -134,7 +136,8 @@ export function rankArticles(terms: string[], rows: GuideRow[], entityTerms: str
     const relevant =
       terms.length > 0
         ? matched >= MIN_MATCHED_TERMS ||
-          (matched >= MIN_MATCHED_FOR_COVERAGE && matched / terms.length >= MIN_COVERAGE_FOR_TWO)
+          (matched >= MIN_MATCHED_FOR_COVERAGE && matched / terms.length >= MIN_COVERAGE_FOR_TWO) ||
+          titleHit
         : entityHit;
     return { row, score, relevant };
   });
