@@ -32,13 +32,26 @@ export function RecruitmentForm({
     const form = e.currentTarget;
     const missing = questions.some((q) => {
       if (!q.required) return false;
-      const fields = Array.from(form.elements).filter(
-        (el): el is HTMLInputElement | HTMLTextAreaElement =>
-          (el instanceof HTMLInputElement || el instanceof HTMLTextAreaElement) && el.name === `q_${q.id}`,
+      const name = `q_${q.id}`;
+      const inputs = Array.from(form.elements).filter(
+        (el): el is HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement =>
+          (el instanceof HTMLInputElement ||
+            el instanceof HTMLTextAreaElement ||
+            el instanceof HTMLSelectElement) &&
+          el.name === name,
       );
-      if (q.type === "multiselect") return !fields.some((f) => f instanceof HTMLInputElement && f.checked);
-      if (q.type === "text" || q.type === "textarea") return fields.every((f) => f.value.trim() === "");
-      return false;
+      if (q.type === "multiselect") {
+        const boxes = inputs.filter((f) => f instanceof HTMLInputElement);
+        return !boxes.some((f) => f.type === "checkbox" && f.checked);
+      }
+      if (q.type === "radio") {
+        return !inputs.some((f) => f instanceof HTMLInputElement && f.checked);
+      }
+      const single = inputs.find((f) => f instanceof HTMLSelectElement || f instanceof HTMLInputElement);
+      if (!single) return true;
+      if (single instanceof HTMLSelectElement) return single.value.trim() === "";
+      if (single.type === "checkbox" || single.type === "radio") return !single.checked;
+      return single.value.trim() === "";
     });
     setClientMissing(missing);
     if (missing) e.preventDefault();
