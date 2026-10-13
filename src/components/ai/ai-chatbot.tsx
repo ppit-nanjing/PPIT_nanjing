@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { Send, Loader2, Check, Pencil } from "lucide-react";
 import { chatWithAIAction, updateProfileFieldAction } from "@/app/actions/ai";
+import { renderMarkdownLite } from "@/lib/markdown-lite";
 import { useT } from "@/lib/i18n/client";
 import type { TKey } from "@/lib/i18n/dictionaries/id";
 import type { T } from "@/lib/i18n/translate";
@@ -112,7 +113,7 @@ export function ChatbotPanel() {
         )}
         {messages.map((m, i) => (
           <div key={i} className={"max-w-[85%] rounded-lg px-3 py-2 text-body-md " + bubbleClass(m.role)}>
-            {m.content}
+            {m.role === "assistant" ? renderMarkdownLite(m.content) : m.content}
           </div>
         ))}
 
