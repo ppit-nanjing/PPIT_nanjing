@@ -35,7 +35,7 @@ export type EventAccess = {
   session: Session | null;
   // Peran orang ini di kepanitiaan acara ybs, atau null kalau bukan panitia.
   role: EventCommitteeRole | null;
-  // true kalau `role` termasuk jabatan BPH Panitia (ketua/wakil/sekretaris/SC).
+  // true kalau `role` termasuk jabatan BPH Panitia (ketua/wakil/sekretaris/bendahara/SC).
   isBphPanitia: boolean;
   // BPH Kabinet: adminScope "full" + setiap anggota Divisi Teknologi.
   isFullAdmin: boolean;

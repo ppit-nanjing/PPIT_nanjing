@@ -5,7 +5,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { auth } from "@/auth";
 import { db } from "@/db";
-import { events, eventRegistrations, eventQuestions, eventCommittee, eventFeeOptions, eventDivisions, eventResponsibleDepartments, departments, galleryAlbums, users, sensusProfiles } from "@/db/schema";
+import { events, eventRegistrations, eventQuestions, eventCommittee, eventFeeOptions, eventDivisions, eventResponsibleDepartments, departments, departmentMembers, galleryAlbums, users, sensusProfiles } from "@/db/schema";
 import { hasModuleAccess } from "@/lib/admin-scope";
 import { getEventAccess, requireEventCapability } from "@/lib/event-access";
 import { logEventAudit } from "@/lib/event-audit";
@@ -158,15 +158,32 @@ export async function createEvent(_prev: EventFormState, formData: FormData): Pr
   // Divisi Penanggung Jawab (opsional dari form buat acara). Divalidasi ke
   // tabel departments supaya id karangan tidak jadi FK error; baris PJ-lah yang
   // memberi divisi itu akses otomatis ke acara ini (event-access.ts).
+  // Non-full admin hanya boleh menandai divisinya sendiri: baris PJ memberi
+  // akses ke acara, dan mengubahnya untuk divisi lain adalah hak full admin
+  // (lihat setEventResponsibleDepartments).
   const requestedDeptIds = formData
     .getAll("departmentId")
     .map((v) => String(v))
     .filter((v) => UUID_RE.test(v));
   if (requestedDeptIds.length > 0) {
+    const isFull = (await auth())?.user?.adminScope === "full";
     const validDepts = await db
       .select({ id: departments.id })
       .from(departments)
-      .where(inArray(departments.id, requestedDeptIds));
+      .where(
+        and(
+          inArray(departments.id, requestedDeptIds),
+          isFull
+            ? undefined
+            : inArray(
+                departments.id,
+                db
+                  .select({ id: departmentMembers.departmentId })
+                  .from(departmentMembers)
+                  .where(eq(departmentMembers.userId, actorId)),
+              ),
+        ),
+      );
     if (validDepts.length > 0) {
       await db
         .insert(eventResponsibleDepartments)

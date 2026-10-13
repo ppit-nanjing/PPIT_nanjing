@@ -1,9 +1,9 @@
 import { cache } from "react";
 import { notFound, redirect } from "next/navigation";
-import { asc, eq } from "drizzle-orm";
+import { and, asc, eq, isNull, or, sql } from "drizzle-orm";
 import { auth } from "@/auth";
 import { db } from "@/db";
-import { departmentMembers, departments, eventCommittee, forms, sensusProfiles, users } from "@/db/schema";
+import { departmentMembers, departments, eventCommittee, eventResponsibleDepartments, events, forms, sensusProfiles, users } from "@/db/schema";
 import type { FormRow } from "@/db/schema";
 import { hasModuleAccess } from "@/lib/admin-scope";
 import { isBphPanitiaRole } from "@/lib/event-capabilities";
@@ -119,6 +119,32 @@ export async function canManageForm(
     if (eventAccess.isBphPanitia) return true;
   }
   return false;
+}
+
+// Acara yang boleh dipakai koordinator untuk membuat form Oprek BPH: acara
+// yang divisinya tercatat sebagai Divisi Penanggung Jawab, atau yang dia buat
+// sendiri. `null` = tanpa batas (full / modul forms). Tanpa batas ini koor
+// divisi mana pun bisa membuka Oprek BPH untuk acara divisi lain lalu
+// (sebagai pembuat form) menempatkan pelamar — termasuk dirinya — jadi ketua.
+export async function getCoordinatorEventIds(access: FormsAccess): Promise<string[] | null> {
+  if (access.isFull || access.canForms) return null;
+  const rows = await db
+    .selectDistinct({ id: events.id })
+    .from(events)
+    .where(
+      and(
+        isNull(events.deletedAt),
+        or(
+          eq(events.createdBy, access.userId),
+          sql`exists (
+            select 1 from ${eventResponsibleDepartments} erd
+            join ${departmentMembers} dm on dm.department_id = erd.department_id
+            where erd.event_id = ${events.id} and dm.user_id = ${access.userId}
+          )`,
+        ),
+      ),
+    );
+  return rows.map((r) => r.id);
 }
 
 // Gerbang wajib untuk halaman/aksi/ekspor PER FORM (bukan requireFormsHub yang

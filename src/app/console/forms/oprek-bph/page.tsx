@@ -1,10 +1,10 @@
-import { and, count, desc, eq, isNotNull, isNull, notInArray, sql } from "drizzle-orm";
+import { and, count, desc, eq, inArray, isNotNull, isNull, notInArray, sql } from "drizzle-orm";
 import { db } from "@/db";
 import { events, formApplications, forms } from "@/db/schema";
 import { FormCreate } from "@/components/console/forms/form-create";
 import { FormList } from "@/components/console/forms/form-list";
 import { FormsTabs } from "@/components/console/forms/forms-tabs";
-import { requireBphTab } from "@/lib/form-access";
+import { getCoordinatorEventIds, requireBphTab } from "@/lib/form-access";
 
 export const metadata = { title: "Formulir — Oprek BPH Acara" };
 
@@ -15,6 +15,8 @@ export default async function FormsOprekBphPage({
 }) {
   const access = await requireBphTab();
   const { error } = await searchParams;
+  // Koordinator hanya boleh memilih acara divisinya (Divisi PJ) atau buatannya.
+  const allowedEventIds = await getCoordinatorEventIds(access);
 
   const [eventOptions, rows] = await Promise.all([
     db
@@ -24,6 +26,11 @@ export default async function FormsOprekBphPage({
         and(
           // Acara di Sampah tidak bisa dipilih lagi (form Oprek-nya ikut mati).
           isNull(events.deletedAt),
+          allowedEventIds === null
+            ? undefined
+            : allowedEventIds.length > 0
+              ? inArray(events.id, allowedEventIds)
+              : sql`false`,
           // Satu acara = satu form Oprek BPH: acara yang sudah punya form
           // tidak muncul lagi (hapus form lamanya kalau mau mengulang).
           notInArray(

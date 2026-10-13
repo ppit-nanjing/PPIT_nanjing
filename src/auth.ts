@@ -89,7 +89,10 @@ async function loadSessionContext(userId: string): Promise<SessionContext | null
            r.name as "roleName",
            u.email_subscribed as "emailSubscribed",
            u.locale as "locale",
-           coalesce(bool_or(d.head_user_id = u.id), false) as "isHead",
+           -- Kepala unit dicek langsung ke departments, bukan lewat join
+           -- department_members: kepala yang tidak punya baris anggota di unitnya
+           -- tetap dikenali sebagai koordinator.
+           exists(select 1 from departments dh where dh.head_user_id = u.id) as "isHead",
            exists(select 1 from event_committee ec0 where ec0.user_id = u.id) as "isCommittee",
            coalesce(
              (select json_agg(distinct ec.role) from event_committee ec where ec.user_id = u.id),

@@ -79,16 +79,16 @@ export default async function WorkLedgerPage() {
 
   const guide = await getGuide("work-ledger");
 
-  // "Selesai" = acara ditandai completed/cancelled ATAU tanggal mulainya sudah
-  // lewat. Kepanitiaan selesai dipisah dari beban aktif: tetap tampil sebagai
+  // "Selesai" = acara ditandai completed/cancelled ATAU waktu selesainya (atau
+  // waktu mulai bila tidak ada waktu selesai) sudah lewat — acara beberapa hari
+  // tetap aktif sampai hari terakhirnya. Kepanitiaan selesai dipisah dari beban aktif: tetap tampil sebagai
   // riwayat, tapi tidak menambah hitungan "kepanitiaan" maupun peringatan beban.
-  // Same rule as the public event page's "past" marker.
   // eslint-disable-next-line react-hooks/purity -- current time dibutuhkan untuk menentukan acara lampau; server component.
   const now = Date.now();
   const isEventDone = (a: { eventStatus: string | null; eventStartAt: Date | null; eventEndAt: Date | null }) =>
     a.eventStatus === "completed" ||
     a.eventStatus === "cancelled" ||
-    (a.eventStartAt != null && new Date(a.eventStartAt).getTime() < now);
+    ((a.eventEndAt ?? a.eventStartAt) != null && new Date((a.eventEndAt ?? a.eventStartAt)!).getTime() < now);
   const people = ledger
     .map((p) => {
       const active = p.assignments.filter((a) => !isEventDone(a));

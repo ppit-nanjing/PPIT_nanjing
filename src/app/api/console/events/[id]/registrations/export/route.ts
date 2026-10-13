@@ -35,7 +35,7 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
   const absUrl = (v: unknown) => (typeof v === "string" && v.startsWith("/api/") ? origin + v : v);
   // Ekspor ini memuat nomor paspor + bukti KTM + kontak → BPH Kabinet +
   // Divisi Teknologi (adminScope "full") DAN BPH Panitia acara ini
-  // (ketua/wakil/sekretaris/SC) yang butuh rekap untuk operasional & LPJ.
+  // (ketua/wakil/sekretaris/bendahara/SC) yang butuh rekap untuk operasional & LPJ.
   const access = await getEventAccess(id);
   if (!access.isFullAdmin && !access.isBphPanitia) {
     return new Response("Forbidden", { status: 403 });
