@@ -98,14 +98,12 @@ export function rankArticles(terms: string[], rows: GuideRow[], entityTerms: str
     const section = row.section.toLowerCase();
     const content = (row.content ?? "").toLowerCase();
     let score = 0;
-    let titleHit = false;
     const matchedStems = new Set<string>();
     for (const { stem, re } of termRes) {
       let hit = false;
       if (re.test(title)) {
         score += 4;
         hit = true;
-        titleHit = true;
       }
       if (re.test(section)) {
         score += 2;
@@ -133,11 +131,15 @@ export function rankArticles(terms: string[], rows: GuideRow[], entityTerms: str
       }
     }
     const matched = matchedStems.size;
+    // Pertanyaan pendek ("cuaca", "biaya kos") tidak mungkin mencocokkan 3
+    // kata kunci, jadi ambangnya disesuaikan jumlah kata kuncinya sendiri:
+    // semua kata kunci harus cocok. Aturan 3-kata dan coverage tetap berlaku
+    // untuk pertanyaan panjang.
+    const minTerms = Math.min(MIN_MATCHED_TERMS, terms.length);
     const relevant =
       terms.length > 0
-        ? matched >= MIN_MATCHED_TERMS ||
-          (matched >= MIN_MATCHED_FOR_COVERAGE && matched / terms.length >= MIN_COVERAGE_FOR_TWO) ||
-          titleHit
+        ? matched >= minTerms ||
+          (matched >= MIN_MATCHED_FOR_COVERAGE && matched / terms.length >= MIN_COVERAGE_FOR_TWO)
         : entityHit;
     return { row, score, relevant };
   });

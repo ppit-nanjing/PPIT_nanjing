@@ -4,6 +4,7 @@ import { auth } from "@/auth";
 import { hasModuleAccess, type AdminModule } from "@/lib/admin-scope";
 import { improveIndonesianText, groqChat, type ImproveContext } from "@/lib/groq";
 import { askGuide } from "@/lib/guide-answer";
+import { annotateHanziPinyin } from "@/lib/pinyin";
 import { and, eq } from "drizzle-orm";
 import { db } from "@/db";
 import { aiQueryLog, users } from "@/db/schema";
@@ -101,7 +102,7 @@ export async function chatWithAIAction(history: { role: "user" | "assistant"; co
       // fall through to normal reply
     }
   }
-  return { reply: raw, citations: answer.citations, followUps: answer.followUps, logId: answer.logId };
+  return { reply: annotateHanziPinyin(raw), citations: answer.citations, followUps: answer.followUps, logId: answer.logId };
 }
 
 /**

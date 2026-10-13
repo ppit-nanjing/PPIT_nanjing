@@ -1071,6 +1071,12 @@ export const helpArticles = pgTable("help_articles", {
   reviewedAt: timestamp("reviewed_at"),
   reviewedBy: uuid("reviewed_by").references(() => users.id),
   expiresAt: timestamp("expires_at"),
+  // Terjemahan Inggris untuk /help publik. Diisi script ingest dari berkas
+  // docs/guidebook/en/*.md (title_en/section_en dari manifest); null artinya
+  // belum ada terjemahan dan halaman jatuh ke teks Indonesia.
+  titleEn: text("title_en"),
+  sectionEn: text("section_en"),
+  contentEn: text("content_en"),
 }, (t) => [
   index("help_articles_phase_idx").on(t.phase, t.sortOrder),
 ]);

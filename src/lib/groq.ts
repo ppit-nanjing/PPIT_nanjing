@@ -295,11 +295,12 @@ export function buildChatSystemPrompt(guideContext: string, answerLanguage: Answ
     // Saran lanjutan ditumpangkan di balasan yang sama (bukan panggilan Groq
     // kedua): widget chat memakainya sebagai tombol. Dua belas kata cukup untuk
     // satu baris tombol dan mencegah model menulis satu paragraf.
-    "Sesudah jawabannya, tutup dengan tiga pertanyaan lanjutan yang paling mungkin ditanyakan pengguna " +
-    "berikutnya, masing-masing maksimal 12 kata, HARUS berkaitan langsung dengan topik yang baru saja " +
+    "Sesudah jawabannya, tuliskan nol sampai tiga pertanyaan lanjutan yang paling mungkin ditanyakan pengguna " +
+    "berikutnya - tulis hanya yang benar-benar relevan, boleh nol atau satu kalau tidak ada yang berguna. " +
+    "Masing-masing maksimal 12 kata, HARUS berkaitan langsung dengan topik yang baru saja " +
     "kamu jawab dan HARUS bisa dijawab dari sumber di atas (jangan menyarankan pertanyaan yang sumbernya " +
     "tidak memuat jawabannya), dalam format: " +
-    '<<FOLLOWUPS:["pertanyaan pertama","pertanyaan kedua","pertanyaan ketiga"]>>. ' +
+    '<<FOLLOWUPS:["pertanyaan pertama","pertanyaan kedua"]>>. ' +
     "Jangan menulis apa pun sesudah penanda itu. Jangan pakai penanda ini kalau balasannya cuma " +
     "pengecualian perubahan data profil di atas. " +
     // Perintah bahasa ditaruh paling akhir dan berdiri sendiri: instruksi di

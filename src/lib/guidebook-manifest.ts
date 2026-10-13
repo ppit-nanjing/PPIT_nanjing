@@ -22,6 +22,11 @@ export type GuidebookTopic = {
   sourceDocSlug: string;
   /** Jalur relatif dari akar repo. */
   file: string;
+  /** Judul/nama bagian untuk halaman publik /help dalam Bahasa Inggris. */
+  titleEn: string;
+  sectionEn: string;
+  /** Berkas terjemahan Inggris; kosong artinya belum ada. */
+  fileEn: string;
   /**
    * Isi lama boleh ditimpa walau `content` di DB sudah berisi sesuatu. Dipakai
    * untuk baris yang isinya masih penanda halaman ekstraksi (mis. "[[p12]]").
@@ -40,6 +45,9 @@ export const GUIDEBOOK_TOPICS: GuidebookTopic[] = [
     sourceLabel: "A Guide to Nanjing 2026; Sosialisasi Nanjing 101",
     sourceDocSlug: "guide-to-nanjing-2026",
     file: "docs/guidebook/transportasi-dari-bandara-ke-kampus.md",
+    titleEn: "Transport from the Airport to Campus",
+    sectionEn: "Frequently Used",
+    fileEn: "docs/guidebook/en/transportasi-dari-bandara-ke-kampus.md",
     replaceStub: true,
   },
   {
@@ -52,6 +60,9 @@ export const GUIDEBOOK_TOPICS: GuidebookTopic[] = [
     sourceLabel: "A Guide to Nanjing 2026 (Profil PPIT Tiongkok)",
     sourceDocSlug: "guide-to-nanjing-2026",
     file: "docs/guidebook/profil-ppit-tiongkok.md",
+    titleEn: "About PPIT Tiongkok",
+    sectionEn: "About PPIT",
+    fileEn: "docs/guidebook/en/profil-ppit-tiongkok.md",
   },
   {
     slug: "profil-ppit-nanjing",
@@ -63,6 +74,9 @@ export const GUIDEBOOK_TOPICS: GuidebookTopic[] = [
     sourceLabel: "A Guide to Nanjing 2026 (Kata Sambutan & Profil PPIT Nanjing)",
     sourceDocSlug: "guide-to-nanjing-2026",
     file: "docs/guidebook/profil-ppit-nanjing.md",
+    titleEn: "About PPIT Nanjing",
+    sectionEn: "About PPIT",
+    fileEn: "docs/guidebook/en/profil-ppit-nanjing.md",
   },
   {
     slug: "kota-nanjing",
@@ -74,6 +88,9 @@ export const GUIDEBOOK_TOPICS: GuidebookTopic[] = [
     sourceLabel: "A Guide to Nanjing 2026; Sosialisasi Nanjing 101 (Perkenalan Kota Nanjing)",
     sourceDocSlug: "guide-to-nanjing-2026",
     file: "docs/guidebook/kota-nanjing.md",
+    titleEn: "The City of Nanjing",
+    sectionEn: "About Nanjing",
+    fileEn: "docs/guidebook/en/kota-nanjing.md",
   },
   {
     slug: "dokumen-dan-berkas-awal-datang",
@@ -85,6 +102,9 @@ export const GUIDEBOOK_TOPICS: GuidebookTopic[] = [
     sourceLabel: "A Guide to Nanjing 2026 (paspor, surat keterangan belajar); Sosialisasi Nanjing 101 (Pre-Arrival)",
     sourceDocSlug: "guide-to-nanjing-2026",
     file: "docs/guidebook/dokumen-dan-berkas-awal-datang.md",
+    titleEn: "Documents to Bring on Arrival",
+    sectionEn: "Before Departure",
+    fileEn: "docs/guidebook/en/dokumen-dan-berkas-awal-datang.md",
   },
   {
     slug: "visa-dan-izin-tinggal",
@@ -96,6 +116,9 @@ export const GUIDEBOOK_TOPICS: GuidebookTopic[] = [
     sourceLabel: "A Guide to Nanjing 2026 (Imigrasi, Residence Permit); Sosialisasi Nanjing 101 (What to do after arriving)",
     sourceDocSlug: "guide-to-nanjing-2026",
     file: "docs/guidebook/visa-dan-izin-tinggal.md",
+    titleEn: "Visa and Residence Permit",
+    sectionEn: "Arrival",
+    fileEn: "docs/guidebook/en/visa-dan-izin-tinggal.md",
   },
   {
     slug: "aplikasi-pembayaran-dan-sim-card",
@@ -107,6 +130,9 @@ export const GUIDEBOOK_TOPICS: GuidebookTopic[] = [
     sourceLabel: "A Guide to Nanjing 2026 (Aplikasi Umum, Sim Card & Internet); China Student Starter Guide VER4 (Part 4)",
     sourceDocSlug: "guide-to-nanjing-2026",
     file: "docs/guidebook/aplikasi-pembayaran-dan-sim-card.md",
+    titleEn: "Apps, Payments, and SIM Card",
+    sectionEn: "Frequently Used",
+    fileEn: "docs/guidebook/en/aplikasi-pembayaran-dan-sim-card.md",
   },
   {
     slug: "tempat-tinggal-asrama-dan-kos",
@@ -118,6 +144,9 @@ export const GUIDEBOOK_TOPICS: GuidebookTopic[] = [
     sourceLabel: "China Student Starter Guide VER4 (Part 3)",
     sourceDocSlug: "starter-guide-ver4",
     file: "docs/guidebook/tempat-tinggal-asrama-dan-kos.md",
+    titleEn: "Housing: Dormitories and Boarding",
+    sectionEn: "Arrival",
+    fileEn: "docs/guidebook/en/tempat-tinggal-asrama-dan-kos.md",
   },
   {
     slug: "biaya-hidup-bulan-pertama",
@@ -129,5 +158,8 @@ export const GUIDEBOOK_TOPICS: GuidebookTopic[] = [
     sourceLabel: "China Student Starter Guide VER4 (Part 5, Part 7)",
     sourceDocSlug: "starter-guide-ver4",
     file: "docs/guidebook/biaya-hidup-bulan-pertama.md",
+    titleEn: "First-Month Living Costs",
+    sectionEn: "Frequently Used",
+    fileEn: "docs/guidebook/en/biaya-hidup-bulan-pertama.md",
   },
 ];

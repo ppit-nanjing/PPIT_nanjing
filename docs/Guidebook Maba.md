@@ -219,12 +219,19 @@ The marker lives in `src/lib/groq.ts` (prompt) and is parsed in `parseAnswer` (`
 
 Refinements since then (2026-10-13, same day):
 
-- **Saran selalu bisa dijawab.** `resolveFollowUps` menjalankan `retrieve()` pada tiap saran model dan membuang yang tidak mengembalikan potongan; sisanya diisi `fallbackFollowUps` (FAQ topik yang terambil). Sebelumnya saran model seperti "apa beda PPIT pusat dan PPIT Nanjing?" lolos tampil tapi berakhir refusal waktu diklik. Saran yang lolos validasi ditulis balik ke cache (`withFollowUps`), jadi jawaban cache juga membawa saran yang sudah terverifikasi.
+- **Saran lanjutan bervariasi dan bisa dijawab.** `resolveFollowUps` menjalankan `retrieve()` pada tiap saran model dan membuang yang tidak mengembalikan potongan, tapi jumlahnya mengikuti model (nol sampai tiga) - tidak lagi dipaksa tiga dengan FAQ. Jawaban yang tidak butuh saran tetap bersih.
 - **Kunci cache berversi.** `answerCacheKey` mencampur `ANSWER_FORMAT_VERSION` ke hash; menaikkan angka itu otomatis membatalkan semua jawaban cache lama (prompt/format berubah), setara menaikkan `corpus_version` tanpa butuh akses database.
 - **Sapaan dijawab, bukan ditolak.** `isSmallTalk` mendeteksi "hi"/"halo kak"/"makasih" murni dan `greet()` membalas ramah tanpa LLM/kuota, dengan `GUIDE_STARTER_QUESTIONS` sebagai tombol lanjutan. Pesan yang memuat satu kata isi pun ("halo, tanya visa") tetap masuk retrieval.
 - **Jawaban lebih pendek.** Prompt meminta 1–2 paragraf tanpa pembuka/penutup, melarang sejarah/asal-usul kecuali ditanya, dan mengarahkan info terkait yang tidak ditanya menjadi pertanyaan lanjutan.
 - **Tombol salin + umpan balik suara.** Setiap jawaban punya tombol salin (ikhtisar teks ke clipboard), dan klik suara menampilkan "terima kasih atas masukannya".
-- **Lantai relevansi dilonggarkan.** Satu kata kunci yang cocok persis dengan judul artikel kini dianggap relevan (`titleHit` di `rankArticles`), jadi pertanyaan pendek seperti "cuaca" tidak langsung ditolak kalau ada artikel berjudul sesuai.
+- **Lantai relevansi disesuaikan panjang pertanyaan.** Pertanyaan pendek ("cuaca", "biaya kos") tidak mungkin mencocokkan 3 kata kunci, jadi ambangnya kini `min(MIN_MATCHED_TERMS, jumlah kata kunci)`: semua kata kunci harus cocok. Pertanyaan panjang tetap pakai aturan 3-kata + coverage.
+
+### Pinyin, Inggris, dan cakupan penuh (2026-10-14)
+
+- **Hanzi diberi pinyin.** `src/lib/pinyin.ts` (`annotateHanziPinyin`) menempelkan `（pinyin）` bernada di kanan tiap run hanzi, dipakai di jawaban chat (`chatWithAIAction`) dan isi artikel `/help`. Library `pinyin-pro` (dependensi baru) dipakai supaya semua hanzi kebaca, bukan kamus sempit.
+- **`/help` dwibahasa.** `help_articles` dapat kolom `title_en`/`section_en`/`content_en` (migrasi 0049). `ingest-guide.ts` membaca `docs/guidebook/en/*.md` (terjemahan mesin lewat `src/db/translate-guidebook.ts`) dan manifest memuat judul/bagian Inggris. Halaman `/help` dan artikel memakai versi Inggris waktu `locale = en`, jatuh ke Indonesia kalau terjemahannya belum ada.
+- **Cakupan penuh.** Migrasi 0048 menandai seluruh 9 topik guidebook sudah ditinjau, jadi chatbot bisa mengutip semuanya (sebelumnya sebagian masih draf dan ditolak retrieval).
+- **Scroll ke bawah lebih andal.** Widget chat kini scroll lewat `requestAnimationFrame` + `scrollTop = scrollHeight`, supaya jawaban panjang langsung sampai ke dasar setelah dirender.
 
 ### Token and quota budget
 

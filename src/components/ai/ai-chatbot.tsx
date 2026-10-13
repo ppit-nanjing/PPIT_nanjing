@@ -79,8 +79,16 @@ export function ChatbotPanel() {
   const [thanked, setThanked] = useState<number | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
 
+  // Scroll ke bawah tiap ada pesan baru / status berubah. rAF memastikan
+  // tinggi isi sudah terhitung dulu (jawaban panjang yang baru dirender),
+  // dan scrollTop dipakai langsung supaya benar-benar sampai ke dasar.
   useEffect(() => {
-    scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight });
+    const el = scrollRef.current;
+    if (!el) return;
+    const id = requestAnimationFrame(() => {
+      el.scrollTop = el.scrollHeight;
+    });
+    return () => cancelAnimationFrame(id);
   }, [messages, busy, pendingEdit]);
 
   // `override` dipakai tombol pertanyaan lanjutan: teksnya dikirim apa adanya

@@ -12,7 +12,7 @@
 //   npx tsx --env-file=.env src/db/ingest-guide.ts                    # semua topik
 //   npx tsx --env-file=.env src/db/ingest-guide.ts kota-nanjing       # satu topik
 //   npx tsx --env-file=.env src/db/ingest-guide.ts --force kota-nanjing
-import { readFileSync } from "node:fs";
+import { readFileSync, existsSync } from "node:fs";
 import path from "node:path";
 import { eq } from "drizzle-orm";
 import { db } from "./index";
@@ -38,6 +38,13 @@ async function main() {
     const body = readFileSync(path.join(process.cwd(), topic.file), "utf8").trim();
     if (body.length === 0) throw new Error(`${topic.file} kosong`);
 
+    // Terjemahan Inggris opsional: kalau berkasnya belum ada, kolomnya null dan
+    // halaman /help jatuh ke teks Indonesia. Berbeda dari `content`, isi Inggris
+    // selalu ditimpa saat ada berkasnya - ini hasil terjemahan mesin, bukan
+    // suntingan pengurus, jadi tidak perlu panel merge.
+    const enPath = topic.fileEn ? path.join(process.cwd(), topic.fileEn) : null;
+    const bodyEn = enPath && existsSync(enPath) ? readFileSync(enPath, "utf8").trim() : null;
+
     const [existing] = await db
       .select({ id: helpArticles.id, content: helpArticles.content })
       .from(helpArticles)
@@ -52,6 +59,9 @@ async function main() {
       sourceDocSlug: topic.sourceDocSlug,
       parsedMarkdown: body,
       updatedAt: new Date(),
+      titleEn: topic.titleEn ?? null,
+      sectionEn: topic.sectionEn ?? null,
+      contentEn: bodyEn,
     };
 
     if (!existing) {

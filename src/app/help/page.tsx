@@ -12,7 +12,7 @@ import { getT } from "@/lib/i18n/server";
 // pengurus tandai relevan buat anggota/pengguna umum, bukan panduan
 // operasional console. Sumbernya sama dengan /console/docs, cuma disaring.
 export default async function HelpPage() {
-  const { t } = await getT();
+  const { t, locale } = await getT();
   // Hanya kolom yang dipakai daftar ini. `select()` tanpa argumen ikut mengirim
   // `content` setiap artikel ke server render - payload halaman tumbuh seiring
   // isi guidebook, padahal isinya belum ditampilkan di sini.
@@ -22,6 +22,8 @@ export default async function HelpPage() {
       section: helpArticles.section,
       title: helpArticles.title,
       slug: helpArticles.slug,
+      sectionEn: helpArticles.sectionEn,
+      titleEn: helpArticles.titleEn,
     })
     .from(helpArticles)
     .where(eq(helpArticles.isPublic, true));
@@ -67,7 +69,7 @@ export default async function HelpPage() {
             {Object.entries(bySection).map(([section, items]) => (
               <section key={section}>
                 <h2 className="text-headline-md text-on-background mb-5 pb-3 border-b border-outline-variant">
-                  {section}
+                  {locale === "en" ? (items[0].sectionEn ?? section) : section}
                 </h2>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   {items.map((a) => (
@@ -76,7 +78,7 @@ export default async function HelpPage() {
                       href={`/help/${a.slug}`}
                       className="group flex items-center justify-between gap-3 bg-surface-container-lowest border border-outline-variant rounded-lg px-5 py-4 text-body-md text-on-background hover:bg-surface-container-low hover:-translate-y-0.5 transition-[background-color,transform] motion-reduce:transition-none motion-reduce:hover:translate-y-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-container focus-visible:ring-offset-2 focus-visible:ring-offset-background"
                     >
-                      {a.title}
+                      {locale === "en" ? (a.titleEn ?? a.title) : a.title}
                       <ArrowRight
                         size={16}
                         className="shrink-0 text-primary-container transition-transform group-hover:translate-x-1 motion-reduce:transition-none motion-reduce:group-hover:translate-x-0"

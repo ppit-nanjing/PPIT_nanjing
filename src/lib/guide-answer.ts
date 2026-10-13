@@ -137,7 +137,7 @@ function questionHash(redacted: string): string {
 // (jawaban yang tersimpan sebelum perubahan tetap berperilaku lama). Naikkan
 // angka ini setiap kali bentuk jawaban berubah - setara menaikkan corpus_version
 // lewat ingest, tapi tanpa butuh akses database.
-const ANSWER_FORMAT_VERSION = 2;
+const ANSWER_FORMAT_VERSION = 3;
 
 function answerCacheKey(redacted: string): string {
   return questionHash(`${redacted}\u0000v${ANSWER_FORMAT_VERSION}`);
@@ -262,19 +262,16 @@ function fallbackFollowUps(slugs: (string | null)[], question: string): string[]
 /**
  * Pertanyaan lanjutan yang benar-benar bisa dijawab. Saran model dipakai hanya
  * kalau retrieval-nya mengembalikan potongan (kalau tidak, klik saran itu cuma
- * berakhir refusal). Sisanya diisi FAQ dari topik yang terambil, jadi tiap
- * tombol selalu menuju jawaban dan tetap seputar topik yang dibahas.
+ * berakhir refusal). Jumlahnya mengikuti model: boleh nol, satu, dua, atau tiga
+ * - tidak lagi dipaksa tiga dengan FAQ, supaya jawaban yang tidak butuh saran
+ * tetap bersih.
  */
-async function resolveFollowUps(modelFollowUps: string[], slugs: (string | null)[], question: string): Promise<string[]> {
+async function resolveFollowUps(modelFollowUps: string[]): Promise<string[]> {
   const out: string[] = [];
   for (const q of modelFollowUps) {
     if (out.length === MAX_FOLLOWUPS) break;
     if (out.includes(q)) continue;
     if ((await retrieve(q)) !== null) out.push(q);
-  }
-  for (const q of fallbackFollowUps(slugs, question)) {
-    if (out.length === MAX_FOLLOWUPS) break;
-    if (!out.includes(q)) out.push(q);
   }
   return out;
 }
@@ -447,7 +444,7 @@ export async function askGuide(input: {
     return {
       reply: parsed.reply,
       citations: cachedCitations,
-      followUps: parsed.followUps.length > 0 ? parsed.followUps : fallbackFollowUps(cachedCitations.map((c) => c.slug), question),
+      followUps: parsed.followUps,
       cacheHit: true,
       degraded: false,
       degradedReason: null,
@@ -494,7 +491,7 @@ export async function askGuide(input: {
   }
 
   const parsed = parseAnswer(reply);
-  const followUps = await resolveFollowUps(parsed.followUps, articles.map((a) => a.slug), question);
+  const followUps = await resolveFollowUps(parsed.followUps);
   if (!reply.includes(PROFILE_EDIT_MARKER)) {
     await writeCache(hash, corpusVersion, redacted, withFollowUps(parsed.reply, followUps), chunkIds);
   }
@@ -561,7 +558,7 @@ export async function warmCacheForQuestion(question: string): Promise<"cached" |
       { temperature: 0.5, maxTokens: ANSWER_MAX_TOKENS },
     );
     const parsed = parseAnswer(reply);
-    const followUps = await resolveFollowUps(parsed.followUps, articles.map((a) => a.slug), normalized);
+    const followUps = await resolveFollowUps(parsed.followUps);
     await writeCache(hash, corpusVersion, redacted, withFollowUps(parsed.reply, followUps), chunkIds);
     await logQuery({
       userId: null,
