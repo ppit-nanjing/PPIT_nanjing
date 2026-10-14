@@ -1,10 +1,10 @@
 "use client";
 
 import { useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { EditorContent, useEditor, type Editor, type JSONContent } from "@tiptap/react";
 import { Node, mergeAttributes } from "@tiptap/core";
 import StarterKit from "@tiptap/starter-kit";
-import Link from "@tiptap/extension-link";
 import { Bold, Heading2, Heading3, ImagePlus, Italic, Link2, List, ListOrdered, Loader2, Quote, Redo2, Trash2, Undo2 } from "lucide-react";
 import { AIImproveButton } from "@/components/ai/ai-improve-button";
 import { CROP_MAX_EDGE, compressImage, imageExtension } from "@/lib/image-compress";
@@ -135,8 +135,16 @@ export function NewsArticleEditor({
         codeBlock: false,
         horizontalRule: false,
         strike: false,
+        // Link sudah termasuk di StarterKit v3 — konfigurasi di sini, JANGAN
+        // tambah ekstensi Link terpisah: namanya dobel dan Tiptap melempar
+        // warning "Duplicate extension names" + handler ganda.
+        link: {
+          openOnClick: false,
+          autolink: false,
+          linkOnPaste: false,
+          HTMLAttributes: { target: "_blank", rel: "noopener noreferrer" },
+        },
       }),
-      Link.configure({ openOnClick: false, autolink: false, linkOnPaste: false, HTMLAttributes: { target: "_blank", rel: "noopener noreferrer" } }),
       NewsFigure,
     ],
     content: initialHtml || plainTextDocument(initialText),
@@ -255,26 +263,36 @@ export function NewsArticleEditor({
       {uploadError && <p role="alert" className="text-body-sm text-error">{uploadError}</p>}
       <input ref={fileInputRef} type="file" accept="image/png,image/jpeg,image/webp,image/gif" className="hidden" onChange={(event) => { const file = event.target.files?.[0]; event.target.value = ""; if (file) void uploadInlineImage(file); }} />
 
-      {linkUrl !== null && (
-        <div className="fixed inset-0 z-[120] flex items-center justify-center bg-black/40 p-4" role="dialog" aria-modal="true" aria-labelledby="news-link-title">
-          <form onSubmit={(event) => { event.preventDefault(); saveLink(); }} className="w-full max-w-md rounded-xl border border-outline-variant bg-surface-container-lowest p-6 shadow-xl">
-            <h3 id="news-link-title" className="text-headline-sm text-on-background">Tambahkan tautan</h3>
-            <label className="mt-4 flex flex-col gap-2 text-body-sm text-on-surface-variant">URL (https:// atau mailto:)<input autoFocus required value={linkUrl} onChange={(event) => setLinkUrl(event.target.value)} className="rounded-md bg-soft-gray p-3 text-on-background outline-none focus:ring-2 focus:ring-primary-container" /></label>
-            <div className="mt-5 flex justify-end gap-3"><button type="button" onClick={() => setLinkUrl(null)} className="px-4 py-2 text-body-sm text-on-surface-variant">Batal</button><button type="submit" className="rounded-md bg-primary-container px-5 py-2 text-label-caps uppercase text-on-primary">Simpan tautan</button></div>
-          </form>
-        </div>
-      )}
+      {/* Modal lewat portal ke document.body: kalau dirender inline, <form>
+          modal jadi turunan <form> artikel (HTML tidak valid -> hydration
+          error). Modal hanya muncul setelah interaksi (state awal null), jadi
+          tidak ada ketidakcocokan SSR. */}
+      {linkUrl !== null &&
+        typeof document !== "undefined" &&
+        createPortal(
+          <div className="fixed inset-0 z-[120] flex items-center justify-center bg-black/40 p-4" role="dialog" aria-modal="true" aria-labelledby="news-link-title">
+            <form onSubmit={(event) => { event.preventDefault(); saveLink(); }} className="w-full max-w-md rounded-xl border border-outline-variant bg-surface-container-lowest p-6 shadow-xl">
+              <h3 id="news-link-title" className="text-headline-sm text-on-background">Tambahkan tautan</h3>
+              <label className="mt-4 flex flex-col gap-2 text-body-sm text-on-surface-variant">URL (https:// atau mailto:)<input autoFocus required value={linkUrl} onChange={(event) => setLinkUrl(event.target.value)} className="rounded-md bg-soft-gray p-3 text-on-background outline-none focus:ring-2 focus:ring-primary-container" /></label>
+              <div className="mt-5 flex justify-end gap-3"><button type="button" onClick={() => setLinkUrl(null)} className="px-4 py-2 text-body-sm text-on-surface-variant">Batal</button><button type="submit" className="rounded-md bg-primary-container px-5 py-2 text-label-caps uppercase text-on-primary">Simpan tautan</button></div>
+            </form>
+          </div>,
+          document.body,
+        )}
 
-      {figureDraft && (
-        <div className="fixed inset-0 z-[120] flex items-center justify-center bg-black/40 p-4" role="dialog" aria-modal="true" aria-labelledby="news-figure-title">
-          <form onSubmit={(event) => { event.preventDefault(); saveFigure(); }} className="w-full max-w-lg rounded-xl border border-outline-variant bg-surface-container-lowest p-6 shadow-xl">
-            <h3 id="news-figure-title" className="text-headline-sm text-on-background">{figureDraft.mode === "insert" ? "Sisipkan gambar" : "Edit gambar"}</h3>
-            <label className="mt-4 flex flex-col gap-2 text-body-sm text-on-surface-variant">Deskripsi gambar untuk pembaca layar *<input autoFocus required value={figureDraft.alt} onChange={(event) => setFigureDraft({ ...figureDraft, alt: event.target.value })} className="rounded-md bg-soft-gray p-3 text-on-background outline-none focus:ring-2 focus:ring-primary-container" /></label>
-            <label className="mt-4 flex flex-col gap-2 text-body-sm text-on-surface-variant">Caption (opsional)<textarea rows={3} value={figureDraft.caption} onChange={(event) => setFigureDraft({ ...figureDraft, caption: event.target.value })} className="resize-none rounded-md bg-soft-gray p-3 text-on-background outline-none focus:ring-2 focus:ring-primary-container" /></label>
-            <div className="mt-5 flex justify-end gap-3"><button type="button" onClick={() => setFigureDraft(null)} className="px-4 py-2 text-body-sm text-on-surface-variant">Batal</button><button type="submit" className="rounded-md bg-primary-container px-5 py-2 text-label-caps uppercase text-on-primary">{figureDraft.mode === "insert" ? "Sisipkan" : "Simpan"}</button></div>
-          </form>
-        </div>
-      )}
+      {figureDraft &&
+        typeof document !== "undefined" &&
+        createPortal(
+          <div className="fixed inset-0 z-[120] flex items-center justify-center bg-black/40 p-4" role="dialog" aria-modal="true" aria-labelledby="news-figure-title">
+            <form onSubmit={(event) => { event.preventDefault(); saveFigure(); }} className="w-full max-w-lg rounded-xl border border-outline-variant bg-surface-container-lowest p-6 shadow-xl">
+              <h3 id="news-figure-title" className="text-headline-sm text-on-background">{figureDraft.mode === "insert" ? "Sisipkan gambar" : "Edit gambar"}</h3>
+              <label className="mt-4 flex flex-col gap-2 text-body-sm text-on-surface-variant">Deskripsi gambar untuk pembaca layar *<input autoFocus required value={figureDraft.alt} onChange={(event) => setFigureDraft({ ...figureDraft, alt: event.target.value })} className="rounded-md bg-soft-gray p-3 text-on-background outline-none focus:ring-2 focus:ring-primary-container" /></label>
+              <label className="mt-4 flex flex-col gap-2 text-body-sm text-on-surface-variant">Caption (opsional)<textarea rows={3} value={figureDraft.caption} onChange={(event) => setFigureDraft({ ...figureDraft, caption: event.target.value })} className="resize-none rounded-md bg-soft-gray p-3 text-on-background outline-none focus:ring-2 focus:ring-primary-container" /></label>
+              <div className="mt-5 flex justify-end gap-3"><button type="button" onClick={() => setFigureDraft(null)} className="px-4 py-2 text-body-sm text-on-surface-variant">Batal</button><button type="submit" className="rounded-md bg-primary-container px-5 py-2 text-label-caps uppercase text-on-primary">{figureDraft.mode === "insert" ? "Sisipkan" : "Simpan"}</button></div>
+            </form>
+          </div>,
+          document.body,
+        )}
     </div>
   );
 }
