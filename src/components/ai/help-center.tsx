@@ -1,12 +1,11 @@
 "use client";
 
-import { useRef, useState, type ReactNode } from "react";
+import { useState, type ReactNode } from "react";
 import { useSession } from "next-auth/react";
 import { AnimatePresence, motion } from "motion/react";
 import { X, Bot, MessageSquarePlus, type LucideIcon } from "lucide-react";
 import { ChatbotPanel } from "@/components/ai/ai-chatbot";
 import { FeedbackPanel } from "@/components/feedback/feedback-widget";
-import { useDraggable } from "@/components/ai/use-draggable";
 import { useT } from "@/lib/i18n/client";
 
 type BubbleProps = {
@@ -98,18 +97,9 @@ export function HelpCenter({ authed }: { authed: boolean }) {
 
   // Satu panel terbuka pada satu waktu.
   const [openId, setOpenId] = useState<PanelId | null>(null);
-  const stackRef = useRef<HTMLDivElement>(null);
-  const boxRef = useRef<HTMLDivElement>(null);
-  // Seluruh widget digeser sebagai satu kesatuan, jadi panelnya selalu ikut
-  // dan tidak pernah lepas dari tumpukan bolanya.
-  const { pos } = useDraggable<HTMLDivElement>(stackRef, { measureRef: boxRef, storageKey: "ppitn_help_pos" });
 
   return (
-    <div
-      ref={boxRef}
-      style={pos ? { left: pos.x, top: pos.y } : undefined}
-      className={`pointer-events-none fixed z-[70] ${pos ? "" : "right-4 bottom-24 sm:right-6 sm:bottom-6"}`}
-    >
+    <div className="pointer-events-none fixed z-[70] right-4 bottom-24 sm:right-6 sm:bottom-6">
       <Panel
         label={t("help.tabFeedback")}
         icon={MessageSquarePlus}
@@ -122,10 +112,7 @@ export function HelpCenter({ authed }: { authed: boolean }) {
         <ChatbotPanel />
       </Panel>
 
-      <div
-        ref={stackRef}
-        className="pointer-events-auto flex touch-none flex-col items-end gap-3 select-none cursor-grab active:cursor-grabbing"
-      >
+      <div className="pointer-events-auto flex flex-col items-end gap-3">
         <Bubble
           icon={MessageSquarePlus}
           label={t("help.tabFeedback")}
