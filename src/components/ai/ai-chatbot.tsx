@@ -234,7 +234,7 @@ export function ChatbotPanel() {
                 {renderMarkdownLite(m.content)}
               </div>
 
-              <div className="flex items-center gap-1 text-on-surface-variant">
+              <div className="flex flex-wrap items-center gap-x-1 gap-y-0.5 text-on-surface-variant">
                 {sources.length > 0 && (
                   <button
                     type="button"
@@ -395,7 +395,7 @@ export function ChatbotPanel() {
           value={input}
           onChange={(e) => setInput(e.target.value)}
           placeholder={t("chat.placeholder")}
-          className="flex-1 bg-soft-gray rounded-md p-3 text-body-md text-on-background placeholder:text-on-surface-variant focus:outline-none focus:ring-2 focus:ring-primary-container"
+          className="min-w-0 flex-1 bg-soft-gray rounded-md p-3 text-body-md text-on-background placeholder:text-on-surface-variant focus:outline-none focus:ring-2 focus:ring-primary-container"
         />
         <button
           type="submit"

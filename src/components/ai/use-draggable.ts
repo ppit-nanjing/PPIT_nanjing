@@ -62,8 +62,13 @@ export function useDraggable<T extends HTMLElement = HTMLElement>(
         if (t.closest("button, a, input, textarea, select")) return;
       }
       const rect = measure().getBoundingClientRect();
+      // Jangan bekukan posisi di sini: kalau `setPos` dipanggil pada setiap
+      // pointerdown (termasuk klik untuk membuka panel), posisi default
+      // `right-4 bottom-24` yang responsif berubah jadi `left/top` piksel tetap
+      // dan tersimpan ke localStorage - lalu widget tidak lagi mengikuti lebar
+      // layar (meluber di layar sempit). Posisi hanya dibekukan waktu pengguna
+      // benar-benar menggeser (lihat onMove).
       const current = posRef.current ?? { x: rect.left, y: rect.top };
-      if (!posRef.current) setPos(current);
       dragging.current = true;
       moved.current = false;
       start.current = { x: e.clientX, y: e.clientY };
