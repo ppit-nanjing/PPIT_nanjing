@@ -47,7 +47,7 @@ export default async function NewNewsArticlePage({
   const backHref = scopedEventId ? `/console/events/${scopedEventId}` : "/console/content";
 
   return (
-    <div className="px-4 py-6 sm:px-6 lg:px-8 lg:py-10 max-w-2xl">
+    <div className="px-4 py-6 sm:px-6 lg:px-8 lg:py-10 max-w-3xl">
       <Link
         href={backHref}
         className="inline-flex items-center gap-2 text-label-caps uppercase tracking-wide text-on-surface-variant hover:text-on-background mb-4"

@@ -686,6 +686,10 @@ export const newsArticles = pgTable("news_articles", {
   title: text("title").notNull(),
   slug: text("slug").notNull().unique(),
   content: text("content"),
+  // Rich text versi artikel. `content` di atas sengaja tetap berupa teks polos
+  // untuk kartu berita, email, pencarian, dan artikel lama; null berarti
+  // artikel belum pernah disimpan lewat editor rich text.
+  contentHtml: text("content_html"),
   coverImageUrl: text("cover_image_url"),
   // Freeform tag (e.g. "Pengumuman", "Komunitas") - backs the /news category filter
   // tabs (Goal.md Tier 1 #12), same pattern as events.category.

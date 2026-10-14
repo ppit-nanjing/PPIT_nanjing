@@ -44,7 +44,7 @@ export default async function EditNewsArticlePage({ params }: { params: Promise<
   const isArchived = article.status === "archived";
 
   return (
-    <div className="px-4 py-6 sm:px-6 lg:px-8 lg:py-10 max-w-2xl">
+    <div className="px-4 py-6 sm:px-6 lg:px-8 lg:py-10 max-w-3xl">
       <div className="flex items-center justify-between gap-3 mb-4">
         <Link
           href={backHref}
@@ -108,6 +108,7 @@ export default async function EditNewsArticlePage({ params }: { params: Promise<
           coverImageUrl: article.coverImageUrl ?? "",
           category: article.category ?? "",
           content: article.content ?? "",
+          contentHtml: article.contentHtml,
           published: article.status === "published",
           archived: isArchived,
         }}

@@ -12,6 +12,7 @@ import { sendEmail } from "@/lib/email";
 import { renderMembershipEmail, renderMembershipEmailText } from "@/lib/membership-email";
 import { getSiteUrl } from "@/lib/site-url";
 import { withFlash } from "@/lib/flash";
+import { sanitizeNewsHtml } from "@/lib/sanitize-news-html";
 
 async function requireContentAccess() {
   const session = await auth();
@@ -84,6 +85,14 @@ export async function upsertNewsArticle(
 
   const title = String(formData.get("title") ?? "").trim();
   const content = String(formData.get("content") ?? "").trim();
+  const contentHtml = (() => {
+    const raw = String(formData.get("contentHtml") ?? "").trim();
+    if (!raw) return null;
+    const clean = sanitizeNewsHtml(raw);
+    // TipTap mengirim <p></p> untuk dokumen kosong. Namun figure tanpa teks
+    // tetap valid, jadi hanya perlakukan paragraf benar-benar kosong sebagai null.
+    return /^(<p><\/p>\s*)+$/.test(clean) ? null : clean || null;
+  })();
   const coverImageUrl = String(formData.get("coverImageUrl") ?? "").trim();
   const category = String(formData.get("category") ?? "").trim();
   const publish = formData.get("publish") === "on";
@@ -114,6 +123,7 @@ export async function upsertNewsArticle(
       .set({
         title,
         content: content || null,
+        contentHtml,
         coverImageUrl: coverImageUrl || null,
         category: category || null,
         eventId,
@@ -129,6 +139,7 @@ export async function upsertNewsArticle(
         title,
         slug: slugify(title),
         content: content || null,
+        contentHtml,
         coverImageUrl: coverImageUrl || null,
         category: category || null,
         eventId,
