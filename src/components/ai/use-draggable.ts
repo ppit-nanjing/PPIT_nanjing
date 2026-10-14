@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 export type Point = { x: number; y: number };
 
@@ -24,6 +24,21 @@ export function useDraggable<T extends HTMLElement = HTMLElement>(
   const posRef = useRef<Point | null>(null);
   const capture = useRef<Element | null>(null);
 
+  // Batas posisi di dalam viewport (dipakai saat drag, restore, dan resize).
+  // useCallback + ref stabil membuatnya tidak berubah tiap render, jadi aman
+  // dipakai lintas effect tanpa me-re-run listener.
+  const clampPoint = useCallback(
+    (x: number, y: number): Point => {
+      const m = measureRef?.current ?? targetRef.current;
+      const w = m?.offsetWidth ?? 56;
+      const h = m?.offsetHeight ?? 56;
+      const maxX = Math.max(8, window.innerWidth - w - 8);
+      const maxY = Math.max(8, window.innerHeight - h - 8);
+      return { x: Math.min(Math.max(x, 8), maxX), y: Math.min(Math.max(y, 8), maxY) };
+    },
+    [measureRef, targetRef],
+  );
+
   useEffect(() => {
     posRef.current = pos;
   }, [pos]);
@@ -32,12 +47,30 @@ export function useDraggable<T extends HTMLElement = HTMLElement>(
     if (!storageKey) return;
     try {
       const raw = localStorage.getItem(storageKey);
-      // eslint-disable-next-line react-hooks/set-state-in-effect
-      if (raw) setPos(JSON.parse(raw) as Point);
+      if (raw) {
+        const saved = JSON.parse(raw) as Point;
+        // Posisi tersimpan bisa berasal dari layar yang lebih lebar; klamp ke
+        // viewport saat ini supaya tidak muncul di luar layar.
+        // eslint-disable-next-line react-hooks/set-state-in-effect
+        setPos(clampPoint(saved.x, saved.y));
+      }
     } catch {
       // ignore malformed saved position
     }
-  }, [storageKey]);
+  }, [storageKey, clampPoint]);
+
+  // Saat jendela diubah ukurannya, posisi tetap (left/top dari hasil geser)
+  // diklamp ulang supaya widget ikut berpindah dan tidak meluber keluar layar.
+  // Posisi default (pos null) memakai right-4 bottom-24 yang sudah responsif.
+  useEffect(() => {
+    if (!enabled) return;
+    const onResize = () => {
+      const cur = posRef.current;
+      if (cur) setPos(clampPoint(cur.x, cur.y));
+    };
+    window.addEventListener("resize", onResize);
+    return () => window.removeEventListener("resize", onResize);
+  }, [enabled, clampPoint]);
 
   useEffect(() => {
     const el = targetRef.current;
