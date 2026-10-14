@@ -399,7 +399,9 @@ export async function askGuide(input: {
     return {
       reply: GREETING_REPLY[detectAnswerLanguage(question)],
       citations: [],
-      followUps: GUIDE_STARTER_QUESTIONS,
+      // Sapaan tidak butuh tombol saran: teksnya sudah menyebut topik yang bisa
+      // ditanya. Tombol saran cuma buat jawaban/refusal yang memang butuh arah.
+      followUps: [],
       cacheHit: false,
       degraded: false,
       degradedReason: null,

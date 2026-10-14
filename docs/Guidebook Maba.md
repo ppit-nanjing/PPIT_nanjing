@@ -231,7 +231,7 @@ Refinements since then (2026-10-13, same day):
 - **Hanzi diberi pinyin.** `src/lib/pinyin.ts` (`annotateHanziPinyin`) menempelkan `（pinyin）` bernada di kanan tiap run hanzi, dipakai di jawaban chat (`chatWithAIAction`) dan isi artikel `/help`. Library `pinyin-pro` (dependensi baru) dipakai supaya semua hanzi kebaca, bukan kamus sempit.
 - **`/help` dwibahasa.** `help_articles` dapat kolom `title_en`/`section_en`/`content_en` (migrasi 0049). `ingest-guide.ts` membaca `docs/guidebook/en/*.md` (terjemahan mesin lewat `src/db/translate-guidebook.ts`) dan manifest memuat judul/bagian Inggris. Halaman `/help` dan artikel memakai versi Inggris waktu `locale = en`, jatuh ke Indonesia kalau terjemahannya belum ada.
 - **Cakupan penuh.** Migrasi 0048 menandai seluruh 9 topik guidebook sudah ditinjau, jadi chatbot bisa mengutip semuanya (sebelumnya sebagian masih draf dan ditolak retrieval).
-- **Scroll ke bawah lebih andal.** Widget chat kini scroll lewat `requestAnimationFrame` + `scrollTop = scrollHeight`, supaya jawaban panjang langsung sampai ke dasar setelah dirender.
+- **Scroll ke bawah lebih andal + animasi.** Pesan sekarang menempel ke bawah (`min-h-full justify-end`) seperti aplikasi chat biasa, scroll-nya halus (`requestAnimationFrame` + `scrollTo` `behavior: smooth`, tetap instan kalau pengguna memilih kurangi gerakan), dan tiap gelembung baru muncul dengan animasi pop. Sapaan ("hi") tidak lagi memaksa tiga tombol saran, jadi jawabannya muat tanpa terpotong.
 
 ### Token and quota budget
 

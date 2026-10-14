@@ -17,6 +17,7 @@ import {
 import { chatWithAIAction, rateAnswerAction, updateProfileFieldAction, type ChatCitation } from "@/app/actions/ai";
 import { renderMarkdownLite } from "@/lib/markdown-lite";
 import { useT } from "@/lib/i18n/client";
+import { motion } from "motion/react";
 import type { TKey } from "@/lib/i18n/dictionaries/id";
 import type { T } from "@/lib/i18n/translate";
 
@@ -79,14 +80,15 @@ export function ChatbotPanel() {
   const [thanked, setThanked] = useState<number | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
 
-  // Scroll ke bawah tiap ada pesan baru / status berubah. rAF memastikan
-  // tinggi isi sudah terhitung dulu (jawaban panjang yang baru dirender),
-  // dan scrollTop dipakai langsung supaya benar-benar sampai ke dasar.
+  // Scroll ke bawah tiap ada pesan baru / status berubah, dengan animasi.
+  // rAF memastikan tinggi isi sudah terhitung dulu (jawaban panjang yang baru
+  // dirender); pengguna yang memilih kurangi gerakan tetap dapat scroll instan.
   useEffect(() => {
     const el = scrollRef.current;
     if (!el) return;
+    const reduce = typeof window !== "undefined" && window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
     const id = requestAnimationFrame(() => {
-      el.scrollTop = el.scrollHeight;
+      el.scrollTo({ top: el.scrollHeight, behavior: reduce ? "auto" : "smooth" });
     });
     return () => cancelAnimationFrame(id);
   }, [messages, busy, pendingEdit]);
@@ -196,25 +198,38 @@ export function ChatbotPanel() {
 
   return (
     <div className="flex flex-col">
-      <div ref={scrollRef} className="flex flex-col gap-3 p-5 h-80 overflow-y-auto">
-        {messages.length === 0 && !pendingEdit && (
-          <p className="text-body-md text-on-surface-variant">
-            {t("chat.greeting")}
-          </p>
-        )}
+      <div ref={scrollRef} className="h-80 overflow-y-auto">
+        <div className="flex min-h-full flex-col justify-end gap-3 p-5">
+          {messages.length === 0 && !pendingEdit && (
+            <p className="text-body-md text-on-surface-variant">
+              {t("chat.greeting")}
+            </p>
+          )}
         {messages.map((m, i) => {
           if (m.role === "user") {
             return (
-              <div key={i} className={"max-w-[85%] rounded-lg px-3 py-2 text-body-md " + bubbleClass("user")}>
+              <motion.div
+                key={i}
+                initial={{ opacity: 0, y: 10, scale: 0.96 }}
+                animate={{ opacity: 1, y: 0, scale: 1 }}
+                transition={{ duration: 0.25, ease: "easeOut" }}
+                className={"max-w-[85%] rounded-lg px-3 py-2 text-body-md " + bubbleClass("user")}
+              >
                 {m.content}
-              </div>
+              </motion.div>
             );
           }
           const sources = m.citations ?? [];
           const followUps = m.followUps ?? [];
           const isLast = i === messages.length - 1;
           return (
-            <div key={i} className="flex w-full flex-col items-start gap-1.5">
+            <motion.div
+              key={i}
+              initial={{ opacity: 0, y: 10, scale: 0.96 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              transition={{ duration: 0.25, ease: "easeOut" }}
+              className="flex w-full flex-col items-start gap-1.5"
+            >
               <div className={"max-w-[85%] rounded-lg px-3 py-2 text-body-md " + bubbleClass("assistant")}>
                 {renderMarkdownLite(m.content)}
               </div>
@@ -334,7 +349,7 @@ export function ChatbotPanel() {
                   ))}
                 </div>
               )}
-            </div>
+            </motion.div>
           );
         })}
 
@@ -366,6 +381,7 @@ export function ChatbotPanel() {
 
         {busy && !pendingEdit && <p className="self-start text-label-caps text-on-surface-variant">{t("chat.typing")}</p>}
         {error && <p className="self-start text-label-caps text-error">{error}</p>}
+        </div>
       </div>
 
       <form
