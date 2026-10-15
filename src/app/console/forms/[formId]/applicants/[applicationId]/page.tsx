@@ -80,7 +80,12 @@ export default async function FormApplicantPage({
     form.kind === "oprek_kepanitiaan"
       ? ["pending", "accepted", "accepted_choice1", "accepted_choice2", "reassigned", "rejected"]
       : ["pending", "accepted", "rejected"];
-  const roleChoices: string[] = form.kind === "oprek_bph_acara" ? BPH_FORM_ROLES : PLACEMENT_ROLE_OPTIONS;
+  // Oprek BPH: hanya posisi yang dibuka form ini — sama dengan aturan server
+  // (updateApplicationPlacement mengabaikan role di luar bphRoles).
+  const roleChoices: string[] =
+    form.kind === "oprek_bph_acara"
+      ? BPH_FORM_ROLES.filter((r) => (form.bphRoles as string[]).includes(r))
+      : PLACEMENT_ROLE_OPTIONS;
   const showRole = form.kind !== "pemilu";
   const showDivision = form.kind === "oprek_kepanitiaan";
 

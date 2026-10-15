@@ -367,7 +367,7 @@ export default async function ConsoleEventDetailPage({ params }: { params: Promi
 
   // Biodata lengkap pendaftar (paspor, KTM, universitas, telpon, jurusan, email,
   // kota, jawaban kustom) tampil untuk BPH Kabinet + Divisi Teknologi
-  // (adminScope "full") DAN BPH Panitia acara ini (ketua/wakil/sekretaris/SC) -
+  // (adminScope "full") DAN BPH Panitia acara ini (ketua/wakil/sekretaris/bendahara/SC) -
   // pengurus inti pelaksana butuh datanya untuk operasional acara. Panitia lain
   // (event.viewRegistrants, DASAR) lihat versi RINGKAS: nama + WeChat ID +
   // kategori/nominal tarif + status keanggotaan + status check-in.
