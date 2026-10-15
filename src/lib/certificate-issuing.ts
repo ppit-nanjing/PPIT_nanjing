@@ -38,10 +38,37 @@ export type CertificateCandidate = {
   title: string;
 };
 
-/** Menyisipkan baris sertifikat lalu memberi tahu tiap penerimanya + satu entri audit per acara. */
+/**
+ * Menyisipkan baris sertifikat lalu memberi tahu tiap penerimanya + satu entri
+ * audit per acara. Sertifikat peserta/panitia sebuah acara dijaga satu per orang:
+ * jalur otomatis (simpan folder, kirim evaluasi, check-in) bisa berjalan
+ * bersamaan dan tabelnya tidak punya indeks unik, jadi tiap baris disisipkan
+ * dengan INSERT … WHERE NOT EXISTS dan hanya yang benar-benar masuk yang diberi
+ * notifikasi. Jenis lain (pemateri/lainnya) boleh lebih dari satu per orang.
+ */
 export async function insertCertificates(rows: (typeof certificates.$inferInsert)[]) {
   if (rows.length === 0) return;
-  await db.insert(certificates).values(rows);
+  const inserted: (typeof certificates.$inferInsert)[] = [];
+  for (const r of rows) {
+    const kind = r.kind ?? "peserta";
+    if (r.eventId && (kind === "peserta" || kind === "panitia")) {
+      const res = await db.execute(sql`
+        insert into ${certificates} (user_id, event_id, kind, title, file_url, issued_by)
+        select ${r.userId}::uuid, ${r.eventId}::uuid, ${kind}::certificate_kind, ${r.title}, ${r.fileUrl ?? null}, ${r.issuedBy ?? null}::uuid
+        where not exists (
+          select 1 from ${certificates} c
+          where c.event_id = ${r.eventId}::uuid and c.user_id = ${r.userId}::uuid and c.kind = ${kind}::certificate_kind
+        )
+        returning id
+      `);
+      if (res.rows.length > 0) inserted.push(r);
+    } else {
+      await db.insert(certificates).values(r);
+      inserted.push(r);
+    }
+  }
+  if (inserted.length === 0) return;
+  rows = inserted;
   await Promise.allSettled(
     rows.map((r) =>
       createTemplatedNotification({
@@ -152,7 +179,9 @@ export async function saveCertificateLinks(
     const current = byUser.get(candidate.userId);
     if (!current) {
       toInsert.push({ userId: candidate.userId, eventId: event.id, kind, title: candidate.title, fileUrl: url, issuedBy: actorId });
-    } else if (!opts.onlyMissing && current.fileUrl !== url) {
+    } else if ((!opts.onlyMissing || !current.fileUrl) && current.fileUrl !== url) {
+      // onlyMissing tetap mengisi sertifikat lama yang belum punya berkas (sisa
+      // aturan sebelum 2026-10-07) — kalau tidak, orangnya tidak pernah dapat.
       await db.update(certificates).set({ fileUrl: url }).where(eq(certificates.id, current.id));
       updated += 1;
     }
