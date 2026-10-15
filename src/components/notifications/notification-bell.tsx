@@ -24,6 +24,7 @@ function hrefFor(item: NItem): string | null {
   if (item.relatedEntityType === "borrow_request") return "/profile/submissions";
   if (item.relatedEntityType === "event_registration") return "/profile/submissions";
   if (item.relatedEntityType === "job" && item.relatedEntityId) return `/jobs/${item.relatedEntityId}/applied`;
+  if (item.relatedEntityType === "certificate") return "/profile#aktivitas";
   return null;
 }
 
