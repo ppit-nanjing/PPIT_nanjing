@@ -11,6 +11,7 @@ import { getEventAccess, requireEventCapability } from "@/lib/event-access";
 import { logEventAudit } from "@/lib/event-audit";
 import { UUID_RE } from "@/lib/uuid";
 import { createTemplatedNotification } from "@/lib/notifications";
+import { issueParticipantCertificateIfEligible } from "@/lib/certificate-issuing";
 import { checkInBlockReason, checkInClosedReason } from "@/lib/event-checkin";
 import { WIF_2026_KELOMPOK, normalizeNameForKelompok } from "@/lib/wif-2026-kelompok";
 import { sanitizeDescriptionHtml } from "@/lib/sanitize-description-html";
@@ -542,6 +543,20 @@ export async function deleteFeeOption(formData: FormData) {
   revalidatePath(`/console/events/${row.eventId}`);
 }
 
+// Hadir dicatat SETELAH orangnya sudah mengisi evaluasi (mis. panitia
+// menandai hadir belakangan untuk yang lupa di-scan): sertifikat peserta
+// langsung terbit kalau folder-nya sudah disimpan. Saat acara berlangsung
+// folder biasanya belum ada, jadi ini berhenti di satu query. Gagal di sini
+// tidak boleh menggagalkan check-in.
+async function issueCertificateAfterCheckIn(eventId: string, userId: string | null) {
+  if (!userId) return;
+  try {
+    await issueParticipantCertificateIfEligible(eventId, userId);
+  } catch (error) {
+    console.error("[check-in] certificate issue failed:", error);
+  }
+}
+
 export async function checkInRegistration(
   registrationId: string,
   eventId: string,
@@ -582,6 +597,7 @@ export async function checkInRegistration(
     .update(eventRegistrations)
     .set({ status: "attended", checkedInAt: new Date(), checkedInBy: session.user.id })
     .where(and(eq(eventRegistrations.id, registrationId), eq(eventRegistrations.eventId, eventId)));
+  await issueCertificateAfterCheckIn(eventId, registration.userId);
 
   if (registration.userId) {
     await createTemplatedNotification({
@@ -696,6 +712,7 @@ export async function checkInByToken(token: string, eventId: string, dryRun = fa
     .update(eventRegistrations)
     .set({ status: "attended", checkedInAt: new Date(), checkedInBy: session.user.id })
     .where(eq(eventRegistrations.id, registration.id));
+  await issueCertificateAfterCheckIn(eventId, registration.userId);
   if (registration.userId) {
     await createTemplatedNotification({
       userId: registration.userId,
@@ -791,6 +808,7 @@ export async function checkInByUserId(eventId: string, userId: string, dryRun = 
     .update(eventRegistrations)
     .set({ status: "attended", checkedInAt: new Date(), checkedInBy: session.user.id })
     .where(eq(eventRegistrations.id, registration.id));
+  await issueCertificateAfterCheckIn(eventId, registration.userId);
   await createTemplatedNotification({
     userId: registration.userId!,
     templateKey: "event_checkin",

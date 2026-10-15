@@ -258,6 +258,7 @@ export function EventEvaluationForm({
   action,
   userName,
   divisionName,
+  linkedAccount = false,
 }: {
   slug: string;
   eventTitle: string;
@@ -278,6 +279,12 @@ export function EventEvaluationForm({
   /** Identitas pengisi untuk audiens panitia (nama & divisi dari kepanitiaan). */
   userName?: string;
   divisionName?: string | null;
+  /**
+   * Evaluasi peserta yang dikirim dengan akun (acara yang memberi e-sertifikat):
+   * dedup-nya di server lewat akun, jadi token & penanda "sudah mengisi" milik
+   * perangkat tidak dipakai — halaman induk sudah menangani "sudah mengisi".
+   */
+  linkedAccount?: boolean;
 }) {
   const t = useT();
   const [state, formAction, isPending] = useActionState<EvaluationFormState, FormData>(
@@ -293,7 +300,7 @@ export function EventEvaluationForm({
   useEffect(() => {
     // Pratinjau tidak menyentuh token/penanda "sudah mengisi" milik perangkat ini;
     // audiens panitia juga tidak — dedup-nya di server lewat akun.
-    if (preview || audience === "panitia") return;
+    if (preview || audience === "panitia" || linkedAccount) return;
     const timer = window.setTimeout(() => {
       let deviceToken = "";
       try {
@@ -312,7 +319,7 @@ export function EventEvaluationForm({
       setToken(deviceToken);
     }, 0);
     return () => window.clearTimeout(timer);
-  }, [slug, preview, audience]);
+  }, [slug, preview, audience, linkedAccount]);
 
   useEffect(() => {
     if (audience === "panitia") return;
@@ -323,7 +330,7 @@ export function EventEvaluationForm({
     }
   }, [state.ok, slug, audience]);
 
-  if (!preview && (state.ok || state.already || (audience !== "panitia" && doneBefore))) {
+  if (!preview && (state.ok || state.already || (audience !== "panitia" && !linkedAccount && doneBefore))) {
     const already = !state.ok;
     return (
       <div className={`${CARD} items-center py-10 text-center`}>
@@ -340,6 +347,20 @@ export function EventEvaluationForm({
               ? t("ceval.thanksBody")
               : t("eval.thanksBody")}
         </p>
+        {state.certificate && (
+          <p className="text-body-md text-on-background max-w-md">
+            {state.certificate === "issued"
+              ? t("eval.certIssued")
+              : state.certificate === "pending"
+                ? t("eval.certPending")
+                : t("eval.certNotAttended")}
+          </p>
+        )}
+        {state.certificate === "issued" && (
+          <Link href="/profile#aktivitas" className={`${BTN} bg-accent text-on-accent hover:brightness-95`}>
+            {t("eval.certOpen")}
+          </Link>
+        )}
         <Link href={`/events/${slug}`} className={`${BTN} border border-outline-variant text-on-background hover:bg-surface-container-low`}>
           <ArrowLeft size={16} aria-hidden="true" /> {t("eval.backToEvent")}
         </Link>
@@ -383,7 +404,7 @@ export function EventEvaluationForm({
       className="flex flex-col gap-5"
     >
       <input type="hidden" name="slug" value={slug} />
-      {audience !== "panitia" && <input type="hidden" name="token" value={token} />}
+      {audience !== "panitia" && !linkedAccount && <input type="hidden" name="token" value={token} />}
 
       {clientMissing && (
         <p role="alert" className="rounded-lg bg-error-container/40 px-4 py-3 text-body-md text-on-error-container">
@@ -413,7 +434,9 @@ export function EventEvaluationForm({
                     : state.error === "required"
                       ? t("ceval.errorRequired")
                       : t("ceval.errorGeneric")
-            : state.error === "ratings"
+            : state.error === "login"
+              ? t("eval.certLoginBody")
+              : state.error === "ratings"
               ? t("eval.requiredRatings")
               : state.error === "required"
                 ? t("eval.requiredTexts")
@@ -474,6 +497,9 @@ export function EventEvaluationForm({
             <span>
               <span className="text-body-md text-on-background">{t("eval.anonymous")}</span>
               <span className="block text-body-sm text-on-surface-variant">{t("eval.anonymousHint")}</span>
+              {linkedAccount && (
+                <span className="block text-body-sm text-on-surface-variant">{t("eval.anonymousCertHint")}</span>
+              )}
             </span>
           </label>
         </section>
@@ -528,7 +554,7 @@ export function EventEvaluationForm({
 
       <button
         type="submit"
-        disabled={preview || isPending || (audience !== "panitia" && !token)}
+        disabled={preview || isPending || (audience !== "panitia" && !linkedAccount && !token)}
         className={`${BTN} deco-btn self-start bg-accent text-on-accent hover:brightness-95 disabled:opacity-60`}
       >
         {preview ? t("eval.previewSubmit") : isPending ? t("eval.submitting") : t("eval.submit")}

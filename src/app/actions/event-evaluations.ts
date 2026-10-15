@@ -3,8 +3,10 @@
 import { and, eq, isNull } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
+import { auth } from "@/auth";
 import { db } from "@/db";
-import { eventEvaluationAnswers, eventEvaluations, events } from "@/db/schema";
+import { eventEvaluationAnswers, eventEvaluations, eventRegistrations, events } from "@/db/schema";
+import { issueParticipantCertificateIfEligible } from "@/lib/certificate-issuing";
 import { canEditCommitteeEvaluation, requireEventConsoleAccess } from "@/lib/event-access";
 import { isUniqueViolation } from "@/lib/db-errors";
 import { logEventAudit } from "@/lib/event-audit";
@@ -28,6 +30,43 @@ function trimmedText(formData: FormData, key: string, max: number): string | nul
   return value;
 }
 
+// Acara yang memberi e-sertifikat peserta: evaluasi WAJIB dikirim dengan akun,
+// karena sertifikat hanya untuk yang hadir DAN sudah mengisi evaluasi — evaluasi
+// tanpa akun tidak bisa dicocokkan ke orangnya. Akun hanya dipakai untuk itu dan
+// untuk mencegah isi dobel (token "peserta:<userId>" menggantikan token
+// perangkat); pilihan anonim tetap menyembunyikan nama di rekap panitia.
+type Responder = { userId: string | null; token: string };
+
+async function resolveResponder(
+  event: { certificateForParticipants: boolean },
+  formData: FormData,
+): Promise<Responder | { error: "login" | "invalid" }> {
+  if (event.certificateForParticipants) {
+    const session = await auth();
+    if (!session?.user?.id) return { error: "login" };
+    return { userId: session.user.id, token: `peserta:${session.user.id}` };
+  }
+  const token = typeof formData.get("token") === "string" ? String(formData.get("token")).trim() : "";
+  if (token.length < TOKEN_MIN || token.length > TOKEN_MAX) return { error: "invalid" };
+  return { userId: null, token };
+}
+
+// Setelah evaluasi berakun tersimpan: terbitkan sertifikat bila berhak, dan
+// kabari pengisi statusnya. Gagal di sini tidak boleh menggagalkan evaluasinya.
+async function certificateAfterEvaluation(eventId: string, userId: string): Promise<EvalFormState["certificate"]> {
+  try {
+    if (await issueParticipantCertificateIfEligible(eventId, userId)) return "issued";
+    const [reg] = await db
+      .select({ status: eventRegistrations.status })
+      .from(eventRegistrations)
+      .where(and(eq(eventRegistrations.eventId, eventId), eq(eventRegistrations.userId, userId)));
+    return reg?.status === "attended" ? "pending" : "not_attended";
+  } catch (error) {
+    console.error("[event-evaluation] certificate issue failed:", error);
+    return "pending";
+  }
+}
+
 function rating(formData: FormData, key: string): number | null {
   const raw = formData.get(key);
   const value = typeof raw === "string" ? Number.parseInt(raw, 10) : Number.NaN;
@@ -43,7 +82,7 @@ export async function submitEventEvaluation(
   if (!slug) return { error: "invalid" };
 
   const [event] = await db
-    .select({ id: events.id, status: events.status })
+    .select({ id: events.id, status: events.status, certificateForParticipants: events.certificateForParticipants })
     .from(events)
     .where(and(eq(events.slug, slug), isNull(events.deletedAt)));
   // Sama dengan halaman publiknya (404 untuk draft/terjadwal): aksi ini juga bisa
@@ -52,8 +91,11 @@ export async function submitEventEvaluation(
 
   // Acara dengan pertanyaan buatan panitia: bentuk jawabannya dinamis.
   const customQuestions = await loadEvaluationQuestions(event.id);
+  const responder = await resolveResponder(event, formData);
+  if ("error" in responder) return { error: responder.error };
+
   if (customQuestions.length > 0) {
-    return submitCustomEvaluation(event.id, slug, customQuestions, formData);
+    return submitCustomEvaluation(event.id, slug, customQuestions, formData, responder);
   }
 
   const ratingRegistration = rating(formData, "ratingRegistration");
@@ -63,9 +105,6 @@ export async function submitEventEvaluation(
   if (!ratingRegistration || !ratingFacilities || !ratingCgt || !ratingOverall) {
     return { error: "ratings" };
   }
-
-  const token = typeof formData.get("token") === "string" ? String(formData.get("token")).trim() : "";
-  if (token.length < TOKEN_MIN || token.length > TOKEN_MAX) return { error: "invalid" };
 
   const anonymous = formData.get("anonymous") === "on" || formData.get("anonymous") === "true";
 
@@ -117,7 +156,8 @@ export async function submitEventEvaluation(
       respondentName: name,
       respondentCity: city,
       anonymous,
-      responderToken: token,
+      userId: responder.userId,
+      responderToken: responder.token,
     });
   } catch (error) {
     if (isUniqueViolation(error)) return { already: true };
@@ -126,7 +166,9 @@ export async function submitEventEvaluation(
   }
 
   revalidatePath(`/events/${slug}/evaluasi`);
-  return { ok: true };
+  if (!responder.userId) return { ok: true };
+  revalidatePath("/profile");
+  return { ok: true, certificate: await certificateAfterEvaluation(event.id, responder.userId) };
 }
 
 // Jalur untuk acara yang punya pertanyaan evaluasi buatan panitia. Field jawaban
@@ -138,10 +180,8 @@ async function submitCustomEvaluation(
   slug: string,
   questions: EvalQuestionRow[],
   formData: FormData,
+  responder: Responder,
 ): Promise<EventEvaluationFormState> {
-  const token = typeof formData.get("token") === "string" ? String(formData.get("token")).trim() : "";
-  if (token.length < TOKEN_MIN || token.length > TOKEN_MAX) return { error: "invalid" };
-
   const anonymous = formData.get("anonymous") === "on" || formData.get("anonymous") === "true";
   let name: string | null = null;
   let city: string | null = null;
@@ -171,7 +211,8 @@ async function submitCustomEvaluation(
     respondentName: name,
     respondentCity: city,
     anonymous,
-    responderToken: token,
+    userId: responder.userId,
+    responderToken: responder.token,
   });
 
   try {
@@ -199,7 +240,9 @@ async function submitCustomEvaluation(
   }
 
   revalidatePath(`/events/${slug}/evaluasi`);
-  return { ok: true };
+  if (!responder.userId) return { ok: true };
+  revalidatePath("/profile");
+  return { ok: true, certificate: await certificateAfterEvaluation(eventId, responder.userId) };
 }
 
 export async function deleteEventEvaluation(formData: FormData): Promise<void> {
