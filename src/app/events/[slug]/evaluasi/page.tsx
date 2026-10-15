@@ -109,7 +109,7 @@ export default async function EventEvaluationPage({ params }: { params: Promise<
         body = (
           <InfoCard
             icon={<CheckCircle2 className="text-primary-container" size={40} aria-hidden="true" />}
-            title={t("eval.alreadyTitle")}
+            title={t("eval.recordedTitle")}
             body={statusText}
           >
             {cert && (

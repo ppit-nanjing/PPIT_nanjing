@@ -1344,6 +1344,7 @@ export const id = {
   "eval.certPending": "Kamu sudah berhak atas e-sertifikat. Sertifikatnya dikirim otomatis ke Profil → Aktivitas begitu panitia mengunggah berkasnya.",
   "eval.certNotAttended": "Kehadiranmu belum tercatat (QR belum di-scan), jadi e-sertifikat belum bisa dikirim. Kalau kamu hadir, hubungi panitia.",
   "eval.certOpen": "Lihat sertifikat",
+  "eval.recordedTitle": "Evaluasimu sudah tercatat",
   "eval.sectionRegistration": "Registrasi",
   "eval.sectionFacilities": "Fasilitas",
   "eval.sectionCgt": "Sharing CGT",

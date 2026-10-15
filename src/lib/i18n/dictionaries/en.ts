@@ -1341,6 +1341,7 @@ export const en = {
   "eval.certPending": "You're eligible for the e-certificate. It will appear in Profile → Activity as soon as the committee uploads the files.",
   "eval.certNotAttended": "Your attendance isn't recorded yet (QR not scanned), so the e-certificate can't be sent. If you attended, contact the committee.",
   "eval.certOpen": "View certificate",
+  "eval.recordedTitle": "Your evaluation is recorded",
   "eval.sectionRegistration": "Registration",
   "eval.sectionFacilities": "Facilities",
   "eval.sectionCgt": "CGT Sharing Session",
