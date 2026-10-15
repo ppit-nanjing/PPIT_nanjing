@@ -408,7 +408,8 @@ Menu Formulir untuk rekrutmen internal kabinet. Semua form di sini hanya bisa di
 Siapa yang bisa akses
 - BPH Inti + Divisi Teknologi: semua tab, semua acara.
 - Koordinator Divisi: tab Oprek BPH Acara — setiap koor boleh membuat form untuk proker divisinya.
-- BPH Acara (ketua/wakil/sekretaris/bendahara/supervisor hasil Oprek): tab Oprek Kepanitiaan untuk acaranya.
+- BPH Acara (ketua/wakil/sekretaris/bendahara/supervisor hasil Oprek): tab Oprek Kepanitiaan untuk acaranya — Oprek Kadiv dan Oprek anggota.
+- Kadiv acara (hasil Oprek Kadiv): Oprek anggota acaranya — boleh membuat formnya, melihat SEMUA pelamar semua divisi, dan memutuskannya; penempatan hanya sebagai peran anggota divisi (tidak bisa mengangkat BPH/Kadiv).
 - Anggota kabinet biasa: hanya MENGISI form; tidak melihat hasil pelamar.
 
 Alur Oprek BPH Acara
@@ -419,8 +420,13 @@ Alur Oprek BPH Acara
 5. Tinjau di bagian Pendaftar → klik pelamar: jawaban lengkap, atur status (Menunggu/Diterima/Ditolak) dan role, lalu Simpan Penempatan. Yang DITERIMA otomatis tercatat sebagai panitia acara itu.
 6. Analitik dan ekspor CSV/Excel ada di halaman form yang sama.
 
-Alur Oprek Kepanitiaan
-1. Dibuat oleh BPH Acara acara tersebut (atau BPH Inti/Tech) setelah BPH-nya terbentuk.
+Alur Oprek Kadiv (ketua divisi)
+1. Setelah BPH Acara terbentuk dan divisi acaranya dibuat di Struktur Kepanitiaan, BPH Acara membuat Oprek Kadiv di tab Oprek Kepanitiaan.
+2. Pelamar memilih divisi yang ingin dipimpin (Pilihan 1 wajib, Pilihan 2 opsional).
+3. Hanya BPH Acara (atau BPH Inti/Tech) yang memutuskan. Yang diterima otomatis tercatat sebagai Kadiv divisinya dan mendapat menu Formulir untuk mengelola Oprek anggota.
+
+Alur Oprek anggota (Oprek Kepanitiaan)
+1. SATU formulir untuk semua divisi. Dibuat oleh BPH Acara atau Kadiv acara tersebut (atau BPH Inti/Tech).
 2. Pelamar memilih Divisi Pilihan 1 (wajib) dan Pilihan 2 (opsional, harus beda) — daftarnya diambil dari Struktur Kepanitiaan acara.
 3. Status penempatan: Menunggu → Diterima Pilihan 1 / Diterima Pilihan 2 / Dipindah divisi (pilih divisi) / Ditolak.
 4. Diterima atau dipindah otomatis masuk Kepanitiaan acara (divisi + role, default anggota). Role dan divisi bisa diubah lewat dropdown, dan perubahannya mengirim notifikasi ke pelamar.
