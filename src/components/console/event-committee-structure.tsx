@@ -18,7 +18,9 @@ import { GRANTABLE_CAPABILITIES } from "@/lib/event-capabilities";
 // otomatis jadi "BPH Panitia" (akses penuh acaranya). Fitur khusus divisi
 // (sertifikat, galeri, keuangan, dst) diatur lewat centang per divisi di bawah,
 // bukan lewat peran.
-const ROLES = ["ketua", "wakil", "sekretaris", "bendahara", "supervisor", "anggota"];
+// "kadiv" = ketua divisi acara (biasanya dari Oprek Kadiv; bisa juga ditugaskan
+// manual di sini) — ikut mengelola Oprek anggota di modul Formulir.
+const ROLES = ["ketua", "wakil", "sekretaris", "bendahara", "supervisor", "kadiv", "anggota"];
 
 // Alias primitif bersama - struktur form di komponen ini padat & spesifik
 // (kartu per divisi), jadi cukup tuker kelasnya, bukan seluruh markahe.

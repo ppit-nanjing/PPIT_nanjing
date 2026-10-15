@@ -11,7 +11,7 @@ import { DecoRule } from "@/components/deco/deco-rule";
 import { FormRenderer, type FormDivisionOption } from "@/components/forms/form-renderer";
 import { submitFormApplication } from "@/app/actions/forms";
 import { getCabinetMembership } from "@/lib/form-access";
-import { FORM_KIND_LABEL, FORM_STATUS_LABEL, type FormApplicationStatus } from "@/lib/form-types";
+import { FORM_KIND_LABEL, FORM_STATUS_LABEL, isDivisionOprekKind, type FormApplicationStatus } from "@/lib/form-types";
 import { INTL_LOCALE } from "@/lib/i18n/config";
 import { getT } from "@/lib/i18n/server";
 import type { MembershipFieldDef } from "@/lib/membership-form";
@@ -114,7 +114,7 @@ export default async function FormFillPage({
   }));
 
   let divisions: FormDivisionOption[] = [];
-  if (form.kind === "oprek_kepanitiaan" && form.eventId) {
+  if (isDivisionOprekKind(form.kind) && form.eventId) {
     const rows = await db
       .select({
         id: eventDivisions.id,

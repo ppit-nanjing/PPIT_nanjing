@@ -290,6 +290,7 @@ const { handlers, auth: uncachedAuth, signIn, signOut } = NextAuth({
         session.user.isCoordinator = false;
         session.user.isCommittee = false;
         session.user.isBphCommittee = false;
+        session.user.isEventKadiv = false;
         session.user.rantingCode = null;
         session.user.emailSubscribed = null;
         session.user.locale = null;
@@ -303,6 +304,8 @@ const { handlers, auth: uncachedAuth, signIn, signOut } = NextAuth({
       // Panitia acara (semua role) vs BPH Acara (ketua/wakil/sekretaris/bendahara/
       // supervisor). Dipakai gate masuk konsol + menu; tidak ada query tambahan.
       session.user.isCommittee = ctx.isCommittee === true;
+      // Kadiv acara (kelola Oprek anggota acaranya) — menu Formulir ikut tampil.
+      session.user.isEventKadiv = (ctx.committeeRoles ?? []).includes("kadiv");
       session.user.isBphCommittee = (ctx.committeeRoles ?? []).some((role) =>
         isBphPanitiaRole(role as EventCommitteeRole),
       );

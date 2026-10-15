@@ -9,7 +9,7 @@ import { ImageUploadCropper } from "@/components/upload/image-upload-cropper";
 import { FileUploadField } from "@/components/upload/file-upload-field";
 import { Select } from "@/components/console/form";
 import { useT } from "@/lib/i18n/client";
-import { BPH_FORM_ROLE_LABEL, type FormKind } from "@/lib/form-types";
+import { BPH_FORM_ROLE_LABEL, isDivisionOprekKind, type FormKind } from "@/lib/form-types";
 
 export type FormDivisionOption = { id: string; name: string };
 
@@ -74,7 +74,7 @@ export function FormRenderer({
   // divisi, pilihan divisi tidak dirender tapi tetap wajib (klien & server),
   // jadi form dulu diam-diam tidak bisa dikirim — sekarang dijelaskan dan
   // tombolnya dimatikan.
-  const noDivisions = kind === "oprek_kepanitiaan" && divisions.length === 0;
+  const noDivisions = isDivisionOprekKind(kind) && divisions.length === 0;
   const errorCount = Object.values(errors).filter(Boolean).length;
 
   function update(key: string, value: string) {
@@ -102,7 +102,7 @@ export function FormRenderer({
     const liveData = new FormData(e.currentTarget);
 
     if (kind === "oprek_bph_acara" && !position) next.sys_position = t("forms.form.errRequired");
-    if (kind === "oprek_kepanitiaan") {
+    if (isDivisionOprekKind(kind)) {
       if (!choice1) next.sys_choice1 = t("forms.form.errRequired");
       if (choice1 && choice2 && choice1 === choice2) next.sys_choice2 = t("forms.form.errSameDivision");
     }
@@ -229,7 +229,7 @@ export function FormRenderer({
       )}
 
       {/* Divisi pilihan kepanitiaan */}
-      {kind === "oprek_kepanitiaan" && divisions.length > 0 && (
+      {isDivisionOprekKind(kind) && divisions.length > 0 && (
         <div className="flex flex-col gap-4">
           <div id="field-sys_choice1">
             <label htmlFor="sys_choice1" className="block text-body-md text-on-background mb-2">
