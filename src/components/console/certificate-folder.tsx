@@ -48,9 +48,12 @@ export function CertificateFolder({
       </h3>
       <p className="text-body-sm text-on-surface-variant max-w-2xl">
         Satu tautan folder berisi semua PDF (mis. folder Google Drive) — praktis kalau sertifikatnya dibuat sekaligus.
-        <b className="text-on-background"> Terbitkan semua yang berhak</b> memasang tautan folder ini ke seluruh daftar
-        di bawah; yang sudah punya tautannya sendiri akan diganti ke folder ini (tanpa notifikasi ulang). Pakai
-        penyimpanan yang bisa dibuka dari Tiongkok — Google Drive sering terblokir tanpa VPN.
+        <b className="text-on-background"> Menyimpan folder langsung menerbitkan</b> sertifikat ke semua yang sudah
+        berhak dan belum punya
+        {kind === "peserta" ? ", lalu ke tiap peserta hadir yang mengisi evaluasi sesudahnya" : ""}.
+        <b className="text-on-background"> Terbitkan semua yang berhak</b> dipakai untuk mengganti SEMUA tautan
+        (termasuk yang per orang) ke folder ini, tanpa notifikasi ulang. Pakai penyimpanan yang bisa dibuka dari
+        Tiongkok — Google Drive sering terblokir tanpa VPN.
       </p>
       <form action={setCertificateFolder} className="flex flex-wrap items-center gap-2">
         <input type="hidden" name="eventId" value={eventId} />
@@ -65,7 +68,7 @@ export function CertificateFolder({
           className={FIELD}
         />
         <SubmitButton
-          successMessage="Folder sertifikat tersimpan."
+          successMessage="Folder tersimpan — sertifikat diterbitkan ke yang berhak."
           className="text-label-caps uppercase tracking-wide border border-outline-variant px-3 py-2 rounded-md hover:bg-surface-container-low transition-colors"
         >
           Simpan folder

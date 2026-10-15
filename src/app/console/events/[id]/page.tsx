@@ -419,8 +419,14 @@ export default async function ConsoleEventDetailPage({ params }: { params: Promi
   // Berhak sertifikat peserta = HANYA yang kehadirannya tercatat (status "attended",
   // QR-nya di-scan). Terkonfirmasi saja tidak cukup. Aturan yang sama dijaga server
   // di certificateCandidates() (actions/committee.ts).
-  const certAttendees = registrations
-    .filter((r) => r.reg.status === "attended")
+  // Berhak sertifikat peserta = tercatat hadir (QR di-scan) DAN sudah mengisi
+  // evaluasi dengan akunnya — aturan yang sama dengan certificateCandidates
+  // (src/lib/certificate-issuing.ts). Evaluasi tanpa akun tidak dihitung.
+  const evaluatedUserIds = new Set(evaluations.map((e) => e.userId).filter((u): u is string => !!u));
+  const attendedRegs = registrations.filter((r) => r.reg.status === "attended");
+  const attendedNotEvaluated = attendedRegs.filter((r) => !evaluatedUserIds.has(r.reg.userId)).length;
+  const certAttendees = attendedRegs
+    .filter((r) => evaluatedUserIds.has(r.reg.userId))
     .map((r) => ({
       userId: r.reg.userId,
       // Email hanya untuk yang boleh melihat detail pendaftar (BPH Kabinet/Teknologi dan BPH
@@ -1113,25 +1119,33 @@ export default async function ConsoleEventDetailPage({ params }: { params: Promi
       <>
       <CollapsibleSection
         title="Sertifikat Peserta"
-        description={`${certAttendees.length} hadir · ${participantCertCount} terbit`}
+        description={`${attendedRegs.length} hadir · ${certAttendees.length} berhak (sudah isi evaluasi) · ${participantCertCount} terbit`}
       >
         {event.certificateForParticipants ? (
           <div className="flex flex-col gap-4">
             <p className="text-body-md text-on-surface-variant max-w-2xl">
-              Hanya peserta yang <strong className="text-on-background">kehadirannya tercatat</strong> (QR-nya di-scan
-              di acara) yang berhak. Sertifikat <strong className="text-on-background">tidak terbit tanpa tautan
-              berkas</strong>: tempel tautan https:// berkas PDF-nya di samping nama, lalu simpan. Saat itu juga
-              sertifikatnya muncul di profil peserta dan mereka diberi notifikasi. Untuk banyak orang sekaligus,
-              pakai &quot;Tempel banyak sekaligus&quot;, atau simpan <strong className="text-on-background">tautan
-              folder</strong> lalu terbitkan ke semua yang berhak sekaligus.
+              Yang berhak: peserta yang <strong className="text-on-background">kehadirannya tercatat</strong> (QR-nya
+              di-scan di acara) <strong className="text-on-background">dan sudah mengisi evaluasi</strong> sambil masuk
+              ke akunnya. Cara paling mudah: <strong className="text-on-background">simpan tautan folder</strong> di
+              bawah — semua yang sudah berhak langsung dapat sertifikat + notifikasi, dan peserta hadir yang baru
+              mengisi evaluasi belakangan otomatis dapat saat evaluasinya terkirim. Tautan per orang dan &quot;Tempel
+              banyak sekaligus&quot; tetap bisa dipakai kalau berkasnya beda-beda.
             </p>
+            {attendedNotEvaluated > 0 && (
+              <p className="text-body-sm text-on-surface-variant">
+                {attendedNotEvaluated} peserta hadir belum mengisi evaluasi (atau mengisinya tanpa masuk akun), jadi
+                belum berhak. Bagikan tautan evaluasi{" "}
+                <code className="text-on-background">/events/{event.slug}/evaluasi</code> — mereka perlu masuk akun
+                untuk mengisinya.
+              </p>
+            )}
             {confirmedNotAttended > 0 && (
               <p className="text-body-sm text-on-surface-variant">
                 {confirmedNotAttended} pendaftar terkonfirmasi belum tercatat hadir, jadi belum berhak. Kalau ada yang
                 hadir tapi belum di-scan, catat kehadirannya dulu di daftar pendaftar.
               </p>
             )}
-            {certAttendees.length > 0 && (
+            {attendedRegs.length > 0 && (
               <CertificateFolder
                 eventId={id}
                 kind="peserta"
@@ -1143,7 +1157,11 @@ export default async function ConsoleEventDetailPage({ params }: { params: Promi
               eventId={id}
               kind="peserta"
               rows={certAttendees}
-              emptyText="Belum ada peserta yang tercatat hadir. Daftar ini terisi saat panitia men-scan QR peserta di acara."
+              emptyText={
+                attendedRegs.length === 0
+                  ? "Belum ada peserta yang tercatat hadir. Daftar ini terisi saat panitia men-scan QR peserta di acara."
+                  : "Belum ada peserta hadir yang mengisi evaluasi dengan akunnya."
+              }
             />
             {certAttendees.length > 0 && <CertificateBulkForm eventId={id} kind="peserta" />}
           </div>
