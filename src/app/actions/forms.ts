@@ -22,9 +22,9 @@ import { sendEmail } from "@/lib/email";
 import { getTemplateDef, renderTemplate, type NotificationTemplateKey } from "@/lib/notification-templates";
 import { createTemplatedNotification } from "@/lib/notifications";
 import { renderMembershipEmail, renderMembershipEmailText } from "@/lib/membership-email";
-import { canPlaceApplicant, getCabinetMembership, getCoordinatorEventIds, getFormsAccess, requireFormManage } from "@/lib/form-access";
+import { canPlaceApplicant, getCabinetMembership, getCoordinatorEventIds, getFormsAccess, isKadivOnlyPlacer, requireFormManage } from "@/lib/form-access";
 import { EVENT_COMMITTEE_ROLE_LABEL, isBphPanitiaRole, type EventCommitteeRole } from "@/lib/event-capabilities";
-import { BPH_FORM_ROLE_LABEL, BPH_FORM_ROLES, FORM_TAB_PATH, PLACEMENT_ROLE_OPTIONS, type FormKind } from "@/lib/form-types";
+import { BPH_FORM_ROLE_LABEL, BPH_FORM_ROLES, FORM_TAB_PATH, KADIV_PLACEMENT_ROLES, PLACEMENT_ROLE_OPTIONS, isDivisionOprekKind, type FormKind } from "@/lib/form-types";
 import { FIELD_TYPE_LABELS, GRID_TYPES, QUESTION_BY_KEY, type MembershipFieldDef } from "@/lib/membership-form";
 import { scrubForeignPrivateUrl } from "@/lib/private-files";
 import { UUID_RE } from "@/lib/uuid";
@@ -36,7 +36,7 @@ import { UUID_RE } from "@/lib/uuid";
 
 const FIELD_TYPE_KEYS = Object.keys(FIELD_TYPE_LABELS) as MembershipFieldDef["type"][];
 
-const FORM_KINDS: FormKind[] = ["pemilu", "oprek_bph_acara", "oprek_kepanitiaan"];
+const FORM_KINDS: FormKind[] = ["pemilu", "oprek_bph_acara", "oprek_kepanitiaan", "oprek_kadiv"];
 
 function tabPath(kind: FormKind): string {
   return FORM_TAB_PATH[kind];
@@ -73,7 +73,7 @@ export async function createForm(formData: FormData) {
 
   if (kind === "pemilu" && !access.canPemilu) redirect("/console/forms");
   if (kind === "oprek_bph_acara" && !access.canBphTab) redirect("/console/forms");
-  if (kind === "oprek_kepanitiaan" && !access.canKepanitiaanTab) redirect("/console/forms");
+  if ((kind === "oprek_kepanitiaan" || kind === "oprek_kadiv") && !access.canKepanitiaanTab) redirect("/console/forms");
 
   const title = String(formData.get("title") ?? "").trim();
   if (!title) redirect(`${back}?error=title`);
@@ -94,8 +94,15 @@ export async function createForm(formData: FormData) {
       kind === "oprek_kepanitiaan" &&
       !access.isFull &&
       !access.canForms &&
-      !access.bphEventIds.includes(eventId)
+      !access.bphEventIds.includes(eventId) &&
+      // Kadiv acara itu juga boleh membuat Oprek anggota (CRUD oprek anggotanya).
+      !access.kadivEventIds.includes(eventId)
     ) {
+      redirect("/console/forms");
+    }
+    // Oprek Kadiv hanya dibuat BPH Acara acara itu (atau full/modul) — Kadiv
+    // adalah pelamarnya, bukan pengelolanya.
+    if (kind === "oprek_kadiv" && !access.isFull && !access.canForms && !access.bphEventIds.includes(eventId)) {
       redirect("/console/forms");
     }
     // Oprek BPH oleh koordinator: hanya untuk acara divisinya (Divisi PJ) atau
@@ -436,7 +443,7 @@ export async function submitFormApplication(formData: FormData) {
     if (!pos || !(form.bphRoles as string[]).includes(pos)) redirect(`${back}?error=submit`);
     positionApplied = pos;
   }
-  if (form.kind === "oprek_kepanitiaan") {
+  if (isDivisionOprekKind(form.kind)) {
     const c1 = String(formData.get("sys_choice1") ?? "").trim();
     const c2 = String(formData.get("sys_choice2") ?? "").trim();
     if (!c1 || !UUID_RE.test(c1) || !(await divisionBelongsToEvent(c1))) redirect(`${back}?error=submit`);
@@ -593,7 +600,7 @@ async function releaseOprekCommitteeRow(
 }
 
 function statusAllowed(kind: FormKind, status: AppStatus): boolean {
-  if (kind === "oprek_kepanitiaan") return true;
+  if (isDivisionOprekKind(kind)) return true;
   return status === "pending" || status === "accepted" || status === "rejected";
 }
 
@@ -688,14 +695,19 @@ export async function updateApplicationPlacement(formData: FormData) {
     const opened = (form.bphRoles as string[]).filter((r) => (BPH_FORM_ROLES as string[]).includes(r));
     const fallback = app.positionApplied && opened.includes(app.positionApplied) ? app.positionApplied : (opened[0] ?? null);
     role = opened.includes(inputRole) ? inputRole : fallback;
+  } else if (form.kind === "oprek_kadiv") {
+    // Oprek Kadiv: yang diterima selalu jadi Kadiv divisinya.
+    role = "kadiv";
   } else if (form.kind === "oprek_kepanitiaan") {
     const inputRole = String(formData.get("assignedRole") ?? "").trim();
-    role = (PLACEMENT_ROLE_OPTIONS as string[]).includes(inputRole) ? inputRole : "anggota";
+    // Kadiv (bukan BPH/full) hanya boleh menempatkan sebagai peran anggota divisi.
+    const allowedRoles = (await isKadivOnlyPlacer(form, access)) ? KADIV_PLACEMENT_ROLES : PLACEMENT_ROLE_OPTIONS;
+    role = (allowedRoles as string[]).includes(inputRole) ? inputRole : "anggota";
   }
 
   // Divisi penempatan (kepanitiaan). accepted/pending/rejected tanpa divisi.
   let assignedDivisionId: string | null = null;
-  if (form.kind === "oprek_kepanitiaan" && ACCEPTED_STATUSES.includes(status)) {
+  if (isDivisionOprekKind(form.kind) && ACCEPTED_STATUSES.includes(status)) {
     if (status === "accepted_choice1") {
       assignedDivisionId = app.choice1DivisionId;
     } else if (status === "accepted_choice2") {
@@ -758,9 +770,12 @@ export async function updateApplicationPlacement(formData: FormData) {
 
     if (willAssign) {
       if (existing) {
-        // Jangan turunkan BPH Acara jadi anggota hanya karena diterima di
-        // form kepanitiaan — role BPH yang menang, divisinya tetap diperbarui.
-        const keepBph = form.kind === "oprek_kepanitiaan" && isBphPanitiaRole(existing.role);
+        // Jangan turunkan BPH Acara (atau Kadiv, di Oprek anggota) jadi anggota
+        // hanya karena diterima di form berdivisi — role lama yang menang,
+        // divisinya tetap diperbarui.
+        const keepBph =
+          (isDivisionOprekKind(form.kind) && isBphPanitiaRole(existing.role)) ||
+          (form.kind === "oprek_kepanitiaan" && existing.role === "kadiv");
         await db
           .update(eventCommittee)
           .set({
@@ -813,6 +828,8 @@ export async function updateApplicationPlacement(formData: FormData) {
       if (key === "oprek_accepted") {
         if (form.kind === "oprek_bph_acara") {
           details = `Kamu tercatat sebagai ${roleLabel} (BPH Acara)${eventRow?.title ? ` untuk acara "${eventRow.title}"` : ""}.`;
+        } else if (form.kind === "oprek_kadiv") {
+          details = `Kamu terpilih sebagai Kadiv ${divisionName ?? "divisi terpilih"}${eventRow?.title ? ` untuk acara "${eventRow.title}"` : ""}.`;
         } else if (form.kind === "oprek_kepanitiaan") {
           details = `Kamu ditempatkan di ${divisionName ?? "divisi terpilih"} sebagai ${roleLabel}.`;
         } else {

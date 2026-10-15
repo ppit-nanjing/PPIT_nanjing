@@ -4,7 +4,7 @@ import { db } from "@/db";
 import { eventDivisions, formApplications, formFields, forms, sensusProfiles, users } from "@/db/schema";
 import { canManageForm, getFormsAccess } from "@/lib/form-access";
 import { EVENT_COMMITTEE_ROLE_LABEL } from "@/lib/event-capabilities";
-import { BPH_FORM_ROLE_LABEL, FORM_KIND_LABEL, FORM_STATUS_LABEL, type FormApplicationStatus } from "@/lib/form-types";
+import { BPH_FORM_ROLE_LABEL, FORM_KIND_LABEL, FORM_STATUS_LABEL, isDivisionOprekKind, type FormApplicationStatus } from "@/lib/form-types";
 import { GRID_TYPES } from "@/lib/membership-form";
 import { datasetToCsv, datasetToXlsx, type ReportColumn, type ReportDataset } from "@/lib/report-export";
 import { UUID_RE } from "@/lib/uuid";
@@ -59,7 +59,7 @@ export async function GET(req: NextRequest, ctx: { params: Promise<{ formId: str
     { header: "Nama Lengkap", key: "fullName" },
     { header: "Divisi Asal", key: "cabinetDivision" },
     ...(form.kind === "oprek_bph_acara" ? [{ header: "Posisi Dilamar", key: "positionApplied" }] : []),
-    ...(form.kind === "oprek_kepanitiaan"
+    ...(isDivisionOprekKind(form.kind)
       ? [
           { header: "Pilihan 1", key: "choice1" },
           { header: "Pilihan 2", key: "choice2" },

@@ -33,7 +33,8 @@ export default async function ConsoleLayout({ children }: { children: React.Reac
           userName={session.user.name ?? "Admin"}
           scope={session.user.adminScope}
           isCommittee={session.user.isCommittee}
-          isBphCommittee={session.user.isBphCommittee}
+          // Menu Formulir untuk pengelola Oprek acara: BPH Acara ATAU Kadiv.
+          isBphCommittee={session.user.isBphCommittee || session.user.isEventKadiv}
           isCoordinator={session.user.isCoordinator}
         />
       </div>

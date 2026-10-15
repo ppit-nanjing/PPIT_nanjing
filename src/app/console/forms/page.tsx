@@ -79,9 +79,12 @@ export default async function ConsoleFormsPage() {
               <span className="text-headline-md">Oprek Kepanitiaan</span>
             </span>
             <span className="text-body-md text-on-surface-variant">
-              Rekrut panitia acara per divisi. Dibuat BPH Acara setelah BPH-nya terbentuk.
+              Oprek Kadiv lalu Oprek anggota (satu formulir untuk semua divisi). Dibuat BPH Acara setelah BPH-nya
+              terbentuk; Kadiv ikut mengelola Oprek anggota.
             </span>
-            <span className={countClass}>{countOf("oprek_kepanitiaan")} formulir</span>
+            <span className={countClass}>
+              {countOf("oprek_kadiv")} Oprek Kadiv · {countOf("oprek_kepanitiaan")} Oprek anggota
+            </span>
           </Link>
         )}
       </div>

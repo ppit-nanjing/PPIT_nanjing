@@ -5,7 +5,7 @@ import { notFound } from "next/navigation";
 import { db } from "@/db";
 import { auditLogs, eventDivisions, events, formApplications, formFields, sensusProfiles, users } from "@/db/schema";
 import { updateApplicationNote, updateApplicationPlacement, deleteFormApplication } from "@/app/actions/forms";
-import { requireFormManage } from "@/lib/form-access";
+import { isKadivOnlyPlacer, requireFormManage } from "@/lib/form-access";
 import { CheckboxField, SelectField, TextAreaField } from "@/components/console/form";
 import { ConfirmButton } from "@/components/console/confirm-button";
 import { SubmitButton } from "@/components/console/submit-button";
@@ -16,7 +16,9 @@ import {
   FORM_KIND_LABEL,
   FORM_STATUS_LABEL,
   FORM_STATUS_TONE,
+  KADIV_PLACEMENT_ROLES,
   PLACEMENT_ROLE_OPTIONS,
+  isDivisionOprekKind,
   type FormApplicationStatus,
 } from "@/lib/form-types";
 import { GRID_TYPES, isSectionType, type MembershipFieldDef } from "@/lib/membership-form";
@@ -32,7 +34,7 @@ export default async function FormApplicantPage({
   params: Promise<{ formId: string; applicationId: string }>;
 }) {
   const { formId, applicationId } = await params;
-  const { form } = await requireFormManage(formId);
+  const { form, access } = await requireFormManage(formId);
   if (!UUID_RE.test(applicationId)) notFound();
 
   const [app] = await db
@@ -43,7 +45,7 @@ export default async function FormApplicantPage({
 
   const [fields, divisionRows, eventRows, actorRows, applicantRows] = await Promise.all([
     db.select().from(formFields).where(eq(formFields.formId, form.id)).orderBy(asc(formFields.orderIndex)),
-    form.kind === "oprek_kepanitiaan" && form.eventId
+    isDivisionOprekKind(form.kind) && form.eventId
       ? db
           .select({ id: eventDivisions.id, name: eventDivisions.name, parentId: eventDivisions.parentDivisionId })
           .from(eventDivisions)
@@ -77,17 +79,23 @@ export default async function FormApplicantPage({
   const status = app.status as FormApplicationStatus;
 
   const statuses: FormApplicationStatus[] =
-    form.kind === "oprek_kepanitiaan"
+    isDivisionOprekKind(form.kind)
       ? ["pending", "accepted", "accepted_choice1", "accepted_choice2", "reassigned", "rejected"]
       : ["pending", "accepted", "rejected"];
   // Oprek BPH: hanya posisi yang dibuka form ini — sama dengan aturan server
   // (updateApplicationPlacement mengabaikan role di luar bphRoles).
+  // Oprek anggota yang dikelola Kadiv (bukan BPH): hanya peran anggota divisi —
+  // sama dengan aturan server (updateApplicationPlacement).
+  const kadivOnly = await isKadivOnlyPlacer(form, access);
   const roleChoices: string[] =
     form.kind === "oprek_bph_acara"
       ? BPH_FORM_ROLES.filter((r) => (form.bphRoles as string[]).includes(r))
-      : PLACEMENT_ROLE_OPTIONS;
-  const showRole = form.kind !== "pemilu";
-  const showDivision = form.kind === "oprek_kepanitiaan";
+      : kadivOnly
+        ? KADIV_PLACEMENT_ROLES
+        : PLACEMENT_ROLE_OPTIONS;
+  // Oprek Kadiv: role selalu Kadiv (tidak dipilih reviewer).
+  const showRole = form.kind !== "pemilu" && form.kind !== "oprek_kadiv";
+  const showDivision = isDivisionOprekKind(form.kind);
 
   const fieldDefs: MembershipFieldDef[] = fields.map((r) => ({
     id: r.id,
@@ -164,7 +172,7 @@ export default async function FormApplicantPage({
               <dd className="text-on-background">{ROLE_LABEL[app.positionApplied] ?? app.positionApplied}</dd>
             </div>
           )}
-          {form.kind === "oprek_kepanitiaan" && (
+          {isDivisionOprekKind(form.kind) && (
             <div>
               <dt className="text-label-caps uppercase tracking-wide text-on-surface-variant">Pilihan Divisi</dt>
               <dd className="text-on-background">

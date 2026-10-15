@@ -1340,6 +1340,11 @@ export const eventCommitteeRoleEnum = pgEnum("event_committee_role", [
   "logistik",
   "dokumentasi",
   "anggota",
+  // Kadiv (Ketua Divisi) acara — dipilih lewat Oprek Kadiv, lalu ikut mengelola
+  // Oprek anggota (satu formulir untuk semua divisi). Akses acaranya sama dengan
+  // panitia biasa (fitur dasar + grant divisinya); bukan BPH Panitia.
+  // Ditambahkan migrasi 0052 (ADD VALUE ditaruh di akhir enum).
+  "kadiv",
 ]);
 
 // Struktur kepanitiaan SATU acara: Departemen → sub-tim, mis. "Perlengkapan"
@@ -1705,7 +1710,9 @@ export const eventEvaluationAnswers = pgTable(
 // acara (events.id) dan keputusan "diterima" menulis penugasan ke
 // event_committee. Dokumentasi: docs/Formulir & Oprek.md.
 
-export const formKindEnum = pgEnum("form_kind", ["pemilu", "oprek_bph_acara", "oprek_kepanitiaan"]);
+// oprek_kadiv (migrasi 0052): rekrutmen Kadiv per divisi acara, sebelum Oprek
+// Kepanitiaan (anggota). Bentuknya sama dengan kepanitiaan (pilihan divisi 1/2).
+export const formKindEnum = pgEnum("form_kind", ["pemilu", "oprek_bph_acara", "oprek_kepanitiaan", "oprek_kadiv"]);
 
 export const formApplicationStatusEnum = pgEnum("form_application_status", [
   "pending",

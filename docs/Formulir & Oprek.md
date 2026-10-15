@@ -9,7 +9,7 @@ Modul **Formulir** di console adalah rumah empat alur formulir internal kabinet:
 | **Pendaftaran PPIT** | Pintasan ke modul `/console/membership` yang sudah ada (form publik Join Us) | pemegang modul `membership` |
 | **Pemilu** | Pendaftaran calon untuk kepengurusan periode berikutnya | BPH Inti + Divisi Teknologi (modul `forms`) |
 | **Oprek BPH Acara** | Rekrutmen BPH Acara (ketua/wakil/sekretaris/bendahara/supervisor) untuk **satu acara/proker** | Koor divisi mana pun (praktiknya untuk proker divisinya) + BPH Inti/Tech |
-| **Oprek Kepanitiaan** | Rekrutmen panitia acara per divisi, dibuka setelah BPH Acara terbentuk | BPH Acara acara itu + BPH Inti/Tech |
+| **Oprek Kepanitiaan** | Dua jenis form berdivisi, berurutan: **Oprek Kadiv** (`oprek_kadiv`, ketua tiap divisi) lalu **Oprek anggota** (`oprek_kepanitiaan`, satu form untuk semua divisi) | Oprek Kadiv: BPH Acara acara itu + BPH Inti/Tech. Oprek anggota: BPH Acara + **Kadiv** acara itu + BPH Inti/Tech |
 
 ## Riwayat: jangan tertukar dengan modul Formulir lama
 
@@ -34,6 +34,9 @@ Gerbang tunggal: `src/lib/form-access.ts`.
 - Sesi (`src/auth.ts`) membawa `isCoordinator`, `isCommittee`, `isBphCommittee` dari satu query gabungan — sidebar/layout tidak query tambahan. `seed.ts` menaruh Koordinator Divisi sebagai `scoped` (koordinator tetap dapat menu Formulir lewat `isCoordinator`, bukan modul).
 
 ## Keputusan desain
+
+- **Kadiv (2026-10-15, migrasi `0052_oprek_kadiv.sql`)**: peran panitia `kadiv` + jenis form `oprek_kadiv`. Oprek Kadiv dibuat & diputuskan BPH Acara; yang diterima jadi `kadiv` di divisi pilihannya. Oprek anggota tetap **satu formulir untuk semua divisi**: setiap Kadiv acara itu boleh membuatnya, melihat semua pelamar, dan memutuskan semua divisi (keputusan BPH), tetapi penempatannya dibatasi ke peran anggota divisi (`KADIV_PLACEMENT_ROLES`, ditegakkan di `updateApplicationPlacement` via `isKadivOnlyPlacer`). Penempatan di Oprek anggota tidak menurunkan Kadiv/BPH yang sudah ada. Akses acara Kadiv = panitia biasa (fitur dasar + grant divisi); bukan BPH Panitia. Menu Formulir tampil lewat flag sesi `isEventKadiv`.
+- **SC dari cabang lain** (mis. SKR): cukup peran `supervisor` yang sudah ada — panitia non-kabinet hanya melihat menu Kegiatan untuk acaranya sendiri (+ Formulir acaranya), tidak melihat modul kabinet.
 
 - **bendahara termasuk BPH Acara** (`BPH_PANITIA_ROLES` di `src/lib/event-capabilities.ts`) — alur kepanitiaan PPIT menempatkan bendahara di BPH Acara; konsekuensinya role `bendahara` di `event_committee` memperoleh kapabilitas acara setingkat BPH Panitia (kecuali hapus/ambil-alih).
 - **PIC orang per acara DITIADAKAN** (keputusan 2026-10-12): Ketua Pelaksana hasil Oprek BPH sudah otomatis memegang peran itu lewat `event_committee`.

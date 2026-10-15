@@ -4,7 +4,15 @@
 
 import { BPH_PANITIA_ROLES, type EventCommitteeRole } from "@/lib/event-capabilities";
 
-export type FormKind = "pemilu" | "oprek_bph_acara" | "oprek_kepanitiaan";
+export type FormKind = "pemilu" | "oprek_bph_acara" | "oprek_kepanitiaan" | "oprek_kadiv";
+
+/**
+ * Form yang pelamarnya memilih divisi acara (pilihan 1/2) dan penempatannya
+ * menulis divisi: Oprek Kadiv dan Oprek Kepanitiaan (anggota).
+ */
+export function isDivisionOprekKind(kind: FormKind): boolean {
+  return kind === "oprek_kepanitiaan" || kind === "oprek_kadiv";
+}
 
 export type FormApplicationStatus =
   | "pending"
@@ -18,6 +26,7 @@ export const FORM_KIND_LABEL: Record<FormKind, string> = {
   pemilu: "Pemilu",
   oprek_bph_acara: "Oprek BPH Acara",
   oprek_kepanitiaan: "Oprek Kepanitiaan",
+  oprek_kadiv: "Oprek Kadiv",
 };
 
 // Rute tab per jenis form (dipakai navigasi console & revalidate).
@@ -25,6 +34,8 @@ export const FORM_TAB_PATH: Record<FormKind, string> = {
   pemilu: "/console/forms/pemilu",
   oprek_bph_acara: "/console/forms/oprek-bph",
   oprek_kepanitiaan: "/console/forms/oprek-kepanitiaan",
+  // Oprek Kadiv tinggal di tab yang sama dengan Oprek anggota.
+  oprek_kadiv: "/console/forms/oprek-kepanitiaan",
 };
 
 // Posisi BPH Acara yang boleh dibuka di Oprek BPH — SATU sumber dengan
@@ -56,6 +67,10 @@ export const FORM_STATUS_TONE: Record<FormApplicationStatus, string> = {
   reassigned: "bg-gold-ink/15 text-gold-ink",
   rejected: "bg-error-container/30 text-error",
 };
+
+// Role yang boleh dipilih KADIV saat menempatkan pelamar Oprek anggota: hanya
+// peran anggota divisi — Kadiv tidak boleh mengangkat orang jadi BPH/Kadiv.
+export const KADIV_PLACEMENT_ROLES: EventCommitteeRole[] = ["anggota", "humas", "acara", "logistik", "dokumentasi"];
 
 // Role yang boleh dipilih reviewer saat menempatkan pelamar kepanitiaan
 // (semua label event_committee_role; default anggota).

@@ -26,7 +26,7 @@ import { CheckboxField, Select, TextAreaField, TextField, ToggleSwitch } from "@
 import { SubmitButton } from "@/components/console/submit-button";
 import { EVENT_COMMITTEE_ROLE_LABEL } from "@/lib/event-capabilities";
 import { buildFormAnalytics } from "@/lib/form-analytics";
-import { BPH_FORM_ROLE_LABEL, BPH_FORM_ROLES, FORM_KIND_LABEL, FORM_STATUS_LABEL, FORM_STATUS_TONE, FORM_TAB_PATH } from "@/lib/form-types";
+import { BPH_FORM_ROLE_LABEL, BPH_FORM_ROLES, FORM_KIND_LABEL, FORM_STATUS_LABEL, FORM_STATUS_TONE, FORM_TAB_PATH, isDivisionOprekKind } from "@/lib/form-types";
 import { toChinaLocalInput } from "@/lib/datetime";
 import { FIELD_TYPE_LABELS, type MembershipFieldDef } from "@/lib/membership-form";
 import { getSiteUrl } from "@/lib/site-url";
@@ -51,7 +51,7 @@ export default async function FormManagePage({ params }: { params: Promise<{ for
           .where(eq(events.id, form.eventId))
       : Promise.resolve([] as { id: string; title: string; status: string }[]),
     db.select({ n: count() }).from(formApplications).where(eq(formApplications.formId, form.id)),
-    form.kind === "oprek_kepanitiaan" && form.eventId
+    isDivisionOprekKind(form.kind) && form.eventId
       ? db
           .select({ id: eventDivisions.id, name: eventDivisions.name, parentId: eventDivisions.parentDivisionId })
           .from(eventDivisions)
@@ -187,7 +187,7 @@ export default async function FormManagePage({ params }: { params: Promise<{ for
           : "Form masih ditutup; halaman isinya hanya menampilkan keterangan ditutup. Jangan bagikan dulu."}
       </p>
 
-      {form.kind === "oprek_kepanitiaan" && previewDivisions.length === 0 && (
+      {isDivisionOprekKind(form.kind) && previewDivisions.length === 0 && (
         // Tanpa divisi kepanitiaan, pelamar tidak punya pilihan divisi dan form
         // tidak bisa dikirim — ingatkan pengelola sebelum tautannya disebar.
         <div className="flex items-start gap-2 bg-error-container/30 border border-outline-variant rounded-xl px-4 py-3 mb-6">

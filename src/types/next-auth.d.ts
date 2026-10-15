@@ -20,6 +20,8 @@ declare module "next-auth" {
       // Subset panitia: rolenya BPH Acara (ketua/wakil/sekretaris/bendahara/
       // supervisor). Dipakai menu "Formulir" — Oprek Kepanitiaan.
       isBphCommittee: boolean;
+      // Kadiv di minimal satu acara (role event_committee "kadiv").
+      isEventKadiv: boolean;
       // Set only for users with a "[INA]/[JIA] …Ranting" role - which campus
       // sub-branch they belong to. Drives the filter on /console/ranting/sensus.
       // null for everyone else. See src/lib/rantings.ts.
