@@ -194,9 +194,10 @@ export async function canPlaceApplicant(
 }
 
 /**
- * Penempat Oprek anggota yang HANYA Kadiv (bukan BPH Panitia/full/modul forms)
- * dibatasi ke peran anggota divisi — Kadiv tidak boleh mengangkat orang jadi
- * BPH atau Kadiv lewat form ini.
+ * Penempat Oprek anggota yang BUKAN BPH Panitia/full/modul forms — praktisnya
+ * Kadiv, atau pembuat form yang belakangan dicopot dari kepanitiaan (jalur
+ * "pembuat form" di canPlaceApplicant) — dibatasi ke peran anggota divisi:
+ * mereka tidak boleh mengangkat orang jadi BPH atau Kadiv lewat form ini.
  */
 export async function isKadivOnlyPlacer(
   form: Pick<FormRow, "eventId" | "kind">,
@@ -205,7 +206,7 @@ export async function isKadivOnlyPlacer(
   if (form.kind !== "oprek_kepanitiaan" || !form.eventId) return false;
   if (access.isFull || access.canForms) return false;
   const eventAccess = await getEventAccess(form.eventId);
-  return !eventAccess.isBphPanitia && eventAccess.role === "kadiv";
+  return !eventAccess.isBphPanitia;
 }
 
 export type CabinetMembership = {
