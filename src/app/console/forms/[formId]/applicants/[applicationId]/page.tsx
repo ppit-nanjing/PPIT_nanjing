@@ -13,6 +13,7 @@ import { EVENT_COMMITTEE_ROLE_LABEL } from "@/lib/event-capabilities";
 import {
   BPH_FORM_ROLE_LABEL,
   BPH_FORM_ROLES,
+  DIVISION_FIELD_KEY,
   FORM_KIND_LABEL,
   FORM_STATUS_LABEL,
   FORM_STATUS_TONE,
@@ -97,7 +98,8 @@ export default async function FormApplicantPage({
   const showRole = form.kind !== "pemilu" && form.kind !== "oprek_kadiv";
   const showDivision = isDivisionOprekKind(form.kind);
 
-  const fieldDefs: MembershipFieldDef[] = fields.map((r) => ({
+  // Baris "Divisi Pilihan" bukan pertanyaan — pilihannya tampil di atas.
+  const fieldDefs: MembershipFieldDef[] = fields.filter((r) => r.key !== DIVISION_FIELD_KEY).map((r) => ({
     id: r.id,
     key: r.key,
     label: r.label,

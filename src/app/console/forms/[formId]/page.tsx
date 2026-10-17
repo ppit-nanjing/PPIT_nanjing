@@ -14,6 +14,7 @@ import {
   updateFormSettings,
 } from "@/app/actions/forms";
 import { requireFormManage } from "@/lib/form-access";
+import { getEventAccess } from "@/lib/event-access";
 import { CollapsibleSection } from "@/components/console/collapsible-section";
 import { ConfirmButton } from "@/components/console/confirm-button";
 import { CopyButton } from "@/components/copy-button";
@@ -26,7 +27,7 @@ import { CheckboxField, Select, TextAreaField, TextField, ToggleSwitch } from "@
 import { SubmitButton } from "@/components/console/submit-button";
 import { EVENT_COMMITTEE_ROLE_LABEL } from "@/lib/event-capabilities";
 import { buildFormAnalytics } from "@/lib/form-analytics";
-import { BPH_FORM_ROLE_LABEL, BPH_FORM_ROLES, FORM_KIND_LABEL, FORM_STATUS_LABEL, FORM_STATUS_TONE, FORM_TAB_PATH, isDivisionOprekKind } from "@/lib/form-types";
+import { BPH_FORM_ROLE_LABEL, BPH_FORM_ROLES, FORM_KIND_LABEL, FORM_STATUS_LABEL, FORM_STATUS_TONE, FORM_TAB_PATH, DIVISION_FIELD_KEY, isDivisionOprekKind } from "@/lib/form-types";
 import { toChinaLocalInput } from "@/lib/datetime";
 import { FIELD_TYPE_LABELS, type MembershipFieldDef } from "@/lib/membership-form";
 import { getSiteUrl } from "@/lib/site-url";
@@ -84,6 +85,11 @@ export default async function FormManagePage({ params }: { params: Promise<{ for
     id: r.id,
     name: r.parentId && divisionNameById.has(r.parentId) ? `${divisionNameById.get(r.parentId)} · ${r.name}` : r.name,
   }));
+  // Tambah divisi dari baris "Divisi Pilihan" = ubah Struktur Kepanitiaan acara.
+  const canAddDivision =
+    isDivisionOprekKind(form.kind) && form.eventId
+      ? (await getEventAccess(form.eventId)).can("event.manageCommittee")
+      : false;
   const fieldDefs: MembershipFieldDef[] = fields.map((r) => ({
     id: r.id,
     key: r.key,
@@ -387,7 +393,8 @@ export default async function FormManagePage({ params }: { params: Promise<{ for
             {fieldDefs.map((f, i) => {
               let sectionLabel: string | undefined;
               for (let j = i - 1; j >= 0; j--) {
-                if (fieldDefs[j].type === "section") {
+                // Baris "Divisi Pilihan" juga bertipe section, tapi bukan judul bagian.
+                if (fieldDefs[j].type === "section" && fieldDefs[j].key !== DIVISION_FIELD_KEY) {
                   sectionLabel = fieldDefs[j].label;
                   break;
                 }
@@ -398,6 +405,11 @@ export default async function FormManagePage({ params }: { params: Promise<{ for
                   field={f}
                   index={i}
                   sectionLabel={sectionLabel}
+                  divisionField={
+                    f.key === DIVISION_FIELD_KEY && isDivisionOprekKind(form.kind)
+                      ? { formId: form.id, divisions: previewDivisions.map((d) => d.name), canAdd: canAddDivision }
+                      : undefined
+                  }
                   actions={{
                     update: updateFormField,
                     remove: deleteFormField,

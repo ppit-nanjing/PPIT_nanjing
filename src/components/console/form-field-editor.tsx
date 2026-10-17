@@ -1,12 +1,20 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { ChevronDown, ChevronRight, GripVertical, MoreVertical, Copy } from "lucide-react";
 import type { MembershipFieldDef } from "@/lib/membership-form";
 import { OPTION_TYPES, SCALE_TYPES, CHOICE_TYPES, GRID_TYPES, FIELD_TYPE_LABELS, isSectionType, canDeleteField } from "@/lib/membership-form";
 import { Select, CheckboxField } from "@/components/console/form";
 import { SubmitButton } from "@/components/console/submit-button";
+import { addFormEventDivision } from "@/app/actions/forms";
+import { DIVISION_FIELD_KEY } from "@/lib/form-types";
+
+/**
+ * Data untuk baris "Divisi Pilihan" di builder Oprek berdivisi: daftar divisi
+ * acara (Struktur Kepanitiaan) dan apakah penampil boleh menambah divisi.
+ */
+export type DivisionFieldInfo = { formId: string; divisions: string[]; canAdd: boolean };
 
 // Aksi-aksi penyimpanan dikirim sebagai prop supaya komponen yang sama dipakai
 // dua modul: Pendaftaran Anggota (/console/membership) dan Formulir
@@ -42,6 +50,7 @@ let dragSourceId: string | null = null;
 let dragSourceIndex = -1;
 
 function summary(f: MembershipFieldDef): string {
+  if (f.key === DIVISION_FIELD_KEY) return "Divisi 1 (wajib) & 2 (opsional), otomatis dari divisi acara";
   if (isSectionType(f.type)) return "Bagian / judul tahap";
   const parts: string[] = [];
   if (f.required) parts.push("Wajib");
@@ -57,12 +66,15 @@ export function FormFieldEditor({
   sectionLabel,
   isQuiz,
   actions,
+  divisionField,
 }: {
   field: MembershipFieldDef;
   index: number;
   sectionLabel?: string;
   isQuiz?: boolean;
   actions: FormFieldActions;
+  /** Hanya untuk baris DIVISION_FIELD_KEY di form Oprek berdivisi. */
+  divisionField?: DivisionFieldInfo;
 }) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
@@ -78,7 +90,8 @@ export function FormFieldEditor({
   const [dropBefore, setDropBefore] = useState<null | boolean>(null);
 
   const isSection = isSectionType(type);
-  const deletable = canDeleteField(field.key);
+  const isDivisionField = field.key === DIVISION_FIELD_KEY;
+  const deletable = canDeleteField(field.key) && !isDivisionField;
   const showOptions = OPTION_TYPES.includes(type) || GRID_TYPES.includes(type);
   const showGrid = GRID_TYPES.includes(type);
   const showRating = SCALE_TYPES.includes(type);
@@ -157,7 +170,7 @@ export function FormFieldEditor({
           <div className="flex-1 min-w-0">
             <p className="text-body-md font-medium text-on-background truncate">{field.label || "(tanpa judul)"}</p>
             <p className="text-label-caps text-on-surface-variant truncate">
-              {FIELD_TYPE_LABELS[field.type]}
+              {isDivisionField ? "Pilihan Divisi" : FIELD_TYPE_LABELS[field.type]}
               {summary(field) ? ` · ${summary(field)}` : ""}
               {sectionLabel ? ` · ${sectionLabel}` : ""}
             </p>
@@ -187,7 +200,7 @@ export function FormFieldEditor({
                 >
                   Tambah deskripsi
                 </button>
-                {!field.isCore && (
+                {!field.isCore && !isDivisionField && (
                   <button
                     type="button"
                     onClick={async () => {
@@ -213,7 +226,9 @@ export function FormFieldEditor({
                   </button>
                 ) : (
                   <p className="px-4 py-2 text-label-caps text-on-surface-variant border-t border-outline-variant/60 mt-1">
-                    Tidak bisa dihapus &mdash; pertanyaan ini dipakai sebagai identitas pengisi.
+                    {isDivisionField
+                      ? "Tidak bisa dihapus — pilihan divisi wajib di form ini. Pindahkan saja urutannya."
+                      : "Tidak bisa dihapus — pertanyaan ini dipakai sebagai identitas pengisi."}
                   </p>
                 )}
               </div>
@@ -227,12 +242,35 @@ export function FormFieldEditor({
           <form action={actions.update} className="flex flex-col gap-4 mt-4">
             <input type="hidden" name="id" value={field.id ?? ""} />
             <input type="hidden" name="config" value={configStr} />
+            {/* Bagian (section) tidak punya pemilih jenis; tanpa ini server
+                menganggapnya "text" dan bagiannya berubah jadi pertanyaan. */}
+            {isSection && <input type="hidden" name="type" value={type} />}
             <div className="flex flex-col gap-2">
               <span className="text-label-caps uppercase tracking-wide text-on-surface-variant">
-                {isSection ? "Judul Bagian" : "Pertanyaan"}
+                {isDivisionField
+                  ? "Nama di daftar (hanya terlihat pengurus)"
+                  : isSection
+                    ? "Judul Bagian"
+                    : "Pertanyaan"}
               </span>
               <input name="label" defaultValue={field.label} className="bg-soft-gray rounded-md p-3 text-body-md" />
             </div>
+
+            {isSection && (
+              // Keterangan bagian ikut dikirim — sebelumnya tidak ada input ini,
+              // jadi menyimpan bagian menghapus keterangannya.
+              <div className="flex flex-col gap-2">
+                <span className="text-label-caps uppercase tracking-wide text-on-surface-variant">
+                  {isDivisionField ? "Keterangan di atas pilihan divisi (opsional)" : "Keterangan (opsional)"}
+                </span>
+                <textarea
+                  name="helpText"
+                  rows={2}
+                  defaultValue={field.helpText ?? ""}
+                  className="bg-soft-gray rounded-md p-3 text-body-md resize-y"
+                />
+              </div>
+            )}
 
             {!isSection && (
               <>
@@ -377,6 +415,8 @@ export function FormFieldEditor({
             </SubmitButton>
           </form>
 
+          {isDivisionField && divisionField && <DivisionManager info={divisionField} />}
+
           {deletable && confirmDelete && (
             <form action={actions.remove} className="flex items-center gap-2 mt-3">
               <input type="hidden" name="id" value={field.id ?? ""} />
@@ -517,5 +557,95 @@ function AnswerKeyEditor({
       <input value={value} onChange={(e) => onChange(e.target.value)} className={cell} />
       <span className="text-label-caps text-on-surface-variant">Dicocokkan persis, tanpa membedakan huruf besar/kecil.</span>
     </>
+  );
+}
+
+// Daftar divisi acara untuk baris "Divisi Pilihan": satu sumber dengan
+// Struktur Kepanitiaan. Tambah divisi di sini = tambah divisi di acara.
+function DivisionManager({ info }: { info: DivisionFieldInfo }) {
+  const router = useRouter();
+  const [name, setName] = useState("");
+  const [error, setError] = useState<string | null>(null);
+  const [pending, startTransition] = useTransition();
+
+  function add() {
+    const trimmed = name.trim();
+    if (!trimmed) return;
+    setError(null);
+    startTransition(async () => {
+      try {
+        const fd = new FormData();
+        fd.set("formId", info.formId);
+        fd.set("name", trimmed);
+        const res = await addFormEventDivision(fd);
+        if (res.error) {
+          setError(res.error);
+          return;
+        }
+        setName("");
+        router.refresh();
+      } catch (e) {
+        setError(e instanceof Error ? e.message : "Gagal menambah divisi");
+      }
+    });
+  }
+
+  return (
+    <div className="mt-4 flex flex-col gap-3 rounded-md bg-soft-gray p-4">
+      <p className="text-label-caps uppercase tracking-wide text-on-surface-variant">
+        Pilihan divisi ({info.divisions.length}) — sama dengan Struktur Kepanitiaan acara
+      </p>
+      {info.divisions.length === 0 ? (
+        <p className="text-body-md text-on-surface-variant">Belum ada divisi. Pelamar belum bisa mengirim form ini.</p>
+      ) : (
+        <ul className="flex flex-wrap gap-2">
+          {info.divisions.map((d) => (
+            <li key={d} className="rounded-md bg-surface-container-lowest px-3 py-1.5 text-body-md text-on-background">
+              {d}
+            </li>
+          ))}
+        </ul>
+      )}
+      {info.canAdd ? (
+        <div className="flex flex-wrap items-center gap-2">
+          <input
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") {
+                e.preventDefault();
+                add();
+              }
+            }}
+            maxLength={80}
+            placeholder="Nama divisi baru, mis. Konsumsi"
+            aria-label="Nama divisi baru"
+            className="min-w-0 flex-1 rounded-md bg-surface-container-lowest p-2.5 text-body-md"
+          />
+          <button
+            type="button"
+            onClick={add}
+            disabled={pending || !name.trim()}
+            className="rounded-md bg-primary-container px-4 py-2 text-label-caps uppercase tracking-wide text-on-primary hover:bg-primary disabled:opacity-60"
+          >
+            {pending ? "Menambah…" : "Tambah divisi"}
+          </button>
+        </div>
+      ) : (
+        <p className="text-body-sm text-on-surface-variant">
+          Menambah atau mengubah divisi hanya bisa oleh BPH Acara / BPH Kabinet.
+        </p>
+      )}
+      {info.canAdd && (
+        <p className="text-body-sm text-on-surface-variant">
+          Divisi baru langsung masuk ke Struktur Kepanitiaan acara. Ganti nama atau hapus divisi dari halaman acara.
+        </p>
+      )}
+      {error && (
+        <p className="text-body-sm text-error" role="alert">
+          {error}
+        </p>
+      )}
+    </div>
   );
 }
