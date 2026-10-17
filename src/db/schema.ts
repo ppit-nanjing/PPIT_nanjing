@@ -1736,6 +1736,10 @@ export const forms = pgTable(
     // Buka/tutup manual + rentang tanggal sebagai informasi. Penegakan hanya
     // lewat isOpen (seperti recruitment_periods) — tanggal tidak menutup sendiri.
     isOpen: boolean("is_open").notNull().default(false),
+    // Migrasi 0053: form Oprek yang boleh diisi SEMUA akun yang login (bukan
+    // hanya pengurus kabinet PPIT Nanjing) — untuk acara lintas cabang seperti
+    // SKR, yang pelamarnya bisa dari PPIT lain. Pemilu selalu khusus kabinet.
+    openToAllAccounts: boolean("open_to_all_accounts").notNull().default(false),
     opensAt: timestamp("opens_at"),
     closesAt: timestamp("closes_at"),
     confirmationMessage: text("confirmation_message")

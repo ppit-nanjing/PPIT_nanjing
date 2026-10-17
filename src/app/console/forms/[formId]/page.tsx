@@ -223,6 +223,14 @@ export default async function FormManagePage({ params }: { params: Promise<{ for
             defaultChecked={form.isOpen}
             hint="Kalau dimatikan, pelamar tidak bisa mengirim (halaman isi menampilkan keterangan ditutup)."
           />
+          {form.kind !== "pemilu" && (
+            <ToggleSwitch
+              name="openToAllAccounts"
+              label="Boleh diisi semua akun (bukan hanya pengurus kabinet)"
+              defaultChecked={form.openToAllAccounts}
+              hint="Untuk acara lintas cabang (mis. SKR): pelamar dari PPIT lain cukup punya akun di website ini. Kalau mati, hanya pengurus kabinet PPIT Nanjing yang bisa mengisi."
+            />
+          )}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <TextField
               name="opensAt"

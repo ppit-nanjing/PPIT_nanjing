@@ -35,6 +35,8 @@ Gerbang tunggal: `src/lib/form-access.ts`.
 
 ## Keputusan desain
 
+- **Form terbuka untuk semua akun (2026-10-17, migrasi `0053_forms_open_to_all.sql`)**: kolom `forms.open_to_all_accounts` (toggle di Setelan, default mati). Kalau nyala, form Oprek boleh diisi akun mana pun yang login dan tidak suspended — untuk acara lintas cabang seperti SKR. Pemilu selalu khusus kabinet. Aturan satu-satunya di `canFillForm` (`src/lib/form-access.ts`), dipakai halaman isi, metadata, dan aksi submit. Pelamar luar kabinet tercatat dengan divisi asal "Luar kabinet".
+
 - **Kadiv (2026-10-15, migrasi `0052_oprek_kadiv.sql`)**: peran panitia `kadiv` + jenis form `oprek_kadiv`. Oprek Kadiv dibuat & diputuskan BPH Acara; yang diterima jadi `kadiv` di divisi pilihannya. Oprek anggota tetap **satu formulir untuk semua divisi**: setiap Kadiv acara itu boleh membuatnya, melihat semua pelamar, dan memutuskan semua divisi (keputusan BPH), tetapi penempatannya dibatasi ke peran anggota divisi (`KADIV_PLACEMENT_ROLES`, ditegakkan di `updateApplicationPlacement` via `isKadivOnlyPlacer`). Penempatan di Oprek anggota tidak menurunkan Kadiv/BPH yang sudah ada. Akses acara Kadiv = panitia biasa (fitur dasar + grant divisi); bukan BPH Panitia. Menu Formulir tampil lewat flag sesi `isEventKadiv`.
 - **SC dari cabang lain** (mis. SKR): cukup peran `supervisor` yang sudah ada — panitia non-kabinet hanya melihat menu Kegiatan untuk acaranya sendiri (+ Formulir acaranya), tidak melihat modul kabinet.
 

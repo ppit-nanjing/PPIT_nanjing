@@ -22,7 +22,7 @@ import { sendEmail } from "@/lib/email";
 import { getTemplateDef, renderTemplate, type NotificationTemplateKey } from "@/lib/notification-templates";
 import { createTemplatedNotification } from "@/lib/notifications";
 import { renderMembershipEmail, renderMembershipEmailText } from "@/lib/membership-email";
-import { canPlaceApplicant, getCabinetMembership, getCoordinatorEventIds, getFormsAccess, isKadivOnlyPlacer, requireFormManage } from "@/lib/form-access";
+import { canFillForm, canPlaceApplicant, getCabinetMembership, getCoordinatorEventIds, getFormsAccess, isKadivOnlyPlacer, requireFormManage } from "@/lib/form-access";
 import { EVENT_COMMITTEE_ROLE_LABEL, isBphPanitiaRole, type EventCommitteeRole } from "@/lib/event-capabilities";
 import { BPH_FORM_ROLE_LABEL, BPH_FORM_ROLES, FORM_TAB_PATH, KADIV_PLACEMENT_ROLES, PLACEMENT_ROLE_OPTIONS, isDivisionOprekKind, type FormKind } from "@/lib/form-types";
 import { FIELD_TYPE_LABELS, GRID_TYPES, QUESTION_BY_KEY, type MembershipFieldDef } from "@/lib/membership-form";
@@ -157,6 +157,8 @@ export async function updateFormSettings(formData: FormData) {
   const description = String(formData.get("description") ?? "").trim();
   const confirmationMessage = String(formData.get("confirmationMessage") ?? "").trim();
   const isOpen = formData.get("isOpen") === "on";
+  // Pemilu selalu khusus kabinet.
+  const openToAllAccounts = form.kind !== "pemilu" && formData.get("openToAllAccounts") === "on";
   const opensAt = parseLocalDate(formData.get("opensAt"));
   const closesAt = parseLocalDate(formData.get("closesAt"));
 
@@ -178,6 +180,7 @@ export async function updateFormSettings(formData: FormData) {
       description: description || null,
       confirmationMessage: confirmationMessage || "Terima kasih! Jawabanmu sudah kami terima.",
       isOpen,
+      openToAllAccounts,
       opensAt,
       closesAt,
       bphRoles,
@@ -406,7 +409,7 @@ export async function submitFormApplication(formData: FormData) {
   const back = `/forms/${form.id}`;
 
   const membership = await getCabinetMembership(userId);
-  if (!membership || !membership.isCabinetMember) redirect(`${back}?error=forbidden`);
+  if (!membership || !canFillForm(form, membership)) redirect(`${back}?error=forbidden`);
 
   const [existing] = await db
     .select({ id: formApplications.id })
@@ -540,7 +543,8 @@ export async function submitFormApplication(formData: FormData) {
       formId: form.id,
       userId,
       fullName: membership.displayName || session?.user?.name || "",
-      cabinetDivision: membership.divisionName ?? "-",
+      // Pelamar dari luar kabinet (form terbuka untuk semua akun) tidak punya divisi asal.
+      cabinetDivision: membership.divisionName ?? "Luar kabinet",
       positionApplied,
       choice1DivisionId: choice1,
       choice2DivisionId: choice2,
