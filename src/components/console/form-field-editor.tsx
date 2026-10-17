@@ -617,6 +617,7 @@ function DivisionManager({ info }: { info: DivisionFieldInfo }) {
                 add();
               }
             }}
+            maxLength={80}
             placeholder="Nama divisi baru, mis. Konsumsi"
             aria-label="Nama divisi baru"
             className="min-w-0 flex-1 rounded-md bg-surface-container-lowest p-2.5 text-body-md"

@@ -131,26 +131,27 @@ export async function createForm(formData: FormData) {
       : [];
   if (kind === "oprek_bph_acara" && bphRoles.length === 0) redirect(`${back}?error=roles`);
 
-  let createdId: string;
+  // Form berdivisi: baris "Divisi Pilihan" langsung ada di Daftar Pertanyaan
+  // (urutan pertama; bisa dipindah) — lihat DIVISION_FIELD_KEY. Dibuat dalam
+  // satu db.batch (transaksi) dengan formnya supaya tidak ada form tanpa baris.
+  const createdId = crypto.randomUUID();
+  const insertForm = db.insert(forms).values({ id: createdId, kind, eventId, title, bphRoles, createdBy: access.userId });
   try {
-    const [created] = await db
-      .insert(forms)
-      .values({ kind, eventId, title, bphRoles, createdBy: access.userId })
-      .returning({ id: forms.id });
-    createdId = created.id;
+    if (isDivisionOprekKind(kind)) {
+      await db.batch([
+        insertForm,
+        db
+          .insert(formFields)
+          .values({ formId: createdId, key: DIVISION_FIELD_KEY, label: DIVISION_FIELD_LABEL, type: "section", orderIndex: 0 }),
+      ]);
+    } else {
+      await insertForm;
+    }
   } catch (err) {
     // Balapan dua POST bersamaan untuk acara yang sama: index unik parsial
     // (kind, event_id) yang menangkap — balas dengan pesan yang sama.
     if (isUniqueViolation(err)) redirect(`${back}?error=exists`);
     throw err;
-  }
-
-  // Form berdivisi: baris "Divisi Pilihan" langsung ada di Daftar Pertanyaan
-  // (urutan pertama; bisa dipindah). Lihat DIVISION_FIELD_KEY.
-  if (isDivisionOprekKind(kind)) {
-    await db
-      .insert(formFields)
-      .values({ formId: createdId, key: DIVISION_FIELD_KEY, label: DIVISION_FIELD_LABEL, type: "section", orderIndex: 0 });
   }
 
   revalidatePath("/console/forms");

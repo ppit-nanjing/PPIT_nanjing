@@ -98,7 +98,8 @@ export default async function FormApplicantPage({
   const showRole = form.kind !== "pemilu" && form.kind !== "oprek_kadiv";
   const showDivision = isDivisionOprekKind(form.kind);
 
-  const fieldDefs: MembershipFieldDef[] = fields.map((r) => ({
+  // Baris "Divisi Pilihan" bukan pertanyaan — pilihannya tampil di atas.
+  const fieldDefs: MembershipFieldDef[] = fields.filter((r) => r.key !== DIVISION_FIELD_KEY).map((r) => ({
     id: r.id,
     key: r.key,
     label: r.label,
@@ -204,8 +205,6 @@ export default async function FormApplicantPage({
         ) : (
           <div className="flex flex-col gap-5">
             {fieldDefs.map((f) => {
-              // Pilihan divisi sudah tampil di atas (Pilihan Divisi 1 & 2).
-              if (f.key === DIVISION_FIELD_KEY) return null;
               if (isSectionType(f.type)) {
                 return (
                   <h3 key={f.id ?? f.key} className="text-label-caps uppercase tracking-wide text-primary-container border-b border-outline-variant/60 pb-1 mt-2">
