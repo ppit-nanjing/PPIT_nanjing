@@ -9,6 +9,7 @@ import { SiteNav } from "@/components/site-nav";
 import { SiteFooter } from "@/components/site-footer";
 import { DecoRule } from "@/components/deco/deco-rule";
 import { FormRenderer, type FormDivisionOption } from "@/components/forms/form-renderer";
+import { LinkifiedText } from "@/components/linkified-text";
 import { submitFormApplication } from "@/app/actions/forms";
 import { canFillForm, getCabinetMembership } from "@/lib/form-access";
 import { FORM_KIND_LABEL, FORM_STATUS_LABEL, isDivisionOprekKind, type FormApplicationStatus } from "@/lib/form-types";
@@ -141,7 +142,11 @@ export default async function FormFillPage({
       </span>
       <h1 className="text-display-hero-mobile md:text-display-hero text-heading mb-3">{form.title}</h1>
       {eventTitle && <h2 className="text-headline-md text-secondary mb-4">{eventTitle}</h2>}
-      {form.description && <p className="text-body-lg text-on-surface-variant whitespace-pre-wrap">{form.description}</p>}
+      {form.description && (
+        <p className="text-body-lg text-on-surface-variant whitespace-pre-wrap">
+          <LinkifiedText text={form.description} />
+        </p>
+      )}
       <DecoRule align="start" className="mt-6" />
     </header>
   );
