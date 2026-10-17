@@ -23,7 +23,8 @@ import { FormFieldEditor } from "@/components/console/form-field-editor";
 import { FormAnalyticsView } from "@/components/console/forms/form-analytics-view";
 import { FormRenderer, type FormDivisionOption } from "@/components/forms/form-renderer";
 import { QuestionBank } from "@/components/console/question-bank";
-import { CheckboxField, Select, TextAreaField, TextField, ToggleSwitch } from "@/components/console/form";
+import { FileUpload } from "@/components/upload/file-upload";
+import { CheckboxField, Select, SelectField, TextAreaField, TextField, ToggleSwitch } from "@/components/console/form";
 import { SubmitButton } from "@/components/console/submit-button";
 import { EVENT_COMMITTEE_ROLE_LABEL } from "@/lib/event-capabilities";
 import { buildFormAnalytics } from "@/lib/form-analytics";
@@ -223,6 +224,46 @@ export default async function FormManagePage({ params }: { params: Promise<{ for
             defaultValue={form.confirmationMessage}
             hint="Muncul di layar selesai/halaman setelah pelamar mengirim jawaban."
           />
+          <fieldset className="flex flex-col gap-4 rounded-lg border border-outline-variant p-4">
+            <legend className="px-1 text-label-caps uppercase tracking-wide text-on-surface-variant">
+              QR grup panitia (opsional)
+            </legend>
+            {/* allowPaste mati: hanya gambar yang diunggah ke folder form-qr yang
+                diterima server (isFormGroupQrUrl) — CSP juga hanya mengizinkan
+                gambar dari blob store. */}
+            <FileUpload
+              name="groupQrUrl"
+              folder="form-qr"
+              label="Gambar QR grup"
+              allowPaste={false}
+              defaultValue={form.groupQrUrl ?? ""}
+              hint="Screenshot QR grup (mis. grup WeChat panitia). Tampil di halaman setelah mengirim. QR grup WeChat kedaluwarsa setelah 7 hari — unggah ulang kalau sudah lewat."
+            />
+            {form.groupQrUrl && (
+              <CheckboxField
+                name="removeGroupQr"
+                label="Hapus QR grup"
+                className="text-body-md text-on-background"
+              />
+            )}
+            <TextAreaField
+              name="groupQrNote"
+              label="Catatan di bawah QR (opsional)"
+              defaultValue={form.groupQrNote ?? ""}
+              rows={2}
+              placeholder="Mis. Scan untuk masuk grup WeChat panitia. Kalau QR kedaluwarsa, hubungi WeChat ID …"
+            />
+            <SelectField
+              name="groupQrAudience"
+              label="Siapa yang melihat QR"
+              options={[
+                { value: "submitted", label: "Semua yang sudah mengirim" },
+                { value: "accepted", label: "Hanya pelamar yang diterima" },
+              ]}
+              defaultValue={form.groupQrAudience}
+              hint="Pelamar yang diterima juga mendapat tautan ke QR ini di notifikasi/email penerimaan."
+            />
+          </fieldset>
           <ToggleSwitch
             name="isOpen"
             label="Buka untuk pengisian"

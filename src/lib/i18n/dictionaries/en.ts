@@ -496,6 +496,8 @@ export const en = {
   "forms.form.statusLabel": "Status: {{status}}",
   "forms.form.submittedTitle": "Submission received",
   "forms.form.backHome": "Back to Home",
+  "forms.form.groupQrTitle": "Join the committee group",
+  "forms.form.groupQrPending": "The committee group QR will appear on this page if your application is accepted.",
   "forms.form.gridNotConfigured": "This grid question has not been configured yet.",
   "forms.form.errSubmit": "Some answers are missing or invalid. Please review and submit again.",
   "career.joinMentorship": "Join Mentorship",

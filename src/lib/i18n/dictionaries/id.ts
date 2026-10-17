@@ -499,6 +499,8 @@ export const id = {
   "forms.form.statusLabel": "Status: {{status}}",
   "forms.form.submittedTitle": "Jawaban terkirim",
   "forms.form.backHome": "Kembali ke Beranda",
+  "forms.form.groupQrTitle": "Gabung grup panitia",
+  "forms.form.groupQrPending": "QR grup panitia akan muncul di halaman ini kalau lamaranmu diterima.",
   "forms.form.gridNotConfigured": "Pertanyaan grid belum diatur pengurus.",
   "forms.form.errSubmit": "Ada isian yang belum lengkap atau tidak valid. Coba isi ulang dan kirim lagi.",
   "career.joinMentorship": "Daftar Mentorship",

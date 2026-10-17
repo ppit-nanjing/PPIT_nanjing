@@ -25,7 +25,8 @@ import { renderMembershipEmail, renderMembershipEmailText } from "@/lib/membersh
 import { getEventAccess } from "@/lib/event-access";
 import { canFillForm, canPlaceApplicant, getCabinetMembership, getCoordinatorEventIds, getFormsAccess, isKadivOnlyPlacer, requireFormManage } from "@/lib/form-access";
 import { EVENT_COMMITTEE_ROLE_LABEL, isBphPanitiaRole, type EventCommitteeRole } from "@/lib/event-capabilities";
-import { BPH_FORM_ROLE_LABEL, BPH_FORM_ROLES, FORM_TAB_PATH, KADIV_PLACEMENT_ROLES, PLACEMENT_ROLE_OPTIONS, DIVISION_FIELD_KEY, DIVISION_FIELD_LABEL, isDivisionOprekKind, type FormKind } from "@/lib/form-types";
+import { BPH_FORM_ROLE_LABEL, BPH_FORM_ROLES, FORM_GROUP_QR_AUDIENCES, FORM_TAB_PATH, KADIV_PLACEMENT_ROLES, PLACEMENT_ROLE_OPTIONS, DIVISION_FIELD_KEY, DIVISION_FIELD_LABEL, isDivisionOprekKind, isFormGroupQrUrl, type FormKind } from "@/lib/form-types";
+import { getSiteUrl } from "@/lib/site-url";
 import { FIELD_TYPE_LABELS, GRID_TYPES, QUESTION_BY_KEY, type MembershipFieldDef } from "@/lib/membership-form";
 import { scrubForeignPrivateUrl } from "@/lib/private-files";
 import { UUID_RE } from "@/lib/uuid";
@@ -183,6 +184,17 @@ export async function updateFormSettings(formData: FormData) {
   // dilepas, pertahankan setelan sebelumnya.
   const bphRoles = form.kind === "oprek_bph_acara" && openedRoles.length === 0 ? form.bphRoles : openedRoles;
 
+  // QR grup panitia: hanya gambar dari folder unggah "form-qr"; nilai lain
+  // (permintaan rakitan) diabaikan dan QR lama dipertahankan.
+  const qrRaw = String(formData.get("groupQrUrl") ?? "").trim();
+  const groupQrUrl =
+    formData.get("removeGroupQr") === "on" ? null : qrRaw && isFormGroupQrUrl(qrRaw) ? qrRaw : form.groupQrUrl;
+  const groupQrNote = String(formData.get("groupQrNote") ?? "").trim().slice(0, 500) || null;
+  const audienceRaw = String(formData.get("groupQrAudience") ?? "");
+  const groupQrAudience = (FORM_GROUP_QR_AUDIENCES as readonly string[]).includes(audienceRaw)
+    ? audienceRaw
+    : form.groupQrAudience;
+
   await db
     .update(forms)
     .set({
@@ -194,6 +206,9 @@ export async function updateFormSettings(formData: FormData) {
       opensAt,
       closesAt,
       bphRoles,
+      groupQrUrl,
+      groupQrNote,
+      groupQrAudience,
       updatedAt: new Date(),
     })
     .where(eq(forms.id, form.id));
@@ -854,6 +869,10 @@ export async function updateApplicationPlacement(formData: FormData) {
           details = `Kamu ditempatkan di ${divisionName ?? "divisi terpilih"} sebagai ${roleLabel}.`;
         } else {
           details = "Kamu tercatat sebagai calon pada periode berikutnya.";
+        }
+        // QR grup panitia ada di halaman status lamaran (forms/<id>/submitted).
+        if (form.groupQrUrl) {
+          details += `\n\nGabung grup panitia lewat QR di halaman lamaranmu: ${getSiteUrl()}/forms/${form.id}/submitted`;
         }
       } else if (key === "oprek_rejected") {
         details = "";
