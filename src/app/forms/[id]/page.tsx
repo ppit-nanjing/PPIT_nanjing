@@ -10,7 +10,7 @@ import { SiteFooter } from "@/components/site-footer";
 import { DecoRule } from "@/components/deco/deco-rule";
 import { FormRenderer, type FormDivisionOption } from "@/components/forms/form-renderer";
 import { submitFormApplication } from "@/app/actions/forms";
-import { getCabinetMembership } from "@/lib/form-access";
+import { canFillForm, getCabinetMembership } from "@/lib/form-access";
 import { FORM_KIND_LABEL, FORM_STATUS_LABEL, isDivisionOprekKind, type FormApplicationStatus } from "@/lib/form-types";
 import { INTL_LOCALE } from "@/lib/i18n/config";
 import { getT } from "@/lib/i18n/server";
@@ -22,10 +22,13 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
   if (!UUID_RE.test(id)) return { title: "Formulir" };
   const session = await auth();
   const membership = session?.user?.id ? await getCabinetMembership(session.user.id) : null;
-  // Judul form hanya untuk anggota kabinet — pengunjung non-anggota melihat
+  const [form] = await db
+    .select({ title: forms.title, kind: forms.kind, openToAllAccounts: forms.openToAllAccounts })
+    .from(forms)
+    .where(eq(forms.id, id));
+  // Judul form hanya untuk yang boleh mengisinya — pengunjung lain melihat
   // layar "khusus pengurus" dan tidak perlu tahu judul formulirnya.
-  if (!membership?.isCabinetMember) return { title: "Formulir", robots: { index: false, follow: false } };
-  const [form] = await db.select({ title: forms.title }).from(forms).where(eq(forms.id, id));
+  if (!form || !canFillForm(form, membership)) return { title: "Formulir", robots: { index: false, follow: false } };
   // Formulir internal kabinet — jangan pernah diindeks mesin pencari.
   return { title: form?.title ?? "Formulir", robots: { index: false, follow: false } };
 }
@@ -74,7 +77,7 @@ export default async function FormFillPage({
     .from(formApplications)
     .where(and(eq(formApplications.formId, form.id), eq(formApplications.userId, userId)));
 
-  if (!membership || !membership.isCabinetMember) {
+  if (!membership || !canFillForm(form, membership)) {
     return (
       <Shell>
         <div className="flex flex-col items-center text-center bg-surface-container-lowest border border-outline-variant rounded-xl px-6 py-14">

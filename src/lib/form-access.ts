@@ -209,6 +209,20 @@ export async function isKadivOnlyPlacer(
   return !eventAccess.isBphPanitia;
 }
 
+/**
+ * Boleh MENGISI form ini? Pengurus kabinet (Struktur Organisasi) selalu boleh;
+ * akun lain hanya kalau form-nya dibuka untuk semua akun (bukan Pemilu).
+ * Akun suspended tidak pernah boleh. Dipakai halaman isi DAN aksi submit.
+ */
+export function canFillForm(
+  form: Pick<FormRow, "kind" | "openToAllAccounts">,
+  membership: CabinetMembership | null,
+): boolean {
+  if (!membership || membership.status === "suspended") return false;
+  if (membership.isCabinetMember) return true;
+  return form.openToAllAccounts && form.kind !== "pemilu";
+}
+
 export type CabinetMembership = {
   status: string;
   // Nama panjang untuk snapshot: sensus_profiles.full_name kalau ada,
