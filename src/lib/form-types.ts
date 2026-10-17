@@ -24,6 +24,34 @@ export function isDivisionOprekKind(kind: FormKind): boolean {
  * di kolom sistem choice1/choice2.
  */
 export const DIVISION_FIELD_KEY = "sys_division_choice";
+
+/** Status lamaran yang dihitung "diterima" (penempatan sudah diputuskan). */
+export const FORM_ACCEPTED_STATUSES = ["accepted", "accepted_choice1", "accepted_choice2", "reassigned"] as const;
+
+export function isAcceptedFormStatus(status: string): boolean {
+  return (FORM_ACCEPTED_STATUSES as readonly string[]).includes(status);
+}
+
+/** Siapa yang melihat QR grup di halaman setelah mengirim (forms.group_qr_audience). */
+export const FORM_GROUP_QR_AUDIENCES = ["submitted", "accepted"] as const;
+export type FormGroupQrAudience = (typeof FORM_GROUP_QR_AUDIENCES)[number];
+
+/**
+ * QR grup hanya boleh gambar yang diunggah lewat /api/upload ke folder
+ * "form-qr" (blob publik) — bukan URL bebas: halaman publik merender <img>-nya.
+ */
+export function isFormGroupQrUrl(value: string): boolean {
+  try {
+    const url = new URL(value);
+    return (
+      url.protocol === "https:" &&
+      url.hostname.endsWith(".public.blob.vercel-storage.com") &&
+      url.pathname.startsWith("/form-qr/")
+    );
+  } catch {
+    return false;
+  }
+}
 export const DIVISION_FIELD_LABEL = "Divisi Pilihan";
 
 export type FormApplicationStatus =

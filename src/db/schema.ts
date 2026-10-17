@@ -1745,6 +1745,13 @@ export const forms = pgTable(
     confirmationMessage: text("confirmation_message")
       .notNull()
       .default("Terima kasih! Jawabanmu sudah kami terima."),
+    // Migrasi 0054: QR grup panitia (mis. grup WeChat) yang tampil di halaman
+    // setelah mengirim. URL = blob publik folder "form-qr" (divalidasi di
+    // updateFormSettings). Audience: "submitted" (semua yang sudah mengirim)
+    // atau "accepted" (hanya pelamar yang diterima).
+    groupQrUrl: text("group_qr_url"),
+    groupQrNote: text("group_qr_note"),
+    groupQrAudience: text("group_qr_audience").notNull().default("submitted"),
     // Posisi BPH Acara yang dibuka (oprek_bph_acara), subset label
     // event_committee_role: ketua/wakil/sekretaris/bendahara/supervisor.
     bphRoles: text("bph_roles").array().notNull().default([]),
