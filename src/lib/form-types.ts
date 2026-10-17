@@ -14,6 +14,18 @@ export function isDivisionOprekKind(kind: FormKind): boolean {
   return kind === "oprek_kepanitiaan" || kind === "oprek_kadiv";
 }
 
+/**
+ * Baris form_fields khusus (type "section") yang menandai POSISI pilihan
+ * Divisi 1 & 2 di form Oprek berdivisi. Tampil di Daftar Pertanyaan seperti
+ * pertanyaan lain dan bisa dipindah urutannya, tapi tidak bisa dihapus/disalin;
+ * pilihannya selalu = divisi di Struktur Kepanitiaan acara (event_divisions),
+ * dan divisi baru yang ditambah dari sini ikut masuk ke acara. Karena jenisnya
+ * "section", submit/analitik/ekspor otomatis melewatinya — jawaban divisi tetap
+ * di kolom sistem choice1/choice2.
+ */
+export const DIVISION_FIELD_KEY = "sys_division_choice";
+export const DIVISION_FIELD_LABEL = "Divisi Pilihan";
+
 export type FormApplicationStatus =
   | "pending"
   | "accepted"

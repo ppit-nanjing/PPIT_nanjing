@@ -22,9 +22,10 @@ import { sendEmail } from "@/lib/email";
 import { getTemplateDef, renderTemplate, type NotificationTemplateKey } from "@/lib/notification-templates";
 import { createTemplatedNotification } from "@/lib/notifications";
 import { renderMembershipEmail, renderMembershipEmailText } from "@/lib/membership-email";
+import { getEventAccess } from "@/lib/event-access";
 import { canFillForm, canPlaceApplicant, getCabinetMembership, getCoordinatorEventIds, getFormsAccess, isKadivOnlyPlacer, requireFormManage } from "@/lib/form-access";
 import { EVENT_COMMITTEE_ROLE_LABEL, isBphPanitiaRole, type EventCommitteeRole } from "@/lib/event-capabilities";
-import { BPH_FORM_ROLE_LABEL, BPH_FORM_ROLES, FORM_TAB_PATH, KADIV_PLACEMENT_ROLES, PLACEMENT_ROLE_OPTIONS, isDivisionOprekKind, type FormKind } from "@/lib/form-types";
+import { BPH_FORM_ROLE_LABEL, BPH_FORM_ROLES, FORM_TAB_PATH, KADIV_PLACEMENT_ROLES, PLACEMENT_ROLE_OPTIONS, DIVISION_FIELD_KEY, DIVISION_FIELD_LABEL, isDivisionOprekKind, type FormKind } from "@/lib/form-types";
 import { FIELD_TYPE_LABELS, GRID_TYPES, QUESTION_BY_KEY, type MembershipFieldDef } from "@/lib/membership-form";
 import { scrubForeignPrivateUrl } from "@/lib/private-files";
 import { UUID_RE } from "@/lib/uuid";
@@ -142,6 +143,14 @@ export async function createForm(formData: FormData) {
     // (kind, event_id) yang menangkap — balas dengan pesan yang sama.
     if (isUniqueViolation(err)) redirect(`${back}?error=exists`);
     throw err;
+  }
+
+  // Form berdivisi: baris "Divisi Pilihan" langsung ada di Daftar Pertanyaan
+  // (urutan pertama; bisa dipindah). Lihat DIVISION_FIELD_KEY.
+  if (isDivisionOprekKind(kind)) {
+    await db
+      .insert(formFields)
+      .values({ formId: createdId, key: DIVISION_FIELD_KEY, label: DIVISION_FIELD_LABEL, type: "section", orderIndex: 0 });
   }
 
   revalidatePath("/console/forms");
@@ -283,9 +292,13 @@ export async function updateFormField(formData: FormData) {
   const { field, form } = await loadFieldForManage(formData);
   const label = String(formData.get("label") ?? "").trim();
   const typeRaw = String(formData.get("type") ?? "text");
-  const type = FIELD_TYPE_KEYS.includes(typeRaw as MembershipFieldDef["type"])
-    ? (typeRaw as MembershipFieldDef["type"])
-    : "text";
+  // Baris "Divisi Pilihan" selalu section (penanda posisi), apa pun isian form.
+  const type =
+    field.key === DIVISION_FIELD_KEY
+      ? "section"
+      : FIELD_TYPE_KEYS.includes(typeRaw as MembershipFieldDef["type"])
+        ? (typeRaw as MembershipFieldDef["type"])
+        : "text";
   const required = formData.get("required") === "on";
   const placeholder = String(formData.get("placeholder") ?? "").trim();
   const helpText = String(formData.get("helpText") ?? "").trim();
@@ -320,6 +333,8 @@ export async function updateFormField(formData: FormData) {
 
 export async function deleteFormField(formData: FormData) {
   const { field, form } = await loadFieldForManage(formData);
+  // Posisi pilihan divisi tidak boleh hilang (pilihan divisi tetap wajib).
+  if (field.key === DIVISION_FIELD_KEY) return;
   await db.delete(formFields).where(eq(formFields.id, field.id));
   revalidateFormPaths(form.id, form.kind);
 }
@@ -354,7 +369,7 @@ export async function moveFormField(id: string, toIndex: number) {
 export async function duplicateFormField(id: string) {
   if (!UUID_RE.test(id)) return;
   const [src] = await db.select().from(formFields).where(eq(formFields.id, id));
-  if (!src) return;
+  if (!src || src.key === DIVISION_FIELD_KEY) return;
   const { form } = await requireFormManage(src.formId);
 
   // orderIndex = integer: JANGAN menyisipkan nilai pecahan (0.5) — Postgres
@@ -942,4 +957,37 @@ export async function deleteFormApplication(formData: FormData) {
   if (form.eventId) revalidatePath(`/console/events/${form.eventId}`);
   if (form.kind !== "pemilu") revalidatePath("/console/work-ledger");
   redirect(`/console/forms/${form.id}`);
+}
+
+// Tambah divisi acara dari builder Oprek (baris "Divisi Pilihan"). Divisi
+// masuk ke Struktur Kepanitiaan acara (event_divisions) — satu sumber dengan
+// halaman acara, jadi pilihan pelamar dan penempatan panitia selalu sama.
+// Butuh kapabilitas acara event.manageCommittee (BPH Acara / BPH Kabinet);
+// Kadiv yang mengelola Oprek anggota tidak bisa menambah divisi.
+// Mengembalikan { error } (bukan throw) supaya pesannya tetap terbaca di
+// produksi — Next.js menyamarkan pesan error yang dilempar Server Action.
+export async function addFormEventDivision(formData: FormData): Promise<{ error?: string }> {
+  const formId = String(formData.get("formId") ?? "");
+  const { form } = await requireFormManage(formId);
+  if (!isDivisionOprekKind(form.kind) || !form.eventId) return { error: "Form ini tidak memakai pilihan divisi." };
+  const access = await getEventAccess(form.eventId);
+  if (!access.can("event.manageCommittee")) {
+    return { error: "Hanya BPH Acara atau BPH Kabinet yang bisa menambah divisi acara." };
+  }
+  const name = String(formData.get("name") ?? "").trim().replace(/\s+/g, " ").slice(0, 80);
+  if (!name) return { error: "Nama divisi wajib diisi." };
+
+  const existing = await db
+    .select({ name: eventDivisions.name, orderIndex: eventDivisions.orderIndex })
+    .from(eventDivisions)
+    .where(eq(eventDivisions.eventId, form.eventId));
+  if (existing.some((d) => d.name.trim().toLowerCase() === name.toLowerCase())) {
+    return { error: `Divisi "${name}" sudah ada di acara ini.` };
+  }
+  const nextOrder = existing.reduce((max, d) => Math.max(max, d.orderIndex), 0) + 1;
+  await db.insert(eventDivisions).values({ eventId: form.eventId, name, orderIndex: nextOrder });
+
+  revalidateFormPaths(form.id, form.kind);
+  revalidatePath(`/console/events/${form.eventId}`);
+  return {};
 }

@@ -13,6 +13,7 @@ import { EVENT_COMMITTEE_ROLE_LABEL } from "@/lib/event-capabilities";
 import {
   BPH_FORM_ROLE_LABEL,
   BPH_FORM_ROLES,
+  DIVISION_FIELD_KEY,
   FORM_KIND_LABEL,
   FORM_STATUS_LABEL,
   FORM_STATUS_TONE,
@@ -203,6 +204,8 @@ export default async function FormApplicantPage({
         ) : (
           <div className="flex flex-col gap-5">
             {fieldDefs.map((f) => {
+              // Pilihan divisi sudah tampil di atas (Pilihan Divisi 1 & 2).
+              if (f.key === DIVISION_FIELD_KEY) return null;
               if (isSectionType(f.type)) {
                 return (
                   <h3 key={f.id ?? f.key} className="text-label-caps uppercase tracking-wide text-primary-container border-b border-outline-variant/60 pb-1 mt-2">
