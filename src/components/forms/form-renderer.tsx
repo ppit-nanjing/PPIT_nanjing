@@ -8,6 +8,7 @@ import { GRID_TYPES, isSectionType } from "@/lib/membership-form";
 import { ImageUploadCropper } from "@/components/upload/image-upload-cropper";
 import { FileUploadField } from "@/components/upload/file-upload-field";
 import { Select } from "@/components/console/form";
+import { LinkifiedText } from "@/components/linkified-text";
 import { useT } from "@/lib/i18n/client";
 import { BPH_FORM_ROLE_LABEL, isDivisionOprekKind, type FormKind } from "@/lib/form-types";
 
@@ -302,7 +303,11 @@ export function FormRenderer({
           return (
             <div key={f.id ?? f.key} className="bg-secondary-container/20 border border-outline-variant rounded-xl p-5 mt-2">
               <h3 className="text-headline-md text-on-background">{f.label}</h3>
-              {f.helpText && <p className="text-body-sm text-on-surface-variant mt-1">{f.helpText}</p>}
+              {f.helpText && (
+                <p className="text-body-sm text-on-surface-variant mt-1 whitespace-pre-wrap">
+                  <LinkifiedText text={f.helpText} />
+                </p>
+              )}
             </div>
           );
         }
@@ -333,7 +338,11 @@ export function FormRenderer({
                 {labelContent}
               </label>
             )}
-            {f.helpText && <p className="text-body-sm text-on-surface-variant mb-2">{f.helpText}</p>}
+            {f.helpText && (
+              <p className="text-body-sm text-on-surface-variant mb-2 whitespace-pre-wrap">
+                <LinkifiedText text={f.helpText} />
+              </p>
+            )}
 
             {GRID_TYPES.includes(f.type) ? (
               <GridInput
