@@ -9,10 +9,7 @@ ALTER TABLE "forms" ADD COLUMN IF NOT EXISTS "group_qr_url" text;
 ALTER TABLE "forms" ADD COLUMN IF NOT EXISTS "group_qr_note" text;
 ALTER TABLE "forms" ADD COLUMN IF NOT EXISTS "group_qr_audience" text NOT NULL DEFAULT 'submitted';
 
-DO $$
-BEGIN
-  IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'forms_group_qr_audience_check') THEN
-    ALTER TABLE "forms"
-      ADD CONSTRAINT "forms_group_qr_audience_check" CHECK ("group_qr_audience" IN ('submitted', 'accepted'));
-  END IF;
-END $$;
+-- CHECK dipasang ulang (DROP IF EXISTS lalu ADD) — bukan blok DO $$, karena
+-- src/db/apply-sql.ts memecah berkas di setiap ";" akhir baris.
+ALTER TABLE "forms" DROP CONSTRAINT IF EXISTS "forms_group_qr_audience_check";
+ALTER TABLE "forms" ADD CONSTRAINT "forms_group_qr_audience_check" CHECK ("group_qr_audience" IN ('submitted', 'accepted'));
