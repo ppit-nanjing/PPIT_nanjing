@@ -1025,6 +1025,8 @@ export const en = {
   "auth.errConfirmMismatch": "Password confirmation does not match.",
   "auth.errEmailTaken": "That email is already registered. Sign in with your password.",
   "auth.errEmailGoogle": "That email is already registered through Google. Sign in with Google.",
+  "auth.errOauthNotLinked": "That email already has an account that cannot be linked to Google automatically. Sign in with your email and password, or request a password reset. If it still fails, contact the committee.",
+  "auth.errOauthFailed": "Signing in with Google failed. Try again, or sign in with your email and password.",
   "auth.errAutoSignIn": "Your account was created, but automatic sign-in failed. Please sign in manually.",
   "auth.errCredentialsRequired": "Email and password are both required.",
   "auth.errCredentialsWrong": "Wrong email or password.",
