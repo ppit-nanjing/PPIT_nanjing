@@ -1,7 +1,7 @@
 "use server";
 
 import { AuthError } from "next-auth";
-import { eq } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 import { redirect, unstable_rethrow } from "next/navigation";
 import { cookies, headers } from "next/headers";
 import { db } from "@/db";
@@ -222,7 +222,13 @@ export async function completePasswordReset(_prev: AuthFormState, formData: Form
   const passwordHash = await hashPassword(password);
   // status: kalau akun masih "invited" (mustahil di jalur ini, tapi murah), jadi
   // aktif. Akun aktif tidak berubah statusnya.
-  await db.update(users).set({ passwordHash, status: "active" }).where(eq(users.id, userId));
+  // Tautan reset dikirim ke email akunnya dan baru saja dipakai, jadi ini bukti
+  // pemilik kotak surat: tandai email terverifikasi (kalau belum). Dipakai saat
+  // Google ditautkan nanti - password yang email-nya sudah terbukti tidak dibuang.
+  await db
+    .update(users)
+    .set({ passwordHash, status: "active", emailVerified: sql`coalesce(${users.emailVerified}, now())` })
+    .where(eq(users.id, userId));
 
   // Sesi lama berbasis JWT dan tidak bisa dicabut dari sini - risiko kecil,
   // token reset sudah dikonsumsi dan hanya berlaku 1 jam. Arahkan ke login.

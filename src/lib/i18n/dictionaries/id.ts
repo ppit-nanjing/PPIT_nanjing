@@ -1028,6 +1028,8 @@ export const id = {
   "auth.errConfirmMismatch": "Konfirmasi kata sandi tidak cocok.",
   "auth.errEmailTaken": "Email sudah terdaftar. Masuk dengan kata sandi kamu.",
   "auth.errEmailGoogle": "Email ini sudah terdaftar lewat Google. Masuk dengan Google.",
+  "auth.errOauthNotLinked": "Email ini sudah punya akun yang tidak bisa ditautkan otomatis ke Google. Masuk dengan email dan kata sandi, atau minta reset kata sandi. Kalau masih gagal, hubungi pengurus.",
+  "auth.errOauthFailed": "Masuk dengan Google gagal. Coba lagi, atau masuk dengan email dan kata sandi.",
   "auth.errAutoSignIn": "Pendaftaran berhasil, tapi gagal masuk otomatis. Coba masuk manual.",
   "auth.errCredentialsRequired": "Email dan kata sandi wajib diisi.",
   "auth.errCredentialsWrong": "Email atau kata sandi salah.",
