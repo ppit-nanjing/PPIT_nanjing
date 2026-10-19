@@ -362,12 +362,13 @@ Aturan data pelamar
     slug: "panduan-maba",
     section: SERING_DIPAKAI,
     title: "Panduan Maba — Menulis, Meninjau, dan Merawat Topiknya",
-    content: `Panduan Maba adalah delapan artikel bantuan yang isinya guidebook untuk maba (hasil ekstraksi PDF pusat). Maba melihatnya di dua tempat: halaman **/guidebook** (daftar topik per fase, ada kotak centang kalau dia login) dan chatbot Help Center. Chatbot hanya boleh mengutip topik yang **sudah ditinjau dan belum kedaluwarsa** — ini yang paling sering bikin bingung, jadi baca bagian "Aturan yang mengikat" di bawah.
+    content: `Panduan Maba adalah 23 artikel bantuan yang isinya guidebook untuk maba. Sembilan di antaranya hasil ekstraksi PDF pusat, empat belas sisanya ditulis Divisi Teknologi: delapan topik pengetahuan sehari-hari (transportasi dalam kota, kuliner, kesehatan dan darurat, musim dan cuaca, nomor penting, spot wisata, perpanjangan paspor dan SKB, bahasa Mandarin) dan enam topik penutup celah terhadap PDF sumber (VPN dan akses internet, packing dan kirim barang, checklist minggu pertama, tempat ibadah, kerja/magang/SIM, festival dan hari libur). Maba melihatnya di dua tempat: halaman **/guidebook** (daftar topik per fase, ada kotak centang kalau dia login) dan chatbot Help Center. Chatbot hanya boleh mengutip topik yang **sudah ditinjau dan belum kedaluwarsa** — ini yang paling sering bikin bingung, jadi baca bagian "Aturan yang mengikat" di bawah.
 
 Dari mana isinya datang
 - Sumber mentahnya markdown di docs/guidebook/ (satu berkas per topik), hasil ekstraksi PDF. Ada di repo, bukan di database.
 - Jalur masuknya: npx tsx --env-file=.env src/db/ingest-guide.ts [slug]. Perintah ini menulis versi sumber ke parsed_markdown, mengisi Isi Panduan kalau masih kosong, membangun ulang potongan pencarian, dan menaikkan corpus_version supaya cache jawaban lama tidak dipakai lagi. Tanpa slug, semua topik diproses. Tambah --force hanya kalau memang mau menimpa isi yang sudah disunting pengurus.
 - Yang disunting pengurus adalah **Isi Panduan** (kolom content). Jangan menyunting parsed_markdown: itu baseline panel merge. Panel merge bisa mengembalikan satu bagian ke versi sumber kalau suntinganmu kacau.
+- Versi Inggrisnya opsional, satu berkas per topik di docs/guidebook/en/ dengan nama yang sama. Berbeda dari kolom Indonesia, isi Inggris selalu ditimpa saat ingest karena itu hasil terjemahan mesin, bukan suntingan pengurus — jadi perbaikan terjemahan dikerjakan di berkas Inggrisnya, bukan di console. Kalau berkasnya belum ada, /help menampilkan teks Indonesia.
 
 Mengisi satu topik (/console/docs → pilih topiknya)
 - Judul, Isi Panduan (markdown + tab pratinjau).
@@ -384,19 +385,66 @@ Aturan yang mengikat
 - **Jangan menaruh data pribadi** (nomor paspor, nomor telepon, alamat rumah) di artikel panduan. Isinya bisa ikut terkirim ke penyedia model saat chatbot menjawab.
 
 Chatbot-nya sendiri
-- Jawaban di widget membawa tiga hal tambahan: daftar **Sumber** yang bisa diklik (tiap baris menuju halaman artikelnya di /help, jadi maba bisa membaca aslinya), tiga **saran pertanyaan lanjutan**, dan tombol **suka/tidak suka**.
-- Suara itu tersimpan di ai_query_log.feedback (satu suara per jawaban, bisa diganti). Yang banyak "tidak membantu" adalah daftar periksa isi topik: biasanya potongannya kurang, bukan modelnya salah. Angka targetnya di docs/Guidebook Maba.md bagian KPI.
-- Saran lanjutan datang dari model. Kalau model tidak mengirimkannya (jawaban terpotong, atau jalur degradasi tanpa model), widget mengambil dari daftar FAQ di src/lib/guidebook-faq.ts untuk topik yang ikut terambil — daftar itu juga yang dipakai prewarm, jadi menambah baris di sana sekaligus memperbaiki saran cadangan.
+- Jawaban di widget membawa tiga hal tambahan: daftar **Sumber** yang bisa diklik (tiap baris menuju halaman artikelnya di /help, jadi maba bisa membaca aslinya), sampai tiga **saran pertanyaan lanjutan**, dan tombol **suka/tidak suka**.
+- Suara itu tersimpan di ai_query_log.feedback (satu suara per jawaban, bisa diganti) dan tampil di /console/docs/guidebook, panel **Suara Pengguna**: yang "tidak suka" di atas, lengkap dengan pertanyaannya dan artikel yang dikutip saat menjawab. Yang banyak "tidak membantu" adalah daftar periksa isi topik: biasanya potongannya kurang, bukan modelnya salah. Angka targetnya di docs/Guidebook Maba.md bagian KPI.
+- Saran lanjutan datang dari model, dan tiap saran diuji dulu ke pencarian supaya tombolnya tidak berakhir "belum ada panduan". Jawaban yang tidak butuh saran boleh tanpa saran sama sekali; daftar FAQ di src/lib/guidebook-faq.ts dipakai waktu modelnya tidak dipanggil (kuota habis, sakelar mati, Groq error) atau waktu jawabannya penolakan, dan daftar itu juga yang dipakai prewarm.
 - Batas 15 pertanyaan per pengguna per hari, dihitung per tanggal Asia/Shanghai. Habis kuota, sakelar mati, atau Groq error: jawabannya tetap potongan panduan yang paling relevan plus kalimat penjelas, bukan halaman error.
 - Sakelar darurat ada di database, tanpa deploy: set guide_meta.ai_enabled = false.
-- Cache jawaban diikat ke corpus_version, jadi menyimpan satu topik otomatis menyegarkan jawaban lama untuk pertanyaan yang sama.
+- Cache jawaban diikat ke corpus_version, jadi menyimpan satu topik otomatis menyegarkan jawaban lama untuk pertanyaan yang sama. Perubahan pada prompt atau pada susunan konteks ditandai dengan menaikkan ANSWER_FORMAT_VERSION di src/lib/guide-answer.ts; angka itu ikut jadi kunci cache, jadi jawaban lama tidak dipakai lagi. Setelah naik, jalankan prewarm sekali lagi kalau stok jawabannya mau tetap hangat.
+- Tiap artikel dikirim ke model sebatas dua jendela teks - satu jendela paling banyak 1.800 karakter yang diambil dari blok paling banyak memuat kata kunci pertanyaannya, plus satu jendela di bagian lain artikel kalau di sana masih ada baris yang memuat kata kuncinya (windowAroundTerms di src/lib/guidebook-terms.ts), total tidak lebih dari 3.600 karakter - bukan dari paragraf pembuka. Artinya artikel panjang aman, tapi bagian yang menjawab pertanyaan tetap harus memuat kata-kata yang dipakai maba (sebut "kirim barang" di bagian kirim barang, jangan cuma "logistik pengiriman" di judul bagian). Kalau pertanyaannya cuma disebut di ringkasan atas sementara bagian jawabannya memakai istilah lain, chatbot bisa menjawab "panduannya tidak memuat itu" padahal isinya ada.
+- Versi Inggris juga ikut dinilai saat pencarian, jadi pertanyaan berbahasa Inggris hanya ketemu kalau berkas di docs/guidebook/en/ ada atau sinonimnya menjembatani. Topik yang fileEn-nya kosong tetap bisa terjawab, tapi lewat jalur sinonim — bukan lewat judul Inggrisnya.
+- Jawaban dibatasi 60 kata, atau 120 kata kalau isinya memang daftar langkah/alamat/tarif/syarat. Batas ini di prompt (src/lib/groq.ts), bukan di widget: kalau jawaban terasa kurang lengkap, yang perlu ditambah adalah bagian artikelnya, bukan batasnya.
 - Prewarm (opsional, menjelang musim maba): npx tsx --env-file=.env.local scripts/prewarm-guide.ts menjawab daftar FAQ di src/lib/guidebook-faq.ts lebih dulu, supaya maba pertama tidak menunggu.
-- Uji mutu: npx tsx --env-file=.env.local src/db/eval-guidebook.ts menjalankan 38 pertanyaan dari docs/guidebook-golden.json. Tanda pending_review di berkas itu diisi tangan; hapus tanda itu begitu topiknya ditinjau, kalau tidak harness-nya tetap merah.
+- Uji mutu: npx tsx --env-file=.env.local src/db/eval-guidebook.ts menjalankan 101 pertanyaan dari docs/guidebook-golden.json dan mencetak recall@4 plus daftar pertanyaan yang luput. Ambang lulusnya 0,80; KPI-nya 0,85. Tanda pending_review di berkas itu diisi tangan; hapus tanda itu begitu topiknya ditinjau, kalau tidak harness-nya tetap merah. Tambahkan pertanyaan baru ke berkas yang sama setiap kali ada topik baru atau ada pertanyaan maba yang dijawab salah.
+- Uji logika pencarian tanpa database: npm run check:guidebook (71 pemeriksaan kata kunci, sinonim, entitas, jendela konteks, renderer, dan format pinyin).
 
 Kalau chatbot bilang "Belum ada panduan yang cocok"
 1. Cek topiknya di /console/docs: sudah ditinjau? belum kedaluwarsa? potongan pencariannya ada?
-2. Cek istilah yang dipakai pertanyaannya. Artikel panduan memakai kata Indonesia, sedangkan maba sering bertanya dalam bahasa Inggris; padanannya ada di SYNONYMS di src/lib/guidebook-terms.ts. Kalau istilah barunya belum ada di sana, tambahkan dulu.
+2. Cek istilah yang dipakai pertanyaannya. Artikel panduan memakai kata Indonesia, sedangkan maba sering bertanya dalam bahasa Inggris; padanannya ada di SYNONYMS di src/lib/guidebook-terms.ts. Kalau istilah barunya belum ada di sana, tambahkan dulu. Dua hal yang pernah bikin salah: kata yang berbeda bisa punya batang kata yang sama (makanan dan makan sama-sama jadi makan, jadi tidak menambah hitungan kata yang cocok), dan lantai relevansinya menuntut minimal tiga kata kunci yang cocok (kalau pertanyaannya cuma punya dua kata kunci, keduanya harus cocok). Kalau kata yang dipakai maba memang belum ada di artikelnya, tambahkan ke artikelnya lalu ingest ulang dengan --force.
 3. Kalau pertanyaannya memang belum ada topiknya, itu jawaban yang benar — catat pertanyaannya dan ajukan topik baru, jangan mengarang isi.`,
+  },
+  {
+    slug: "panduan-maba-kartu-tempat",
+    section: SERING_DIPAKAI,
+    title: "Panduan Maba — Kartu Tempat di Jawaban Chatbot",
+    content: `Kartu tempat muncul di bawah gelembung jawaban chatbot: satu kartu per tempat yang jawaban itu sebut, berisi nama tempat, satu baris keterangan pendek (alamat dari baris korpus yang sama), dan tombol ikon rute di kanan yang membuka tempat itu di Amap pada tab baru. Isinya bukan teks karangan model — namanya dari baris tempat di artikel panduan yang terambil saat pertanyaan itu dijawab, dan tautannya tautan di baris yang sama. Jadi maba tetap dapat tautannya walau model lupa menyalinnya.
+
+Kenapa jawaban tidak lagi menuliskan tempat satu per satu
+Nama dan alamat tempat sudah tampil di kartu, jadi jawaban cukup ringkasan pengelompokan: di distrik mana tempatnya berkumpul, jalur metro apa yang melayani, dan nama tempatnya disebut di dalam kalimat supaya kartunya ketemu. Alamat, bus, dan pintu keluar metro per tempat baru ditulis kalau pertanyaannya memang soal tempat itu. Untuk pertanyaan "ada masjid di Nanjing?", yang dijawab lebih dulu masjid di dalam kota (净觉寺, 草桥, 吉兆营); masjid di luar kota ada di pertanyaan lanjutan "masjid di luar kota Nanjing apa saja?".
+
+Perakitannya di server: src/lib/guide-answer.ts memuat potongan guide_chunks milik artikel yang menang di pencarian (maksimal 4 artikel), lalu placeButtons (src/lib/chat-places.ts) memakai teks gabungan potongan itu sebagai indeks tempat. Satu baris butir yang namanya ditulis tebal adalah satu tempat (- **净觉寺 Jingjue Mosque** — ...), dan tautannya tautan markdown di baris itu. Hasilnya dikirim lewat ChatResult.places (src/app/actions/ai.ts). Aturannya:
+
+- Urutannya urutan kemunculan nama tempat di dalam teks jawaban, bukan urutan skor pencarian.
+- Yang dapat kartu cuma tempat yang jawabannya sebut. Tempat di artikel yang tidak disebut jawabannya tidak dapat kartu, dan tempat yang disebut tapi barisnya tidak memuat tautan juga tidak dapat kartu — tautan tidak pernah dikarang.
+- Nama tempat dikenali dari bentuk hanzi (净觉寺) atau romanisasinya (Jingjue Mosque), dua-duanya diambil dari penanda tebal baris itu. Alias Amap sesudah nama tebal (Amap: 草桥寺) tidak ikut jadi keterangan kartu.
+- Keterangan di kartu dipotong sekitar 120 karakter di batas kata, jadi yang tampil alamat singkat, bukan seluruh isi baris.
+- Maksimal 12 kartu (MAX_PLACES), dan tautan yang sama cuma tampil sekali.
+- Daftar tempat lengkap juga ikut ke model lewat blok "Indeks tempat di artikel ini" (placeIndex), satu baris per tempat, maksimal 12 baris. Jadi angka di jawaban bisa dicek ke indeks itu walau potongan teks artikelnya cuma memuat dua-tiga baris, dan pertanyaan soal satu tempat tetap dijawab alamat serta rute metronya.
+- Tidak ada baris tempat bertautan di artikelnya berarti tidak ada kartu. Artikel yang memang tidak menyebut tempat apa pun wajar menghasilkan nol kartu.
+
+Bentuk URL yang dipakai korpus
+Bebas, asal tautannya tautan tempat itu sendiri — placeButtons tidak memeriksa bentuk URL, dan kalau satu baris memuat beberapa tautan yang dipilih host amap.com. Contoh yang dipakai korpus sekarang:
+
+https://uri.amap.com/search?keyword=<nama hanzi>&city=<南京>&src=ppit-nanjing
+
+Tautan pola ini cuma alat baca di korpus, bukan tautan kartu: yang jadi kartu chatbot cuma tautan halaman POI amap.com/place/<id>, jadi baris dengan tautan pencarian tidak menampilkan kartu apa pun — nama tempatnya tetap terjawab di teks jawaban.
+
+Nama tempat di keyword dan kota di city di-encode persen. Contoh dari docs/guidebook/tempat-ibadah-di-nanjing.md, 净觉寺 jadi:
+
+https://uri.amap.com/search?keyword=%E5%87%80%E8%A7%89%E5%AF%BA&city=%E5%8D%97%E4%BA%AC&src=ppit-nanjing
+
+Tempat yang halaman POI-nya belum ketemu karena itu cuma dapat jawaban, tanpa kartu di bawahnya; kartunya baru muncul setelah tautan barisnya diganti tautan amap.com/place/<id>. Jadi kalau sebuah pertanyaan tempat dijawab tanpa kartu, periksa dulu baris korpusnya sudah punya tautan halaman POI atau masih tautan pencarian.
+
+Label tautannya bebas ([净觉寺] atau [Masjid Jingjue] sama saja) karena yang dibaca cuma alamatnya. src=ppit-nanjing jangan dihapus. Tautan pencarian kata kunci (pola di atas) memakai GCJ-02 tanpa koordinat di artikel: kalau tombolnya menunjuk tempat yang salah, yang perlu dibetulkan adalah nama hanzi di keyword, bukan angka lintang-bujur.
+
+Yang dicek kalau kartunya hilang
+1. Tautannya benar-benar tautan markdown di baris tempat itu, bukan URL yang ditempel apa adanya di baris lain.
+2. Nama tempatnya ditulis tebal di awal baris butir, dan pertanyaannya menyebut nama itu.
+3. Topiknya sudah ditinjau, belum kedaluwarsa, dan potongan pencariannya tidak nol (syarat yang sama seperti chatbot boleh mengutipnya; cek panel Status Topik Guidebook di /console/docs).
+4. Pertanyaannya memang menyentuh artikel itu: jawabannya cuma menyinggung tempat dari artikel yang terambil, jadi pertanyaan visa yang tidak menyinggung artikel tempat ibadah menghasilkan nol tombol walau tautannya lengkap.
+5. Tombolnya selalu dihitung ulang di server saat menjawab, dari teks jawaban yang dipakai saat itu plus potongan terbaru: menyunting baris tempatnya langsung terlihat. Setelah menyunting isi, jalankan npx tsx --env-file=.env.local src/db/ingest-guide.ts [slug] supaya potongan pencariannya ikut diperbarui.
+
+Tidak perlu menyentuh kode atau database: cukup tempel tautannya di artikel, lalu ingest ulang topiknya.`,
   },
 ];
 

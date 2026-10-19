@@ -7,6 +7,7 @@ For those living off campus, the deposit is the biggest expense. The source's co
 - University application fee, usually 400 to 600 RMB, non-refundable and not covered by scholarships.
 - Seat confirmation deposit at some universities, after you receive the offer.
 - Tuition for self-funded students is 20,000 to 40,000 RMB per year.
+- Mandatory health insurance, bought at registration (see the Health Insurance section).
 - If you get a scholarship, some campuses still require the first-year tuition to be paid in full first; the reimbursement goes into a Chinese bank account in the first semester after enrollment.
 
 ## Monthly costs
@@ -37,6 +38,13 @@ The source does not give a single figure. Students in standard dormitories who e
 - If the budget is tight, rent together with classmates.
 - For scholarships, ask the admissions office when results are announced and whether recipients must pay in full first and then be reimbursed. Keep all receipts.
 - Cigarettes at 200 to 300 RMB per month are cited by some respondents as the biggest expense. The source's advice: do not smoke or drink alcohol if you want to save.
+
+## Health Insurance
+
+Health insurance is mandatory for international students, so it belongs in the first-month budget rather than being an optional item. The amount differs by campus.
+
+- **NJU** — 400 RMB per semester or 800 RMB per academic year, bought at registration on campus. The NJU guide recommends buying the student policy there rather than a policy from outside China, because foreign policies often require large co-payments, have caps, and exclude many illnesses.
+- **NUIST** — all international students must buy the comprehensive insurance prescribed by the university. The premium is paid together with the tuition fee, and students who refuse to pay it cannot register. For Chinese Government Scholarship, Confucius Institute Scholarship, and Jasmine Jiangsu Government Scholarship recipients, the university buys the group policy if the scholarship covers insurance. Other scholarship students, exchange students, and self-funded students pay it themselves if the scholarship or the agreement does not say the university covers it.
 
 ## Notes
 

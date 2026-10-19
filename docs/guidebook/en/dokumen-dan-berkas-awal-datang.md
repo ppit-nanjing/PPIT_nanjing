@@ -13,6 +13,27 @@ For school registration, the documents to bring:
 - CSCA
 - University application documents: CV, study plan, personal statement, SKCK, recommendation letter, application form for the university, photocopy of passport, academic transcript, and birth certificate
 
+## Registration at NJU
+
+According to the New Student Enrollment guide on NJU's website, registration is held in the lobby on the ground floor of Zeng Xianzi Building, Institute for International Students, 18 Jinyin Street, Gulou District (金银街18号，南京大学鼓楼校区海外教育学院曾宪梓楼). It takes place at the end of August for the fall semester and the end of February for the spring semester. Dormitory check-in comes after registration, on the Xianlin campus.
+
+Bring to the registration desk: admission letter, JW202, passport, several 2-inch passport photos with a light background, and the original Physical Examination Record if required. Bring enough RMB in cash as well — on campus, supermarkets and canteens only take cash, credit cards are not accepted.
+
+The registration desks are visited in this order:
+
+1. Information Desk — pick up the Registration Form.
+2. Scholarship desk — only for CSC or Confucius scholarship recipients.
+3. Exchange Students desk — pick up the enrolment materials.
+4. Insurance desk — pay the insurance fee.
+5. Tuition fee desk — skip it if you are an exchange student with tuition waived.
+6. Academic registration desk.
+7. Visa desk — visa matters, including the residence permit application.
+8. The desk near the visa counter — hand back the completed Registration Form.
+
+The student card is not handed out on registration day. Pick it up about a week later at the Office of the Institute for International Students, Room 503, Zeng Xianzi Building, Gulou Campus.
+
+If you choose to live off campus, two deadlines apply: register at the local police station within 24 hours of moving in, then report to the International Students' Service Office within 5 days to fill in the "NJU Study Abroad Student Off-Campus Accommodations Registration Form" and hand in one 2-inch half-length, bareheaded photo.
+
 ## Requirements for Passport Extension
 
 Requirements for the passport extension application:
