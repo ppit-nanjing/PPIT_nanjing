@@ -5,8 +5,9 @@ import { aiQueryLog, aiUsage, guideAnswers, guideChunks, guideMeta, helpArticles
 import { buildChatSystemPrompt, detectAnswerLanguage, type AnswerLanguage, type GroqMessage } from "./groq";
 import { assistantChat } from "./assistant";
 import { buildGuideContext, findGuideChunks, RETRIEVABLE_ARTICLE, type GuideChunk } from "./guidebook-search";
-import { questionEntities, searchTerms } from "./guidebook-terms";
+import { excerpt, orderByRank, questionEntities, searchTerms } from "./guidebook-terms";
 import { GUIDE_FAQ, GUIDE_STARTER_QUESTIONS } from "./guidebook-faq";
+import { placeButtons, type ChatPlace } from "./chat-places";
 
 // Jalur jawaban guidebook maba (docs/Guidebook Maba.md, bagian "AI answer path",
 // "Token and quota budget", dan "Edge cases"). Bukan Server Action: dipakai
@@ -39,12 +40,29 @@ const REFUSAL_NO_CHUNKS =
   "Belum ada panduan yang cocok dengan pertanyaan itu. Coba pakai kata lain, " +
   "atau lihat daftar topik panduan di /guidebook.";
 
+// Teks cadangan versi Inggris. Jalur jawaban ini tidak memanggil LLM, jadi
+// bahasanya tidak bisa ikut menyesuaikan seperti jawaban model - pertanyaan
+// Inggris harus dapat teks Inggris juga.
+const REFUSAL_NO_KEYWORDS_EN =
+  "That question is not specific enough yet. Try again with more concrete words, " +
+  "or browse the guide topics at /guidebook.";
+const REFUSAL_NO_CHUNKS_EN =
+  "No guide matches that question yet. Try other words, " +
+  "or browse the guide topics at /guidebook.";
+
 const DEGRADED_HEADER: Record<string, string> = {
   kuota_harian: "Kuota tanya AI hari ini sudah habis (15 pertanyaan sehari). Ini panduan yang paling relevan:",
   ai_nonaktif: "Asisten AI sedang dimatikan sementara oleh pengurus. Ini panduan yang paling relevan:",
 };
 
 const DEGRADED_HEADER_DEFAULT = "Asisten AI sedang tidak bisa dipakai. Ini panduan yang paling relevan:";
+
+const DEGRADED_HEADER_EN: Record<string, string> = {
+  kuota_harian: "Today's AI quota is used up (15 questions a day). Here is the most relevant guide:",
+  ai_nonaktif: "The AI assistant is temporarily switched off by the committee. Here is the most relevant guide:",
+};
+
+const DEGRADED_HEADER_DEFAULT_EN = "The AI assistant is unavailable right now. Here is the most relevant guide:";
 
 // Sapaan murni ("hi", "halo kak", "makasih") tidak punya kata kunci, jadi dulu
 // jatuh ke refusal "pertanyaan belum jelas". Balasannya kini ramah dan tetap
@@ -74,12 +92,18 @@ function isSmallTalk(question: string): boolean {
 // pengguna lain yang menanyakan kalimat sama akan menerima usulan edit itu.
 const PROFILE_EDIT_MARKER = "<<PROFILE_EDIT:";
 
-// Batas token keluaran jawaban. Dinaikkan dari 400 waktu penanda saran
-// lanjutan masuk: penanda itu ikut dihitung, dan kalau jawabannya kepotong di
-// tengah, penandanya hilang sehingga saran jatuh ke daftar FAQ. Angka ini
-// dipakai jalur jawaban biasa maupun prewarm supaya cache tidak terisi
-// jawaban yang lebih pendek dari jalur live.
-const ANSWER_MAX_TOKENS = 540;
+// Batas token keluaran jawaban. Naik 400 -> 540 waktu penanda saran lanjutan
+// masuk, lalu 540 -> 700 setelah pertanyaan "masjid di Nanjing di mana saja?"
+// berhenti tepat di tengah penandanya: jawaban berupa daftar alamat (tiga
+// masjid, jalur bus, exit metro) kehabisan ruang sebelum JSON-nya ditutup, jadi
+// tombol sarannya hilang. Angka ini dipakai jalur jawaban biasa maupun prewarm
+// supaya cache tidak terisi jawaban yang lebih pendek dari jalur live.
+
+const ANSWER_MAX_TOKENS = 700;
+
+// Batas jumlah kartu tempat di bawah jawaban: sebanyak tempat yang disebut
+// jawaban, selama satu artikel memuatnya (indeks tempat satu artikel ±12 baris).
+const MAX_PLACES = 12;
 
 export type GuideAnswer = {
   reply: string;
@@ -87,18 +111,22 @@ export type GuideAnswer = {
   // Pertanyaan lanjutan yang bisa diklik di widget chat: dari model kalau ada,
   // kalau tidak dari daftar FAQ yang topiknya ikut terambil.
   followUps: string[];
-  cacheHit: boolean;
-  degraded: boolean;
-  degradedReason: string | null;
   // Baris ai_query_log jawaban ini. Widget chat memakainya sebagai id pesan
   // waktu pengguna menekan suka/tidak suka.
   logId: string;
+  // Tombol tempat: hanya tempat yang jawabannya sebut, urut kemunculan di
+  // teks jawaban, tautannya dibaca dari baris korpusnya (src/lib/chat-places.ts).
+  places: ChatPlace[];
+  cacheHit: boolean;
+  degraded: boolean;
+  degradedReason: string | null;
 };
 
 type ChunkRow = {
   id: string;
   slug: string;
   title: string;
+  titleEn: string | null;
   ordinal: number;
   pageFrom: number | null;
   pageTo: number | null;
@@ -133,11 +161,64 @@ function questionHash(redacted: string): string {
 }
 
 // Kunci cache jawaban. Versi formatnya ikut di-hash supaya perubahan prompt,
-// panjang jawaban, atau aturan saran lanjutan otomatis membatalkan cache lama
-// (jawaban yang tersimpan sebelum perubahan tetap berperilaku lama). Naikkan
-// angka ini setiap kali bentuk jawaban berubah - setara menaikkan corpus_version
-// lewat ingest, tapi tanpa butuh akses database.
-const ANSWER_FORMAT_VERSION = 3;
+// panjang jawaban, aturan saran lanjutan, atau teks sumber yang dikirim ke model
+// otomatis membatalkan cache lama (jawaban yang tersimpan sebelum perubahan tetap
+// berperilaku lama). Naikkan angka ini setiap kali bentuk jawaban berubah -
+// setara menaikkan corpus_version lewat ingest, tapi tanpa butuh akses database.
+// 7 -> 8: batas panjang jawaban berubah dari "1-2 paragraf" jadi jumlah kata, jadi
+// jawaban panjang yang sudah tersimpan tidak boleh dipakai lagi. 8 -> 9: prompt
+// mewajibkan tautan tempat disalin apa adanya (lihat buildChatSystemPrompt); aturan
+// itu dicabut di 9 -> 10 karena jawaban panjang berhenti di tengah url. Sejak 10
+// tombol tempat dibaca dari nama tempat di dalam jawaban, bukan dari tautannya di
+// teks jawaban. 10 -> 11: cara retrieval memotong teks artikel berubah - dulu satu
+// blok 1.800 karakter yang dipotong di tengah baris, sekarang baris utuh di sekitar
+// baris terbaik (windowAroundTerms di src/lib/guidebook-terms.ts). Jawaban lama
+// dihitung dari teks yang terpotong di tengah, jadi tidak boleh dipakai lagi.
+// 11 -> 12: prompt tidak lagi menuliskan tempat sebagai daftar - nama dan alamatnya
+// tampil sebagai kartu di bawah jawaban - dan retrieval mengurutkan entri dalam kota
+// lebih dulu (inCityFirst di src/lib/guidebook-search.ts). Jawaban lama berbentuk
+// daftar per tempat, jadi dibuang dari cache.
+// 12 -> 13: konteks tiap artikel bertambah blok "Indeks tempat di artikel ini"
+// (placeIndex di src/lib/chat-places.ts), jadi model menerima daftar tempat yang
+// lengkap dan jumlah di jawaban bisa dicek ke sana. Teks konteks berubah lagi,
+// jadi jawaban lama yang menyebut "ada dua" tidak boleh dipakai.
+// 13 -> 14: aturan satu tempat ditambahkan - kartu tidak menggantikan jawaban
+// alamat/rute untuk pertanyaan tentang satu tempat, jadi model tidak lagi
+// menolak pertanyaan yang tempatnya justru ada di sumber.
+// 14 -> 15: aturan baru melarang jawaban tempat berbentuk daftar markdown, jadi
+// jawaban lama yang mendaftar 8 masjid keluar kota sebagai butir (nama di daftar,
+// nama lagi di kartu) tidak boleh dipakai.
+// 15 -> 16: baris indeks tempat (placeIndex) sekarang membawa penanda bagiannya
+// ([dalam kota] / [luar kota]), jadi konteks berubah lagi dan jawaban lama yang
+// menukar masjid dalam kota dengan masjid luar kota tidak boleh dipakai.
+// 16 -> 17: penolakan dipersempit ke hal yang ditanyakan, bukan topiknya - dulu
+// pertanyaan perpanjangan visa dijawab dengan tujuh langkah sampai Residence
+// Permit, sekarang cukup dua kalimat plus tawaran topik terdekat. Aturan hanzi
+// juga melarang model menulis pinyinnya sendiri, karena renderer
+// (annotateHanziPinyin) sudah menambahkannya.
+// 17 -> 18: retrieval mencocokkan kata kunci beserta akhiran yang dibuang
+// normalizeToken (termPattern di src/lib/guidebook-search.ts), jadi susunan
+// konteksnya bergeser - pertanyaan perpanjangan visa kini mengirim dokumen
+// berkas awal datang sebelum kerja/magang, dan pertanyaan paspor akhirnya
+// menemukan topiknya. Jawaban lama yang disusun dari konteks lain tidak boleh
+// dipakai lagi.
+// 18 -> 19: retrieval mengirim jendela kedua untuk artikel panjang
+// (windowAroundTerms di src/lib/guidebook-terms.ts), jadi konteks yang dilihat
+// model memuat fakta yang dulu jatuh di luar jendela - dan batas per artikelnya
+// naik ke MAX_CHUNK_CHARS_TOTAL. Jawaban cache lama disusun dari konteks yang
+// tidak memuat bagian itu ("sumber belum memuat besaran denda") dan tidak boleh
+// dipakai lagi untuk pertanyaan yang sama.
+// 19 -> 20: aturan pemilihan jendela kedua berubah - varian satu kata kunci di
+// baris yang sama tidak lagi mengalahkan judul bagian yang memuat dua kata kunci
+// berbeda (windowAroundTerms di src/lib/guidebook-terms.ts), jadi artikel panjang
+// mengirim jendela yang berbeda dari yang dilihat model saat versi 19. Jawaban
+// yang tersimpan dari konteks v19 - mulai dari jawaban 住宿登记 yang bilang batas
+// jamnya belum ada di sumber - tidak boleh dipakai lagi untuk pertanyaan yang sama.
+// 20 -> 21: artikel tempat ibadah kehilangan satu masjid dalam kota (汉西门
+// dihapus dari docs/guidebook/tempat-ibadah-di-nanjing.md), jadi konteksnya
+// berubah - jawaban masjid yang tersimpan menyebut empat masjid dan tidak boleh
+// dipakai lagi.
+const ANSWER_FORMAT_VERSION = 21;
 
 function answerCacheKey(redacted: string): string {
   return questionHash(`${redacted}\u0000v${ANSWER_FORMAT_VERSION}`);
@@ -172,6 +253,7 @@ async function loadChunks(scope: { slugs: string[] } | { ids: string[] }): Promi
       id: guideChunks.id,
       slug: helpArticles.slug,
       title: helpArticles.title,
+      titleEn: helpArticles.titleEn,
       ordinal: guideChunks.ordinal,
       pageFrom: guideChunks.pageFrom,
       pageTo: guideChunks.pageTo,
@@ -183,13 +265,15 @@ async function loadChunks(scope: { slugs: string[] } | { ids: string[] }): Promi
     .orderBy(helpArticles.sortOrder, guideChunks.ordinal);
 }
 
-function citationsFrom(chunks: ChunkRow[]): GuideAnswer["citations"] {
+function citationsFrom(chunks: ChunkRow[], lang: AnswerLanguage = "id"): GuideAnswer["citations"] {
   const bySlug = new Map<string, GuideAnswer["citations"][number]>();
   for (const chunk of chunks) {
     const existing = bySlug.get(chunk.slug);
     if (!existing) {
       bySlug.set(chunk.slug, {
-        title: chunk.title,
+        // Judul sitasi mengikuti bahasa jawabannya: pertanyaan Inggris tidak
+        // dikutipkan ke judul Indonesia selama terjemahannya ada.
+        title: lang === "en" ? chunk.titleEn ?? chunk.title : chunk.title,
         slug: chunk.slug,
         pageFrom: chunk.pageFrom,
         pageTo: chunk.pageTo,
@@ -214,14 +298,28 @@ const MAX_FOLLOWUPS = 3;
 const MAX_FOLLOWUP_CHARS = 160;
 
 /**
+ * Buang penanda yang kepotong batas token. Jawaban panjang berhenti tepat di
+ * tengah `<<FOLLOWUPS:[...]>>`, jadi regex penutup di atas tidak cocok dan sisa
+ * JSON-nya ikut tampil di gelembung jawaban ("...<<FOLLOWUPS:[\"Gereja Kristen").
+ * Penanda PROFILE_EDIT yang utuh dibiarkan: Server Action yang membacanya.
+ */
+function stripPartialMarkers(text: string): string {
+  const followUps = text.indexOf("<<FOLLOWUPS:");
+  if (followUps !== -1) return text.slice(0, followUps).trim();
+  const profile = text.indexOf(PROFILE_EDIT_MARKER);
+  if (profile !== -1 && !text.slice(profile).includes(">>")) return text.slice(0, profile).trim();
+  return text.trim();
+}
+
+/**
  * Pisahkan penanda pertanyaan lanjutan dari teks jawaban. Teks mentah - penanda
  * ikut di dalamnya - yang disimpan di cache, dan cache hit dibaca lewat fungsi
  * yang sama, jadi saran tidak hilang pada jawaban yang datang dari cache.
  */
 function parseAnswer(raw: string): { reply: string; followUps: string[] } {
   const match = raw.match(FOLLOWUPS_MARKER);
-  if (!match) return { reply: raw.trim(), followUps: [] };
-  const reply = raw.replace(FOLLOWUPS_MARKER, "").trim();
+  if (!match) return { reply: stripPartialMarkers(raw), followUps: [] };
+  const reply = stripPartialMarkers(raw.replace(FOLLOWUPS_MARKER, ""));
   let parsed: unknown;
   try {
     parsed = JSON.parse(match[1]);
@@ -246,14 +344,15 @@ function parseAnswer(raw: string): { reply: string; followUps: string[] } {
  * `slugs` diisi urutan relevansi hasil retrieval, jadi saran pertama datang
  * dari artikel yang paling relevan.
  */
-function fallbackFollowUps(slugs: (string | null)[], question: string): string[] {
+function fallbackFollowUps(slugs: (string | null)[], question: string, lang: AnswerLanguage): string[] {
   const topics = new Set(slugs.filter((slug): slug is string => slug !== null));
   const asked = normalizeQuestion(question);
   const out: string[] = [];
   for (const faq of GUIDE_FAQ) {
     if (!topics.has(faq.topic)) continue;
-    if (normalizeQuestion(faq.question) === asked || out.includes(faq.question)) continue;
-    out.push(faq.question);
+    const candidate = (lang === "en" ? faq.questionEn : undefined) ?? faq.question;
+    if (normalizeQuestion(candidate) === asked || out.includes(candidate)) continue;
+    out.push(candidate);
     if (out.length === MAX_FOLLOWUPS) break;
   }
   return out;
@@ -282,19 +381,26 @@ function withFollowUps(reply: string, followUps: string[]): string {
   return followUps.length > 0 ? `${base}\n\n<<FOLLOWUPS:${JSON.stringify(followUps)}>>` : base;
 }
 
-/** Satu paragraf pendek per topik, cukup untuk jawaban cadangan tanpa LLM. */
-function excerpt(text: string, max = 220): string {
-  const flat = text.replace(/\s+/g, " ").trim();
-  if (flat.length <= max) return flat;
-  const cut = flat.slice(0, max);
-  const lastSpace = cut.lastIndexOf(" ");
-  return `${(lastSpace > max / 2 ? cut.slice(0, lastSpace) : cut).trimEnd()}...`;
-}
-
-function retrievalReply(reason: string, chunks: ChunkRow[]): string {
-  const header = DEGRADED_HEADER[reason] ?? DEGRADED_HEADER_DEFAULT;
+function retrievalReply(reason: string, chunks: ChunkRow[], articles: GuideChunk[], lang: AnswerLanguage): string {
   const seen = new Set<string>();
   const blocks: string[] = [];
+  // Teks potongan tersimpan dalam Bahasa Indonesia (guide_chunks dibangun dari
+  // help_articles.content), jadi pertanyaan Inggris dijawab dari isi terjemahan
+  // artikelnya - tanpa nomor halaman karena berkas Inggris tidak memuat penanda
+  // halaman PDF-nya.
+  if (lang === "en") {
+    const header = DEGRADED_HEADER_EN[reason] ?? DEGRADED_HEADER_DEFAULT_EN;
+    for (const article of articles) {
+      if (seen.has(article.slug)) continue;
+      seen.add(article.slug);
+      const body = article.contentEn ?? article.content;
+      if (!body) continue;
+      blocks.push(`${article.titleEn ?? article.title}\n${excerpt(body)}\nRead: /help/${article.slug}`);
+      if (blocks.length === 3) break;
+    }
+    return blocks.length > 0 ? `${header}\n\n${blocks.join("\n\n")}` : header;
+  }
+  const header = DEGRADED_HEADER[reason] ?? DEGRADED_HEADER_DEFAULT;
   for (const chunk of chunks) {
     if (seen.has(chunk.slug)) continue;
     seen.add(chunk.slug);
@@ -351,7 +457,15 @@ async function logQuery(input: LogInput): Promise<string> {
 async function retrieve(question: string): Promise<{ articles: GuideChunk[]; chunks: ChunkRow[] } | null> {
   const articles = await findGuideChunks(question);
   if (articles.length === 0) return null;
-  const chunks = await loadChunks({ slugs: articles.map((a) => a.slug) });
+  // Urutan potongan mengikuti skor retrieval, bukan sort_order artikel:
+  // jawaban degradasi ("ini panduan yang paling relevan") dan daftar sitasinya
+  // dibaca dari array ini, dan pemotongan tiga artikel di retrievalReply hanya
+  // benar kalau yang terdepan memang yang paling relevan.
+  const chunks = orderByRank(
+    await loadChunks({ slugs: articles.map((a) => a.slug) }),
+    articles.map((a) => a.slug),
+    (chunk) => chunk.slug,
+  );
   if (chunks.length === 0) return null;
   return { articles, chunks };
 }
@@ -363,6 +477,10 @@ export async function askGuide(input: {
 }): Promise<GuideAnswer> {
   const started = Date.now();
   const question = normalizeQuestion(input.question);
+  // Bahasa jawaban ditentukan dari pertanyaannya, bukan dari locale antarmuka:
+  // maba yang menulis Inggris dapat jawaban Inggris, sitasi Inggris, dan teks
+  // cadangan Inggris walau halamannya sedang dibuka dalam Bahasa Indonesia.
+  const lang = detectAnswerLanguage(question);
 
   // Fixed refusal: tanpa kata kunci, jawabannya tidak dicari dan tidak di-cache.
   const refuse = async (reply: string): Promise<GuideAnswer> => {
@@ -379,6 +497,7 @@ export async function askGuide(input: {
       reply,
       citations: [],
       followUps: GUIDE_STARTER_QUESTIONS,
+      places: [],
       cacheHit: false,
       degraded: false,
       degradedReason: null,
@@ -397,11 +516,12 @@ export async function askGuide(input: {
       latencyMs: Date.now() - started,
     });
     return {
-      reply: GREETING_REPLY[detectAnswerLanguage(question)],
+      reply: GREETING_REPLY[lang],
       citations: [],
       // Sapaan tidak butuh tombol saran: teksnya sudah menyebut topik yang bisa
       // ditanya. Tombol saran cuma buat jawaban/refusal yang memang butuh arah.
       followUps: [],
+      places: [],
       cacheHit: false,
       degraded: false,
       degradedReason: null,
@@ -410,15 +530,19 @@ export async function askGuide(input: {
   };
 
   if (searchTerms(question).length === 0 && questionEntities(question).length === 0) {
-    return isSmallTalk(question) ? greet() : refuse(REFUSAL_NO_KEYWORDS);
+    return isSmallTalk(question) ? greet() : refuse(lang === "en" ? REFUSAL_NO_KEYWORDS_EN : REFUSAL_NO_KEYWORDS);
   }
 
   const retrieved = await retrieve(question);
-  if (!retrieved) return refuse(REFUSAL_NO_CHUNKS);
+  if (!retrieved) return refuse(lang === "en" ? REFUSAL_NO_CHUNKS_EN : REFUSAL_NO_CHUNKS);
 
   const { articles, chunks } = retrieved;
+  // Korpus tombol tempat: baris daftar tiap potongan yang ikut terambil. Tautan
+  // tiap tempat dibaca dari sini, bukan dari teks jawaban, jadi model boleh
+  // melepas atau menulis ulang tautannya tanpa membuat tombolnya hilang.
+  const corpus = chunks.map((c) => c.text).join("\n\n");
   const chunkIds = chunks.map((c) => c.id);
-  const citations = citationsFrom(chunks);
+  const citations = citationsFrom(chunks, lang);
   const redacted = redactQuestion(question);
   const hash = answerCacheKey(redacted);
   const { corpusVersion, aiEnabled } = await loadMeta();
@@ -427,8 +551,11 @@ export async function askGuide(input: {
   // jadi artikel yang sudah disembunyikan, dibatalkan tinjauannya, atau
   // kedaluwarsa tidak ikut terbit lewat cache walau corpus_version tidak naik.
   const cached = await findCachedAnswer(hash, corpusVersion);
+  // chunk_ids ditulis urut skor retrieval, dan loadChunks mengembalikannya urut
+  // sort_order - jadi urutannya dipulihkan di sini supaya sitasi jawaban dari
+  // cache tidak berbalik jadi urutan tampilan konsol.
   const cachedChunks = cached && cached.chunkIds.length > 0
-    ? await loadChunks({ ids: cached.chunkIds })
+    ? orderByRank(await loadChunks({ ids: cached.chunkIds }), cached.chunkIds, (chunk) => chunk.id)
     : [];
   if (cached && cachedChunks.length > 0) {
     await bumpHits(hash, corpusVersion);
@@ -441,11 +568,12 @@ export async function askGuide(input: {
       degradedReason: null,
       latencyMs: Date.now() - started,
     });
-    const cachedCitations = citationsFrom(cachedChunks);
+    const cachedCitations = citationsFrom(cachedChunks, lang);
     const parsed = parseAnswer(cached.answer);
     return {
       reply: parsed.reply,
       citations: cachedCitations,
+      places: placeButtons(corpus, parsed.reply, MAX_PLACES),
       followUps: parsed.followUps,
       cacheHit: true,
       degraded: false,
@@ -464,10 +592,12 @@ export async function askGuide(input: {
       degradedReason: reason,
       latencyMs: Date.now() - started,
     });
+    const reply = retrievalReply(reason, chunks, articles, lang);
     return {
-      reply: retrievalReply(reason, chunks),
+      reply,
       citations,
-      followUps: fallbackFollowUps(articles.map((a) => a.slug), question),
+      places: placeButtons(corpus, reply, MAX_PLACES),
+      followUps: fallbackFollowUps(articles.map((a) => a.slug), question, lang),
       cacheHit: false,
       degraded: true,
       degradedReason: reason,
@@ -479,7 +609,7 @@ export async function askGuide(input: {
   if (!(await consumeQuota(input.userId))) return degraded("kuota_harian", false);
 
   const messages: GroqMessage[] = [
-    { role: "system", content: buildChatSystemPrompt(buildGuideContext(articles), detectAnswerLanguage(question)) },
+    { role: "system", content: buildChatSystemPrompt(buildGuideContext(articles, lang), lang) },
     ...input.history,
   ];
   // Prewarm memanggil tanpa history, jadi pertanyaannya belum ada di messages.
@@ -493,6 +623,11 @@ export async function askGuide(input: {
   }
 
   const parsed = parseAnswer(reply);
+  // Penanda pertanyaan lanjutan yang datang lebih dulu membuat parseAnswer
+  // mengembalikan teks kosong. Jawaban kosong tidak boleh masuk cache: cache
+  // hit membacanya kembali apa adanya, jadi satu balasan kosong akan bertahan
+  // sampai versi korpus berubah. Pakai jawaban panduan dari potongan sumber.
+  if (parsed.reply.length === 0) return degraded("jawaban_kosong", true);
   const followUps = await resolveFollowUps(parsed.followUps);
   if (!reply.includes(PROFILE_EDIT_MARKER)) {
     await writeCache(hash, corpusVersion, redacted, withFollowUps(parsed.reply, followUps), chunkIds);
@@ -509,6 +644,7 @@ export async function askGuide(input: {
   return {
     reply: parsed.reply,
     citations,
+    places: placeButtons(corpus, parsed.reply, MAX_PLACES),
     followUps,
     cacheHit: false,
     degraded: false,
@@ -544,6 +680,7 @@ export async function warmCacheForQuestion(question: string): Promise<"cached" |
 
   const { articles, chunks } = retrieved;
   const chunkIds = chunks.map((c) => c.id);
+  const lang = detectAnswerLanguage(normalized);
   const redacted = redactQuestion(normalized);
   const hash = answerCacheKey(redacted);
   const { corpusVersion, aiEnabled } = await loadMeta();
@@ -554,12 +691,16 @@ export async function warmCacheForQuestion(question: string): Promise<"cached" |
   try {
     const reply = await assistantChat(
       [
-        { role: "system", content: buildChatSystemPrompt(buildGuideContext(articles), detectAnswerLanguage(normalized)) },
+        {
+          role: "system",
+          content: buildChatSystemPrompt(buildGuideContext(articles, lang), lang),
+        },
         { role: "user", content: normalized },
       ],
       { temperature: 0.5, maxTokens: ANSWER_MAX_TOKENS },
     );
     const parsed = parseAnswer(reply);
+    if (parsed.reply.length === 0) throw new Error("Respons AI kosong");
     const followUps = await resolveFollowUps(parsed.followUps);
     await writeCache(hash, corpusVersion, redacted, withFollowUps(parsed.reply, followUps), chunkIds);
     await logQuery({
