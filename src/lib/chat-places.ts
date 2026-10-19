@@ -38,8 +38,14 @@ const HAN_RUN = /\p{Script=Han}+/u;
 const LATIN_RUN = /[A-Za-z][A-Za-z0-9'’.-]*(?:\s+[A-Za-z][A-Za-z0-9'’.-]*)*/;
 /** Penanda tebal/miring di dalam label dibuang, sisanya teks apa adanya. */
 const EMPHASIS = /[*_`]/g;
-/** Tautan halaman POI Amap: satu-satunya tautan yang boleh jadi tautan kartu. */
-const AMAP_HREF = /^https?:\/\/(?:[\w-]+\.)*amap\.com\/place\/[\w-]+/i;
+/**
+ * Tautan Amap yang boleh jadi tautan kartu: halaman POI (`amap.com/place/<id>`)
+ * atau pencarian kata kunci (`uri.amap.com/search?keyword=…&city=…`). Baris
+ * korpus yang halaman POI-nya belum ketemu tetap dapat kartu lewat tautan
+ * pencarian - rutenya membuka hasil pencarian nama tempat itu di Amap, bukan
+ * mengarang koordinat. Tautan non-Amap tetap ditolak.
+ */
+const AMAP_HREF = /^https?:\/\/(?:[\w-]+\.)*amap\.com\/(?:place\/[\w-]+|search\/?\?)/i;
 /** Panjang satu baris indeks: nama + klausa transit, bukan alamat lengkap. */
 const MAX_INDEX = 90;
 /** Klausa transit di baris korpus: "Bus ..." atau "Metro: ...". */
@@ -98,9 +104,9 @@ export function placeButtons(chunks: string, reply: string, max = 6): ChatPlace[
     const match = PLACE_LINE.exec(line);
     const label = match?.[1]?.replace(EMPHASIS, "").trim();
     if (!label || !match) continue;
-    // Satu baris = satu tempat, dan tautannya tautan tempat itu. Baris yang
-    // tautan POI-nya belum ketemu (masih URL pencarian atau tautan lain) tidak
-    // menghasilkan kartu; tempatnya tetap terjawab di teks jawaban.
+    // Satu baris = satu tempat, dan tautannya tautan tempat itu. Halaman POI
+    // maupun tautan pencarian Amap sama-sama dipakai; tautan lain tidak
+    // menghasilkan kartu, dan tempatnya tetap terjawab di teks jawaban.
     const links = [...line.matchAll(MD_LINK)].map((link) => link[1]);
     const url = links.find((href) => AMAP_HREF.test(href));
     if (!url || used.has(url)) continue;
@@ -143,8 +149,9 @@ export function placeIndex(text: string): string[] {
     const match = PLACE_LINE.exec(line);
     const label = match?.[1]?.replace(EMPHASIS, "").trim();
     if (!match || !label) continue;
-    // Hanya baris yang punya tautan Amap: baris tebal lain ("Deposit:", "Cari
-    // mesinnya.") bukan tempat dan hanya menghabiskan jatah konteks.
+    // Hanya baris yang punya tautan Amap (halaman POI atau pencarian): baris
+    // tebal lain ("Deposit:", "Cari mesinnya.") bukan tempat dan hanya
+    // menghabiskan jatah konteks.
     const links = [...line.matchAll(MD_LINK)].map((link) => link[1]);
     if (!links.some((href) => AMAP_HREF.test(href))) continue;
     const rest = detailFrom(line, match.index + match[0].length).replace(EMPHASIS, "");

@@ -7,7 +7,7 @@ import { assistantChat } from "./assistant";
 import { buildGuideContext, findGuideChunks, RETRIEVABLE_ARTICLE, type GuideChunk } from "./guidebook-search";
 import { excerpt, orderByRank, questionEntities, searchTerms } from "./guidebook-terms";
 import { GUIDE_FAQ, GUIDE_STARTER_QUESTIONS } from "./guidebook-faq";
-import { placeButtons, type ChatPlace } from "./chat-places";
+import { placeButtons, placeIndex, type ChatPlace } from "./chat-places";
 
 // Jalur jawaban guidebook maba (docs/Guidebook Maba.md, bagian "AI answer path",
 // "Token and quota budget", dan "Edge cases"). Bukan Server Action: dipakai
@@ -218,7 +218,40 @@ function questionHash(redacted: string): string {
 // dihapus dari docs/guidebook/tempat-ibadah-di-nanjing.md), jadi konteksnya
 // berubah - jawaban masjid yang tersimpan menyebut empat masjid dan tidak boleh
 // dipakai lagi.
-const ANSWER_FORMAT_VERSION = 21;
+// 21 -> 22: pembagian jatah teks antar artikel berubah (buildGuideContext di
+// src/lib/guidebook-search.ts): tiap artikel peringkat dapat bagiannya sendiri,
+// jadi artikel peringkat 2-4 ikut masuk konteks. Jawaban v21 disusun dari
+// konteks yang hanya memuat satu-dua artikel pertama - penolakan "sumber belum
+// memuat" untuk fakta yang ada di artikel peringkat bawah - dan tidak boleh
+// dipakai lagi untuk pertanyaan yang sama.
+// 22 -> 23: aturan prompt soal kelompok di dalam artikel berubah
+// (buildChatSystemPrompt di src/lib/groq.ts): pertanyaan yang menanyakan satu
+// kelompok - misalnya masjid di luar kota - wajib menyebut anggota kelompok itu
+// dari indeks tempat, bukan menjawab dengan kelompok lain lalu bilang yang
+// ditanyakan tidak dirinci. Jawaban cache v22 untuk pertanyaan seperti itu
+// berhenti di "tidak saya rinci di sini"; aturan "sebut masjid dalam kota" juga
+// dikoreksi dari empat jadi tiga masjid.
+// 23 -> 24: jendela teks tiap artikel berubah (windowAroundTerms di
+// src/lib/guidebook-terms.ts) - sekarang sampai tiga jendela, dan yang dipilih
+// adalah baris yang memuat kata kunci yang belum terbaca di jendela sebelumnya,
+// bukan baris dengan kecocokan terbanyak - ditambah jatah konteksnya
+// (buildGuideContext di src/lib/guidebook-search.ts) yang cukup untuk seluruh
+// jendela itu, dan aturan prompt soal pertanyaan lanjutan (buildChatSystemPrompt
+// di src/lib/groq.ts). Jawaban cache v23 disusun dari konteks yang tidak memuat
+// baris jawabannya (alamat Perpustakaan Nanjing, "SIM internasional tidak
+// berlaku di Nanjing", denda 500 RMB per hari), jadi penolakan "panduannya tidak
+// memuat itu" yang tersimpan tidak boleh dipakai lagi. Bahasa jawaban juga
+// dihitung ulang: pertanyaan Indonesia bertypo berat tidak lagi dijawab Inggris.
+// 24 -> 25: aturan prompt kartu tempat berubah (buildChatSystemPrompt di
+// src/lib/groq.ts) - kalimat "alamat tampil di kartu" hanya dikirim kalau
+// artikel yang terambil punya baris tempat bertautan Amap, dan jumlah yang
+// disebut wajib cocok dengan nama yang benar-benar disebut. Pencarian sekarang
+// membuang kata perintah ("sebutkan semua ... satu per satu") supaya artikel
+// tempat ibadah benar-benar terambil, dan tautan pencarian Amap diterima sebagai
+// tautan kartu. Jawaban cache v24 untuk pertanyaan "sebutkan semua masjid di
+// luar kota" menjanjikan kartu yang tidak pernah dirender dan menyebut jumlah
+// yang salah, jadi tidak boleh dipakai lagi.
+const ANSWER_FORMAT_VERSION = 25;
 
 function answerCacheKey(redacted: string): string {
   return questionHash(`${redacted}\u0000v${ANSWER_FORMAT_VERSION}`);
@@ -609,7 +642,14 @@ export async function askGuide(input: {
   if (!(await consumeQuota(input.userId))) return degraded("kuota_harian", false);
 
   const messages: GroqMessage[] = [
-    { role: "system", content: buildChatSystemPrompt(buildGuideContext(articles, lang), lang) },
+    {
+      role: "system",
+      content: buildChatSystemPrompt(
+        buildGuideContext(articles, lang),
+        lang,
+        placeIndex(corpus).length > 0,
+      ),
+    },
     ...input.history,
   ];
   // Prewarm memanggil tanpa history, jadi pertanyaannya belum ada di messages.
@@ -693,7 +733,11 @@ export async function warmCacheForQuestion(question: string): Promise<"cached" |
       [
         {
           role: "system",
-          content: buildChatSystemPrompt(buildGuideContext(articles, lang), lang),
+          content: buildChatSystemPrompt(
+            buildGuideContext(articles, lang),
+            lang,
+            placeIndex(chunks.map((c) => c.text).join("\n\n")).length > 0,
+          ),
         },
         { role: "user", content: normalized },
       ],

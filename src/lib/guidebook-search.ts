@@ -51,7 +51,30 @@ export type GuideRow = GuideChunk;
 
 /** Batas potongan & panjang konteks: cukup untuk jawaban 1-3 paragraf, tetap murah per pesan. */
 export const MAX_CHUNKS = 4;
-const MAX_CONTEXT_CHARS = 7000;
+/** Judul artikel dan judul bagian yang selalu ditulis di depan tiap potongan. */
+const ARTICLE_HEADER_CHARS = 80;
+/** Jatah indeks tempat (maks MAX_INDEX_ROWS baris, lihat chat-places.ts). */
+const PLACE_INDEX_CHARS = 1600;
+/**
+ * Anggaran teks seluruh artikel dalam satu pertanyaan. Setiap artikel yang
+ * dikutip dijamin dapat seluruh jendelanya (MAX_CHUNK_CHARS_TOTAL - jendela
+ * utama plus jendela kedua), lalu sisanya dipakai indeks tempat.
+ *
+ * Dulu 7000: lebih kecil dari dua jendela penuh, jadi satu artikel bisa
+ * menghabiskan seluruh anggaran, perulangannya berhenti, dan artikel peringkat
+ * 2-4 - yang justru memuat jawabannya - tidak pernah masuk konteks padahal UI
+ * tetap menyitirnya (14 dari 17 kegagalan pada uji 52 pertanyaan).
+ *
+ * Lalu MAX_CHUNK_CHARS saja per artikel: jendela keduanya dihitung tapi tidak
+ * pernah muat, jadi baris jawaban yang cuma ada di jendela kedua (uraian "SIM
+ * internasional tidak berlaku di Nanjing", denda "500 RMB per hari") tetap
+ * hilang dari prompt - sama saja dengan tidak punya jendela kedua. Anggarannya
+ * sekarang seukur jendela: 4 x MAX_CHUNK_CHARS_TOTAL + indeks tempat (sekitar
+ * 16 KB, kurang lebih 12 ribu token). Prompt jadi sekitar 1.7x lebih panjang;
+ * kalau biayanya suatu saat lebih penting daripada kasus yang hilang itu,
+ * ubah satu baris ini - bukan memotong jendela kedua di tiga tempat berbeda.
+ */
+const MAX_CONTEXT_CHARS = MAX_CHUNKS * (MAX_CHUNK_CHARS_TOTAL + ARTICLE_HEADER_CHARS) + PLACE_INDEX_CHARS;
 
 // Tanpa batas LIMIT: skoringnya di JS, dan LIMIT tanpa ORDER BY membuang kandidat
 // secara acak - artikel terbaik bisa hilang sebelum sempat diskor. Korpusnya
@@ -387,30 +410,45 @@ function inCityFirst(body: string): string {
  * Batas per artikelnya MAX_CHUNK_CHARS_TOTAL, bukan MAX_CHUNK_CHARS: satu artikel
  * bisa mengirim dua jendela (windowAroundTerms), dan potongan di sini tidak boleh
  * membuang jendela keduanya. Biayanya tetap terkendali karena totalnya dibatasi
- * MAX_CONTEXT_CHARS.
+ * MAX_CONTEXT_CHARS, dan jatahnya dibagi rata ke semua artikel yang dikutip -
+ * urutan "siapa cepat dia dapat" pernah membuang artikel peringkat belakang
+ * tanpa jejak (lihat MAX_CONTEXT_CHARS).
  */
 export function buildGuideContext(chunks: GuideChunk[], lang: AnswerLanguage = "id"): string {
+  const en = lang === "en";
+  const perArticle = Math.floor((MAX_CONTEXT_CHARS - PLACE_INDEX_CHARS) / Math.max(chunks.length, 1));
   const parts: string[] = [];
+  const extras: string[] = [];
   let used = 0;
   for (const chunk of chunks) {
-    const en = lang === "en";
-    const body = ((en ? chunk.contentEn ?? chunk.content : chunk.content) ?? "")
+    const text = ((en ? chunk.contentEn ?? chunk.content : chunk.content) ?? "")
       .replace(/\n{3,}/g, "\n\n")
       .trim()
       .slice(0, MAX_CHUNK_CHARS_TOTAL);
-    const ordered = inCityFirst(body);
+    const ordered = inCityFirst(text);
     const section = en ? chunk.sectionEn ?? chunk.section : chunk.section;
     const title = en ? chunk.titleEn ?? chunk.title : chunk.title;
     // Daftar tempat lengkap artikel, di luar jendela teks: pertanyaan "ada
     // masjid apa saja?" tidak boleh dijawab dari dua baris yang kebetulan muat.
     const places = (en ? chunk.placesEn ?? chunk.places : chunk.places) ?? [];
     const index = places.length
-      ? `\n\n## ${en ? "Place index in this article" : "Indeks tempat di artikel ini"}\n${places.join("\n")}`
+      ? `## ${en ? "Place index in this article" : "Indeks tempat di artikel ini"}\n${places.join("\n")}`
       : "";
-    const part = `### ${section} - ${title}\n${ordered}${index}`;
-    if (used + part.length > MAX_CONTEXT_CHARS) break;
-    parts.push(part);
-    used += part.length;
+    const header = `### ${section} - ${title}\n`;
+    const body = ordered.slice(0, Math.max(perArticle - header.length, 0));
+    parts.push(`${header}${body}`);
+    // Jendela utamanya sudah pasti ikut; sisa teks artikel (indeks tempat lebih
+    // dulu daripada jendela kedua) hanya kalau anggarannya masih tersisa.
+    extras.push([index, ordered.slice(body.length)].filter(Boolean).join("\n\n"));
+    used += header.length + body.length + (parts.length > 1 ? 2 : 0);
+  }
+  let room = MAX_CONTEXT_CHARS - used;
+  for (let i = 0; i < extras.length && room > 0; i += 1) {
+    const take = extras[i].slice(0, room);
+    const cut = take.lastIndexOf("\n");
+    if (cut <= 0) continue;
+    parts[i] += `\n\n${take.slice(0, cut)}`;
+    room -= cut + 2;
   }
   return parts.join("\n\n");
 }

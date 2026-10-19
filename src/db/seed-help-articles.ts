@@ -423,17 +423,17 @@ Perakitannya di server: src/lib/guide-answer.ts memuat potongan guide_chunks mil
 - Tidak ada baris tempat bertautan di artikelnya berarti tidak ada kartu. Artikel yang memang tidak menyebut tempat apa pun wajar menghasilkan nol kartu.
 
 Bentuk URL yang dipakai korpus
-Bebas, asal tautannya tautan tempat itu sendiri — placeButtons tidak memeriksa bentuk URL, dan kalau satu baris memuat beberapa tautan yang dipilih host amap.com. Contoh yang dipakai korpus sekarang:
+Dua bentuk tautan Amap sama-sama diterima placeButtons: halaman POI amap.com/place/<id> dan pencarian kata kunci uri.amap.com/search?keyword=…&city=…&src=ppit-nanjing. Kalau satu baris memuat beberapa tautan, yang dipakai tautan host amap.com pertama. Contoh tautan pencarian yang dipakai korpus:
 
 https://uri.amap.com/search?keyword=<nama hanzi>&city=<南京>&src=ppit-nanjing
 
-Tautan pola ini cuma alat baca di korpus, bukan tautan kartu: yang jadi kartu chatbot cuma tautan halaman POI amap.com/place/<id>, jadi baris dengan tautan pencarian tidak menampilkan kartu apa pun — nama tempatnya tetap terjawab di teks jawaban.
+Tautan pencarian tetap menghasilkan kartu: tombol rutenya membuka hasil pencarian nama tempat itu di Amap, dan label tautannya "Rute Amap" seperti di korpus. Tautan non-Amap tetap ditolak — tautan tidak pernah dikarang.
 
 Nama tempat di keyword dan kota di city di-encode persen. Contoh dari docs/guidebook/tempat-ibadah-di-nanjing.md, 净觉寺 jadi:
 
 https://uri.amap.com/search?keyword=%E5%87%80%E8%A7%89%E5%AF%BA&city=%E5%8D%97%E4%BA%AC&src=ppit-nanjing
 
-Tempat yang halaman POI-nya belum ketemu karena itu cuma dapat jawaban, tanpa kartu di bawahnya; kartunya baru muncul setelah tautan barisnya diganti tautan amap.com/place/<id>. Jadi kalau sebuah pertanyaan tempat dijawab tanpa kartu, periksa dulu baris korpusnya sudah punya tautan halaman POI atau masih tautan pencarian.
+Tempat yang halaman POI-nya belum ketemu tetap dapat kartu lewat tautan pencarian; ganti ke amap.com/place/<id> kalau halaman POI-nya sudah ada, supaya tombolnya langsung membuka tempat, bukan hasil pencarian. Kalau sebuah pertanyaan tempat dijawab tanpa kartu, periksa dulu baris korpusnya punya tautan Amap (POI atau pencarian) dan namanya disebut di jawaban.
 
 Label tautannya bebas ([净觉寺] atau [Masjid Jingjue] sama saja) karena yang dibaca cuma alamatnya. src=ppit-nanjing jangan dihapus. Tautan pencarian kata kunci (pola di atas) memakai GCJ-02 tanpa koordinat di artikel: kalau tombolnya menunjuk tempat yang salah, yang perlu dibetulkan adalah nama hanzi di keyword, bukan angka lintang-bujur.
 

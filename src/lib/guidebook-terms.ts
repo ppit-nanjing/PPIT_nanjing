@@ -32,6 +32,14 @@ const STOPWORDS: Record<string, true> = {
   kami: true, kita: true, anda: true, nya: true, tidak: true, bukan: true, belum: true, sudah: true,
   juga: true, saja: true, mau: true, ingin: true, butuh: true, tolong: true, minta: true, tanya: true,
   cara: true, info: true, informasi: true, dong: true, ya: true, kah: true, sih: true, the: true,
+  // Kata penyusun perintah ("sebutkan semua ... satu per satu beserta alamatnya")
+  // bukan topik. Kalau ikut dicari, kata seperti "satu" dan "per" cocok dengan
+  // hampir semua artikel, menaikkan skor artikel yang tidak menjawab, dan
+  // artikel tempat ibadah - satu-satunya yang memuat daftar masjid - terdorong
+  // keluar dari empat artikel teratas untuk pertanyaan "sebutkan semua masjid
+  // di luar kota ... beserta alamatnya".
+  sebut: true, sebutkan: true, semua: true, satu: true, per: true, beserta: true,
+  alamatnya: true, masing: true,
   and: true, for: true, with: true, how: true, what: true, where: true, when: true, who: true, can: true,
   // Kata fungsi Inggris lain yang muncul di pertanyaan maba ("how is the visa
   // work?"). Kalau ikut dicari, kata seperti "is" mencocokkan hampir semua
@@ -158,6 +166,28 @@ const SYNONYMS: Record<string, string[]> = {
   wechat: ["wechat", "微信"],
   alipay: ["alipay", "支付宝"],
   address: ["alamat", "lokasi"],
+  // Artikel wisata menulis nama tempatnya dalam bahasa Inggris/China aslinya
+  // ("Nanjing Library", 南京图书馆), jadi pertanyaan "alamat Perpustakaan
+  // Nanjing di mana?" tidak punya satu kata pun yang cocok dengan barisnya
+  // sendiri - barisnya seri dengan puluhan entri lain dan jendelanya jatuh di
+  // entri pertama daftar.
+  perpustakaan: ["library", "图书馆"],
+  library: ["perpustakaan", "图书馆"],
+  // Kasus yang sama, tapi kali ini panduannya menyebut gedung dan ruangannya
+  // dengan nama aslinya ("Zeng Xianzi Building", "Room 503"). Pertanyaan "kartu
+  // mahasiswa saya diambil di gedung apa dan ruangan nomor berapa?" tidak punya
+  // satu kata pun yang cocok dengan baris jawabannya, jadi skornya kalah dari
+  // artikel yang cuma kebetulan memuat kata "nomor".
+  gedung: ["building"],
+  building: ["gedung"],
+  ruangan: ["ruang", "room"],
+  ruang: ["ruangan", "room"],
+  // Artikel dari bandara menulis "bandara" dan "mendarat", pertanyaannya
+  // menulis "pesawat tiba" - kata yang tidak ada di artikel itu.
+  pesawat: ["bandara", "mendarat"],
+  bandara: ["pesawat", "airport"],
+  sepeda: ["单车", "bike", "bicycle"],
+  bike: ["sepeda", "单车"],
   contact: ["kontak", "nomor", "whatsapp"],
   emergency: ["darurat", "nomor penting"],
   // Pertanyaan campur bahasa soal rumah ibadah, kerja, dan libur nasional
@@ -415,13 +445,25 @@ export function questionEntities(question: string): string[] {
 export const MAX_CHUNK_CHARS = 1800;
 
 /**
- * Batas teks satu artikel setelah jendela kedua ikut dikirim. Dua jendela -
- * masing-masing paling banyak MAX_CHUNK_CHARS - sudah menutup fakta yang terpisah
- * jauh, dan batasnya sengaja tidak lebih besar dari itu: biaya per pesan naik
- * paling banyak dua kali lipat, sementara total konteksnya tetap dijaga
- * MAX_CONTEXT_CHARS di buildGuideContext.
+ * Batas teks satu artikel sesudah jendela tambahannya ikut dikirim: jendela
+ * utama (paling banyak MAX_CHUNK_CHARS) plus sampai MAX_EXTRA_WINDOWS jendela
+ * lain, dengan jatah total yang dibagi rata. Batasnya sengaja tidak lebih besar
+ * dari dua kali MAX_CHUNK_CHARS: biaya per pesan naik paling banyak dua kali
+ * lipat, sementara total konteksnya tetap dijaga MAX_CONTEXT_CHARS di
+ * buildGuideContext.
  */
 export const MAX_CHUNK_CHARS_TOTAL = MAX_CHUNK_CHARS * 2;
+
+/**
+ * Jumlah jendela tambahan per artikel (di luar jendela utama). Satu jendela
+ * tambahan tidak cukup kalau baris jawabannya seri dengan baris lain yang lebih
+ * awal - di artikel visa, baris "SIM internasional tidak berlaku di Nanjing"
+ * kalah dari baris appointment yang sama-sama dua istilah berbeda, lalu jatah
+ * jendelanya habis di baris yang tidak menjawab. Jatah MAX_CHUNK_CHARS_TOTAL
+ * dibagi rata ke jendela-jendela itu, jadi menambah jendela tidak menambah
+ * panjang konteks - hanya memindahkan bagian yang dikirim.
+ */
+export const MAX_EXTRA_WINDOWS = 2;
 
 /**
  * Penanda teks yang tidak ikut dikirim, di antara dua jendela satu artikel.
@@ -502,11 +544,12 @@ function widenWindow(
 /**
  * Teks satu artikel yang dikirim ke model: satu jendela di sekitar baris tempat
  * kata kunci pertanyaannya paling banyak muncul (paling banyak MAX_CHUNK_CHARS),
- * ditambah jendela kedua kalau di bagian lain artikelnya masih ada baris yang
- * memuat kata kuncinya. Jawaban satu artikel sering terbelah dua tempat - denda
- * di daftar sanksi, batas hari lapor di bagian administrasi - dan dengan satu
- * jendela saja model menjawab "panduannya tidak memuat itu" untuk fakta yang ada
- * di artikelnya. Artikel pendek, dan artikel yang bagian keduanya tidak memuat
+ * ditambah sampai MAX_EXTRA_WINDOWS jendela di baris-baris lain yang juga memuat
+ * kata kuncinya, dihitung dari jatah MAX_CHUNK_CHARS_TOTAL. Jawaban satu artikel
+ * sering terbelah dua tempat - denda di daftar sanksi, batas hari lapor di bagian
+ * administrasi - dan dengan satu jendela saja model menjawab "panduannya tidak
+ * memuat itu" untuk fakta yang ada di artikelnya. Artikel pendek, dan artikel
+ * yang bagian keduanya tidak memuat
  * satu kata kunci pun, keluar persis sama seperti sebelum ada jendela kedua.
  *
  * Artikel yang lebih panjang dipotong di sekitar baris tempat kata kunci
@@ -523,7 +566,9 @@ function widenWindow(
  * dua. Skor mentah sering cuma mengulang satu topik dengan dua varian katanya,
  * jadi baris yang cuma menyinggung topik itu mengalahkan judul bagian yang
  * memuat dua kata kunci berbeda ("## Registrasi 住宿登记: Batas 24 Jam") dan
- * jatah jendela kedua habis di bagian yang tidak menjawab pertanyaan. Kalau di
+ * jatah jendela kedua habis di bagian yang tidak menjawab pertanyaan. Jendela
+ * pertama dinilai dengan aturan yang sama supaya baris yang menang di situ juga
+ * baris dengan bukti terbanyak, bukan baris yang mengulang satu topik. Kalau di
  * luar jendela pertama tidak ada satu baris pun yang memuat kata kuncinya,
  * artikelnya keluar sebagai satu jendela.
  *
@@ -546,10 +591,21 @@ export function windowAroundTerms(body: string, terms: string[]): string {
   // awal kalimat, sementara sisi skoring membandingkan teks yang sudah di-lowercase.
   const probes = terms.map((term) => new RegExp(escapedTerm(term), "iu"));
   const lines = body.split("\n");
+  // Nilai satu baris dihitung tanpa mengulang istilah yang sebenarnya varian
+  // istilah lain di baris yang sama: "izin" dan "tinggal" pada baris
+  // "## ... Izin Tinggal" hanya satu bukti, begitu juga "pakai" pada baris yang
+  // sudah memuat "dipakai". Skor mentahnya sering cuma mengulang satu topik
+  // dengan dua varian katanya, jadi baris yang cuma menyinggung topik itu
+  // mengalahkan baris yang memuat dua kata kunci berbeda - dan di jalur ini
+  // baris pemenangnya menentukan di mana jendela utama dipotong.
+  const distinctHits = (line: string) => {
+    const hits = terms.filter((_, j) => probes[j].test(line));
+    return hits.filter((term) => !hits.some((other) => other !== term && other.includes(term)));
+  };
   let best = 0;
   let bestScore = 0;
   lines.forEach((line, i) => {
-    const score = probes.reduce((total, probe) => (probe.test(line) ? total + 1 : total), 0);
+    const score = distinctHits(line).length;
     // Seri dimenangkan baris paling awal, bukan baris paling panjang. Di artikel
     // berdaftar, baris pertama yang cocok adalah entri pertama bagian pertama;
     // baris panjang belakangan (mis. satu masjid di luar kota) tidak boleh
@@ -564,47 +620,81 @@ export function windowAroundTerms(body: string, terms: string[]): string {
   const primaryText = primaryLines.join("\n");
 
   // Baris yang memuat kata kunci pertanyaan tapi jatuh di luar jendela pertama:
-  // di situlah bagian kedua artikel sering menyimpan jawabannya. Sisi atas dan
-  // sisi bawah jendela pertama dinilai terpisah, lalu sisi terbaik yang dipakai -
-  // seri dimenangkan sisi atas, mengikuti aturan "baris paling awal menang" di
-  // jendela pertama, lalu baris dengan lebih banyak kata kunci cocok.
+  // di situlah bagian kedua artikel sering menyimpan jawabannya. Kandidatnya
+  // diambil sampai MAX_EXTRA_WINDOWS, satu per satu, dengan aturan: kata kunci
+  // yang BELUM terbaca di jendela sebelumnya dulu, baru istilah berbeda, baru
+  // jumlah kecocokan, baru baris paling awal.
   //
-  // Nilai satu baris dihitung tanpa mengulang istilah yang sebenarnya varian
-  // istilah lain di baris yang sama: "izin" dan "tinggal" pada baris
-  // "## ... Izin Tinggal" hanya satu bukti, begitu juga "laku" pada baris yang
-  // sudah memuat "dilakukan". Tanpa itu baris yang mengulang satu topik dengan
-  // dua varian katanya mengalahkan judul bagian yang memuat dua kata kunci
-  // berbeda, dan jendela kedua habis di bagian yang tidak menjawab pertanyaan.
-  let anchor = -1;
-  let anchorDistinct = 0;
-  let anchorScore = 0;
-  for (const [low, high] of [[0, primary.start - 1], [primary.end + 1, lines.length - 1]] as const) {
-    for (let i = low; i <= high; i++) {
-      const hits = terms.filter((_, j) => probes[j].test(lines[i]));
-      if (hits.length === 0) continue;
-      const distinct = hits.filter((term) => !hits.some((other) => other !== term && other.includes(term))).length;
-      if (distinct > anchorDistinct || (distinct === anchorDistinct && hits.length > anchorScore)) {
-        anchor = i;
-        anchorDistinct = distinct;
-        anchorScore = hits.length;
+  // Urutan itu penting di artikel visa. Jendela utamanya sudah memuat
+  // "residence permit" dan "lewat", jadi baris yang mengulang kata kunci itu
+  // dengan empat kecocokan selalu menang kalau penilainya jumlah kecocokan -
+  // sementara baris "## Denda Overstay" yang cuma memuat satu kata kunci, dan
+  // satu-satunya kata kunci yang belum terbaca, justru tempat jawabannya.
+  // Begitu juga baris "SIM internasional tidak berlaku di Nanjing": kata
+  // kuncinya seri dengan baris appointment yang lebih awal, dan satu jendela
+  // tambahan saja membuatnya kalah. Sisa jatahnya karena itu dibagi rata ke
+  // beberapa jendela, bukan diberikan seluruhnya ke satu baris.
+  const anchors: number[] = [];
+  // Teks yang sudah terbaca model sejauh ini (jendela utama + baris jangkar yang
+  // sudah dipilih); kata kunci yang sudah ada di sini tidak dihitung "baru" lagi.
+  let windowsText = primaryText;
+  while (anchors.length < MAX_EXTRA_WINDOWS) {
+    let pick = -1;
+    let pickFresh = 0;
+    let pickDistinct = 0;
+    let pickHits = 0;
+    for (let i = 0; i < lines.length; i++) {
+      if ((i >= primary.start && i <= primary.end) || anchors.includes(i)) continue;
+      const hits = terms.filter((_, j) => probes[j].test(lines[i])).length;
+      if (hits === 0) continue;
+      const fresh = terms.filter((term, j) => probes[j].test(lines[i]) && !windowsText.includes(term)).length;
+      const distinct = distinctHits(lines[i]).length;
+      if (
+        fresh > pickFresh ||
+        (fresh === pickFresh && (distinct > pickDistinct || (distinct === pickDistinct && hits > pickHits)))
+      ) {
+        pick = i;
+        pickFresh = fresh;
+        pickDistinct = distinct;
+        pickHits = hits;
       }
     }
+    if (pick < 0) break;
+    anchors.push(pick);
+    windowsText += `\n${lines[pick]}`;
   }
+  anchors.sort((a, b) => a - b);
+  const room = MAX_CHUNK_CHARS_TOTAL - primaryText.length;
+  const slots = anchors.map((anchor) => ({ start: anchor, end: anchor }));
+  const share = slots.length > 0 ? Math.floor(room / slots.length) : 0;
   // Keluarannya tetap satu jendela - persis seperti sebelum jendela kedua ada -
   // kalau tidak ada baris lain yang memuat satu kata kunci pun, atau baris
-  // jangkarnya saja tidak muat lagi di jatah dua jendela.
-  const room = MAX_CHUNK_CHARS_TOTAL - primaryText.length - WINDOW_GAP.length;
-  if (anchor < 0 || room < lines[anchor].length) return primaryText;
+  // jangkarnya saja tidak muat lagi di bagian jatahnya.
+  if (slots.length === 0 || room <= 0 || slots.some((slot) => share < lines[slot.start].length)) {
+    return primaryText;
+  }
 
-  const above = anchor < primary.start;
-  const second = widenWindow(
-    lines,
-    anchor,
-    above ? 0 : primary.end + 1,
-    above ? primary.start - 1 : lines.length - 1,
-    room,
-  );
-  return `${primaryText}${WINDOW_GAP}${lines.slice(second.start, second.end + 1).join("\n")}`;
+  const windows: string[] = [primaryText];
+  const last = slots.length - 1;
+  let floor = 0;
+  let used = 0;
+  slots.forEach((slot, position) => {
+    const above = slot.start < primary.start;
+    const sameSide = position < last && slots[position + 1].start < primary.start === above;
+    const low = Math.max(floor, above ? 0 : primary.end + 1);
+    const high = sameSide ? slots[position + 1].start - 1 : above ? primary.start - 1 : lines.length - 1;
+    // Jendela terakhir cuma dibatasi ujung artikel, dan dia yang menerima sisa
+    // jatah: sebagian kecil jatah hilang kalau semua jendela dipotong rata
+    // (jendela yang barisnya sedikit tidak memakainya), dan sisa itu justru
+    // yang membuat jendela terakhir bisa memanjang sampai kalimat penutup.
+    const cap = position === last ? room - used - WINDOW_GAP.length : share;
+    const window = widenWindow(lines, slot.start, low, high, cap);
+    const text = lines.slice(window.start, window.end + 1).join("\n");
+    windows.push(text);
+    floor = window.end + 1;
+    used += text.length + WINDOW_GAP.length;
+  });
+  return windows.join(WINDOW_GAP);
 }
 
 /**

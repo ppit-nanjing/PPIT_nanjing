@@ -11,8 +11,9 @@ import { readFileSync } from "node:fs";
 import { renderToStaticMarkup } from "react-dom/server";
 import { CHUNKER_VERSION, chunkMarkdown } from "../src/lib/guide-chunker";
 import { renderMarkdownLite } from "../src/lib/markdown-lite";
-import { MAX_CHUNK_CHARS_TOTAL, WINDOW_GAP, buildCorpusVocabulary, correctQuestionTypo, correctTypo, excerpt, orderByRank, questionEntities, searchTerms, windowAroundTerms } from "../src/lib/guidebook-terms";
+import { MAX_CHUNK_CHARS_TOTAL, MAX_EXTRA_WINDOWS, WINDOW_GAP, buildCorpusVocabulary, correctQuestionTypo, correctTypo, excerpt, orderByRank, questionEntities, searchTerms, windowAroundTerms } from "../src/lib/guidebook-terms";
 import { annotateHanziPinyin } from "../src/lib/pinyin";
+import { placeButtons, placeIndex } from "../src/lib/chat-places";
 
 const MAX_CHUNK_CHARS = 3200;
 
@@ -295,15 +296,20 @@ check(
   `${twoWindows.length} karakter`,
 );
 const split = twoWindows.split(WINDOW_GAP);
-const firstLines = new Set(split[0].split("\n"));
-const overlap = split[1]?.split("\n").filter((line) => line !== "" && firstLines.has(line)) ?? [];
+// Jendela tambahannya sampai MAX_EXTRA_WINDOWS dan semuanya tidak menumpuk satu
+// sama lain: satu baris yang sama dua kali hanya memakan jatah tanpa menambah
+// fakta baru.
+const overlap = split.flatMap((part, i) => {
+  const earlier = new Set(split.slice(0, i).flatMap((before) => before.split("\n")));
+  return part.split("\n").filter((line) => line !== "" && earlier.has(line));
+});
 check(
-  "jendela: jendela kedua tidak menumpuk jendela pertama",
-  split.length === 2 && overlap.length === 0,
+  "jendela: jendela tambahan tidak menumpuk jendela sebelumnya",
+  split.length >= 2 && split.length <= MAX_EXTRA_WINDOWS + 1 && overlap.length === 0,
   overlap[0] ?? `${split.length} jendela`,
 );
 check(
-  "jendela: jatah dua jendela tidak dilampaui",
+  "jendela: jatah jendela-jendelanya tidak dilampaui",
   twoWindows.length <= MAX_CHUNK_CHARS_TOTAL,
   `${twoWindows.length} / ${MAX_CHUNK_CHARS_TOTAL} karakter`,
 );
@@ -334,11 +340,10 @@ const variantBody = [
 ].join("\n");
 const variantWindows = windowAroundTerms(variantBody, ["registrasi", "jam", "dilakukan", "laku"]);
 const variantSplit = variantWindows.split(WINDOW_GAP);
+const deadlineWindow = variantSplit.find((part) => part.includes("24 jam"));
 check(
   "jendela: varian satu kata kunci tidak mengalahkan dua kata kunci berbeda",
-  variantSplit.length === 2 &&
-    variantSplit[1].includes("24 jam") &&
-    !variantSplit[1].includes("tanpa aplikasi"),
+  deadlineWindow !== undefined && !deadlineWindow.includes("tanpa aplikasi"),
   `${variantWindows.length} karakter, ${variantSplit.length} jendela`,
 );
 // Varian pendek tetap dihitung kalau varian panjangnya tidak ada di baris itu:
@@ -350,7 +355,7 @@ const loneVariantWindows = windowAroundTerms(
 );
 check(
   "jendela: varian pendek berdiri sendiri tetap jadi kandidat",
-  loneVariantWindows.split(WINDOW_GAP).length === 2 && loneVariantWindows.includes("30 hari"),
+  loneVariantWindows.includes(WINDOW_GAP) && loneVariantWindows.includes("30 hari"),
   `${loneVariantWindows.length} karakter`,
 );
 // Tidak ada satu kata kunci pun di luar jendela pertama: jatah jendela kedua
@@ -475,6 +480,63 @@ check(
   "ringkasan: kutipan blok ikut dibuang",
   excerpt("> Simpan nomor ini\n\nNanjing, 4 nomor.") === "Simpan nomor ini Nanjing, 4 nomor.",
   excerpt("> Simpan nomor ini\n\nNanjing, 4 nomor."),
+);
+
+// ---------- kartu dan indeks tempat ----------
+// Delapan masjid luar kota di korpus harus lolos semua ke kartu dan indeks.
+// Dua di antaranya cuma punya tautan pencarian Amap; sebelum tautan itu
+// diterima, keduanya hilang diam-diam dari kartu dan indeks.
+const mosqueMd = readFileSync("docs/guidebook/tempat-ibadah-di-nanjing.md", "utf8");
+const outsideNames = [
+  "凤凰花园清真寺",
+  "六合南门清真寺",
+  "六合竹镇清真寺",
+  "江宁湖熟清真寺",
+  "溧水清真寺",
+  "浦口江浦清真寺",
+  "浦口星甸清真寺",
+  "一条巷清真寺",
+];
+const insideNames = ["净觉寺", "草桥清真寺", "吉兆营清真寺"];
+const outsideButtons = placeButtons(mosqueMd, outsideNames.join(" "), 12);
+check(
+  "kartu: delapan masjid luar kota semuanya dapat kartu",
+  outsideButtons.length === 8,
+  `${outsideButtons.length} kartu: ${outsideButtons.map((b) => b.label).join(", ")}`,
+);
+check(
+  "kartu: tautan pencarian Amap diterima",
+  outsideButtons.some((b) => b.label.includes("浦口星甸") && /uri\.amap\.com\/search/.test(b.url)) &&
+    outsideButtons.some((b) => b.label.includes("一条巷") && /uri\.amap\.com\/search/.test(b.url)),
+  outsideButtons.map((b) => `${b.label}=${b.url}`).join(" | "),
+);
+const insideButtons = placeButtons(mosqueMd, insideNames.join(" "), 12);
+check(
+  "kartu: masjid dalam kota tetap tiga",
+  insideButtons.length === 3,
+  `${insideButtons.length} kartu: ${insideButtons.map((b) => b.label).join(", ")}`,
+);
+check(
+  "kartu: tautan non-Amap tidak jadi kartu",
+  placeButtons("- **Contoh Tempat** — Jalan Contoh. ([Buka](https://example.com/place/1))", "Contoh Tempat", 12)
+    .length === 0,
+);
+const mosqueIndex = placeIndex(mosqueMd);
+const outsideRows = mosqueIndex.filter((row) => row.startsWith("[luar kota] "));
+const insideRows = mosqueIndex.filter((row) => row.startsWith("[dalam kota] "));
+check(
+  "indeks: delapan masjid luar kota semuanya masuk",
+  outsideRows.length === 8,
+  `${outsideRows.length} baris: ${outsideRows.map((r) => r.split(" — ")[0]).join(", ")}`,
+);
+check(
+  "indeks: masjid dalam kota tetap tiga",
+  insideRows.length === 3,
+  `${insideRows.length} baris: ${insideRows.map((r) => r.split(" — ")[0]).join(", ")}`,
+);
+check(
+  "indeks: dua tautan pencarian ikut jadi baris",
+  outsideRows.some((r) => r.includes("浦口星甸清真寺")) && outsideRows.some((r) => r.includes("一条巷清真寺")),
 );
 
 // ---------- laporan ----------
