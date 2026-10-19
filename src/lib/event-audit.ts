@@ -19,6 +19,8 @@ export type EventAuditAction =
   | "event.published"
   | "event.unpublished"
   | "event.status"
+  | "event.trashed"
+  | "event.restored"
   | "event.deleted"
   | "event.takeover"
   | "registration.cancelled"
@@ -26,10 +28,12 @@ export type EventAuditAction =
   | "committee.assigned"
   | "committee.removed"
   | "division.grants"
+  | "event.responsible_departments"
   | "credit.added"
   | "credit.removed"
   | "asset.reserved"
-  | "asset.released";
+  | "asset.released"
+  | "committee_evaluation.deleted";
 
 export async function logEventAudit(
   actorId: string | null | undefined,
@@ -63,15 +67,19 @@ export const EVENT_AUDIT_ACTION_LABEL: Record<EventAuditAction, string> = {
   "event.published": "Acara dipublikasikan",
   "event.unpublished": "Acara ditarik dari publik",
   "event.status": "Status acara diubah",
-  "event.deleted": "Acara dihapus",
+  "event.trashed": "Acara dipindah ke Sampah",
+  "event.restored": "Acara dipulihkan dari Sampah",
+  "event.deleted": "Acara dihapus permanen",
   "event.takeover": "Acara diambil alih BPH",
   "registration.cancelled": "Pendaftaran peserta dibatalkan",
   "registration.restored": "Pendaftaran peserta dipulihkan",
   "committee.assigned": "Panitia ditugaskan",
   "committee.removed": "Panitia dikeluarkan",
   "division.grants": "Izin fitur divisi diubah",
+  "event.responsible_departments": "Divisi penanggung jawab diubah",
   "credit.added": "Kredit kepanitiaan ditambah",
   "credit.removed": "Kredit kepanitiaan dihapus",
   "asset.reserved": "Aset direservasi",
   "asset.released": "Reservasi aset dilepas",
+  "committee_evaluation.deleted": "Jawaban evaluasi panitia dihapus",
 };

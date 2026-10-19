@@ -1,16 +1,17 @@
 "use server";
 
-import { eq, and, or, ilike, isNull, sql } from "drizzle-orm";
+import { eq, and, or, ilike, isNotNull, isNull, inArray, sql } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { auth } from "@/auth";
 import { db } from "@/db";
-import { events, eventRegistrations, eventQuestions, eventCommittee, eventFeeOptions, eventDivisions, galleryAlbums, users, sensusProfiles } from "@/db/schema";
+import { events, eventRegistrations, eventQuestions, eventCommittee, eventFeeOptions, eventDivisions, eventResponsibleDepartments, departments, departmentMembers, galleryAlbums, users, sensusProfiles } from "@/db/schema";
 import { hasModuleAccess } from "@/lib/admin-scope";
 import { getEventAccess, requireEventCapability } from "@/lib/event-access";
 import { logEventAudit } from "@/lib/event-audit";
 import { UUID_RE } from "@/lib/uuid";
 import { createTemplatedNotification } from "@/lib/notifications";
+import { issueParticipantCertificateIfEligible } from "@/lib/certificate-issuing";
 import { checkInBlockReason, checkInClosedReason } from "@/lib/event-checkin";
 import { WIF_2026_KELOMPOK, normalizeNameForKelompok } from "@/lib/wif-2026-kelompok";
 import { sanitizeDescriptionHtml } from "@/lib/sanitize-description-html";
@@ -98,6 +99,13 @@ export async function createEvent(_prev: EventFormState, formData: FormData): Pr
   if (locationUrl2Raw && !isValidHttpUrl(locationUrl2Raw)) {
     return { error: "Link lokasi (2) harus diawali http:// atau https://" };
   }
+  const startAt = formData.get("startAt") ? new Date(String(formData.get("startAt"))) : null;
+  const endAt = formData.get("endAt") ? new Date(String(formData.get("endAt"))) : null;
+  // Waktu selesai dipakai kunci kepanitiaan (isCommitteeLocked) dan status
+  // "sudah lewat"; selesai sebelum mulai membuat keduanya salah hitung.
+  if (startAt && endAt && endAt <= startAt) {
+    return { error: "Waktu selesai harus setelah waktu mulai." };
+  }
 
   const scheduledPublishAt = formData.get("scheduledPublishAt")
     ? new Date(String(formData.get("scheduledPublishAt")))
@@ -119,7 +127,8 @@ export async function createEvent(_prev: EventFormState, formData: FormData): Pr
       locationUrl: locationUrlRaw || null,
       locationUrl2: locationUrl2Raw || null,
       coverImageUrl: String(formData.get("coverImageUrl") ?? "").trim() || null,
-      startAt: formData.get("startAt") ? new Date(String(formData.get("startAt"))) : null,
+      startAt,
+      endAt,
       registrationDeadline: formData.get("registrationDeadline")
         ? new Date(String(formData.get("registrationDeadline")))
         : null,
@@ -147,6 +156,43 @@ export async function createEvent(_prev: EventFormState, formData: FormData): Pr
     })
     .returning();
 
+  // Divisi Penanggung Jawab (opsional dari form buat acara). Divalidasi ke
+  // tabel departments supaya id karangan tidak jadi FK error; baris PJ-lah yang
+  // memberi divisi itu akses otomatis ke acara ini (event-access.ts).
+  // Non-full admin hanya boleh menandai divisinya sendiri: baris PJ memberi
+  // akses ke acara, dan mengubahnya untuk divisi lain adalah hak full admin
+  // (lihat setEventResponsibleDepartments).
+  const requestedDeptIds = formData
+    .getAll("departmentId")
+    .map((v) => String(v))
+    .filter((v) => UUID_RE.test(v));
+  if (requestedDeptIds.length > 0) {
+    const isFull = (await auth())?.user?.adminScope === "full";
+    const validDepts = await db
+      .select({ id: departments.id })
+      .from(departments)
+      .where(
+        and(
+          inArray(departments.id, requestedDeptIds),
+          isFull
+            ? undefined
+            : inArray(
+                departments.id,
+                db
+                  .select({ id: departmentMembers.departmentId })
+                  .from(departmentMembers)
+                  .where(eq(departmentMembers.userId, actorId)),
+              ),
+        ),
+      );
+    if (validDepts.length > 0) {
+      await db
+        .insert(eventResponsibleDepartments)
+        .values(validDepts.map((d) => ({ eventId: created.id, departmentId: d.id })))
+        .onConflictDoNothing();
+    }
+  }
+
   redirect(`/console/events/${created.id}`);
 }
 
@@ -173,6 +219,11 @@ export async function updateEventInfo(id: string, formData: FormData) {
   if (locationUrl2Raw && !isValidHttpUrl(locationUrl2Raw)) {
     throw new Error("Link lokasi (2) harus diawali http:// atau https://");
   }
+  const startAt = formData.get("startAt") ? new Date(String(formData.get("startAt"))) : null;
+  const endAt = formData.get("endAt") ? new Date(String(formData.get("endAt"))) : null;
+  if (startAt && endAt && endAt <= startAt) {
+    throw new Error("Waktu selesai harus setelah waktu mulai.");
+  }
 
   const [before] = await db
     .select({ status: events.status, slug: events.slug })
@@ -193,7 +244,8 @@ export async function updateEventInfo(id: string, formData: FormData) {
       locationUrl: locationUrlRaw || null,
       locationUrl2: locationUrl2Raw || null,
       coverImageUrl: String(formData.get("coverImageUrl") ?? "").trim() || null,
-      startAt: formData.get("startAt") ? new Date(String(formData.get("startAt"))) : null,
+      startAt,
+      endAt,
       registrationDeadline: formData.get("registrationDeadline")
         ? new Date(String(formData.get("registrationDeadline")))
         : null,
@@ -491,6 +543,20 @@ export async function deleteFeeOption(formData: FormData) {
   revalidatePath(`/console/events/${row.eventId}`);
 }
 
+// Hadir dicatat SETELAH orangnya sudah mengisi evaluasi (mis. panitia
+// menandai hadir belakangan untuk yang lupa di-scan): sertifikat peserta
+// langsung terbit kalau folder-nya sudah disimpan. Saat acara berlangsung
+// folder biasanya belum ada, jadi ini berhenti di satu query. Gagal di sini
+// tidak boleh menggagalkan check-in.
+async function issueCertificateAfterCheckIn(eventId: string, userId: string | null) {
+  if (!userId) return;
+  try {
+    await issueParticipantCertificateIfEligible(eventId, userId);
+  } catch (error) {
+    console.error("[check-in] certificate issue failed:", error);
+  }
+}
+
 export async function checkInRegistration(
   registrationId: string,
   eventId: string,
@@ -531,6 +597,7 @@ export async function checkInRegistration(
     .update(eventRegistrations)
     .set({ status: "attended", checkedInAt: new Date(), checkedInBy: session.user.id })
     .where(and(eq(eventRegistrations.id, registrationId), eq(eventRegistrations.eventId, eventId)));
+  await issueCertificateAfterCheckIn(eventId, registration.userId);
 
   if (registration.userId) {
     await createTemplatedNotification({
@@ -645,6 +712,7 @@ export async function checkInByToken(token: string, eventId: string, dryRun = fa
     .update(eventRegistrations)
     .set({ status: "attended", checkedInAt: new Date(), checkedInBy: session.user.id })
     .where(eq(eventRegistrations.id, registration.id));
+  await issueCertificateAfterCheckIn(eventId, registration.userId);
   if (registration.userId) {
     await createTemplatedNotification({
       userId: registration.userId,
@@ -740,6 +808,7 @@ export async function checkInByUserId(eventId: string, userId: string, dryRun = 
     .update(eventRegistrations)
     .set({ status: "attended", checkedInAt: new Date(), checkedInBy: session.user.id })
     .where(eq(eventRegistrations.id, registration.id));
+  await issueCertificateAfterCheckIn(eventId, registration.userId);
   await createTemplatedNotification({
     userId: registration.userId!,
     templateKey: "event_checkin",
@@ -866,23 +935,132 @@ export async function searchCheckInCandidates(eventId: string, query: string) {
   ];
 }
 
+// Sampah (soft delete). Tidak ada peran kepanitiaan yang boleh menghapus
+// acara — hanya BPH "full" (lolos lewat isFullAdmin di getEventAccess).
+// "Hapus" kini hanya memindahkan acara ke Sampah: deleted_at diisi, status dan
+// semua data turunannya (pendaftar, panitia, evaluasi, album yang tertaut)
+// dibiarkan utuh. getEventAccess menolak acara di Sampah untuk siapa pun dan
+// semua halaman/daftar publik menyaring deleted_at, jadi efeknya bagi pengguna
+// sama dengan terhapus — bedanya bisa dipulihkan.
 export async function deleteEvent(eventId: string) {
-  // Tidak ada peran kepanitiaan yang boleh menghapus acara — hanya BPH "full"
-  // (lolos lewat isFullAdmin di getEventAccess).
   const { session } = await requireEventCapability(eventId, "event.delete");
-  const [doomed] = await db.select({ title: events.title, status: events.status }).from(events).where(eq(events.id, eventId));
+  const [moved] = await db
+    .update(events)
+    .set({ deletedAt: new Date(), deletedBy: session.user.id })
+    .where(and(eq(events.id, eventId), isNull(events.deletedAt)))
+    .returning({ title: events.title, status: events.status });
+  if (moved) {
+    await logEventAudit(session.user.id, eventId, "event.trashed", { before: { title: moved.title, status: moved.status } });
+  }
+  revalidateEventSurfaces();
+  redirect("/console/events");
+}
+
+// Pulihkan & hapus permanen hanya untuk BPH "full" dan hanya untuk acara yang
+// SUDAH di Sampah. getEventAccess menolak semua akses ke acara di Sampah, jadi
+// dua aksi ini memeriksa adminScope langsung, bukan lewat kapabilitas acara.
+async function requireTrashedEventForFullAdmin(formData: FormData) {
+  const session = await auth();
+  if (!session?.user?.id) redirect("/login");
+  if (session.user.adminScope !== "full") redirect("/console/events");
+  const eventId = String(formData.get("eventId") ?? "").trim();
+  if (!UUID_RE.test(eventId)) throw new Error("Acara tidak valid.");
+  const [row] = await db
+    .select({ title: events.title, status: events.status, deletedAt: events.deletedAt })
+    .from(events)
+    .where(eq(events.id, eventId));
+  if (!row) throw new Error("Acara sudah tidak ada.");
+  if (!row.deletedAt) throw new Error("Acara ini tidak ada di Sampah.");
+  return { userId: session.user.id, eventId, row };
+}
+
+export async function restoreEvent(formData: FormData) {
+  const { userId, eventId, row } = await requireTrashedEventForFullAdmin(formData);
+  await db.update(events).set({ deletedAt: null, deletedBy: null }).where(eq(events.id, eventId));
+  await logEventAudit(userId, eventId, "event.restored", { after: { title: row.title, status: row.status } });
+  revalidateEventSurfaces();
+}
+
+// Hapus permanen: perilaku "Hapus" lama. Tidak bisa dibatalkan — pendaftar,
+// panitia, evaluasi, dst. ikut terhapus (cascade).
+export async function deleteEventPermanently(formData: FormData) {
+  const { userId, eventId, row } = await requireTrashedEventForFullAdmin(formData);
   // Dicatat SEBELUM dihapus; audit_logs.entity_id tidak ber-FK ke events jadi
   // recordnya tetap ada setelah acaranya hilang.
-  await logEventAudit(session.user.id, eventId, "event.deleted", { before: { title: doomed?.title, status: doomed?.status } });
+  await logEventAudit(userId, eventId, "event.deleted", { before: { title: row.title, status: row.status } });
   // Gallery albums are curated by the content team and merely *link* to an event
   // (galleryAlbums.eventId, set from the "Setelah Acara" dropdown). Deleting the
   // event must NOT destroy the album or its photos — just unlink it. The FK has
   // no cascade, so do it explicitly before removing the event; eventRegistrations
   // cascade from events automatically.
   await db.update(galleryAlbums).set({ eventId: null }).where(eq(galleryAlbums.eventId, eventId));
-  await db.delete(events).where(eq(events.id, eventId));
+  await db.delete(events).where(and(eq(events.id, eventId), isNotNull(events.deletedAt)));
+  revalidateEventSurfaces();
+}
+
+// Acara masuk/keluar Sampah mengubah apa yang tampil di semua daftar acara.
+function revalidateEventSurfaces() {
   revalidatePath("/console/events");
   revalidatePath("/console/content");
+  revalidatePath("/console");
+  revalidatePath("/events");
+  revalidatePath("/");
   revalidatePath("/gallery");
-  redirect("/console/events");
+}
+
+
+// Divisi kabinet penanggung jawab acara (proker). Satu acara biasanya milik satu
+// divisi; proker gabungan boleh lebih dari satu. Menyentuh tabel terpisah
+// (event_responsible_departments) — events.department_id lama dibiarkan.
+//
+// HANYA full admin (BPH Kabinet + Divisi Teknologi): kolom ini yang menentukan
+// siapa yang mendapat akses ke acara (event-access.ts), jadi tidak boleh
+// diubah oleh pemegang jembatan modul yang justru diatur olehnya.
+export async function setEventResponsibleDepartments(formData: FormData) {
+  const session = await auth();
+  if (!session?.user?.id) redirect("/login");
+  if (session.user.adminScope !== "full") {
+    throw new Error("Hanya BPH Kabinet/Divisi Teknologi yang bisa mengubah Divisi Penanggung Jawab.");
+  }
+  const eventId = String(formData.get("eventId") ?? "");
+  if (!UUID_RE.test(eventId)) redirect("/console/events");
+  const [eventExists] = await db
+    .select({ id: events.id })
+    .from(events)
+    .where(and(eq(events.id, eventId), isNull(events.deletedAt)));
+  if (!eventExists) redirect("/console/events");
+
+  const rawIds = formData
+    .getAll("departmentId")
+    .map((v) => String(v))
+    .filter((v) => UUID_RE.test(v));
+  const valid = rawIds.length
+    ? await db.select({ id: departments.id }).from(departments).where(inArray(departments.id, rawIds))
+    : [];
+  const ids = valid.map((d) => d.id);
+
+  const before = await db
+    .select({ departmentId: eventResponsibleDepartments.departmentId })
+    .from(eventResponsibleDepartments)
+    .where(eq(eventResponsibleDepartments.eventId, eventId));
+
+  // neon-http tidak mendukung transaction interaktif — delete+insert dibungkus
+  // db.batch (satu transaksi implisit; kalau tidak ada pilihan, cukup delete).
+  if (ids.length > 0) {
+    await db.batch([
+      db.delete(eventResponsibleDepartments).where(eq(eventResponsibleDepartments.eventId, eventId)),
+      db
+        .insert(eventResponsibleDepartments)
+        .values(ids.map((departmentId) => ({ eventId, departmentId })))
+        .onConflictDoNothing(),
+    ]);
+  } else {
+    await db.delete(eventResponsibleDepartments).where(eq(eventResponsibleDepartments.eventId, eventId));
+  }
+
+  await logEventAudit(session.user.id, eventId, "event.responsible_departments", {
+    before: { departments: before.map((r) => r.departmentId) },
+    after: { departments: ids },
+  });
+  revalidatePath(`/console/events/${eventId}`);
 }

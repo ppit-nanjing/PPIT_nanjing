@@ -47,16 +47,17 @@ function respondentLabel(e: Evaluation): string {
   return e.anonymous || !e.respondentName ? "Anonim" : e.respondentName;
 }
 
-function ExportLinks({ eventId }: { eventId: string }) {
+function ExportLinks({ eventId, audience = "peserta" }: { eventId: string; audience?: "peserta" | "panitia" }) {
   const base = `/api/console/events/${eventId}/evaluasi/export`;
+  const audienceParam = audience === "panitia" ? "&audience=panitia" : "";
   const cls =
     "inline-flex items-center gap-1.5 rounded-md border border-outline-variant px-3 py-2 text-label-caps uppercase tracking-wide text-on-background hover:bg-surface-container-low transition-colors";
   return (
     <div className="flex flex-wrap gap-2">
-      <a href={`${base}?format=csv`} className={cls}>
+      <a href={`${base}?format=csv${audienceParam}`} className={cls}>
         <Download size={14} aria-hidden="true" /> CSV
       </a>
-      <a href={`${base}?format=xlsx`} className={cls}>
+      <a href={`${base}?format=xlsx${audienceParam}`} className={cls}>
         <Download size={14} aria-hidden="true" /> Excel
       </a>
     </div>
@@ -109,6 +110,7 @@ export function EvaluationResults({
   sections,
   questions = [],
   answers = [],
+  exportAudience = "peserta",
 }: {
   eventId: string;
   evaluations: Evaluation[];
@@ -116,7 +118,21 @@ export function EvaluationResults({
   /** Pertanyaan buatan panitia (kosong = acara memakai template tetap). */
   questions?: EvalQuestionRow[];
   answers?: EvalAnswerRow[];
+  /** Audiens tautan ekspor: "panitia" menambahkan ?audience=panitia (gerbangnya lebih ketat). */
+  exportAudience?: "peserta" | "panitia";
 }) {
+  // Tab Panitia: keadaan kosongnya harus menunjuk tautan evaluasi PANITIA. Pesan
+  // kosong milik peserta (TemplateResults/CustomResults) menyuruh membagikan
+  // /events/<slug>/evaluasi ke grup peserta - kalau itu yang dibagikan ke grup
+  // panitia, jawaban panitia masuk ke rekap peserta.
+  if (exportAudience === "panitia" && evaluations.length === 0) {
+    return (
+      <p className="text-body-md text-on-surface-variant">
+        Belum ada respons panitia. Bagikan tautan pengisian di atas ke grup panitia acara ini selama jendela terbuka —
+        hanya panitia yang login yang bisa mengisi.
+      </p>
+    );
+  }
   const legacy = evaluations.filter(isLegacy);
   const custom = evaluations.filter((e) => !isLegacy(e));
   // Mode pertanyaan sendiri berlaku selama acara punya pertanyaan, atau sudah ada
@@ -129,6 +145,7 @@ export function EvaluationResults({
         questions={questions}
         answers={answers}
         legacyCount={legacy.length}
+        exportAudience={exportAudience}
       />
     );
   }
@@ -364,12 +381,14 @@ function CustomResults({
   questions,
   answers,
   legacyCount,
+  exportAudience = "peserta",
 }: {
   eventId: string;
   evaluations: Evaluation[];
   questions: EvalQuestionRow[];
   answers: EvalAnswerRow[];
   legacyCount: number;
+  exportAudience?: "peserta" | "panitia";
 }) {
   const [tab, setTab] = useState<"grafik" | "jawaban" | "respons">("grafik");
   const columns = evalColumns(questions, answers);
@@ -392,7 +411,7 @@ function CustomResults({
           QR-nya di menu Tautan supaya gampang disebar di WeChat.
         </p>
         {legacyNote}
-        <ExportLinks eventId={eventId} />
+        <ExportLinks eventId={eventId} audience={exportAudience} />
       </div>
     );
   }
@@ -421,11 +440,15 @@ function CustomResults({
               <b className="text-on-background">{average(chip.values)}</b>/{SCALE_MAX[chip.type]}
             </span>
           ))}
-          <span className="rounded-md bg-surface-container-low px-3 py-1.5 text-label-caps text-on-surface-variant">
-            <b className="text-on-background">{anonymousCount}</b> anonim
-          </span>
+          {/* Evaluasi panitia selalu tercatat atas nama akun pengisinya: hitungan
+              "anonim" hanya bermakna untuk respons peserta. */}
+          {exportAudience !== "panitia" && (
+            <span className="rounded-md bg-surface-container-low px-3 py-1.5 text-label-caps text-on-surface-variant">
+              <b className="text-on-background">{anonymousCount}</b> anonim
+            </span>
+          )}
         </div>
-        <ExportLinks eventId={eventId} />
+        <ExportLinks eventId={eventId} audience={exportAudience} />
       </div>
       {legacyNote}
 

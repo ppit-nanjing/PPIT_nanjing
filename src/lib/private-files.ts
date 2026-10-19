@@ -13,6 +13,9 @@ export const PRIVATE_FILE_FOLDERS = [
   "borrow-doc",
   "membership",
   "resume",
+  // Lampiran formulir kabinet (Pemilu/Oprek) — diunggah pengurus yang login,
+  // dibaca manajer form terkait (modul forms / koor pembuat / BPH Acara).
+  "form-file",
 ] as const;
 
 export type PrivateFileFolder = (typeof PRIVATE_FILE_FOLDERS)[number];

@@ -15,9 +15,11 @@ type Props = {
   value?: string;
   onImproved?: (text: string) => void;
   className?: string;
+  disabled?: boolean;
+  disabledReason?: string;
 };
 
-export function AIImproveButton({ context, label, targetId, value, onImproved, className }: Props) {
+export function AIImproveButton({ context, label, targetId, value, onImproved, className, disabled, disabledReason }: Props) {
   const t = useT();
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
@@ -53,7 +55,8 @@ export function AIImproveButton({ context, label, targetId, value, onImproved, c
       <button
         type="button"
         onClick={run}
-        disabled={busy}
+        disabled={busy || disabled}
+        title={disabled ? disabledReason : undefined}
         className="inline-flex items-center gap-1.5 text-label-caps text-primary-container hover:text-primary disabled:opacity-50"
       >
         {busy ? <Loader2 size={14} className="animate-spin" /> : <Sparkles size={14} />}

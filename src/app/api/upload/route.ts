@@ -50,6 +50,14 @@ const FOLDER_MODULE: Record<string, AdminModule | null> = {
   inventory: "inventory",
   events: "events",
   membership: null,
+  // Lampiran formulir kabinet (Pemilu/Oprek) — pengunggahnya pengurus yang
+  // login, pembacanya manajer form terkait (modul forms / koor / BPH Acara).
+  "form-file": null,
+  // QR grup panitia di halaman setelah mengirim form (forms.group_qr_url).
+  // Pengunggahnya pengelola form (BPH Acara / Kadiv bisa tanpa modul admin),
+  // jadi tidak dipetakan ke modul; gambarnya memang untuk dilihat pelamar
+  // (blob publik). updateFormSettings yang memeriksa hak kelola form.
+  "form-qr": null,
   catalog: "content",
   donation: "organization",
 };

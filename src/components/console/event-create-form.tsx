@@ -2,7 +2,7 @@
 
 import { useActionState } from "react";
 import { createEvent, type EventFormState } from "@/app/actions/admin-events";
-import { TextField, TextAreaField, CheckField } from "@/components/console/form";
+import { CheckboxField, TextField, TextAreaField, CheckField } from "@/components/console/form";
 import { ImageUploadCropper } from "@/components/upload/image-upload-cropper";
 import { AIImproveButton } from "@/components/ai/ai-improve-button";
 import { AIReviewButton } from "@/components/ai/ai-review-popup";
@@ -13,9 +13,17 @@ import { useActionToast } from "@/components/console/submit-button";
 // (useActionState) instead of crashing into the route error boundary and
 // wiping everything the admin typed. Markup mirrors the edit form in
 // /console/events/[id].
-export function EventCreateForm() {
+export function EventCreateForm({
+  departments = [],
+}: {
+  // Divisi Penanggung Jawab (opsional) — menentukan divisi mana yang otomatis
+  // boleh mengelola acara ini di menu Kegiatan (lihat event-access.ts).
+  departments?: { id: string; name: string; parentId: string | null }[];
+}) {
   const [state, formAction, isPending] = useActionState<EventFormState, FormData>(createEvent, {});
   useActionToast(isPending, state.error, "Acara dibuat.");
+
+  const nameById = new Map(departments.map((d) => [d.id, d.name]));
 
   return (
     <form action={formAction} className="px-4 pb-5 sm:px-6 sm:pb-6 flex flex-col gap-4">
@@ -41,9 +49,10 @@ export function EventCreateForm() {
             <TextField name="locationUrl2" label="Link peta 2 (opsional)" type="url" placeholder="mis. Baidu Maps" />
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <TextField name="startAt" label="Tanggal & jam mulai" type="datetime-local" hint="Kapan acara berlangsung." />
-            <TextField name="capacity" label="Kapasitas" type="number" min={1} />
+            <TextField name="startAt" label="Tanggal & jam mulai" type="datetime-local" hint="Kapan acara dimulai." />
+            <TextField name="endAt" label="Tanggal & jam selesai" type="datetime-local" hint="Kapan acara berakhir." />
           </div>
+          <TextField name="capacity" label="Kapasitas" type="number" min={1} />
           <ImageUploadCropper
             name="coverImageUrl"
             folder="events"
@@ -51,6 +60,29 @@ export function EventCreateForm() {
             aspect={16 / 9}
             hint="Ideal 1920 × 1080 px (16:9) — gambar di-crop & dikompres otomatis."
           />
+          {departments.length > 0 && (
+            <fieldset className="flex flex-col gap-2 border border-outline-variant rounded-lg p-3">
+              <legend className="text-label-caps uppercase tracking-wide text-on-surface-variant px-1">
+                Divisi Penanggung Jawab (opsional)
+              </legend>
+              <p className="text-body-sm text-on-surface-variant -mt-1">
+                Divisi kabinet pemilik acara/proker ini (boleh lebih dari satu untuk proker gabungan). Anggota divisi
+                itu otomatis bisa mengelola acaranya di menu Kegiatan <strong>selama divisinya memegang centang
+                &quot;Kegiatan&quot; di Organisasi</strong> — baris PJ menyempitkan akses, bukan memberi modul baru.
+              </p>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5">
+                {departments.map((d) => (
+                  <CheckboxField
+                    key={d.id}
+                    name="departmentId"
+                    value={d.id}
+                    label={d.parentId && nameById.has(d.parentId) ? `${nameById.get(d.parentId)} · ${d.name}` : d.name}
+                    className="text-body-md text-on-background"
+                  />
+                ))}
+              </div>
+            </fieldset>
+          )}
         </div>
       </details>
 

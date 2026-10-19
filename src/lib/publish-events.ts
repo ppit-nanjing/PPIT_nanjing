@@ -1,4 +1,4 @@
-import { and, eq, lte, isNotNull, sql } from "drizzle-orm";
+import { and, eq, lte, isNotNull, sql, isNull } from "drizzle-orm";
 import { db } from "@/db";
 import { events } from "@/db/schema";
 
@@ -13,6 +13,7 @@ export async function publishDueEvents() {
     .where(
       and(
         eq(events.status, "scheduled"),
+        isNull(events.deletedAt),
         isNotNull(events.scheduledPublishAt),
         lte(events.scheduledPublishAt, sql`now()`)
       )

@@ -1,19 +1,26 @@
 "use server";
 
 import { randomUUID } from "crypto";
-import { and, desc, eq, inArray, isNotNull, sql as raw } from "drizzle-orm";
+import { and, desc, eq, inArray, isNotNull, sql as raw, isNull } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { auth } from "@/auth";
 import { db } from "@/db";
-import { eventCommittee, eventCredits, eventDivisions, certificates, events, users, eventRegistrations, sensusProfiles } from "@/db/schema";
+import { eventCommittee, eventCredits, eventDivisions, certificates, events, users, eventRegistrations } from "@/db/schema";
 import { requireModuleAccess } from "@/lib/admin-scope";
-import { requireEventCapability, requireEventConsoleAccess } from "@/lib/event-access";
+import { requireEventCapability, requireEventConsoleAccess, getScopedEventIds } from "@/lib/event-access";
 import { EVENT_COMMITTEE_ROLE_LABEL, GRANTABLE_CAPABILITIES, type EventCommitteeRole } from "@/lib/event-capabilities";
 import { logEventAudit } from "@/lib/event-audit";
 import { getStructureTemplate } from "@/lib/event-structure-templates";
 import { createTemplatedNotification } from "@/lib/notifications";
 import { PRIVATE_FILE_PREFIX, isOwnPrivateFileUrl } from "@/lib/private-files";
-import { buildCertificateTitle } from "@/lib/certificate-title";
+import {
+  type CertificateCandidate,
+  type CertificateKind,
+  certificateCandidates,
+  insertCertificates,
+  issueFolderCertificatesToMissing,
+  saveCertificateLinks,
+} from "@/lib/certificate-issuing";
 import { normalizeCertificateUrl, parseCertificateBulk, personKey } from "@/lib/certificate-links";
 
 // Committee membership is per-event on purpose: the treasurer of one event is
@@ -206,9 +213,16 @@ export async function removeEventCredit(formData: FormData) {
 /**
  * The work ledger BPH actually asked for: one row per person with how many
  * committees they sit on, so nobody quietly ends up on eight at once.
+ *
+ * Scope dihitung DI DALAM action (boundary server — Server Action = endpoint
+ * publik, tidak boleh percaya pemanggil): full admin = semua acara, selain itu
+ * hanya acara yang boleh diaksesnya (getScopedEventIds: dibuat ∪ divisi PJ ∪
+ * tempat dia panitia).
  */
 export async function getWorkLedger() {
   await requireModuleAccess("events");
+  const scopeEventIds = await getScopedEventIds();
+  if (scopeEventIds !== null && scopeEventIds.length === 0) return [];
   const rows = await db
     .select({
       assignmentId: eventCommittee.id,
@@ -218,12 +232,21 @@ export async function getWorkLedger() {
       eventId: events.id,
       eventTitle: events.title,
       eventStartAt: events.startAt,
+      eventEndAt: events.endAt,
+      eventStatus: events.status,
       role: eventCommittee.role,
       note: eventCommittee.note,
     })
     .from(eventCommittee)
     .leftJoin(users, eq(eventCommittee.userId, users.id))
     .leftJoin(events, eq(eventCommittee.eventId, events.id))
+    .where(
+      and(
+        scopeEventIds !== null ? inArray(eventCommittee.eventId, scopeEventIds) : undefined,
+        // Kepanitiaan di acara yang ada di Sampah tidak dihitung sebagai beban kerja.
+        isNull(events.deletedAt),
+      ),
+    )
     .orderBy(desc(events.startAt));
 
   const byPerson = new Map<string, { name: string; email: string; assignments: typeof rows }>();
@@ -269,36 +292,6 @@ export async function assignMembersToDivision(formData: FormData): Promise<void>
 }
 
 // ---------- sertifikat ----------
-
-// Menyisipkan baris sertifikat lalu memberi tahu tiap penerimanya. Semua jalur
-// penerbitan (satuan, per-divisi, seluruh acara, peserta) lewat sini supaya
-// notifikasinya konsisten dan tidak ada yang terlewat.
-async function insertCertificates(rows: (typeof certificates.$inferInsert)[]) {
-  if (rows.length === 0) return;
-  await db.insert(certificates).values(rows);
-  await Promise.allSettled(
-    rows.map((r) =>
-      createTemplatedNotification({
-        userId: r.userId,
-        templateKey: "certificate_issued",
-        variables: { certTitle: r.title },
-        relatedEntityType: "certificate",
-        relatedEntityId: r.eventId ?? null,
-      }),
-    ),
-  );
-  // Satu entri audit per acara (jalur peserta/panitia/divisi bisa mencampur).
-  const byEvent = new Map<string, { count: number; issuedBy: string | null }>();
-  for (const r of rows) {
-    if (!r.eventId) continue;
-    const cur = byEvent.get(r.eventId) ?? { count: 0, issuedBy: r.issuedBy ?? null };
-    cur.count += 1;
-    byEvent.set(r.eventId, cur);
-  }
-  for (const [eventId, v] of byEvent) {
-    await logEventAudit(v.issuedBy, eventId, "certificate.issued", { after: { count: v.count } });
-  }
-}
 
 export async function issueCertificate(formData: FormData) {
   const userId = String(formData.get("userId") ?? "");
@@ -399,57 +392,6 @@ export async function updateCertificateFileUrl(formData: FormData) {
 //     artinya QR-nya sudah di-scan). Terkonfirmasi saja tidak cukup. Sertifikat
 //     PANITIA untuk anggota kepanitiaan acara itu.
 
-type CertificateKind = "peserta" | "panitia";
-
-type CertificateCandidate = {
-  userId: string;
-  /** Nama untuk ditampilkan dan dicocokkan: nama lengkap sensus dulu, lalu nama akun. */
-  names: string[];
-  email: string | null;
-  title: string;
-};
-
-async function certificateCandidates(event: { id: string; title: string }, kind: CertificateKind): Promise<CertificateCandidate[]> {
-  if (kind === "peserta") {
-    const rows = await db
-      .select({ userId: eventRegistrations.userId, name: users.name, email: users.email, fullName: sensusProfiles.fullName })
-      .from(eventRegistrations)
-      .innerJoin(users, eq(eventRegistrations.userId, users.id))
-      .leftJoin(sensusProfiles, eq(sensusProfiles.userId, eventRegistrations.userId))
-      .where(and(eq(eventRegistrations.eventId, event.id), eq(eventRegistrations.status, "attended")));
-    return rows.map((r) => ({
-      userId: r.userId,
-      names: [r.fullName?.trim(), r.name?.trim()].filter((n): n is string => !!n),
-      email: r.email,
-      title: `Peserta — ${event.title}`,
-    }));
-  }
-
-  const [members, divisions] = await Promise.all([
-    db
-      .select({
-        userId: eventCommittee.userId,
-        role: eventCommittee.role,
-        divisionId: eventCommittee.divisionId,
-        name: users.name,
-        email: users.email,
-        fullName: sensusProfiles.fullName,
-      })
-      .from(eventCommittee)
-      .innerJoin(users, eq(eventCommittee.userId, users.id))
-      .leftJoin(sensusProfiles, eq(sensusProfiles.userId, eventCommittee.userId))
-      .where(eq(eventCommittee.eventId, event.id)),
-    db.select({ id: eventDivisions.id, name: eventDivisions.name }).from(eventDivisions).where(eq(eventDivisions.eventId, event.id)),
-  ]);
-  const divisionNames = new Map(divisions.map((d) => [d.id, d.name]));
-  return members.map((m) => ({
-    userId: m.userId,
-    names: [m.fullName?.trim(), m.name?.trim()].filter((n): n is string => !!n),
-    email: m.email,
-    title: buildCertificateTitle(m.role, divisionNames.get(m.divisionId ?? "") ?? null, event.title),
-  }));
-}
-
 /**
  * Kelayakan untuk sertifikat sebuah acara. Hanya jenis "peserta" (harus tercatat hadir)
  * dan "panitia" (harus anggota kepanitiaan acara itu) yang dijaga; pemateri, juara,
@@ -463,44 +405,10 @@ async function assertEligibleForEventCertificate(eventId: string, userId: string
   if (!candidates.some((c) => c.userId === userId)) {
     throw new Error(
       kind === "peserta"
-        ? "Hanya peserta yang kehadirannya tercatat (QR di-scan) yang berhak atas sertifikat peserta"
+        ? "Hanya peserta yang kehadirannya tercatat (QR di-scan) DAN sudah mengisi evaluasi dengan akunnya yang berhak atas sertifikat peserta"
         : "Orang ini bukan anggota kepanitiaan acara ini",
     );
   }
-}
-
-/**
- * Menulis tautan sertifikat untuk sekumpulan orang yang SUDAH dipastikan berhak.
- * Yang belum punya sertifikat: dibuat (lengkap dengan tautannya) + diberi notifikasi.
- * Yang sudah punya: hanya tautannya yang diperbarui (tanpa notifikasi ulang, tanggal
- * terbit tetap).
- */
-async function saveCertificateLinks(
-  event: { id: string },
-  kind: CertificateKind,
-  items: { candidate: CertificateCandidate; url: string }[],
-  actorId: string,
-): Promise<{ issued: number; updated: number }> {
-  const existing = await db
-    .select({ id: certificates.id, userId: certificates.userId, fileUrl: certificates.fileUrl })
-    .from(certificates)
-    .where(and(eq(certificates.eventId, event.id), eq(certificates.kind, kind)));
-  const byUser = new Map(existing.map((c) => [c.userId, c]));
-
-  const toInsert: (typeof certificates.$inferInsert)[] = [];
-  let updated = 0;
-  for (const { candidate, url } of items) {
-    const current = byUser.get(candidate.userId);
-    if (!current) {
-      toInsert.push({ userId: candidate.userId, eventId: event.id, kind, title: candidate.title, fileUrl: url, issuedBy: actorId });
-    } else if (current.fileUrl !== url) {
-      await db.update(certificates).set({ fileUrl: url }).where(eq(certificates.id, current.id));
-      updated += 1;
-    }
-  }
-  await insertCertificates(toInsert); // notifikasi + entri audit "diterbitkan"
-  if (updated > 0) await logEventAudit(actorId, event.id, "certificate.link_updated", { after: { count: updated } });
-  return { issued: toInsert.length, updated };
 }
 
 function revalidateCertificates(eventId: string) {
@@ -540,7 +448,7 @@ export async function issueCertificateWithLink(formData: FormData): Promise<void
   if (!candidate) {
     throw new Error(
       kind === "peserta"
-        ? "Hanya peserta yang kehadirannya tercatat (QR di-scan) yang berhak atas sertifikat"
+        ? "Hanya peserta yang kehadirannya tercatat (QR di-scan) DAN sudah mengisi evaluasi dengan akunnya yang berhak atas sertifikat"
         : "Orang ini bukan anggota kepanitiaan acara ini",
     );
   }
@@ -603,7 +511,7 @@ export async function saveCertificateLinksBulk(
     if (matches.length === 0) {
       allProblems.push(
         `Baris ${entry.line} "${entry.key}": tidak ada di daftar yang berhak` +
-          (kind === "peserta" ? " (harus tercatat hadir, QR di-scan)" : " (harus anggota kepanitiaan acara ini)"),
+          (kind === "peserta" ? " (harus tercatat hadir DAN sudah mengisi evaluasi)" : " (harus anggota kepanitiaan acara ini)"),
       );
       continue;
     }
@@ -633,7 +541,7 @@ export async function setCertificateFolder(formData: FormData): Promise<void> {
   const eventId = String(formData.get("eventId") ?? "");
   const kind = parseKind(formData.get("kind"));
   if (!eventId) throw new Error("Acara wajib dipilih");
-  await requireEventCapability(eventId, "event.issueCertificates");
+  const { session } = await requireEventCapability(eventId, "event.issueCertificates");
 
   const raw = String(formData.get("folderUrl") ?? "").trim();
   const folderUrl = raw ? normalizeCertificateUrl(raw) : null;
@@ -643,6 +551,12 @@ export async function setCertificateFolder(formData: FormData): Promise<void> {
     .update(events)
     .set(kind === "peserta" ? { certificateFolderPesertaUrl: folderUrl } : { certificateFolderPanitiaUrl: folderUrl })
     .where(eq(events.id, eventId));
+
+  // Menyimpan folder = menerbitkan: semua yang SUDAH berhak dan belum punya
+  // sertifikat langsung dapat (beserta notifikasi). Yang baru berhak belakangan
+  // (peserta hadir yang baru mengisi evaluasi) diterbitkan saat evaluasinya
+  // terkirim — lihat issueParticipantCertificateIfEligible.
+  if (folderUrl) await issueFolderCertificatesToMissing(eventId, kind, session.user.id);
 
   revalidateCertificates(eventId);
 }
@@ -730,7 +644,7 @@ export async function listPendingPayments(eventId?: string) {
     .from(eventRegistrations)
     .leftJoin(users, eq(eventRegistrations.userId, users.id))
     .leftJoin(events, eq(eventRegistrations.eventId, events.id))
-    .where(where)
+    .where(and(where, isNull(events.deletedAt)))
     .orderBy(desc(eventRegistrations.registeredAt));
 }
 

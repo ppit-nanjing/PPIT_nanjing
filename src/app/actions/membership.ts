@@ -456,11 +456,13 @@ export async function moveFormField(id: string, toIndex: number) {
   const [moved] = rows.splice(from, 1);
   const clamped = Math.max(0, Math.min(toIndex, rows.length));
   rows.splice(clamped, 0, moved);
-  await db.transaction(async (tx) => {
-    for (let i = 0; i < rows.length; i++) {
-      await tx.update(membershipFormFields).set({ orderIndex: i }).where(eq(membershipFormFields.id, rows[i].id));
-    }
-  });
+  // neon-http tidak mendukung transaction interaktif — pakai db.batch
+  // (satu transaksi implisit, pola yang sama dengan committee.ts). db.batch
+  // menuntut tuple non-kosong; daftar ini selalu berisi minimal field yang dipindah.
+  const updates = rows.map((row, i) =>
+    db.update(membershipFormFields).set({ orderIndex: i }).where(eq(membershipFormFields.id, row.id)),
+  );
+  await db.batch([updates[0], ...updates.slice(1)]);
   revalidatePath("/console/membership/form");
 }
 
@@ -469,24 +471,36 @@ export async function duplicateFormField(id: string) {
   await requireModuleAccess("membership");
   const [src] = await db.select().from(membershipFormFields).where(eq(membershipFormFields.id, id));
   if (!src) return;
-  await db.insert(membershipFormFields).values({
-    key: src.key,
-    label: `${src.label} (salinan)`,
-    type: src.type,
-    placeholder: src.placeholder,
-    helpText: src.helpText,
-    required: src.required,
-    options: src.options,
-    config: src.config,
-    isCore: false,
-    orderIndex: src.orderIndex + 0.5,
-  });
-  const all = await db.select().from(membershipFormFields).orderBy(asc(membershipFormFields.orderIndex));
-  await db.transaction(async (tx) => {
-    for (let i = 0; i < all.length; i++) {
-      await tx.update(membershipFormFields).set({ orderIndex: i }).where(eq(membershipFormFields.id, all[i].id));
-    }
-  });
+  // Key baru (key lama unik per tabel) + orderIndex integer, bukan pecahan:
+  // menyisipkan 0.5 ke kolom integer ditolak Postgres. Klon disisipkan di
+  // integer berikutnya lalu seluruh daftar disusun ulang secara eksplisit.
+  const [created] = await db
+    .insert(membershipFormFields)
+    .values({
+      key: `custom_${Math.random().toString(36).slice(2, 10)}`,
+      label: `${src.label} (salinan)`,
+      type: src.type,
+      placeholder: src.placeholder,
+      helpText: src.helpText,
+      required: src.required,
+      options: src.options,
+      config: src.config,
+      isCore: false,
+      orderIndex: src.orderIndex + 1,
+    })
+    .returning({ id: membershipFormFields.id });
+  const all = await db
+    .select({ id: membershipFormFields.id })
+    .from(membershipFormFields)
+    .orderBy(asc(membershipFormFields.orderIndex));
+  const ids = all.map((r) => r.id).filter((rowId) => rowId !== created.id);
+  const srcIdx = ids.indexOf(src.id);
+  if (srcIdx >= 0) ids.splice(srcIdx + 1, 0, created.id);
+  else ids.push(created.id);
+  const updates = ids.map((rowId, i) =>
+    db.update(membershipFormFields).set({ orderIndex: i }).where(eq(membershipFormFields.id, rowId)),
+  );
+  await db.batch([updates[0], ...updates.slice(1)]);
   revalidatePath("/console/membership/form");
 }
 

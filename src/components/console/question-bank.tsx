@@ -3,10 +3,19 @@
 import { useState } from "react";
 import { Plus, Search } from "lucide-react";
 import { QUESTION_BANK, FIELD_TYPE_LABELS, type QuestionTemplate } from "@/lib/membership-form";
-import { createFormFieldFromTemplate } from "@/app/actions/membership";
 import { SubmitButton } from "@/components/console/submit-button";
 
-export function QuestionBank() {
+// `action` dikirim sebagai prop supaya bank pertanyaan yang sama dipakai modul
+// Pendaftaran Anggota dan modul Formulir (masing-masing punya Server Action
+// sendiri yang mengecek hak aksesnya). `hiddenFields` mengisi field tambahan
+// yang dibutuhkan action tujuan (mis. formId di modul Formulir).
+export function QuestionBank({
+  action,
+  hiddenFields,
+}: {
+  action: (formData: FormData) => void | Promise<void>;
+  hiddenFields?: Record<string, string>;
+}) {
   const [query, setQuery] = useState("");
   const q = query.trim().toLowerCase();
 
@@ -20,8 +29,11 @@ export function QuestionBank() {
     : QUESTION_BANK;
 
   // Card chrome + heading come from the CollapsibleSection this sits inside.
+  // Container query (@container), bukan breakpoint layar: bank ini dipakai di
+  // halaman selebar berbeda (Pendaftaran Anggota, kelola Formulir), jadi jumlah
+  // kolom mengikuti lebar panel tempatnya, bukan lebar jendela.
   return (
-    <div>
+    <div className="@container">
       <div className="flex items-center gap-2 bg-soft-gray rounded-md px-3 mb-5">
         <Search size={16} className="text-on-surface-variant" />
         <input
@@ -32,14 +44,16 @@ export function QuestionBank() {
         />
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+      <div className="grid grid-cols-1 @2xl:grid-cols-2 @5xl:grid-cols-3 gap-x-6 gap-y-6">
         {categories.map((cat) => (
-          <div key={cat.title}>
-            <h3 className="text-label-caps uppercase tracking-wide text-primary-container mb-2">{cat.title}</h3>
+          <div key={cat.title} className="min-w-0">
+            <h3 className="text-label-caps uppercase tracking-wide text-primary-container mb-2">
+              {cat.title} <span className="text-on-surface-variant">· {cat.templates.length}</span>
+            </h3>
             <ul className="flex flex-col gap-2">
               {cat.templates.map((t) => (
                 <li key={t.key}>
-                  <AddTemplateButton template={t} />
+                  <AddTemplateButton template={t} action={action} hiddenFields={hiddenFields} />
                 </li>
               ))}
             </ul>
@@ -50,12 +64,26 @@ export function QuestionBank() {
   );
 }
 
-function AddTemplateButton({ template }: { template: QuestionTemplate }) {
+function AddTemplateButton({
+  template,
+  action,
+  hiddenFields,
+}: {
+  template: QuestionTemplate;
+  action: (formData: FormData) => void | Promise<void>;
+  hiddenFields?: Record<string, string>;
+}) {
   return (
-    <form action={createFormFieldFromTemplate} className="flex items-center justify-between gap-3 bg-soft-gray rounded-md px-4 py-3">
-      <div className="min-w-0">
-        <p className="text-body-md text-on-background truncate">{template.label}</p>
-        <p className="text-label-caps text-on-surface-variant">{FIELD_TYPE_LABELS[template.type]}</p>
+    <form action={action} className="flex items-start justify-between gap-3 bg-soft-gray rounded-md px-4 py-3 h-full">
+      {hiddenFields &&
+        Object.entries(hiddenFields).map(([name, value]) => (
+          <input key={name} type="hidden" name={name} value={value} />
+        ))}
+      {/* Label dibiarkan membungkus (bukan truncate): pertanyaan komitmen &
+          keahlian panjang dan harus terbaca utuh sebelum ditambahkan. */}
+      <div className="min-w-0 flex-1">
+        <p className="text-body-md text-on-background leading-snug text-pretty break-words">{template.label}</p>
+        <p className="text-label-caps text-on-surface-variant mt-1">{FIELD_TYPE_LABELS[template.type]}</p>
       </div>
       <SubmitButton
         successMessage="Pertanyaan ditambahkan."

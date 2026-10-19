@@ -1,4 +1,4 @@
-import { eq, and, ne, desc } from "drizzle-orm";
+import { eq, and, ne, desc, isNull } from "drizzle-orm";
 import { notFound } from "next/navigation";
 import { auth } from "@/auth";
 import { db } from "@/db";
@@ -40,7 +40,8 @@ export default async function EventDetailPage({ params, searchParams }: { params
   const { slug } = await params;
   const { volunteer: volunteerFlag } = await searchParams;
   const { t, locale } = await getT();
-  const [event] = await db.select().from(events).where(eq(events.slug, slug));
+  // Acara di Sampah = 404, sama seperti acara yang sudah dihapus.
+  const [event] = await db.select().from(events).where(and(eq(events.slug, slug), isNull(events.deletedAt)));
   if (!event) notFound();
 
   const session = await auth();
@@ -153,7 +154,7 @@ export default async function EventDetailPage({ params, searchParams }: { params
   const related = await db
     .select()
     .from(events)
-    .where(and(eq(events.status, "published"), ne(events.id, event.id)))
+    .where(and(eq(events.status, "published"), ne(events.id, event.id), isNull(events.deletedAt)))
     .orderBy(desc(events.startAt))
     .limit(3);
 

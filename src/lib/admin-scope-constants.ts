@@ -31,7 +31,7 @@
 // 2026-10-11) that BPH or pusat may hold it, and that it stays separate from
 // "content" (news). Before this key existed those pages only checked
 // user.isAdmin, so any scoped admin could publish visa advice.
-export type AdminModule = "users" | "organization" | "events" | "inventory" | "reports" | "sensus" | "sensus-ranting" | "sensus-verify" | "content" | "guidebook" | "feedback" | "membership" | "notifications" | "links" | "documents" | "career";
+export type AdminModule = "users" | "organization" | "events" | "inventory" | "reports" | "sensus" | "sensus-ranting" | "sensus-verify" | "content" | "guidebook" | "feedback" | "membership" | "forms" | "notifications" | "links" | "documents" | "career";
 
 const MODULE_ALIASES: Partial<Record<AdminModule, string[]>> = {
   content: ["content", "gallery"],
@@ -58,6 +58,7 @@ export const ASSIGNABLE_SCOPE_KEYS: { key: string; label: string }[] = [
   { key: "organization", label: "Organisasi (sensitif — hanya BPH)" },
   { key: "feedback", label: "Masukan Pengguna (sensitif — hanya BPH)" },
   { key: "membership", label: "Pendaftaran Anggota (rekrutmen)" },
+  { key: "forms", label: "Formulir & Oprek (Pemilu, BPH Acara, Kepanitiaan)" },
   { key: "links", label: "Tautan (short link)" },
   { key: "documents", label: "Dokumen (Google Drive)" },
   { key: "career", label: "Lowongan (pasang lowongan & proses lamaran)" },

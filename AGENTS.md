@@ -28,8 +28,9 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
 	- `npm run dev`
 	- `npx tsc --noEmit`
 	- `npm run lint`
-	- `npm run build`
-	- `npm run db:seed` only with an intentional target database
+- `npm run build`
+- `npm run check:drift` membandingkan `src/db/schema.ts` dengan database (tabel, kolom, nilai enum). Migrasi di repo ini dijalankan manual — jalankan ini setelah menarik perubahan yang membawa migrasi baru dan sebelum push, supaya kolom yang belum di-apply tidak menjatuhkan produksi (insiden `news_articles.content_html`, migrasi 0051)
+- `npm run db:seed` only with an intentional target database
 - Copy `.env.example` to `.env` for local setup. Never commit `.env` or credentials.
 
 ## Repository map

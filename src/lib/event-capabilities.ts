@@ -56,14 +56,21 @@ export type EventCommitteeRole =
   | "acara"
   | "logistik"
   | "dokumentasi"
-  | "anggota";
+  | "anggota"
+  // Kadiv: ketua satu divisi acara. Akses acara = panitia biasa; hak tambahannya
+  // hanya di modul Formulir (kelola Oprek anggota) — lihat form-access.ts.
+  | "kadiv";
 
 // TINGKAT 3 — BPH Panitia. Jabatan pelaksana inti yang otomatis pegang SEMUA
 // fitur acaranya (kecuali event.delete / event.takeOver — itu BPH Kabinet).
+// bendahara ikut di sini sejak modul Formulir/Oprek (2026-10): alur kepanitiaan
+// PPIT menempatkan bendahara sebagai bagian BPH Acara (ketua → wakil/sekretaris/
+// bendahara), jadi hasil Oprek BPH yang diterima harus dapat izin kelola acara.
 export const BPH_PANITIA_ROLES: EventCommitteeRole[] = [
   "ketua",
   "wakil",
   "sekretaris",
+  "bendahara",
   "supervisor",
 ];
 
@@ -196,4 +203,5 @@ export const EVENT_COMMITTEE_ROLE_LABEL: Record<EventCommitteeRole, string> = {
   logistik: "Logistik",
   dokumentasi: "Dokumentasi",
   anggota: "Anggota",
+  kadiv: "Kadiv (Ketua Divisi)",
 };

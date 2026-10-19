@@ -1,6 +1,6 @@
 "use server";
 
-import { and, eq } from "drizzle-orm";
+import { and, eq, isNull } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { auth } from "@/auth";
@@ -31,7 +31,7 @@ export async function applyAsVolunteer(formData: FormData): Promise<void> {
 
   if (!slug) redirect("/events");
 
-  const [event] = await db.select().from(events).where(eq(events.id, eventId));
+  const [event] = await db.select().from(events).where(and(eq(events.id, eventId), isNull(events.deletedAt)));
   if (
     !event ||
     !event.volunteerSignupOpen ||

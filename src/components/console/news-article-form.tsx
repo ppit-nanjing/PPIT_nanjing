@@ -3,10 +3,10 @@
 import { useActionState } from "react";
 import type { ContentFormState } from "@/app/actions/admin-content";
 import { ImageUploadCropper } from "@/components/upload/image-upload-cropper";
-import { AIImproveButton } from "@/components/ai/ai-improve-button";
 import { AIReviewButton } from "@/components/ai/ai-review-popup";
 import { CheckboxField } from "@/components/console/form";
 import { useActionToast } from "@/components/console/submit-button";
+import { NewsArticleEditor } from "@/components/console/news-article-editor";
 
 // Shared create/edit form for console news. Client component so validation
 // errors from upsertNewsArticle render inline (useActionState) instead of
@@ -25,6 +25,7 @@ export function NewsArticleForm({
     coverImageUrl?: string;
     category?: string;
     content?: string;
+    contentHtml?: string | null;
     published?: boolean;
     archived?: boolean;
   };
@@ -74,16 +75,9 @@ export function NewsArticleForm({
         />
       </div>
       <div>
-        <textarea
-          id="news-content"
-          name="content"
-          placeholder="Isi berita"
-          rows={10}
-          defaultValue={initial?.content ?? ""}
-          className="bg-soft-gray rounded-md p-3 text-body-md resize-none w-full"
-        />
+        <label className="mb-2 block text-label-caps uppercase tracking-wide text-on-surface-variant">Isi berita</label>
+        <NewsArticleEditor initialText={initial?.content ?? ""} initialHtml={initial?.contentHtml ?? null} />
         <div className="flex items-center gap-4 mt-1">
-          <AIImproveButton context="news" targetId="news-content" />
           <AIReviewButton context="news" fields={[{ id: "news-title", label: "Judul" }, { id: "news-content", label: "Isi" }]} />
         </div>
       </div>

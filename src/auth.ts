@@ -9,6 +9,7 @@ import { cookies } from "next/headers";
 import { db } from "@/db";
 import { users, accounts, sessions, verificationTokens } from "@/db/schema";
 import { verifyPassword } from "@/lib/password";
+import { isBphPanitiaRole, type EventCommitteeRole } from "@/lib/event-capabilities";
 import { isRantingBphRole, rantingCodeFromRoleName, type RantingCode } from "@/lib/rantings";
 
 // Best-effort brute-force throttle for the email/password path. NOTE: this is an
@@ -48,11 +49,13 @@ function getRememberMePreference(user: unknown): boolean | undefined {
 
 // Admin-access rule per docs/Data Dictionary.md "Admin Access Rule" (sourced from the
 // 2026/2027 recruitment guidebook):
-// - accessTier 'full' (Ketua Umum, BPH, any Koordinator Divisi) -> every admin module.
+// - accessTier 'full' (Ketua Umum, BPH) -> every admin module.
 // - belongs to a department with grantsFullAdminAccess = true (every member of Divisi
 //   Teknologi, coordinator or not - they build/maintain the system) -> every module too.
-// - accessTier 'scoped' (Anggota Divisi) -> only the module keys listed in the union of
-//   their department(s)' adminModuleScope arrays.
+// - accessTier 'scoped' (Anggota Divisi AND Koordinator Divisi - koordinator
+//   sengaja scoped sejak keputusan 2026-10) -> only the module keys listed in the
+//   union of their department(s)' adminModuleScope arrays. Koordinator tetap
+//   dapat menu Formulir/Oprek lewat session.user.isCoordinator, bukan modul.
 // - accessTier 'advisory' (Dewan Pembina) or no role/department -> no admin access.
 // - a ranting role ("[INA]/[JIA] BPH Ranting") -> the single "sensus-ranting" key
 //   (own-campus census summary only, see src/lib/rantings.ts); "[INA]/[JIA]
@@ -62,13 +65,22 @@ function getRememberMePreference(user: unknown): boolean | undefined {
 // Perf: this used to be three sequential awaited helpers (resolveAdminScope's two
 // queries + emailSubscribed + locale = 4 round trips) and it runs inside the session
 // callback on EVERY auth() call. With Neon over HTTP each query is a full round trip
-// to ap-southeast-1, so all four reads are fused into one joined SELECT here.
+// to ap-southeast-1, so all four reads are fused into one joined SELECT here
+// (kepanitiaan juga ikut lewat subquery skalar - lihat isCommittee/committeeRoles -
+// supaya layout konsol tidak query lagi).
 type SessionContext = {
   accessTier: string | null;
   roleName: string | null;
   emailSubscribed: boolean | null;
   locale: string | null;
-  memberships: { grants: boolean; scope: string[] }[];
+  // Kepala unit (departments.head_user_id = user ini) — dipakai isCoordinator
+  // supaya Koordinator Divisi (role scoped) tetap dapat akses menu Formulir.
+  isHead: boolean | null;
+  // Panitia acara: ada minimal satu baris event_committee, plus daftar role-nya
+  // (untuk membedakan BPH Acara dari panitia biasa tanpa query tambahan).
+  isCommittee: boolean | null;
+  committeeRoles: string[] | null;
+  memberships: { grants: boolean; scope: string[]; position: string | null }[];
 };
 
 async function loadSessionContext(userId: string): Promise<SessionContext | null> {
@@ -77,8 +89,17 @@ async function loadSessionContext(userId: string): Promise<SessionContext | null
            r.name as "roleName",
            u.email_subscribed as "emailSubscribed",
            u.locale as "locale",
+           -- Kepala unit dicek langsung ke departments, bukan lewat join
+           -- department_members: kepala yang tidak punya baris anggota di unitnya
+           -- tetap dikenali sebagai koordinator.
+           exists(select 1 from departments dh where dh.head_user_id = u.id) as "isHead",
+           exists(select 1 from event_committee ec0 where ec0.user_id = u.id) as "isCommittee",
            coalesce(
-             json_agg(json_build_object('grants', d.grants_full_admin_access, 'scope', d.admin_module_scope))
+             (select json_agg(distinct ec.role) from event_committee ec where ec.user_id = u.id),
+             '[]'::json
+           ) as "committeeRoles",
+           coalesce(
+             json_agg(json_build_object('grants', d.grants_full_admin_access, 'scope', d.admin_module_scope, 'position', dm.position))
                filter (where d.id is not null),
              '[]'::json
            ) as "memberships"
@@ -91,6 +112,17 @@ async function loadSessionContext(userId: string): Promise<SessionContext | null
     limit 1
   `);
   return result.rows[0] ?? null;
+}
+
+// "Koordinator Divisi" (atau kepala unit) dikenali dari nama role, posisi di
+// department_members, atau kolom head departments — sama seperti pola
+// name-matching role ranting di resolveAdminScope(). Dipakai modul Formulir
+// (koor boleh bikin form Oprek BPH untuk prokernya) tanpa memberi mereka
+// modul admin lain.
+function isCabinetCoordinator(ctx: SessionContext): boolean {
+  if (ctx.roleName?.trim() === "Koordinator Divisi") return true;
+  if (ctx.isHead) return true;
+  return ctx.memberships.some((m) => (m.position ?? "").toLowerCase().includes("koordinator"));
 }
 
 function resolveAdminScope(ctx: SessionContext): "full" | string[] | null {
@@ -255,6 +287,10 @@ const { handlers, auth: uncachedAuth, signIn, signOut } = NextAuth({
         session.user.image = null;
         session.user.adminScope = null;
         session.user.isAdmin = false;
+        session.user.isCoordinator = false;
+        session.user.isCommittee = false;
+        session.user.isBphCommittee = false;
+        session.user.isEventKadiv = false;
         session.user.rantingCode = null;
         session.user.emailSubscribed = null;
         session.user.locale = null;
@@ -263,6 +299,16 @@ const { handlers, auth: uncachedAuth, signIn, signOut } = NextAuth({
       const scope = resolveAdminScope(ctx);
       session.user.adminScope = scope;
       session.user.isAdmin = scope === "full" || (Array.isArray(scope) && scope.length > 0);
+      // Koor/kepala unit — dipakai menu & gerbang modul Formulir (src/lib/form-access.ts).
+      session.user.isCoordinator = isCabinetCoordinator(ctx);
+      // Panitia acara (semua role) vs BPH Acara (ketua/wakil/sekretaris/bendahara/
+      // supervisor). Dipakai gate masuk konsol + menu; tidak ada query tambahan.
+      session.user.isCommittee = ctx.isCommittee === true;
+      // Kadiv acara (kelola Oprek anggota acaranya) — menu Formulir ikut tampil.
+      session.user.isEventKadiv = (ctx.committeeRoles ?? []).includes("kadiv");
+      session.user.isBphCommittee = (ctx.committeeRoles ?? []).some((role) =>
+        isBphPanitiaRole(role as EventCommitteeRole),
+      );
       // Which ranting a ranting-role user belongs to; null for everyone else.
       // Drives the campus filter on /console/ranting/sensus.
       session.user.rantingCode = (rantingCodeFromRoleName(ctx.roleName) as RantingCode | null) ?? null;

@@ -33,7 +33,10 @@ export type NotificationTemplateKey =
   | "job_application"
   | "sensus_possible_duplicate_name"
   | "membership_accepted"
-  | "membership_rejected";
+  | "membership_rejected"
+  | "oprek_accepted"
+  | "oprek_rejected"
+  | "oprek_placement_changed";
 
 export type NotificationTemplateDef = {
   key: NotificationTemplateKey;
@@ -115,7 +118,7 @@ export const NOTIFICATION_TEMPLATES: NotificationTemplateDef[] = [
     variables: ["certTitle"],
     defaultSubject: "E-sertifikat kamu sudah terbit",
     defaultBody:
-      'E-sertifikat "{{certTitle}}" sudah terbit. Lihat dan unduh di halaman Profil → Riwayat Pengajuan.',
+      'E-sertifikat "{{certTitle}}" sudah terbit. Lihat dan unduh di halaman Profil → Aktivitas.',
   },
   {
     key: "borrow_approved",
@@ -253,6 +256,36 @@ export const NOTIFICATION_TEMPLATES: NotificationTemplateDef[] = [
     defaultSubject: "Hasil seleksi pengurus PPIT Nanjing",
     defaultBody:
       "Halo {{fullName}},\n\nTerima kasih sudah meluangkan waktu mengikuti seleksi pengurus PPIT Nanjing {{batchLabel}}.\n\nSetelah mempertimbangkan seluruh proses seleksi, untuk kali ini kami belum bisa mengajak kamu bergabung di kepengurusan. Keputusan ini tidak mengurangi apresiasi kami atas minat dan usaha kamu.\n\nKami harap kamu tetap aktif di kegiatan PPIT Nanjing, dan semoga bisa bertemu lagi di kesempatan berikutnya.",
+  },
+  {
+    key: "oprek_accepted",
+    group: "Formulir & Oprek",
+    label: "Lamaran Oprek diterima",
+    trigger: "Dikirim saat pengurus menerima pelamar di modul Formulir (Pemilu/Oprek BPH Acara/Oprek Kepanitiaan).",
+    variables: ["fullName", "formTitle", "details"],
+    defaultSubject: "Lamaran diterima — {{formTitle}}",
+    defaultBody:
+      'Halo {{fullName}},\n\nLamaranmu di "{{formTitle}}" DITERIMA. {{details}}\n\nPengurus akan menghubungimu lewat notifikasi atau email untuk langkah berikutnya. Terima kasih!',
+  },
+  {
+    key: "oprek_rejected",
+    group: "Formulir & Oprek",
+    label: "Lamaran Oprek ditolak",
+    trigger: "Dikirim saat pengurus menolak pelamar di modul Formulir (Pemilu/Oprek BPH Acara/Oprek Kepanitiaan).",
+    variables: ["fullName", "formTitle", "details"],
+    defaultSubject: "Hasil lamaran — {{formTitle}}",
+    defaultBody:
+      'Halo {{fullName}},\n\nTerima kasih sudah melamar di "{{formTitle}}". Setelah ditinjau, lamaranmu belum dapat kami terima kali ini. {{details}}\n\nSemoga berjumpa di kesempatan berikutnya!',
+  },
+  {
+    key: "oprek_placement_changed",
+    group: "Formulir & Oprek",
+    label: "Penempatan Oprek diperbarui",
+    trigger: "Dikirim saat pengurus mengubah divisi/role pelamar yang sudah diterima di modul Formulir.",
+    variables: ["fullName", "formTitle", "details"],
+    defaultSubject: "Penempatanmu diperbarui — {{formTitle}}",
+    defaultBody:
+      'Halo {{fullName}},\n\nPenempatanmu di "{{formTitle}}" diperbarui. {{details}}\n\nCek notifikasi atau hubungi pengurus kalau ada pertanyaan.',
   },
 ];
 

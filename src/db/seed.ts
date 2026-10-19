@@ -26,7 +26,7 @@ async function main() {
     .returning();
   const [koordinator] = await db
     .insert(roles)
-    .values({ name: "Koordinator Divisi", accessTier: "full", description: "Memimpin perencanaan teknis divisi" })
+    .values({ name: "Koordinator Divisi", accessTier: "scoped", description: "Memimpin perencanaan teknis divisi — akses modul mengikuti scope divisinya (+ menu Formulir/Oprek lewat isCoordinator)" })
     .returning();
   const [anggota] = await db
     .insert(roles)

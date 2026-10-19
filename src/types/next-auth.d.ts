@@ -10,6 +10,18 @@ declare module "next-auth" {
       // module - counts as no access). null = no admin access at all
       // (accessTier 'advisory', or no role/department assigned).
       adminScope: "full" | string[] | null;
+      // True untuk Koordinator Divisi / kepala unit (dikenali dari role,
+      // position, atau departments.head_user_id). Bukan akses modul penuh:
+      // hanya membuka menu Formulir + Oprek BPH (src/lib/form-access.ts).
+      isCoordinator: boolean;
+      // Panitia acara: punya minimal satu baris event_committee (semua role).
+      // Dipakai gerbang masuk /console dan menu "Kegiatan".
+      isCommittee: boolean;
+      // Subset panitia: rolenya BPH Acara (ketua/wakil/sekretaris/bendahara/
+      // supervisor). Dipakai menu "Formulir" — Oprek Kepanitiaan.
+      isBphCommittee: boolean;
+      // Kadiv di minimal satu acara (role event_committee "kadiv").
+      isEventKadiv: boolean;
       // Set only for users with a "[INA]/[JIA] …Ranting" role - which campus
       // sub-branch they belong to. Drives the filter on /console/ranting/sensus.
       // null for everyone else. See src/lib/rantings.ts.

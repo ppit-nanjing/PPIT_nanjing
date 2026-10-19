@@ -67,16 +67,18 @@ Setiap perubahan di sini (buat/ubah/urutkan) otomatis tercatat di Log Audit (lin
     slug: "kegiatan",
     section: SERING_DIPAKAI,
     title: "Kegiatan — Buat & Kelola Acara",
-    content: `Field Buat/Edit Kegiatan
+    content: `Field Buat/Edit Kegiatan (form "Info & Pengaturan Acara" terbagi 2 bagian; tiap field ada label + keterangan)
 - Judul: wajib.
-- Kategori, Lokasi: teks bebas.
-- Tanggal & jam mulai: wajib.
-- Kapasitas: angka, minimal 1.
+- Kategori, Lokasi: teks bebas. Kategori jadi tab filter di /events; untuk acara online, tulis platformnya di Lokasi (mis. "Zoom Meeting (Online)").
+- Link peta 1/2: opsional, untuk acara offline — teks Lokasi di halaman publik jadi tombol petunjuk arah.
+- Tanggal & jam mulai: wajib. Jam selesai: opsional tapi isi — dipakai sebagai penanda "sudah lewat" dan awal penguncian panitia (14 hari setelahnya).
+- Kapasitas: angka, minimal 1; kosong = tanpa batas.
 - "Hanya peserta yang sensusnya lengkap": centang kalau mau membatasi pendaftar.
 - Gambar Sampul: upload atau tempel URL, rasio 16:9.
 - Batas Pendaftaran: opsional — lewat tanggal ini, pendaftaran otomatis ditutup. Kosongkan kalau tidak ada batas.
 - Jadwal Rilis Publikasi: opsional — kalau diisi, acara tetap tersembunyi ("Terjadwal") sampai tanggal itu, lalu terbit otomatis. Kosongkan kalau mau tetap Draft sampai dipublikasikan manual.
 - Agenda: teks bebas, satu baris per item.
+- Info Setelah Daftar + QR Kontak: tampil di halaman tiket peserta SETELAH mendaftar (bukan di halaman publik) — taruh di sini tautan masuk acara online (Zoom dll.) atau ajakan masuk grup WeChat.
 
 Soal status (draft/terjadwal/terbit/dst)
 - Tombol "Buat & Lanjut Edit" mengikuti Jadwal Rilis Publikasi (kalau diisi → terjadwal, kalau kosong → draft).
@@ -86,16 +88,23 @@ Soal status (draft/terjadwal/terbit/dst)
 Struktur Kepanitiaan
 Bikin divisi acara (nama wajib, bisa punya sub-divisi), lalu tugaskan siapa saja (tidak harus anggota departemen tertentu) + peran + divisi. Menugaskan ulang orang yang sama di acara yang sama cuma mengganti perannya, bukan bikin baris dobel.
 
+Divisi Penanggung Jawab
+Field di halaman detail acara: divisi kabinet pemilik acara/proker ini (boleh lebih dari satu untuk proker gabungan). Efeknya: anggota divisi itu otomatis melihat & mengelola acara tersebut di menu Kegiatan — ASAL divisinya sudah dicentang modul "Kegiatan" oleh admin penuh di Organisasi → edit divisi. Baris PJ ini menyempitkan akses pemegang modul ke acara divisinya, bukan memberi modul baru; kalau divisi PJ belum punya centang "Kegiatan" (mis. Humas untuk acara Sosialisasi), mintakan dulu ke admin penuh. Hanya BPH Kabinet/Divisi Teknologi (admin penuh) yang boleh mengubah field ini. Acara yang belum punya Divisi Penanggung Jawab hanya terlihat admin penuh dan pembuatnya.
+
 Pertanyaan Pendaftaran
 Di halaman detail acara. Kosong = form pendaftaran standar. Tambahkan pertanyaan (Teks Pendek/Panjang, Dropdown, Pilihan, Pilih Banyak) bila acaranya butuh — mis. preferensi makanan atau ukuran kaos; centang "Wajib diisi" supaya tidak bisa dilewati. Jawabannya muncul di kolom Peserta pada Daftar Pendaftar. Menghapus pertanyaan tidak menghapus jawaban yang sudah tersimpan, cuma berhenti ditampilkan.
 
-Hapus kegiatan: album galeri terkait acara ini ikut terhapus, pendaftaran ikut terhapus otomatis.`,
+Hapus kegiatan & Sampah (khusus BPH Kabinet)
+- Tombol "Hapus" tidak langsung menghapus: kegiatan dipindah ke Sampah. Kegiatan di Sampah hilang dari situs publik, dari daftar kegiatan, dan dari akses panitia, tapi pendaftar, panitia, evaluasi, dan datanya tetap tersimpan. Formulir/Oprek milik acara itu juga tidak bisa diisi lagi.
+- Bagian "Sampah" ada di bawah Daftar Kegiatan. "Pulihkan" mengembalikan kegiatan dengan status semula — kalau statusnya publik, langsung tampil lagi di situs.
+- "Hapus Permanen" hanya bisa dari Sampah dan TIDAK bisa dibatalkan: pendaftar, panitia, evaluasi ikut terhapus. Album galeri yang tertaut tidak ikut terhapus, hanya dilepas tautannya. Sertifikat yang sudah terbit tetap ada.
+- Setiap pindah ke Sampah, pemulihan, dan hapus permanen tercatat di Log Audit.`,
   },
   {
     slug: "work-ledger",
     section: SERING_BINGUNG,
     title: "Work Ledger — Beban Kepanitiaan, Pembayaran, Sertifikat",
-    content: `Halaman ini BUKAN pengganti halaman Kegiatan — ini tampilan lintas-acara supaya kelihatan siapa kebanyakan jadi panitia, plus dua alat tambahan: verifikasi pembayaran dan sertifikat.
+    content: `Halaman ini BUKAN pengganti halaman Kegiatan — ini tampilan lintas-acara supaya kelihatan siapa kebanyakan jadi panitia, plus dua alat tambahan: verifikasi pembayaran dan sertifikat. Sejak akses Kegiatan dibuat spesifik per acara, Work Ledger hanya menampilkan acara yang boleh kamu lihat (BPH Kabinet/Divisi Teknologi tetap melihat semua).
 
 Tugaskan Panitia
 - Acara, Pengurus (siapa saja): wajib pilih.
@@ -104,7 +113,7 @@ Tugaskan Panitia
 Menugaskan orang yang sama di acara yang sama cuma mengganti perannya, tidak bikin baris dobel.
 
 Beban Kepanitiaan
-Daftar baca-saja. Yang sudah jadi panitia di 3 acara atau lebih ditandai peringatan (bukan larangan, cuma pengingat beban). Tombol "Lepas" hanya melepas satu penugasan itu.
+Daftar baca-saja. Hitungan dan peringatan beban (3 acara atau lebih) hanya dihitung dari kepanitiaan AKTIF — acara yang sudah selesai/dibatalkan atau tanggal mulainya sudah lewat ditandai "Selesai" dan tidak menambah beban, tapi tetap tampil sebagai riwayat. Tombol "Lepas" hanya melepas satu penugasan itu.
 
 Verifikasi Pembayaran
 Bagian ini hanya terlihat oleh akun ber-scope ORGANISASI — catatan finansial sengaja tidak dibuka ke semua admin acara, jadi bendahara acara harus punya scope itu dulu. Daftar di sini cuma penunjuk lintas-acara; verifikasi sesungguhnya ada di halaman detail Kegiatannya (konteks biaya + kolom catatan ada di sana). Sebelum menekan Terverifikasi, cocokkan nominal, nama pengirim, dan waktu transfer dengan mutasi Alipay/rekening — bukti diunggah sendiri oleh peserta, belum tentu benar.
@@ -119,7 +128,7 @@ Sertifikat
 - Sertifikat TANPA berkas (sisa aturan lama) tidak tampil di profil penerima; menempel tautan padanya membuatnya terbit.
 Hapus sertifikat langsung permanen, tidak ada konfirmasi.
 
-Terbit sertifikat massal peserta/panitia TIDAK lagi dari sini — sekarang dari halaman detail Kegiatan (section "Sertifikat Peserta" / "Sertifikat Panitia"): pakai tautan per orang, "Tempel banyak sekaligus", atau simpan satu **tautan folder** lalu "Terbitkan semua yang berhak" (praktis kalau semua PDF dikumpulkan dalam satu folder Drive; yang sudah punya tautan diganti ke folder tanpa notifikasi ulang). Sertifikat peserta hanya untuk yang sudah di-scan hadir (status attended).`,
+Terbit sertifikat massal peserta/panitia TIDAK lagi dari sini — sekarang dari halaman detail Kegiatan (section "Sertifikat Peserta" / "Sertifikat Panitia"): pakai tautan per orang, "Tempel banyak sekaligus", atau simpan satu **tautan folder** lalu "Terbitkan semua yang berhak" (praktis kalau semua PDF dikumpulkan dalam satu folder Drive; yang sudah punya tautan diganti ke folder tanpa notifikasi ulang). Sertifikat peserta hanya untuk yang sudah di-scan hadir DAN sudah mengisi evaluasi sambil masuk akunnya. Cukup simpan tautan folder: yang sudah berhak langsung dapat, dan yang mengisi evaluasi belakangan otomatis dapat saat evaluasinya terkirim.`,
   },
   {
     slug: "inventaris",
@@ -295,7 +304,7 @@ Menghapus (Hapus) sebuah file memindahkannya ke sampah Drive dan menonaktifkan s
     content: `Setelah acara selesai, peserta bisa mengisi evaluasi lewat tautan publik /events/<slug>/evaluasi (tanpa perlu akun). Tombol "Isi Evaluasi" juga otomatis muncul di halaman acara begitu tanggal acara sudah lewat.
 
 Menyebarkan
-- Bikin short link dulu di menu Tautan (contoh slug: eval-wif26, target /events/wif-2026/evaluasi), unduh QR-nya, tempel di grup WeChat.
+- Dari halaman console acara, buka section "Tautan Pendaftaran & Evaluasi" → klik "Buat tautan pendek + QR (keduanya)" — satu klik membuat tautan pendaftaran DAN evaluasi (slug otomatis daftar-<slug-acara> & eval-<slug-acara>; kalau sudah pernah dibuat, tautan yang sama dipakai ulang). Unduh QR-nya, tempel di grup WeChat. Targetnya relatif, jadi QR tetap hidup walau situs pindah domain. Modul Tautan tetap bisa dipakai untuk tautan lain.
 - Satu perangkat hanya bisa mengisi SEKALI. Kalau ada yang salah isi dan mau mengulang dari perangkat yang sama, hapus dulu barisnya di console (lihat di bawah), baru orang itu bisa isi lagi.
 
 Identitas
@@ -309,6 +318,36 @@ Melihat hasil
 - Ada ringkasan rata-rata + grafik kecil distribusi nilai 1-10 untuk tiap pertanyaan, plus semua jawaban teks.
 - Tombol CSV / Excel untuk mengunduh rekap (buat LPJ).
 - Tombol hapus (ikon tempat sampah) di tiap respons untuk membuang jawaban spam/uji coba.`,
+  },
+  {
+    slug: "evaluasi-panitia",
+    section: SERING_BINGUNG,
+    title: "Evaluasi Panitia — Menilai Kerja Kepanitiaan Bersama",
+    content: `Evaluasi panitia dipakai setelah acara untuk menilai kerja sama divisi dan kepanitiaan secara keseluruhan, bukan menilai orang per orang. Yang mengisi hanya panitia acara itu sendiri, wajib login, dan masing-masing cukup sekali.
+
+Siapa yang mengatur
+- BPH Panitia acara itu (ketua, wakil, sekretaris, bendahara, supervisor) dan BPH Kabinet.
+- Anggota panitia lain hanya melihat berapa orang yang sudah mengisi, tanpa nama dan tanpa isi jawaban.
+- 14 hari setelah acara selesai, acara terkunci: BPH Panitia hanya bisa membaca rekap; perubahan lewat BPH Kabinet.
+
+Membuka evaluasi
+1. Buka /console/events/<id> → section "Evaluasi Acara" → tab "Panitia".
+2. Isi jendela pengisian: "Buka" dan "Tutup" (jam Tiongkok). Tombol "Buka setelah acara" mengisi keduanya otomatis: buka saat acara selesai, tutup 3/7/14 hari kemudian.
+3. Klik "Simpan jendela". Saat pertama kali disimpan, pertanyaan template (lima penilaian bintang 1–5 + tiga pertanyaan teks) otomatis disiapkan.
+4. Salin "Tautan pengisian untuk grup panitia" lalu bagikan ke grup panitia. Jangan bagikan tautan evaluasi peserta ke grup panitia — itu form yang berbeda.
+
+Mengubah pertanyaan
+- Section "Pertanyaan Evaluasi" → tab "Panitia". Tambah, ubah, atau hapus pertanyaan seperti builder evaluasi peserta.
+- Tipe pertanyaan terkunci setelah ada jawaban.
+- Jangan hapus semua pertanyaan saat jendela terbuka: form panitia akan menampilkan "Evaluasi belum disiapkan".
+
+Siapa yang bisa membaca jawaban
+- Jawaban tercatat atas nama akun pengisi beserta divisinya. Yang bisa membaca nama dan isinya hanya BPH Panitia acara itu dan BPH Kabinet. Pengisi diberi tahu hal ini di form-nya.
+
+Melihat hasil
+- Tab "Panitia" di section "Evaluasi Acara": rata-rata tiap penilaian, grafik, dan semua jawaban teks.
+- Tombol CSV / Excel untuk rekap LPJ.
+- Respons bisa dihapus (misalnya salah isi); setiap penghapusan tercatat di Riwayat Audit acara.`,
   },
   {
     slug: "karier",
@@ -329,6 +368,7 @@ Memasang lowongan (/console/jobs → Tambah Lowongan)
 - Lokasi, Batas lamaran, Deskripsi, Persyaratan: opsional.
 - Poster (opsional): unggah gambar poster di kolom "Poster / gambar lowongan". Gambar diunggah apa adanya (tidak dipotong), tampil di samping kanan halaman lowongan dan sebagai thumbnail di daftar Lowongan (publik dan console) — poster potret paling pas. Tautan yang kamu tempel di Deskripsi/Persyaratan otomatis bisa diklik pembaca.
 - Kotak "Langsung buka untuk pelamar": kalau dicentang, lowongan langsung tampil di halaman Jobs (/jobs, "Career Opportunities in Nanjing"). Kalau dikosongkan, lowongan tersimpan tertutup: tidak tampil di daftar dan tidak bisa dilamar, tapi halamannya TETAP bisa dibaca siapa pun yang punya tautannya. Jadi bukan draf rahasia, dan jangan bagikan tautannya sebelum dibuka.
+- Membagikan tautan lowongan: buka lowongannya di console, lalu klik "Salin tautan" (tombol "Lihat publik" membuka halamannya langsung) — tempel tautan itu ke grup atau chat. Pembaca juga bisa memakai tombol "Bagikan" di halaman lowongan: di HP membuka menu berbagi (WhatsApp/WeChat), di komputer menyalin tautan.
 - Batas lamaran DITEGAKKAN otomatis: begitu tanggalnya lewat, lowongan tidak bisa dilamar lagi (tombol lamar diganti keterangan) dan tampil abu-abu. Paling banyak 3 lowongan lewat batas yang tetap tampil abu-abu di /jobs; sisanya pindah ke halaman Arsip (/jobs/archive), bersama lowongan yang kamu tutup manual.
 
 Cara melamar (pilih satu per lowongan)
@@ -445,6 +485,51 @@ Yang dicek kalau kartunya hilang
 5. Tombolnya selalu dihitung ulang di server saat menjawab, dari teks jawaban yang dipakai saat itu plus potongan terbaru: menyunting baris tempatnya langsung terlihat. Setelah menyunting isi, jalankan npx tsx --env-file=.env.local src/db/ingest-guide.ts [slug] supaya potongan pencariannya ikut diperbarui.
 
 Tidak perlu menyentuh kode atau database: cukup tempel tautannya di artikel, lalu ingest ulang topiknya.`,
+  },
+  {
+    slug: "oprek",
+    section: SERING_BINGUNG,
+    title: "Formulir & Oprek — Pemilu, BPH Acara, dan Kepanitiaan",
+    content: `Apa ini
+Menu Formulir untuk rekrutmen internal kabinet. Semua form di sini hanya bisa diisi pengurus kabinet (terdaftar di Struktur Organisasi): Pemilu (pendaftaran calon periode berikutnya), Oprek BPH Acara (rekrut BPH untuk satu acara), dan Oprek Kepanitiaan (rekrut panitia acara per divisi). Form Pendaftaran PPIT (publik) tetap di menu Pendaftaran.
+
+Siapa yang bisa akses
+- BPH Inti + Divisi Teknologi: semua tab, semua acara.
+- Koordinator Divisi: tab Oprek BPH Acara — setiap koor boleh membuat form untuk proker divisinya.
+- BPH Acara (ketua/wakil/sekretaris/bendahara/supervisor hasil Oprek): tab Oprek Kepanitiaan untuk acaranya — Oprek Kadiv dan Oprek anggota.
+- Kadiv acara (hasil Oprek Kadiv): Oprek anggota acaranya — boleh membuat formnya, melihat SEMUA pelamar semua divisi, dan memutuskannya; penempatan hanya sebagai peran anggota divisi (tidak bisa mengangkat BPH/Kadiv).
+- Anggota kabinet biasa: hanya MENGISI form; tidak melihat hasil pelamar.
+
+Alur Oprek BPH Acara
+1. Pastikan acaranya sudah dibuat lebih dulu di menu Kegiatan.
+2. Formulir → Oprek BPH Acara → isi judul, pilih acara, centang posisi yang dibuka (minimal satu).
+3. Susun pertanyaan (Tambah Pertanyaan / Bank Pertanyaan), lalu nyalakan "Buka untuk pengisian".
+4. Bagikan tautannya (Salin tautan / Bagikan) ke grup. Penerima wajib login sebagai pengurus kabinet.
+5. Tinjau di bagian Pendaftar → klik pelamar: jawaban lengkap, atur status (Menunggu/Diterima/Ditolak) dan role, lalu Simpan Penempatan. Yang DITERIMA otomatis tercatat sebagai panitia acara itu.
+6. Analitik dan ekspor CSV/Excel ada di halaman form yang sama.
+
+Alur Oprek Kadiv (ketua divisi)
+1. Setelah BPH Acara terbentuk dan divisi acaranya dibuat di Struktur Kepanitiaan, BPH Acara membuat Oprek Kadiv di tab Oprek Kepanitiaan.
+2. Pelamar memilih divisi yang ingin dipimpin (Pilihan 1 wajib, Pilihan 2 opsional).
+3. Hanya BPH Acara (atau BPH Inti/Tech) yang memutuskan. Yang diterima otomatis tercatat sebagai Kadiv divisinya dan mendapat menu Formulir untuk mengelola Oprek anggota.
+
+Alur Oprek anggota (Oprek Kepanitiaan)
+1. SATU formulir untuk semua divisi. Dibuat oleh BPH Acara atau Kadiv acara tersebut (atau BPH Inti/Tech).
+2. Pelamar memilih Divisi Pilihan 1 (wajib) dan Pilihan 2 (opsional, harus beda) — daftarnya diambil dari Struktur Kepanitiaan acara.
+3. Status penempatan: Menunggu → Diterima Pilihan 1 / Diterima Pilihan 2 / Dipindah divisi (pilih divisi) / Ditolak.
+4. Diterima atau dipindah otomatis masuk Kepanitiaan acara (divisi + role, default anggota). Role dan divisi bisa diubah lewat dropdown, dan perubahannya mengirim notifikasi ke pelamar.
+5. Menolak pelamar yang sebelumnya diterima menghapus baris panitianya — KECUALI dia masih diterima lewat form lain untuk acara yang sama, atau baris panitianya ditugaskan manual (bukan dari Oprek).
+
+Pemilu
+Form pendaftaran calon untuk kepengurusan periode berikutnya, khusus kabinet. Hanya BPH Inti + Divisi Teknologi yang mengelola.
+
+Catatan penting
+- Satu acara hanya punya SATU form Oprek BPH dan SATU form Oprek Kepanitiaan. Setelah form BPH dibuat, acaranya tidak muncul lagi di pilihan "Buat Formulir" Oprek BPH — lanjut ke Oprek Kepanitiaan setelah BPH-nya terbentuk. Kalau perlu mengulang rekrutmen, hapus dulu formulir lamanya (lamaran lama ikut terhapus).
+- Semua form kabinet: satu orang satu kiriman per form, dan jawaban TIDAK bisa diedit sendiri — pelamar yang perlu mengubah jawaban harus menghubungi pengurus formnya (hapus lamarannya lewat tombol Hapus di halaman pelamar, lalu minta isi ulang).
+- Lampiran file/gambar disimpan privat: hanya pemilik, pengelola form, dan BPH Inti/Divisi Teknologi yang bisa membuka.
+- 14 hari setelah acara selesai, BPH Acara tidak bisa lagi mengubah penempatan (acara terkunci); hubungi BPH Kabinet/Divisi Teknologi.
+- Notifikasi keputusan (diterima/ditolak/perubahan penempatan) dikirim in-app + email. Teksnya bisa diedit di menu Notifikasi → grup "Formulir & Oprek".
+- Divisi Penanggung Jawab tiap acara diatur di halaman acara (menu Kegiatan) dan dipakai untuk filter laporan per divisi.`,
   },
 ];
 

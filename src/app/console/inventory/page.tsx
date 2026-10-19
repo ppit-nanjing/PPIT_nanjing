@@ -1,4 +1,4 @@
-import { eq, desc } from "drizzle-orm";
+import { eq, desc, and, isNull } from "drizzle-orm";
 import { db } from "@/db";
 import { inventoryItems, borrowRequests, users, itemContributions, procurementRequests, externalLoans, itemReservations, events } from "@/db/schema";
 import { createInventoryItem, updateInventoryItem } from "@/app/actions/admin-inventory";
@@ -61,7 +61,7 @@ export default async function ConsoleInventoryPage() {
     db
       .select({ id: events.id, title: events.title })
       .from(events)
-      .where(eq(events.status, "published"))
+      .where(and(eq(events.status, "published"), isNull(events.deletedAt)))
       .orderBy(desc(events.startAt)),
     getGuide("inventaris"),
   ]);

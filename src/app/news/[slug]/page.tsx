@@ -12,6 +12,7 @@ import { ReadingProgress } from "@/components/reading-progress";
 import { ArticleShare } from "@/components/article-share";
 import { ArrowLeft } from "lucide-react";
 import Image from "next/image";
+import { sanitizeNewsHtml } from "@/lib/sanitize-news-html";
 import Link from "next/link";
 import { getT } from "@/lib/i18n/server";
 import { INTL_LOCALE } from "@/lib/i18n/config";
@@ -123,8 +124,13 @@ export default async function NewsDetailPage({
           <ArticleShare />
         </div>
 
-        <article lang={locale} className="flex flex-col gap-5 text-body-lg text-on-surface-variant leading-relaxed text-pretty">
-          {paragraphs.length > 0 ? (
+        <article
+          lang={locale}
+          className="news-article-content flex flex-col gap-5 text-body-lg text-on-surface-variant leading-relaxed text-pretty [&_a]:text-primary-container [&_a]:underline [&_blockquote]:my-2 [&_blockquote]:border-l-4 [&_blockquote]:border-primary-container/50 [&_blockquote]:pl-5 [&_blockquote]:italic [&_figcaption]:mt-2 [&_figcaption]:text-center [&_figcaption]:text-body-sm [&_figcaption]:text-on-surface-variant [&_figcaption:empty]:hidden [&_figure]:my-5 [&_h2]:mt-8 [&_h2]:text-headline-lg [&_h2]:text-on-background [&_h3]:mt-6 [&_h3]:text-headline-md [&_h3]:text-on-background [&_img]:h-auto [&_img]:w-full [&_img]:rounded-lg [&_li]:ml-6 [&_ol]:list-decimal [&_ol]:space-y-1 [&_p]:mb-5 last:[&_p]:mb-0 [&_ul]:list-disc [&_ul]:space-y-1"
+        >
+          {a.contentHtml ? (
+            <div dangerouslySetInnerHTML={{ __html: sanitizeNewsHtml(a.contentHtml) }} />
+          ) : paragraphs.length > 0 ? (
             paragraphs.map((p, i) => (
               <p
                 key={i}

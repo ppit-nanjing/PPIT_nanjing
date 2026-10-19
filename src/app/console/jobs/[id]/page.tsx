@@ -16,6 +16,7 @@ import { deleteJobPosting, setJobPostingStatus, upsertJobPosting } from "@/app/a
 import { JobPostingForm } from "@/components/console/job-posting-form";
 import { CollapsibleSection } from "@/components/console/collapsible-section";
 import { ConfirmButton } from "@/components/console/confirm-button";
+import { CopyButton } from "@/components/copy-button";
 import { FlashToast } from "@/components/console/flash-toast";
 import { getSiteUrl } from "@/lib/site-url";
 import { UUID_RE } from "@/lib/uuid";
@@ -60,14 +61,17 @@ export default async function EditJobPostingPage({ params }: { params: Promise<{
           <ArrowLeft size={16} /> Kembali
         </Link>
         {isOpen && (
-          <a
-            href={`${getSiteUrl()}/jobs/${job.id}`}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="inline-flex items-center gap-1.5 text-label-caps uppercase tracking-wide text-primary-container hover:text-primary transition-colors"
-          >
-            Lihat publik <ExternalLink size={13} aria-hidden />
-          </a>
+          <div className="flex flex-wrap items-center gap-3">
+            <CopyButton value={`${getSiteUrl()}/jobs/${job.id}`} label="Salin tautan" />
+            <a
+              href={`${getSiteUrl()}/jobs/${job.id}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-1.5 text-label-caps uppercase tracking-wide text-primary-container hover:text-primary transition-colors"
+            >
+              Lihat publik <ExternalLink size={13} aria-hidden />
+            </a>
+          </div>
         )}
       </div>
 

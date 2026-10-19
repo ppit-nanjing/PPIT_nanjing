@@ -1,12 +1,15 @@
 ﻿"use server";
 
-import { eq, ne, and, sql } from "drizzle-orm";
+import { eq, ne, and, like, sql } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
+import QRCode from "qrcode";
 import { auth } from "@/auth";
 import { db } from "@/db";
-import { managementPeriods, shortLinks } from "@/db/schema";
+import { events, managementPeriods, shortLinks } from "@/db/schema";
 import { hasModuleAccess } from "@/lib/admin-scope-constants";
+import { requireEventCapability } from "@/lib/event-access";
+import { getSiteOrigin } from "@/lib/site";
 
 export type ShortLinkFormState = { error?: string };
 
@@ -230,4 +233,86 @@ export async function createManagementPeriod(
   revalidatePath("/console/links");
   revalidatePath("/console/links/new");
   return {};
+}
+
+// ---------- tautan pendek otomatis untuk acara ----------
+//
+// Panitia tidak perlu membuat tautan pendaftaran/evaluasi secara manual di
+// modul Tautan: dari halaman console acara, SATU klik membuat KEDUANYA (slug
+// `daftar-<slug-acara>` & `eval-<slug-acara>`), idempoten - klik berikutnya
+// memakai tautan yang sudah ada, termasuk yang dibuat manual.
+//
+// Dua detail yang menjaga QR yang sudah tersebar tetap hidup:
+//  - target disimpan RELATIF ("/events/...") supaya tidak terikat domain saat
+//    situs pindah (nanjing.ppitiongkok.com). Rute /l menerima relatif & absolut.
+//  - pencocokan tautan lama memakai AKHIRAN path, bukan URL penuh, supaya
+//    tautan absolute lama (domain lama) tetap dikenali dan tidak dobel.
+// Gerbangnya `event.editContent` (fitur dasar semua panitia acara); barisnya
+// tetap tercatat di /console/links seperti tautan lain.
+export type EventShortLinkInfo = { slug: string; shortUrl: string; qrDataUrl: string; created: boolean };
+
+export async function ensureEventShortLinks(
+  eventId: string,
+): Promise<{ daftar: EventShortLinkInfo; evaluasi: EventShortLinkInfo }> {
+  const { session } = await requireEventCapability(eventId, "event.editContent");
+
+  const [event] = await db
+    .select({ slug: events.slug, title: events.title })
+    .from(events)
+    .where(eq(events.id, eventId));
+  if (!event) throw new Error("Acara tidak ditemukan");
+
+  const origin = await getSiteOrigin();
+
+  async function ensureKind(kind: "daftar" | "evaluasi"): Promise<EventShortLinkInfo> {
+    const path = `/events/${event.slug}/${kind === "daftar" ? "register" : "evaluasi"}`;
+
+    // Sudah pernah dibuat untuk tujuan ini (slug apa pun, domain apa pun)?
+    // Pakai ulang, jangan bikin baris kedua.
+    const [existing] = await db
+      .select({ slug: shortLinks.slug })
+      .from(shortLinks)
+      .where(like(shortLinks.targetUrl, `%${path}`))
+      .limit(1);
+
+    let slug = existing?.slug ?? null;
+    let created = false;
+    if (!slug) {
+      const preferred = `${kind === "daftar" ? "daftar" : "eval"}-${slugify(event.slug)}`.slice(0, 60);
+      for (let i = 0; i < 20 && !slug; i += 1) {
+        const candidate = i === 0 ? preferred : `${preferred}-${i + 1}`;
+        if (!isValidSlug(candidate)) break;
+        const [collision] = await db
+          .select({ id: shortLinks.id })
+          .from(shortLinks)
+          .where(eq(shortLinks.slug, candidate))
+          .limit(1);
+        if (!collision) slug = candidate;
+      }
+      if (!slug) throw new Error("Tidak menemukan slug tautan yang bebas");
+
+      await db.insert(shortLinks).values({
+        slug,
+        targetUrl: path,
+        title: kind === "daftar" ? `Pendaftaran — ${event.title}` : `Evaluasi — ${event.title}`,
+        description: kind === "daftar" ? "Form pendaftaran peserta acara." : "Kuesioner evaluasi pasca-acara.",
+        category: "form",
+        createdBy: session.user.id,
+      });
+      created = true;
+      revalidatePath("/console/links");
+    }
+
+    return {
+      slug,
+      shortUrl: `${origin}/l/${slug}`,
+      qrDataUrl: await QRCode.toDataURL(`${origin}/l/${slug}`, { width: 160, margin: 1 }),
+      created,
+    };
+  }
+
+  const daftar = await ensureKind("daftar");
+  const evaluasi = await ensureKind("evaluasi");
+  revalidatePath(`/console/events/${eventId}`);
+  return { daftar, evaluasi };
 }

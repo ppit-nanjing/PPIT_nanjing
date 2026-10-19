@@ -1,7 +1,8 @@
-import { eq, and, desc, sql, inArray } from "drizzle-orm";
+import { eq, and, asc, desc, like, or, sql, inArray } from "drizzle-orm";
 import { notFound } from "next/navigation";
+import QRCode from "qrcode";
 import { db } from "@/db";
-import { auditLogs, certificates, coverageCities, events, eventCredits, eventDivisions, eventEvaluations, eventFeeOptions, eventQuestions, eventRegistrations, eventVolunteers, galleryAlbums, galleryPhotos, inventoryItems, itemReservations, newsArticles, sensusProfiles, users } from "@/db/schema";
+import { auditLogs, certificates, coverageCities, departments, events, eventCredits, eventDivisions, eventEvaluations, eventFeeOptions, eventQuestions, eventRegistrations, eventResponsibleDepartments, eventVolunteers, galleryAlbums, galleryPhotos, inventoryItems, itemReservations, newsArticles, sensusProfiles, shortLinks, users } from "@/db/schema";
 import { MEMBERSHIP_LABEL, effectiveBranch, membershipStatus } from "@/lib/membership-status";
 import { updateEventInfo, updateEventContent, updateEventPostReport, setEventStatus, saveEventQuestion, deleteEventQuestion, saveFeeOption, deleteFeeOption } from "@/app/actions/admin-events";
 import { createEventGalleryAlbum } from "@/app/actions/admin-content";
@@ -10,12 +11,16 @@ import { publishDueEvents } from "@/lib/publish-events";
 import { DeleteEventButton } from "@/components/console/delete-event-button";
 import { RegistrationList } from "@/components/console/registration-list";
 import { EventCommitteeStructure } from "@/components/console/event-committee-structure";
+import { EventResponsibleDepartments } from "@/components/console/event-responsible-departments";
 import { listEventDivisions, takeOverEvent, addEventCredit, removeEventCredit } from "@/app/actions/committee";
 import { CertificateRoster } from "@/components/console/certificate-roster";
 import { CertificateBulkForm } from "@/components/console/certificate-bulk-form";
 import { CertificateFolder } from "@/components/console/certificate-folder";
+import { EventQuestionFields } from "@/components/events/event-question-fields";
+import { EventShareLinks } from "@/components/console/event-share-links";
+import { getSiteOrigin } from "@/lib/site";
 import { EVENT_COMMITTEE_ROLE_LABEL } from "@/lib/event-capabilities";
-import { requireEventConsoleAccess } from "@/lib/event-access";
+import { canEditCommitteeEvaluation, canReadCommitteeEvaluation, requireEventConsoleAccess } from "@/lib/event-access";
 import { EVENT_STATUS_LABEL as STATUS_LABEL } from "@/lib/event-status-labels";
 import { EVENT_AUDIT_ACTION_LABEL, type EventAuditAction } from "@/lib/event-audit";
 import { ImageUploadCropper } from "@/components/upload/image-upload-cropper";
@@ -34,11 +39,15 @@ import { loadEvaluationAnswers, loadEvaluationQuestions } from "@/lib/event-eval
 import { ReservationManager } from "@/components/console/reservation-manager";
 import { checkInBlockReason } from "@/lib/event-checkin";
 import { feeTierAt, amountForTier } from "@/lib/event-fee";
-import { toDateLocalInput } from "@/lib/datetime";
+import { toChinaLocalInput, toDateLocalInput } from "@/lib/datetime";
 import { ConfirmButton } from "@/components/console/confirm-button";
 import { FlashToast } from "@/components/console/flash-toast";
 import { SubmitButton } from "@/components/console/submit-button";
-import { Download, Images } from "lucide-react";
+import { CommitteeEvalWindowEditor } from "@/components/console/committee-eval-window-editor";
+import { EvalAudienceTabs } from "@/components/console/eval-audience-tabs";
+import { CopyButton } from "@/components/copy-button";
+import { committeeEvalWindowState } from "@/lib/committee-evaluation";
+import { Download, Eye, Images } from "lucide-react";
 
 const QUESTION_TYPE_LABELS: Record<string, string> = {
   text: "Teks Pendek",
@@ -57,6 +66,32 @@ export default async function ConsoleEventDetailPage({ params }: { params: Promi
   const [event] = await db.select().from(events).where(eq(events.id, id));
   if (!event) notFound();
 
+  // Tautan pendek pendaftaran & evaluasi: URL absolut + baris short_links yang
+  // sudah ada (dibuat dari section "Tautan Pendaftaran & Evaluasi" atau manual
+  // di modul Tautan). Pencocokan memakai AKHIRAN path supaya tautan lama
+  // (target absolute/domain lama) tetap dikenali. Query-nya ikut gelombang
+  // pertama di bawah.
+  const shareOrigin = await getSiteOrigin();
+  const sharePaths = {
+    daftar: `/events/${event.slug}/register`,
+    evaluasi: `/events/${event.slug}/evaluasi`,
+  };
+  const shareDirect = {
+    daftar: `${shareOrigin}${sharePaths.daftar}`,
+    evaluasi: `${shareOrigin}${sharePaths.evaluasi}`,
+  };
+
+  // ===== Evaluasi panitia (kolektif, audiens "panitia" di event_evaluations) =====
+  // GERBANG B2 — dihitung SEBELUM Promise.all supaya jawaban beserta nama
+  // pengisinya TIDAK PERNAH diambil dari database untuk yang tidak berhak.
+  // Editor jendela waktu, rekap lengkap, dan ekspor hanya untuk BPH Kabinet/
+  // Teknologi atau BPH Panitia acara ini; panitia lain cukup melihat jumlah
+  // pengisi dan statusnya sendiri.
+  const canManageCommitteeEval = canReadCommitteeEvaluation(access);
+  // Mengubah (jendela, pertanyaan panitia, hapus respons) ikut kunci kepanitiaan:
+  // BPH Panitia hanya bisa membaca rekap setelah acara terkunci.
+  const canEditCommitteeEval = canEditCommitteeEvaluation(access);
+
   // Semua query di bawah hanya bergantung pada `id` dan hak akses, bukan satu
   // sama lain, jadi dijalankan serentak: satu putaran ke database alih-alih
   // belasan putaran berurutan (tiap putaran ~240 ms bila fungsi dan database
@@ -74,7 +109,7 @@ export default async function ConsoleEventDetailPage({ params }: { params: Promi
     { divisions, members: committee }, // struktur kepanitiaan acara ini (Departemen -> sub-tim)
     questions,
     feeOptions,
-    evaluations,
+    evaluations, // respons evaluasi audiens PESERTA (tab Peserta di section Evaluasi Acara)
     volunteerApps,
     candidates, // kandidat penugasan: SEMUA akun, kepanitiaan tidak terikat jabatan struktural
     albums, // album galeri untuk section "Setelah Acara"
@@ -82,10 +117,15 @@ export default async function ConsoleEventDetailPage({ params }: { params: Promi
     auditRows,
     credits,
     eventArticles,
-    evalQuestions, // pertanyaan evaluasi buatan panitia (kosong = template tetap)
-    evalAnswers, // jawaban untuk pertanyaan itu, semua respons acara ini
+    evalQuestions, // pertanyaan evaluasi buatan panitia, audiens peserta (kosong = template tetap)
+    evalAnswers, // jawaban pertanyaan itu, dari respons audiens peserta
+    evalQuestionsPanitia, // pertanyaan audiens panitia (kosong = template kolektif)
     cityRows, // untuk pratinjau form evaluasi, hanya bila viewer boleh menyusunnya
+    committeeEvalRows, // respons audiens panitia + nama/divisi — HANYA untuk pengelola (B2)
+    committeeEvalAnswers, // jawaban audiens panitia — HANYA untuk pengelola (B2)
+    committeeEvalStats, // (non-pengelola) jumlah respons panitia + apakah dirinya sudah mengisi
     [assetItems, assetReservations], // reservasi aset Inventaris, hanya untuk yang punya grant
+    shareLinkRows, // tautan pendek pendaftaran & evaluasi yang sudah dibuat
   ] = await Promise.all([
     db
       .select({
@@ -119,10 +159,12 @@ export default async function ConsoleEventDetailPage({ params }: { params: Promi
       .from(eventFeeOptions)
       .where(eq(eventFeeOptions.eventId, id))
       .orderBy(eventFeeOptions.orderIndex, eventFeeOptions.id),
+    // Respons evaluasi audiens PESERTA saja — jawaban panitia (audience 'panitia')
+    // tampil di tab tersendiri dan tidak boleh ikut menghitung rata-rata peserta.
     db
       .select()
       .from(eventEvaluations)
-      .where(eq(eventEvaluations.eventId, id))
+      .where(and(eq(eventEvaluations.eventId, id), eq(eventEvaluations.audience, "peserta")))
       .orderBy(desc(eventEvaluations.createdAt)),
     db
       .select({
@@ -177,11 +219,45 @@ export default async function ConsoleEventDetailPage({ params }: { params: Promi
           .where(eq(newsArticles.eventId, id))
           .orderBy(desc(newsArticles.publishedAt))
       : Promise.resolve([]),
+    // Pertanyaan + jawaban audiens PESERTA (tab Peserta & builder-nya).
     loadEvaluationQuestions(id),
     loadEvaluationAnswers(id),
+    // Pertanyaan audiens panitia (builder + rekap panitia di tab masing-masing).
+    loadEvaluationQuestions(id, "panitia"),
     canEditEvaluationQuestions
       ? db.select({ label: coverageCities.label }).from(coverageCities)
       : Promise.resolve([]),
+    // B2: baris evaluasi panitia beserta nama & divisinya hanya diambil untuk
+    // pengelola (BPH Kabinet/Teknologi atau BPH Panitia acara ini). Panitia lain
+    // tidak perlu isinya — cukup angka di committeeEvalStats di bawah.
+    canManageCommitteeEval
+      ? db
+          .select({
+            row: eventEvaluations,
+            userName: users.name,
+            divisionName: eventDivisions.name,
+          })
+          .from(eventEvaluations)
+          .leftJoin(users, eq(eventEvaluations.userId, users.id))
+          .leftJoin(eventDivisions, eq(eventEvaluations.divisionId, eventDivisions.id))
+          .where(and(eq(eventEvaluations.eventId, id), eq(eventEvaluations.audience, "panitia")))
+          .orderBy(desc(eventEvaluations.createdAt))
+      : Promise.resolve([]),
+    // B2: isi jawaban evaluasi panitia hanya dibaca untuk pengelola; rekapnya
+    // dirender dari sini, bukan dari daftar jawaban yang bocor ke semua orang.
+    canManageCommitteeEval ? loadEvaluationAnswers(id, "panitia") : Promise.resolve([]),
+    // Non-pengelola: jumlah pengisi + apakah penampil sendiri sudah mengisi
+    // (status dirinya saja, bukan status orang lain).
+    canManageCommitteeEval
+      ? Promise.resolve({ total: 0, mine: 0 })
+      : db
+          .select({
+            total: sql<number>`count(*)::int`,
+            mine: sql<number>`count(*) filter (where ${eventEvaluations.userId} = ${access.session?.user?.id ?? "00000000-0000-0000-0000-000000000000"})::int`,
+          })
+          .from(eventEvaluations)
+          .where(and(eq(eventEvaluations.eventId, id), eq(eventEvaluations.audience, "panitia")))
+          .then((r) => r[0] ?? { total: 0, mine: 0 }),
     canBorrowAssets
       ? Promise.all([
           db.select({ id: inventoryItems.id, name: inventoryItems.name }).from(inventoryItems).orderBy(inventoryItems.name),
@@ -193,7 +269,41 @@ export default async function ConsoleEventDetailPage({ params }: { params: Promi
             .orderBy(desc(itemReservations.reservedFrom)),
         ])
       : Promise.resolve([[], []]),
+    db
+      .select({ slug: shortLinks.slug, targetUrl: shortLinks.targetUrl })
+      .from(shortLinks)
+      .where(
+        or(
+          like(shortLinks.targetUrl, `%${sharePaths.daftar}`),
+          like(shortLinks.targetUrl, `%${sharePaths.evaluasi}`),
+        ),
+      ),
   ]);
+
+  // Divisi kabinet penanggung jawab acara (proker) — tabel kecil, dimuat untuk
+  // semua yang bisa membuka konsol acara (read-only bila tak boleh mengubah).
+  const [allDepartments, responsibleRows] = await Promise.all([
+    db
+      .select({ id: departments.id, name: departments.name, parentId: departments.parentDepartmentId })
+      .from(departments)
+      .orderBy(asc(departments.orderIndex)),
+    db
+      .select({ departmentId: eventResponsibleDepartments.departmentId })
+      .from(eventResponsibleDepartments)
+      .where(eq(eventResponsibleDepartments.eventId, id)),
+  ]);
+
+  // QR tautan pendek digenerate server-side (sama seperti /console/links);
+  // hanya untuk tautan yang memang sudah ada.
+  const shareQrBySlug = new Map(
+    await Promise.all(
+      shareLinkRows.map(
+        async (l) => [l.slug, await QRCode.toDataURL(`${shareOrigin}/l/${l.slug}`, { width: 160, margin: 1 })] as const,
+      ),
+    ),
+  );
+  const daftarShareLink = shareLinkRows.find((l) => l.targetUrl.endsWith(sharePaths.daftar)) ?? null;
+  const evaluasiShareLink = shareLinkRows.find((l) => l.targetUrl.endsWith(sharePaths.evaluasi)) ?? null;
 
   const linkedAlbum = albums.find((a) => a.eventId === id) ?? null;
   // Jawaban yang sudah masuk per pertanyaan evaluasi: tipe pertanyaan dikunci bila > 0.
@@ -257,7 +367,7 @@ export default async function ConsoleEventDetailPage({ params }: { params: Promi
 
   // Biodata lengkap pendaftar (paspor, KTM, universitas, telpon, jurusan, email,
   // kota, jawaban kustom) tampil untuk BPH Kabinet + Divisi Teknologi
-  // (adminScope "full") DAN BPH Panitia acara ini (ketua/wakil/sekretaris/SC) -
+  // (adminScope "full") DAN BPH Panitia acara ini (ketua/wakil/sekretaris/bendahara/SC) -
   // pengurus inti pelaksana butuh datanya untuk operasional acara. Panitia lain
   // (event.viewRegistrants, DASAR) lihat versi RINGKAS: nama + WeChat ID +
   // kategori/nominal tarif + status keanggotaan + status check-in.
@@ -309,8 +419,14 @@ export default async function ConsoleEventDetailPage({ params }: { params: Promi
   // Berhak sertifikat peserta = HANYA yang kehadirannya tercatat (status "attended",
   // QR-nya di-scan). Terkonfirmasi saja tidak cukup. Aturan yang sama dijaga server
   // di certificateCandidates() (actions/committee.ts).
-  const certAttendees = registrations
-    .filter((r) => r.reg.status === "attended")
+  // Berhak sertifikat peserta = tercatat hadir (QR di-scan) DAN sudah mengisi
+  // evaluasi dengan akunnya — aturan yang sama dengan certificateCandidates
+  // (src/lib/certificate-issuing.ts). Evaluasi tanpa akun tidak dihitung.
+  const evaluatedUserIds = new Set(evaluations.map((e) => e.userId).filter((u): u is string => !!u));
+  const attendedRegs = registrations.filter((r) => r.reg.status === "attended");
+  const attendedNotEvaluated = attendedRegs.filter((r) => !evaluatedUserIds.has(r.reg.userId)).length;
+  const certAttendees = attendedRegs
+    .filter((r) => evaluatedUserIds.has(r.reg.userId))
     .map((r) => ({
       userId: r.reg.userId,
       // Email hanya untuk yang boleh melihat detail pendaftar (BPH Kabinet/Teknologi dan BPH
@@ -330,6 +446,28 @@ export default async function ConsoleEventDetailPage({ params }: { params: Promi
       cert: certByPerson.get(`panitia:${m.userId}`) ?? null,
     }));
   const committeeCertCount = certCommittee.filter((p) => p.cert?.fileUrl).length;
+
+  // ===== Evaluasi panitia (kolektif) — tab "Panitia" di section "Evaluasi Acara" =====
+  const committeeEvalWindow = committeeEvalWindowState(event.committeeEvalOpensAt, event.committeeEvalClosesAt);
+  // Pertanyaan rekap panitia = baris DB saja. Template kolektif disalin ke DB saat
+  // jendela dipasang (saveCommitteeEvaluationWindow), jadi setiap jawaban punya
+  // questionId asli; memakai template statis di sini justru membuat kolom rekap
+  // tidak cocok dengan jawabannya.
+  const committeeQuestions = evalQuestionsPanitia;
+  // Respons panitia dipetakan ke bentuk yang dibaca EvaluationResults/CustomResults:
+  // nama pengisi dari akun, divisi evaluator di posisi "kota". Data ini hanya
+  // ada di memori viewer pengelola (query-nya sendiri sudah digerbang B2).
+  const committeeEvaluations = committeeEvalRows.map((r) => ({
+    ...r.row,
+    respondentName: r.userName,
+    respondentCity: r.divisionName,
+  }));
+  // Hitungan jawaban per pertanyaan panitia (builder memakainya untuk mengunci
+  // tipe), diturunkan dari jawaban yang sudah dimuat — sama seperti evalAnswerCounts.
+  const committeeAnswerCountMap: Record<string, number> = {};
+  for (const a of committeeEvalAnswers) {
+    if (a.questionId) committeeAnswerCountMap[a.questionId] = (committeeAnswerCountMap[a.questionId] ?? 0) + 1;
+  }
 
   return (
     <div className="py-2">
@@ -363,6 +501,39 @@ export default async function ConsoleEventDetailPage({ params }: { params: Promi
           (volunteer, verifikasi bayar) menempel di kolom kanan. */}
       <div className="grid grid-cols-1 xl:grid-cols-[minmax(0,1fr)_400px] gap-6 items-start">
         <div className="flex flex-col gap-6 min-w-0">
+      {/* Tautan pendek pendaftaran & evaluasi — fitur DASAR: bisa dibuat
+          sekali klik di sini, tanpa membuka modul Tautan. */}
+      {can("event.editContent") && (
+      <CollapsibleSection
+        title="Tautan Pendaftaran & Evaluasi"
+        description="tautan pendek + QR untuk dibagikan (WeChat dsb)"
+      >
+        <EventShareLinks
+          eventId={id}
+          status={event.status}
+          scheduledPublishLabel={
+            event.scheduledPublishAt
+              ? new Date(event.scheduledPublishAt).toLocaleString("id-ID", {
+                  dateStyle: "long",
+                  timeStyle: "short",
+                  timeZone: "Asia/Shanghai",
+                })
+              : null
+          }
+          daftar={{
+            directUrl: shareDirect.daftar,
+            slug: daftarShareLink?.slug ?? null,
+            qrDataUrl: daftarShareLink ? shareQrBySlug.get(daftarShareLink.slug) ?? null : null,
+          }}
+          evaluasi={{
+            directUrl: shareDirect.evaluasi,
+            slug: evaluasiShareLink?.slug ?? null,
+            qrDataUrl: evaluasiShareLink ? shareQrBySlug.get(evaluasiShareLink.slug) ?? null : null,
+          }}
+        />
+      </CollapsibleSection>
+      )}
+
       {/* Deskripsi & agenda — fitur DASAR: semua panitia acara bisa. */}
       {can("event.editContent") && (
       <CollapsibleSection title="Deskripsi & Agenda" description="Teks yang tampil di halaman acara publik.">
@@ -438,40 +609,81 @@ export default async function ConsoleEventDetailPage({ params }: { params: Promi
               1 · Info Acara
             </summary>
             <div className="px-4 pb-4 flex flex-col gap-4">
-              <input id="event-title" name="title" defaultValue={event.title} required className="bg-soft-gray rounded-md p-3 text-body-md" />
+              <p className="text-body-sm text-on-surface-variant">
+                Isi lengkap supaya pengurus berikutnya paham konteks acaranya. Bagian ini menentukan tampilan di
+                halaman publik dan kartu di /events.
+              </p>
+              <label className="flex flex-col gap-1.5">
+                <span className="text-label-caps uppercase tracking-wide text-on-surface-variant">Judul acara *</span>
+                <input id="event-title" name="title" defaultValue={event.title} required placeholder="mis. Nanjing Diaries" className="bg-soft-gray rounded-md p-3 text-body-md" />
+                <span className="text-xs text-on-surface-variant">Tampil sebagai judul di halaman acara publik dan kartu daftar /events.</span>
+              </label>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <input id="event-category" name="category" defaultValue={event.category ?? ""} placeholder="Kategori" className="bg-soft-gray rounded-md p-3 text-body-md" />
-                <input id="event-location" name="location" defaultValue={event.location ?? ""} placeholder="Lokasi" className="bg-soft-gray rounded-md p-3 text-body-md" />
+                <label className="flex flex-col gap-1.5">
+                  <span className="text-label-caps uppercase tracking-wide text-on-surface-variant">Kategori</span>
+                  <input id="event-category" name="category" defaultValue={event.category ?? ""} placeholder="mis. Webinar / Lomba / Sosialisasi" className="bg-soft-gray rounded-md p-3 text-body-md" />
+                  <span className="text-xs text-on-surface-variant">Jadi tab filter di /events. Boleh dikosongkan.</span>
+                </label>
+                <label className="flex flex-col gap-1.5">
+                  <span className="text-label-caps uppercase tracking-wide text-on-surface-variant">Lokasi (teks)</span>
+                  <input id="event-location" name="location" defaultValue={event.location ?? ""} placeholder="mis. Zoom Meeting (Online)" className="bg-soft-gray rounded-md p-3 text-body-md" />
+                  <span className="text-xs text-on-surface-variant">Untuk acara online tulis platformnya; tautan masuk (Zoom dll.) taruh di &ldquo;Info Setelah Daftar&rdquo;.</span>
+                </label>
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <input
-                  name="locationUrl"
-                  type="url"
-                  defaultValue={event.locationUrl ?? ""}
-                  placeholder="Link peta 1 (mis. Amap) — opsional"
-                  className="bg-soft-gray rounded-md p-3 text-body-md"
-                />
-                <input
-                  name="locationUrl2"
-                  type="url"
-                  defaultValue={event.locationUrl2 ?? ""}
-                  placeholder="Link peta 2 (mis. Baidu Maps) — opsional"
-                  className="bg-soft-gray rounded-md p-3 text-body-md"
-                />
+                <label className="flex flex-col gap-1.5">
+                  <span className="text-label-caps uppercase tracking-wide text-on-surface-variant">Link peta 1 (opsional)</span>
+                  <input
+                    name="locationUrl"
+                    type="url"
+                    defaultValue={event.locationUrl ?? ""}
+                    placeholder="https://… (Amap)"
+                    className="bg-soft-gray rounded-md p-3 text-body-md"
+                  />
+                </label>
+                <label className="flex flex-col gap-1.5">
+                  <span className="text-label-caps uppercase tracking-wide text-on-surface-variant">Link peta 2 (opsional)</span>
+                  <input
+                    name="locationUrl2"
+                    type="url"
+                    defaultValue={event.locationUrl2 ?? ""}
+                    placeholder="https://… (Baidu Maps)"
+                    className="bg-soft-gray rounded-md p-3 text-body-md"
+                  />
+                </label>
               </div>
-              <p className="text-xs text-on-surface-variant -mt-2">Kalau diisi, teks Lokasi di halaman publik jadi tombol langsung ke petunjuk arah (dua tombol kalau dua-duanya diisi).</p>
+              <p className="text-xs text-on-surface-variant -mt-2">Kalau salah satu/semuanya diisi, teks Lokasi di halaman publik jadi tombol petunjuk arah. Untuk acara online, kosongkan saja.</p>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div className="flex flex-col gap-1">
+                <label className="flex flex-col gap-1">
+                  <span className="text-label-caps uppercase tracking-wide text-on-surface-variant">Mulai</span>
                   <input
                     name="startAt"
                     type="datetime-local"
                     defaultValue={event.startAt ? toDateLocalInput(new Date(event.startAt)) : ""}
                     className="bg-soft-gray rounded-md p-3 text-body-md"
                   />
-                  <p className="text-xs text-on-surface-variant">Kapan acara berlangsung (tanggal & jam mulai).</p>
-                </div>
-                  <input name="capacity" type="number" min={1} defaultValue={event.capacity ?? ""} placeholder="Kapasitas" className="bg-soft-gray rounded-md p-3 text-body-md" />
-                </div>
+                  <span className="text-xs text-on-surface-variant">Kapan acara dimulai.</span>
+                </label>
+                <label className="flex flex-col gap-1">
+                  <span className="text-label-caps uppercase tracking-wide text-on-surface-variant">Selesai</span>
+                  <input
+                    name="endAt"
+                    type="datetime-local"
+                    defaultValue={event.endAt ? toDateLocalInput(new Date(event.endAt)) : ""}
+                    className="bg-soft-gray rounded-md p-3 text-body-md"
+                  />
+                  <span className="text-xs text-on-surface-variant">
+                    Kapan acara berakhir. Dipakai untuk menghitung kunci kepanitiaan 14 hari setelah acara.
+                  </span>
+                </label>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <label className="flex flex-col gap-1">
+                  <span className="text-label-caps uppercase tracking-wide text-on-surface-variant">Kapasitas</span>
+                  <input name="capacity" type="number" min={1} defaultValue={event.capacity ?? ""} placeholder="mis. 60" className="bg-soft-gray rounded-md p-3 text-body-md" />
+                  <span className="text-xs text-on-surface-variant">Batas jumlah pendaftar (sisa kuota tampil di halaman publik). Kosong = tanpa batas.</span>
+                </label>
+              </div>
               <ImageUploadCropper
                 name="coverImageUrl"
                 folder="events"
@@ -498,14 +710,24 @@ export default async function ConsoleEventDetailPage({ params }: { params: Promi
               2 · Pendaftaran, Biaya &amp; Jadwal Rilis
             </summary>
             <div className="px-4 pb-4 flex flex-col gap-4">
-              <CheckField name="requiresSensus" defaultChecked={event.requiresSensus} label="Hanya untuk peserta yang sudah lengkap mengisi sensus (mahasiswa Indo di China)" />
+              <CheckField
+                name="requiresSensus"
+                defaultChecked={event.requiresSensus}
+                label="Hanya untuk peserta yang sudah lengkap mengisi sensus (mahasiswa Indo di China)"
+                hint="Pendaftar wajib sudah melengkapi sensus; kota/kampus/WeChat otomatis diambil dari data sensus, tidak ditanya ulang di form."
+              />
               <CheckField
                 name="requiresBiodata"
                 defaultChecked={event.requiresBiodata}
                 label="Kumpulkan biodata lengkap peserta saat mendaftar (WIF dsb.)"
                 hint="Nama, paspor, WeChat, no. HP China, kota/ranting, universitas, angkatan, bukti mahasiswa aktif. Peserta yang sensusnya lengkap tidak mengetik ulang — datanya diambil dari sensus."
               />
-              <CheckField name="certificateForParticipants" defaultChecked={event.certificateForParticipants} label="Peserta mendapat e-sertifikat kehadiran" />
+              <CheckField
+                name="certificateForParticipants"
+                defaultChecked={event.certificateForParticipants}
+                label="Peserta mendapat e-sertifikat kehadiran"
+                hint="Saklar ketersediaan: kalau nyala, panitia bisa menerbitkan e-sertifikat (tautan berkas wajib) untuk peserta yang tercatat hadir."
+              />
               <CheckField
                 name="volunteerSignupOpen"
                 defaultChecked={event.volunteerSignupOpen}
@@ -530,21 +752,21 @@ export default async function ConsoleEventDetailPage({ params }: { params: Promi
                 </p>
               )}
               <div className="flex flex-col gap-1">
+                <span className="text-label-caps uppercase tracking-wide text-on-surface-variant">Batas pendaftaran</span>
                 <input
                   name="registrationDeadline"
                   type="datetime-local"
                   defaultValue={event.registrationDeadline ? toDateLocalInput(new Date(event.registrationDeadline)) : ""}
-                  placeholder="Batas Pendaftaran"
                   className="bg-soft-gray rounded-md p-3 text-body-md"
                 />
                 <p className="text-xs text-on-surface-variant">Batas waktu peserta boleh mendaftar. Lewat dari ini tombol daftar tertutup otomatis. Kosongkan bila tak ada batas.</p>
               </div>
               <div className="flex flex-col gap-1">
+                <span className="text-label-caps uppercase tracking-wide text-on-surface-variant">Jadwal rilis publikasi (opsional)</span>
                 <input
                   name="scheduledPublishAt"
                   type="datetime-local"
                   defaultValue={event.scheduledPublishAt ? toDateLocalInput(new Date(event.scheduledPublishAt)) : ""}
-                  placeholder="Jadwal Rilis Publikasi (opsional)"
                   className="bg-soft-gray rounded-md p-3 text-body-md"
                 />
                 <p className="text-xs text-on-surface-variant">Isi bila acara mau tampil ke publik hanya SETELAH tanggal/waktu ini (status &quot;Terjadwal&quot; dulu, rilis sendiri nanti). Kosongkan = tetap Draf, rilis saat kamu klik Publikasikan.</p>
@@ -716,6 +938,29 @@ export default async function ConsoleEventDetailPage({ params }: { params: Promi
             </SubmitButton>
           </div>
         </form>
+
+        {/* Pratinjau memakai komponen field yang SAMA dengan form pendaftaran
+            publik (event-question-fields) - tampilan persis, semua kontrol mati. */}
+        <details className="group mt-4 rounded-lg border border-outline-variant">
+          <summary className="flex cursor-pointer items-center gap-2 px-4 py-3 text-label-caps uppercase tracking-wide text-on-background">
+            <Eye size={16} aria-hidden="true" /> Pratinjau form pendaftaran
+          </summary>
+          <div className="flex flex-col gap-4 border-t border-outline-variant p-4">
+            <p role="note" className="rounded-lg border border-primary-container/40 bg-primary-container/10 px-4 py-3 text-body-md text-on-background">
+              Ini hanya pratinjau — tidak ada data yang terkirim atau tersimpan. Form aslinya ada di halaman pendaftaran
+              publik (<code>/events/{event.slug}/register</code>).
+            </p>
+            {questions.length === 0 ? (
+              <p className="text-body-md text-on-surface-variant">
+                Belum ada pertanyaan tambahan — pendaftar hanya mengisi form standar.
+              </p>
+            ) : (
+              <div className="flex max-w-xl flex-col gap-4">
+                <EventQuestionFields questions={questions} preview fileHint="Unggah berkas (pratinjau)" />
+              </div>
+            )}
+          </div>
+        </details>
       </CollapsibleSection>
       )}
 
@@ -842,6 +1087,19 @@ export default async function ConsoleEventDetailPage({ params }: { params: Promi
       </CollapsibleSection>
       )}
 
+      <CollapsibleSection
+        title="Divisi Penanggung Jawab"
+        description="Divisi kabinet yang bertanggung jawab atas acara/proker ini (boleh lebih dari satu). Anggota divisi ini otomatis bisa mengelola acaranya di menu Kegiatan selama divisinya memegang centang &quot;Kegiatan&quot; di Organisasi. Hanya admin penuh yang bisa mengubahnya."
+        defaultOpen={false}
+      >
+        <EventResponsibleDepartments
+          eventId={id}
+          departments={allDepartments}
+          selected={responsibleRows.map((r) => r.departmentId)}
+          canEdit={access.isFullAdmin}
+        />
+      </CollapsibleSection>
+
       {can("event.manageCommittee") && (
       <CollapsibleSection
         title="Struktur Kepanitiaan"
@@ -861,25 +1119,33 @@ export default async function ConsoleEventDetailPage({ params }: { params: Promi
       <>
       <CollapsibleSection
         title="Sertifikat Peserta"
-        description={`${certAttendees.length} hadir · ${participantCertCount} terbit`}
+        description={`${attendedRegs.length} hadir · ${certAttendees.length} berhak (sudah isi evaluasi) · ${participantCertCount} terbit`}
       >
         {event.certificateForParticipants ? (
           <div className="flex flex-col gap-4">
             <p className="text-body-md text-on-surface-variant max-w-2xl">
-              Hanya peserta yang <strong className="text-on-background">kehadirannya tercatat</strong> (QR-nya di-scan
-              di acara) yang berhak. Sertifikat <strong className="text-on-background">tidak terbit tanpa tautan
-              berkas</strong>: tempel tautan https:// berkas PDF-nya di samping nama, lalu simpan. Saat itu juga
-              sertifikatnya muncul di profil peserta dan mereka diberi notifikasi. Untuk banyak orang sekaligus,
-              pakai &quot;Tempel banyak sekaligus&quot;, atau simpan <strong className="text-on-background">tautan
-              folder</strong> lalu terbitkan ke semua yang berhak sekaligus.
+              Yang berhak: peserta yang <strong className="text-on-background">kehadirannya tercatat</strong> (QR-nya
+              di-scan di acara) <strong className="text-on-background">dan sudah mengisi evaluasi</strong> sambil masuk
+              ke akunnya. Cara paling mudah: <strong className="text-on-background">simpan tautan folder</strong> di
+              bawah — semua yang sudah berhak langsung dapat sertifikat + notifikasi, dan peserta hadir yang baru
+              mengisi evaluasi belakangan otomatis dapat saat evaluasinya terkirim. Tautan per orang dan &quot;Tempel
+              banyak sekaligus&quot; tetap bisa dipakai kalau berkasnya beda-beda.
             </p>
+            {attendedNotEvaluated > 0 && (
+              <p className="text-body-sm text-on-surface-variant">
+                {attendedNotEvaluated} peserta hadir belum mengisi evaluasi (atau mengisinya tanpa masuk akun), jadi
+                belum berhak. Bagikan tautan evaluasi{" "}
+                <code className="text-on-background">/events/{event.slug}/evaluasi</code> — mereka perlu masuk akun
+                untuk mengisinya.
+              </p>
+            )}
             {confirmedNotAttended > 0 && (
               <p className="text-body-sm text-on-surface-variant">
                 {confirmedNotAttended} pendaftar terkonfirmasi belum tercatat hadir, jadi belum berhak. Kalau ada yang
                 hadir tapi belum di-scan, catat kehadirannya dulu di daftar pendaftar.
               </p>
             )}
-            {certAttendees.length > 0 && (
+            {attendedRegs.length > 0 && (
               <CertificateFolder
                 eventId={id}
                 kind="peserta"
@@ -891,7 +1157,11 @@ export default async function ConsoleEventDetailPage({ params }: { params: Promi
               eventId={id}
               kind="peserta"
               rows={certAttendees}
-              emptyText="Belum ada peserta yang tercatat hadir. Daftar ini terisi saat panitia men-scan QR peserta di acara."
+              emptyText={
+                attendedRegs.length === 0
+                  ? "Belum ada peserta yang tercatat hadir. Daftar ini terisi saat panitia men-scan QR peserta di acara."
+                  : "Belum ada peserta hadir yang mengisi evaluasi dengan akunnya."
+              }
             />
             {certAttendees.length > 0 && <CertificateBulkForm eventId={id} kind="peserta" />}
           </div>
@@ -1272,31 +1542,159 @@ export default async function ConsoleEventDetailPage({ params }: { params: Promi
       {canEditEvaluationQuestions && (
       <CollapsibleSection
         title="Pertanyaan Evaluasi"
-        description={evalQuestions.length > 0 ? `${evalQuestions.length} pertanyaan sendiri` : "template standar"}
+        description={
+          evalQuestions.length > 0 || evalQuestionsPanitia.length > 0
+            ? `${evalQuestions.length} peserta · ${evalQuestionsPanitia.length} panitia`
+            : "template standar"
+        }
       >
-        <EvaluationQuestionsBuilder
-          eventId={id}
-          slug={event.slug}
-          eventTitle={event.title}
-          questions={evalQuestions}
-          answerCounts={evalAnswerCounts}
-          legacyResponseCount={evaluations.filter((e) => e.ratingRegistration != null).length}
-          cityOptions={sortByCoverageOrder(cityRows, (row) => row.label).map((c) => c.label)}
-          sections={evaluationTemplateForSlug(event.slug).sections}
+        <EvalAudienceTabs
+          peserta={
+            <EvaluationQuestionsBuilder
+              eventId={id}
+              slug={event.slug}
+              eventTitle={event.title}
+              audience="peserta"
+              questions={evalQuestions}
+              answerCounts={evalAnswerCounts}
+              legacyResponseCount={evaluations.filter((e) => e.ratingRegistration != null).length}
+              cityOptions={sortByCoverageOrder(cityRows, (row) => row.label).map((c) => c.label)}
+              sections={evaluationTemplateForSlug(event.slug).sections}
+            />
+          }
+          panitia={
+            // Pertanyaan yang menilai kepanitiaan disusun BPH, bukan anggota
+            // panitia yang ikut dinilai. Server action-nya memakai gerbang yang
+            // sama (requireQuestionAccess di actions/event-evaluation-questions.ts).
+            canEditCommitteeEval ? (
+              <EvaluationQuestionsBuilder
+                eventId={id}
+                slug={event.slug}
+                eventTitle={event.title}
+                audience="panitia"
+                questions={evalQuestionsPanitia}
+                answerCounts={committeeAnswerCountMap}
+                legacyResponseCount={0}
+                cityOptions={[]}
+                sections={[]}
+              />
+            ) : (
+              <p className="text-body-md text-on-surface-variant max-w-2xl">
+                {canManageCommitteeEval
+                  ? "Acara ini sudah terkunci (14 hari setelah selesai): pertanyaan evaluasi panitia hanya bisa diubah BPH Kabinet."
+                  : "Pertanyaan evaluasi panitia disusun oleh BPH Panitia atau BPH Kabinet."}
+                {evalQuestionsPanitia.length > 0
+                  ? ` Saat ini ada ${evalQuestionsPanitia.length} pertanyaan.`
+                  : " Pertanyaannya disiapkan otomatis saat BPH memasang jendela pengisian."}
+              </p>
+            )
+          }
         />
       </CollapsibleSection>
       )}
 
+      {/* Evaluasi peserta & panitia dalam SATU section (K7: tanpa section tambahan
+          di halaman konsol acara yang sudah panjang). Aturan B2 berlaku: isi
+          jawaban dan nama pengisi panitia hanya untuk pengelola (BPH Kabinet/
+          Teknologi atau BPH Panitia acara ini); panitia lain hanya melihat jumlah
+          pengisi dan statusnya sendiri. */}
       <CollapsibleSection
         title="Evaluasi Acara"
-        description={evaluations.length > 0 ? `${evaluations.length} respons` : "belum ada respons"}
+        description={
+          [
+            evaluations.length > 0 ? `${evaluations.length} respons peserta` : "peserta: belum ada respons",
+            canManageCommitteeEval
+              ? committeeEvaluations.length > 0
+                ? `${committeeEvaluations.length} respons panitia`
+                : "panitia: belum ada respons"
+              : `${committeeEvalStats.total} panitia sudah mengisi`,
+          ].join(" · ")
+        }
       >
-        <EvaluationResults
-          eventId={id}
-          evaluations={evaluations}
-          sections={evaluationTemplateForSlug(event.slug).sections}
-          questions={evalQuestions}
-          answers={evalAnswers}
+        <EvalAudienceTabs
+          peserta={
+            <EvaluationResults
+              eventId={id}
+              evaluations={evaluations}
+              sections={evaluationTemplateForSlug(event.slug).sections}
+              questions={evalQuestions}
+              answers={evalAnswers}
+            />
+          }
+          panitia={
+            canManageCommitteeEval ? (
+              <div className="flex flex-col gap-8">
+                <div className="flex flex-col gap-2">
+                  <p className="text-label-caps uppercase tracking-wide text-on-surface-variant">Tautan pengisian untuk grup panitia</p>
+                  <div className="flex flex-wrap items-center gap-3">
+                    <code className="text-body-sm bg-surface-container-low px-2 py-1 rounded break-all">
+                      {`${shareOrigin}/events/${event.slug}/evaluasi-panitia`}
+                    </code>
+                    <CopyButton value={`${shareOrigin}/events/${event.slug}/evaluasi-panitia`} label="Salin tautan" />
+                  </div>
+                  <p className="text-body-sm text-on-surface-variant">
+                    Hanya panitia acara ini yang login yang bisa mengisi, dan hanya selama jendela di bawah terbuka.
+                  </p>
+                </div>
+                {canEditCommitteeEval ? (
+                <CommitteeEvalWindowEditor
+                  eventId={id}
+                  // Jam Tiongkok, bukan jam server: aksi simpannya membaca nilai
+                  // ini sebagai jam Tiongkok juga (parseChinaLocalInput).
+                  opensAt={event.committeeEvalOpensAt ? toChinaLocalInput(new Date(event.committeeEvalOpensAt)) : ""}
+                  closesAt={event.committeeEvalClosesAt ? toChinaLocalInput(new Date(event.committeeEvalClosesAt)) : ""}
+                  presetOpens={event.endAt ? toChinaLocalInput(new Date(event.endAt)) : toChinaLocalInput(new Date())}
+                  windowLabel={
+                    committeeEvalWindow === "open"
+                      ? "Jendela pengisian sedang TERBUKA"
+                      : committeeEvalWindow === "before"
+                        ? "Jendela pengisian belum dibuka"
+                        : committeeEvalWindow === "closed"
+                          ? "Jendela pengisian sudah ditutup"
+                          : "Jendela pengisian belum dipasang"
+                  }
+                  windowNote="Waktu kosong: sebelum jendela mulai / tidak pernah menutup otomatis. Mengosongkan keduanya lalu simpan = melepas jadwal. Saat jendela pertama kali disimpan, pertanyaan template kolektif otomatis disiapkan bila tab Panitia di Pertanyaan Evaluasi masih kosong."
+                  scheduleLabel="Durasi pintasan"
+                  opensLabel="Buka"
+                  closesLabel="Tutup"
+                  presetLabel="Buka setelah acara"
+                  clearLabel="Kosongkan jadwal"
+                  saveLabel="Simpan jendela"
+                  clearConfirmNote="Status jendela dihitung otomatis dari waktu saat ini — panitia hanya bisa mengisi selama terbuka."
+                />
+                ) : (
+                  <p className="text-body-md text-on-surface-variant max-w-2xl">
+                    Acara ini sudah terkunci (14 hari setelah selesai): jendela pengisian hanya bisa diubah BPH Kabinet.
+                  </p>
+                )}
+                <EvaluationResults
+                  eventId={id}
+                  exportAudience="panitia"
+                  evaluations={committeeEvaluations}
+                  sections={[]}
+                  questions={committeeQuestions}
+                  answers={committeeEvalAnswers}
+                />
+              </div>
+            ) : (
+              <div className="text-body-md text-on-surface-variant max-w-2xl flex flex-col gap-2">
+                <p>
+                  {committeeEvalStats.total > 0
+                    ? `${committeeEvalStats.total} dari ${committee.length} panitia sudah mengisi${
+                        committeeEvalStats.mine > 0 ? " — termasuk kamu. Terima kasih!" : "."
+                      }`
+                    : "Belum ada yang mengisi."}
+                </p>
+                <p>
+                  Rekap lengkap (nama &amp; jawaban) hanya tampil untuk BPH. Pengisian lewat{" "}
+                  <code className="text-body-sm bg-surface-container-low px-1.5 py-0.5 rounded">
+                    /events/{event.slug}/evaluasi-panitia
+                  </code>{" "}
+                  selama jendela terbuka.
+                </p>
+              </div>
+            )
+          }
         />
       </CollapsibleSection>
         </div>

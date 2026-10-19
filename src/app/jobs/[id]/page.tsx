@@ -7,6 +7,7 @@ import { SiteNav } from "@/components/site-nav";
 import { SiteFooter } from "@/components/site-footer";
 import { AnimatedHeroHeading } from "@/components/animated-hero-heading";
 import { DecoRule } from "@/components/deco/deco-rule";
+import { ShareJobButton } from "@/components/jobs/share-job-button";
 import { LinkifiedText } from "@/lib/linkified-text";
 import { formatRelativeTime } from "@/lib/format-relative-time";
 import { getT } from "@/lib/i18n/server";
@@ -129,13 +130,19 @@ export default async function JobDetailPage({ params }: { params: Promise<{ id: 
       <header className="border-b border-[var(--deco-line)] bg-warm-cream">
         <div className="max-w-[var(--container-max)] mx-auto px-[var(--spacing-container-padding)] py-16">
           <div className="max-w-3xl">
-            <Link
-              href="/jobs"
-              aria-label={t("jobs.backToListAria")}
-              className="inline-flex items-center gap-1.5 mb-6 text-label-caps uppercase tracking-wide text-on-surface-variant hover:text-primary-container transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-container focus-visible:ring-offset-2 focus-visible:ring-offset-background rounded-md motion-reduce:transition-none"
-            >
-              <ArrowLeft size={14} aria-hidden /> {t("jobs.listLabel")}
-            </Link>
+            <div className="flex items-center justify-between gap-3 mb-6">
+              <Link
+                href="/jobs"
+                aria-label={t("jobs.backToListAria")}
+                className="inline-flex items-center gap-1.5 text-label-caps uppercase tracking-wide text-on-surface-variant hover:text-primary-container transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-container focus-visible:ring-offset-2 focus-visible:ring-offset-background rounded-md motion-reduce:transition-none"
+              >
+                <ArrowLeft size={14} aria-hidden /> {t("jobs.listLabel")}
+              </Link>
+              <ShareJobButton
+                title={job.title}
+                text={`${job.company}${job.location ? ` · ${job.location}` : ""}`}
+              />
+            </div>
             <div className="flex items-center gap-3 mb-6">
               <span className="bg-gold-ink/10 text-gold-ink text-label-caps uppercase tracking-wide px-3 py-1.5 rounded-md">
                 {typeLabel(t, job.type)}
