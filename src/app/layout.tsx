@@ -98,7 +98,7 @@ const inter = Inter({ variable: "--font-inter-g", subsets: ["latin"], weight: ["
 // actual variable axis in one clean query instead of two colliding ones.
 const manrope = Manrope({ variable: "--font-manrope-g", subsets: ["latin"], weight: "variable", preload: false });
 // Serif & Elegan
-const playfair = Playfair_Display({ variable: "--font-playfair-g", subsets: ["latin"], weight: ["400", "700"], preload: false });
+const playfair = Playfair_Display({ variable: "--font-playfair-g", subsets: ["latin"], weight: "variable", preload: false });
 const lora = Lora({ variable: "--font-lora-g", subsets: ["latin"], weight: ["400", "700"], preload: false });
 const merriweather = Merriweather({ variable: "--font-merriweather-g", subsets: ["latin"], weight: ["400", "700"], preload: false });
 // Tegas & Poster
@@ -106,9 +106,9 @@ const bebasNeue = Bebas_Neue({ variable: "--font-bebas-g", subsets: ["latin"], w
 const anton = Anton({ variable: "--font-anton-g", subsets: ["latin"], weight: ["400"], preload: false });
 const oswald = Oswald({ variable: "--font-oswald-g", subsets: ["latin"], weight: ["400", "700"], preload: false });
 // Playful & Santai
-const fredoka = Fredoka({ variable: "--font-fredoka-g", subsets: ["latin"], weight: ["400", "600"], preload: false });
+const fredoka = Fredoka({ variable: "--font-fredoka-g", subsets: ["latin"], weight: "variable", preload: false });
 const baloo = Baloo_2({ variable: "--font-baloo-g", subsets: ["latin"], weight: ["400", "700"], preload: false });
-const quicksand = Quicksand({ variable: "--font-quicksand-g", subsets: ["latin"], weight: ["400", "700"], preload: false });
+const quicksand = Quicksand({ variable: "--font-quicksand-g", subsets: ["latin"], weight: "variable", preload: false });
 // Tulisan Tangan
 const caveat = Caveat({ variable: "--font-caveat-g", subsets: ["latin"], weight: ["400", "700"], preload: false });
 const pacifico = Pacifico({ variable: "--font-pacifico-g", subsets: ["latin"], weight: ["400"], preload: false });
