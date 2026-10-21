@@ -1,9 +1,9 @@
 import { cache } from "react";
 import { notFound, redirect } from "next/navigation";
-import { asc, eq } from "drizzle-orm";
+import { and, asc, eq, isNull, or, sql } from "drizzle-orm";
 import { auth } from "@/auth";
 import { db } from "@/db";
-import { departmentMembers, departments, eventCommittee, forms, sensusProfiles, users } from "@/db/schema";
+import { departmentMembers, departments, eventCommittee, eventResponsibleDepartments, events, forms, sensusProfiles, users } from "@/db/schema";
 import type { FormRow } from "@/db/schema";
 import { hasModuleAccess } from "@/lib/admin-scope";
 import { isBphPanitiaRole } from "@/lib/event-capabilities";
@@ -17,7 +17,11 @@ import { UUID_RE } from "@/lib/uuid";
 // Peran:
 // - full (BPH Inti + Divisi Teknologi) / modul "forms" -> semua
 // - Koordinator Divisi (isCoordinator dari sesi) -> tab Oprek BPH Acara
-// - BPH Panitia sebuah acara -> form Oprek acara itu (tab Kepanitiaan)
+// - BPH Panitia sebuah acara -> form Oprek acara itu (tab Kepanitiaan), termasuk
+//   Oprek Kadiv
+// - Kadiv sebuah acara -> Oprek anggota (oprek_kepanitiaan) acara itu: melihat
+//   SEMUA pelamar semua divisi dan boleh memutuskannya (keputusan BPH 2026-10-15),
+//   tapi hanya menempatkan sebagai peran anggota divisi (KADIV_PLACEMENT_ROLES).
 // - Anggota kabinet biasa -> boleh MENGISI form, tidak melihat hasil
 //   (diatur getCabinetMembership + halaman/publik form).
 
@@ -35,6 +39,8 @@ export type FormsAccess = {
   canKepanitiaanTab: boolean;
   // Acara tempat user ini BPH Panitia (ketua/wakil/sekretaris/bendahara/supervisor).
   bphEventIds: string[];
+  // Acara tempat user ini Kadiv (kelola Oprek anggota acara itu).
+  kadivEventIds: string[];
 };
 
 export const getFormsAccess = cache(async (): Promise<FormsAccess | null> => {
@@ -53,9 +59,10 @@ export const getFormsAccess = cache(async (): Promise<FormsAccess | null> => {
     .from(eventCommittee)
     .where(eq(eventCommittee.userId, userId));
   const bphEventIds = committeeRows.filter((r) => isBphPanitiaRole(r.role)).map((r) => r.eventId);
+  const kadivEventIds = committeeRows.filter((r) => r.role === "kadiv").map((r) => r.eventId);
 
   const canBphTab = isFull || canForms || isCoordinator;
-  const canKepanitiaanTab = isFull || canForms || bphEventIds.length > 0;
+  const canKepanitiaanTab = isFull || canForms || bphEventIds.length > 0 || kadivEventIds.length > 0;
 
   return {
     userId,
@@ -67,6 +74,7 @@ export const getFormsAccess = cache(async (): Promise<FormsAccess | null> => {
     canBphTab,
     canKepanitiaanTab,
     bphEventIds,
+    kadivEventIds,
   };
 });
 
@@ -117,8 +125,36 @@ export async function canManageForm(
   if (form.eventId) {
     const eventAccess = await getEventAccess(form.eventId);
     if (eventAccess.isBphPanitia) return true;
+    // Kadiv mengelola Oprek anggota acaranya (bukan Oprek Kadiv/BPH).
+    if (form.kind === "oprek_kepanitiaan" && eventAccess.role === "kadiv") return true;
   }
   return false;
+}
+
+// Acara yang boleh dipakai koordinator untuk membuat form Oprek BPH: acara
+// yang divisinya tercatat sebagai Divisi Penanggung Jawab, atau yang dia buat
+// sendiri. `null` = tanpa batas (full / modul forms). Tanpa batas ini koor
+// divisi mana pun bisa membuka Oprek BPH untuk acara divisi lain lalu
+// (sebagai pembuat form) menempatkan pelamar — termasuk dirinya — jadi ketua.
+export async function getCoordinatorEventIds(access: FormsAccess): Promise<string[] | null> {
+  if (access.isFull || access.canForms) return null;
+  const rows = await db
+    .selectDistinct({ id: events.id })
+    .from(events)
+    .where(
+      and(
+        isNull(events.deletedAt),
+        or(
+          eq(events.createdBy, access.userId),
+          sql`exists (
+            select 1 from ${eventResponsibleDepartments} erd
+            join ${departmentMembers} dm on dm.department_id = erd.department_id
+            where erd.event_id = ${events.id} and dm.user_id = ${access.userId}
+          )`,
+        ),
+      ),
+    );
+  return rows.map((r) => r.id);
 }
 
 // Gerbang wajib untuk halaman/aksi/ekspor PER FORM (bukan requireFormsHub yang
@@ -140,7 +176,7 @@ export async function requireFormManage(formId: string): Promise<{ form: FormRow
 // itu, ATAU koor/pembuat form (mereka yang menjalankan rekrutmen BPH sebelum
 // kepanitiaan terbentuk), ATAU pemegang modul forms/full.
 export async function canPlaceApplicant(
-  form: Pick<FormRow, "eventId" | "createdBy">,
+  form: Pick<FormRow, "eventId" | "createdBy" | "kind">,
   access: FormsAccess,
 ): Promise<boolean> {
   // Form tanpa acara (Pemilu) tidak menyentuh kepanitiaan sama sekali.
@@ -152,8 +188,39 @@ export async function canPlaceApplicant(
   if (form.createdBy && form.createdBy === access.userId) {
     return !eventAccess.locked;
   }
-  if (!eventAccess.isBphPanitia) return false;
+  const isKadivOnMemberForm = form.kind === "oprek_kepanitiaan" && eventAccess.role === "kadiv";
+  if (!eventAccess.isBphPanitia && !isKadivOnMemberForm) return false;
   return !eventAccess.locked;
+}
+
+/**
+ * Penempat Oprek anggota yang BUKAN BPH Panitia/full/modul forms — praktisnya
+ * Kadiv, atau pembuat form yang belakangan dicopot dari kepanitiaan (jalur
+ * "pembuat form" di canPlaceApplicant) — dibatasi ke peran anggota divisi:
+ * mereka tidak boleh mengangkat orang jadi BPH atau Kadiv lewat form ini.
+ */
+export async function isKadivOnlyPlacer(
+  form: Pick<FormRow, "eventId" | "kind">,
+  access: FormsAccess,
+): Promise<boolean> {
+  if (form.kind !== "oprek_kepanitiaan" || !form.eventId) return false;
+  if (access.isFull || access.canForms) return false;
+  const eventAccess = await getEventAccess(form.eventId);
+  return !eventAccess.isBphPanitia;
+}
+
+/**
+ * Boleh MENGISI form ini? Pengurus kabinet (Struktur Organisasi) selalu boleh;
+ * akun lain hanya kalau form-nya dibuka untuk semua akun (bukan Pemilu).
+ * Akun suspended tidak pernah boleh. Dipakai halaman isi DAN aksi submit.
+ */
+export function canFillForm(
+  form: Pick<FormRow, "kind" | "openToAllAccounts">,
+  membership: CabinetMembership | null,
+): boolean {
+  if (!membership || membership.status === "suspended") return false;
+  if (membership.isCabinetMember) return true;
+  return form.openToAllAccounts && form.kind !== "pemilu";
 }
 
 export type CabinetMembership = {

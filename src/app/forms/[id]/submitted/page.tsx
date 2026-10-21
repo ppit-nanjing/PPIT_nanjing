@@ -7,7 +7,7 @@ import { db } from "@/db";
 import { formApplications, forms } from "@/db/schema";
 import { SiteNav } from "@/components/site-nav";
 import { SiteFooter } from "@/components/site-footer";
-import { FORM_KIND_LABEL, FORM_STATUS_LABEL, type FormApplicationStatus } from "@/lib/form-types";
+import { FORM_KIND_LABEL, FORM_STATUS_LABEL, isAcceptedFormStatus, type FormApplicationStatus } from "@/lib/form-types";
 import { getT } from "@/lib/i18n/server";
 import { UUID_RE } from "@/lib/uuid";
 
@@ -36,6 +36,11 @@ export default async function FormSubmittedPage({ params }: { params: Promise<{ 
   // Belum mengirim: balik ke form (halaman ini hanya untuk yang sudah kirim).
   if (!application) redirect(`/forms/${form.id}`);
 
+  // QR grup panitia: untuk semua yang sudah mengirim, atau hanya yang diterima.
+  const accepted = isAcceptedFormStatus(application.status);
+  const qrVisible = Boolean(form.groupQrUrl) && (form.groupQrAudience !== "accepted" || accepted);
+  const qrPending = Boolean(form.groupQrUrl) && !qrVisible && application.status === "pending";
+
   return (
     <div className="min-h-screen bg-background text-on-background">
       <SiteNav />
@@ -50,6 +55,24 @@ export default async function FormSubmittedPage({ params }: { params: Promise<{ 
               status: FORM_STATUS_LABEL[application.status as FormApplicationStatus],
             })}
           </p>
+          {qrVisible && form.groupQrUrl && (
+            <div className="deco-frame mt-8 rounded-lg bg-surface-container-low p-6 flex flex-col items-center gap-3">
+              <h2 className="text-headline-sm text-on-background">{t("forms.form.groupQrTitle")}</h2>
+              {/* <img> biasa (bukan next/image): QR butuh piksel tajam, rasio asli. */}
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={form.groupQrUrl}
+                alt={t("forms.form.groupQrTitle")}
+                className="w-full max-w-[260px] h-auto rounded-lg border border-outline-variant bg-white p-2"
+              />
+              {form.groupQrNote && (
+                <p className="text-body-sm text-on-surface-variant whitespace-pre-wrap">{form.groupQrNote}</p>
+              )}
+            </div>
+          )}
+          {qrPending && (
+            <p className="mt-6 text-body-sm text-on-surface-variant">{t("forms.form.groupQrPending")}</p>
+          )}
           <div className="mt-8">
             <Link
               href="/"

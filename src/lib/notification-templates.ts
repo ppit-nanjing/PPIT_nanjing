@@ -118,7 +118,7 @@ export const NOTIFICATION_TEMPLATES: NotificationTemplateDef[] = [
     variables: ["certTitle"],
     defaultSubject: "E-sertifikat kamu sudah terbit",
     defaultBody:
-      'E-sertifikat "{{certTitle}}" sudah terbit. Lihat dan unduh di halaman Profil → Riwayat Pengajuan.',
+      'E-sertifikat "{{certTitle}}" sudah terbit. Lihat dan unduh di halaman Profil → Aktivitas.',
   },
   {
     key: "borrow_approved",

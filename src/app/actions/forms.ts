@@ -22,9 +22,11 @@ import { sendEmail } from "@/lib/email";
 import { getTemplateDef, renderTemplate, type NotificationTemplateKey } from "@/lib/notification-templates";
 import { createTemplatedNotification } from "@/lib/notifications";
 import { renderMembershipEmail, renderMembershipEmailText } from "@/lib/membership-email";
-import { canPlaceApplicant, getCabinetMembership, getFormsAccess, requireFormManage } from "@/lib/form-access";
+import { getEventAccess } from "@/lib/event-access";
+import { canFillForm, canPlaceApplicant, getCabinetMembership, getCoordinatorEventIds, getFormsAccess, isKadivOnlyPlacer, requireFormManage } from "@/lib/form-access";
 import { EVENT_COMMITTEE_ROLE_LABEL, isBphPanitiaRole, type EventCommitteeRole } from "@/lib/event-capabilities";
-import { BPH_FORM_ROLE_LABEL, BPH_FORM_ROLES, FORM_TAB_PATH, PLACEMENT_ROLE_OPTIONS, type FormKind } from "@/lib/form-types";
+import { BPH_FORM_ROLE_LABEL, BPH_FORM_ROLES, FORM_GROUP_QR_AUDIENCES, FORM_TAB_PATH, KADIV_PLACEMENT_ROLES, PLACEMENT_ROLE_OPTIONS, DIVISION_FIELD_KEY, DIVISION_FIELD_LABEL, isDivisionOprekKind, isFormGroupQrUrl, type FormKind } from "@/lib/form-types";
+import { getSiteUrl } from "@/lib/site-url";
 import { FIELD_TYPE_LABELS, GRID_TYPES, QUESTION_BY_KEY, type MembershipFieldDef } from "@/lib/membership-form";
 import { scrubForeignPrivateUrl } from "@/lib/private-files";
 import { UUID_RE } from "@/lib/uuid";
@@ -36,7 +38,7 @@ import { UUID_RE } from "@/lib/uuid";
 
 const FIELD_TYPE_KEYS = Object.keys(FIELD_TYPE_LABELS) as MembershipFieldDef["type"][];
 
-const FORM_KINDS: FormKind[] = ["pemilu", "oprek_bph_acara", "oprek_kepanitiaan"];
+const FORM_KINDS: FormKind[] = ["pemilu", "oprek_bph_acara", "oprek_kepanitiaan", "oprek_kadiv"];
 
 function tabPath(kind: FormKind): string {
   return FORM_TAB_PATH[kind];
@@ -73,7 +75,7 @@ export async function createForm(formData: FormData) {
 
   if (kind === "pemilu" && !access.canPemilu) redirect("/console/forms");
   if (kind === "oprek_bph_acara" && !access.canBphTab) redirect("/console/forms");
-  if (kind === "oprek_kepanitiaan" && !access.canKepanitiaanTab) redirect("/console/forms");
+  if ((kind === "oprek_kepanitiaan" || kind === "oprek_kadiv") && !access.canKepanitiaanTab) redirect("/console/forms");
 
   const title = String(formData.get("title") ?? "").trim();
   if (!title) redirect(`${back}?error=title`);
@@ -94,9 +96,22 @@ export async function createForm(formData: FormData) {
       kind === "oprek_kepanitiaan" &&
       !access.isFull &&
       !access.canForms &&
-      !access.bphEventIds.includes(eventId)
+      !access.bphEventIds.includes(eventId) &&
+      // Kadiv acara itu juga boleh membuat Oprek anggota (CRUD oprek anggotanya).
+      !access.kadivEventIds.includes(eventId)
     ) {
       redirect("/console/forms");
+    }
+    // Oprek Kadiv hanya dibuat BPH Acara acara itu (atau full/modul) — Kadiv
+    // adalah pelamarnya, bukan pengelolanya.
+    if (kind === "oprek_kadiv" && !access.isFull && !access.canForms && !access.bphEventIds.includes(eventId)) {
+      redirect("/console/forms");
+    }
+    // Oprek BPH oleh koordinator: hanya untuk acara divisinya (Divisi PJ) atau
+    // acara buatannya — sama dengan pilihan di halaman tab.
+    if (kind === "oprek_bph_acara") {
+      const allowed = await getCoordinatorEventIds(access);
+      if (allowed !== null && !allowed.includes(eventId)) redirect("/console/forms");
     }
     // Satu acara = satu form Oprek BPH dan satu form Oprek Kepanitiaan (alur:
     // BPH dulu → kepanitiaan). Cegah form dobel untuk acara yang sama; index
@@ -117,13 +132,22 @@ export async function createForm(formData: FormData) {
       : [];
   if (kind === "oprek_bph_acara" && bphRoles.length === 0) redirect(`${back}?error=roles`);
 
-  let createdId: string;
+  // Form berdivisi: baris "Divisi Pilihan" langsung ada di Daftar Pertanyaan
+  // (urutan pertama; bisa dipindah) — lihat DIVISION_FIELD_KEY. Dibuat dalam
+  // satu db.batch (transaksi) dengan formnya supaya tidak ada form tanpa baris.
+  const createdId = crypto.randomUUID();
+  const insertForm = db.insert(forms).values({ id: createdId, kind, eventId, title, bphRoles, createdBy: access.userId });
   try {
-    const [created] = await db
-      .insert(forms)
-      .values({ kind, eventId, title, bphRoles, createdBy: access.userId })
-      .returning({ id: forms.id });
-    createdId = created.id;
+    if (isDivisionOprekKind(kind)) {
+      await db.batch([
+        insertForm,
+        db
+          .insert(formFields)
+          .values({ formId: createdId, key: DIVISION_FIELD_KEY, label: DIVISION_FIELD_LABEL, type: "section", orderIndex: 0 }),
+      ]);
+    } else {
+      await insertForm;
+    }
   } catch (err) {
     // Balapan dua POST bersamaan untuk acara yang sama: index unik parsial
     // (kind, event_id) yang menangkap — balas dengan pesan yang sama.
@@ -144,6 +168,8 @@ export async function updateFormSettings(formData: FormData) {
   const description = String(formData.get("description") ?? "").trim();
   const confirmationMessage = String(formData.get("confirmationMessage") ?? "").trim();
   const isOpen = formData.get("isOpen") === "on";
+  // Pemilu selalu khusus kabinet.
+  const openToAllAccounts = form.kind !== "pemilu" && formData.get("openToAllAccounts") === "on";
   const opensAt = parseLocalDate(formData.get("opensAt"));
   const closesAt = parseLocalDate(formData.get("closesAt"));
 
@@ -158,6 +184,17 @@ export async function updateFormSettings(formData: FormData) {
   // dilepas, pertahankan setelan sebelumnya.
   const bphRoles = form.kind === "oprek_bph_acara" && openedRoles.length === 0 ? form.bphRoles : openedRoles;
 
+  // QR grup panitia: hanya gambar dari folder unggah "form-qr"; nilai lain
+  // (permintaan rakitan) diabaikan dan QR lama dipertahankan.
+  const qrRaw = String(formData.get("groupQrUrl") ?? "").trim();
+  const groupQrUrl =
+    formData.get("removeGroupQr") === "on" ? null : qrRaw && isFormGroupQrUrl(qrRaw) ? qrRaw : form.groupQrUrl;
+  const groupQrNote = String(formData.get("groupQrNote") ?? "").trim().slice(0, 500) || null;
+  const audienceRaw = String(formData.get("groupQrAudience") ?? "");
+  const groupQrAudience = (FORM_GROUP_QR_AUDIENCES as readonly string[]).includes(audienceRaw)
+    ? audienceRaw
+    : form.groupQrAudience;
+
   await db
     .update(forms)
     .set({
@@ -165,9 +202,13 @@ export async function updateFormSettings(formData: FormData) {
       description: description || null,
       confirmationMessage: confirmationMessage || "Terima kasih! Jawabanmu sudah kami terima.",
       isOpen,
+      openToAllAccounts,
       opensAt,
       closesAt,
       bphRoles,
+      groupQrUrl,
+      groupQrNote,
+      groupQrAudience,
       updatedAt: new Date(),
     })
     .where(eq(forms.id, form.id));
@@ -177,7 +218,24 @@ export async function updateFormSettings(formData: FormData) {
 
 export async function deleteForm(formData: FormData) {
   const id = String(formData.get("id") ?? "");
-  const { form } = await requireFormManage(id);
+  const { form, access } = await requireFormManage(id);
+  // Lamaran ikut terhapus (cascade). Penugasan panitia hasil lamaran yang
+  // diterima dilepas dengan aturan yang sama seperti hapus satu lamaran, dan
+  // butuh izin penempatan yang sama (kunci acara 14 hari).
+  if (form.kind !== "pemilu" && form.eventId) {
+    const accepted = await db
+      .select({ userId: formApplications.userId })
+      .from(formApplications)
+      .where(and(eq(formApplications.formId, form.id), inArray(formApplications.status, ACCEPTED_STATUSES)));
+    if (accepted.length > 0) {
+      if (!(await canPlaceApplicant(form, access))) {
+        throw new Error("Acara ini terkunci atau kamu tidak berhak melepas penugasan hasil formulir ini.");
+      }
+      for (const a of accepted) {
+        await releaseOprekCommitteeRow(form.eventId, a.userId, { excludeFormId: form.id });
+      }
+    }
+  }
   await db.delete(forms).where(eq(forms.id, form.id));
   revalidatePath("/console/forms");
   revalidatePath(tabPath(form.kind));
@@ -250,9 +308,13 @@ export async function updateFormField(formData: FormData) {
   const { field, form } = await loadFieldForManage(formData);
   const label = String(formData.get("label") ?? "").trim();
   const typeRaw = String(formData.get("type") ?? "text");
-  const type = FIELD_TYPE_KEYS.includes(typeRaw as MembershipFieldDef["type"])
-    ? (typeRaw as MembershipFieldDef["type"])
-    : "text";
+  // Baris "Divisi Pilihan" selalu section (penanda posisi), apa pun isian form.
+  const type =
+    field.key === DIVISION_FIELD_KEY
+      ? "section"
+      : FIELD_TYPE_KEYS.includes(typeRaw as MembershipFieldDef["type"])
+        ? (typeRaw as MembershipFieldDef["type"])
+        : "text";
   const required = formData.get("required") === "on";
   const placeholder = String(formData.get("placeholder") ?? "").trim();
   const helpText = String(formData.get("helpText") ?? "").trim();
@@ -287,6 +349,8 @@ export async function updateFormField(formData: FormData) {
 
 export async function deleteFormField(formData: FormData) {
   const { field, form } = await loadFieldForManage(formData);
+  // Posisi pilihan divisi tidak boleh hilang (pilihan divisi tetap wajib).
+  if (field.key === DIVISION_FIELD_KEY) return;
   await db.delete(formFields).where(eq(formFields.id, field.id));
   revalidateFormPaths(form.id, form.kind);
 }
@@ -321,7 +385,7 @@ export async function moveFormField(id: string, toIndex: number) {
 export async function duplicateFormField(id: string) {
   if (!UUID_RE.test(id)) return;
   const [src] = await db.select().from(formFields).where(eq(formFields.id, id));
-  if (!src) return;
+  if (!src || src.key === DIVISION_FIELD_KEY) return;
   const { form } = await requireFormManage(src.formId);
 
   // orderIndex = integer: JANGAN menyisipkan nilai pecahan (0.5) — Postgres
@@ -376,7 +440,7 @@ export async function submitFormApplication(formData: FormData) {
   const back = `/forms/${form.id}`;
 
   const membership = await getCabinetMembership(userId);
-  if (!membership || !membership.isCabinetMember) redirect(`${back}?error=forbidden`);
+  if (!membership || !canFillForm(form, membership)) redirect(`${back}?error=forbidden`);
 
   const [existing] = await db
     .select({ id: formApplications.id })
@@ -413,7 +477,7 @@ export async function submitFormApplication(formData: FormData) {
     if (!pos || !(form.bphRoles as string[]).includes(pos)) redirect(`${back}?error=submit`);
     positionApplied = pos;
   }
-  if (form.kind === "oprek_kepanitiaan") {
+  if (isDivisionOprekKind(form.kind)) {
     const c1 = String(formData.get("sys_choice1") ?? "").trim();
     const c2 = String(formData.get("sys_choice2") ?? "").trim();
     if (!c1 || !UUID_RE.test(c1) || !(await divisionBelongsToEvent(c1))) redirect(`${back}?error=submit`);
@@ -510,7 +574,8 @@ export async function submitFormApplication(formData: FormData) {
       formId: form.id,
       userId,
       fullName: membership.displayName || session?.user?.name || "",
-      cabinetDivision: membership.divisionName ?? "-",
+      // Pelamar dari luar kabinet (form terbuka untuk semua akun) tidak punya divisi asal.
+      cabinetDivision: membership.divisionName ?? "Luar kabinet",
       positionApplied,
       choice1DivisionId: choice1,
       choice2DivisionId: choice2,
@@ -537,8 +602,40 @@ type AppStatus = (typeof APPLICATION_STATUSES)[number];
 
 const ACCEPTED_STATUSES: AppStatus[] = ["accepted", "accepted_choice1", "accepted_choice2", "reassigned"];
 
+// Lepas baris panitia hasil Oprek untuk satu orang di satu acara — hanya kalau
+// (a) baris itu memang dibuat Oprek (note "Oprek: …"; penugasan manual tidak
+// boleh hilang) dan (b) tidak ada penerimaan lain di acara yang sama selain
+// lamaran/form yang sedang dilepas.
+async function releaseOprekCommitteeRow(
+  eventId: string,
+  userId: string,
+  exclude: { excludeApplicationId?: string; excludeFormId?: string },
+) {
+  const [existing] = await db
+    .select({ id: eventCommittee.id, note: eventCommittee.note })
+    .from(eventCommittee)
+    .where(and(eq(eventCommittee.eventId, eventId), eq(eventCommittee.userId, userId)));
+  if (!existing || !(existing.note ?? "").startsWith("Oprek:")) return;
+  const others = await db
+    .select({ id: formApplications.id })
+    .from(formApplications)
+    .innerJoin(forms, eq(forms.id, formApplications.formId))
+    .where(
+      and(
+        eq(formApplications.userId, userId),
+        eq(forms.eventId, eventId),
+        exclude.excludeApplicationId ? ne(formApplications.id, exclude.excludeApplicationId) : undefined,
+        exclude.excludeFormId ? ne(formApplications.formId, exclude.excludeFormId) : undefined,
+        inArray(formApplications.status, ACCEPTED_STATUSES),
+      ),
+    );
+  if (others.length === 0) {
+    await db.delete(eventCommittee).where(eq(eventCommittee.id, existing.id));
+  }
+}
+
 function statusAllowed(kind: FormKind, status: AppStatus): boolean {
-  if (kind === "oprek_kepanitiaan") return true;
+  if (isDivisionOprekKind(kind)) return true;
   return status === "pending" || status === "accepted" || status === "rejected";
 }
 
@@ -611,6 +708,12 @@ export async function updateApplicationPlacement(formData: FormData) {
     .from(formApplications)
     .where(and(eq(formApplications.id, applicationId), eq(formApplications.formId, form.id)));
   if (!app) notFound();
+  // Tidak boleh memutuskan lamaran sendiri (mis. pembuat form Oprek BPH yang
+  // ikut melamar lalu menerima dirinya jadi ketua). BPH Kabinet/Teknologi tetap
+  // bisa, karena mereka sudah punya akses penuh ke acara.
+  if (app.userId === access.userId && !access.isFull) {
+    throw new Error("Kamu tidak bisa memutuskan lamaranmu sendiri — minta pengelola lain.");
+  }
 
   const statusRaw = String(formData.get("status") ?? "pending");
   if (!APPLICATION_STATUSES.includes(statusRaw as AppStatus)) throw new Error("Status tidak valid.");
@@ -623,16 +726,23 @@ export async function updateApplicationPlacement(formData: FormData) {
   let role: string | null = null;
   if (form.kind === "oprek_bph_acara") {
     const inputRole = String(formData.get("assignedRole") ?? "").trim();
-    const fallback = app.positionApplied ?? (form.bphRoles as string[])[0] ?? null;
-    role = (BPH_FORM_ROLES as string[]).includes(inputRole) ? inputRole : fallback;
+    // Hanya posisi yang memang dibuka form ini (bphRoles), bukan semua role BPH.
+    const opened = (form.bphRoles as string[]).filter((r) => (BPH_FORM_ROLES as string[]).includes(r));
+    const fallback = app.positionApplied && opened.includes(app.positionApplied) ? app.positionApplied : (opened[0] ?? null);
+    role = opened.includes(inputRole) ? inputRole : fallback;
+  } else if (form.kind === "oprek_kadiv") {
+    // Oprek Kadiv: yang diterima selalu jadi Kadiv divisinya.
+    role = "kadiv";
   } else if (form.kind === "oprek_kepanitiaan") {
     const inputRole = String(formData.get("assignedRole") ?? "").trim();
-    role = (PLACEMENT_ROLE_OPTIONS as string[]).includes(inputRole) ? inputRole : "anggota";
+    // Kadiv (bukan BPH/full) hanya boleh menempatkan sebagai peran anggota divisi.
+    const allowedRoles = (await isKadivOnlyPlacer(form, access)) ? KADIV_PLACEMENT_ROLES : PLACEMENT_ROLE_OPTIONS;
+    role = (allowedRoles as string[]).includes(inputRole) ? inputRole : "anggota";
   }
 
   // Divisi penempatan (kepanitiaan). accepted/pending/rejected tanpa divisi.
   let assignedDivisionId: string | null = null;
-  if (form.kind === "oprek_kepanitiaan" && ACCEPTED_STATUSES.includes(status)) {
+  if (isDivisionOprekKind(form.kind) && ACCEPTED_STATUSES.includes(status)) {
     if (status === "accepted_choice1") {
       assignedDivisionId = app.choice1DivisionId;
     } else if (status === "accepted_choice2") {
@@ -684,20 +794,29 @@ export async function updateApplicationPlacement(formData: FormData) {
   // Sinkronisasi penugasan kepanitiaan: satu baris per (acara, user).
   if (touchingCommittee && form.eventId) {
     const [existing] = await db
-      .select({ id: eventCommittee.id, role: eventCommittee.role, note: eventCommittee.note })
+      .select({
+        id: eventCommittee.id,
+        role: eventCommittee.role,
+        note: eventCommittee.note,
+        divisionId: eventCommittee.divisionId,
+      })
       .from(eventCommittee)
       .where(and(eq(eventCommittee.eventId, form.eventId), eq(eventCommittee.userId, app.userId)));
 
     if (willAssign) {
       if (existing) {
-        // Jangan turunkan BPH Acara jadi anggota hanya karena diterima di
-        // form kepanitiaan — role BPH yang menang, divisinya tetap diperbarui.
-        const keepBph = form.kind === "oprek_kepanitiaan" && isBphPanitiaRole(existing.role);
+        // Jangan turunkan BPH Acara (atau Kadiv, di Oprek anggota) jadi anggota
+        // hanya karena diterima di form berdivisi — role lama yang menang,
+        // divisinya tetap diperbarui.
+        const keepBph =
+          (isDivisionOprekKind(form.kind) && isBphPanitiaRole(existing.role)) ||
+          (form.kind === "oprek_kepanitiaan" && existing.role === "kadiv");
         await db
           .update(eventCommittee)
           .set({
             role: (keepBph ? existing.role : ((role ?? "anggota") as EventCommitteeRole)),
-            divisionId: assignedDivisionId,
+            // Form BPH tidak punya divisi: jangan hapus divisi yang sudah ada.
+            divisionId: form.kind === "oprek_bph_acara" ? existing.divisionId : assignedDivisionId,
           })
           .where(eq(eventCommittee.id, existing.id));
       } else {
@@ -713,29 +832,7 @@ export async function updateApplicationPlacement(formData: FormData) {
           .onConflictDoNothing();
       }
     } else if (willRemove) {
-      // Hapus baris panitia hanya kalau (a) baris itu memang dibuat Oprek
-      // (note "Oprek: …" — baris yang ditugaskan manual tidak boleh hilang),
-      // dan (b) tidak ada penerimaan lain di acara yang sama.
-      const oprekCreated = (existing?.note ?? "").startsWith("Oprek:");
-      if (existing && oprekCreated) {
-        const others = await db
-          .select({ id: formApplications.id })
-          .from(formApplications)
-          .innerJoin(forms, eq(forms.id, formApplications.formId))
-          .where(
-            and(
-              eq(formApplications.userId, app.userId),
-              eq(forms.eventId, form.eventId),
-              ne(formApplications.id, app.id),
-              inArray(formApplications.status, ["accepted", "accepted_choice1", "accepted_choice2", "reassigned"]),
-            ),
-          );
-        if (others.length === 0) {
-          await db
-            .delete(eventCommittee)
-            .where(and(eq(eventCommittee.eventId, form.eventId), eq(eventCommittee.userId, app.userId)));
-        }
-      }
+      await releaseOprekCommitteeRow(form.eventId, app.userId, { excludeApplicationId: app.id });
     }
   }
 
@@ -766,10 +863,16 @@ export async function updateApplicationPlacement(formData: FormData) {
       if (key === "oprek_accepted") {
         if (form.kind === "oprek_bph_acara") {
           details = `Kamu tercatat sebagai ${roleLabel} (BPH Acara)${eventRow?.title ? ` untuk acara "${eventRow.title}"` : ""}.`;
+        } else if (form.kind === "oprek_kadiv") {
+          details = `Kamu terpilih sebagai Kadiv ${divisionName ?? "divisi terpilih"}${eventRow?.title ? ` untuk acara "${eventRow.title}"` : ""}.`;
         } else if (form.kind === "oprek_kepanitiaan") {
           details = `Kamu ditempatkan di ${divisionName ?? "divisi terpilih"} sebagai ${roleLabel}.`;
         } else {
           details = "Kamu tercatat sebagai calon pada periode berikutnya.";
+        }
+        // QR grup panitia ada di halaman status lamaran (forms/<id>/submitted).
+        if (form.groupQrUrl) {
+          details += `\n\nGabung grup panitia lewat QR di halaman lamaranmu: ${getSiteUrl()}/forms/${form.id}/submitted`;
         }
       } else if (key === "oprek_rejected") {
         details = "";
@@ -849,30 +952,7 @@ export async function deleteFormApplication(formData: FormData) {
       throw new Error("Acara ini terkunci atau kamu tidak berhak melepas penugasan.");
     }
     if (form.eventId) {
-      const [existing] = await db
-        .select({ id: eventCommittee.id, note: eventCommittee.note })
-        .from(eventCommittee)
-        .where(and(eq(eventCommittee.eventId, form.eventId), eq(eventCommittee.userId, app.userId)));
-      const oprekCreated = (existing?.note ?? "").startsWith("Oprek:");
-      if (existing && oprekCreated) {
-        const others = await db
-          .select({ id: formApplications.id })
-          .from(formApplications)
-          .innerJoin(forms, eq(forms.id, formApplications.formId))
-          .where(
-            and(
-              eq(formApplications.userId, app.userId),
-              eq(forms.eventId, form.eventId),
-              ne(formApplications.id, app.id),
-              inArray(formApplications.status, ["accepted", "accepted_choice1", "accepted_choice2", "reassigned"]),
-            ),
-          );
-        if (others.length === 0) {
-          await db
-            .delete(eventCommittee)
-            .where(and(eq(eventCommittee.eventId, form.eventId), eq(eventCommittee.userId, app.userId)));
-        }
-      }
+      await releaseOprekCommitteeRow(form.eventId, app.userId, { excludeApplicationId: app.id });
     }
   }
 
@@ -897,4 +977,37 @@ export async function deleteFormApplication(formData: FormData) {
   if (form.eventId) revalidatePath(`/console/events/${form.eventId}`);
   if (form.kind !== "pemilu") revalidatePath("/console/work-ledger");
   redirect(`/console/forms/${form.id}`);
+}
+
+// Tambah divisi acara dari builder Oprek (baris "Divisi Pilihan"). Divisi
+// masuk ke Struktur Kepanitiaan acara (event_divisions) — satu sumber dengan
+// halaman acara, jadi pilihan pelamar dan penempatan panitia selalu sama.
+// Butuh kapabilitas acara event.manageCommittee (BPH Acara / BPH Kabinet);
+// Kadiv yang mengelola Oprek anggota tidak bisa menambah divisi.
+// Mengembalikan { error } (bukan throw) supaya pesannya tetap terbaca di
+// produksi — Next.js menyamarkan pesan error yang dilempar Server Action.
+export async function addFormEventDivision(formData: FormData): Promise<{ error?: string }> {
+  const formId = String(formData.get("formId") ?? "");
+  const { form } = await requireFormManage(formId);
+  if (!isDivisionOprekKind(form.kind) || !form.eventId) return { error: "Form ini tidak memakai pilihan divisi." };
+  const access = await getEventAccess(form.eventId);
+  if (!access.can("event.manageCommittee")) {
+    return { error: "Hanya BPH Acara atau BPH Kabinet yang bisa menambah divisi acara." };
+  }
+  const name = String(formData.get("name") ?? "").trim().replace(/\s+/g, " ").slice(0, 80);
+  if (!name) return { error: "Nama divisi wajib diisi." };
+
+  const existing = await db
+    .select({ name: eventDivisions.name, orderIndex: eventDivisions.orderIndex })
+    .from(eventDivisions)
+    .where(eq(eventDivisions.eventId, form.eventId));
+  if (existing.some((d) => d.name.trim().toLowerCase() === name.toLowerCase())) {
+    return { error: `Divisi "${name}" sudah ada di acara ini.` };
+  }
+  const nextOrder = existing.reduce((max, d) => Math.max(max, d.orderIndex), 0) + 1;
+  await db.insert(eventDivisions).values({ eventId: form.eventId, name, orderIndex: nextOrder });
+
+  revalidateFormPaths(form.id, form.kind);
+  revalidatePath(`/console/events/${form.eventId}`);
+  return {};
 }

@@ -8,8 +8,9 @@ import { GRID_TYPES, isSectionType } from "@/lib/membership-form";
 import { ImageUploadCropper } from "@/components/upload/image-upload-cropper";
 import { FileUploadField } from "@/components/upload/file-upload-field";
 import { Select } from "@/components/console/form";
+import { LinkifiedText } from "@/components/linkified-text";
 import { useT } from "@/lib/i18n/client";
-import { BPH_FORM_ROLE_LABEL, type FormKind } from "@/lib/form-types";
+import { BPH_FORM_ROLE_LABEL, DIVISION_FIELD_KEY, isDivisionOprekKind, type FormKind } from "@/lib/form-types";
 
 export type FormDivisionOption = { id: string; name: string };
 
@@ -74,7 +75,7 @@ export function FormRenderer({
   // divisi, pilihan divisi tidak dirender tapi tetap wajib (klien & server),
   // jadi form dulu diam-diam tidak bisa dikirim — sekarang dijelaskan dan
   // tombolnya dimatikan.
-  const noDivisions = kind === "oprek_kepanitiaan" && divisions.length === 0;
+  const noDivisions = isDivisionOprekKind(kind) && divisions.length === 0;
   const errorCount = Object.values(errors).filter(Boolean).length;
 
   function update(key: string, value: string) {
@@ -102,7 +103,7 @@ export function FormRenderer({
     const liveData = new FormData(e.currentTarget);
 
     if (kind === "oprek_bph_acara" && !position) next.sys_position = t("forms.form.errRequired");
-    if (kind === "oprek_kepanitiaan") {
+    if (isDivisionOprekKind(kind)) {
       if (!choice1) next.sys_choice1 = t("forms.form.errRequired");
       if (choice1 && choice2 && choice1 === choice2) next.sys_choice2 = t("forms.form.errSameDivision");
     }
@@ -179,57 +180,11 @@ export function FormRenderer({
       </p>
     ) : null;
 
-  return (
-    <form ref={formRef} action={preview ? undefined : action} onSubmit={handleSubmit} className="flex flex-col gap-6" noValidate>
-      <input type="hidden" name="formId" value={formId} />
-
-      {/* Kolom sistem — identitas read-only dari akun + Struktur Organisasi */}
-      {prefill && (
-        <section className="bg-surface-container-lowest border border-outline-variant rounded-xl p-5">
-          <h2 className="text-label-caps uppercase tracking-wide text-on-surface-variant mb-3">
-            {t("forms.form.identityHeading")}
-          </h2>
-          <dl className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div>
-              <dt className="text-label-caps uppercase tracking-wide text-on-surface-variant">{t("forms.form.fullName")}</dt>
-              <dd className="text-body-lg text-on-background">{prefill.fullName || "—"}</dd>
-            </div>
-            <div>
-              <dt className="text-label-caps uppercase tracking-wide text-on-surface-variant">
-                {t("forms.form.cabinetDivision")}
-              </dt>
-              <dd className="text-body-lg text-on-background">{prefill.divisionName ?? "—"}</dd>
-            </div>
-          </dl>
-          <p className="text-body-sm text-on-surface-variant mt-3">{t("forms.form.identityNote")}</p>
-        </section>
-      )}
-
-      {/* Posisi BPH Acara */}
-      {kind === "oprek_bph_acara" && bphRoles.length > 0 && (
-        <div id="field-sys_position">
-          <label htmlFor="sys_position" className="block text-body-md text-on-background mb-2">
-            {t("forms.form.position")} <span className="text-error">*</span>
-          </label>
-          <Select
-            id="sys_position"
-            name="sys_position"
-            required
-            placeholder={t("forms.form.positionPlaceholder")}
-            value={position}
-            onChange={(e) => {
-              setPosition(e.target.value);
-              setErrors((er) => (er.sys_position ? { ...er, sys_position: "" } : er));
-            }}
-            options={bphRoles.map((r) => ({ value: r, label: BPH_FORM_ROLE_LABEL[r] ?? r }))}
-            className="w-full sm:max-w-sm"
-          />
-          {errorBox("sys_position")}
-        </div>
-      )}
-
+  const hasDivisionField = isDivisionOprekKind(kind) && fields.some((f) => f.key === DIVISION_FIELD_KEY);
+  const divisionBlock = (
+    <>
       {/* Divisi pilihan kepanitiaan */}
-      {kind === "oprek_kepanitiaan" && divisions.length > 0 && (
+      {isDivisionOprekKind(kind) && divisions.length > 0 && (
         <div className="flex flex-col gap-4">
           <div id="field-sys_choice1">
             <label htmlFor="sys_choice1" className="block text-body-md text-on-background mb-2">
@@ -293,16 +248,90 @@ export function FormRenderer({
         </div>
       )}
 
+    </>
+  );
+
+  return (
+    <form ref={formRef} action={preview ? undefined : action} onSubmit={handleSubmit} className="flex flex-col gap-6" noValidate>
+      <input type="hidden" name="formId" value={formId} />
+
+      {/* Kolom sistem — identitas read-only dari akun + Struktur Organisasi */}
+      {prefill && (
+        <section className="bg-surface-container-lowest border border-outline-variant rounded-xl p-5">
+          <h2 className="text-label-caps uppercase tracking-wide text-on-surface-variant mb-3">
+            {t("forms.form.identityHeading")}
+          </h2>
+          <dl className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <dt className="text-label-caps uppercase tracking-wide text-on-surface-variant">{t("forms.form.fullName")}</dt>
+              <dd className="text-body-lg text-on-background">{prefill.fullName || "—"}</dd>
+            </div>
+            <div>
+              <dt className="text-label-caps uppercase tracking-wide text-on-surface-variant">
+                {t("forms.form.cabinetDivision")}
+              </dt>
+              <dd className="text-body-lg text-on-background">{prefill.divisionName ?? "—"}</dd>
+            </div>
+          </dl>
+          <p className="text-body-sm text-on-surface-variant mt-3">{t("forms.form.identityNote")}</p>
+        </section>
+      )}
+
+      {/* Posisi BPH Acara */}
+      {kind === "oprek_bph_acara" && bphRoles.length > 0 && (
+        <div id="field-sys_position">
+          <label htmlFor="sys_position" className="block text-body-md text-on-background mb-2">
+            {t("forms.form.position")} <span className="text-error">*</span>
+          </label>
+          <Select
+            id="sys_position"
+            name="sys_position"
+            required
+            placeholder={t("forms.form.positionPlaceholder")}
+            value={position}
+            onChange={(e) => {
+              setPosition(e.target.value);
+              setErrors((er) => (er.sys_position ? { ...er, sys_position: "" } : er));
+            }}
+            options={bphRoles.map((r) => ({ value: r, label: BPH_FORM_ROLE_LABEL[r] ?? r }))}
+            className="w-full sm:max-w-sm"
+          />
+          {errorBox("sys_position")}
+        </div>
+      )}
+
+      {/* Pilihan divisi (kolom sistem): di posisi baris "Divisi Pilihan" kalau
+          form punya baris itu (DIVISION_FIELD_KEY), kalau tidak paling atas. */}
+      {!hasDivisionField && divisionBlock}
+
       {/* Pertanyaan kustom */}
       {fields.map((f) => {
         const fieldId = `field-${f.key}`;
         const invalid = Boolean(errors[f.key]);
 
+        if (f.key === DIVISION_FIELD_KEY) {
+          if (!hasDivisionField) return null;
+          return (
+            <div key={f.id ?? f.key} className="flex flex-col gap-3">
+              {f.helpText && (
+                <p className="text-body-sm text-on-surface-variant whitespace-pre-wrap">
+                  <LinkifiedText text={f.helpText} />
+                </p>
+              )}
+              {divisionBlock}
+            </div>
+          );
+        }
+
         if (isSectionType(f.type)) {
           return (
             <div key={f.id ?? f.key} className="bg-secondary-container/20 border border-outline-variant rounded-xl p-5 mt-2">
               <h3 className="text-headline-md text-on-background">{f.label}</h3>
-              {f.helpText && <p className="text-body-sm text-on-surface-variant mt-1">{f.helpText}</p>}
+              {f.helpText && (
+                <p className="text-body-sm text-on-surface-variant mt-1 whitespace-pre-wrap">
+                  <LinkifiedText text={f.helpText} />
+                </p>
+              )}
             </div>
           );
         }
@@ -333,7 +362,11 @@ export function FormRenderer({
                 {labelContent}
               </label>
             )}
-            {f.helpText && <p className="text-body-sm text-on-surface-variant mb-2">{f.helpText}</p>}
+            {f.helpText && (
+              <p className="text-body-sm text-on-surface-variant mb-2 whitespace-pre-wrap">
+                <LinkifiedText text={f.helpText} />
+              </p>
+            )}
 
             {GRID_TYPES.includes(f.type) ? (
               <GridInput

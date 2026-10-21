@@ -17,10 +17,16 @@ export function buildCertificateTitle(role: string, unitName: string | null, eve
     bendahara: "Bendahara",
     anggota: "Panitia",
   };
+  // Kadiv: "Ketua Divisi Acara" — nama divisi acara kadang sudah diawali "Divisi".
+  const kadivLabel = (unit: string) => (/^divisi\b/i.test(unit) ? `Ketua ${unit}` : `Ketua Divisi ${unit}`);
   const label = unitName
     ? role === "anggota"
       ? `Anggota ${unitName}`
-      : `${titleCase(role)} ${unitName}`
-    : TOP_LEVEL[role] ?? titleCase(role);
+      : role === "kadiv"
+        ? kadivLabel(unitName)
+        : `${titleCase(role)} ${unitName}`
+    : role === "kadiv"
+      ? "Ketua Divisi"
+      : TOP_LEVEL[role] ?? titleCase(role);
   return eventTitle ? `${label} — ${eventTitle}` : label;
 }

@@ -14,7 +14,8 @@ const ERROR_TEXT: Record<string, string> = {
 const PLACEHOLDER: Record<FormKind, string> = {
   pemilu: "mis. Pendaftaran Calon Ketua Umum 2027/2028",
   oprek_bph_acara: "mis. Oprek BPH — WIF 2027",
-  oprek_kepanitiaan: "mis. Oprek Kepanitiaan — WIF 2027",
+  oprek_kepanitiaan: "mis. Oprek Anggota Kepanitiaan — WIF 2027",
+  oprek_kadiv: "mis. Oprek Kadiv — WIF 2027",
 };
 
 // Kartu "Buat Formulir Baru" untuk tab Pemilu / Oprek BPH / Oprek Kepanitiaan.
@@ -41,7 +42,9 @@ export function FormCreate({
         {kind === "oprek_bph_acara" &&
           "Rekrut BPH Acara untuk satu acara/proker. Pilih acara dan posisi yang dibuka; pertanyaan disusun setelah form dibuat."}
         {kind === "oprek_kepanitiaan" &&
-          "Rekrut panitia acara. Pilih acara tempatmu BPH Acara; divisi pilihan pelamar diambil dari Struktur Kepanitiaan acara itu."}
+          "Rekrut anggota panitia untuk SEMUA divisi dalam satu formulir. Bisa dibuat BPH Acara atau Kadiv acara itu; semua Kadiv ikut melihat dan memutuskan pelamar. Divisi pilihan diambil dari Struktur Kepanitiaan acara."}
+        {kind === "oprek_kadiv" &&
+          "Rekrut Kadiv (ketua divisi) acara — langkah sesudah BPH terbentuk, sebelum Oprek anggota. Hanya BPH Acara yang membuat dan memutuskan; yang diterima otomatis jadi Kadiv divisinya dan ikut mengelola Oprek anggota."}
       </p>
 
       {message && (

@@ -1,7 +1,7 @@
 import { DonutChart } from "@/components/console/donut-chart";
 import { SummaryList } from "@/components/console/summary-list";
 import type { FormAnalytics } from "@/lib/form-analytics";
-import { FORM_KIND_LABEL, type FormKind } from "@/lib/form-types";
+import { FORM_KIND_LABEL, isDivisionOprekKind, type FormKind } from "@/lib/form-types";
 
 // Ringkasan analitik form (dipakai section "Analitik" di halaman kelola):
 // kartu angka + distribusi status/posisi/divisi + ringkas per pertanyaan pilihan.
@@ -34,7 +34,7 @@ export function FormAnalyticsView({ analytics, kind }: { analytics: FormAnalytic
         </div>
       )}
 
-      {kind === "oprek_kepanitiaan" && (
+      {isDivisionOprekKind(kind) && (
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-8">
           <div>
             <h3 className="text-body-md font-semibold text-on-background mb-3">Distribusi Pilihan 1</h3>

@@ -14,6 +14,7 @@ import {
   updateFormSettings,
 } from "@/app/actions/forms";
 import { requireFormManage } from "@/lib/form-access";
+import { getEventAccess } from "@/lib/event-access";
 import { CollapsibleSection } from "@/components/console/collapsible-section";
 import { ConfirmButton } from "@/components/console/confirm-button";
 import { CopyButton } from "@/components/copy-button";
@@ -22,11 +23,12 @@ import { FormFieldEditor } from "@/components/console/form-field-editor";
 import { FormAnalyticsView } from "@/components/console/forms/form-analytics-view";
 import { FormRenderer, type FormDivisionOption } from "@/components/forms/form-renderer";
 import { QuestionBank } from "@/components/console/question-bank";
-import { CheckboxField, Select, TextAreaField, TextField, ToggleSwitch } from "@/components/console/form";
+import { FileUpload } from "@/components/upload/file-upload";
+import { CheckboxField, Select, SelectField, TextAreaField, TextField, ToggleSwitch } from "@/components/console/form";
 import { SubmitButton } from "@/components/console/submit-button";
 import { EVENT_COMMITTEE_ROLE_LABEL } from "@/lib/event-capabilities";
 import { buildFormAnalytics } from "@/lib/form-analytics";
-import { BPH_FORM_ROLE_LABEL, BPH_FORM_ROLES, FORM_KIND_LABEL, FORM_STATUS_LABEL, FORM_STATUS_TONE, FORM_TAB_PATH } from "@/lib/form-types";
+import { BPH_FORM_ROLE_LABEL, BPH_FORM_ROLES, FORM_KIND_LABEL, FORM_STATUS_LABEL, FORM_STATUS_TONE, FORM_TAB_PATH, DIVISION_FIELD_KEY, isDivisionOprekKind } from "@/lib/form-types";
 import { toChinaLocalInput } from "@/lib/datetime";
 import { FIELD_TYPE_LABELS, type MembershipFieldDef } from "@/lib/membership-form";
 import { getSiteUrl } from "@/lib/site-url";
@@ -51,7 +53,7 @@ export default async function FormManagePage({ params }: { params: Promise<{ for
           .where(eq(events.id, form.eventId))
       : Promise.resolve([] as { id: string; title: string; status: string }[]),
     db.select({ n: count() }).from(formApplications).where(eq(formApplications.formId, form.id)),
-    form.kind === "oprek_kepanitiaan" && form.eventId
+    isDivisionOprekKind(form.kind) && form.eventId
       ? db
           .select({ id: eventDivisions.id, name: eventDivisions.name, parentId: eventDivisions.parentDivisionId })
           .from(eventDivisions)
@@ -84,6 +86,11 @@ export default async function FormManagePage({ params }: { params: Promise<{ for
     id: r.id,
     name: r.parentId && divisionNameById.has(r.parentId) ? `${divisionNameById.get(r.parentId)} · ${r.name}` : r.name,
   }));
+  // Tambah divisi dari baris "Divisi Pilihan" = ubah Struktur Kepanitiaan acara.
+  const canAddDivision =
+    isDivisionOprekKind(form.kind) && form.eventId
+      ? (await getEventAccess(form.eventId)).can("event.manageCommittee")
+      : false;
   const fieldDefs: MembershipFieldDef[] = fields.map((r) => ({
     id: r.id,
     key: r.key,
@@ -187,7 +194,7 @@ export default async function FormManagePage({ params }: { params: Promise<{ for
           : "Form masih ditutup; halaman isinya hanya menampilkan keterangan ditutup. Jangan bagikan dulu."}
       </p>
 
-      {form.kind === "oprek_kepanitiaan" && previewDivisions.length === 0 && (
+      {isDivisionOprekKind(form.kind) && previewDivisions.length === 0 && (
         // Tanpa divisi kepanitiaan, pelamar tidak punya pilihan divisi dan form
         // tidak bisa dikirim — ingatkan pengelola sebelum tautannya disebar.
         <div className="flex items-start gap-2 bg-error-container/30 border border-outline-variant rounded-xl px-4 py-3 mb-6">
@@ -217,12 +224,60 @@ export default async function FormManagePage({ params }: { params: Promise<{ for
             defaultValue={form.confirmationMessage}
             hint="Muncul di layar selesai/halaman setelah pelamar mengirim jawaban."
           />
+          <fieldset className="flex flex-col gap-4 rounded-lg border border-outline-variant p-4">
+            <legend className="px-1 text-label-caps uppercase tracking-wide text-on-surface-variant">
+              QR grup panitia (opsional)
+            </legend>
+            {/* allowPaste mati: hanya gambar yang diunggah ke folder form-qr yang
+                diterima server (isFormGroupQrUrl) — CSP juga hanya mengizinkan
+                gambar dari blob store. */}
+            <FileUpload
+              name="groupQrUrl"
+              folder="form-qr"
+              label="Gambar QR grup"
+              allowPaste={false}
+              defaultValue={form.groupQrUrl ?? ""}
+              hint="Screenshot QR grup (mis. grup WeChat panitia). Tampil di halaman setelah mengirim. QR grup WeChat kedaluwarsa setelah 7 hari — unggah ulang kalau sudah lewat."
+            />
+            {form.groupQrUrl && (
+              <CheckboxField
+                name="removeGroupQr"
+                label="Hapus QR grup"
+                className="text-body-md text-on-background"
+              />
+            )}
+            <TextAreaField
+              name="groupQrNote"
+              label="Catatan di bawah QR (opsional)"
+              defaultValue={form.groupQrNote ?? ""}
+              rows={2}
+              placeholder="Mis. Scan untuk masuk grup WeChat panitia. Kalau QR kedaluwarsa, hubungi WeChat ID …"
+            />
+            <SelectField
+              name="groupQrAudience"
+              label="Siapa yang melihat QR"
+              options={[
+                { value: "submitted", label: "Semua yang sudah mengirim" },
+                { value: "accepted", label: "Hanya pelamar yang diterima" },
+              ]}
+              defaultValue={form.groupQrAudience}
+              hint="Pelamar yang diterima juga mendapat tautan ke QR ini di notifikasi/email penerimaan."
+            />
+          </fieldset>
           <ToggleSwitch
             name="isOpen"
             label="Buka untuk pengisian"
             defaultChecked={form.isOpen}
             hint="Kalau dimatikan, pelamar tidak bisa mengirim (halaman isi menampilkan keterangan ditutup)."
           />
+          {form.kind !== "pemilu" && (
+            <ToggleSwitch
+              name="openToAllAccounts"
+              label="Boleh diisi semua akun (bukan hanya pengurus kabinet)"
+              defaultChecked={form.openToAllAccounts}
+              hint="Untuk acara lintas cabang (mis. SKR): pelamar dari PPIT lain cukup punya akun di website ini. Kalau mati, hanya pengurus kabinet PPIT Nanjing yang bisa mengisi."
+            />
+          )}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <TextField
               name="opensAt"
@@ -379,7 +434,8 @@ export default async function FormManagePage({ params }: { params: Promise<{ for
             {fieldDefs.map((f, i) => {
               let sectionLabel: string | undefined;
               for (let j = i - 1; j >= 0; j--) {
-                if (fieldDefs[j].type === "section") {
+                // Baris "Divisi Pilihan" juga bertipe section, tapi bukan judul bagian.
+                if (fieldDefs[j].type === "section" && fieldDefs[j].key !== DIVISION_FIELD_KEY) {
                   sectionLabel = fieldDefs[j].label;
                   break;
                 }
@@ -390,6 +446,11 @@ export default async function FormManagePage({ params }: { params: Promise<{ for
                   field={f}
                   index={i}
                   sectionLabel={sectionLabel}
+                  divisionField={
+                    f.key === DIVISION_FIELD_KEY && isDivisionOprekKind(form.kind)
+                      ? { formId: form.id, divisions: previewDivisions.map((d) => d.name), canAdd: canAddDivision }
+                      : undefined
+                  }
                   actions={{
                     update: updateFormField,
                     remove: deleteFormField,

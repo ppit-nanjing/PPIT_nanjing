@@ -89,7 +89,10 @@ async function loadSessionContext(userId: string): Promise<SessionContext | null
            r.name as "roleName",
            u.email_subscribed as "emailSubscribed",
            u.locale as "locale",
-           coalesce(bool_or(d.head_user_id = u.id), false) as "isHead",
+           -- Kepala unit dicek langsung ke departments, bukan lewat join
+           -- department_members: kepala yang tidak punya baris anggota di unitnya
+           -- tetap dikenali sebagai koordinator.
+           exists(select 1 from departments dh where dh.head_user_id = u.id) as "isHead",
            exists(select 1 from event_committee ec0 where ec0.user_id = u.id) as "isCommittee",
            coalesce(
              (select json_agg(distinct ec.role) from event_committee ec where ec.user_id = u.id),
@@ -209,40 +212,67 @@ const { handlers, auth: uncachedAuth, signIn, signOut } = NextAuth({
     },
   },
   callbacks: {
-    // Handles admin-invited accounts: a `users` row may exist with status
-    // "invited" and no passwordHash when an admin pre-provisioned an account for
-    // someone before they ever signed in. Auth.js does NOT auto-link an OAuth
-    // sign-in to an
-    // existing user by email (by design, to prevent account takeover via a
-    // same-email OAuth provider) - without this, the invited person's first
-    // Google sign-in would hit OAuthAccountNotLinked and fail. We manually link
-    // the `accounts` row here, which runs BEFORE the adapter's own
-    // getUserByAccount check in handleLoginOrRegister, so that check finds our
-    // row and treats it as an existing linked account instead of throwing.
-    async signIn({ user, account }) {
+    // Links a first-time Google sign-in to a `users` row that already has the
+    // same email. Auth.js does NOT do this by itself (by design, to prevent
+    // account takeover via a same-email OAuth provider): without us, that person
+    // hits OAuthAccountNotLinked and cannot sign in at all. We insert the
+    // `accounts` row here, which runs BEFORE the adapter's own getUserByAccount
+    // check in handleLoginOrRegister, so that check finds our row and treats it
+    // as an existing linked account instead of throwing. Two cases:
+    //
+    //  - "invited": an admin pre-provisioned the account (no passwordHash).
+    //  - "active" with an email+password account (self sign-up): link only when
+    //    Google itself says the address is verified, i.e. this person controls
+    //    the mailbox. Email sign-up here never verifies the address, so such a
+    //    row may have been created by SOMEONE ELSE who typed this email plus a
+    //    password of their own (pre-registration takeover). When the address was
+    //    never proven (users.email_verified is null) the password is therefore
+    //    dropped at link time and the address is marked verified; an address that
+    //    was proven earlier (password set through the emailed reset link) keeps
+    //    its password.
+    //
+    // inactive / suspended accounts are never linked here, and an unverified
+    // Google address is never linked: they fall through to OAuthAccountNotLinked.
+    async signIn({ user, account, profile }) {
       if (account?.provider === "google" && user?.email) {
         const email = user.email.toLowerCase();
         const [existing] = await db.select().from(users).where(eq(users.email, email));
-        if (existing?.status === "invited") {
+        if (existing) {
           const [alreadyLinked] = await db
             .select()
             .from(accounts)
             .where(and(eq(accounts.provider, "google"), eq(accounts.providerAccountId, account.providerAccountId)));
-          if (!alreadyLinked) {
-            await db.insert(accounts).values({
-              userId: existing.id,
-              type: account.type,
-              provider: account.provider,
-              providerAccountId: account.providerAccountId,
-              refresh_token: (account.refresh_token as string | null) ?? null,
-              access_token: (account.access_token as string | null) ?? null,
-              expires_at: (account.expires_at as number | null) ?? null,
-              token_type: (account.token_type as string | null) ?? null,
-              scope: (account.scope as string | null) ?? null,
-              id_token: (account.id_token as string | null) ?? null,
-              session_state: (account.session_state as string | null) ?? null,
-            });
-            await db.update(users).set({ status: "active" }).where(eq(users.id, existing.id));
+          const invited = existing.status === "invited";
+          const verifiedActive = existing.status === "active" && profile?.email_verified === true;
+          if (!alreadyLinked && (invited || verifiedActive)) {
+            await db
+              .insert(accounts)
+              .values({
+                userId: existing.id,
+                type: account.type,
+                provider: account.provider,
+                providerAccountId: account.providerAccountId,
+                refresh_token: (account.refresh_token as string | null) ?? null,
+                access_token: (account.access_token as string | null) ?? null,
+                expires_at: (account.expires_at as number | null) ?? null,
+                token_type: (account.token_type as string | null) ?? null,
+                scope: (account.scope as string | null) ?? null,
+                id_token: (account.id_token as string | null) ?? null,
+                session_state: (account.session_state as string | null) ?? null,
+              })
+              .onConflictDoNothing();
+            if (invited) {
+              await db.update(users).set({ status: "active" }).where(eq(users.id, existing.id));
+            } else if (!existing.emailVerified) {
+              await db
+                .update(users)
+                .set({ emailVerified: new Date(), passwordHash: null })
+                .where(eq(users.id, existing.id));
+              console.info(
+                `[auth] linked Google to existing email account ${existing.id}` +
+                  (existing.passwordHash ? " (unverified password removed)" : ""),
+              );
+            }
           }
         }
       }
@@ -287,6 +317,7 @@ const { handlers, auth: uncachedAuth, signIn, signOut } = NextAuth({
         session.user.isCoordinator = false;
         session.user.isCommittee = false;
         session.user.isBphCommittee = false;
+        session.user.isEventKadiv = false;
         session.user.rantingCode = null;
         session.user.emailSubscribed = null;
         session.user.locale = null;
@@ -300,6 +331,8 @@ const { handlers, auth: uncachedAuth, signIn, signOut } = NextAuth({
       // Panitia acara (semua role) vs BPH Acara (ketua/wakil/sekretaris/bendahara/
       // supervisor). Dipakai gate masuk konsol + menu; tidak ada query tambahan.
       session.user.isCommittee = ctx.isCommittee === true;
+      // Kadiv acara (kelola Oprek anggota acaranya) — menu Formulir ikut tampil.
+      session.user.isEventKadiv = (ctx.committeeRoles ?? []).includes("kadiv");
       session.user.isBphCommittee = (ctx.committeeRoles ?? []).some((role) =>
         isBphPanitiaRole(role as EventCommitteeRole),
       );

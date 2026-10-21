@@ -1,4 +1,4 @@
-import { and, count, desc, eq, inArray, isNotNull, isNull, notInArray, sql } from "drizzle-orm";
+import { and, count, desc, eq, inArray, isNotNull, isNull, notInArray, or, sql } from "drizzle-orm";
 import { db } from "@/db";
 import { events, formApplications, forms } from "@/db/schema";
 import { FormCreate } from "@/components/console/forms/form-create";
@@ -8,6 +8,13 @@ import { requireKepanitiaanTab } from "@/lib/form-access";
 
 export const metadata = { title: "Formulir — Oprek Kepanitiaan" };
 
+type EventOption = { id: string; title: string; status: string };
+
+// Tab Kepanitiaan memuat dua jenis form berdivisi, berurutan sesuai alur
+// rekrutmen acara: Oprek Kadiv (dibuat & diputuskan BPH Acara) lalu Oprek
+// anggota (satu form untuk semua divisi; dibuat BPH Acara atau Kadiv, dan semua
+// Kadiv ikut memutuskan). Hak akses sebenarnya tetap di server (createForm,
+// requireFormManage) — halaman ini hanya menyaring pilihan & daftar.
 export default async function FormsOprekKepanitiaanPage({
   searchParams,
 }: {
@@ -17,71 +24,71 @@ export default async function FormsOprekKepanitiaanPage({
   const { error } = await searchParams;
 
   const canCreateForAnyEvent = access.isFull || access.canForms;
-  const eventQuery = db
-    .select({ id: events.id, title: events.title, status: events.status })
-    .from(events)
-    .orderBy(sql`${events.startAt} desc nulls last`);
+  // Acara yang boleh dikelola pemakai ini di tab ini (BPH Acara ∪ Kadiv).
+  const managedEventIds = [...new Set([...access.bphEventIds, ...access.kadivEventIds])];
 
-  const canSeeAllForms = canCreateForAnyEvent || access.bphEventIds.length === 0;
-  const rowsBase = db
-    .select({
-      id: forms.id,
-      title: forms.title,
-      kind: forms.kind,
-      isOpen: forms.isOpen,
-      eventTitle: events.title,
-      applicants: count(formApplications.id),
-    })
-    .from(forms)
-    .leftJoin(events, eq(events.id, forms.eventId))
-    .leftJoin(formApplications, eq(formApplications.formId, forms.id));
-  const rowsQuery = (
-    canSeeAllForms
-      ? rowsBase.where(and(eq(forms.kind, "oprek_kepanitiaan"), isNull(events.deletedAt)))
-      : rowsBase.where(
-          and(
-            eq(forms.kind, "oprek_kepanitiaan"),
-            inArray(forms.eventId, access.bphEventIds),
-            isNull(events.deletedAt),
+  // Acara yang BELUM punya form jenis `kind` (satu acara satu form per jenis),
+  // dibatasi ke `allowed` kalau pemakai bukan full/modul.
+  function eventOptionsFor(kind: "oprek_kadiv" | "oprek_kepanitiaan", allowed: string[] | null) {
+    if (allowed !== null && allowed.length === 0) return Promise.resolve([] as EventOption[]);
+    return db
+      .select({ id: events.id, title: events.title, status: events.status })
+      .from(events)
+      .where(
+        and(
+          isNull(events.deletedAt),
+          allowed === null ? undefined : inArray(events.id, allowed),
+          notInArray(
+            events.id,
+            db
+              .select({ eventId: forms.eventId })
+              .from(forms)
+              .where(and(eq(forms.kind, kind), isNotNull(forms.eventId))),
           ),
-        )
-  )
-    .groupBy(forms.id, events.title)
-    .orderBy(desc(forms.createdAt));
+        ),
+      )
+      .orderBy(sql`${events.startAt} desc nulls last`);
+  }
 
-  const [eventOptions, rows] = await Promise.all([
-    canCreateForAnyEvent
-      ? eventQuery.where(
-          and(
-            isNull(events.deletedAt),
-            // Satu acara = satu form Oprek Kepanitiaan.
-            notInArray(
-              events.id,
-              db
-                .select({ eventId: forms.eventId })
-                .from(forms)
-                .where(and(eq(forms.kind, "oprek_kepanitiaan"), isNotNull(forms.eventId))),
-            ),
-          ),
-        )
-      : access.bphEventIds.length > 0
-        ? eventQuery.where(
+  const rowsQuery =
+    canCreateForAnyEvent || managedEventIds.length > 0
+      ? db
+          .select({
+            id: forms.id,
+            title: forms.title,
+            kind: forms.kind,
+            isOpen: forms.isOpen,
+            eventTitle: events.title,
+            applicants: count(formApplications.id),
+          })
+          .from(forms)
+          .leftJoin(events, eq(events.id, forms.eventId))
+          .leftJoin(formApplications, eq(formApplications.formId, forms.id))
+          .where(
             and(
-              inArray(events.id, access.bphEventIds),
+              inArray(forms.kind, ["oprek_kadiv", "oprek_kepanitiaan"]),
               isNull(events.deletedAt),
-              notInArray(
-                events.id,
-                db
-                  .select({ eventId: forms.eventId })
-                  .from(forms)
-                  .where(and(eq(forms.kind, "oprek_kepanitiaan"), isNotNull(forms.eventId))),
-              ),
+              // BPH Acara / Kadiv hanya melihat rekrutmen acaranya sendiri.
+              canCreateForAnyEvent ? undefined : inArray(forms.eventId, managedEventIds),
+              // Kadiv tidak melihat Oprek Kadiv acaranya kecuali dia juga BPH.
+              canCreateForAnyEvent
+                ? undefined
+                : or(
+                    eq(forms.kind, "oprek_kepanitiaan"),
+                    access.bphEventIds.length > 0 ? inArray(forms.eventId, access.bphEventIds) : undefined,
+                  ),
             ),
           )
-        : Promise.resolve([] as { id: string; title: string; status: string }[]),
-    // BPH Acara hanya melihat rekrutmen acaranya sendiri; full/modul melihat semua.
+          .groupBy(forms.id, events.title)
+          .orderBy(desc(forms.createdAt))
+      : Promise.resolve([]);
+
+  const [kadivEventOptions, memberEventOptions, rows] = await Promise.all([
+    eventOptionsFor("oprek_kadiv", canCreateForAnyEvent ? null : access.bphEventIds),
+    eventOptionsFor("oprek_kepanitiaan", canCreateForAnyEvent ? null : managedEventIds),
     rowsQuery,
   ]);
+  const canCreateKadiv = canCreateForAnyEvent || access.bphEventIds.length > 0;
 
   return (
     <div className="px-4 py-6 sm:px-6 lg:px-8 lg:py-10 max-w-5xl">
@@ -94,12 +101,18 @@ export default async function FormsOprekKepanitiaanPage({
         showKepanitiaan={access.canKepanitiaanTab}
       />
 
-      {/* Selalu render FormCreate: requireKepanitiaanTab sudah menjamin akses
-          (full/modul atau BPH Acara). Kalau picker kosong, FormCreate sendiri
-          menampilkan catatan "semua acara sudah punya formulir". */}
-      <FormCreate kind="oprek_kepanitiaan" events={eventOptions} error={error ?? null} />
+      <p className="text-body-md text-on-surface-variant mb-6 max-w-3xl">
+        Urutan rekrutmen acara: <strong className="text-on-background">Oprek BPH</strong> →{" "}
+        <strong className="text-on-background">Oprek Kadiv</strong> (BPH Acara memilih ketua tiap divisi) →{" "}
+        <strong className="text-on-background">Oprek anggota</strong> (satu formulir untuk semua divisi; BPH Acara dan
+        semua Kadiv ikut menilai). Divisi pilihan diambil dari Struktur Kepanitiaan acara, jadi buat divisinya dulu.
+      </p>
 
-      <FormList rows={rows} emptyText="Belum ada formulir Oprek Kepanitiaan." />
+      {/* FormCreate menampilkan catatan sendiri kalau picker-nya kosong. */}
+      {canCreateKadiv && <FormCreate kind="oprek_kadiv" events={kadivEventOptions} error={error ?? null} />}
+      <FormCreate kind="oprek_kepanitiaan" events={memberEventOptions} error={error ?? null} />
+
+      <FormList rows={rows} emptyText="Belum ada formulir Oprek Kadiv atau Oprek anggota." />
     </div>
   );
 }
