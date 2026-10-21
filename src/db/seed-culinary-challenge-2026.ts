@@ -9,9 +9,14 @@
  * (eventId, name, parent), panitia lewat (eventId, userId), kredit lewat
  * (eventId, displayName). Status acara tidak ditimpa kalau sudah diubah di console.
  *
- * YANG TIDAK DILAKUKAN SKRIP INI (belum ada datanya dari panitia):
- * tanggal/lokasi/kapasitas/biaya, deskripsi, poster, QR grup peserta, dan jendela
- * evaluasi panitia. Isi lewat /console/events, lalu terbitkan.
+ * Detail acara (jadwal, lokasi, kuota, gratis) hanya diisi saat acara DIBUAT;
+ * acara yang sudah ada tidak ditimpa, supaya suntingan di /console/events tidak
+ * hilang kalau skrip dijalankan ulang. Pertanyaan, evaluasi, dan panitia
+ * disamakan ulang dengan isi skrip ini.
+ *
+ * YANG TIDAK DILAKUKAN SKRIP INI (belum ada datanya dari panitia): deskripsi
+ * final, poster, QR grup peserta, dan jendela evaluasi panitia. Isi lewat
+ * /console/events, lalu terbitkan.
  *
  * Pendaftaran: requiresSensus = true (pola Fun Hike). Yang sensusnya lengkap
  * hanya ditanya isian yang TIDAK ada di sensus; yang belum lengkap diarahkan
@@ -134,6 +139,14 @@ async function main() {
         title: "Nanjing Culinary Challenge 2026",
         slug: SLUG,
         description: "Detail acara menyusul.",
+        // Detail dari panitia (2026-10-21). Date.UTC supaya jam dinding CST
+        // tersimpan apa adanya di kolom timestamp tanpa zona (pola
+        // seed-fun-hike-2026.ts). Gratis; tanpa batas tanggal, hanya kuota 30.
+        startAt: new Date(Date.UTC(2026, 10, 14, 16, 0, 0)),
+        endAt: new Date(Date.UTC(2026, 10, 14, 19, 0, 0)),
+        location: "南京义乌美食街 (Nanjing Yiwu Food Street), Tianyuan East Road No.388, dekat exit metro Longmiandadao",
+        locationUrl: "https://surl.amap.com/iApQhsm1m5B0",
+        capacity: 30,
         isPaid: false,
         requiresBiodata: false,
         requiresSensus: true,
@@ -144,20 +157,6 @@ async function main() {
     eventId = created.id;
     console.log("Acara dibuat sebagai DRAFT.");
   }
-
-  // Detail dari panitia (2026-10-21). Date.UTC supaya jam dinding CST tersimpan
-  // apa adanya di kolom timestamp tanpa zona (pola seed-fun-hike-2026.ts).
-  // Biaya gratis (dikonfirmasi panitia); tanpa batas tanggal, hanya kuota 30.
-  await db
-    .update(events)
-    .set({
-      startAt: new Date(Date.UTC(2026, 10, 14, 16, 0, 0)),
-      endAt: new Date(Date.UTC(2026, 10, 14, 19, 0, 0)),
-      location: "南京义乌美食街 (Nanjing Yiwu Food Street), Tianyuan East Road No.388, dekat exit metro Longmiandadao",
-      locationUrl: "https://surl.amap.com/iApQhsm1m5B0",
-      capacity: 30,
-    })
-    .where(eq(events.id, eventId));
 
   let qBaru = 0;
   for (const [i, q] of QUESTIONS.entries()) {
