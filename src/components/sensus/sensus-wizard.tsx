@@ -96,6 +96,8 @@ function issueMessage(t: T, issue: SensusIssue): string {
       return t("sensus.errWhatsapp");
     case "email":
       return t("sensus.errEmail");
+    case "emailTypo":
+      return t("sensus.errEmailTypo", { suggestion: issue.suggestion ?? "" });
     case "year":
       return t("sensus.errYear");
     case "gradBeforeEntry":

@@ -10,6 +10,7 @@ import { sendEmail } from "@/lib/email";
 import { renderMembershipEmail, renderMembershipEmailText } from "@/lib/membership-email";
 import { createResetToken, purgeExpiredResetTokens } from "@/lib/password-reset";
 import { getSiteUrl } from "@/lib/site-url";
+import { suggestEmailFix } from "@/lib/email-typo";
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
@@ -61,6 +62,8 @@ export async function updateUserDetails(userId: string, name: string, email: str
   const n = name.trim();
   const e = email.trim().toLowerCase();
   if (!n || !EMAIL_RE.test(e)) throw new Error("Nama dan email wajib diisi dengan benar");
+  const emailFix = suggestEmailFix(e);
+  if (emailFix) throw new Error(`Email sepertinya salah ketik. Maksud Anda ${emailFix}?`);
   const [existing] = await db.select({ id: users.id }).from(users).where(eq(users.email, e));
   if (existing && existing.id !== userId) throw new Error("Email sudah digunakan oleh akun lain");
   await db.update(users).set({ name: n, email: e }).where(eq(users.id, userId));
