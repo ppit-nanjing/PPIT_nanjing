@@ -1,5 +1,6 @@
 import { eq, and, asc, desc, like, or, sql, inArray } from "drizzle-orm";
 import { notFound } from "next/navigation";
+import type { ComponentProps } from "react";
 import QRCode from "qrcode";
 import { db } from "@/db";
 import { auditLogs, certificates, coverageCities, departments, events, eventCredits, eventDivisions, eventEvaluations, eventFeeOptions, eventQuestions, eventRegistrations, eventResponsibleDepartments, eventVolunteers, galleryAlbums, galleryPhotos, inventoryItems, itemReservations, newsArticles, sensusProfiles, shortLinks, users } from "@/db/schema";
@@ -27,7 +28,7 @@ import { ImageUploadCropper } from "@/components/upload/image-upload-cropper";
 import { EventThemeFields } from "@/components/console/event-theme-fields";
 import { EventDescriptionEditor } from "@/components/console/event-description-editor";
 import { AIReviewButton } from "@/components/ai/ai-review-popup";
-import { CollapsibleSection } from "@/components/console/collapsible-section";
+import { CollapsibleSection as CollapsibleSectionBase } from "@/components/console/collapsible-section";
 import { HtmFields } from "@/components/console/htm-fields";
 import { Select, CheckboxField, CheckField } from "@/components/console/form";
 import { PaymentVerificationList } from "@/components/console/payment-verification-list";
@@ -47,7 +48,7 @@ import { CommitteeEvalWindowEditor } from "@/components/console/committee-eval-w
 import { EvalAudienceTabs } from "@/components/console/eval-audience-tabs";
 import { CopyButton } from "@/components/copy-button";
 import { committeeEvalWindowState } from "@/lib/committee-evaluation";
-import { Download, Eye, Images } from "lucide-react";
+import { ChevronRight, Download, Eye, Images } from "lucide-react";
 
 const QUESTION_TYPE_LABELS: Record<string, string> = {
   text: "Teks Pendek",
@@ -57,6 +58,13 @@ const QUESTION_TYPE_LABELS: Record<string, string> = {
   multiselect: "Pilih Banyak (centang)",
   file: "Unggah Berkas (PDF/dokumen/gambar)",
 };
+
+// Semua bagian halaman kegiatan tertutup saat halaman dibuka (halamannya panjang);
+// bagian yang memang butuh tindakan (mis. verifikasi bayar, volunteer menunggu)
+// membuka dirinya lewat defaultOpen eksplisit di pemakaiannya.
+function CollapsibleSection(props: ComponentProps<typeof CollapsibleSectionBase>) {
+  return <CollapsibleSectionBase defaultOpen={false} {...props} />;
+}
 
 export default async function ConsoleEventDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -592,13 +600,14 @@ export default async function ConsoleEventDetailPage({ params }: { params: Promi
 
       {/* Info & pengaturan acara — wewenang BPH Panitia (event.editInfo). */}
       {can("event.editInfo") && (
-      <details className="bg-surface-container-lowest border border-outline-variant rounded-xl">
-        <summary className="px-6 py-4 cursor-pointer text-label-caps text-primary-container uppercase tracking-wide">
-          Info &amp; Pengaturan Acara
+      <details className="group bg-surface-container-lowest border border-outline-variant rounded-xl overflow-hidden">
+        <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-4 py-3 sm:px-6 sm:py-4 hover:bg-surface-container-low/60 transition-colors [&::-webkit-details-marker]:hidden">
+          <span className="text-headline-sm text-on-background">Info &amp; Pengaturan Acara</span>
+          <ChevronRight size={20} className="text-on-surface-variant shrink-0 transition-transform group-open:rotate-90" aria-hidden="true" />
         </summary>
         <form action={updateEventInfo.bind(null, id)} className="px-6 pb-6 flex flex-col gap-4">
           {/* Bagian 1 - identitas acara */}
-          <details open className="border border-outline-variant rounded-lg">
+          <details className="border border-outline-variant rounded-lg">
             <summary className="px-4 py-3 cursor-pointer text-label-caps uppercase tracking-wide text-primary-container">
               1 · Info Acara
             </summary>
@@ -699,7 +708,7 @@ export default async function ConsoleEventDetailPage({ params }: { params: Promi
           </details>
 
           {/* Bagian 2 - aturan pendaftaran & HTM + jadwal rilis */}
-          <details open className="border border-outline-variant rounded-lg">
+          <details className="border border-outline-variant rounded-lg">
             <summary className="px-4 py-3 cursor-pointer text-label-caps uppercase tracking-wide text-primary-container">
               2 · Pendaftaran, Biaya &amp; Jadwal Rilis
             </summary>
