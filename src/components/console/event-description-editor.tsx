@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useRef } from "react";
 import { useEditor, EditorContent, type JSONContent } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
 import { TextStyle } from "@tiptap/extension-text-style";
@@ -8,6 +8,7 @@ import FontFamily from "@tiptap/extension-font-family";
 import TextAlign from "@tiptap/extension-text-align";
 import { Bold, Italic, AlignLeft, AlignCenter, AlignRight, AlignJustify, RemoveFormatting } from "lucide-react";
 import { AIImproveButton } from "@/components/ai/ai-improve-button";
+import { improveEventDescriptionAction } from "@/app/actions/ai";
 import { FontSize } from "@/lib/tiptap-font-size";
 import { DESCRIPTION_FONT_CATEGORIES, DESCRIPTION_SIZE_OPTIONS } from "@/lib/event-description-style";
 
@@ -41,10 +42,10 @@ function ToolbarButton({
 // Rich text (Bold/Italic/Align/Font/Ukuran per rentang teks terpilih) untuk
 // deskripsi acara - menggantikan picker gaya-global sebelumnya (satu
 // font/ukuran untuk SELURUH teks). Textarea tersembunyi `id="event-description"`
-// tetap ada supaya AIImproveButton (yang baca/tulis lewat DOM id, lihat
-// ai-improve-button.tsx) terus jalan tanpa perlu diubah - isinya disinkronkan
-// dua arah dengan editor: ketika AI menulis teks baru ke textarea itu (event
-// "input" asli), isinya didorong balik jadi paragraf polos ke editor.
+// menyimpan teks polos untuk form; `descriptionHtml` menyimpan HTML-nya.
+// Tombol "Perbagus dengan AI" mengirim HTML editor dan memasang balasan HTML
+// (sudah disanitasi server) kembali ke editor, jadi hasilnya ikut memakai
+// format toolbar; bisa dibatalkan dengan Ctrl+Z.
 export function EventDescriptionEditor({
   defaults,
 }: {
@@ -52,7 +53,6 @@ export function EventDescriptionEditor({
 }) {
   const hiddenTextRef = useRef<HTMLTextAreaElement>(null);
   const hiddenHtmlRef = useRef<HTMLInputElement>(null);
-  const lastEditorText = useRef(defaults.description);
 
   const initialContent: JSONContent | string = defaults.descriptionHtml
     ? defaults.descriptionHtml
@@ -95,33 +95,10 @@ export function EventDescriptionEditor({
     },
     onUpdate: ({ editor }) => {
       const text = editor.getText();
-      lastEditorText.current = text;
       if (hiddenTextRef.current) hiddenTextRef.current.value = text;
       if (hiddenHtmlRef.current) hiddenHtmlRef.current.value = editor.getHTML();
     },
   });
-
-  // AIImproveButton menulis teks baru ke textarea tersembunyi lalu
-  // men-dispatch event "input" asli (lihat ai-improve-button.tsx) - itu satu-
-  // satunya jalur textarea ini berubah TANPA lewat onUpdate di atas (jalur
-  // normal user mengetik ada di editor langsung, bukan di textarea).
-  useEffect(() => {
-    const el = hiddenTextRef.current;
-    if (!el || !editor) return;
-    const onExternalInput = () => {
-      if (el.value === lastEditorText.current) return;
-      const paragraphs = el.value
-        .split(/\n{2,}/)
-        .map((p) => p.trim())
-        .filter(Boolean)
-        .map((p) => ({ type: "paragraph" as const, content: [{ type: "text" as const, text: p }] }));
-      editor.commands.setContent({ type: "doc", content: paragraphs.length > 0 ? paragraphs : [{ type: "paragraph" }] });
-      lastEditorText.current = el.value;
-      if (hiddenHtmlRef.current) hiddenHtmlRef.current.value = editor.getHTML();
-    };
-    el.addEventListener("input", onExternalInput);
-    return () => el.removeEventListener("input", onExternalInput);
-  }, [editor]);
 
   if (!editor) return null;
 
@@ -227,7 +204,13 @@ export function EventDescriptionEditor({
       <textarea ref={hiddenTextRef} id="event-description" name="description" defaultValue={defaults.description} hidden />
       <input ref={hiddenHtmlRef} type="hidden" name="descriptionHtml" defaultValue={defaults.descriptionHtml ?? ""} />
 
-      <AIImproveButton context="event" targetId="event-description" className="mt-1" />
+      <AIImproveButton
+        context="event"
+        className="mt-1"
+        getValue={() => (editor.isEmpty ? "" : editor.getHTML())}
+        improve={improveEventDescriptionAction}
+        onImproved={(html) => editor.chain().focus().setContent(html).run()}
+      />
     </div>
   );
 }
