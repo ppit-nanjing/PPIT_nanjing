@@ -2,7 +2,9 @@
 
 import { auth } from "@/auth";
 import { hasModuleAccess, type AdminModule } from "@/lib/admin-scope";
-import { improveIndonesianText, groqChat, AI_CHAT_SYSTEM_PROMPT, type ImproveContext, type GroqMessage } from "@/lib/groq";
+import sanitizeHtml from "sanitize-html";
+import { improveIndonesianText, improveEventDescriptionHtml, groqChat, AI_CHAT_SYSTEM_PROMPT, type ImproveContext, type GroqMessage } from "@/lib/groq";
+import { sanitizeDescriptionHtml } from "@/lib/sanitize-description-html";
 import { eq } from "drizzle-orm";
 import { db } from "@/db";
 import { users } from "@/db/schema";
@@ -32,6 +34,31 @@ export async function improveTextAction(text: string, context: ImproveContext): 
   if (clean.length > MAX_TEXT) throw new Error(`Teks terlalu panjang (maks ${MAX_TEXT} karakter)`);
 
   return improveIndonesianText(clean, context);
+}
+
+const MAX_DESCRIPTION_HTML = 8000;
+
+// Versi "perbagus" untuk deskripsi acara rich text: menerima HTML editor dan
+// mengembalikan HTML yang sudah memakai format toolbar (tebal/miring/rata/
+// ukuran/font). Hasilnya DISANITASI di sini - HTML dari model tidak pernah
+// dipercaya, sama seperti HTML dari form.
+export async function improveEventDescriptionAction(html: string): Promise<string> {
+  const session = await auth();
+  if (!session?.user?.id) throw new Error("Kamu harus masuk untuk menggunakan fitur ini");
+  if (!hasModuleAccess(session.user.adminScope, "events")) {
+    throw new Error("Kamu tidak punya akses untuk memproses teks ini");
+  }
+
+  const clean = (html ?? "").toString();
+  if (clean.length > MAX_DESCRIPTION_HTML) throw new Error("Deskripsi terlalu panjang untuk diperbaiki");
+  const plain = sanitizeHtml(clean, { allowedTags: [], allowedAttributes: {} }).trim();
+  if (plain.length < 3) throw new Error("Teks terlalu pendek untuk diperbaiki");
+
+  const improved = sanitizeDescriptionHtml(await improveEventDescriptionHtml(sanitizeDescriptionHtml(clean)));
+  if (sanitizeHtml(improved, { allowedTags: [], allowedAttributes: {} }).trim().length < 3) {
+    throw new Error("Respons AI tidak valid, coba lagi");
+  }
+  return improved;
 }
 
 const PROFILE_FIELDS = [

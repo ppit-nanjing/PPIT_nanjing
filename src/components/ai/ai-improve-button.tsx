@@ -14,18 +14,25 @@ type Props = {
   // Controlled (e.g. feedback widget): pass value + callback.
   value?: string;
   onImproved?: (text: string) => void;
+  // Sumber dibaca saat diklik (bukan saat render) - untuk editor yang isinya
+  // tidak tercermin di prop `value`. Dipasangkan dengan `improve` bila hasilnya
+  // bukan teks polos (mis. HTML rich text).
+  getValue?: () => string;
+  // Pengganti improveTextAction(source, context) untuk konteks yang punya
+  // aksi sendiri.
+  improve?: (source: string) => Promise<string>;
   className?: string;
   disabled?: boolean;
   disabledReason?: string;
 };
 
-export function AIImproveButton({ context, label, targetId, value, onImproved, className, disabled, disabledReason }: Props) {
+export function AIImproveButton({ context, label, targetId, value, onImproved, getValue, improve, className, disabled, disabledReason }: Props) {
   const t = useT();
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
 
   async function run() {
-    const source = value !== undefined ? value : targetId ? ((document.getElementById(targetId) as HTMLTextAreaElement | HTMLInputElement | null)?.value ?? "") : "";
+    const source = getValue ? getValue() : value !== undefined ? value : targetId ? ((document.getElementById(targetId) as HTMLTextAreaElement | HTMLInputElement | null)?.value ?? "") : "";
     if (!source.trim()) {
       setErr(t("ai.errEmpty"));
       return;
@@ -33,7 +40,7 @@ export function AIImproveButton({ context, label, targetId, value, onImproved, c
     setBusy(true);
     setErr(null);
     try {
-      const improved = await improveTextAction(source, context);
+      const improved = await (improve ? improve(source) : improveTextAction(source, context));
       if (onImproved) {
         onImproved(improved);
       } else if (targetId) {
