@@ -62,7 +62,10 @@ export async function updateUserDetails(userId: string, name: string, email: str
   const n = name.trim();
   const e = email.trim().toLowerCase();
   if (!n || !EMAIL_RE.test(e)) throw new Error("Nama dan email wajib diisi dengan benar");
-  const emailFix = suggestEmailFix(e);
+  // Hanya saat email DIGANTI: mengubah nama akun yang emailnya sudah terlanjur
+  // salah ketik (mis. gmail.con) tidak boleh ikut tertahan oleh cek ini.
+  const [current] = await db.select({ email: users.email }).from(users).where(eq(users.id, userId));
+  const emailFix = current?.email.toLowerCase() === e ? null : suggestEmailFix(e);
   if (emailFix) throw new Error(`Email sepertinya salah ketik. Maksud Anda ${emailFix}?`);
   const [existing] = await db.select({ id: users.id }).from(users).where(eq(users.email, e));
   if (existing && existing.id !== userId) throw new Error("Email sudah digunakan oleh akun lain");
