@@ -356,11 +356,23 @@ const { handlers, auth: uncachedAuth, signIn, signOut } = NextAuth({
     // Auth.js mencatatnya sebagai `[auth][error] JWTSessionError` + membuang
     // identitas user (nama + email) ke `[auth][details]` — membanjiri panel
     // error dan membocorkan PII ke log. Telan yang ini; kegagalan decode lain
-    // (secret berganti, token cacat) tetap tampil, dan kegagalan sign-in
-    // (CredentialsSignin, OAuth) tak lewat sini.
+    // (secret berganti, token cacat) tetap tampil.
+    //
+    // CredentialsSignin = email/kata sandi salah, akun tidak ada, atau akun
+    // Google-only yang mencoba kata sandi. Itu hasil LOGIN biasa yang sudah
+    // ditangkap signInWithPassword() dan ditampilkan ke pengguna ("Email atau
+    // kata sandi salah"), bukan kegagalan sistem - tapi Auth.js tetap
+    // mencatatnya sebagai [auth][error] + stack, jadi tiap salah ketik muncul
+    // sebagai "runtime error" di Vercel dan dikira insiden (2026-09-11,
+    // 2026-10-21). Diturunkan jadi satu baris warn tanpa email/stack: jejak
+    // lonjakan percobaan login (brute force) tetap ada, panel error bersih.
     error(err) {
       const kind = (err as { type?: string }).type ?? err.name;
       if (kind === "JWTSessionError") return;
+      if (kind === "CredentialsSignin") {
+        console.warn("[auth] CredentialsSignin: login gagal (email/kata sandi salah atau akun tanpa kata sandi)");
+        return;
+      }
       console.error(`[auth][error] ${kind}: ${err.message}`, err.stack ?? "");
     },
   },

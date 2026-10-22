@@ -1029,7 +1029,7 @@ export const en = {
   "auth.errOauthFailed": "Signing in with Google failed. Try again, or sign in with your email and password.",
   "auth.errAutoSignIn": "Your account was created, but automatic sign-in failed. Please sign in manually.",
   "auth.errCredentialsRequired": "Email and password are both required.",
-  "auth.errCredentialsWrong": "Wrong email or password.",
+  "auth.errCredentialsWrong": "Wrong email or password. If you signed up with Google, choose \"Continue with Google\".",
 
   // Membership application form (/join-us)
   "membership.form.previewBtn": "Preview (not submitted)",
