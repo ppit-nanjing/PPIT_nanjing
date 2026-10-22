@@ -25,7 +25,8 @@ import { renderMembershipEmail, renderMembershipEmailText } from "@/lib/membersh
 import { getEventAccess } from "@/lib/event-access";
 import { canFillForm, canPlaceApplicant, getCabinetMembership, getCoordinatorEventIds, getFormsAccess, isKadivOnlyPlacer, requireFormManage } from "@/lib/form-access";
 import { EVENT_COMMITTEE_ROLE_LABEL, isBphPanitiaRole, type EventCommitteeRole } from "@/lib/event-capabilities";
-import { BPH_FORM_ROLE_LABEL, BPH_FORM_ROLES, FORM_GROUP_QR_AUDIENCES, FORM_TAB_PATH, KADIV_PLACEMENT_ROLES, PLACEMENT_ROLE_OPTIONS, DIVISION_FIELD_KEY, DIVISION_FIELD_LABEL, isDivisionOprekKind, isFormGroupQrUrl, type FormKind } from "@/lib/form-types";
+import { BPH_FORM_ROLE_LABEL, BPH_FORM_ROLES, FORM_GROUP_QR_AUDIENCES, FORM_TAB_PATH, KADIV_PLACEMENT_ROLES, PLACEMENT_ROLE_OPTIONS, DIVISION_FIELD_KEY, DIVISION_FIELD_LABEL, isDivisionOprekKind, isFormGroupQrUrl, isOprekKind, type FormKind } from "@/lib/form-types";
+import { hasCompletedSensus } from "@/lib/sensus-gate";
 import { getSiteUrl } from "@/lib/site-url";
 import { FIELD_TYPE_LABELS, GRID_TYPES, QUESTION_BY_KEY, type MembershipFieldDef } from "@/lib/membership-form";
 import { scrubForeignPrivateUrl } from "@/lib/private-files";
@@ -447,6 +448,11 @@ export async function submitFormApplication(formData: FormData) {
     .from(formApplications)
     .where(and(eq(formApplications.formId, form.id), eq(formApplications.userId, userId)));
   if (existing) redirect(`${back}/submitted`);
+  // Oprek wajib sensus lengkap (dicek di server; halaman isi juga mengarahkan
+  // ke /sensus, tapi aksi ini bisa dipanggil langsung).
+  if (isOprekKind(form.kind) && !(await hasCompletedSensus(userId))) {
+    redirect(`/sensus?returnTo=${encodeURIComponent(back)}`);
+  }
   // Acara di Sampah: form Oprek-nya tidak menerima jawaban baru (halaman isi
   // juga 404). Ditaruh SETELAH cek "sudah kirim" supaya pelamar lama tetap
   // bisa melihat statusnya. Form tanpa acara (Pemilu) tidak terpengaruh.
