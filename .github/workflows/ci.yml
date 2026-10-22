@@ -1,0 +1,60 @@
+name: CI
+
+on:
+  pull_request:
+    branches: [master]
+  push:
+    branches: [master]
+  workflow_dispatch:
+
+# A new push to the same PR/branch cancels the run still in flight for the
+# old one - no point burning minutes checking a commit that's already stale.
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    name: Typecheck, lint, build
+    runs-on: ubuntu-latest
+    # Values below are placeholders, not secrets - safe to commit. `next build`
+    # evaluates src/db/index.ts (which calls neon(DATABASE_URL) at module scope)
+    # while collecting route data, and translateFields()/groqChat() are only
+    # ever called at request time, never at build time - so both just need a
+    # syntactically valid value, never a real connection. Confirmed locally:
+    # `next build` completes successfully against an unreachable Postgres URL
+    # and a fake Groq key. If a future change makes the build genuinely need a
+    # real value (e.g. build-time data fetching against Neon or Groq), add the
+    # real one as a GitHub Actions secret instead of widening this comment.
+    env:
+      DATABASE_URL: postgresql://ci:ci@localhost:5432/ci
+      GROQ_API_KEY: ci-placeholder
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: npm
+
+      - run: npm ci
+
+      # tsc needs Next's generated route types (LayoutProps, PageProps, etc.
+      # in .next/types/) - those only exist after next dev/build/typegen has
+      # run once. A fresh checkout has no .next/ (gitignored), so `tsc
+      # --noEmit` fails here with "Cannot find name 'LayoutProps'" without
+      # this step first. `next typegen` generates just the types, no bundling.
+      - name: Generate Next.js route types
+        run: npx next typegen
+
+      - name: Typecheck
+        run: npx tsc --noEmit
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Build
+        run: npm run build
