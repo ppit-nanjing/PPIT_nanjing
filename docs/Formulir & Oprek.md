@@ -31,6 +31,7 @@ Gerbang tunggal: `src/lib/form-access.ts`.
 - `getFormsAccess()` — full / modul `forms` / `isCoordinator` (Koordinator Divisi & kepala unit, dari sesi) / BPH Acara (`bphEventIds`).
 - `requireFormsHub/requirePemiluTab/requireBphTab/requireKepanitiaanTab` untuk halaman; `requireFormManage(formId)` **wajib** untuk halaman/aksi/ekspor per form (404 kalau tidak berhak); `canPlaceApplicant()` untuk penulisan penempatan (menghormati kunci acara 14 hari).
 - Pengisian form: `getCabinetMembership(userId)` — wajib punya baris `department_members` + status akun bukan `suspended`; dicek di halaman **dan** aksi submit.
+- Pengisian form **Oprek** (`isOprekKind`: BPH acara, kepanitiaan, Kadiv; bukan Pemilu) juga mewajibkan **sensus lengkap** (`hasCompletedSensus`): halaman mengarahkan ke `/sensus?returnTo=…`, aksi submit mengulang cek yang sama. Pelamar yang sudah pernah mengirim tetap bisa melihat statusnya. Menjadi anggota struktur kabinet **tidak** mewajibkan sensus lengkap; hanya mengisi Oprek (dan mendaftar acara yang `requiresSensus`) yang diwajibkan.
 - Sesi (`src/auth.ts`) membawa `isCoordinator`, `isCommittee`, `isBphCommittee` dari satu query gabungan — sidebar/layout tidak query tambahan. `seed.ts` menaruh Koordinator Divisi sebagai `scoped` (koordinator tetap dapat menu Formulir lewat `isCoordinator`, bukan modul).
 
 ## Keputusan desain

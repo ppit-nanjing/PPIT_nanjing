@@ -12,7 +12,8 @@ import { FormRenderer, type FormDivisionOption } from "@/components/forms/form-r
 import { LinkifiedText } from "@/components/linkified-text";
 import { submitFormApplication } from "@/app/actions/forms";
 import { canFillForm, getCabinetMembership } from "@/lib/form-access";
-import { FORM_KIND_LABEL, FORM_STATUS_LABEL, isDivisionOprekKind, type FormApplicationStatus } from "@/lib/form-types";
+import { hasCompletedSensus } from "@/lib/sensus-gate";
+import { FORM_KIND_LABEL, FORM_STATUS_LABEL, isDivisionOprekKind, isOprekKind, type FormApplicationStatus } from "@/lib/form-types";
 import { INTL_LOCALE } from "@/lib/i18n/config";
 import { getT } from "@/lib/i18n/server";
 import type { MembershipFieldDef } from "@/lib/membership-form";
@@ -94,6 +95,12 @@ export default async function FormFillPage({
         </div>
       </Shell>
     );
+  }
+
+  // Oprek wajib sensus lengkap. Yang sudah pernah mengirim tetap boleh melihat
+  // statusnya (tidak dipaksa isi sensus lagi).
+  if (isOprekKind(form.kind) && !myApplication && !(await hasCompletedSensus(userId))) {
+    redirect(`/sensus?returnTo=${encodeURIComponent(`/forms/${form.id}`)}`);
   }
 
   const [fields, eventRows] = await Promise.all([
