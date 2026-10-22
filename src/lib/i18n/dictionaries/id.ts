@@ -1036,7 +1036,7 @@ export const id = {
   "auth.errOauthFailed": "Masuk dengan Google gagal. Coba lagi, atau masuk dengan email dan kata sandi.",
   "auth.errAutoSignIn": "Pendaftaran berhasil, tapi gagal masuk otomatis. Coba masuk manual.",
   "auth.errCredentialsRequired": "Email dan kata sandi wajib diisi.",
-  "auth.errCredentialsWrong": "Email atau kata sandi salah.",
+  "auth.errCredentialsWrong": "Email atau kata sandi salah. Kalau kamu mendaftar dengan Google, pilih \"Lanjutkan dengan Google\".",
 
   // Membership application form (/join-us)
   "membership.form.previewBtn": "Pratinjau (tidak dikirim)",
