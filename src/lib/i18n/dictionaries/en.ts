@@ -738,6 +738,7 @@ export const en = {
   "sensus.errPhone": "The active phone number must be a Chinese number (+86).",
   "sensus.errWhatsapp": "The WhatsApp number must start with +62 or +86.",
   "sensus.errEmail": "That email address isn't valid. Example: name@gmail.com.",
+  "sensus.errEmailTypo": "That email address looks like a typo. Did you mean {{suggestion}}?",
   "sensus.errYear": "The year must be 4 digits, e.g. 2024.",
   "sensus.errPassport": "Invalid passport number format — 1 letter followed by 7 digits, e.g. X1234567.",
   "sensus.errGradBeforeEntry": "Expected graduation year cannot be earlier than the entry year.",
@@ -1021,6 +1022,9 @@ export const en = {
 
   // Email/password auth errors (src/app/actions/auth.ts)
   "auth.errEmailInvalid": "That email address is not valid.",
+  "auth.errEmailTypo": "That email address looks like a typo. Did you mean {{suggestion}}?",
+  "auth.emailTypoHint": "Did you mean {{suggestion}}?",
+  "auth.emailTypoUse": "Use this",
   "auth.errPasswordShort": "Password must be at least {{n}} characters.",
   "auth.errConfirmMismatch": "Password confirmation does not match.",
   "auth.errEmailTaken": "That email is already registered. Sign in with your password.",

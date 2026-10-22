@@ -13,6 +13,7 @@ import { sendEmail } from "@/lib/email";
 import { renderMembershipEmail, renderMembershipEmailText } from "@/lib/membership-email";
 import { createResetToken, consumeResetToken, purgeExpiredResetTokens } from "@/lib/password-reset";
 import type { TKey } from "@/lib/i18n/dictionaries/id";
+import { suggestEmailFix } from "@/lib/email-typo";
 
 // Carries a dictionary KEY, not a finished sentence: this runs on the server
 // where the request locale is known but the dictionary is not the natural
@@ -44,6 +45,10 @@ export async function signUpWithPassword(_prev: AuthFormState, formData: FormDat
   const confirm = String(formData.get("confirm") ?? "");
 
   if (!EMAIL_RE.test(email)) return { errorKey: "auth.errEmailInvalid" };
+  // Domain yang pasti salah ketik (mis. gmail.con) ditolak: akun dengan email
+  // begini tidak pernah menerima email apa pun dan berujung akun ganda.
+  const emailFix = suggestEmailFix(email);
+  if (emailFix) return { errorKey: "auth.errEmailTypo", vars: { suggestion: emailFix } };
   if (password.length < MIN_PASSWORD) return { errorKey: "auth.errPasswordShort", vars: { n: MIN_PASSWORD } };
   if (password !== confirm) return { errorKey: "auth.errConfirmMismatch" };
 
