@@ -212,40 +212,67 @@ const { handlers, auth: uncachedAuth, signIn, signOut } = NextAuth({
     },
   },
   callbacks: {
-    // Handles admin-invited accounts: a `users` row may exist with status
-    // "invited" and no passwordHash when an admin pre-provisioned an account for
-    // someone before they ever signed in. Auth.js does NOT auto-link an OAuth
-    // sign-in to an
-    // existing user by email (by design, to prevent account takeover via a
-    // same-email OAuth provider) - without this, the invited person's first
-    // Google sign-in would hit OAuthAccountNotLinked and fail. We manually link
-    // the `accounts` row here, which runs BEFORE the adapter's own
-    // getUserByAccount check in handleLoginOrRegister, so that check finds our
-    // row and treats it as an existing linked account instead of throwing.
-    async signIn({ user, account }) {
+    // Links a first-time Google sign-in to a `users` row that already has the
+    // same email. Auth.js does NOT do this by itself (by design, to prevent
+    // account takeover via a same-email OAuth provider): without us, that person
+    // hits OAuthAccountNotLinked and cannot sign in at all. We insert the
+    // `accounts` row here, which runs BEFORE the adapter's own getUserByAccount
+    // check in handleLoginOrRegister, so that check finds our row and treats it
+    // as an existing linked account instead of throwing. Two cases:
+    //
+    //  - "invited": an admin pre-provisioned the account (no passwordHash).
+    //  - "active" with an email+password account (self sign-up): link only when
+    //    Google itself says the address is verified, i.e. this person controls
+    //    the mailbox. Email sign-up here never verifies the address, so such a
+    //    row may have been created by SOMEONE ELSE who typed this email plus a
+    //    password of their own (pre-registration takeover). When the address was
+    //    never proven (users.email_verified is null) the password is therefore
+    //    dropped at link time and the address is marked verified; an address that
+    //    was proven earlier (password set through the emailed reset link) keeps
+    //    its password.
+    //
+    // inactive / suspended accounts are never linked here, and an unverified
+    // Google address is never linked: they fall through to OAuthAccountNotLinked.
+    async signIn({ user, account, profile }) {
       if (account?.provider === "google" && user?.email) {
         const email = user.email.toLowerCase();
         const [existing] = await db.select().from(users).where(eq(users.email, email));
-        if (existing?.status === "invited") {
+        if (existing) {
           const [alreadyLinked] = await db
             .select()
             .from(accounts)
             .where(and(eq(accounts.provider, "google"), eq(accounts.providerAccountId, account.providerAccountId)));
-          if (!alreadyLinked) {
-            await db.insert(accounts).values({
-              userId: existing.id,
-              type: account.type,
-              provider: account.provider,
-              providerAccountId: account.providerAccountId,
-              refresh_token: (account.refresh_token as string | null) ?? null,
-              access_token: (account.access_token as string | null) ?? null,
-              expires_at: (account.expires_at as number | null) ?? null,
-              token_type: (account.token_type as string | null) ?? null,
-              scope: (account.scope as string | null) ?? null,
-              id_token: (account.id_token as string | null) ?? null,
-              session_state: (account.session_state as string | null) ?? null,
-            });
-            await db.update(users).set({ status: "active" }).where(eq(users.id, existing.id));
+          const invited = existing.status === "invited";
+          const verifiedActive = existing.status === "active" && profile?.email_verified === true;
+          if (!alreadyLinked && (invited || verifiedActive)) {
+            await db
+              .insert(accounts)
+              .values({
+                userId: existing.id,
+                type: account.type,
+                provider: account.provider,
+                providerAccountId: account.providerAccountId,
+                refresh_token: (account.refresh_token as string | null) ?? null,
+                access_token: (account.access_token as string | null) ?? null,
+                expires_at: (account.expires_at as number | null) ?? null,
+                token_type: (account.token_type as string | null) ?? null,
+                scope: (account.scope as string | null) ?? null,
+                id_token: (account.id_token as string | null) ?? null,
+                session_state: (account.session_state as string | null) ?? null,
+              })
+              .onConflictDoNothing();
+            if (invited) {
+              await db.update(users).set({ status: "active" }).where(eq(users.id, existing.id));
+            } else if (!existing.emailVerified) {
+              await db
+                .update(users)
+                .set({ emailVerified: new Date(), passwordHash: null })
+                .where(eq(users.id, existing.id));
+              console.info(
+                `[auth] linked Google to existing email account ${existing.id}` +
+                  (existing.passwordHash ? " (unverified password removed)" : ""),
+              );
+            }
           }
         }
       }
@@ -329,11 +356,23 @@ const { handlers, auth: uncachedAuth, signIn, signOut } = NextAuth({
     // Auth.js mencatatnya sebagai `[auth][error] JWTSessionError` + membuang
     // identitas user (nama + email) ke `[auth][details]` — membanjiri panel
     // error dan membocorkan PII ke log. Telan yang ini; kegagalan decode lain
-    // (secret berganti, token cacat) tetap tampil, dan kegagalan sign-in
-    // (CredentialsSignin, OAuth) tak lewat sini.
+    // (secret berganti, token cacat) tetap tampil.
+    //
+    // CredentialsSignin = email/kata sandi salah, akun tidak ada, atau akun
+    // Google-only yang mencoba kata sandi. Itu hasil LOGIN biasa yang sudah
+    // ditangkap signInWithPassword() dan ditampilkan ke pengguna ("Email atau
+    // kata sandi salah"), bukan kegagalan sistem - tapi Auth.js tetap
+    // mencatatnya sebagai [auth][error] + stack, jadi tiap salah ketik muncul
+    // sebagai "runtime error" di Vercel dan dikira insiden (2026-09-11,
+    // 2026-10-21). Diturunkan jadi satu baris warn tanpa email/stack: jejak
+    // lonjakan percobaan login (brute force) tetap ada, panel error bersih.
     error(err) {
       const kind = (err as { type?: string }).type ?? err.name;
       if (kind === "JWTSessionError") return;
+      if (kind === "CredentialsSignin") {
+        console.warn("[auth] CredentialsSignin: login gagal (email/kata sandi salah atau akun tanpa kata sandi)");
+        return;
+      }
       console.error(`[auth][error] ${kind}: ${err.message}`, err.stack ?? "");
     },
   },

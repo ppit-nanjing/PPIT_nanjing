@@ -755,6 +755,7 @@ export const en = {
   "sensus.errPhone": "The active phone number must be a Chinese number (+86).",
   "sensus.errWhatsapp": "The WhatsApp number must start with +62 or +86.",
   "sensus.errEmail": "That email address isn't valid. Example: name@gmail.com.",
+  "sensus.errEmailTypo": "That email address looks like a typo. Did you mean {{suggestion}}?",
   "sensus.errYear": "The year must be 4 digits, e.g. 2024.",
   "sensus.errPassport": "Invalid passport number format — 1 letter followed by 7 digits, e.g. X1234567.",
   "sensus.errGradBeforeEntry": "Expected graduation year cannot be earlier than the entry year.",
@@ -1038,13 +1039,18 @@ export const en = {
 
   // Email/password auth errors (src/app/actions/auth.ts)
   "auth.errEmailInvalid": "That email address is not valid.",
+  "auth.errEmailTypo": "That email address looks like a typo. Did you mean {{suggestion}}?",
+  "auth.emailTypoHint": "Did you mean {{suggestion}}?",
+  "auth.emailTypoUse": "Use this",
   "auth.errPasswordShort": "Password must be at least {{n}} characters.",
   "auth.errConfirmMismatch": "Password confirmation does not match.",
   "auth.errEmailTaken": "That email is already registered. Sign in with your password.",
   "auth.errEmailGoogle": "That email is already registered through Google. Sign in with Google.",
+  "auth.errOauthNotLinked": "That email already has an account that cannot be linked to Google automatically. Sign in with your email and password, or request a password reset. If it still fails, contact the committee.",
+  "auth.errOauthFailed": "Signing in with Google failed. Try again, or sign in with your email and password.",
   "auth.errAutoSignIn": "Your account was created, but automatic sign-in failed. Please sign in manually.",
   "auth.errCredentialsRequired": "Email and password are both required.",
-  "auth.errCredentialsWrong": "Wrong email or password.",
+  "auth.errCredentialsWrong": "Wrong email or password. If you signed up with Google, choose \"Continue with Google\".",
 
   // Membership application form (/join-us)
   "membership.form.previewBtn": "Preview (not submitted)",

@@ -5,6 +5,7 @@ import Link from "next/link";
 import { AlertCircle, ArrowRight, Eye, EyeOff, Loader2, Lock, Mail } from "lucide-react";
 import type { AuthFormState } from "@/app/actions/auth";
 import { useT } from "@/lib/i18n/client";
+import { suggestEmailFix } from "@/lib/email-typo";
 
 type Props = {
   action: (prev: AuthFormState, formData: FormData) => Promise<AuthFormState>;
@@ -48,6 +49,9 @@ export function CredentialForm({ action, googleAction, mode, returnTo }: Props) 
   const invalid = Boolean(state?.errorKey);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
+  // Saran perbaikan domain email yang jelas salah ketik (mis. gmail.con) -
+  // muncul begitu kolom email ditinggalkan, sebelum form dikirim.
+  const [emailSuggestion, setEmailSuggestion] = useState<string | null>(null);
 
   useEffect(() => {
     if (invalid) emailRef.current?.focus();
@@ -76,7 +80,24 @@ export function CredentialForm({ action, googleAction, mode, returnTo }: Props) 
           placeholder={t("auth.emailPlaceholder")}
           aria-invalid={invalid}
           aria-describedby={invalid ? errorId : undefined}
+          onBlur={mode === "signup" ? (e) => setEmailSuggestion(suggestEmailFix(e.currentTarget.value)) : undefined}
+          onChange={mode === "signup" ? () => setEmailSuggestion(null) : undefined}
         />
+        {mode === "signup" && emailSuggestion && (
+          <p role="status" className="flex flex-wrap items-center gap-x-2 text-body-sm text-on-background">
+            <span>{t("auth.emailTypoHint", { suggestion: emailSuggestion })}</span>
+            <button
+              type="button"
+              onClick={() => {
+                if (emailRef.current) emailRef.current.value = emailSuggestion;
+                setEmailSuggestion(null);
+              }}
+              className="text-primary-container font-medium hover:underline rounded-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-container"
+            >
+              {t("auth.emailTypoUse")}
+            </button>
+          </p>
+        )}
       </div>
 
       <div className="flex flex-col gap-2 lg:gap-1.5">

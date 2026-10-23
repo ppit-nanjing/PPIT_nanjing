@@ -7,6 +7,8 @@
 // memakai aturan yang PERSIS sama, sehingga tidak ada data yang lolos di server
 // padahal ditolak di layar, atau sebaliknya.
 
+import { suggestEmailFix } from "@/lib/email-typo";
+
 export interface SensusInput {
   // BIODATA
   fullName: string;
@@ -149,10 +151,12 @@ export const REQUIRED_BY_STEP: ReadonlyArray<ReadonlyArray<keyof SensusInput>> =
 export interface SensusIssue {
   field: keyof SensusInput;
   step: number;
+  // Hanya untuk kind "emailTypo": alamat yang sudah dibetulkan.
+  suggestion?: string;
   // "required" = kosong; sisanya = terisi tapi bentuknya salah.
   // "passportTaken" hanya bisa ditentukan server (perlu lihat baris lain di
   // database), jadi tidak pernah muncul dari validateSensus() di klien.
-  kind: "required" | "wechat" | "phone" | "whatsapp" | "email" | "year" | "gradBeforeEntry" | "passportTaken" | "passport" | "studentCard";
+  kind: "required" | "wechat" | "phone" | "whatsapp" | "email" | "emailTypo" | "year" | "gradBeforeEntry" | "passportTaken" | "passport" | "studentCard";
 }
 
 // Semua masalah sekaligus, bukan berhenti di yang pertama, supaya pengisi form
@@ -184,6 +188,9 @@ export function validateSensus(input: SensusInput): SensusIssue[] {
 
   if (filled("activeEmail") && !isValidEmail(input.activeEmail)) {
     issues.push({ field: "activeEmail", step: 2, kind: "email" });
+  } else if (filled("activeEmail")) {
+    const suggestion = suggestEmailFix(input.activeEmail);
+    if (suggestion) issues.push({ field: "activeEmail", step: 2, kind: "emailTypo", suggestion });
   }
   if (filled("wechatId") && !isValidWechatId(input.wechatId)) {
     issues.push({ field: "wechatId", step: 2, kind: "wechat" });

@@ -1,5 +1,5 @@
 import { redirect } from "next/navigation";
-import { ArrowLeft, CheckCircle2, Undo2 } from "lucide-react";
+import { AlertCircle, ArrowLeft, CheckCircle2, Undo2 } from "lucide-react";
 import { auth } from "@/auth";
 import { CredentialForm } from "@/components/auth/credential-form";
 import { SeasonPanel } from "@/components/auth/season-panel";
@@ -14,14 +14,23 @@ import { PlumBlossoms, PlumSymbols } from "@/components/deco/plum-blossoms";
 export default async function LoginPage({
   searchParams,
 }: {
-  searchParams: Promise<{ returnTo?: string; reset?: string }>;
+  searchParams: Promise<{ returnTo?: string; reset?: string; error?: string }>;
 }) {
   const { t } = await getT();
-  const { returnTo: rawReturnTo, reset } = await searchParams;
+  const { returnTo: rawReturnTo, reset, error } = await searchParams;
   const returnTo = safeRedirect(rawReturnTo);
   const session = await auth();
   if (session) redirect(returnTo);
   const justReset = reset === "1";
+  // Auth.js mengalihkan kegagalan Google ke /login?error=<Kode>. Tanpa ini orang
+  // mendarat di form login tanpa penjelasan apa pun. Hanya kode OAuth yang
+  // ditampilkan; kegagalan password ditangani form sendiri.
+  const oauthErrorKey =
+    error === "OAuthAccountNotLinked"
+      ? "auth.errOauthNotLinked"
+      : error === "OAuthCallbackError" || error === "OAuthSignin" || error === "AccessDenied" || error === "Callback"
+        ? "auth.errOauthFailed"
+        : null;
 
   return (
     <div className="min-h-screen lg:h-screen bg-background relative overflow-hidden grid grid-cols-1 lg:grid-cols-2">
@@ -53,6 +62,16 @@ export default async function LoginPage({
             <div role="status" className="flex items-start gap-2.5 bg-primary-container/10 border border-primary-container/20 rounded-lg px-3 py-2.5 mb-3 text-left">
               <CheckCircle2 className="text-primary-container shrink-0 mt-0.5" size={16} aria-hidden="true" />
               <p className="text-body-sm text-on-surface-variant">{t("auth.resetSuccessFlash")}</p>
+            </div>
+          )}
+
+          {oauthErrorKey && (
+            <div
+              role="alert"
+              className="flex items-start gap-2 bg-error-container/40 border-l-4 border-error rounded-r-lg p-3 mb-3 text-left"
+            >
+              <AlertCircle className="text-error shrink-0 mt-0.5" size={16} aria-hidden="true" />
+              <p className="text-body-sm text-on-background">{t(oauthErrorKey)}</p>
             </div>
           )}
 

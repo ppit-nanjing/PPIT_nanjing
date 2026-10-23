@@ -1,7 +1,7 @@
 "use server";
 
 import { AuthError } from "next-auth";
-import { eq } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 import { redirect, unstable_rethrow } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { cookies, headers } from "next/headers";
@@ -14,6 +14,7 @@ import { sendEmail } from "@/lib/email";
 import { renderMembershipEmail, renderMembershipEmailText } from "@/lib/membership-email";
 import { createResetToken, consumeResetToken, purgeExpiredResetTokens } from "@/lib/password-reset";
 import type { TKey } from "@/lib/i18n/dictionaries/id";
+import { suggestEmailFix } from "@/lib/email-typo";
 
 // Carries a dictionary KEY, not a finished sentence: this runs on the server
 // where the request locale is known but the dictionary is not the natural
@@ -45,6 +46,10 @@ export async function signUpWithPassword(_prev: AuthFormState, formData: FormDat
   const confirm = String(formData.get("confirm") ?? "");
 
   if (!EMAIL_RE.test(email)) return { errorKey: "auth.errEmailInvalid" };
+  // Domain yang pasti salah ketik (mis. gmail.con) ditolak: akun dengan email
+  // begini tidak pernah menerima email apa pun dan berujung akun ganda.
+  const emailFix = suggestEmailFix(email);
+  if (emailFix) return { errorKey: "auth.errEmailTypo", vars: { suggestion: emailFix } };
   if (password.length < MIN_PASSWORD) return { errorKey: "auth.errPasswordShort", vars: { n: MIN_PASSWORD } };
   if (password !== confirm) return { errorKey: "auth.errConfirmMismatch" };
 
@@ -231,7 +236,13 @@ export async function completePasswordReset(_prev: AuthFormState, formData: Form
   const passwordHash = await hashPassword(password);
   // status: kalau akun masih "invited" (mustahil di jalur ini, tapi murah), jadi
   // aktif. Akun aktif tidak berubah statusnya.
-  await db.update(users).set({ passwordHash, status: "active" }).where(eq(users.id, userId));
+  // Tautan reset dikirim ke email akunnya dan baru saja dipakai, jadi ini bukti
+  // pemilik kotak surat: tandai email terverifikasi (kalau belum). Dipakai saat
+  // Google ditautkan nanti - password yang email-nya sudah terbukti tidak dibuang.
+  await db
+    .update(users)
+    .set({ passwordHash, status: "active", emailVerified: sql`coalesce(${users.emailVerified}, now())` })
+    .where(eq(users.id, userId));
 
   // Sesi lama berbasis JWT dan tidak bisa dicabut dari sini - risiko kecil,
   // token reset sudah dikonsumsi dan hanya berlaku 1 jam. Arahkan ke login.

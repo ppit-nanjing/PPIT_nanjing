@@ -1,3 +1,5 @@
+import { DESCRIPTION_FONT_OPTIONS, DESCRIPTION_SIZE_OPTIONS } from "@/lib/event-description-style";
+
 const GROQ_URL = "https://api.groq.com/openai/v1/chat/completions";
 // Groq retired llama-3.3-70b-versatile (confirmed via GET /openai/v1/models -
 // 404 model_not_found as of 2026-08-28), which silently broke every AI feature
@@ -146,6 +148,46 @@ export async function improveIndonesianText(text: string, context: ImproveContex
     ],
     { temperature: 0.4, maxTokens: 700 },
   );
+}
+
+// Deskripsi acara itu rich text (toolbar editor: tebal, miring, rata teks,
+// font, ukuran), jadi "perbagus" boleh sekalian memakai toolbar itu. Model
+// diberi HANYA subset HTML yang bisa dihasilkan toolbar; hasilnya tetap
+// disanitasi sanitizeDescriptionHtml() oleh pemanggil, jadi prompt ini cuma
+// mengarahkan, bukan penjaga keamanan.
+const DESCRIPTION_HTML_RULES =
+  "Format keluaran: HTML dengan HANYA elemen berikut. " +
+  "<p> untuk tiap paragraf (boleh style=\"text-align:left|center|right|justify\"), <strong>, <em>, <br>, " +
+  `<span style="font-size:${DESCRIPTION_SIZE_OPTIONS.map((s) => s.px).join("|")}"> dan ` +
+  `<span style="font-family:var(--font-KEY)"> dengan KEY salah satu dari: ${DESCRIPTION_FONT_OPTIONS.map((f) => f.key).join(", ")}. ` +
+  "Tidak ada tag lain, tidak ada class, tidak ada warna, tidak ada markdown. " +
+  "Pakai format seperlunya supaya enak dibaca: judul pembuka boleh <strong>, lebih besar (24px), dan rata tengah, begitu juga kalimat penutup; rincian dan isi biasa dibiarkan rata kiri (jangan ditengahkan semua); " +
+  "rincian penting seperti tanggal, jam, tempat, biaya, dan batas daftar diberi label <strong> (mis. <strong>Tanggal:</strong> ...) dan dipisah per baris atau paragraf; " +
+  "penutup/ajakan boleh <em>. Teks isi biasa jangan diberi font atau ukuran, biarkan bawaan situs. " +
+  "Pakai paling banyak SATU font dekoratif (serif/display), hanya untuk judul pembuka, dan jangan campur banyak font. " +
+  "Jangan berlebihan: kalau teks pendek, cukup beberapa paragraf rapi dengan sedikit penekanan.";
+
+const EVENT_DESCRIPTION_SYSTEM =
+  "Kamu adalah editor konten PPIT Nanjing, organisasi mahasiswa Indonesia di Nanjing, Tiongkok. " +
+  "Kamu menerima deskripsi kegiatan dalam bentuk HTML (atau teks biasa). Perbaiki ejaan dan tata bahasa, buat lebih jelas dan menarik, " +
+  "dan atur tampilannya dengan format toolbar editor. Bila cocok tambahkan satu emoji di awal. " +
+  "JANGAN mengubah atau menambah fakta, tanggal, jam, tempat, biaya, atau nama; jangan mengarang informasi yang tidak ada di teks." +
+  ANTI_SLOP_ID +
+  " " +
+  DESCRIPTION_HTML_RULES +
+  " Balas HANYA HTML-nya, tanpa code fence dan tanpa penjelasan.";
+
+export async function improveEventDescriptionHtml(html: string): Promise<string> {
+  // Anggaran token longgar: gpt-oss menghitung token "berpikir" ke max_tokens,
+  // dan HTML lebih panjang dari teks polos - 700 memotong balasan di tengah.
+  const raw = await groqChat(
+    [
+      { role: "system", content: EVENT_DESCRIPTION_SYSTEM },
+      { role: "user", content: html },
+    ],
+    { temperature: 0.4, maxTokens: 3000 },
+  );
+  return raw.replace(/^```(?:html)?\s*/i, "").replace(/```\s*$/, "").trim();
 }
 
 // Parse balasan Groq untuk translateFields: buang code fence, ambil hanya

@@ -758,6 +758,7 @@ export const id = {
   "sensus.errPhone": "Nomor telepon aktif harus nomor Tiongkok (+86).",
   "sensus.errWhatsapp": "Nomor WhatsApp harus diawali +62 atau +86.",
   "sensus.errEmail": "Alamat email tidak valid. Contoh: nama@gmail.com.",
+  "sensus.errEmailTypo": "Alamat email sepertinya salah ketik. Maksud kamu {{suggestion}}?",
   "sensus.errYear": "Tahun harus 4 digit, contoh: 2024.",
   "sensus.errPassport": "Format nomor paspor tidak valid — 1 huruf diikuti 7 angka, contoh: X1234567.",
   "sensus.errGradBeforeEntry": "Perkiraan tahun kelulusan tidak boleh lebih awal dari tahun masuk.",
@@ -1041,13 +1042,18 @@ export const id = {
 
   // Email/password auth errors (src/app/actions/auth.ts)
   "auth.errEmailInvalid": "Format email tidak valid.",
+  "auth.errEmailTypo": "Alamat email sepertinya salah ketik. Maksud kamu {{suggestion}}?",
+  "auth.emailTypoHint": "Maksud kamu {{suggestion}}?",
+  "auth.emailTypoUse": "Pakai ini",
   "auth.errPasswordShort": "Kata sandi minimal {{n}} karakter.",
   "auth.errConfirmMismatch": "Konfirmasi kata sandi tidak cocok.",
   "auth.errEmailTaken": "Email sudah terdaftar. Masuk dengan kata sandi kamu.",
   "auth.errEmailGoogle": "Email ini sudah terdaftar lewat Google. Masuk dengan Google.",
+  "auth.errOauthNotLinked": "Email ini sudah punya akun yang tidak bisa ditautkan otomatis ke Google. Masuk dengan email dan kata sandi, atau minta reset kata sandi. Kalau masih gagal, hubungi pengurus.",
+  "auth.errOauthFailed": "Masuk dengan Google gagal. Coba lagi, atau masuk dengan email dan kata sandi.",
   "auth.errAutoSignIn": "Pendaftaran berhasil, tapi gagal masuk otomatis. Coba masuk manual.",
   "auth.errCredentialsRequired": "Email dan kata sandi wajib diisi.",
-  "auth.errCredentialsWrong": "Email atau kata sandi salah.",
+  "auth.errCredentialsWrong": "Email atau kata sandi salah. Kalau kamu mendaftar dengan Google, pilih \"Lanjutkan dengan Google\".",
 
   // Membership application form (/join-us)
   "membership.form.previewBtn": "Pratinjau (tidak dikirim)",
