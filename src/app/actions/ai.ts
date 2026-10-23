@@ -3,11 +3,14 @@
 import { auth } from "@/auth";
 import { hasModuleAccess, type AdminModule } from "@/lib/admin-scope";
 import sanitizeHtml from "sanitize-html";
-import { improveIndonesianText, improveEventDescriptionHtml, groqChat, AI_CHAT_SYSTEM_PROMPT, type ImproveContext, type GroqMessage } from "@/lib/groq";
+import { improveIndonesianText, improveEventDescriptionHtml, groqChat, type ImproveContext } from "@/lib/groq";
 import { sanitizeDescriptionHtml } from "@/lib/sanitize-description-html";
-import { eq } from "drizzle-orm";
+import { askGuide } from "@/lib/guide-answer";
+import { annotateHanziPinyin } from "@/lib/pinyin";
+import { and, eq } from "drizzle-orm";
 import { db } from "@/db";
-import { users } from "@/db/schema";
+import { aiQueryLog, users } from "@/db/schema";
+import { UUID_RE } from "@/lib/uuid";
 
 // event/news/gallery edits are gated by the matching admin module.
 // feedback text improvement is open to any signed-in user (they improve their own draft).
@@ -86,9 +89,16 @@ const FIELD_MAX: Record<ProfileField, number> = {
   avatarUrl: 2000,
 };
 
+export type ChatCitation = { title: string; slug: string | null; pageFrom: number | null; pageTo: number | null };
+
 export type ChatResult = {
   reply: string;
   profileEdit?: { field: ProfileField; value: string };
+  // Sumber jawaban, pertanyaan lanjutan, dan id baris log untuk tombol
+  // suka/tidak suka. Widget chat menampilkan ketiganya di bawah balasan.
+  citations: ChatCitation[];
+  followUps: string[];
+  logId: string;
 };
 
 export async function chatWithAIAction(history: { role: "user" | "assistant"; content: string }[]): Promise<ChatResult> {
@@ -98,8 +108,13 @@ export async function chatWithAIAction(history: { role: "user" | "assistant"; co
   const recent = history.slice(-12).map((m) => ({ role: m.role, content: m.content }));
   if (recent.length === 0) throw new Error("Pesan kosong");
 
-  const messages: GroqMessage[] = [{ role: "system", content: AI_CHAT_SYSTEM_PROMPT }, ...recent];
-  const raw = await groqChat(messages, { temperature: 0.5, maxTokens: 500 });
+  // Jawaban diambil lewat askGuide (src/lib/guide-answer.ts): retrieval dari
+  // artikel yang sudah ditinjau, cache per corpus_version, kuota harian, baru
+  // Groq. Kalau AI-nya mati, kuotanya habis, atau Groq menolak, jawabannya
+  // panduan yang paling relevan, bukan pesan error.
+  const question = [...recent].reverse().find((m) => m.role === "user")?.content ?? "";
+  const answer = await askGuide({ userId: session.user.id, question, history: recent });
+  const raw = answer.reply;
 
   const marker = raw.match(/<<PROFILE_EDIT:([\s\S]*?)>>/);
   if (marker) {
@@ -108,13 +123,34 @@ export async function chatWithAIAction(history: { role: "user" | "assistant"; co
       const field = parsed.field as ProfileField;
       const value = String(parsed.value ?? "").trim();
       if ((PROFILE_FIELDS as readonly string[]).includes(field) && value && value.length <= FIELD_MAX[field]) {
-        return { reply: "", profileEdit: { field, value } };
+        return { reply: "", profileEdit: { field, value }, citations: [], followUps: [], logId: answer.logId };
       }
     } catch {
       // fall through to normal reply
     }
   }
-  return { reply: raw };
+  return { reply: annotateHanziPinyin(raw), citations: answer.citations, followUps: answer.followUps, logId: answer.logId };
+}
+
+/**
+ * Suara pengguna atas satu jawaban (tombol suka/tidak suka di widget chat).
+ * Ditulis ke baris ai_query_log yang memang milik pemanggilnya: id baris itu
+ * dikirim klien, jadi tanpa syarat user_id orang lain bisa menilai jawaban
+ * orang lain. Id-nya disaring dulu - Postgres melempar error sintaks (bukan 0
+ * baris) untuk teks yang bukan UUID.
+ */
+export async function rateAnswerAction(logId: string, vote: "up" | "down"): Promise<void> {
+  const session = await auth();
+  if (!session?.user?.id) throw new Error("Kamu harus masuk");
+  if (vote !== "up" && vote !== "down") throw new Error("Nilai masukan tidak dikenal");
+  if (typeof logId !== "string" || !UUID_RE.test(logId)) throw new Error("Jawaban tidak dikenal");
+
+  const updated = await db
+    .update(aiQueryLog)
+    .set({ feedback: vote })
+    .where(and(eq(aiQueryLog.id, logId), eq(aiQueryLog.userId, session.user.id)))
+    .returning({ id: aiQueryLog.id });
+  if (updated.length === 0) throw new Error("Jawaban tidak dikenal");
 }
 
 /**

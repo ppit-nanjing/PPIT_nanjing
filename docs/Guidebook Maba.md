@@ -1,0 +1,732 @@
+# Guidebook Maba
+
+> Implementation plan for **issue #65 — "Guidebook untuk maba: AI atau interaktif"**.
+> Status: **plan; P0–P2 done, chatbot half browser-verified (2026-10-12, lihat Verification).** Branch `feat/chatbot` is pushed to `origin` and merges the chatbot part of step 1 below: `src/lib/guidebook-search.ts` (new), changes to `src/app/actions/ai.ts` and `src/lib/groq.ts`, and the "Chatbot Help Center" section of [Documentation & Help Center](./Documentation%20&%20Help%20Center.md). P0 landed on the same branch (see the phase table). P1 added `drizzle/0046_guidebook.sql`, the schema mirror, `src/lib/guide-chunker.ts`, `src/lib/markdown-lite.tsx`, and `scripts/check-guidebook.ts`. P2 added the console side: `src/app/console/docs/guidebook/` (topic list + diagnostics), the topic form (`article-form.tsx`, `markdown-editor.tsx`), and topic actions in `src/app/actions/admin-docs.ts`. No migration has been applied to Neon production yet (the local Docker database does have it), and P2 topics have been saved from a browser — see "Verification and Definition of Done" for what was actually run. P3 sudah mulai (2026-10-12): `src/db/ingest-guide.ts` + `src/lib/guidebook-manifest.ts` memasukkan hasil ekstraksi PDF per topik ke `content` dan `parsed_markdown`, dan 5 topik pertama sudah ada di database lokal (12.927 karakter, 23 potongan, `corpus_version` 19) — lihat "Guidebook maba masuk korpus" di bawah. P4 sudah dibangun (2026-10-12; retrieval + gerbang tinjauan + cache/kuota + halaman `/guidebook` + checklist per akun — lihat baris P4 di tabel fase). Panel merge PDF-vs-live juga sudah ada di console (`resolveGuideMerge` di `src/app/actions/admin-docs.ts` + panel di `src/app/console/docs/[slug]`). Sisa yang belum dikerjakan bukan kode: spot-check 10 halaman hasil ekstraksi PDF, merge pertama 5 topik yang sudah di-ingest, migrasi ke Neon produksi, dan push 3 commit terakhir.
+> Related: [Documentation & Help Center](./Documentation%20&%20Help%20Center.md), [Data Dictionary](./Data%20Dictionary.md), [Entity Relationship Diagram](./Entity%20Relationship%20Diagram.md), [Tech Stack](./Tech%20Stack.md), [Sensus Profile Flow](./Sensus%20Profile%20Flow.md), [Information Architecture](./Information%20Architecture.md).
+
+## Summary
+
+The maba guidebook is a **staged guide (checklist) plus a Q&A that answers only from the guidebook's own content.** Content is authored by pengurus from the console with no deploy, and can come either from the 5 existing PDF guides (150 pages) or be written directly in the console.
+
+The principle: **content first, AI second.** AI answers are only as good as the content, and visa/residence-permit questions must never be answered from thin air — that is guaranteed by data (a topic must be reviewed and must have an expiry date), not by politely asking the prompt to behave.
+
+## Architecture decisions
+
+| Decision | Rationale | Consequence |
+|---|---|---|
+| **Markdown is the text SSoT**, stored per **topic** in `help_articles.content` (Postgres) | It is the only format that is pleasant for a human to edit in the console, and the review unit must equal the retrieval unit (per topic) | Needs a markdown renderer; `seed-help-articles.ts:235` ("teks biasa, tidak ada markdown") must be updated |
+| **PDF is provenance, not SSoT** | The 5 PDFs are one-off parse input; pengurus edit the result | PDFs live in Drive plus a hash so re-parsing is reproducible |
+| **Page numbers ride along as text markers**, not as structured JSON | Page numbers are machine data (must be exact for citations), prose is human text | The datalab extractor already emits one `{12}------------` rule per page; the chunker reads the range off it, and also honours a hand-written `[[p12]]` |
+| **No embeddings / no vector DB** | Groq has no embeddings endpoint → new vendor, new key, re-embed cost on every change | Lexical retrieval (Postgres FTS); the upgrade path is documented, not built now |
+| **`parsed_markdown` (upstream) ≠ `content` (live)** | Re-ingest must never overwrite pengurus corrections | Needs a per-topic merge panel in the console |
+| **Retrieval-only is a success path**, not an error | The free Groq quota (8.000 TPM) will be hit during maba season | The endpoint returns guide snippets + links whenever the LLM is unavailable |
+| **Revision history reuses `audit_logs`** | The table and its write pattern already exist (`src/lib/event-audit.ts`, `admin-departments.ts`) | No new revision table; retention needs a pruning policy |
+
+## Scope
+
+### First version
+
+- Public `/guidebook` page: staged guide (before departure → first week → first month) rendered as a checklist.
+- Per-account progress (`guidebook_progress`), idempotent, storing only completed steps.
+- Pengurus can add/edit/review/publish topics from the console without a deploy.
+- Q&A (the existing `chatWithAIAction` path) that answers **only** from published + reviewed + unexpired topics.
+- Retrieval-only degradation path, per-user quota, answer cache, FAQ prewarm.
+- This doc + a `docs/README.md` entry + a Help Center article as the pengurus SOP.
+
+### Out of scope
+
+Maba-to-maba chat, forum, ranking, payments, automatic content translation (see § i18n), embedding/vector search, PDF upload straight from the console (the parser runs outside the app).
+
+## Data flow
+
+```mermaid
+graph LR
+  PDF[5 PDFs in Drive] --> PARSE[parser outside the app]
+  PARSE --> JSON[JSON per page]
+  JSON --> INGEST[src/db/ingest-guide.ts]
+  MANIFEST[src/lib/guidebook-manifest.ts] --> INGEST
+  INGEST --> PM[help_articles.parsed_markdown]
+  PM --> MERGE{merge panel in console}
+  MERGE -->|accept| CONTENT[help_articles.content = SSoT]
+  MERGE -->|keep mine| CONTENT
+  CONTENT --> CHUNK[chunk(markdown) → guide_chunks → tsv]
+  CONTENT --> RENDER[markdown → React elements]
+  CHUNK --> ASK[retrieval + answer]
+  RENDER --> UI[/guidebook + /help/:slug/]
+```
+
+## Data model
+
+```sql
+-- help_articles already exists; this is the delta.
+ALTER TABLE help_articles
+  ADD COLUMN phase text,                          -- sebelum-berangkat | minggu-pertama | bulan-pertama
+  ADD COLUMN sort_order integer NOT NULL DEFAULT 0,  -- same `order_index` pattern used by many tables (e.g. `events`, schema.ts:383)
+  ADD COLUMN source_label text,                   -- "Panduan Maba 2026, hal. 12-14"
+  ADD COLUMN source_doc_slug text,                -- -> guide_documents.slug
+  ADD COLUMN parsed_markdown text,                -- upstream; written ONLY by the ingest script
+  ADD COLUMN reviewed_at timestamp,
+  ADD COLUMN reviewed_by uuid REFERENCES users(id),
+  ADD COLUMN expires_at timestamp;
+  -- content (existing column) = live markdown, the SSoT edited by pengurus
+
+CREATE TABLE guide_documents (
+  slug text PRIMARY KEY, title text NOT NULL, source_label text NOT NULL,
+  pdf_url text, pdf_hash text, page_count integer, version text,
+  ingested_at timestamp NOT NULL DEFAULT now()
+);
+
+CREATE TABLE guide_chunks (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  article_id uuid NOT NULL REFERENCES help_articles(id) ON DELETE CASCADE,
+  ordinal integer NOT NULL, heading text,
+  page_from integer, page_to integer,             -- from the {N} page rules / [[pN]] markers
+  text text NOT NULL,
+  text_stemmed text NOT NULL DEFAULT '',          -- filled by the existing Indonesian affix normalization
+  tsv tsvector GENERATED ALWAYS AS (
+    to_tsvector('simple'::regconfig, coalesce(heading,'') || ' ' || text || ' ' || text_stemmed)
+  ) STORED,
+  UNIQUE (article_id, ordinal)
+);
+CREATE INDEX guide_chunks_tsv_idx ON guide_chunks USING gin (tsv);
+
+CREATE TABLE guide_meta (
+  one_row boolean PRIMARY KEY DEFAULT true,
+  corpus_version bigint NOT NULL DEFAULT 1,   -- bumped whenever content/review state changes → cache key
+  chunker_version integer NOT NULL DEFAULT 1,
+  ai_enabled boolean NOT NULL DEFAULT true,   -- kill switch without a deploy
+  updated_at timestamp NOT NULL DEFAULT now()
+);
+
+CREATE TABLE guide_answers (
+  question_hash text NOT NULL, corpus_version bigint NOT NULL, question text NOT NULL,
+  answer text NOT NULL, chunk_ids uuid[] NOT NULL,
+  hits integer NOT NULL DEFAULT 0, created_at timestamp NOT NULL DEFAULT now(),
+  PRIMARY KEY (question_hash, corpus_version)   -- a new corpus version simply ignores old cache rows
+);
+
+CREATE TABLE ai_usage (
+  user_id uuid NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  day date NOT NULL, count integer NOT NULL DEFAULT 0,
+  PRIMARY KEY (user_id, day)
+);
+
+CREATE TABLE guidebook_progress (
+  user_id uuid NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  article_id uuid NOT NULL REFERENCES help_articles(id) ON DELETE CASCADE,
+  done_at timestamp NOT NULL DEFAULT now(),
+  PRIMARY KEY (user_id, article_id)
+);
+
+CREATE TYPE ai_feedback_vote AS ENUM ('up', 'down');
+
+CREATE TABLE ai_query_log (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id uuid REFERENCES users(id) ON DELETE SET NULL,
+  question_hash text NOT NULL, question_redacted text,   -- redacted text, never the raw question
+  chunk_ids uuid[], scores real[], cache_hit boolean NOT NULL DEFAULT false,
+  used_llm boolean NOT NULL DEFAULT false, degraded_reason text,
+  latency_ms integer, model text, prompt_tokens integer, completion_tokens integer,
+  -- Vote on the answer this row logged (drizzle/0047_ai_answer_feedback.sql).
+  -- NULL = not voted, which is also what every pre-2026-10-13 row carries.
+  feedback ai_feedback_vote,
+  created_at timestamp NOT NULL DEFAULT now()
+);
+```
+
+Implementation notes:
+
+- The 2-argument `to_tsvector(regconfig, text)` is immutable, so `GENERATED ALWAYS AS ... STORED` is valid. The `tsvector` limit is 1 MB — chunks are far below that.
+- Drizzle 0.45 has no `tsvector` type. The `tsv` column is created in the migration SQL and only read through Drizzle `sql` fragments (do not map it as a `customType` if nothing reads it from TypeScript).
+- Migrations go in `drizzle/` and are applied via `npx tsx --env-file=.env src/db/apply-sql.ts drizzle/<file>.sql` — **not** `db:push`. Migrations are additive, so app rollback needs no column drops.
+
+## Shared pure functions
+
+These three functions are used by both the write path and the read path, so they must be side-effect free and testable without a DB:
+
+| Function | File | Responsibility |
+|---|---|---|
+| `chunkMarkdown(md) → GuideChunkDraft[]` | `src/lib/guide-chunker.ts` (new) | Split on `##` headings, keep table/list blocks intact, derive `page_from/page_to` from the `{N}` page rules (and `[[pN]]`), cap at ~800 tokens. Not a move: `guidebook-search.ts` never chunked anything, it gives each article an 1800-char request context (`MAX_CHUNK_CHARS = 1800`, `MAX_CHUNKS = 4`), taken from the block where the question's keywords cluster — see `windowAroundTerms` below. That path stays untouched for the chat; P4 builds the searchable corpus with this chunker instead. `guidebook-search.ts` keeps `searchTerms`/`rankArticles` |
+| `normalizeToken/ searchTerms` | `src/lib/guidebook-search.ts` (already exists) | Indonesian affix stemming + function-word removal |
+| `windowAroundTerms(body, terms) → string` | `src/lib/guidebook-terms.ts` (new) | The 1800-char slice of one article that goes into the prompt: scores every 1800-char block by how many question keywords it holds and returns the winner, first block on a tie. Case-insensitive, because the scoring side lowercases the text while the article keeps its capitals |
+| `renderMarkdownLite(md) → ReactNode` | `src/lib/markdown-lite.tsx` (new) | Headings, lists, tables, bold/italic, links, code. **No `dangerouslySetInnerHTML`**, no new dependency, tolerant of half-finished markdown. Extras worth knowing: a `{12}------------` rule becomes an `<hr>`, an image becomes its alt text (assets are not hosted), and only `http(s):`/`mailto:`/relative hrefs become real links |
+
+`renderMarkdownLite` must survive: a table with no closing row, a code fence with no closing fence, an empty heading, a deleted `[[p12]]` marker. Nothing throws and nothing injects HTML: a broken table still renders as a table, an unclosed fence still renders as a code block, and an empty heading or a stray `[[p12]]` falls through as literal text.
+
+Both files are checked by `scripts/check-guidebook.ts` (`npm run check:guidebook`, 40 assertions, no env needed). It also accepts a path, which is how the chunker is checked against a real extraction: `npm run check:guidebook -- "tmp/datalab-output-Guide_to_南京_2026.md"`.
+
+## Pengurus experience (editability)
+
+The ticket's core requirement: "pengurus bisa menambah dan mengubah isi dari console tanpa deploy". That makes the edit path a feature, not an afterthought.
+
+| Need | Mechanism |
+|---|---|
+| Edit without a deploy | `content` is edited in `/console/docs` and saved through `upsertHelpArticle` (`src/app/actions/admin-docs.ts`) |
+| The edit takes effect immediately | Save → re-chunk → `guide_meta.corpus_version++` → old cached answers are ignored automatically → `revalidatePath("/guidebook")` + `/help` |
+| Add a topic with no PDF | New-topic form: title, slug, phase, order, markdown body |
+| Edits do not collide | The form carries `expected_updated_at`; the save is rejected with `topik ini baru saja diubah` if it moved |
+| Edits are reversible | History from `audit_logs` (`entityType='help_article'`, `beforeJson`/`afterJson`) + a restore button |
+| Visa content is human-reviewed | A **Tinjau & terbitkan** button fills `reviewed_at`/`reviewed_by`; retrieval requires it |
+| Visa content does not rot | An `expires_at` column; expired topics are not used by the AI and the page shows "sedang ditinjau ulang" |
+| A fresh parse does not clobber edits | Per-topic merge panel: upstream (`parsed_markdown`) vs live (`content`), with **accept upstream** / **keep mine** |
+| Pengurus can tell the edit "landed" | Save-time diagnostics: "terdeteksi 4 heading → 7 potongan", "12 jawaban cache dibuang", plus a warning when a topic has no page markers |
+
+The editor stays **textarea + preview**, using the same renderer as the public page. No rich-text editor, no new dependency.
+
+## AI answer path
+
+```mermaid
+graph TD
+  A[question] --> B[searchTerms + normalization]
+  B --> C{any keywords?}
+  C -->|no| R1[Soft refusal, no LLM call]
+  C -->|yes| D[FTS over guide_chunks<br/>filter published + reviewed + unexpired]
+  D --> E{any chunks?}
+  E -->|no| R1
+  E -->|yes| F{answer cache<br/>hash + corpus_version}
+  F -->|hit| G[cached answer + citations]
+  F -->|miss| H{per-user daily quota?}
+  H -->|exhausted| I[Retrieval-only: snippets + links]
+  H -->|available| J[Groq, abort 20 s, max_tokens 700]
+  J -->|429 / timeout / 5xx| I
+  J -->|ok| K[answer + citations + follow-up suggestions + cache + log]
+  K --> L[user vote: thumbs up/down on the log row]
+```
+
+Binding rules:
+
+1. Citations **always** come from `chunk_ids` in the DB (document label + page range), never from model text.
+2. No chunks → **no LLM call**; the output is fixed.
+3. Answers produced by the degradation path or by a refusal are **never cached** (otherwise one Groq outage would poison every later answer with an empty one).
+4. The endpoint is a Route Handler `/api/guide/ask` (so it can return clear 200/429/503); the checklist stays a Server Action.
+
+What shipped against these rules (2026-10-12):
+
+- Rules 1–3 hold: `askGuide` (`src/lib/guide-answer.ts`) builds citations from the stored `chunk_ids`, makes no LLM call when retrieval returns nothing, and caches nothing from the refusal or degradation paths.
+- **Rule 4 was deliberately not built.** The chat widget is the only caller, and it reaches the server through the Server Action (`chatWithAIAction` → `askGuide`), which already returns the degraded answer as content instead of throwing. A `/api/guide/ask` handler with no consumer would be dead code; the answer core is a plain module, so adding the handler later is ~40 lines. Revisit if something other than the widget needs the answer path (email digest, WeChat bot, status codes for a client).
+- Retrieval is **not** FTS over `guide_chunks`: `findGuideChunks` matches tokens against `help_articles` with `ILIKE` and ranks in JS. `guide_chunks` still holds the excerpts, page ranges, and citation ids. The stemmed index (`guide_chunks.text_stemmed`) exists but is unused so far — see the risk note under [Evaluation](#evaluation-golden-set).
+
+### Follow-up suggestions, sources, and votes (2026-10-13)
+
+Three things the chat widget shows under every answer, and where each one comes from:
+
+| Element | Source | Rule |
+|---|---|---|
+| Source pills | `GuideAnswer.citations`, built from `chunk_ids` | Label = guide title + page range; the pill is a link to `/guidebook/<slug>`, opened in a new tab. Never built from model text |
+| Follow-up questions (max 3) | `<<FOLLOWUPS:["…","…","…"]>>` on the last line of the model answer, stripped before the text is stored | Live answers show only the model's own suggestions, each one re-run through `retrieve()` so a chip that would end in a refusal never shows. Zero is a valid result: the model is not topped up with FAQ questions. The FAQ fallback (`fallbackFollowUps`) fires only where there is no model answer to read — the degradation path and refusals, which use `GUIDE_STARTER_QUESTIONS`. The question the user just asked is never suggested back |
+| Thumbs up/down | `feedback` on the `ai_query_log` row (`GuideAnswer.logId`) | One vote per answer, changeable; the action checks the log row belongs to the session user before writing. Signed-out users never see the buttons |
+
+The marker lives in `src/lib/groq.ts` (prompt) and is parsed in `parseAnswer` (`src/lib/guide-answer.ts`), which runs on both the live path and the cache read, so prewarmed answers keep their suggestions. `max_tokens` went from 400 to 540 for this: the marker costs ~40 tokens, and a reply truncated before it loses the suggestions. Since 2026-10-15 a truncated marker is stripped from the visible text instead of being shown raw (`stripPartialMarkers`), and the answer keeps the FAQ fallback only on the degraded path.
+
+Refinements since then (2026-10-13, same day):
+
+- **Saran lanjutan bervariasi dan bisa dijawab.** `resolveFollowUps` menjalankan `retrieve()` pada tiap saran model dan membuang yang tidak mengembalikan potongan, tapi jumlahnya mengikuti model (nol sampai tiga) - tidak lagi dipaksa tiga dengan FAQ. Jawaban yang tidak butuh saran tetap bersih.
+- **Kunci cache berversi.** `answerCacheKey` mencampur `ANSWER_FORMAT_VERSION` ke hash; menaikkan angka itu otomatis membatalkan semua jawaban cache lama (prompt/format berubah), setara menaikkan `corpus_version` tanpa butuh akses database.
+- **Sapaan dijawab, bukan ditolak.** `isSmallTalk` mendeteksi "hi"/"halo kak"/"makasih" murni dan `greet()` membalas ramah tanpa LLM/kuota, dengan `GUIDE_STARTER_QUESTIONS` sebagai tombol lanjutan. Pesan yang memuat satu kata isi pun ("halo, tanya visa") tetap masuk retrieval.
+- **Jawaban lebih pendek.** Prompt meminta 1–2 paragraf tanpa pembuka/penutup, melarang sejarah/asal-usul kecuali ditanya, dan mengarahkan info terkait yang tidak ditanya menjadi pertanyaan lanjutan.
+- **Tombol salin + umpan balik suara.** Setiap jawaban punya tombol salin (ikhtisar teks ke clipboard), dan klik suara menampilkan "terima kasih atas masukannya".
+- **Lantai relevansi disesuaikan panjang pertanyaan.** Pertanyaan pendek ("cuaca", "biaya kos") tidak mungkin mencocokkan 3 kata kunci, jadi ambangnya kini `min(MIN_MATCHED_TERMS, jumlah kata kunci)`: semua kata kunci harus cocok. Pertanyaan panjang tetap pakai aturan 3-kata + coverage.
+
+### Pinyin, Inggris, dan cakupan penuh (2026-10-14)
+
+- **Hanzi diberi pinyin.** `src/lib/pinyin.ts` (`annotateHanziPinyin`) membungkus tiap run hanzi jadi `({hanzi} - {pinyin})` bernada, misalnya `Jiangsu Province (江苏 - jiāng sū)`, dipakai di jawaban chat (`chatWithAIAction`) dan isi artikel `/help`. Kurung yang sudah ada di sumbernya dilepas dulu supaya hasilnya tidak dobel (`((江苏 - jiāng sū))`), dan model tidak lagi menulis pinyin sendiri karena pinyin karangan model bisa beda nada dengan pinyin-pro. Library `pinyin-pro` (dependensi baru) dipakai supaya semua hanzi kebaca, bukan kamus sempit.
+- **Judul sumber tidak diulang di dalam balasan.** Prompt berhenti meminta model menyebut judul panduannya; sumbernya cuma tampil di kartu yang bisa dibuka di bawah balasan (`citations`), jadi teksnya tidak lagi berisi baris "Source: …". Kunci cache naik ke `ANSWER_FORMAT_VERSION = 6` supaya jawaban lama yang masih menyebut judul tidak ikut terpakai.
+- **`/help` dwibahasa.** `help_articles` dapat kolom `title_en`/`section_en`/`content_en` (migrasi 0049). `ingest-guide.ts` membaca `docs/guidebook/en/*.md` (terjemahan mesin lewat `src/db/translate-guidebook.ts`) dan manifest memuat judul/bagian Inggris. Halaman `/help` dan artikel memakai versi Inggris waktu `locale = en`, jatuh ke Indonesia kalau terjemahannya belum ada.
+- **Cakupan penuh.** Migrasi 0048 menandai seluruh 9 topik guidebook sudah ditinjau, jadi chatbot bisa mengutip semuanya (sebelumnya sebagian masih draf dan ditolak retrieval).
+- **Scroll ke bawah lebih andal + animasi.** Pesan sekarang menempel ke bawah (`min-h-full justify-end`) seperti aplikasi chat biasa, scroll-nya halus (`requestAnimationFrame` + `scrollTo` `behavior: smooth`, tetap instan kalau pengguna memilih kurangi gerakan), dan tiap gelembung baru muncul dengan animasi pop. Sapaan ("hi") tidak lagi memaksa tiga tombol saran, jadi jawabannya muat tanpa terpotong.
+
+### Koreksi salah ketik (2026-10-16)
+
+Pertanyaan yang memuat satu huruf salah dulu berhenti di penolakan tetap. "Mkanan khas Nanjing apa yang harus dicoba?" tidak mengembalikan potongan, jadi pengguna membaca "Belum ada panduan yang cocok dengan pertanyaan itu" padahal artikelnya ada. Diukur atas 92 pertanyaan jawaban emas yang masing-masing diberi satu salah ketik: recall@4 turun dari 1,000 ke 0,84, dan 6 sampai 7 pertanyaan berubah jadi ditolak. Yang lebih sering terjadi daripada yang dikira, karena maba mengetik di ponsel.
+
+Sekarang `findGuideChunks` (`src/lib/guidebook-search.ts`) mengulang pencariannya sekali memakai pertanyaan yang kata salahnya sudah dibetulkan. Kamusnya kosakata korpus (`buildCorpusVocabulary`, `src/lib/guidebook-terms.ts`) dari artikel yang lolos `RETRIEVABLE_ARTICLE` yang sama, bukan kamus bahasa. Aturannya:
+
+- satu huruf, sekali: huruf hilang, huruf berlebih, huruf tertukar, atau huruf salah;
+- minimal 5 huruf. Di bawah itu tebakannya terlalu murah untuk salah ("kost" berjarak satu huruf dari "cost", "lost", "most", dan "kos"), jadi yang dipertimbangkan hanya huruf tertukar dan tebakannya harus tunggal: "kso" hanya bisa jadi "kos" sehingga pertanyaannya sampai ke artikel kos, sedangkan substitusi satu huruf tidak dipakai - "buy" satu huruf dari "bus", dan versi pertama aturan ini memang menarik artikel transportasi untuk pertanyaan belanja;
+- kata yang sudah ada di korpus tidak disentuh, jadi kata yang benar tidak pernah "diperbaiki";
+- dua kandidat yang sama-sama masuk akal berarti tidak ada yang dipilih, dan pertanyaannya dibiarkan;
+- hasil koreksi hanya dipakai kalau benar-benar mengembalikan potongan.
+
+Yang dikoreksi pertanyaannya, bukan daftar kata kuncinya, supaya sinonim, batang kata, dan batas jumlah kata kunci berlaku sama seperti pertanyaan yang diketik benar. Koreksi yang jatuh ke nama entitas juga ikut: "where is toingkok?" berakhir di pencarian cadangan judul/bagian, sama seperti "tiongkok".
+
+Harganya satu query kosakata (23 artikel, 4.392 kata per 2026-10-16) per pertanyaan yang punya kata kunci tak dikenal, dan hanya di jalur yang memang sudah menyentuh database. `npm run check:guidebook` menguji 12 kasus koreksinya tanpa database; `src/db/eval-guidebook.ts` menambah grup "salah ketik" berisi 92 varian yang dihasilkan otomatis dari pertanyaan jawaban emas, ambang 0,95. Setelah dipasang: recall@4 jawaban emas tetap 1,000, grup salah ketik 1,000, dan pertanyaan must_refuse tetap nol potongan.
+
+### "kost" ditolak, dan jawaban yang kepanjangan (2026-10-16)
+
+Dua keluhan dari tangkapan layar pengguna. Sebabnya berbeda, dan yang kedua bukan soal retrieval sama sekali.
+
+**"ada kost di nanjing?" dijawab "Belum ada panduan".** Artikelnya ada - `tempat-tinggal-asrama-dan-kos` - tapi artikelnya menulis "kos" dan "asrama", sedangkan maba menulis "kost". Pencariannya leksikal dan lantai relevansinya dihitung dari jumlah kata kunci pertanyaan, jadi satu kata kunci yang tidak ada di korpus sudah cukup menjatuhkan pertanyaan yang cuma punya satu kata kunci. Koreksi salah ketik tidak menolong di sini: "kost" berjarak satu huruf dari "cost", "lost", "most", dan "kos" sekaligus, jadi tebakannya ambigu. Yang dipakai pemetaan istilah, `SYNONYMS.kost = ["kos", "asrama"]` di `src/lib/guidebook-terms.ts` - sama seperti pasangan Indonesia-Inggris yang sudah ada di sana.
+
+**"biaya kso di nanjing berapa?"** ini betulan salah ketik, tapi "kso" cuma tiga huruf sementara koreksi berhenti di lima. Aturannya sekarang: di bawah lima huruf, hanya huruf tertukar yang dipertimbangkan dan tebakannya harus tunggal. "kso" hanya bisa jadi "kos", jadi pertanyaannya sampai ke artikel kos; substitusi huruf tidak dipakai, karena "buy" satu huruf dari "bus".
+
+Ketiga pertanyaan dari tangkapan layar masuk `docs/guidebook-golden.json` (101 pertanyaan, 95 di antaranya bertopik yang sudah ditinjau). Langkah ini yang menangkap kesalahan versi pertama aturan kata pendek: recall grup jawaban emas turun ke 0,989 karena "buy" ikut dikoreksi jadi "bus", dan pertanyaan "What can I buy after arriving instead of bringing it?" berhenti menemukan artikel packing.
+
+**Jawaban kepanjangan.** "what is ppit?" dijawab 124 kata: definisi PPIT Tiongkok dan PPIT Nanjing disatukan jadi satu paragraf, dan di panel selebar ponsel itu dua layar penuh. Prompt lama meminta "1-2 paragraf pendek", dan paragraf tidak punya ukuran. Batasnya sekarang jumlah kata: 60 kata, atau 120 kata kalau jawabannya memang berupa daftar langkah/alamat/tarif/syarat dan ditulis sebagai poin-poin, ditambah larangan menyatukan isi beberapa sumber. Diukur atas tujuh pertanyaan yang jawaban lamanya masih tersimpan: 124 → 41 kata ("what is ppit?"), 94 → 38, 72 → 52, 69 → 35, 157 → 69, 124 → 114, dan 152 → 157 untuk daftar bawaan koper yang isinya memang daftar. Karena bentuk jawabannya berubah, `ANSWER_FORMAT_VERSION` naik 7 → 8: 23 dari 46 jawaban di cache panjangnya di atas 600 karakter dan tidak dipakai lagi. Jawaban baru tetap memuat penanda saran lanjutan (tidak terpotong) dan sitasinya utuh.
+
+### Jawaban kosong yang tersimpan di cache (2026-10-17)
+
+Setelah `SYNONYMS.kost` dipasang, tiga pertanyaan uji dijawab benar di mesin lokal: "biaya kost di nanjing berapa?" (335 karakter, 4 sitasi), "apakah ada kost in nanjing?" (3 sitasi), dan "kost" (3 sitasi). Satu di antaranya sempat mengembalikan jawaban kosong dua kali berturut-turut, dan itu yang perlu dicatat.
+
+Gejalanya: `assistantChat` mengembalikan string kosong, `parseAnswer` meneruskannya sebagai jawaban, dan `askGuide` menyimpannya ke `guide_answers` dengan `length(answer) = 0`. Cache tidak pernah memeriksa isi, jadi setiap penanya berikutnya menerima gelembung kosong sampai `corpus_version` berubah.
+
+Penyebabnya ada di gateway, bukan di prompt. Log `[assistant] auto/best-fast prompt=4583 completion=358` menunjukkan permintaan yang sukses dengan 358 token keluaran, sementara `message.content` berisi `""` - model penalaran menghabiskan jatahnya di bagian penalaran dan tidak menulis jawaban. Lima percobaan berturut-turut atas pertanyaan yang sama: panjang 353, 448, 0, lalu dua kali `kuota_harian`.
+
+Yang diubah:
+
+- `src/lib/assistant.ts` dan `src/lib/groq.ts` memperlakukan `content` kosong sebagai kegagalan model, bukan jawaban: `lastError = new Error("Respons AI kosong")` lalu lanjut ke model berikutnya. Kalau semua model kosong, pemanggil menerima error.
+- `src/lib/guide-answer.ts` menolak menulis cache kalau `parsed.reply` kosong (penanda `<<FOLLOWUPS:` yang datang lebih dulu membuat teksnya habis) dan menjawab lewat jalur degradasi `jawaban_kosong` yang menyajikan kutipan artikel. `prewarmGuide` melempar error yang sama supaya prahangat tidak menulis baris kosong.
+
+Cara memastikan tanpa menunggu gateway mengulang ulangnya: `fetch` diganti stub yang mengembalikan `{ choices: [{ message: { content: "" } }], usage: … }` dengan status 200. Dengan satu stub kosong, `assistantChat` menjawab dari `auto/chat` ("halo", 4 karakter); dengan stub kosong di semua percobaan, hasilnya `MELEMPAR: Respons AI kosong`, bukan string kosong.
+
+Baris cache kosong yang terlanjur ada dihapus (`delete from guide_answers where length(trim(answer)) = 0`), dan kuota harian akun uji dikembalikan ke jumlah baris log yang benar-benar memanggil model. Terpasang di https://ppit-nanjing-preview.vercel.app lewat `vercel --prod --yes` (deployment `ppit-nanjing-preview-oand99sq1`, status Ready).
+
+### Kartu tempat dari nama di teks jawaban (2026-10-17)
+
+Di bawah gelembung jawaban sekarang ada daftar kartu tempat, bukan lagi satu baris pil. Satu kartu = satu tempat yang teks jawabannya sebut: nama tempat sebagai baris tebal, satu baris keterangan pendek di bawahnya, lalu tombol ikon `Navigation` di kanan yang membuka tautan tempat itu di tab baru. Lebarnya selebar gelembung (maksimal 85%), kartu ditumpuk dengan `gap-1.5`, cincin fokus `focus:ring-2` tetap terlihat saat keyboard dipakai, dan `aria-label`/`title` tombolnya tetap kunci `chat.placeLink` ("Buka {{place}} di Amap" / "Open {{place}} in Amap"). Tidak ada foto dan tidak ada rating: tidak ada sumbernya di repo ini.
+
+- Keterangannya dibaca dari baris korpus yang sama dengan tautannya, bukan dari teks jawaban. `detailFrom` (`src/lib/chat-places.ts`) mengambil sisa baris sesudah nama tebal, membuang tautan markdown dan kurung kosongnya, membuang catatan nama Amap seperti `(Amap: 草桥寺)`, lalu memotong di ~120 karakter pada batas kata. Jadi alamat di kartu tidak pernah dikarang model.
+- Teks jawaban berhenti mengulang isi kartu. `buildChatSystemPrompt` (`src/lib/groq.ts`) memberi tahu model bahwa nama dan alamat tempat tampil sebagai kartu, jadi jawabannya cukup ringkasan pengelompokan (distrik mana, jalur metro apa) dan nama tempatnya disebut di dalam kalimat supaya kartunya ketemu; alamat, bus, dan pintu keluar metro per tempat baru ditulis kalau pertanyaannya memang soal tempat itu.
+- Kartunya mengikuti teks jawaban, bukan skor retrieval. `placeButtons` menerima dua string: gabungan `guide_chunks.text` artikel yang menang di retrieval (maksimal `MAX_CHUNKS` = 4 artikel) sebagai indeks tempat, dan teks jawaban mentah. Tiap baris butir korpus yang namanya ditulis tebal (`- **净觉寺 Jingjue Mosque** — ...`) jadi satu tempat, dan tautannya tautan markdown di baris itu. Tempat yang namanya muncul di jawaban diurutkan menurut posisi kemunculan pertamanya, dipotong di `MAX_PLACES` = 12 (satu topik tempat biasanya 4-12 titik), dan tautan yang sama cuma tampil sekali. `askGuide` memanggilnya di ketiga jalur jawaban; jalur penolakan dan sapaan tetap `places: []`.
+- Daftar tempat lengkap ikut ke konteks model, bukan cuma dua-tiga baris yang muat. `buildGuideContext` (`src/lib/guidebook-search.ts`) menambahkan blok "Indeks tempat di artikel ini" di bawah potongan teks tiap artikel, diisi `placeIndex` (`src/lib/chat-places.ts`): satu baris per tempat bertautan Amap, berisi nama tebal dan klausa bus/metro, dipotong ~90 karakter, maksimal 12 baris. Jadi pertanyaan seperti "ada masjid di Nanjing?" tidak lagi dijawab "ada dua" cuma karena jendela teksnya memuat dua baris; aturan di prompt menyuruh model mencocokkan angka itu ke indeks. `ANSWER_FORMAT_VERSION` naik ke 14 dengan dua alasan: konteks berubah, dan model diminta tetap menuliskan alamat serta rute metro saat pertanyaannya soal satu tempat tertentu, walau kartunya sudah tampil.
+- Nama tempat dikenali dalam dua bentuk, dua-duanya dari penanda tebal baris itu: run hanzi pertama (`净觉寺`) dan rangkaian kata Latin pertama (`Jingjue Mosque`), tanpa membedakan besar-kecil huruf. Bagian di dalam tanda kurung sengaja tidak dipakai — kata umum seperti `清真寺` di situ akan cocok dengan hampir semua jawaban.
+- Alias Amap ditulis sesudah nama tebal, mis. `**吉兆营清真寺 Jizhaoying Mosque** (Amap: 吉兆营寺) — ...`, karena pembaca yang mencari di Amap butuh nama yang dipakai Amap. Nama tebalnya tidak diubah, jadi pencocokan run hanzi dan Latin pertama tetap sama, dan kurung aliasnya tidak ikut jadi keterangan kartu.
+- Tautan tidak pernah dikarang: tempat yang jawabannya sebut tapi barisnya tidak memuat tautan tidak dapat kartu, dan yang dipakai adalah tautan di baris korpusnya, bukan tautan di teks jawaban — model boleh melepas atau menulis ulang tautannya tanpa membuat kartunya hilang. Tautan non-Amap ditolak; kalau satu baris memuat beberapa tautan Amap, yang pertama dipakai.
+- Jawaban dari cache tetap menghitung kartunya saat itu, dari potongan yang terambil sekarang plus teks jawaban yang tersimpan, jadi suntingan baris tempat di artikel langsung terlihat walau teks jawabannya masih yang lama. Teks jawabannya sendiri baru ikut diperbarui kalau `ANSWER_FORMAT_VERSION` (`src/lib/guide-answer.ts`, sekarang 25) dinaikkan: angka itu masuk kunci cache (`questionHash` atas pertanyaan tersunting, plus `corpus_version`), jadi menaikkannya membuang semua jawaban tersimpan sekaligus. Versi 21 dipakai karena satu masjid dalam kota dihapus dari artikel tempat ibadah; sebelumnya 20 waktu aturan jendela kedua berubah, dan 12 waktu prompt berhenti menuliskan tempat sebagai daftar.
+- Default-nya dalam kota. Artikel `tempat-ibadah-di-nanjing` dipisah jadi `## Masjid di kota Nanjing` (净觉寺, 草桥, 吉兆营) dan `## Masjid di luar kota Nanjing` (浦口, 江宁, 六合, 溧水), jadi pertanyaan "ada masjid di Nanjing?" dijawab masjid kota dulu. `windowAroundTerms` (`src/lib/guidebook-terms.ts`) memilih baris paling awal saat skornya seri supaya baris panjang di bagian luar kota tidak menyeret jendela keluar dari bagian pertama, dan `inCityFirst` (`src/lib/guidebook-search.ts`) mendorong blok berjudul "luar"/"outside"/"郊区" ke belakang tanpa membuangnya. Pertanyaan lanjutan "masjid di luar kota Nanjing apa saja?" ikut ditambahkan ke `GUIDE_FAQ` (`questionEn` dipakai jawaban Inggris), jadi jalur keluar itu selalu ada.
+- Potongan `吉兆营清真寺 地址` ikut menyentuh artikel tempat ibadah sejak tokenizer di `src/lib/guidebook-terms.ts` mengambil satu run hanzi utuh (`[\p{Script=Han}]+`, pola kedua `[a-z0-9]+`) sebagai kandidat istilah, bukan cuma kata latin. Pertanyaan Mandarin tidak memakai spasi, jadi tanpa cabang itu daftar kata kuncinya kosong dan pertanyaannya jatuh ke penolakan pertama. Batasnya tetap sama untuk keduanya: minimal 3 huruf atau karakter, jadi "地址" dibuang seperti "di", dan `MAX_TERMS` tetap 10.
+
+Di sisi klien, widget chat cuma memakai `ChatResult.places` (`src/app/actions/ai.ts`); pembacaan tautan dari teks jawaban di `src/components/ai/ai-chatbot.tsx` sudah dibuang, jadi pesan lama tanpa `places` tidak menampilkan kartu sama sekali.
+
+### Jendela konteks, bahasa jawaban, dan kelompok yang ditanyakan (2026-10-23)
+
+Uji stres tiga putaran (60 pertanyaan) menemukan empat kesalahan yang sumbernya berbeda-beda.
+
+**Jatah konteks dibagi per artikel.** `buildGuideContext` dulu mengisi konteks berurutan sampai `MAX_CONTEXT_CHARS` habis, jadi dua artikel teratas memakan seluruh jatah dan artikel ketiga serta keempat hilang tanpa jejak. Model lalu menolak fakta yang ada di artikel yang tidak pernah sampai ke mejanya. Sekarang jatahnya dibagi rata ke semua artikel hasil peringkat (`MAX_CHUNKS` = 4): satu jendela utama di sekitar baris yang paling banyak memuat kata kunci, ditambah sampai dua jendela lain di baris berbeda (`MAX_EXTRA_WINDOWS`), dengan batas teks per artikel `MAX_CHUNK_CHARS_TOTAL` = 2 × 1800 karakter. Panjang totalnya tetap, isinya yang berpindah.
+
+**Bahasa jawaban mengikuti pertanyaan.** `detectAnswerLanguage` (`src/lib/groq.ts`) membandingkan jumlah kata fungsi Indonesia dengan kata fungsi Inggris. Daftar Indonesia memuat bentuk typo yang sering dipakai ("udah", "udh", "klo", "kalo", "gak"), sedangkan kata benda Inggris di tengah kalimat Indonesia ("residence permit", "apply") tidak dihitung sebagai bukti bahasa Inggris. Pertanyaan Indonesia yang penuh typo dijawab Indonesia, dan 60 pertanyaan uji cocok bahasanya.
+
+**Pertanyaan lanjutan menjawab kelompok yang baru ditanyakan.** Prompt menyebut aturannya dua kali: kelompok yang ditanyakan dijawab dengan menyebut setiap anggotanya seperti tertulis di indeks tempat, dan daftar dari jawaban sebelumnya tidak diulang. Angka total yang lebih kecil dari isi sumber juga dilarang, jadi model tidak bisa menulis "tiga masjid" sambil menyebut lima.
+
+**Kartu tempat tidak lagi bergantung pada tautan POI.** `AMAP_HREF` (`src/lib/chat-places.ts`) menerima halaman POI (`amap.com/place/<id>`) dan tautan pencarian (`uri.amap.com/search?keyword=…`), jadi baris korpus yang POI-nya belum ditemukan tetap menghasilkan kartu; tautan non-Amap tetap ditolak. Kalimat prompt soal kartu hanya dikirim kalau sumber yang terambil punya baris tempat bertaut Amap (`hasPlaceCards`), sehingga jawaban tidak menjanjikan kartu yang tidak muncul. `ANSWER_FORMAT_VERSION` naik 23 → 25 agar jawaban lama di cache tidak dipakai lagi.
+
+### Token and quota budget
+
+| Prompt part | Budget |
+|---|---|
+| system + instructions | ~150 tokens |
+| guide excerpts (max 7.000 characters) | ~2.000 tokens |
+| 12-message history (trimmed by length) | ≤1.000 tokens |
+| output (`max_tokens: 700`) | 700 tokens (batas; jawaban biasa ~450) |
+| **total per question** | **~3.850 tokens → ≈2 questions/minute** |
+
+| Resource | Free limit | Impact on the feature |
+|---|---|---|
+| Groq `openai/gpt-oss-120b` | 30 RPM, **8.000 TPM**, 1.000 RPD (as of 2026-10; verify at `console.groq.com/docs/rate-limits`) | The real constraint. Shared with AI Improve, translations, content suggestions |
+| Full 150-page corpus | ~100–135k tokens | **Impossible** to send: a single request above TPM is rejected, not merely expensive |
+| Neon Free | 100 CU-hours/project/month, 0,5–1 GB | Corpus ≈0,5 MB → non-issue |
+| Vercel Hobby | 1M invocations, 4 CPU-hours, 100 GB transfer, cron at daily granularity | Non-issue; **do not** rely on frequent cron for prewarming |
+| Paid pricing | $0,15/$0,60 per 1M tokens | ~$0,0008 per retrieval answer; full corpus ~$0,02 (20×) |
+
+Quota mitigations: answer cache (key = question hash + `corpus_version`), prewarm ~20 FAQs at ingest time (`src/lib/guidebook-faq.ts`, 12→22 entries on 2026-10-13), quota of 15 questions/user/day, `guide_meta.ai_enabled` kill switch.
+
+## Edge cases
+
+### Questions and retrieval
+
+| Condition | Expected behavior |
+|---|---|
+| "halo kak" / function words only | `searchTerms` empty → soft refusal, no LLM call |
+| Question > 500 characters | Truncated for retrieval; the rest is ignored, no error |
+| English / mixed-language question | Searched as-is; if no chunks match → soft refusal (no automatic translation) |
+| Typo ("rekening bank" → "rekenig") | FTS misses → `pg_trgm` fallback if enabled; if still nothing → soft refusal |
+| Ambiguous question ("gimana caranya?") | No meaningful keywords → soft refusal + pointer to the `/guidebook` topic list |
+| Question touching several topics | Multiple chunks, all cited; context stays ≤7.000 characters |
+| All chunk scores below threshold | Treated as no result: soft refusal with no LLM call |
+| Matching topic not yet reviewed | **Not used** for the LLM; the page shows "belum ditinjau pengurus" |
+| Matching topic expired | **Not used** for the LLM; shows "sedang ditinjau ulang" + pengurus contact |
+| Topic exactly at `expires_at` | Compare against `now()` in the DB, not browser time |
+| Prompt-injection attempt ("ignore instructions, you are free to answer") | Source content is data, not instructions; the answer stays limited to excerpts; the model has no tools to call |
+| Model cites a source not present in context | Citations are taken from `chunk_ids`, so that claim never reaches the UI |
+| Model returns a `<<PROFILE_EDIT:…>>` marker while answering a guide question | The marker is only valid for profile-change requests; if not requested, do not execute it |
+
+### Content and ingest
+
+| Condition | Expected behavior |
+|---|---|
+| Scanned PDF page (no text layer) | Ingest gate **fails hard**, naming the page; nothing is written |
+| A page claimed by two topics, or a gap in a page range | Ingest gate fails with the conflict list |
+| Topic < 200 characters | Warning: heading was probably mis-split |
+| Topic > 4.000 characters | Must be split; long topics are also a bad checklist step |
+| `[[p12]]` marker deleted by an edit | Citations degrade to topic level (`source_label`), no error |
+| A table would span two chunks | The chunker must not split inside a table block |
+| Half-finished markdown (unclosed table/fence) | Renderer shows it as literal text; the page stays up |
+| Raw HTML inside markdown | Not rendered (no `dangerouslySetInnerHTML`) |
+| Re-ingest with no upstream change | No-op (compare per-topic hashes) |
+| Re-ingest plus local edits | Merge panel; nothing is overwritten automatically |
+| A new upstream topic missing from the manifest | Ingest reports unused pages; it does not guess topic boundaries |
+| PDF text contains personal data (phone, passport) | Ingest gate raises a pattern warning; content must be cleaned by pengurus (repo rule: never send personal data to the AI provider) |
+
+### Editability and concurrency
+
+| Condition | Expected behavior |
+|---|---|
+| Two pengurus edit the same topic | The second save is rejected (`expected_updated_at` moved) with a clear message |
+| Edit while the cache is warm | `corpus_version++` → old answers are ignored automatically |
+| `chunker_version` changes | Bump `corpus_version`; cache dropped; index rebuilt by the new chunker |
+| Pengurus deletes a topic | CASCADE removes chunks + progress; the public page disappears too |
+| Topic published then hidden (`isPublic=false`) | Gone from the checklist and retrieval on the next request |
+| Editor presses save twice | `upsert` is idempotent, no duplicate rows |
+| Revision history grows | Retention policy: keep the last 20 revisions per topic (periodic pruning) so `audit_logs` does not become a dump |
+
+### Quota, failures, degradation
+
+| Condition | Expected behavior |
+|---|---|
+| Groq 429 (TPM) | Honor `Retry-After`; **do not** fall through to the next model (same quota); answer retrieval-only |
+| Groq 5xx / 20 s timeout | Retrieval-only; `degraded_reason` recorded |
+| `GROQ_API_KEY` missing | Retrieval-only path, not a crash |
+| Model retired (404) | Model fallback chain; if all fail → retrieval-only |
+| 200 with empty `content` | Try the next model alias; if every alias returns empty, `assistantChat` throws and the reply is retrieval-only. An empty reply is never written to the answer cache |
+| Per-user daily quota exhausted | "kuota tanya hari ini habis" message + retrieval-only; cache hits are not counted |
+| Daily quota reset | Based on the **Asia/Shanghai (UTC+8, no DST)** date so it never resets at a user's odd hour |
+| Three questions within 10 seconds | The third will likely 429 → retrieval-only (document it; do not promise streaming) |
+| Neon cold start after idle | Latency increases; out of our control — the answer cache + `unstable_cache` on article reads reduce how often it is hit |
+| Cached answer whose topic was deleted | Cannot be used: `corpus_version` bumps when a topic is deleted |
+| Kill switch off | Every question goes straight to retrieval-only |
+
+### Progress and accounts
+
+| Condition | Expected behavior |
+|---|---|
+| Double check / rapid clicks | `insert … onConflictDoNothing` + `delete`; the `(user_id, article_id)` PK guarantees idempotency |
+| Not logged in | The checklist is still publicly readable; checking a box triggers login (no anonymous progress) |
+| Topic deleted after being checked | CASCADE removes the progress, no orphan rows |
+| User deletes their account | CASCADE removes progress + `ai_usage`; `ai_query_log.user_id` becomes NULL (the log stays) |
+
+## KPIs
+
+| KPI | Target | Data source | How to measure |
+|---|---|---|---|
+| **14-day checklist completion** (north star) | ≥50% of new maba check ≥8 steps | `guidebook_progress` | Periodic console query (a small report) |
+| Recall@4 on the golden set | ≥0,85 | `docs/guidebook-golden.json` | Offline harness (`src/db/eval-guidebook.ts`), run on every retrieval change |
+| Fabricated answers (visa/health specifically) | 0 | Manual review of 10 test questions | Pre-release review checklist + quarterly |
+| Valid citations (every answer has ≥1 published `chunk_id`) | 100% | `ai_query_log` | `used_llm AND chunk_ids IS NULL` must be 0 |
+| Cache hit ratio | ≥60% within the first 30 days | `guide_answers.hits` | Hits / total questions |
+| Daily Groq calls | ≤400 (60% headroom under the 1.000 RPD) | `ai_query_log` | Daily chart; alert if >400 two days in a row |
+| p95 latency (cache hit) | ≤800 ms | `ai_query_log.latency_ms` | Percentile |
+| p95 latency (LLM path) | ≤6 s | `ai_query_log.latency_ms` | Percentile |
+| Degradation rate (retrieval-only) | ≤5% | `ai_query_log.degraded_reason` | Ratio |
+| Voted answers judged unhelpful | ≤15% of votes | `ai_query_log.feedback` | `feedback = 'down'` / all rows with `feedback IS NOT NULL`; a topic with a run of `down` votes is the review queue for the corpus |
+| Published topics that are reviewed | 100% before release | `help_articles.reviewed_at` | Console query |
+| Expired topics still being answered | 0 | `guide_chunks` × `help_articles.expires_at` | Harness regression check |
+| Content fix time (spot typo → live) | <10 minutes, no deploy | `audit_logs` (edit) + `guide_meta.updated_at` | Manual sample of the first 5 edits |
+| Merge debt (topics where `parsed_markdown ≠ content`) | ≤5 topics idle >30 days | DB | Periodic query |
+
+## Evaluation (golden set)
+
+- `docs/guidebook-golden.json`: ≥30 real maba questions (5 about visa/residence permits, 5 about money/SIM cards, 5 small-talk/ambiguous) with `expected_slug` plus `must_refuse` for anything outside the corpus.
+- Harness `src/db/eval-guidebook.ts` (via `npx tsx --env-file=.env`, same pattern as `seed-*.ts`): prints recall@4, the misses, and the refusal decision — **without calling the LLM**, so it can run in a manual CI step.
+- Full answer evaluation (with the LLM) runs manually once per prompt change, at most ~30 calls.
+- Questions from `ai_query_log` (failures/refusals) become golden-set candidates each month.
+
+What the harness actually contains (2026-10-12):
+
+- 38 questions: 6 about the one reviewed topic (transportasi), 26 marked `pending_review` (their topics are still drafts, so the gate must return **zero chunks** for all of them), 6 `must_refuse` (small talk, jokes, "who won the 2026 World Cup", bitcoin). All 8 corpus topics are covered, and every `expected_slug` was checked to exist with `is_public = true`, so no case is unanswerable by construction.
+- Exit code 1 when recall@4 < 0,80 or when any `pending_review`/`must_refuse` question returns a chunk. The 0,80 in the harness is the push gate; the 0,85 in the KPI table above is the post-maintenance target — the difference is written in the harness header so nobody loosens it silently.
+- The `pending_review` mark in the JSON is **manual**: when a topic gets reviewed, delete its questions from that group in the same commit. The harness prints that reminder on every run, so a forgotten flag shows up as a red harness instead of a silent one.
+- Run `npx tsx --env-file=.env.local src/db/eval-guidebook.ts` (the command reads the DB, so `.env.local`, not `.env`).
+
+**Known risk: recall is measured against one reviewed topic.** Lexical `ILIKE` matching plus the relevance floor works at today's corpus size (recall@4 6/6 = 1.000, see [Verification](#verification-and-definition-of-done)). Once the other seven topics are reviewed, recall@4 is the number that says whether the matching holds up. If it drops below 0,80, the next step is the stemmed index that already exists (`guide_chunks.text_stemmed`) with `to_tsvector`/`websearch_to_tsquery` instead of `ILIKE` — not embeddings, which would add a vendor.
+
+## Security, privacy, i18n
+
+- **Never send personal data to Groq** (repo rule): guide excerpts must be free of personal data; the user question is redacted before logging (`question_redacted`), the raw text is not stored.
+- `ai_query_log` retention: 90 days, then deleted (periodic pruning script; Hobby cron is daily-granularity, so monthly manual pruning is also fine).
+- The model never receives session data (passport, phone, census) — only guide excerpts plus the question.
+- Citations and links are rendered from the DB; model output is treated as plain text.
+- i18n: new UI keys go into `id.ts` **and** `en.ts`. Guide **content is Indonesian-only in the first version**; this repo's convention for bilingual content is parallel `*_en` columns (`places`, `universities`, `districts`) and `help_articles` has none — adding 150 pages of manual translation is a recurring burden with no owner. Do not use `translateFields()` for visa content.
+
+## Implementation plan
+
+| Phase | Content | Main files | Done when |
+|---|---|---|---|
+| **P0 — Hygiene** *(done)* | `/help` selects only `(id, section, title, slug)`; `groq.ts` gets a 20 s timeout + stops the chain on 429; drop the unordered `.limit(40)`; log `usage` | `src/app/help/page.tsx:16`, `src/lib/groq.ts`, `src/lib/guidebook-search.ts` | The index page payload drops (no longer shipping every article body), no fetch is left without a timeout, a 429 no longer burns the next model's quota |
+| **P1 — Schema + pure functions** *(done)* | SQL migration `0046_guidebook.sql`; `guide-chunker.ts`; `markdown-lite.tsx`; harness `scripts/check-guidebook.ts` | `drizzle/0046_guidebook.sql`, `src/db/schema.ts`, `src/lib/guide-chunker.ts`, `src/lib/markdown-lite.tsx`, `scripts/check-guidebook.ts` | `tsc`/`npm run lint` clean; `npm run check:guidebook` 24/24 green; chunking the 5 real extractions gives 133 chunks with page ranges that match the PDFs (0–37, 0–68, …); migration applied and re-applied idempotently on a throwaway Postgres 16 and on the local Docker database ([Database Lokal Docker](./Database%20Lokal%20Docker.md)). The migration is **not applied to the Neon production database yet** |
+| **P2 — Console (editability)** *(done; the three acceptance points below were clicked through in a browser on 2026-10-10)* | Topic form (phase/order/review/expiry), preview, diagnostics, history + restore, merge panel | `src/app/console/docs/**`, `src/app/actions/admin-docs.ts`, `src/components/console/{article-form,markdown-editor,status-row}.tsx`, `src/lib/guidebook-topic.ts` | A new topic shows up in the checklist and retrieval **with no deploy**; an edit bumps `corpus_version`; a concurrent save is rejected |
+| **P3 — Ingest** *(script + 5 topik jalan; panel merge sudah ada; spot-check & merge pertama belum)* | JSON-per-page → per-topic markdown → `parsed_markdown`; quality gate; first merge | `src/db/ingest-guide.ts`, `src/lib/guidebook-manifest.ts`, `src/lib/guidebook-faq.ts` | All 5 PDFs ingested, 10 random pages manually checked, no empty/conflicting pages, local edits not clobbered |
+| **P4 — Retrieval & UX** *(done 2026-10-12, except the Route Handler in rule 4 — see "What shipped against these rules")* | Lexical retrieval + review/expiry gate + relevance floor + refusal + cache per `corpus_version` + daily quota + retrieval-only degradation + prewarm; `/guidebook` page + checklist action; chat wiring; docs + SOP | `src/lib/guide-answer.ts`, `src/lib/guidebook-search.ts`, `src/lib/guidebook-faq.ts`, `scripts/prewarm-guide.ts`, `src/app/guidebook/**`, `src/app/actions/guidebook-progress.ts`, `src/db/eval-guidebook.ts`, `docs/**` | Golden set passes (`LULUS`, recall@4 1.000, 0 leaks); `/guidebook` verified over HTTP including the no-JavaScript form (`docs` entry under Verification); SOP article exists in `src/db/seed-help-articles.ts` under slug `panduan-maba` and is seeded onto the target DB with `npx tsx --env-file=.env src/db/seed-help-articles.ts panduan-maba`; KPIs are measurable from `ai_query_log` |
+
+P0 can be done right now without waiting on the parser; P2 deliberately precedes P3 so the edit path is proven before 150 pages land. The `guidebook` module key and the 6-month default for new topics shipped with P2 (2026-10-11) — see [Decisions](#decisions-answered-2026-10-11).
+
+## Verification and Definition of Done
+
+- `npx tsc --noEmit`, `npm run lint`, `npm run build` before the PR — **this repo has no test runner**, so never claim "tests passed".
+- Offline harness for the chunker/retrieval (not a new test framework).
+- Browser check: `/guidebook` on mobile + light/dark mode; check a progress box; one question that gets answered, one that is refused, and one with Groq disabled (kill switch).
+- Verify the migration separately: inspect the SQL, apply it through `apply-sql.ts` to the correct database; **never** use `db:push`.
+- What P2 has actually been run against (branch `feat/chatbot`, no `DATABASE_URL` on the machine that wrote it): `tsc`/`lint` clean; `npm run build` **passes end to end** once a database is reachable (87/87 static pages, 2026-10-10, against the local Docker database). The same command used to stop at `Failed to collect page data` on the machine without a `DATABASE_URL`, so that was an environment gap rather than a phase defect. Building while `next dev` runs fails inside `.next/dev/types/validator.ts` because the dev server rewrites that file while the build reads it, so stop the dev server first; `npm run check:guidebook` 24/24; `drizzle/0046_guidebook.sql` applied twice to a throwaway Postgres 16, and the two P2 acceptance criteria ran there for real: `INSERT ... ON CONFLICT (one_row) DO UPDATE SET corpus_version = corpus_version + 1` moved 1 → 2 → 3 (upsert was run twice), and the second save carrying a stale `md5(title|section|content)` signature updated 0 rows while the first updated 1. The topic form and its markdown editor were driven through a real DOM (jsdom, throwaway) — preview tab, `<script>` not executed, opening preview and saving submits the full content, counter follows typing. **Not** run: saving a topic from the browser against a real database, and the console pages themselves.
+
+  Since 2026-10-10 that gap is closed: the console pages were driven in Chromium against the local Docker database ([Database Lokal Docker](./Database%20Lokal%20Docker.md)) through `npm run dev -- -p 3100`. A topic created from `/console/docs/new` with a phase showed up on `/console/docs/guidebook` under that phase — `phase`, `sort_order` and `source_label` in the row, one chunk with page range 12–13, and `corpus_version` rising by one per save. A stale second save was rejected with "Artikel ini sudah disimpan pengurus lain" and the first save's content stayed in the database; `reviewState=mark` filled `reviewed_at`/`reviewed_by`; clearing the phase deleted that topic's chunks and left no orphan rows; the diagnostics panel reported a past `expires_at` as `Kedaluwarsa: 1`, and read green once it was cleared. The check scripts were throwaway; the recipe for repeating this is in the local-Docker doc.
+- A feature counts as done only when this doc exists (and is listed in `docs/README.md`) **and** a Help Center article exists as the pengurus SOP — see [Documentation & Help Center](./Documentation%20&%20Help%20Center.md).
+
+### Chatbot di jawaban nyata (2026-10-12)
+
+Jalur jawaban diuji di Chromium pada deployment pratinjau (`ppit-nanjing-preview.vercel.app`, deployment target production di project `ppit-nanjing-preview`), login `admin@ppit-local.test`. Hasilnya:
+
+- Pertanyaan Inggris "How do I get from Lukou airport to the campus?" dijawab Bahasa Inggris dan menyebut judul panduannya (*Sering Dipakai - Transportasi dari Bandara ke Kampus*); versi Bahasa Indonesia dijawab Bahasa Indonesia. Sebelum perubahan bahasa (commit `70fae8e`), pertanyaan Inggris dijawab satu paragraf Bahasa Indonesia walau judulnya benar. (Sejak 2026-10-14 judulnya tidak lagi muncul di dalam teks balasan; bukti pengambilannya sekarang larik `citations`, dan judulnya cuma tampil di kartu sumber.)
+- Pertanyaan Inggris yang tidak punya sumber ("How much does a residence permit renewal cost this year?") dijawab menolak dengan sopan dan mengarahkan ke pengurus, dalam Bahasa Inggris; tidak ada angka yang dikarang.
+- Tidak ada error di console browser. Kunci Groq di mesin lokal menjawab 403 di `api.groq.com`, jadi uji bahasa memang hanya bisa jalan di deployment.
+- Filter artikel non-publik diuji terpisah terhadap database lokal: `findGuideChunks("Bagaimana cara isi ulang kartu Yikatong?")` mengembalikan 0 potongan, padahal artikel "Kartu Transportasi" (non-publik, satu-satunya yang menyebut Yikatong) ada di tabel yang sama. Tidak ada judul atau isi artikel non-publik yang masuk konteks.
+- Sesi setelah login lewat form sekarang langsung terpakai tanpa muat ulang: alamat beranda menampilkan "Admin Lokal" dan bola Asisten AI sudah bisa diklik pada render pertama, sementara bagi pengguna anonim bola itu redup (`disabled`) dan hanya bola Masukan yang aktif.
+
+### Guidebook maba masuk korpus (2026-10-12)
+
+Delapan topik sudah benar-benar ada di database lokal, bukan cuma di dokumen rencana. Sumbernya markdown di `docs/guidebook/`, dipetakan per topik oleh `src/lib/guidebook-manifest.ts` (judul, bagian, fase, urutan, label sumber), lalu ditulis `src/db/ingest-guide.ts`:
+
+| Topik | Fase | Urutan | Karakter |
+|---|---|---|---|
+| Sering Dipakai - Transportasi dari Bandara ke Kampus | arrival | 5 | 1.157 |
+| Tentang PPIT - Profil PPIT Nanjing | pre-arrival | 10 | 4.168 |
+| Tentang Nanjing - Kota Nanjing | pre-arrival | 20 | 3.114 |
+| Sebelum Berangkat - Dokumen dan Berkas Awal Datang | pre-arrival | 30 | 2.772 |
+| Kedatangan - Visa dan Izin Tinggal | arrival | 40 | 3.220 |
+| Sering Dipakai - Aplikasi, Pembayaran, dan Kartu SIM | first-week | 50 | 3.995 |
+| Kedatangan - Tempat Tinggal: Asrama dan Kos | first-week | 60 | 3.968 |
+| Sering Dipakai - Biaya Hidup Bulan Pertama | first-month | 70 | 3.994 |
+
+Semuanya terbit (`is_public = true`), total 26.388 karakter, 40 potongan di `guide_chunks`, `corpus_version` naik dari 14 ke 24. Tiga topik terakhir ditulis batch kedua (2026-10-12) dari dua sumber yang sama: *China Student Starter Guide VER4* (bagian Canteens and daily meals, Core expenses, Managing your first-month budget, international vs domestic dorms) dan *A Guide to Nanjing 2026* (penyedia kartu SIM, aplikasi transportasi). Tidak ada tabel di ketiganya, dan setiap angka biaya sudah dicocokkan ulang ke baris sumbernya.
+
+`content` yang sudah disunting pengurus tidak ditimpa: ingest cuma memperbarui metadata dan membiarkan isinya, kecuali `--force`. Profil PPIT Nanjing naik dari 2.664 ke 4.168 karakter dengan cara itu, bukan lewat ingest ulang.
+
+Pencariannya diuji lewat skrip sekali-pakai terhadap database lokal, karena `api.groq.com` menolak IP mesin ini (403, sama seperti sebelumnya) sehingga langkah modelnya tidak bisa dijalankan di sini:
+
+| Pertanyaan | Artikel yang terambil |
+|---|---|
+| "how to NUAA from airport" | Transportasi dari Bandara ke Kampus |
+| "how is the visa work?" | Visa dan Izin Tinggal |
+| "what is PPIT" | Profil PPIT Nanjing |
+| "where is nanjing at?" | Kota Nanjing |
+| "kartu transportasi kampus itu apa?" | Transportasi dari Bandara ke Kampus |
+| "cara perpanjang paspor bagaimana?" | Dokumen dan Berkas Awal Datang |
+| "berapa biaya hidup di Nanjing per bulan?" | Biaya Hidup Bulan Pertama |
+| "bagaimana cara isi pulsa kartu SIM?" | Aplikasi, Pembayaran, dan Kartu SIM |
+| "apakah asrama kampus dijamin untuk mahasiswa internasional?" | Tempat Tinggal: Asrama dan Kos |
+| "aplikasi apa yang dipakai untuk pesan makanan?" | Aplikasi, Pembayaran, dan Kartu SIM |
+
+Halaman publiknya juga dicek di deployment pratinjau: `/help` sudah memuat ketiga judul baru, dan `/help/biaya-hidup-bulan-pertama`, `/help/tempat-tinggal-asrama-dan-kos`, `/help/aplikasi-pembayaran-dan-sim-card` menjawab 200 dengan isi yang benar ("Perkiraan total bulan pertama", 转接头, "Top-up Credit"). Langkah model tidak diuji ulang di sini: alasan Groq 403 masih sama, dan Chromium di mesin ini gagal start karena `libnss3` tidak ada. Yang belum diverifikasi: jawaban model sesungguhnya untuk topik baru di deployment, satu pertanyaan lewat chat setelah login.
+
+Yang berubah karena ini: pertanyaan Inggris sebelumnya tidak menemukan apa pun, karena artikelnya Indonesia dan tidak ada satu kata pun yang cocok. `SYNONYMS` di `src/lib/guidebook-terms.ts` memetakan istilah Inggris ke kata yang dipakai korpus, dan `questionEntities` menangani pertanyaan yang isinya cuma nama. Artikel non-publik tetap tidak ikut: `findGuideChunks("Bagaimana cara isi ulang kartu Yikatong?")` mengembalikan 0 potongan (artikel Yikatong-nya internal).
+
+`npm run check:guidebook` 31/31 hijau. Tujuh pemeriksaan barunya soal kata kunci, bukan chunker: pertanyaan Inggris dapat istilah Indonesia, sinonim tidak menendang kata asli, kata fungsi Inggris dibuang, jumlah kata kunci dibatasi, pertanyaan entitas tidak menyisakan kata kunci, entitasnya tetap dikenali untuk pencarian cadangan, dan sapaan tidak jadi kata kunci. Harness ini jalan tanpa database karena logikanya dipisah ke `src/lib/guidebook-terms.ts`.
+
+### Delapan topik baru masuk korpus (2026-10-14)
+
+Delapan topik ditulis di `docs/guidebook/` beserta terjemahan Inggrisnya di `docs/guidebook/en/`: transportasi dalam kota, kuliner dan tempat makan, kesehatan dan darurat, musim dan cuaca, nomor penting dan kontak, spot wisata dan rekreasi, perpanjangan paspor dan SKB, bahasa Mandarin sehari-hari. Semuanya masuk lewat perintah yang sama seperti topik lama, dan hasilnya `8 topik, 44 potongan pencarian, corpus_version naik 1` dengan `publik=true`. `drizzle/0050_review_new_guidebook_topics.sql` (satu `UPDATE` ke `help_articles`) menandai tinjauannya, jadi tidak ada topik baru yang nyangkut di gerbang tinjauan.
+
+Harness-nya sekarang 66 pertanyaan dan recall@4 **60/60 = 1,000** (ambang 0,80, KPI 0,85), enam pertanyaan `must_refuse` semuanya nol potongan. Angka itu bukan hasil sekali jalan: percobaan pertama 52/58 = 0,897 dengan enam luput, dan tiap luput punya sebab berbeda.
+
+| Pertanyaan yang luput | Sebabnya | Yang diubah |
+|---|---|---|
+| "Makanan khas Nanjing apa yang harus dicoba?" | "makanan" dan "makan" punya batang kata yang sama, jadi artikel kuliner cuma mencocokkan dua batang kata | `SYNONYMS` makanan → masakan, hidangan, kuliner |
+| "How do I see a doctor…", "Where do I renew my Indonesian passport…", "Useful Chinese phrases…" | pertanyaan Inggris di korpus Indonesia, istilahnya belum ada di peta sinonim | `SYNONYMS` doctor, international, renew, indonesian, chinese, phrases, daily, first, month |
+| "Ada rekomendasi taman dan museum untuk akhir pekan?" | frasa "akhir pekan" ada di artikel cuaca, tidak ada di artikel wisata | paragraf pembuka "Catatan" di artikel wisata, lalu ingest ulang `--force` |
+| "Kalau saya sakit di Nanjing, apa yang harus dilakukan?" | kata "sakit" cuma mencocokkan satu batang kata di artikel kesehatan | bagian "Keluhan Ringan" di artikel kesehatan, plus `SYNONYMS` sakit → demam, klinik, obat, berobat |
+
+Dua hal soal ingest ulang: isi artikel yang sudah disunting pengurus tidak ditimpa tanpa `--force` (pesannya `metadata saja, suntingan pengurus dibiarkan`), sementara isi Inggris selalu ditimpa karena itu hasil terjemahan mesin. Sebelum memaksa, isi di DB dibandingkan dulu dengan berkasnya (sama, jadi tidak ada suntingan yang hilang). Dua pertanyaan gejala ditambahkan ke `docs/guidebook-golden.json` supaya perbaikan "sakit" itu ikut terjaga.
+
+Yang dijalankan di mesin ini, terhadap database Docker lokal dan dev server yang sudah jalan di port 3100:
+
+- `npm run check:guidebook` 31/31, `npx tsc --noEmit` bersih, `npm run lint` tanpa error. (Sejak 2026-10-14 jumlahnya 36/36; lima pemeriksaan baru soal format pinyin.)
+- Delapan URL `/help/<slug>` menjawab 200 dengan isi yang benar ("Masakan Khas", "Rumah sakit", "akhir pekan", "Frasa"), dan kedelapan slug tertaut dari indeks `/help`.
+- `askGuide` untuk empat pertanyaan (termasuk pertanyaan Inggris soal paspor) mengambil konteks dari topik baru; langkah modelnya jalan di mesin ini lewat jalur `auto/best-fast`, bukan Groq. Waktu itu judulnya ikut disebut di teks; sejak 2026-10-14 sumbernya hanya tampil di kartu sumber di bawah balasan.
+
+Yang belum: pass visual di browser dan di deployment pratinjau, plus jawaban model untuk kedelapan topik di sana. Chromium masih tidak start di mesin ini (`libnss3`), jadi buktinya baru `curl` HTML dan panggilan `askGuide` langsung.
+
+### Pertanyaan Inggris dijawab dari bagian yang benar (2026-10-15)
+
+Retrieval sudah lama mengambil kata kunci dari kolom Indonesia saja, jadi pertanyaan Inggris hanya ketemu lewat sinonim (`airport` → bandara). Setelah terjemahan masuk `title_en`/`section_en`/`content_en`, dua hal yang masih salah:
+
+- **Skor hanya satu versi.** Judul, bagian, dan isi sekarang dinilai dua kali (Indonesia dan Inggris) dan kata kunci yang cocok digabung dari keduanya, sementara skornya tetap maksimum salah satu versi. Pertanyaan "How do I extend my passport?" sebelumnya menghasilkan nol potongan: kata kuncinya `extend`, `passport`, `paspor` — `passport` cuma ada di teks Inggris, `paspor` cuma di teks Indonesia, dan salah satu versi sendirian tidak pernah menutup dua dari tiga kata kunci.
+- **Isi artikel dipotong dari atas.** Tiap artikel dapat 1.800 karakter di konteks model, dan yang diambil selalu paragraf pembuka. Pertanyaan "How do I ship my boxes to Nanjing before I fly?" dijawab "panduannya tidak memuat cara kirim barang" — bagian `## Kirim Barang Pintu ke Pintu` ada di karakter ~3.400 dari artikel packing, di luar potongan yang dikirim. Sekarang `windowAroundTerms` (`src/lib/guidebook-terms.ts`) memilih blok 1.800 karakter tempat kata kunci pertanyaannya paling banyak muncul; seri dimenangkan blok pertama, jadi artikel tanpa kata kunci di isinya tetap dikirim dari awal. Panjang konteksnya tidak berubah, jadi biaya token per pesan sama.
+- **Kunci cache naik ke `ANSWER_FORMAT_VERSION = 7`.** Isi konteks yang dikirim ke model berubah, jadi jawaban cache lama (termasuk hasil prewarm) tidak boleh dipakai lagi.
+- **Penanda yang kepotong token tidak lagi tampil di jawaban.** Jawaban panjang berhenti tepat di tengah `<<FOLLOWUPS:[...]>>` (batas 540 token), regex penutupnya tidak cocok, dan sisa JSON-nya ikut terkirim ke gelembung chat. Terjadi pada jawaban panjang seperti daftar alamat masjid. `stripPartialMarkers` (`src/lib/guide-answer.ts`) sekarang memotong penanda yang tidak punya penutup, di jalur jawaban baru maupun pembacaan cache, jadi yang hilang cuma tombol sarannya, bukan kebersihan teks. Penanda `<<PROFILE_EDIT:` yang utuh dibiarkan karena dibaca Server Action.
+- **Suara pengguna punya panel di console.** Votenya selama ini hanya tersimpan di `ai_query_log.feedback` tanpa satu pun layar yang membacanya. `/console/docs/guidebook` sekarang punya panel **Suara Pengguna** (modul `guidebook`): jumlah suka dan tidak suka dari seluruh suara, lalu 50 suara terakhir dengan yang tidak suka di atas — masing-masing membawa pertanyaannya, status jawabannya (dijawab model / dari cache / tanpa model, plus alasan degradasi), dan tautan ke tiap artikel yang dikutip saat menjawab. Di situ juga terlihat topik mana yang paling sering dinilai tidak membantu. Angka tidak suka bukan alarm korpus di panel Diagnostik: satu suara tidak selalu berarti isinya salah.
+- **Tombol suka/tidak suka terlihat ditekan, bukan cuma berubah warna ikon.** Pilihannya sekarang jadi tombol terisi (suka: `bg-primary-container`, tidak suka: `bg-error`) dengan ikon yang ikut terisi, dan tulisan "THANKS FOR YOUR FEEDBACK" turun ke pembaca layar (`sr-only` + `role="status"`) supaya baris tidak melompat saat suara terkirim. Suara tetap tersimpan di `ai_query_log.feedback` lewat `rateAnswerAction`, satu suara per jawaban, hanya bisa ditulis pemilik barisnya.
+- **`max_tokens` jawaban naik 540 → 700.** Pertanyaan masjid di atas menunjukkan batasnya: daftar tiga masjid plus jalur bus dan exit metro menghabiskan 540 token sebelum penanda saran ditutup. Batasnya dipakai jalur live dan prewarm, jadi jawaban cache tidak lebih pendek dari jalur live. Total per pertanyaan jadi ~3.850 token (~2 pertanyaan/menit di batas 8.000 TPM).
+- **Kata tanya Indonesia berhenti jadi kata kunci.** "masjid di Nanjing di mana saja?" menyisakan `masjid` dan `mana` sebagai kata kunci, dan lantai relevansinya menuntut keduanya cocok di satu artikel — hasilnya nol potongan, padahal pertanyaannya juga ada di daftar FAQ yang dipakai prewarm, jadi saran pertanyaan buatan sendiri berujung "belum ada panduan yang cocok". `mana`, `kemana`, `darimana`, `berapa`, dan `seberapa` sekarang ada di `STOPWORDS` (`src/lib/guidebook-terms.ts`), jadi pertanyaannya menyisakan satu kata kunci dan menjawab dari `tempat-ibadah-di-nanjing`.
+- **Golden set bertambah pertanyaan Inggris** (`docs/guidebook-golden.json`): tempat ibadah, packing dan kirim barang, VPN dan akses internet, hari libur, minggu pertama, magang/SIM, perpanjangan paspor. Isinya sekarang 98 pertanyaan — 23 berbahasa Inggris, 6 di antaranya pertanyaan yang memang harus dijawab penolakan. `npx tsx --env-file=.env.local src/db/eval-guidebook.ts` menilai 92 pertanyaan beralas jawaban dengan recall@4 1,000 dan keenam pertanyaan "harus menolak" tetap nol potongan.
+
+Pertanyaan Inggris yang jawabannya ada jauh di dalam artikel panjang tetap bisa meleset kalau tidak satu pun kata kuncinya muncul di blok yang benar: pencocokannya kata utuh, jadi "ship" tidak menemukan "Shipping". Menambah bentuk imbuhan Inggris adalah pekerjaan berikutnya kalau angkanya menunjukkan itu perlu.
+
+### Celah terhadap PDF sumber ditutup: 6 topik baru, 14 artikel lama diperluas (2026-10-14)
+
+Perbandingan korpus dengan empat PDF sumber yang diringkas di `/tmp/ppit-coverage/RINGKASAN-GAP.md` menemukan 21 tema celah. Yang ditulis ke korpus:
+
+- Enam topik baru: `vpn-dan-akses-internet`, `packing-dan-kirim-barang`, `minggu-pertama-checklist`, `tempat-ibadah-di-nanjing`, `kerja-magang-dan-sim`, `festival-dan-hari-libur`. Artikel ini Indonesia saja; `fileEn` sengaja dikosongkan di manifest, dan halaman `/help` jatuh ke teks Indonesia tanpa error.
+- Empat belas artikel yang sudah ada di korpus diperluas atau diberi koreksi angka: aplikasi-pembayaran-dan-sim-card (katalog app, 12306, mini program Alipay, Wise/rekening), spot-wisata-dan-rekreasi dan kota-nanjing (tempat yang hilang, tiket, alamat candi, 古鸡鸣寺 Exit 4 → **5**; musim semi di `kota-nanjing` 28–32 → **8–22**, angka 28–32 dari tabel musim buku panduan itu kutipan yang salah tempat), transportasi-dalam-kota dan transportasi-dari-bandara-ke-kampus (simpul transportasi, kebiasaan peta, HelloRide, konter SIM bandara, tiba tengah malam), kesehatan-dan-darurat (biaya berobat, MCU 600–650 RMB), visa-dan-izin-tinggal (住宿登记 lima kategori, kantor 出入境 No. 173 Baixia Road), dokumen-dan-berkas-awal-datang (sistem empat lapis), kuliner-dan-tempat-makan (biaya makan per jenis masakan), bahasa-mandarin-sehari-hari (frasa pesan makan), biaya-hidup-bulan-pertama (tarif metro 3–8 → **2–9**), musim-dan-cuaca (Lubo Garden Exit 1 → **2**, catatan bahwa sumber keliru menulis 28–32 °C untuk musim semi), tempat-tinggal-asrama-dan-kos (belanja perlengkapan), nomor-penting-dan-kontak (kantor 出入境).
+
+Jangan pertahankan dua topik untuk satu tema. Materi SIM-perangkat-lunak dan download aplikasi sudah ada di `aplikasi-pembayaran-dan-sim-card`, jadi materi VPN masuk topik tersendiri karena pertanyaannya muncul sendiri ("WhatsApp diblokir, pakai apa"), bukan karena beda bagian buku. Sebaliknya materi SIM (izin mengemudi) ditempelkan ke `kerja-magang-dan-sim` dan bukan jadi topik sendiri, karena aturan kerja dan syarat SIM berasal dari bab yang sama dan volumenya kecil.
+
+Kandidat lain dari daftar celah ditempelkan ke artikel yang sudah ada, bukan jadi topik baru: wali untuk mahasiswa di bawah 18 tahun masuk ke `visa-dan-izin-tinggal` (bagian wali, syarat berkas, peringatan notarisasi berjalan mingguan), dan Ruang Publik — Perpustakaan Nanjing, terminal bus, 南京汽车客运站 — masuk ke `spot-wisata-dan-rekreasi` dan `transportasi-dalam-kota`, karena tiap butirnya cuma satu-dua baris dan artikelnya sudah memuat alamat-bus-exit untuk tempat lain di kota yang sama.
+
+Urutan kerjanya: 11 agen menulis berkas (6 berkas baru, 11 berkas lama), lalu integrator menyatukan manifest, `guidebook-golden.json`, `guidebook-faq.ts`, dan migrasi tinjauan. Ingest penuh `--force` menulis ulang seluruh korpus dari berkas (dicek dulu: `content` sama dengan `parsed_markdown` untuk semua baris, jadi tidak ada suntingan pengurus yang hilang), hasilnya `23 topik, 146 potongan pencarian, corpus_version naik 1`. `drizzle/0051_review_gap_topics.sql` menandai keenam topik baru sebagai sudah ditinjau.
+
+Harness-nya sekarang 87 pertanyaan dan recall@4 **81/81 = 1,000**. Tiga luput pertama punya sebab yang berbeda lagi, dan semuanya soal kosakata, bukan retrieval yang salah artikel:
+
+| Pertanyaan yang luput | Sebabnya | Yang diubah |
+|---|---|---|
+| "Di mana gereja Kristen berbahasa Inggris di Nanjing?" | artikel rumah ibadah menyebut nama dalam bahasa Inggris (Holy World Christian Church) dan belum menyinggung bahasa kebaktian, jadi cakupan kata kuncinya di bawah ambang | satu kalimat di `tempat-ibadah-di-nanjing.md` bahwa sumber tidak menyebut bahasa kebaktian, plus `SYNONYMS` gereja/church, masjid/mosque, klasternya |
+| "Mahasiswa asing boleh kerja part time di China?" | artikelnya menulis "kerja paruh waktu", pertanyaannya menulis "part time", jadi cakupan 2/5 | `SYNONYMS` part → paruh |
+| "What are the public holidays in China and travel tips?" | artikel libur sepenuhnya Indonesia, tidak ada satu kata pun yang cocok | `SYNONYMS` holiday(s), public, travel |
+
+Yang dijalankan di mesin ini, terhadap database Docker lokal dan dev server yang sudah jalan di port 3100:
+
+- `npm run check:guidebook` 36/36, `npx tsc --noEmit` bersih, `npm run lint` tanpa error.
+- Lima URL `/help/<slug>` topik baru menjawab 200 dengan isi yang benar, dan keenam judulnya muncul di indeks `/guidebook`. Hanzi di artikel rumah ibadah ikut dapat pinyin di render (`净觉寺 - jìng jué sì`).
+- `askGuide` menjawab "Masjid apa saja yang ada di Nanjing dan naik metro apa?" dengan tiga masjid, alamat, bus, dan exit metro dari topik baru; kartu sumbernya memuat `tempat-ibadah-di-nanjing`. Setelah kuota 15 pertanyaan/hari untuk user uji habis, jalur degradasi tetap menyitir `vpn-dan-akses-internet` dan `festival-dan-hari-libur` dengan benar.
+
+Yang belum: pass visual di browser (Chromium/daemon browser tidak start di mesin ini), terjemahan Inggris untuk keenam topik baru, dan pemeriksaan ulang isi tiap butir terhadap PDF oleh manusia — penanda tinjauan di migrasi berarti "lolos korpus resmi", bukan "sudah dicek ulang baris per baris".
+
+### Halaman `/guidebook` dan centang progres (2026-10-12)
+
+`/guidebook` menampilkan delapan topik yang sudah terbit saat itu (sekarang 23, lihat entri 2026-10-14 di atas), dikelompokkan per fase (`GUIDE_PHASES`: sebelum berangkat, kedatangan, minggu pertama, bulan pertama). Tiap baris menautkan artikelnya di `/help`, menyebut label sumbernya, dan menandai topik yang belum ditinjau pengurus atau sedang ditinjau ulang. Anggota yang login dapat kotak centang per topik; pengunjung anonim hanya dapat kalimat "Masuk dulu kalau mau menyimpan progres".
+
+Diuji terhadap database Docker lokal, lewat `curl` dan bukan browser (Chromium di mesin ini tidak bisa start, `libnss3` tidak ada):
+
+| Yang diuji | Hasil |
+|---|---|
+| `GET /guidebook` tanpa login | 200, 0 kotak centang, label "Belum ditinjau pengurus" muncul 15 kali (delapan topik, sebagian diulang di payload RSC) |
+| `POST /guidebook` tanpa login | 303 ke `/login?returnTo=/guidebook`, tidak ada baris ditulis |
+| Login kredensial lalu `GET /guidebook` | 200, 8 kotak centang, tombolnya `aria-pressed="false"` |
+| Kirim formulir tanpa JavaScript (multipart berisi `$ACTION_ID_*`, `articleId`, `done=true`) | 200, halaman berikutnya menampilkan "1 dari 8 langkah selesai" dan `aria-pressed="true"`, barisnya ada di `guidebook_progress` |
+| Kirim ulang dengan `done=false` | barisnya terhapus, kembali 0 baris |
+| `articleId` artikel non-publik (`Kartu Transportasi Kampus`) | 303 kembali ke `/guidebook`, tidak ada baris ditulis |
+
+Formulirnya tetap bisa dipakai kalau JavaScript mati, karena action-nya dirender sebagai `<form method="POST">` dengan hidden `$ACTION_ID_*` — bukan hanya `onClick`. Yang belum diuji: tampilan ponsel dan mode gelap di browser sungguhan, dan badge "kedaluwarsa" (hanya "belum ditinjau" yang terlihat di data lokal).
+
+### Gerbang tinjauan, lantai relevansi, dan jalur degradasi (2026-10-12)
+
+Gerbangnya satu definisi: `RETRIEVABLE_ARTICLE` di `src/lib/guidebook-search.ts` (publik **dan** sudah ditinjau **dan** belum kedaluwarsa). Dipakai tiga tempat: `findGuideChunks`, `findEntityChunks`, dan pembacaan potongan dari cache di `src/lib/guide-answer.ts` — kalau gerbangnya hanya di jalur pencarian, topik yang dicabut tinjauannya masih bisa terbit lewat jawaban cache yang sudah tersimpan.
+
+Angka harness (`npx tsx --env-file=.env.local src/db/eval-guidebook.ts`, 38 pertanyaan, tanpa satu pun panggilan model):
+
+| Tahap | `pending_review` yang nol potongan | Recall@4 |
+|---|---|---|
+| Awal (pencocokan substring) | 7/26 | 6/6 = 1.000 |
+| Setelah kata utuh + lantai 2 kata | 22/26 | 6/6 = 1.000 |
+| Setelah kata dihitung per akar + lantai "3 konsep, atau 2 konsep dengan cakupan ≥50%" | **26/26** | 6/6 = 1.000 |
+
+Keluarannya exit 0 dan baris terakhir `LULUS: recall@4 >= 0.8, pending_review dan must_refuse semuanya nol potongan.` `must_refuse` 6/6 nol potongan di ketiga tahap. Empat kebocoran yang tersisa di tahap kedua bukan lagi efek substring: pertanyaannya menyerempet dua kata umum yang memang ada di satu-satunya artikel yang sudah ditinjau (transportasi), sementara artikel yang benar (profil PPIT, tempat tinggal, visa, aplikasi pembayaran) masih draf dan disaring gerbang. Setelah lantainya diperketat, keempatnya dijawab penolakan tetap sampai topik aslinya ditinjau.
+
+Harness-nya read-only: `ai_usage` / `ai_query_log` / `guide_answers` tetap 0/0/0 setelah delapan kali dijalankan berturut-turut.
+
+Jalur yang tidak butuh model diuji langsung ke database Docker lokal (script sementara, sudah dihapus):
+
+| Kasus | Hasil |
+|---|---|
+| Sakelar mati (`guide_meta.ai_enabled = false`) | `degraded: true`, alasan `ai_nonaktif`, jawabannya potongan panduan + "Asisten AI sedang dimatikan sementara oleh pengurus" |
+| Kuota habis (`ai_usage.count` sudah 15) | `degraded: true`, alasan `kuota_harian`, kutipan tetap keluar, baris kuota tidak bertambah |
+| Pertanyaan yang jawabannya sudah ada di cache | `cacheHit: true`, jawaban dari cache, kutipan dibaca dari `chunk_ids` yang tersimpan, **tanpa** menulis baris `ai_usage` |
+| Tinjauan artikel itu dicabut, cache-nya masih ada | penolakan tetap ("Belum ada panduan yang cocok…"), kutipan nol — cache tidak menerbitkan topik yang sudah dicabut |
+| Artikelnya dibuat kedaluwarsa | sama: penolakan tetap, kutipan nol |
+| Semua dikembalikan | cache jalan lagi, jawaban cache muncul utuh |
+
+Baris `ai_query_log` dari uji itu menunjukkan rantainya apa adanya: dua baris degradasi (`used_llm: false`, `chunk_ids` 3), satu cache hit, dua penolakan dengan `chunk_ids` kosong, lalu cache hit lagi. Artinya KPI "kutipan sah" (`used_llm` true tapi `chunk_ids` kosong) memang bisa dihitung dari tabel itu.
+
+Yang belum diuji di sini: panggilan Groq yang sungguhan — `api.groq.com` menjawab 403 dari mesin lokal, jadi jalur jawaban model dan penulisan cache baru hanya bisa dibuktikan di deployment (lihat entri chatbot di atas). `scripts/prewarm-guide.ts` sendiri jalan sampai selesai: 21 baris FAQ, exit 0, hasilnya `failed 4` (semuanya 403 Groq), `skipped 17`, `cached 0`. Angka "skipped" itu bukan kegagalan: topiknya belum ditinjau, jadi memang tidak boleh dijawab.
+
+### Markdown yang tadinya tampil mentah (2026-10-12)
+
+Halaman artikel publik `/help/[slug]` memecah isi artikel per baris kosong, jadi `**Tentang PPIT…**`, `##` judul, dan `-` daftar terlihat apa adanya di halaman yang dibaca maba — dan hal yang sama terjadi di halaman baca console serta modal "panduan" yang dipakai pengurus di setiap modul. Isi artikel memang markdown sejak awal (lihat `src/components/console/markdown-editor.tsx`, tab Pratinjau), hanya halaman bacanya yang belum memakai renderer itu.
+
+Sekarang ketiganya memakai `renderMarkdownLite` (`src/lib/markdown-lite.tsx`), renderer yang sama dengan tab Pratinjau editor:
+
+| Permukaan | Sebelum | Sesudah |
+|---|---|---|
+| `/help/[slug]` publik | dipecah per baris kosong | markdown dirender |
+| `/console/docs/[slug]` | `<p>` dengan `whitespace-pre-wrap` | markdown dirender, `whitespace-pre-wrap` tetap supaya baris baru di dalam paragraf tidak hilang |
+| Modal `GuideButton` di halaman modul console | teks apa adanya | markdown dirender, `whitespace-pre-wrap` tetap dengan alasan yang sama |
+
+Diuji lewat HTTP ke `npm run dev` di port 3100 atas lima artikel guidebook yang publik: tidak ada lagi `**`, `##`, `](`, atau `|---` di dalam `<article>`; yang muncul `<h2>` 4-7, `<li>` 3-17, `<strong>` 0-2 per artikel. Teks yang dilaporkan pengurus (`**Tentang PPIT - Profil PPIT Nanjing** PPIT (Perhimpunan…)`) dirender jadi satu paragraf dengan `<strong>` di depan, termasuk tanda hubung non-standar `awal‑nya` yang terbawa dari PDF. Halaman console dicek dengan sesi admin sementara (kata sandinya dikembalikan setelah uji): blok isi artikel 5.439 byte, nol penanda markdown yang tersisa.
+
+### Saran lanjutan, sitasi yang bisa diklik, dan suara pengguna (2026-10-13)
+
+Yang diminta: tombol saran pertanyaan lanjutan di bawah jawaban, tombol suka/tidak suka, dan daftar sumber yang bisa diklik. Rujukannya tampilan Grok.
+
+Yang benar-benar dijalankan di mesin lokal (database Docker `ppit`, port 3100):
+
+| Langkah | Hasil |
+|---|---|
+| `npx tsx --env-file=.env.local src/db/apply-sql.ts drizzle/0047_ai_answer_feedback.sql` | 3 pernyataan: `CREATE TYPE ai_feedback_vote`, `ALTER TABLE ai_query_log ADD COLUMN IF NOT EXISTS feedback`, `CREATE INDEX ai_query_log_feedback_idx` (parsial, `WHERE feedback IS NOT NULL`) |
+| Jawaban nyata lewat `askGuide` dengan akun uji (`uji-chat-2601@ppit-local.test`), pertanyaan "apa itu PPIT Nanjing?" | Jawaban dari model (`cache_hit false`), 2 sitasi (`profil-ppit-tiongkok`, `profil-ppit-nanjing`), saran dari model sendiri ("Apa perbedaan PPIT pusat dan PPIT Nanjing?", "Bagaimana kontak resmi PPIT Tiongkok?", "Di mana daftar cabang PPIT per kota?"), `logId` uuid, tidak ada sisa `<<` di teks |
+| Refusal tanpa kata kunci ("halo") | 0 sitasi, tetap 3 saran (`GUIDE_STARTER_QUESTIONS`), `logId` uuid |
+| Cache dibaca ulang setelah jawaban di cache disisipi penanda buatan | `cache_hit true`, saran terbaca dari penanda, penanda hilang dari teks |
+| Kill switch `guide_meta.ai_enabled = false`, pertanyaan "berapa banyak mahasiswa Indonesia di Nanjing?" | `degraded true`, 3 sitasi, saran jatuh ke FAQ topik yang terambil, `logId` uuid; kill switch dikembalikan ke `true` |
+| Tulisan suara lewat drizzle (jalur yang sama dengan `rateAnswerAction`) | `user_id` lain → 0 baris berubah; pemilik baris → 1 baris, kolom `feedback` terbaca `down` |
+
+Jalur LLM lokal ini jalan sekarang karena jalur jawaban memakai endpoint OpenAI-compatible (`OPENAI_BASE_URL`/`OPENAI_API_KEY` di `src/lib/assistant.ts`), bukan `api.groq.com` yang menjawab 403 dari mesin ini (lihat entri 2026-10-12 di atas). Satu temuan dari uji ini: dengan `max_tokens 400` jawaban model pernah berhenti tepat di batas token sebelum penanda saran sempat ditulis — karena itu batasnya dinaikkan ke 540 dan dipakai bersama jalur prewarm.
+
+Widget-nya sendiri ditelusuri di Chromium (Playwright headless, sesi admin uji `uji-chat-2601@ppit-local.test`, `http://localhost:3100/help`):
+
+| Yang diklik | Yang terlihat |
+|---|---|
+| Pertanyaan "apa itu PPIT Nanjing?" | Jawaban dari cache (jawaban model yang tersimpan tadi), pil **"2 SUMBER"** dengan `aria-expanded` berubah saat diklik |
+| Pil sumber | Dua tautan `Profil PPIT Tiongkok` → `/help/profil-ppit-tiongkok` dan `Profil PPIT Nanjing` → `/help/profil-ppit-nanjing`, keduanya `target="_blank"` |
+| Saran lanjutan | Tiga baris dari model: "Apa perbedaan PPIT pusat dan PPIT Nanjing?", "Bagaimana kontak resmi PPIT Tiongkok?", "Di mana daftar cabang PPIT per kota?" |
+| Tombol suara | Dua tombol `aria-label` "Jawaban ini membantu" / "Jawaban ini tidak membantu", keduanya `aria-pressed="false"` |
+| Klik "membantu" | Baris log terbaru (id `b5837765-…`, `feedback` masih `null` sebelum klik) jadi `feedback='up'`, tombolnya `aria-pressed="true"` |
+| Klik saran pertama | Pertanyaannya masuk sebagai pesan pengguna (dua gelembung pengguna, isi terakhir persis teks saran) |
+
+Dua catatan dari uji ini:
+
+- Jawaban atas saran itu sendiri **ditolak** retrieval ("Belum ada panduan yang cocok"), karena di database lokal baru tiga topik yang ditinjau sementara `kota-nanjing` dan `visa-dan-izin-tinggal` masih draf. Saran dari model memang bisa menunjuk topik yang belum ditinjau; yang menahannya tetap gerbang tinjauan, bukan widget. Di produksi seluruh topik ditinjau sebelum rilis, jadi jalur ini hanya muncul kalau ada topik baru.
+- Dev server di port 3100 harus dibuka lewat `localhost`, bukan `127.0.0.1`: `AUTH_URL` menyebut `localhost`, dan lewat `127.0.0.1` Next menolak chunk JS-nya dengan 403 sehingga halaman tampil tapi tidak ter-hidrasi — klik apa pun tidak bereaksi. Ini yang bikin penelusuran pertama terlihat seperti tombol rusak.
+
+## Operations and rollback
+
+- All schema changes are additive → app rollback is safe without dropping columns.
+- AI kill switch: `guide_meta.ai_enabled = false` (no deploy).
+- Deleting a topic is destructive → requires `ConfirmButton` (`src/components/console/confirm-button.tsx`).
+- Re-ingest is always repeatable; the raw input is stored in Drive plus `guide_documents.pdf_hash`.
+- Cache prewarm, run before maba season or after a corpus bump: `npx tsx --env-file=.env.local scripts/prewarm-guide.ts`. Reads `GUIDE_FAQ` (`src/lib/guidebook-faq.ts`), one line per question with `cached` / `skipped` / `failed`; `skipped` means no retrievable chunks (the topic is unreviewed, expired, or empty) and is the expected result for drafts.
+- Quality gate after any retrieval or prompt change: `npx tsx --env-file=.env.local src/db/eval-guidebook.ts`. Exit 0 = recall@4 ≥ 0,80 with zero chunks from `pending_review` and `must_refuse` questions. It calls no model, so it is safe to run against a real database.
+- Console SOP article for pengurus lives in `src/db/seed-help-articles.ts` (slug `panduan-maba`, section "Sering Dipakai", `is_public` stays false so the chatbot can never quote it). Publish it to a database with `npx tsx --env-file=.env src/db/seed-help-articles.ts panduan-maba` — the slug argument keeps every other article untouched.
+- Quota counters live in `ai_usage` (one row per user per Asia/Shanghai day). To lift the 15/day limit, change `DAILY_QUESTION_LIMIT` in `src/lib/guide-answer.ts`; to clear today's counters, delete the rows for that day.
+- Dropping the embarrassingly-stale answers: bumping the corpus already invalidates them (`bumpCorpusVersion` on every save). `guide_answers` rows can be deleted wholesale without breaking anything — the next question rebuilds them.
+
+## Risks and mitigations
+
+| Risk | Impact | Mitigation |
+|---|---|---|
+| Poor PDF extraction quality (two columns, scans) | Wrong answers / mass refusals | Ingest gate + manual spot-check of 10 pages before release |
+| Free Groq quota exhausted during maba season | The Q&A goes dark | Cache + prewarm + daily quota + retrieval-only + kill switch |
+| Two text sources (parsed vs live) confuse pengurus | They edit the wrong place | Ownership rule: **only `content` is edited**; `parsed_markdown` never appears in the normal editor |
+| Stale visa/residence-permit info | Misleading information | `reviewed_at` + `expires_at` as retrieval requirements, not prompt warnings |
+| Free-form markdown breaks the page | Public page error | Tolerant renderer + mandatory preview in the editor |
+| Vercel Hobby is non-commercial | Unexpected cost if forced to upgrade | Record as a financial risk, not a technical one |
+
+## Decisions (answered 2026-10-11)
+
+Pengurus answered the six questions. P3 and P4 follow these answers; anything not listed here is still open.
+
+| Question | Answer | What changes in the code |
+|---|---|---|
+| Who reviews visa/residence-permit topics | **BPH or pusat, either one** | No per-user reviewer list. The review button is gated by the `guidebook` module, which BPH and pusat hold, and the gate stays the `reviewed_at` timestamp |
+| Default validity for volatile topics | **6 months** | `EXPIRY_OPTIONS` (`src/components/console/article-form.tsx`) keeps `keep` for ordinary articles; on a **new** topic, a phase plus the untouched "Biarkan" choice is saved as `+6 months` (`DEFAULT_TOPIC_EXPIRY` in `src/app/actions/admin-docs.ts`), so `expires_at` is filled on the first save instead of staying empty. A later edit leaves a saved "Cabut masa berlaku" (`expires_at = null`) alone |
+| Original PDFs publicly downloadable | **No, internal Drive link only** | `guide_documents` stores the Drive id and `pdf_hash`; no public download route, and `/guidebook` renders `help_articles.content` only |
+| Store user questions for 90 days | **Yes, redacted only** | Already implemented: `ai_query_log.question_redacted` gets the redacted text, the raw question is never written, pruning after 90 days |
+| Owner of `guidebook-manifest.ts` | **Divisi Teknologi** | The page to topic map stays in the repo and changes through a PR. Re-mapping after the PDFs are replaced next year is a Teknologi task, not something an editor does from the console |
+| Dedicated admin module | **Yes, a `guidebook` module** | Today `src/app/actions/admin-docs.ts` only checks `session.user.isAdmin`, so every admin can publish visa advice. The module key goes into `src/lib/admin-scope.ts` and `admin-scope-constants.ts`, and the docs console pages, actions and export check it instead of the blanket admin flag |
+
+### Module and validity shipped (2026-10-11)
+
+- `guidebook` is a real key in `src/lib/admin-scope-constants.ts` (`AdminModule`, `ASSIGNABLE_SCOPE_KEYS`, which is the list the Organization Management checkbox renders from, so it appears as *Guidebook Maba & Help Center* and is not in `SENSITIVE_SCOPE_KEYS`). It gates the five `/console/docs/**` pages, every action in `src/app/actions/admin-docs.ts`, `GET /api/console/docs/[slug]/export`, and the sidebar link — see [Documentation & Help Center](./Documentation%20&%20Help%20Center.md).
+- The export route answers **403** instead of redirecting, because a route handler cannot throw a page redirect; the pages use `requireModuleAccess`, which redirects to `/console`.
+- Checked against `npm run dev -- -p 3100` and the local Docker database with `curl` (no browser): an admin holding only `["events"]` got `NEXT_REDIRECT;replace;/console;307` on `/console/docs`, `/console/docs/new`, `/console/docs/guidebook`, `/console/docs/changelog` and a topic detail page, with no article title anywhere in the response body and no `/console/docs` link in the sidebar; the export route returned `403`; the create action returned `303 → /console` and wrote no row. A `"full"` admin created four articles in the same run: phase + untouched expiry → `+6 months`, `3` → `+3 months`, *Cabut* → `null`, and an article without a phase → `null`; editing the `null` topic with `reviewState=mark` set `reviewed_at` and left `expires_at` at `null`. All smoke articles, chunks, audit rows and the two test admins were deleted afterwards. Not exercised: ticking the box in the Organization Management UI (the page loads, but the per-division form is client-expanded and no browser was used) — the scope array itself was set by hand, which is what that form writes.
+
+## Related
+
+- [Documentation & Help Center](./Documentation%20&%20Help%20Center.md) — the article + chatbot path the guidebook builds on
+- [Data Dictionary](./Data%20Dictionary.md), [Entity Relationship Diagram](./Entity%20Relationship%20Diagram.md) — must be updated when the new tables land
+- [Tech Stack](./Tech%20Stack.md) — Neon/Vercel/Groq limits
+- [Progress & Handoff](./Progress%20&%20Handoff.md) — current status

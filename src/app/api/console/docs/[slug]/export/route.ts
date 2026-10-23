@@ -1,14 +1,16 @@
 import { eq } from "drizzle-orm";
 import { auth } from "@/auth";
+import { hasModuleAccess } from "@/lib/admin-scope-constants";
 import { db } from "@/db";
 import { helpArticles, users } from "@/db/schema";
 import { helpArticleToDocx } from "@/lib/help-article-docx";
 
 export async function GET(_req: Request, { params }: { params: Promise<{ slug: string }> }) {
   const session = await auth();
-  // Gerbang sama dengan Help Center-nya sendiri (isAdmin longgar, bukan modul
-  // baru) - lihat requireAdmin() di admin-docs.ts.
-  if (!session?.user?.isAdmin) {
+  // Route handler, jadi gerbangnya balas 403 alih-alih melempar redirect
+  // seperti requireModuleAccess(). Modulnya sama dengan halaman Help Center:
+  // "guidebook" (pengurus memisahkannya dari "content" pada 2026-10-11).
+  if (!session || !hasModuleAccess(session.user.adminScope, "guidebook")) {
     return new Response("Forbidden", { status: 403 });
   }
 

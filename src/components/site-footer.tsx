@@ -15,6 +15,7 @@ import Link from "next/link";
 const ABOUT_LINKS = [
   { href: "/organization", labelKey: "footer.aboutLinks.structure" },
   { href: "/sensus", labelKey: "footer.aboutLinks.sensus" },
+  { href: "/guidebook", labelKey: "footer.aboutLinks.guidebook" },
   { href: "/help", labelKey: "footer.aboutLinks.help" },
   { href: "/terms", labelKey: "footer.aboutLinks.terms" },
   { href: "/privacy", labelKey: "footer.aboutLinks.privacy" },
