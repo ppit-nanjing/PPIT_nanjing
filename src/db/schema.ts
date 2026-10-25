@@ -481,6 +481,16 @@ export const events = pgTable("events", {
   // saklar ketersediaannya - penerbitan manual per orang dari roster
   // "Sertifikat Peserta" (tautan berkas wajib), bukan otomatis saat selesai.
   certificateForParticipants: boolean("certificate_for_participants").notNull().default(true),
+  // Aturan hadir untuk sertifikat peserta. NYALA (bawaan) = harus tercatat hadir
+  // lewat QR (status "attended") DAN sudah mengisi evaluasi dengan akun. MATIKAN
+  // untuk acara tanpa absen QR (Zoom, Nanjing Diaries): cukup terdaftar
+  // (terkonfirmasi) DAN sudah mengisi evaluasi dengan akun.
+  certificateRequiresAttendance: boolean("certificate_requires_attendance").notNull().default(true),
+  // Evaluasi peserta boleh dikirim anonim. NYALA (bawaan) = ada kotak "kirim
+  // sebagai anonim" (akun tetap tercatat untuk sertifikat, hanya namanya
+  // disembunyikan dari rekap panitia). MATIKAN = evaluasi selalu atas nama
+  // (nama dari isian, atau dari sensus/akun bila dikosongkan).
+  evaluationAllowsAnonymous: boolean("evaluation_allows_anonymous").notNull().default(true),
   // Folder sertifikat (biasanya Google Drive) berisi semua PDF peserta/panitia,
   // diisi panitia dari section sertifikat; dipakai tombol "Terbitkan semua yang
   // berhak" supaya tautannya tidak ditempel per orang. NULL = belum diisi

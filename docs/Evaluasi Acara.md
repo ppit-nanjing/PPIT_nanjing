@@ -62,6 +62,17 @@ Pindah mode otomatis: begitu pertanyaan pertama ditambahkan, form publik, rekap,
 
 Identitas: `respondent_name` + `respondent_city` (opsional) dan flag `anonymous` — kalau anonim dicentang, server **tidak menyimpan** nama/kota sama sekali.
 
+**Acara bersertifikat** (`events.certificate_for_participants`, bawaan nyala): evaluasi wajib login dan selalu menyimpan `user_id` (token `peserta:<userId>`), supaya sertifikat bisa dikirim ke orangnya. Di acara seperti ini kotak "anonim" hanya menyembunyikan nama dari rekap panitia; akunnya tetap tercatat di baris respons.
+
+Dua saklar per acara (migrasi `0056`, diatur di form Edit acara):
+
+| Saklar | Bawaan | Kalau dimatikan |
+|---|---|---|
+| `certificate_requires_attendance` ("Sertifikat hanya untuk yang tercatat hadir") | nyala | Acara **tanpa absen QR**: sertifikat peserta cukup untuk yang **terdaftar** (status `confirmed` atau `attended`) **dan** sudah mengisi evaluasi dengan akun. Dipakai Nanjing Diaries. |
+| `evaluation_allows_anonymous` ("Evaluasi peserta boleh dikirim anonim") | nyala | Kotak anonim hilang dari form dan diabaikan server; evaluasi selalu **atas nama**. Nama diambil dari isian, atau dari sensus (nama lengkap) lalu akun bila dikosongkan. Respons yang sudah masuk tidak berubah. |
+
+Aturan status pendaftaran untuk sertifikat punya satu sumber: `src/lib/certificate-eligibility.ts` (dipakai server dan tampilan konsol).
+
 ## Template pertanyaan (berlaku untuk semua acara)
 
 Setiap acara otomatis punya halaman evaluasi (tombol "Isi Evaluasi" muncul di halaman acara begitu acaranya lewat). Pertanyaannya dipilih otomatis dari **template** di `src/lib/event-evaluation-template.ts`:
