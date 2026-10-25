@@ -1,4 +1,5 @@
 import ExcelJS from "exceljs";
+import { CHINA_TIME_ZONE, CHINA_TZ_LABEL, toChinaWallClock } from "@/lib/datetime";
 
 export type ReportColumn = {
   header: string;
@@ -15,10 +16,15 @@ export type ReportDataset = {
   rows: Record<string, unknown>[];
 };
 
+// Zona dikunci ke Tiongkok: tanpa timeZone, Intl memakai zona server (UTC di Vercel).
 const idDateTime = new Intl.DateTimeFormat("id-ID", {
   dateStyle: "medium",
   timeStyle: "short",
+  timeZone: CHINA_TIME_ZONE,
 });
+
+// Kolom waktu membawa zonanya di kepala kolom, karena sel Excel tidak punya zona.
+const headerOf = (c: ReportColumn) => (c.type === "date" ? `${c.header} (${CHINA_TZ_LABEL})` : c.header);
 
 function rawValue(col: ReportColumn, row: Record<string, unknown>): string | number | Date | null {
   const v = row[col.key];
@@ -43,7 +49,7 @@ export function datasetToCsv(ds: ReportDataset): string {
     if (v instanceof Date) return esc(idDateTime.format(v));
     return esc(v);
   };
-  const header = ds.columns.map((c) => esc(c.header)).join(",");
+  const header = ds.columns.map((c) => esc(headerOf(c))).join(",");
   const lines = ds.rows.map((r) => ds.columns.map((c) => cell(c, r)).join(","));
   return "﻿" + [header, ...lines].join("\r\n");
 }
@@ -68,7 +74,7 @@ export async function datasetToXlsx(ds: ReportDataset): Promise<ArrayBuffer> {
 
   ws.getCell("A1").value = ds.title;
   ws.getCell("A1").font = { bold: true, size: 14 };
-  ws.getCell("A2").value = `Dicetak: ${idDateTime.format(ds.generatedAt)}`;
+  ws.getCell("A2").value = `Dicetak: ${idDateTime.format(ds.generatedAt)} (${CHINA_TZ_LABEL})`;
   ws.getCell("A2").font = { italic: true, color: { argb: "FF6B5849" } };
   if (filterText) {
     ws.getCell("A3").value = `Filter: ${filterText}`;
@@ -79,7 +85,7 @@ export async function datasetToXlsx(ds: ReportDataset): Promise<ArrayBuffer> {
   const headerRow = ws.getRow(headerRowIdx);
   ds.columns.forEach((c, i) => {
     const cell = headerRow.getCell(i + 1);
-    cell.value = c.header;
+    cell.value = headerOf(c);
     cell.font = { bold: true, color: { argb: "FFFFFFFF" } };
     cell.fill = {
       type: "pattern",
@@ -97,7 +103,7 @@ export async function datasetToXlsx(ds: ReportDataset): Promise<ArrayBuffer> {
       const val = rawValue(c, r);
       const cell = row.getCell(i + 1);
       if (val instanceof Date) {
-        cell.value = val;
+        cell.value = toChinaWallClock(val);
         cell.numFmt = "dd/mm/yyyy hh:mm";
       } else if (typeof val === "number") {
         cell.value = val;
@@ -109,7 +115,7 @@ export async function datasetToXlsx(ds: ReportDataset): Promise<ArrayBuffer> {
 
   // Auto-fit column widths from header + content.
   ds.columns.forEach((c, i) => {
-    let max = c.header.length;
+    let max = headerOf(c).length;
     ds.rows.forEach((r) => {
       const v = rawValue(c, r);
       const len = v instanceof Date ? 16 : String(v ?? "").length;

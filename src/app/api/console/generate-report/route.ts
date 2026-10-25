@@ -1,4 +1,5 @@
 import { and, desc, eq, gte, inArray, lte, isNull } from "drizzle-orm";
+import { formatChinaDateIso } from "@/lib/datetime";
 import { NextResponse } from "next/server";
 import { auth } from "@/auth";
 import { db } from "@/db";
@@ -287,7 +288,7 @@ export async function GET(request: Request) {
   });
 
   const ext = format === "xlsx" ? "xlsx" : "csv";
-  const disposition = `attachment; filename="laporan-${type}-${now.toISOString().slice(0, 10)}.${ext}"`;
+  const disposition = `attachment; filename="laporan-${type}-${formatChinaDateIso(now)}.${ext}"`;
 
   if (format === "xlsx") {
     const buf = await datasetToXlsx(dataset);
