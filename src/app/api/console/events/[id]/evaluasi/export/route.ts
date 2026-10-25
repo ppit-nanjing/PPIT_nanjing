@@ -1,11 +1,6 @@
-import { and, desc, eq } from "drizzle-orm";
 import { NextResponse } from "next/server";
-import { db } from "@/db";
-import { eventDivisions, eventEvaluations, events, users } from "@/db/schema";
-import { canReadCommitteeEvaluation, getEventAccess } from "@/lib/event-access";
-import { evaluationTemplateForSlug } from "@/lib/event-evaluation-template";
-import { loadEvaluationAnswers, loadEvaluationQuestions } from "@/lib/event-evaluation-queries";
-import { buildEvaluationDataset } from "@/lib/event-evaluation-dataset";
+import { canReadCommitteeEvaluation, getEventAccess, hasEvaluationExportAccess } from "@/lib/event-access";
+import { loadEvaluationExport } from "@/lib/event-evaluation-export";
 import { isEvalAudience } from "@/lib/event-evaluation-questions";
 import { datasetToCsv, datasetToXlsx, type ReportDataset } from "@/lib/report-export";
 
@@ -16,7 +11,7 @@ import { datasetToCsv, datasetToXlsx, type ReportDataset } from "@/lib/report-ex
 export async function GET(request: Request, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const access = await getEventAccess(id);
-  if (!access.session || (!access.isFullAdmin && !access.moduleBridge && access.role == null)) {
+  if (!hasEvaluationExportAccess(access)) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
@@ -34,49 +29,17 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
-  const [event] = await db.select({ title: events.title, slug: events.slug }).from(events).where(eq(events.id, id));
-  if (!event) return NextResponse.json({ error: "Not found" }, { status: 404 });
-
-  const [rows, questions, answers] = await Promise.all([
-    db
-      .select({
-        row: eventEvaluations,
-        userName: users.name,
-        divisionName: eventDivisions.name,
-      })
-      .from(eventEvaluations)
-      .leftJoin(users, eq(eventEvaluations.userId, users.id))
-      .leftJoin(eventDivisions, eq(eventEvaluations.divisionId, eventDivisions.id))
-      .where(and(eq(eventEvaluations.eventId, id), eq(eventEvaluations.audience, audience)))
-      .orderBy(desc(eventEvaluations.createdAt)),
-    loadEvaluationQuestions(id, audience),
-    loadEvaluationAnswers(id, audience),
-  ]);
-
-  // Nama & divisi evaluator hanya relevan untuk audiens panitia — dan jalur itu
-  // sudah dipastikan hanya dijangkau pengelola.
-  const mapped = rows.map((r) =>
-    audience === "panitia"
-      ? { ...r.row, respondentName: r.userName, respondentCity: r.divisionName }
-      : r.row,
-  );
-
-  const template = evaluationTemplateForSlug(event.slug);
-  const { columns, rows: datasetRows } = buildEvaluationDataset({
-    audience,
-    sections: template.sections,
-    rows: mapped,
-    questions,
-    answers,
-  });
+  const loaded = await loadEvaluationExport(id, audience);
+  if (!loaded) return NextResponse.json({ error: "Not found" }, { status: 404 });
+  const event = { title: loaded.title };
 
   const dataset: ReportDataset = {
     title: audience === "panitia" ? `Evaluasi Panitia ${event.title}` : `Evaluasi ${event.title}`,
     type: audience === "panitia" ? "event_committee_evaluation" : "event_evaluation",
     generatedAt: new Date(),
     filters: {},
-    columns,
-    rows: datasetRows,
+    columns: loaded.dataset.columns,
+    rows: loaded.dataset.rows,
   };
 
   const prefix = audience === "panitia" ? "evaluasi-panitia" : "evaluasi";

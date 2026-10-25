@@ -14,6 +14,7 @@ import {
   Download,
   FileSpreadsheet,
   ListFilter,
+  Loader2,
   Lock,
   Search,
   X,
@@ -33,6 +34,9 @@ export type TableExportLink = { label: string; href: string };
 
 // Spreadsheet kosong baru di akun Google yang sedang login di browser.
 const NEW_GOOGLE_SHEET_URL = "https://sheets.new";
+
+/** Hasil aksi server "buat Google Sheet": tautan sheet, atau pesan kegagalan yang siap ditampilkan. */
+export type OpenSheetsResult = { ok: true; url: string } | { ok: false; error: string };
 
 const SORT_LOCALE = "id";
 const DEFAULT_PAGE_SIZE = 100;
@@ -106,6 +110,7 @@ export function DataTable({
   rows,
   exportLinks = [],
   canCopy = false,
+  onOpenSheets,
   pageSize = DEFAULT_PAGE_SIZE,
   maxHeightClass = "max-h-[36rem]",
   label,
@@ -118,6 +123,12 @@ export function DataTable({
   exportLinks?: TableExportLink[];
   /** Tombol "Salin" untuk ditempel ke Sheets/Excel; sama gerbangnya dengan ekspor. */
   canCopy?: boolean;
+  /**
+   * Buat Google Sheet dari data ini di server lalu buka. Server membangun ulang
+   * datanya sendiri (semua baris, tanpa kolom pribadi), bukan memakai pencarian,
+   * filter, atau kolom yang sedang tampil di layar. Sama gerbangnya dengan ekspor.
+   */
+  onOpenSheets?: () => Promise<OpenSheetsResult>;
   pageSize?: number;
   maxHeightClass?: string;
   /** Nama tabel untuk pembaca layar. */
@@ -134,6 +145,7 @@ export function DataTable({
   const [fullText, setFullText] = useState(false);
   const [page, setPage] = useState(1);
   const [copied, setCopied] = useState(false);
+  const [sheetsBusy, setSheetsBusy] = useState(false);
   const chooserRef = useRef<HTMLDivElement>(null);
 
   // Kolom data pribadi tersembunyi sampai pembaca menyalakannya sendiri.
@@ -228,14 +240,46 @@ export function DataTable({
     }
   }
 
-  // Salin dulu, baru buka Google Sheets kosong: tab baru bisa mengambil fokus
-  // dan clipboard menolak tulis dari halaman yang tidak fokus. Salinan memakan
-  // milidetik, jadi klik masih dihitung sebagai aksi pengguna untuk membuka tab.
-  // Tidak ada data yang lewat server atau Google dari sini: Sheets hanya menerima
-  // apa yang pengguna tempel sendiri.
+  // Tempel manual: salin dulu, baru buka Google Sheets kosong. Tab baru bisa
+  // mengambil fokus dan clipboard menolak tulis dari halaman yang tidak fokus,
+  // jadi urutannya salin -> buka. Salinan memakan milidetik, jadi klik masih
+  // dihitung sebagai aksi pengguna untuk membuka tab. Tidak ada data yang lewat
+  // server atau Google dari sini: Sheets hanya menerima apa yang pengguna tempel.
   async function copyToSheets() {
     const ok = await copyAll("Tabel disalin. Di Google Sheets yang terbuka, klik sel A1 lalu tekan Ctrl+V.");
     if (ok) window.open(NEW_GOOGLE_SHEET_URL, "_blank", "noopener,noreferrer");
+  }
+
+  // Sheet dibuat di server (lihat src/app/actions/export-sheets.ts), hanya kalau
+  // induknya memberi onOpenSheets (server sudah dikonfigurasi). Isinya semua
+  // baris tanpa kolom pribadi, bukan pencarian/filter/kolom yang sedang tampil.
+  async function openSheetsFromServer() {
+    if (!onOpenSheets || sheetsBusy) return;
+    // Jendela dibuka SEKARANG, selagi klik masih dihitung sebagai aksi pengguna:
+    // pembuatan sheet makan beberapa detik, dan popup yang dibuka sesudah await
+    // diblokir browser. opener dilepas supaya halaman Google tidak memegang tab ini.
+    const popup = window.open("about:blank", "_blank");
+    if (popup) {
+      popup.opener = null;
+      popup.document.title = "Membuat Google Sheet…";
+      popup.document.body.textContent = "Membuat Google Sheet… tunggu sebentar.";
+    }
+    setSheetsBusy(true);
+    try {
+      const res = await onOpenSheets();
+      if (res.ok) {
+        if (popup) popup.location.replace(res.url);
+        else toast.success("Google Sheet siap.", { action: { label: "Buka", onClick: () => window.open(res.url, "_blank", "noopener") } });
+      } else {
+        popup?.close();
+        toast.error(res.error);
+      }
+    } catch {
+      popup?.close();
+      toast.error("Gagal membuat Google Sheet. Pakai tombol Salin sebagai gantinya.");
+    } finally {
+      setSheetsBusy(false);
+    }
   }
 
   const btnCls =
@@ -335,12 +379,16 @@ export function DataTable({
             <>
               <button
                 type="button"
-                onClick={copyToSheets}
-                disabled={processed.length === 0}
-                title="Menyalin tabel (kolom yang tampil, sesuai pencarian dan filter) lalu membuka Google Sheets kosong. Tempel dengan Ctrl+V. Itu salinan: mengubah isinya tidak mengubah data di website."
-                className={`${btnCls} disabled:opacity-50`}
+                onClick={onOpenSheets ? openSheetsFromServer : copyToSheets}
+                disabled={sheetsBusy || (!onOpenSheets && processed.length === 0)}
+                title={
+                  onOpenSheets
+                    ? "Membuat Google Sheet berisi semua baris, tanpa paspor, telepon, dan KTM (bukan hanya yang tampil atau terfilter). Hanya akunmu yang bisa membukanya, dan dihapus otomatis setelah 24 jam. Itu salinan: mengubahnya tidak mengubah data di website."
+                    : "Menyalin tabel (kolom yang tampil, sesuai pencarian dan filter) lalu membuka Google Sheets kosong. Tempel dengan Ctrl+V. Itu salinan: mengubah isinya tidak mengubah data di website."
+                }
+                className={`${btnCls} disabled:opacity-60`}
               >
-                <FileSpreadsheet size={13} aria-hidden /> Ke Google Sheets
+                {sheetsBusy ? <Loader2 size={13} className="animate-spin" aria-hidden /> : <FileSpreadsheet size={13} aria-hidden />} Ke Google Sheets
               </button>
               <button type="button" onClick={() => copyAll()} disabled={processed.length === 0} className={`${btnCls} disabled:opacity-50`}>
                 {copied ? <Check size={13} aria-hidden /> : <Copy size={13} aria-hidden />} Salin

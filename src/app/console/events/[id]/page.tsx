@@ -19,6 +19,7 @@ import { CertificateBulkForm } from "@/components/console/certificate-bulk-form"
 import { CertificateFolder } from "@/components/console/certificate-folder";
 import { EventQuestionFields } from "@/components/events/event-question-fields";
 import { EventShareLinks } from "@/components/console/event-share-links";
+import { isSheetsConfigured } from "@/lib/google-sheets";
 import { getSiteOrigin } from "@/lib/site";
 import { EVENT_COMMITTEE_ROLE_LABEL } from "@/lib/event-capabilities";
 import { canEditCommitteeEvaluation, canReadCommitteeEvaluation, requireEventConsoleAccess } from "@/lib/event-access";
@@ -81,6 +82,8 @@ export default async function ConsoleEventDetailPage({ params }: { params: Promi
   // (target absolute/domain lama) tetap dikenali. Query-nya ikut gelombang
   // pertama di bawah.
   const shareOrigin = await getSiteOrigin();
+  // Tombol "Ke Google Sheets": true = sheet dibuat server, false = salin-tempel.
+  const sheetsEnabled = isSheetsConfigured();
   const sharePaths = {
     daftar: `/events/${event.slug}/register`,
     evaluasi: `/events/${event.slug}/evaluasi`,
@@ -1362,6 +1365,7 @@ export default async function ConsoleEventDetailPage({ params }: { params: Promi
           detail={canSeeRegistrantDetail}
           canCancel={canManageRegistrants}
           exportHref={canExportRegistrants ? `/api/console/events/${id}/registrations/export` : undefined}
+          sheetsEnabled={sheetsEnabled}
           questions={questions.map((q) => ({ id: q.id, label: q.label }))}
           registrations={registrations.map((r) => ({
             id: r.reg.id,
@@ -1661,6 +1665,7 @@ export default async function ConsoleEventDetailPage({ params }: { params: Promi
           peserta={
             <EvaluationResults
               eventId={id}
+              sheetsEnabled={sheetsEnabled}
               evaluations={evaluations}
               sections={evaluationTemplateForSlug(event.slug).sections}
               questions={evalQuestions}
@@ -1715,6 +1720,7 @@ export default async function ConsoleEventDetailPage({ params }: { params: Promi
                 )}
                 <EvaluationResults
                   eventId={id}
+                  sheetsEnabled={sheetsEnabled}
                   exportAudience="panitia"
                   evaluations={committeeEvaluations}
                   sections={[]}

@@ -33,7 +33,8 @@ export type EventAuditAction =
   | "credit.removed"
   | "asset.reserved"
   | "asset.released"
-  | "committee_evaluation.deleted";
+  | "committee_evaluation.deleted"
+  | "export.sheet";
 
 export async function logEventAudit(
   actorId: string | null | undefined,
@@ -82,4 +83,5 @@ export const EVENT_AUDIT_ACTION_LABEL: Record<EventAuditAction, string> = {
   "asset.reserved": "Aset direservasi",
   "asset.released": "Reservasi aset dilepas",
   "committee_evaluation.deleted": "Jawaban evaluasi panitia dihapus",
+  "export.sheet": "Data diekspor ke Google Sheets",
 };

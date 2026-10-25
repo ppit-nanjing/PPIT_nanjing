@@ -264,6 +264,13 @@ export async function requireEventCapability(
  * - Ubah: sama, tapi BPH Panitia tunduk pada kunci kepanitiaan 14 hari setelah
  *   acara (setelahnya hanya BPH Kabinet), sama seperti kapabilitas panitia lain.
  */
+// Gerbang dasar ekspor evaluasi acara (file Excel/CSV dan Google Sheet): ada
+// sesi, dan orangnya punya jalan masuk ke konsol acara ini. Evaluasi PANITIA
+// masih perlu canReadCommitteeEvaluation di atasnya.
+export function hasEvaluationExportAccess(access: EventAccess): boolean {
+  return Boolean(access.session) && (access.isFullAdmin || access.moduleBridge || access.role != null);
+}
+
 export function canReadCommitteeEvaluation(access: EventAccess): boolean {
   return access.isFullAdmin || access.isBphPanitia;
 }
