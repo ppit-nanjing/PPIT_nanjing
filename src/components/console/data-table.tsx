@@ -12,6 +12,7 @@ import {
   Columns3,
   Copy,
   Download,
+  FileSpreadsheet,
   ListFilter,
   Lock,
   Search,
@@ -29,6 +30,9 @@ import type { TableCell, TableColumn, TableRow } from "@/lib/table-view";
 // pribadi sampai pembaca memilih menampilkannya.
 
 export type TableExportLink = { label: string; href: string };
+
+// Spreadsheet kosong baru di akun Google yang sedang login di browser.
+const NEW_GOOGLE_SHEET_URL = "https://sheets.new";
 
 const SORT_LOCALE = "id";
 const DEFAULT_PAGE_SIZE = 100;
@@ -206,7 +210,8 @@ export function DataTable({
     setPage(1);
   }
 
-  async function copyAll() {
+  // true = tersalin. `message` mengganti toast bawaan.
+  async function copyAll(message?: string): Promise<boolean> {
     const lines = [
       visible.map((c) => c.header.replace(/[\t\r\n]+/g, " ")).join("\t"),
       ...processed.map((r) => visible.map((c) => copyCell(r.cells[c.key], c.kind)).join("\t")),
@@ -215,10 +220,22 @@ export function DataTable({
       await navigator.clipboard.writeText(lines.join("\n"));
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
-      toast.success(`${processed.length} baris disalin. Tempel di Google Sheets atau Excel.`);
+      toast.success(message ?? `${processed.length} baris disalin. Tempel di Google Sheets atau Excel.`);
+      return true;
     } catch {
       toast.error("Browser menolak akses clipboard. Pakai tombol unduh sebagai gantinya.");
+      return false;
     }
+  }
+
+  // Salin dulu, baru buka Google Sheets kosong: tab baru bisa mengambil fokus
+  // dan clipboard menolak tulis dari halaman yang tidak fokus. Salinan memakan
+  // milidetik, jadi klik masih dihitung sebagai aksi pengguna untuk membuka tab.
+  // Tidak ada data yang lewat server atau Google dari sini: Sheets hanya menerima
+  // apa yang pengguna tempel sendiri.
+  async function copyToSheets() {
+    const ok = await copyAll("Tabel disalin. Di Google Sheets yang terbuka, klik sel A1 lalu tekan Ctrl+V.");
+    if (ok) window.open(NEW_GOOGLE_SHEET_URL, "_blank", "noopener,noreferrer");
   }
 
   const btnCls =
@@ -315,9 +332,20 @@ export function DataTable({
 
         <span className="ml-auto flex flex-wrap items-center gap-2">
           {canCopy && (
-            <button type="button" onClick={copyAll} disabled={processed.length === 0} className={`${btnCls} disabled:opacity-50`}>
-              {copied ? <Check size={13} aria-hidden /> : <Copy size={13} aria-hidden />} Salin
-            </button>
+            <>
+              <button
+                type="button"
+                onClick={copyToSheets}
+                disabled={processed.length === 0}
+                title="Menyalin tabel (kolom yang tampil, sesuai pencarian dan filter) lalu membuka Google Sheets kosong. Tempel dengan Ctrl+V. Itu salinan: mengubah isinya tidak mengubah data di website."
+                className={`${btnCls} disabled:opacity-50`}
+              >
+                <FileSpreadsheet size={13} aria-hidden /> Ke Google Sheets
+              </button>
+              <button type="button" onClick={() => copyAll()} disabled={processed.length === 0} className={`${btnCls} disabled:opacity-50`}>
+                {copied ? <Check size={13} aria-hidden /> : <Copy size={13} aria-hidden />} Salin
+              </button>
+            </>
           )}
           {exportLinks.map((l) => (
             <a key={l.href} href={l.href} download className={`${btnCls} text-primary-container hover:text-primary`}>

@@ -17,6 +17,7 @@ Tab **Tabel** menampilkan data yang bisa diekspor ke Excel/CSV sebagai tabel di 
 - **Kolom**: tombol *Kolom* memilih kolom yang tampil. *Bawaan* mengembalikan pilihan awal.
 - **Teks penuh**: kalau ada kolom berisi teks panjang (komentar, jawaban), baris dipotong dua baris sampai tombol ini dinyalakan.
 - **Salin**: menyalin baris yang lolos pencarian dan filter, dengan kolom yang sedang tampil, untuk ditempel di Google Sheets atau Excel. Tombolnya hanya muncul untuk yang boleh mengekspor.
+- **Ke Google Sheets**: menyalin tabel (sama seperti Salin) lalu membuka Google Sheets kosong di tab baru (`https://sheets.new`). Klik sel A1 dan tekan Ctrl+V. Tidak ada data yang lewat server atau Google dari tombol ini; Sheets hanya menerima yang kamu tempel. Isinya salinan: mengubah sheet tidak mengubah data di website, dan data baru di website tidak muncul di sheet yang sudah ada. Kalau browser menolak akses clipboard, tab Sheets tidak dibuka dan muncul pesan galat. Butuh VPN dari Tiongkok.
 - **Unduh**: tautan ke file asli (CSV, atau Excel untuk evaluasi). Isinya tidak berubah dari sebelum ada tabel.
 - **Halaman**: 100 baris per halaman. Salin tetap mengambil semua baris, bukan hanya halaman yang terbuka.
 
@@ -62,6 +63,21 @@ Yang masih ada untuk versi lengkap: kolom pribadi yang tersembunyi tetap ikut di
 | `src/components/console/data-table.tsx` | Komponen tabel (urut, cari, filter, kolom, salin, halaman) |
 
 Menambah tabel di modul lain: rakit `TableData` di server atau lewat fungsi murni seperti di atas (kolom bertanda `sensitive` untuk data pribadi), lalu render `<DataTable label=... columns rows />`. Isi `canCopy` dan `exportLinks` hanya kalau pembacanya memang boleh mengekspor.
+
+## Kenapa Google Sheet tidak dibuat otomatis dari server
+
+Sudah dicoba dan tidak bisa dengan setelan Google yang ada sekarang. Service account yang dipakai modul Dokumen (`GOOGLE_DRIVE_SA_JSON`) punya kuota Drive 0 (`about.get` mengembalikan `storageQuota.limit = 0`), dan folder akar `GOOGLE_DRIVE_ROOT_FOLDER_ID` dimiliki service account itu sendiri, bukan Shared Drive. Hasilnya, dicoba dengan kredensial di `.env` pada 2026-10-25:
+
+| Percobaan | Hasil |
+|---|---|
+| `files.create` folder di folder akar | Berhasil |
+| `files.create` Google Sheet atau Docs di folder akar | Gagal: `The user's Drive storage quota has been exceeded` |
+| `spreadsheets.create` lewat Sheets API | Gagal: `The caller does not have permission` |
+| `files.create` unggah berkas teks 1 baris | Gagal: `Service Accounts do not have storage quota` |
+
+Mengaktifkan Google Sheets API di Google Cloud tidak mengubah itu. Yang dibutuhkan adalah penyimpanan yang bukan milik service account: Shared Drive (butuh Google Workspace) atau izin OAuth dari tiap pengguna. Dua-duanya perubahan besar, jadi tombol **Ke Google Sheets** memakai tempel manual.
+
+Kalau suatu hari ada Shared Drive atau akun Google organisasi yang bisa memegang file, pembuatan sheet dari server bisa dicoba lagi: Sheets API sudah aktif, dan sisanya adalah memindahkan pembuatan file ke penyimpanan itu.
 
 ## Batasan
 
