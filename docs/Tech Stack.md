@@ -55,6 +55,16 @@ Rekomendasi awal adalah Supabase karena satu platform mencakup DB+Auth+Storage s
 - ⏳ Deploy demo ke Vercel.
 - ⏳ Migrasi hosting permanen (pasca-demo) — belum diputuskan, akan didiskusikan lagi setelah demo berjalan.
 
+## Override dependency (`overrides` di `package.json`)
+
+Dipasang 2026-10-25 untuk menutup temuan `npm audit` tanpa `npm audit fix --force` (yang justru menurunkan versi `@vercel/blob`, `next-auth`, dan `exceljs`). Tinjau ulang setiap kali `next-auth`, `@auth/core`, `exceljs`, `@vercel/blob`, atau `drizzle-kit` naik versi: kalau paket induk sudah membawa versi yang aman, hapus override-nya. Target `npm audit` adalah 0 temuan.
+
+| Override | Alasan | Kenapa aman |
+|---|---|---|
+| `next-auth` dan `@auth/core` → `nodemailer` mengikuti versi kita (10.x) | Peer opsional mereka (`^7 || ^8`) memuat nodemailer yang punya banyak advisory | Auth.js hanya memakai nodemailer untuk Email provider; kita hanya memakai Google + Credentials. Email dikirim lewat `src/lib/email.ts` (Gmail SMTP, tanpa attachment URL, OAuth, atau proxy) |
+| `exceljs` → `uuid ^11.1.1` | `exceljs` membawa `uuid` 8.3.2 (GHSA-w5hq-g745-h8pq) | `exceljs` hanya memanggil `uuid.v4()`; tulis-baca xlsx diuji |
+| `@vercel/cli-config` → `zod ^4.6.7` | `zod` bersarang <4.6.6 (DoS memori) | Naik dalam mayor yang sama (4.x). Blob kita dipakai lewat `BLOB_READ_WRITE_TOKEN`, bukan OIDC |
+| `@esbuild-kit/core-utils` → `esbuild ^0.25.12` | `esbuild` 0.18 (GHSA-67mh-4wv8-2f99, server dev) | Hanya devDependency; `drizzle-kit check` dan `npm run check:drift` diuji jalan |
 ## Terkait
 
 - [Entity Relationship Diagram](./Entity%20Relationship%20Diagram.md) — skema yang dipetakan ke Drizzle
