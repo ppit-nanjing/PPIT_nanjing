@@ -1,4 +1,5 @@
 import { desc, eq } from "drizzle-orm";
+import { CHINA_TZ_LABEL, formatChinaDateIso, formatChinaDateTimeIso } from "@/lib/datetime";
 import { db } from "@/db";
 import { events, eventRegistrations, eventQuestions, eventFeeOptions, sensusProfiles, users } from "@/db/schema";
 import { getEventAccess } from "@/lib/event-access";
@@ -113,7 +114,7 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
     "Nama",
     "Email",
     "Status",
-    "Tanggal Daftar",
+    `Waktu Daftar (${CHINA_TZ_LABEL})`,
     "Cabang",
     // Acara tanpa blok biodata tetap punya kampus & WeChat dari sensus.
     ...(anyBiodata ? [] : ["Kampus", "WeChat ID"]),
@@ -130,8 +131,8 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
         r.name ?? "",
         r.email ?? "",
         STATUS_LABEL[r.status] ?? r.status,
-        // ISO date - locale-formatted dates ("10 Agu 2026") break Excel parsing.
-        new Date(r.registeredAt).toISOString().slice(0, 10),
+        // ISO date-time in China time - locale-formatted dates ("10 Agu 2026") break Excel parsing.
+        formatChinaDateTimeIso(new Date(r.registeredAt)),
         effectiveBranch(r.sensusCompletion === "complete" ? r.sensusBranch : null, r.branch) ?? "",
         ...(anyBiodata ? [] : [r.sensusUniversity ?? "", r.sensusWechat ?? ""]),
         ...(anyFee ? [feeLabelFor(r.feeOptionId, r.registeredAt)] : []),
@@ -151,7 +152,7 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
   return new Response(csv, {
     headers: {
       "Content-Type": "text/csv; charset=utf-8",
-      "Content-Disposition": `attachment; filename="pendaftar-${safeTitle}-${new Date().toISOString().slice(0, 10)}.csv"`,
+      "Content-Disposition": `attachment; filename="pendaftar-${safeTitle}-${formatChinaDateIso(new Date())}.csv"`,
       // Tanpa ini, klik berulang di link download yang sama (URL identik,
       // tanpa query string) bisa kena cache HTTP browser dan menyajikan
       // snapshot lama - pendaftar yang baru masuk hilang dari CSV padahal

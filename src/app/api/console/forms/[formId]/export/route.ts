@@ -1,4 +1,5 @@
 import { asc, eq } from "drizzle-orm";
+import { formatChinaDateIso } from "@/lib/datetime";
 import { NextResponse, type NextRequest } from "next/server";
 import { db } from "@/db";
 import { eventDivisions, formApplications, formFields, forms, sensusProfiles, users } from "@/db/schema";
@@ -134,7 +135,7 @@ export async function GET(req: NextRequest, ctx: { params: Promise<{ formId: str
     rows,
   };
 
-  const date = new Date().toISOString().slice(0, 10);
+  const date = formatChinaDateIso(new Date());
   const filename = `formulir-${form.kind}-${form.id.slice(0, 8)}-${date}.${format}`;
 
   if (format === "xlsx") {
