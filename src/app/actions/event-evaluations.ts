@@ -166,6 +166,8 @@ export async function submitEventEvaluation(
   if (!anonymous && !name && responder.userId && !event.evaluationAllowsAnonymous) {
     name = await accountDisplayName(responder.userId);
   }
+  // Evaluasi atas nama tanpa nama = tidak bisa dicocokkan ke orangnya; tolak.
+  if (!event.evaluationAllowsAnonymous && !name) return { error: "required" };
 
   // Pertanyaan teks wajib (non-optional) mengikuti template: hanya `heartwarming`
   // yang opsional. Kalau template berubah, samakan daftar ini.
@@ -237,6 +239,7 @@ async function submitCustomEvaluation(
   if (!anonymous && !name && responder.userId && !opts.allowsAnonymous) {
     name = await accountDisplayName(responder.userId);
   }
+  if (!opts.allowsAnonymous && !name) return { error: "required" };
 
   const answers: { questionId: string; label: string; type: string; text: string | null; number: number | null }[] = [];
   for (const q of questions) {
