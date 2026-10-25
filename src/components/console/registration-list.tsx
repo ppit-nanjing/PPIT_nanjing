@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState, useTransition } from "react";
-import { CheckCircle2, TriangleAlert, Search, Ban, Undo2 } from "lucide-react";
+import { CheckCircle2, TriangleAlert, Search, Ban, Undo2, Rows3, Table2 } from "lucide-react";
 import { checkInRegistration, setRegistrationCancelled } from "@/app/actions/admin-events";
 import { ConfirmButton } from "@/components/console/confirm-button";
 import { toast } from "sonner";
@@ -11,75 +11,17 @@ import {
   CHECK_IN_BLOCK_LABEL,
   CHECK_IN_BLOCK_MESSAGE,
   CHECK_IN_CLOSED_MESSAGE,
-  type CheckInBlock,
 } from "@/lib/event-checkin";
 import { CollapsibleRecordList, type BadgeTone } from "@/components/console/collapsible-record-list";
 import { RefreshButton } from "@/components/console/refresh-button";
-
-interface Registration {
-  id: string;
-  userName: string | null;
-  userEmail: string | null;
-  status: "pending" | "confirmed" | "attended" | "cancelled";
-  registeredAt: string;
-  // Turunan dari sensus (lihat src/lib/membership-status.ts), bukan kolom di
-  // database. `branch` diisi dari sensus kalau lengkap, kalau tidak dari jawaban
-  // peserta saat mendaftar; null untuk pendaftaran lama sebelum ditanyakan.
-  membership: string;
-  branch: string | null;
-  // Jawaban pertanyaan kustom acara, { [questionId]: string }.
-  answers?: Record<string, string> | null;
-  // Kategori tarif yang dipilih peserta, mis. "Freshmen (¥15)". null = acara
-  // gratis / tarif tunggal / pendaftaran lama.
-  feeLabel?: string | null;
-  // Nama kategori tarif MENTAH (mis. "Freshmen"), tanpa nominal/tahap harga -
-  // dipakai untuk filter, supaya "Freshmen" tetap satu grup walau nominalnya
-  // berubah antar waktu (early bird / normal / digratiskan sponsor). feeLabel
-  // di atas tidak stabil untuk ini karena beda nominal = beda string.
-  feeCategory?: string | null;
-  // WeChat ID — bagian dari versi RINGKAS (Humas menghubungi peserta). Diambil
-  // dari snapshot biodata atau fallback sensus di server; null kalau dua-duanya
-  // kosong.
-  wechatId?: string | null;
-  // Asal kampus — snapshot biodata atau fallback sensus (acara requiresSensus
-  // seperti Fun Hike). Selalu tampil di baris ringkas.
-  university?: string | null;
-  // Biodata lengkap yang di-snapshot saat mendaftar (acara requiresBiodata).
-  // Hanya dikirim ke versi LENGKAP (BPH Kabinet + Divisi Teknologi + BPH
-  // Panitia acara ini).
-  biodata?: Record<string, string> | null;
-  // Alasan peserta ini belum boleh di-check-in (dihitung di server dari status
-  // pendaftaran + status bayar). null = boleh.
-  checkInBlocked?: CheckInBlock | null;
-  // Kapan & oleh siapa peserta ini di-check-in (event_registrations.checked_in_by).
-  // null kalau belum hadir atau data lama sebelum kolomnya ada.
-  checkedInAt?: string | null;
-  checkedInByName?: string | null;
-}
-
-const BIODATA_LABEL: Record<string, string> = {
-  fullName: "Nama Lengkap",
-  passportNumber: "Nomor Paspor",
-  wechatId: "WeChat ID",
-  chinaPhone: "No. Telpon China",
-  branch: "Kota / Ranting",
-  university: "Universitas",
-  major: "Jurusan",
-  entryYear: "Tahun Angkatan",
-  studentProofUrl: "Bukti Mahasiswa Aktif",
-};
-
-interface QuestionRef {
-  id: string;
-  label: string;
-}
-
-const STATUS_LABEL: Record<Registration["status"], string> = {
-  pending: "Menunggu",
-  confirmed: "Terkonfirmasi",
-  attended: "Hadir",
-  cancelled: "Dibatalkan",
-};
+import { DataTable } from "@/components/console/data-table";
+import {
+  BIODATA_LABEL,
+  STATUS_LABEL,
+  buildRegistrationTable,
+  type QuestionRef,
+  type Registration,
+} from "@/lib/registration-table";
 
 const STATUS_TONE: Record<Registration["status"], BadgeTone> = {
   pending: "neutral",
@@ -94,6 +36,7 @@ export function RegistrationList({
   questions = [],
   detail = false,
   canCancel = false,
+  exportHref,
 }: {
   eventId: string;
   registrations: Registration[];
@@ -106,6 +49,9 @@ export function RegistrationList({
   // Panitia acara ini boleh membatalkan pendaftaran walau cuma lihat versi
   // ringkas (lihat event.manageRegistrants di event-capabilities.ts).
   canCancel?: boolean;
+  // Tautan ekspor CSV. Hanya diisi untuk yang memang boleh mengekspor; sekaligus
+  // menentukan apakah tombol Salin di tampilan tabel muncul.
+  exportHref?: string;
 }) {
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
@@ -114,6 +60,12 @@ export function RegistrationList({
   const [statusFilter, setStatusFilter] = useState<"all" | Registration["status"]>("all");
   const [checkinFilter, setCheckinFilter] = useState<"all" | "in" | "out">("all");
   const [feeFilter, setFeeFilter] = useState("all");
+  const [view, setView] = useState<"list" | "table">("list");
+
+  const table = useMemo(
+    () => buildRegistrationTable(registrations, questions, detail),
+    [registrations, questions, detail],
+  );
 
   const feeCategories = useMemo(
     () => [...new Set(registrations.map((r) => r.feeCategory).filter((f): f is string => Boolean(f)))].sort(),
@@ -216,9 +168,39 @@ export function RegistrationList({
 
   return (
     <div className="flex flex-col gap-3">
-      <div className="flex justify-end">
+      <div className="flex items-center justify-between gap-2">
+        <div role="group" aria-label="Tampilan pendaftar" className="inline-flex rounded-md bg-soft-gray p-0.5 text-label-caps uppercase tracking-wide">
+          {([
+            ["list", "Daftar", Rows3],
+            ["table", "Tabel", Table2],
+          ] as const).map(([key, text, Icon]) => (
+            <button
+              key={key}
+              type="button"
+              onClick={() => setView(key)}
+              aria-pressed={view === key}
+              className={`inline-flex items-center gap-1.5 rounded px-2.5 py-1.5 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-container ${
+                view === key ? "bg-surface-container-lowest text-on-background shadow-sm" : "text-on-surface-variant hover:text-on-background"
+              }`}
+            >
+              <Icon size={13} aria-hidden /> {text}
+            </button>
+          ))}
+        </div>
         <RefreshButton />
       </div>
+      {view === "table" ? (
+        <DataTable
+          label="Tabel pendaftar"
+          columns={table.columns}
+          rows={table.rows}
+          canCopy={Boolean(exportHref)}
+          exportLinks={exportHref ? [{ label: "Unduh CSV", href: exportHref }] : []}
+          emptyText="Belum ada yang mendaftar."
+          note="Tabel ini hanya untuk dilihat. Check-in dan pembatalan pendaftaran ada di tampilan Daftar."
+        />
+      ) : (
+      <>
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2">
         <label className="relative sm:col-span-2 lg:col-span-1">
           <Search size={14} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-on-surface-variant" aria-hidden />
@@ -374,6 +356,8 @@ export function RegistrationList({
           );
         }}
       />
+      </>
+      )}
     </div>
   );
 }

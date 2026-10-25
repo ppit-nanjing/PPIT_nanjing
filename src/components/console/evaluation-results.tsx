@@ -1,11 +1,14 @@
 "use client";
 
-import { useState, type ReactNode } from "react";
-import { BarChart3, Download, ListChecks, Trash2, Users } from "lucide-react";
+import { useMemo, useState, type ReactNode } from "react";
+import { BarChart3, Download, ListChecks, Table2, Trash2, Users } from "lucide-react";
 import type { InferSelectModel } from "drizzle-orm";
 import type { eventEvaluations } from "@/db/schema";
 import { ConfirmButton } from "@/components/console/confirm-button";
+import { DataTable } from "@/components/console/data-table";
 import { deleteEventEvaluation } from "@/app/actions/event-evaluations";
+import { buildEvaluationDataset } from "@/lib/event-evaluation-dataset";
+import { datasetToTable, type TableData } from "@/lib/table-view";
 import { ratingQuestions, textQuestions, type EvaluationSection } from "@/lib/event-evaluation-template";
 import { type EvalQuestionRow, SCALE_MAX, isScaleType } from "@/lib/event-evaluation-questions";
 import {
@@ -102,7 +105,26 @@ const TAB_LIST = [
   { id: "grafik", label: "Grafik", icon: <BarChart3 size={14} aria-hidden="true" /> },
   { id: "jawaban", label: "Jawaban", icon: <ListChecks size={14} aria-hidden="true" /> },
   { id: "respons", label: "Respons", icon: <Users size={14} aria-hidden="true" /> },
+  { id: "tabel", label: "Tabel", icon: <Table2 size={14} aria-hidden="true" /> },
 ];
+
+type ResultTab = "grafik" | "jawaban" | "respons" | "tabel";
+
+// Tabel baca-saja dengan kolom dan baris yang sama persis dengan file Excel/CSV
+// (dirakit oleh buildEvaluationDataset yang sama dengan rute ekspor), termasuk
+// respons bentuk standar yang tidak ditampilkan di tab lain.
+function ResultsTable({ table }: { table: TableData }) {
+  return (
+    <DataTable
+      label="Tabel hasil evaluasi"
+      columns={table.columns}
+      rows={table.rows}
+      canCopy
+      emptyText="Belum ada respons."
+      note="Isinya sama dengan file Excel/CSV. Tabel ini hanya untuk dilihat; hapus respons lewat tab Respons."
+    />
+  );
+}
 
 export function EvaluationResults({
   eventId,
@@ -121,6 +143,14 @@ export function EvaluationResults({
   /** Audiens tautan ekspor: "panitia" menambahkan ?audience=panitia (gerbangnya lebih ketat). */
   exportAudience?: "peserta" | "panitia";
 }) {
+  const table = useMemo(
+    () =>
+      datasetToTable(
+        buildEvaluationDataset({ audience: exportAudience, sections, rows: evaluations, questions, answers }),
+      ),
+    [exportAudience, sections, evaluations, questions, answers],
+  );
+
   // Tab Panitia: keadaan kosongnya harus menunjuk tautan evaluasi PANITIA. Pesan
   // kosong milik peserta (TemplateResults/CustomResults) menyuruh membagikan
   // /events/<slug>/evaluasi ke grup peserta - kalau itu yang dibagikan ke grup
@@ -146,10 +176,11 @@ export function EvaluationResults({
         answers={answers}
         legacyCount={legacy.length}
         exportAudience={exportAudience}
+        table={table}
       />
     );
   }
-  return <TemplateResults eventId={eventId} evaluations={legacy} sections={sections} />;
+  return <TemplateResults eventId={eventId} evaluations={legacy} sections={sections} table={table} />;
 }
 
 // ---------- Template tetap (WIF / umum) ----------
@@ -158,12 +189,14 @@ function TemplateResults({
   eventId,
   evaluations,
   sections,
+  table,
 }: {
   eventId: string;
   evaluations: LegacyEvaluation[];
   sections: EvaluationSection[];
+  table: TableData;
 }) {
-  const [tab, setTab] = useState<"grafik" | "jawaban" | "respons">("grafik");
+  const [tab, setTab] = useState<ResultTab>("grafik");
 
   if (evaluations.length === 0) {
     return (
@@ -322,6 +355,8 @@ function TemplateResults({
           })}
         </ul>
       )}
+
+      {tab === "tabel" && <ResultsTable table={table} />}
     </div>
   );
 }
@@ -382,6 +417,7 @@ function CustomResults({
   answers,
   legacyCount,
   exportAudience = "peserta",
+  table,
 }: {
   eventId: string;
   evaluations: Evaluation[];
@@ -389,8 +425,9 @@ function CustomResults({
   answers: EvalAnswerRow[];
   legacyCount: number;
   exportAudience?: "peserta" | "panitia";
+  table: TableData;
 }) {
-  const [tab, setTab] = useState<"grafik" | "jawaban" | "respons">("grafik");
+  const [tab, setTab] = useState<ResultTab>("grafik");
   const columns = evalColumns(questions, answers);
   const byEvaluation = answersByEvaluation(answers);
 
@@ -582,6 +619,8 @@ function CustomResults({
           })}
         </ul>
       )}
+
+      {tab === "tabel" && <ResultsTable table={table} />}
     </div>
   );
 }

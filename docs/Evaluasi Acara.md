@@ -24,7 +24,7 @@ flowchart TD
 | Rute | Isi |
 |---|---|
 | `/events/:slug/evaluasi` | Form publik. `draft`/`scheduled` → 404. Tanpa login; identitas opsional; satu perangkat satu respons (token `localStorage` + unique `(event_id, responder_token)`). |
-| `/console/events/:id` | Section **Pertanyaan Evaluasi** (builder + pratinjau, lihat di bawah) dan section **Evaluasi Acara** (CollapsibleSection): ringkasan (jumlah respons, rata-rata, anonim) + **3 tab** — *Grafik* (rata-rata & distribusi tiap rating; hitungan per pilihan), *Jawaban* (preview jawaban per pertanyaan: distribusi nilai + semua teks), *Respons* (daftar per orang + hapus). |
+| `/console/events/:id` | Section **Pertanyaan Evaluasi** (builder + pratinjau, lihat di bawah) dan section **Evaluasi Acara** (CollapsibleSection): ringkasan (jumlah respons, rata-rata, anonim) + **4 tab** — *Grafik* (rata-rata & distribusi tiap rating; hitungan per pilihan), *Jawaban* (preview jawaban per pertanyaan: distribusi nilai + semua teks), *Respons* (daftar per orang + hapus), *Tabel* (isi yang sama dengan file ekspor, baca-saja; lihat [Tampilan Tabel Konsol](./Tampilan%20Tabel%20Konsol.md)). |
 | `/api/console/events/:id/evaluasi/export?format=csv\|xlsx` | Ekspor lengkap. Template tetap: 14 kolom. Pertanyaan sendiri: satu kolom per pertanyaan. Akses: sesi dengan akses console acara ini (sama seperti halaman console-nya). |
 
 ## Dua mode pertanyaan

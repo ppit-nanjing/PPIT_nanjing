@@ -1361,14 +1361,18 @@ export default async function ConsoleEventDetailPage({ params }: { params: Promi
           eventId={id}
           detail={canSeeRegistrantDetail}
           canCancel={canManageRegistrants}
+          exportHref={canExportRegistrants ? `/api/console/events/${id}/registrations/export` : undefined}
           questions={questions.map((q) => ({ id: q.id, label: q.label }))}
           registrations={registrations.map((r) => ({
             id: r.reg.id,
             userName: r.userName,
-            userEmail: r.userEmail,
+            // Email dan jawaban formulir hanya untuk versi LENGKAP. Dipotong di
+            // server, bukan disembunyikan di UI: yang dikirim ke browser sudah
+            // terbaca oleh siapa pun yang membuka payload halaman.
+            userEmail: canSeeRegistrantDetail ? r.userEmail : null,
             status: r.reg.status,
             registeredAt: r.reg.registeredAt.toISOString(),
-            answers: r.reg.answersJson ?? {},
+            answers: canSeeRegistrantDetail ? r.reg.answersJson ?? {} : {},
             feeLabel: feeLabelFor(r.reg.feeOptionId, r.reg.registeredAt),
             feeCategory: r.reg.feeOptionId ? feeOptionById.get(r.reg.feeOptionId)?.label ?? null : null,
             // WeChat ID = bagian dari versi ringkas (Humas menghubungi peserta).

@@ -47,6 +47,7 @@
 - [Organization & Regional Branches](./Organization%20&%20Regional%20Branches.md)
 - [Event Flow](./Event%20Flow.md)
 - [Evaluasi Acara](./Evaluasi%20Acara.md) — kuesioner pasca-acara (`/events/:slug/evaluasi`) + rekap & ekspor di console
+- [Tampilan Tabel Konsol](./Tampilan%20Tabel%20Konsol.md) — tab Tabel (baca-saja, ala spreadsheet) untuk evaluasi acara dan daftar pendaftar: urut, cari, filter, pilih kolom, salin; kolom pribadi tersembunyi
 - [Evaluasi Panitia Acara](./Evaluasi%20Panitia%20Acara.md) — evaluasi kolektif antar panitia per-acara (`/events/:slug/evaluasi-panitia`), jendela waktu diatur BPH di konsol acara
 - [Sampah Kegiatan](./Sampah%20Kegiatan.md) — "Hapus" kegiatan = pindah ke Sampah (soft delete), pulihkan / hapus permanen di `/console/events`
 - [Content Pages](./Content%20Pages.md) (News, Gallery, Legal)
