@@ -40,16 +40,14 @@ const STATIC_PAGES: { url: string; priority: number; changeFrequency?: MetadataR
   { url: "/terms", priority: 0.2, changeFrequency: "yearly" },
 ];
 
-export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
-  const base = STATIC_PAGES.map((p) => ({
-    url: `${SITE_URL}${p.url}`,
-    lastModified: new Date(),
-    changeFrequency: p.changeFrequency ?? "monthly" as const,
-    priority: p.priority,
-  }));
+// Dibaca dari database. Tanpa ini Next membekukan sitemap saat build: acara dan
+// berita yang terbit sesudah deploy tidak muncul sampai deploy berikutnya.
+// Diperbarui tiap jam (ISR): tidak ada query per permintaan, dan kalau
+// pembaruannya gagal Next tetap menyajikan versi lama yang baik.
+export const revalidate = 3600;
 
-  // Fetch dynamic routes in parallel
-  const [publishedEvents, publishedNews, albums, openJobs] = await Promise.all([
+async function loadRows() {
+  return Promise.all([
     db
       .select({ slug: events.slug, startAt: events.startAt })
       .from(events)
@@ -64,6 +62,29 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       .from(jobPostings)
       .where(eq(jobPostings.status, "open")),
   ]);
+}
+type Rows = Awaited<ReturnType<typeof loadRows>>;
+
+export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
+  const base = STATIC_PAGES.map((p) => ({
+    url: `${SITE_URL}${p.url}`,
+    lastModified: new Date(),
+    changeFrequency: p.changeFrequency ?? "monthly" as const,
+    priority: p.priority,
+  }));
+
+  // Fetch dynamic routes in parallel
+  let rows: Rows = [[], [], [], []];
+  try {
+    rows = await loadRows();
+  } catch (error) {
+    // Build tanpa database (CI memakai DATABASE_URL palsu): cukup halaman statis.
+    // Saat runtime galat dibiarkan naik, supaya ISR mempertahankan sitemap lama
+    // yang lengkap, bukan menyimpan yang kosong selama satu jam.
+    if (process.env.NEXT_PHASE !== "phase-production-build") throw error;
+    console.warn("[sitemap] database tidak terjangkau saat build, memakai halaman statis saja:", error instanceof Error ? error.message : error);
+  }
+  const [publishedEvents, publishedNews, albums, openJobs] = rows;
 
   const eventEntries: MetadataRoute.Sitemap = publishedEvents.map((e) => ({
     url: `${SITE_URL}/events/${e.slug}`,
