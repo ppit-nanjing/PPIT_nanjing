@@ -8,9 +8,14 @@ const CHAT_URL = process.env.OPENAI_BASE_URL
   ? `${process.env.OPENAI_BASE_URL.replace(/\/+$/, "")}/chat/completions`
   : "";
 
-// Alias `auto/*` merutekan ke model di balik gateway, jadi satu alias bisa
-// dipindah tanpa mengubah kode.
-const MODEL_CHAIN = ["auto/best-fast", "auto/chat"];
+// Urutan model dicoba dari kiri ke kanan. Lewat env supaya pindah penyedia
+// (gateway, Groq, Cloudflare Workers AI) cuma mengubah konfigurasi: Workers AI
+// misalnya memakai id `@cf/meta/llama-3.3-70b-instruct-fp8-fast`, sedangkan
+// gateway OpenAI-compatible memakai alias `auto/*`. Default = perilaku lama.
+const MODEL_CHAIN = (process.env.OPENAI_MODELS ?? "auto/best-fast,auto/chat")
+  .split(",")
+  .map((m) => m.trim())
+  .filter((m) => m.length > 0);
 
 const TIMEOUT_MS = 20_000;
 

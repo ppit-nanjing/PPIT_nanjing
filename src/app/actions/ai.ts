@@ -6,6 +6,7 @@ import sanitizeHtml from "sanitize-html";
 import { improveIndonesianText, improveEventDescriptionHtml, groqChat, type ImproveContext } from "@/lib/groq";
 import { sanitizeDescriptionHtml } from "@/lib/sanitize-description-html";
 import { askGuide } from "@/lib/guide-answer";
+import { sanitizeHistory } from "@/lib/chat-history";
 import { and, eq } from "drizzle-orm";
 import { db } from "@/db";
 import type { ChatPlace } from "@/lib/chat-places";
@@ -108,7 +109,12 @@ export async function chatWithAIAction(history: { role: "user" | "assistant"; co
   const session = await auth();
   if (!session?.user?.id) throw new Error("Kamu harus masuk untuk menggunakan asisten AI");
 
-  const recent = history.slice(-12).map((m) => ({ role: m.role, content: m.content }));
+  // Riwayat datang dari klien, jadi tidak dipercaya apa adanya: role di luar
+  // user/assistant dibuang (klien bisa mengirim `system`), isi non-string
+  // dibuang, PII diredaksi, dan panjang tiap pesan serta totalnya dibatasi.
+  // Validasi yang sama diulang di askGuide karena fungsi itu juga dipanggil
+  // script prewarm.
+  const recent = sanitizeHistory(history);
   if (recent.length === 0) throw new Error("Pesan kosong");
 
   // Jawaban diambil lewat askGuide (src/lib/guide-answer.ts): retrieval dari

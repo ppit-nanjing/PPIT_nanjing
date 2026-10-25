@@ -1,6 +1,6 @@
-import { eq, sql } from "drizzle-orm";
+import { eq, lt, sql } from "drizzle-orm";
 import { db } from "@/db";
-import { guideChunks, guideMeta } from "@/db/schema";
+import { guideAnswers, guideChunks, guideMeta } from "@/db/schema";
 import { CHUNKER_VERSION, chunkMarkdown } from "@/lib/guide-chunker";
 import { stemmedText } from "@/lib/guidebook-terms";
 
@@ -39,7 +39,7 @@ export async function rebuildChunks(articleId: string, content: string | null): 
  * mana yang perlu dibangun ulang kalau aturan pemotongan berubah.
  */
 export async function bumpCorpusVersion(): Promise<void> {
-  await db
+  const [meta] = await db
     .insert(guideMeta)
     .values({ oneRow: true, corpusVersion: 1, chunkerVersion: CHUNKER_VERSION })
     .onConflictDoUpdate({
@@ -49,5 +49,13 @@ export async function bumpCorpusVersion(): Promise<void> {
         chunkerVersion: CHUNKER_VERSION,
         updatedAt: new Date(),
       },
-    });
+    })
+    .returning({ corpusVersion: guideMeta.corpusVersion });
+
+  // Jawaban dari versi korpus lama tidak akan pernah dibaca lagi: kunci cache
+  // memuat corpus_version (src/lib/guide-answer.ts), jadi barisnya cuma sampah.
+  // Tanpa pembersihan ini guide_answers tumbuh satu set penuh setiap ingest.
+  if (meta) {
+    await db.delete(guideAnswers).where(lt(guideAnswers.corpusVersion, meta.corpusVersion));
+  }
 }

@@ -8,6 +8,7 @@ import { buildGuideContext, findGuideChunks, RETRIEVABLE_ARTICLE, type GuideChun
 import { excerpt, orderByRank, questionEntities, searchTerms } from "./guidebook-terms";
 import { GUIDE_FAQ, GUIDE_STARTER_QUESTIONS } from "./guidebook-faq";
 import { placeButtons, placeIndex, type ChatPlace } from "./chat-places";
+import { redactPII, sanitizeHistory } from "./chat-history";
 
 // Jalur jawaban guidebook maba (docs/Guidebook Maba.md, bagian "AI answer path",
 // "Token and quota budget", dan "Edge cases"). Bukan Server Action: dipakai
@@ -142,14 +143,11 @@ function normalizeQuestion(question: string): string {
  * jangan pernah mengirim data pribadi ke penyedia AI, dan teks mentahnya tidak
  * pernah disimpan). Email, nomor telepon, dan deretan angka panjang (NIM,
  * nomor paspor) diganti penanda sebelum masuk question_hash/question_redacted.
+ * redactPII/redaksi riwayat tinggal di src/lib/chat-history.ts supaya bisa diuji
+ * tanpa database.
  */
 function redactQuestion(text: string): string {
-  return text
-    .replace(/[\w.+-]+@[\w-]+\.[\w.-]+/g, "[email]")
-    .replace(/\+?\d[\d\s().-]{6,}\d/g, "[nomor]")
-    .replace(/\s+/g, " ")
-    .trim()
-    .slice(0, MAX_QUESTION_CHARS);
+  return redactPII(text, MAX_QUESTION_CHARS).replace(/\s+/g, " ").trim();
 }
 
 // Hash dihitung dari bentuk yang sudah disunting, bukan teks mentah: hash nomor
@@ -251,7 +249,10 @@ function questionHash(redacted: string): string {
 // tautan kartu. Jawaban cache v24 untuk pertanyaan "sebutkan semua masjid di
 // luar kota" menjanjikan kartu yang tidak pernah dirender dan menyebut jumlah
 // yang salah, jadi tidak boleh dipakai lagi.
-const ANSWER_FORMAT_VERSION = 25;
+// 25 -> 26: jawaban percakapan berkonteks tidak lagi masuk cache (kuncinya tidak
+// memuat riwayat, jadi jawaban "yang tadi" bisa terbaca pengguna lain). Baris v25
+// yang terlanjur tersimpan dari pertanyaan lanjutan harus berhenti dilayani.
+const ANSWER_FORMAT_VERSION = 26;
 
 function answerCacheKey(redacted: string): string {
   return questionHash(`${redacted}\u0000v${ANSWER_FORMAT_VERSION}`);
@@ -510,6 +511,15 @@ export async function askGuide(input: {
 }): Promise<GuideAnswer> {
   const started = Date.now();
   const question = normalizeQuestion(input.question);
+  // Klien boleh mengirim apa saja ke sini, jadi riwayat disaring dulu: role
+  // asing dibuang, PII diredaksi, panjang dibatasi (lihat sanitizeHistory).
+  const history = sanitizeHistory(input.history);
+  // Pertanyaan lanjutan ("yang tadi maksudnya?") hanya bisa dijawab dengan
+  // konteks, dan jawabannya tidak boleh dibagi ke pengguna lain lewat cache:
+  // kunci cache tidak memuat riwayat. Jadi cache hanya dipakai untuk percakapan
+  // yang belum punya giliran sebelumnya.
+  const lastUserIndex = history.reduce((idx, m, i) => (m.role === "user" ? i : idx), -1);
+  const hasPriorContext = lastUserIndex > 0;
   // Bahasa jawaban ditentukan dari pertanyaannya, bukan dari locale antarmuka:
   // maba yang menulis Inggris dapat jawaban Inggris, sitasi Inggris, dan teks
   // cadangan Inggris walau halamannya sedang dibuka dalam Bahasa Indonesia.
@@ -583,7 +593,7 @@ export async function askGuide(input: {
   // Cache hit tidak memakan kuota. Sitasinya tetap dibaca dari baris potongan,
   // jadi artikel yang sudah disembunyikan, dibatalkan tinjauannya, atau
   // kedaluwarsa tidak ikut terbit lewat cache walau corpus_version tidak naik.
-  const cached = await findCachedAnswer(hash, corpusVersion);
+  const cached = hasPriorContext ? null : await findCachedAnswer(hash, corpusVersion);
   // chunk_ids ditulis urut skor retrieval, dan loadChunks mengembalikannya urut
   // sort_order - jadi urutannya dipulihkan di sini supaya sitasi jawaban dari
   // cache tidak berbalik jadi urutan tampilan konsol.
@@ -615,7 +625,16 @@ export async function askGuide(input: {
     };
   }
 
+  // Kuota dipotong sebelum panggilan LLM (satu statement atomik), jadi kalau
+  // penyedia gagal atau jawabannya kosong, jatah pengguna dikembalikan di sini.
+  // Tanpa ini satu gangguan penyedia menghabiskan 15 pertanyaan harian.
+  let quotaConsumed = false;
+
   const degraded = async (reason: string, usedLlm: boolean): Promise<GuideAnswer> => {
+    if (quotaConsumed) {
+      quotaConsumed = false;
+      await refundQuota(input.userId);
+    }
     const logId = await logQuery({
       userId: input.userId,
       question,
@@ -640,6 +659,7 @@ export async function askGuide(input: {
 
   if (!aiEnabled) return degraded("ai_nonaktif", false);
   if (!(await consumeQuota(input.userId))) return degraded("kuota_harian", false);
+  quotaConsumed = true;
 
   const messages: GroqMessage[] = [
     {
@@ -650,10 +670,11 @@ export async function askGuide(input: {
         placeIndex(corpus).length > 0,
       ),
     },
-    ...input.history,
+    ...history,
   ];
   // Prewarm memanggil tanpa history, jadi pertanyaannya belum ada di messages.
-  if (!input.history.some((m) => m.role === "user")) messages.push({ role: "user", content: question });
+  // Yang dikirim bentuk tersunting: teks mentah tidak boleh sampai ke penyedia.
+  if (!history.some((m) => m.role === "user")) messages.push({ role: "user", content: redacted });
 
   let reply: string;
   try {
@@ -669,7 +690,7 @@ export async function askGuide(input: {
   // sampai versi korpus berubah. Pakai jawaban panduan dari potongan sumber.
   if (parsed.reply.length === 0) return degraded("jawaban_kosong", true);
   const followUps = await resolveFollowUps(parsed.followUps);
-  if (!reply.includes(PROFILE_EDIT_MARKER)) {
+  if (!hasPriorContext && !reply.includes(PROFILE_EDIT_MARKER)) {
     await writeCache(hash, corpusVersion, redacted, withFollowUps(parsed.reply, followUps), chunkIds);
   }
   const logId = await logQuery({
@@ -819,4 +840,23 @@ async function consumeQuota(userId: string): Promise<boolean> {
     })
     .returning({ count: aiUsage.count });
   return rows.length > 0;
+}
+
+/**
+ * Kembalikan satu jatah yang sudah terlanjur dipotong consumeQuota. Dibatasi di
+ * nol supaya baris kuota tidak pernah negatif, dan hari yang dipakai sama
+ * dengan pemotongnya (Asia/Shanghai) - pertanyaan lewat tengah malam tidak
+ * mengembalikan jatah ke hari yang salah.
+ */
+async function refundQuota(userId: string): Promise<void> {
+  await db
+    .update(aiUsage)
+    .set({ count: sql`greatest(${aiUsage.count} - 1, 0)` })
+    .where(
+      and(
+        eq(aiUsage.userId, userId),
+        eq(aiUsage.day, shanghaiDay()),
+        sql`${aiUsage.count} > 0`,
+      ),
+    );
 }
