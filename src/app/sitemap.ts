@@ -40,6 +40,11 @@ const STATIC_PAGES: { url: string; priority: number; changeFrequency?: MetadataR
   { url: "/terms", priority: 0.2, changeFrequency: "yearly" },
 ];
 
+// Dibaca dari database, jadi dirender per permintaan: tanpa ini Next membekukan
+// sitemap saat build (acara/berita yang terbit sesudah deploy tidak muncul sampai
+// deploy berikutnya) dan build tanpa database (CI) gagal di /sitemap.xml.
+export const dynamic = "force-dynamic";
+
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const base = STATIC_PAGES.map((p) => ({
     url: `${SITE_URL}${p.url}`,
