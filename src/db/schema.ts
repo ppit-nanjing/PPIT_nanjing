@@ -1741,7 +1741,7 @@ export const eventEvaluationAnswers = pgTable(
 );
 
 // ---------- Guidebook maba (issue #65, docs/Guidebook Maba.md) ----------
-// Migrasinya: drizzle/0046_guidebook.sql. `tsv` ikut dipetakan di sini walau
+// Migrasinya: drizzle/0057_guidebook.sql. `tsv` ikut dipetakan di sini walau
 // tidak pernah dibaca lewat Drizzle: kalau tidak, `db:push` menganggapnya kolom
 // asing dan menawarkan DROP, sementara query FTS-nya (P4) masih memakainya.
 const tsvector = customType<{ data: string }>({
@@ -1776,7 +1776,7 @@ export const guideChunks = pgTable(
     pageTo: integer("page_to"),
     text: text("text").notNull(),
     textStemmed: text("text_stemmed").notNull().default(""),
-    // Ekspresinya harus sama persis dengan drizzle/0046_guidebook.sql, kalau
+    // Ekspresinya harus sama persis dengan drizzle/0057_guidebook.sql, kalau
     // tidak `db:push` akan terus menganggap kolomnya berubah.
     tsv: tsvector("tsv").generatedAlwaysAs(
       sql`to_tsvector('simple'::regconfig, coalesce("heading", '') || ' ' || "text" || ' ' || "text_stemmed")`,

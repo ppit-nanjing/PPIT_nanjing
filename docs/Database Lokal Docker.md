@@ -2,7 +2,7 @@
 
 > Dibuat 2026-10-10. Cara menjalankan website ini di mesin sendiri dengan Postgres di dalam Docker: tanpa menyentuh Neon produksi, dan dengan database yang boleh dihapus kapan saja.
 >
-> Asalnya dari pengujian guidebook maba (#65). Migrasi `drizzle/0046_guidebook.sql` perlu dijalankan berkali-kali sambil diperiksa dengan `psql`, dan itu tidak bisa dilakukan ke Neon.
+> Asalnya dari pengujian guidebook maba (#65). Migrasi `drizzle/0057_guidebook.sql` perlu dijalankan berkali-kali sambil diperiksa dengan `psql`, dan itu tidak bisa dilakukan ke Neon.
 
 ## Kenapa perlu database sendiri
 
@@ -60,19 +60,19 @@ Variabel shell menang atas `--env-file`. Jadi `DATABASE_URL=... npx tsx src/db/s
 2. `npm install`
 3. Buat `.env.local` seperti tabel di atas, dan `.env` untuk sisa variabelnya
 4. Bentuk skema: `npx drizzle-kit push` — **baca daftar pernyataan yang dicetak lebih dulu**, lalu jawab Yes
-5. `npx tsx --env-file=.env.local src/db/apply-sql.ts drizzle/0046_guidebook.sql`
+5. `npx tsx --env-file=.env.local src/db/apply-sql.ts drizzle/0057_guidebook.sql`
 6. `npx tsx --env-file=.env.local src/db/seed.ts`
 7. `npx tsx --env-file=.env.local src/db/seed-local-admin.ts admin@ppit-local.test 'pilih-password-sendiri'`
 8. `npm run dev -- -p 3100`
 
 Port 3000 tidak dipakai karena di mesin ini sudah dipegang traefik milik Dokploy.
 
-Langkah 4 dan 5 diuji di database kosong: `push` membentuk 70 tabel lengkap dengan `guide_chunks.tsv` sebagai kolom generated, lalu `0046_guidebook.sql` jalan tanpa error (semua pernyataannya `IF NOT EXISTS`, jadi aman diulang dan aman dijalankan setelah `push`). Jumlah tabel, kolom, dan indeksnya sama dengan database lokal yang sudah dipakai.
+Langkah 4 dan 5 diuji di database kosong: `push` membentuk 70 tabel lengkap dengan `guide_chunks.tsv` sebagai kolom generated, lalu `0057_guidebook.sql` jalan tanpa error (semua pernyataannya `IF NOT EXISTS`, jadi aman diulang dan aman dijalankan setelah `push`). Jumlah tabel, kolom, dan indeksnya sama dengan database lokal yang sudah dipakai.
 
 ## Yang perlu diwaspadai
 
 - `drizzle-kit push` ke database lokal yang sudah ada selalu melaporkan sekitar enam pernyataan: nama foreign key yang dipendekkan jadi 63 karakter dan `SET DEFAULT '{}'` di `departments.admin_module_scope` serta `event_divisions.granted_capabilities`. Itu drift lama, bukan dari guidebook. Setuju saja saat mengerjakan lokal.
-- Kolom `guide_chunks.tsv` itu generated column. Ekspresinya ditulis di dua tempat, `src/db/schema.ts` dan `drizzle/0046_guidebook.sql`, dan keduanya harus sama persis. Kalau tidak, `push` terus menganggap kolomnya berubah.
+- Kolom `guide_chunks.tsv` itu generated column. Ekspresinya ditulis di dua tempat, `src/db/schema.ts` dan `drizzle/0057_guidebook.sql`, dan keduanya harus sama persis. Kalau tidak, `push` terus menganggap kolomnya berubah.
 - Jangan pernah meng-export `DATABASE_URL` Neon saat menjalankan `push`.
 - `npm run db:seed` membaca `.env`, bukan `.env.local`. Untuk database lokal, jalankan langsung seperti langkah 6 di atas.
 

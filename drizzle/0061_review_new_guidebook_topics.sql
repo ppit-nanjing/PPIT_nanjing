@@ -5,7 +5,7 @@
 -- "lolos korpus resmi", bukan "belum dicek manusia". Idempoten: baris yang
 -- sudah ditinjau tidak disentuh, topik lain tidak ikut.
 --
--- Jalankan: npx tsx --env-file=.env.local src/db/apply-sql.ts drizzle/0050_review_new_guidebook_topics.sql
+-- Jalankan: npx tsx --env-file=.env.local src/db/apply-sql.ts drizzle/0061_review_new_guidebook_topics.sql
 UPDATE "help_articles"
 SET "reviewed_at" = now()
 WHERE "slug" IN (
