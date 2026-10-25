@@ -62,9 +62,10 @@ export function RegistrationList({
   const [feeFilter, setFeeFilter] = useState("all");
   const [view, setView] = useState<"list" | "table">("list");
 
+  // Dirakit hanya saat tampilan tabel dibuka.
   const table = useMemo(
-    () => buildRegistrationTable(registrations, questions, detail),
-    [registrations, questions, detail],
+    () => (view === "table" ? buildRegistrationTable(registrations, questions, detail) : null),
+    [view, registrations, questions, detail],
   );
 
   const feeCategories = useMemo(
@@ -189,7 +190,7 @@ export function RegistrationList({
         </div>
         <RefreshButton />
       </div>
-      {view === "table" ? (
+      {view === "table" && table ? (
         <DataTable
           label="Tabel pendaftar"
           columns={table.columns}

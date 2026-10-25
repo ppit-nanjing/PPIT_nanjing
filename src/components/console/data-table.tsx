@@ -18,6 +18,7 @@ import {
   X,
 } from "lucide-react";
 import { toast } from "sonner";
+import { isUploadedFilePath } from "@/lib/private-files";
 import type { TableCell, TableColumn, TableRow } from "@/lib/table-view";
 
 // Tabel baca-saja ala spreadsheet untuk konsol: urut, cari, filter per kolom,
@@ -36,7 +37,9 @@ const NUMBER_FILTER = /^(>=|<=|>|<|=)?\s*(-?\d+(?:\.\d+)?)$/;
 type SortState = { key: string; dir: "asc" | "desc" } | null;
 
 const isEmpty = (v: TableCell) => v == null || v === "";
-const isFilePath = (v: TableCell): v is string => typeof v === "string" && v.startsWith("/api/");
+// Hanya path berkas unggahan yang jadi tautan. Isi sel bisa buatan peserta
+// (jawaban formulir), jadi "/api/..." sembarang tidak boleh ikut jadi tautan.
+const isFilePath = (v: TableCell): v is string => typeof v === "string" && isUploadedFilePath(v);
 
 function compareCells(a: TableCell, b: TableCell, kind: TableColumn["kind"]): number {
   if (kind === "number") return Number(a) - Number(b);

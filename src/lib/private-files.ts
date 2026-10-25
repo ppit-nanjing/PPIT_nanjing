@@ -21,6 +21,27 @@ export const PRIVATE_FILE_FOLDERS = [
 export type PrivateFileFolder = (typeof PRIVATE_FILE_FOLDERS)[number];
 
 export const PRIVATE_FILE_PREFIX = "/api/files/";
+export const STUDENT_CARD_PREFIX = "/api/sensus/student-card/";
+
+// Apakah teks ini path berkas unggahan yang disajikan proxy ter-auth? Dipakai
+// sebelum teks buatan peserta (jawaban formulir, biodata) dijadikan tautan.
+// Mengecek awalan saja tidak cukup: browser menyederhanakan "/api/files/../x"
+// menjadi "/api/x" saat diklik, dan "//host/api/files/x" menunjuk host lain.
+// Jadi path diurai dulu, lalu hasil normalisasinya harus tetap di origin yang
+// sama dan tetap di bawah salah satu awalan.
+export function isUploadedFilePath(value: string): boolean {
+  if (!value.startsWith(PRIVATE_FILE_PREFIX) && !value.startsWith(STUDENT_CARD_PREFIX)) return false;
+  try {
+    const base = "http://placeholder.invalid";
+    const url = new URL(value, base);
+    return (
+      url.origin === base &&
+      (url.pathname.startsWith(PRIVATE_FILE_PREFIX) || url.pathname.startsWith(STUDENT_CARD_PREFIX))
+    );
+  } catch {
+    return false;
+  }
+}
 
 export function isPrivateFileFolder(value: string): value is PrivateFileFolder {
   return (PRIVATE_FILE_FOLDERS as readonly string[]).includes(value);

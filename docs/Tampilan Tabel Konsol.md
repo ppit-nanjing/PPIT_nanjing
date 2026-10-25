@@ -39,7 +39,9 @@ Evaluasi: peserta memakai gerbang konsol acara yang sama dengan halaman dan eksp
 
 Kolom yang berisi data pribadi (**Nomor Paspor, No. Telpon China, Bukti Mahasiswa Aktif**) ada di tabel versi lengkap tetapi **tersembunyi sampai dinyalakan lewat tombol Kolom**, dan ditandai gembok. Penyembunyian ini hanya kenyamanan supaya paspor tidak terbaca orang yang berdiri di belakang layar. Kolom tersembunyi tidak ikut pencarian dan tidak ikut disalin. Pengamannya tetap pemotongan di server.
 
-Sel berupa berkas unggahan (`/api/files/...`) tampil sebagai tautan **Buka berkas**. Saat disalin, tautannya dilengkapi dengan alamat situs, sama seperti di CSV, dan tetap butuh login pengurus untuk dibuka.
+Sel berupa berkas unggahan (`/api/files/...` atau `/api/sensus/student-card/...`) tampil sebagai tautan **Buka berkas**. Saat disalin, tautannya dilengkapi dengan alamat situs, sama seperti di CSV, dan tetap butuh login pengurus untuk dibuka.
+
+Isi sel bisa buatan peserta (jawaban formulir), jadi tidak semua teks yang diawali `/api/` dijadikan tautan. `isUploadedFilePath()` di `src/lib/private-files.ts` mengurai path-nya dulu: hasilnya harus tetap di origin yang sama dan tetap di bawah dua awalan di atas setelah browser menyederhanakan `..`. Jawaban seperti `/api/files/../cron/mark-overdue` atau `//situs-lain/api/files/x` tampil sebagai teks biasa.
 
 ## Penutupan kebocoran data pendaftar
 
