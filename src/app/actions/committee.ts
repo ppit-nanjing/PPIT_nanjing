@@ -399,13 +399,18 @@ export async function updateCertificateFileUrl(formData: FormData) {
  */
 async function assertEligibleForEventCertificate(eventId: string, userId: string, kind: string): Promise<void> {
   if (kind !== "peserta" && kind !== "panitia") return;
-  const [event] = await db.select({ id: events.id, title: events.title }).from(events).where(eq(events.id, eventId));
+  const [event] = await db
+    .select({ id: events.id, title: events.title, certificateRequiresAttendance: events.certificateRequiresAttendance })
+    .from(events)
+    .where(eq(events.id, eventId));
   if (!event) throw new Error("Acara tidak ditemukan");
   const candidates = await certificateCandidates(event, kind);
   if (!candidates.some((c) => c.userId === userId)) {
     throw new Error(
       kind === "peserta"
-        ? "Hanya peserta yang kehadirannya tercatat (QR di-scan) DAN sudah mengisi evaluasi dengan akunnya yang berhak atas sertifikat peserta"
+        ? event.certificateRequiresAttendance
+          ? "Hanya peserta yang kehadirannya tercatat (QR di-scan) DAN sudah mengisi evaluasi dengan akunnya yang berhak atas sertifikat peserta"
+          : "Hanya peserta yang terdaftar DAN sudah mengisi evaluasi dengan akunnya yang berhak atas sertifikat peserta"
         : "Orang ini bukan anggota kepanitiaan acara ini",
     );
   }

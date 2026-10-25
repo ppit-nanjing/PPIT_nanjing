@@ -5,7 +5,8 @@ import { notFound } from "next/navigation";
 import { Award, CheckCircle2, Lock } from "lucide-react";
 import { auth } from "@/auth";
 import { db } from "@/db";
-import { certificates, coverageCities, eventEvaluations, eventRegistrations, events } from "@/db/schema";
+import { certificates, coverageCities, eventEvaluations, eventRegistrations, events, sensusProfiles } from "@/db/schema";
+import { qualifiesForParticipantCertificate } from "@/lib/certificate-eligibility";
 import { SiteNav } from "@/components/site-nav";
 import { SiteFooter } from "@/components/site-footer";
 import { PageHeader } from "@/components/page-header";
@@ -57,6 +58,7 @@ export default async function EventEvaluationPage({ params }: { params: Promise<
   // sertifikat hanya untuk yang hadir (QR di-scan) DAN sudah mengisi evaluasi.
   let body: ReactNode = null;
   let certificateNote: string | null = null;
+  let defaultName: string | undefined;
   if (event.certificateForParticipants) {
     const session = await auth();
     const userId = session?.user?.id;
@@ -65,7 +67,7 @@ export default async function EventEvaluationPage({ params }: { params: Promise<
         <InfoCard
           icon={<Lock className="text-on-surface-variant" size={32} aria-hidden="true" />}
           title={t("eval.certLoginTitle")}
-          body={t("eval.certLoginBody")}
+          body={event.certificateRequiresAttendance ? t("eval.certLoginBody") : t("eval.certLoginBodyNoQr")}
         >
           <Link href={`/login?returnTo=/events/${encodeURIComponent(event.slug)}/evaluasi`} className={LINK_BTN}>
             {t("ceval.loginButton")}
@@ -73,7 +75,7 @@ export default async function EventEvaluationPage({ params }: { params: Promise<
         </InfoCard>
       );
     } else {
-      const [[mine], [reg], [cert]] = await Promise.all([
+      const [[mine], [reg], [cert], [profile]] = await Promise.all([
         db
           .select({ id: eventEvaluations.id })
           .from(eventEvaluations)
@@ -102,9 +104,22 @@ export default async function EventEvaluationPage({ params }: { params: Promise<
             ),
           )
           .limit(1),
+        db
+          .select({ fullName: sensusProfiles.fullName })
+          .from(sensusProfiles)
+          .where(eq(sensusProfiles.userId, userId))
+          .limit(1),
       ]);
-      const attended = reg?.status === "attended";
-      const statusText = cert ? t("eval.certIssued") : attended ? t("eval.certPending") : t("eval.certNotAttended");
+      defaultName = profile?.fullName?.trim() || session?.user?.name?.trim() || undefined;
+      // Berhak = tercatat hadir (acara dengan QR) atau cukup terdaftar (acara tanpa QR).
+      const eligible = !!reg && qualifiesForParticipantCertificate(reg.status, event.certificateRequiresAttendance);
+      const statusText = cert
+        ? t("eval.certIssued")
+        : eligible
+          ? t("eval.certPending")
+          : event.certificateRequiresAttendance
+            ? t("eval.certNotAttended")
+            : t("eval.certNotRegistered");
       if (mine) {
         body = (
           <InfoCard
@@ -120,7 +135,13 @@ export default async function EventEvaluationPage({ params }: { params: Promise<
           </InfoCard>
         );
       } else {
-        certificateNote = attended ? t("eval.certNoteAttended") : t("eval.certNoteNotAttended");
+        certificateNote = eligible
+          ? event.certificateRequiresAttendance
+            ? t("eval.certNoteAttended")
+            : t("eval.certNoteRegistered")
+          : event.certificateRequiresAttendance
+            ? t("eval.certNoteNotAttended")
+            : t("eval.certNoteNotRegistered");
       }
     }
   }
@@ -150,6 +171,8 @@ export default async function EventEvaluationPage({ params }: { params: Promise<
               sections={evaluationTemplateForSlug(event.slug).sections}
               questions={customQuestions}
               linkedAccount={event.certificateForParticipants}
+              allowAnonymous={event.evaluationAllowsAnonymous}
+              defaultName={defaultName}
             />
           </div>
         )}

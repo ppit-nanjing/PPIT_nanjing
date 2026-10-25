@@ -5,8 +5,9 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { auth } from "@/auth";
 import { db } from "@/db";
-import { eventEvaluationAnswers, eventEvaluations, eventRegistrations, events } from "@/db/schema";
+import { eventEvaluationAnswers, eventEvaluations, eventRegistrations, events, sensusProfiles, users } from "@/db/schema";
 import { issueParticipantCertificateIfEligible } from "@/lib/certificate-issuing";
+import { qualifiesForParticipantCertificate } from "@/lib/certificate-eligibility";
 import { canEditCommitteeEvaluation, requireEventConsoleAccess } from "@/lib/event-access";
 import { isUniqueViolation } from "@/lib/db-errors";
 import { logEventAudit } from "@/lib/event-audit";
@@ -53,18 +54,37 @@ async function resolveResponder(
 
 // Setelah evaluasi berakun tersimpan: terbitkan sertifikat bila berhak, dan
 // kabari pengisi statusnya. Gagal di sini tidak boleh menggagalkan evaluasinya.
-async function certificateAfterEvaluation(eventId: string, userId: string): Promise<EvalFormState["certificate"]> {
+async function certificateAfterEvaluation(
+  eventId: string,
+  userId: string,
+  requiresAttendance: boolean,
+): Promise<EvalFormState["certificate"]> {
   try {
     if (await issueParticipantCertificateIfEligible(eventId, userId)) return "issued";
     const [reg] = await db
       .select({ status: eventRegistrations.status })
       .from(eventRegistrations)
       .where(and(eq(eventRegistrations.eventId, eventId), eq(eventRegistrations.userId, userId)));
-    return reg?.status === "attended" ? "pending" : "not_attended";
+    if (reg && qualifiesForParticipantCertificate(reg.status, requiresAttendance)) return "pending";
+    return requiresAttendance ? "not_attended" : "not_registered";
   } catch (error) {
     console.error("[event-evaluation] certificate issue failed:", error);
     return "pending";
   }
+}
+
+// Acara dengan evaluasi atas nama (evaluationAllowsAnonymous = false): kalau kolom
+// nama dikosongkan, namanya diambil dari sensus (nama lengkap) lalu akun. Dibaca
+// di server dari userId sesi, bukan dari isian form.
+async function accountDisplayName(userId: string): Promise<string | null> {
+  const [row] = await db
+    .select({ fullName: sensusProfiles.fullName, name: users.name })
+    .from(users)
+    .leftJoin(sensusProfiles, eq(sensusProfiles.userId, users.id))
+    .where(eq(users.id, userId))
+    .limit(1);
+  const display = row?.fullName?.trim() || row?.name?.trim() || null;
+  return display ? display.slice(0, NAME_MAX) : null;
 }
 
 function rating(formData: FormData, key: string): number | null {
@@ -82,7 +102,13 @@ export async function submitEventEvaluation(
   if (!slug) return { error: "invalid" };
 
   const [event] = await db
-    .select({ id: events.id, status: events.status, certificateForParticipants: events.certificateForParticipants })
+    .select({
+      id: events.id,
+      status: events.status,
+      certificateForParticipants: events.certificateForParticipants,
+      certificateRequiresAttendance: events.certificateRequiresAttendance,
+      evaluationAllowsAnonymous: events.evaluationAllowsAnonymous,
+    })
     .from(events)
     .where(and(eq(events.slug, slug), isNull(events.deletedAt)));
   // Sama dengan halaman publiknya (404 untuk draft/terjadwal): aksi ini juga bisa
@@ -95,7 +121,10 @@ export async function submitEventEvaluation(
   if ("error" in responder) return { error: responder.error };
 
   if (customQuestions.length > 0) {
-    return submitCustomEvaluation(event.id, slug, customQuestions, formData, responder);
+    return submitCustomEvaluation(event.id, slug, customQuestions, formData, responder, {
+      requiresAttendance: event.certificateRequiresAttendance,
+      allowsAnonymous: event.evaluationAllowsAnonymous,
+    });
   }
 
   const ratingRegistration = rating(formData, "ratingRegistration");
@@ -106,7 +135,9 @@ export async function submitEventEvaluation(
     return { error: "ratings" };
   }
 
-  const anonymous = formData.get("anonymous") === "on" || formData.get("anonymous") === "true";
+  // Acara yang mematikan opsi anonim: kotak anonim diabaikan di server juga.
+  const anonymous =
+    event.evaluationAllowsAnonymous && (formData.get("anonymous") === "on" || formData.get("anonymous") === "true");
 
   let name: string | null = null;
   let city: string | null = null;
@@ -130,6 +161,10 @@ export async function submitEventEvaluation(
     heartwarming = trimmedText(formData, "heartwarming", TEXT_MAX);
   } catch {
     return { error: "invalid" };
+  }
+
+  if (!anonymous && !name && responder.userId && !event.evaluationAllowsAnonymous) {
+    name = await accountDisplayName(responder.userId);
   }
 
   // Pertanyaan teks wajib (non-optional) mengikuti template: hanya `heartwarming`
@@ -168,7 +203,10 @@ export async function submitEventEvaluation(
   revalidatePath(`/events/${slug}/evaluasi`);
   if (!responder.userId) return { ok: true };
   revalidatePath("/profile");
-  return { ok: true, certificate: await certificateAfterEvaluation(event.id, responder.userId) };
+  return {
+    ok: true,
+    certificate: await certificateAfterEvaluation(event.id, responder.userId, event.certificateRequiresAttendance),
+  };
 }
 
 // Jalur untuk acara yang punya pertanyaan evaluasi buatan panitia. Field jawaban
@@ -181,8 +219,10 @@ async function submitCustomEvaluation(
   questions: EvalQuestionRow[],
   formData: FormData,
   responder: Responder,
+  opts: { requiresAttendance: boolean; allowsAnonymous: boolean },
 ): Promise<EventEvaluationFormState> {
-  const anonymous = formData.get("anonymous") === "on" || formData.get("anonymous") === "true";
+  const anonymous =
+    opts.allowsAnonymous && (formData.get("anonymous") === "on" || formData.get("anonymous") === "true");
   let name: string | null = null;
   let city: string | null = null;
   try {
@@ -192,6 +232,10 @@ async function submitCustomEvaluation(
     }
   } catch {
     return { error: "invalid" };
+  }
+
+  if (!anonymous && !name && responder.userId && !opts.allowsAnonymous) {
+    name = await accountDisplayName(responder.userId);
   }
 
   const answers: { questionId: string; label: string; type: string; text: string | null; number: number | null }[] = [];
@@ -242,7 +286,7 @@ async function submitCustomEvaluation(
   revalidatePath(`/events/${slug}/evaluasi`);
   if (!responder.userId) return { ok: true };
   revalidatePath("/profile");
-  return { ok: true, certificate: await certificateAfterEvaluation(eventId, responder.userId) };
+  return { ok: true, certificate: await certificateAfterEvaluation(eventId, responder.userId, opts.requiresAttendance) };
 }
 
 export async function deleteEventEvaluation(formData: FormData): Promise<void> {
