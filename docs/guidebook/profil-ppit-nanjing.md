@@ -12,7 +12,7 @@ PPIT Cabang Nanjing bukan kantor pusat. PPIT (Perhimpunan Pelajar Indonesia Tion
 
 - Situs resmi PPIT: <https://www.ppitiongkok.com/>.
 - Direktori cabang: buka situs PPIT lalu tekan tombol **View All Branches**. Di situ ada daftar cabang per provinsi dan kota beserta kontak dan media sosial tiap cabang.
-- Media sosial PPIT (pusat, bukan kanal cabang): [Instagram @ppitiongkok](https://www.instagram.com/ppitiongkok/), [X @ppi_tiongkok](https://x.com/ppi_tiongkok), [Facebook](https://www.facebook.com/PerhimpunanPelajarIndonesiaTiongkok), dan [YouTube @PPITiongkok](https://www.youtube.com/@PPITiongkok).
+- Kanal resmi PPIT Cabang Nanjing: [Instagram @ppit_nanjing](https://www.instagram.com/ppit_nanjing/). Media sosial PPIT pusat (bukan kanal cabang): [X @ppi_tiongkok](https://x.com/ppi_tiongkok), [Facebook](https://www.facebook.com/PerhimpunanPelajarIndonesiaTiongkok), dan [YouTube @PPITiongkok](https://www.youtube.com/@PPITiongkok).
 - Media sosial tiap cabang, termasuk Nanjing, ada di direktori cabang (tombol **View All Branches**), bukan di daftar kanal pusat di atas.
 - Kontak cabang Nanjing yang dicantumkan di direktori PPIT: ppitnanjing.partnership@gmail.com (Sekretaris Eksternal).
 - Alamat situs tiap cabang memakai pola `https://www.<nama-cabang>.ppitiongkok.com`. Subdomain cabang sedang disiapkan; selama belum aktif, pakai direktori cabang di situs PPIT.

@@ -6,12 +6,12 @@
 
 ## Kenapa perlu database sendiri
 
-`DATABASE_URL` produksi memakai endpoint pooled Neon, yang cuma bicara HTTP. `psql` dan `drizzle-kit` tidak bisa menyambung ke sana. Akibatnya, selama memakai Neon:
+`DATABASE_URL` produksi dulu memakai endpoint pooled Neon, yang cuma bicara HTTP. (Sejak 2026-10-15 produksi Vercel memakai Postgres VPS ini dengan `DB_DRIVER=pg` — lihat bagian Deploy Vercel di bawah.) `psql` dan `drizzle-kit` tidak bisa menyambung ke sana. Akibatnya, selama memakai Neon:
 
 - Hasil migrasi tidak bisa diperiksa langsung (`\d guide_chunks`, hitung baris, cek kolom generated).
 - `drizzle-kit push` berjalan ke database sungguhan, dan **`push` menerapkan pernyataan tanpa bertanya kalau stdin bukan terminal** — sekali dijalankan lewat pipe atau `< /dev/null`, tidak ada layar konfirmasi yang muncul.
 
-Karena itu `src/db/index.ts` punya dua driver. `DB_DRIVER=pg` memakai `node-postgres`; tanpa variabel itu, tetap `neon-http` seperti produksi. Paket `pg` cuma devDependency dan dimuat lewat `createRequire` supaya tidak ikut terbundel ke fungsi produksi.
+Karena itu `src/db/index.ts` punya dua driver. `DB_DRIVER=pg` memakai `node-postgres`; tanpa variabel itu, tetap `neon-http` seperti produksi lama. Paket `pg` cuma devDependency dan dimuat lewat `createRequire`, jadi `outputFileTracingIncludes` di `next.config.ts` yang menariknya masuk ke fungsi Vercel.
 
 ## Yang sedang jalan di mesin ini
 
@@ -89,6 +89,25 @@ Langkah 4 dan 5 diuji di database kosong: `push` membentuk 70 tabel lengkap deng
   ```
 
   Skripnya login lewat `/login`, lalu membuka `/console/docs/guidebook` atau satu topik dan mencetak satu baris `[ok]`/`[!!]` per pemeriksaan. Tulis `import("playwright-core")`, bukan `import("playwright")`.
+
+## Deploy Vercel: produksi sekarang memakai Postgres VPS ini
+
+Sejak 2026-10-15, proyek Vercel `ppit-nanjing-preview` (team `zandev32s-projects`) tidak lagi menyambung ke Neon. Dua variabel Production diisi begini:
+
+| Variabel | Nilai | Alasan |
+| --- | --- | --- |
+| `DB_DRIVER` | `pg` | Tanpa ini `src/db/index.ts` memakai driver neon-http, dan URL biasa akan gagal dengan `Failed to parse URL from https://api.<host>/sql` |
+| `DATABASE_URL` | `postgresql://ppit:<password>@202.73.4.145:55432/ppit` | Container Postgres di VPS ini, alamat publiknya, port yang dipublikasikan Docker |
+
+Tiga deploy sebelum ini (14 Okt 14:57, 15:23, 15:39) gagal di prerender `/sitemap.xml` karena `DATABASE_URL` sudah menunjuk IP VPS tapi drivernya masih neon-http. Setelah `DB_DRIVER=pg`, `npm run build` di Vercel bisa menyelesaikan query sitemapnya. Bundling tidak perlu diubah: `outputFileTracingIncludes` di `next.config.ts` sudah menarik `pg` dan kawan-kawannya ke dalam fungsi walaupun `pg` cuma devDependency dan dimuat lewat `createRequire`.
+
+Cara deploy: `vercel --prod --yes` dari akar repo (CLI memakai direktori kerja, jadi perubahan yang belum di-commit ikut terkirim). Alamat produksinya `https://ppit-nanjing-preview.vercel.app`.
+
+Yang harus diingat:
+
+- **Koneksinya tanpa TLS.** Port `55432` terbuka ke internet (diuji dari tiga titik luar: Frankfurt, Isfahan, Khmelnytskyi, semuanya tersambung di bawah 0,3 detik), dan passwordnya dikirim apa adanya di setiap query. Selama itu belum diperbaiki, siapa pun yang menemukan port itu bisa mencoba password. Ganti password container kalau sudah tidak dipakai, atau hidupkan SSL di Postgres dan tambahkan `sslmode=require`.
+- **Isinya database uji.** Data di sini hasil seed dan pengujian guidebook, bukan salinan produksi. Kalau mau kembali ke Neon, ambil connection string pooled dari dashboard Neon, lalu timpa `DATABASE_URL` Production dan kosongkan `DB_DRIVER`.
+- Vercel mengirim query dari Singapura (`regions: ["sin1"]`), jadi setiap request membayar latensi VPS.
 
 ## Lihat juga
 

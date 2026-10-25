@@ -56,134 +56,127 @@
   {
     "question": "Nanjing itu kota apa dan berapa lama naik kereta cepat ke Shanghai?",
     "expected_slug": "kota-nanjing",
-    "must_refuse": false,
-    "pending_review": true
+    "must_refuse": false
   },
   {
     "question": "Musim panas di Nanjing suhunya berapa dan apa yang perlu dibawa?",
     "expected_slug": "kota-nanjing",
-    "must_refuse": false,
-    "pending_review": true
+    "must_refuse": false
   },
   {
     "question": "Tempat wisata apa saja yang direkomendasikan di Nanjing?",
     "expected_slug": "kota-nanjing",
-    "must_refuse": false,
-    "pending_review": true
+    "must_refuse": false
   },
   {
     "question": "Tempat makan halal di Nanjing di mana dan kisarannya berapa?",
     "expected_slug": "kota-nanjing",
-    "must_refuse": false,
-    "pending_review": true
+    "must_refuse": false
   },
   {
     "question": "Dokumen apa saja yang dibawa untuk registrasi sekolah setelah tiba?",
     "expected_slug": "dokumen-dan-berkas-awal-datang",
-    "must_refuse": false,
-    "pending_review": true
+    "must_refuse": false
   },
   {
     "question": "Syarat perpanjangan paspor dan di mana tempat mengurusnya?",
     "expected_slug": "dokumen-dan-berkas-awal-datang",
-    "must_refuse": false,
-    "pending_review": true
+    "must_refuse": false
   },
   {
     "question": "Bagaimana cara mengajukan Surat Keterangan Belajar dan berapa biayanya?",
     "expected_slug": "dokumen-dan-berkas-awal-datang",
-    "must_refuse": false,
-    "pending_review": true
+    "must_refuse": false
   },
   {
     "question": "Dokumen apa yang disiapkan untuk verifikasi ijazah?",
     "expected_slug": "dokumen-dan-berkas-awal-datang",
-    "must_refuse": false,
-    "pending_review": true
+    "must_refuse": false
   },
   {
     "question": "Tahun pertama sebaiknya tinggal di asrama kampus atau kos di luar?",
     "expected_slug": "tempat-tinggal-asrama-dan-kos",
-    "must_refuse": false,
-    "pending_review": true
+    "must_refuse": false
   },
   {
     "question": "Apakah kamar asrama dijamin dapat dan bagaimana cara memesannya?",
     "expected_slug": "tempat-tinggal-asrama-dan-kos",
-    "must_refuse": false,
-    "pending_review": true
+    "must_refuse": false
   },
   {
     "question": "Apa saja yang perlu diperiksa saat pertama kali masuk kamar asrama?",
     "expected_slug": "tempat-tinggal-asrama-dan-kos",
-    "must_refuse": false,
-    "pending_review": true
+    "must_refuse": false
+  },
+  {
+    "question": "ada kost di nanjing?",
+    "expected_slug": "tempat-tinggal-asrama-dan-kos",
+    "must_refuse": false
+  },
+  {
+    "question": "biaya kost di nanjing",
+    "expected_slug": "tempat-tinggal-asrama-dan-kos",
+    "must_refuse": false
+  },
+  {
+    "question": "biaya kso di nanjing berapa?",
+    "expected_slug": "tempat-tinggal-asrama-dan-kos",
+    "must_refuse": false
   },
   {
     "question": "Bagaimana kalau paket saya datang, kurir boleh masuk sampai kamar?",
     "expected_slug": "tempat-tinggal-asrama-dan-kos",
-    "must_refuse": false,
-    "pending_review": true
+    "must_refuse": false
   },
   {
     "question": "Berapa lama saya punya waktu untuk mengurus residence permit setelah tiba di China?",
     "expected_slug": "visa-dan-izin-tinggal",
-    "must_refuse": false,
-    "pending_review": true
+    "must_refuse": false
   },
   {
     "question": "Dokumen apa saja yang dibawa untuk lapor di imigrasi saat baru sampai?",
     "expected_slug": "visa-dan-izin-tinggal",
-    "must_refuse": false,
-    "pending_review": true
+    "must_refuse": false
   },
   {
     "question": "Bagaimana cara buat appointment medical check-up dan berapa biayanya?",
     "expected_slug": "visa-dan-izin-tinggal",
-    "must_refuse": false,
-    "pending_review": true
+    "must_refuse": false
   },
   {
     "question": "How do I apply for my residence permit after arriving?",
     "expected_slug": "visa-dan-izin-tinggal",
-    "must_refuse": false,
-    "pending_review": true
+    "must_refuse": false
   },
   {
     "question": "Asuransi mahasiswa 800 RMB per tahun dibayar pakai apa?",
     "expected_slug": "visa-dan-izin-tinggal",
-    "must_refuse": false,
-    "pending_review": true
+    "must_refuse": false
   },
   {
     "question": "Perkiraan biaya hidup bulanan mahasiswa di Nanjing berapa?",
     "expected_slug": "biaya-hidup-bulan-pertama",
-    "must_refuse": false,
-    "pending_review": true
+    "must_refuse": false
   },
   {
     "question": "Berapa sewa asrama kampus dan sewa kos di luar kampus per bulan?",
     "expected_slug": "biaya-hidup-bulan-pertama",
-    "must_refuse": false,
-    "pending_review": true
+    "must_refuse": false
   },
   {
     "question": "Berapa harga paket kartu SIM mahasiswa dan dokumen apa yang diperlukan?",
     "expected_slug": "aplikasi-pembayaran-dan-sim-card",
-    "must_refuse": false,
-    "pending_review": true
+    "must_refuse": false
   },
   {
     "question": "Aplikasi apa yang dipakai buat bayar dan belanja sehari-hari?",
     "expected_slug": "aplikasi-pembayaran-dan-sim-card",
-    "must_refuse": false,
-    "pending_review": true
+    "must_refuse": false
   },
   {
     "question": "how much money do I need for my first month?",
     "expected_slug": "biaya-hidup-bulan-pertama",
-    "must_refuse": false,
-    "pending_review": true
+    "must_refuse": false
   },
   {
     "question": "Halo kak, makasih ya",
@@ -223,6 +216,296 @@
   {
     "question": "Apa itu PPIT Tiongkok?",
     "expected_slug": "profil-ppit-tiongkok",
+    "must_refuse": false
+  },
+  {
+    "question": "Berapa tarif metro Nanjing dan bagaimana cara bayarnya?",
+    "expected_slug": "transportasi-dalam-kota",
+    "must_refuse": false
+  },
+  {
+    "question": "Bagaimana cara naik metro di Nanjing, dari masuk gerbang sampai keluar stasiun?",
+    "expected_slug": "transportasi-dalam-kota",
+    "must_refuse": false
+  },
+  {
+    "question": "How do I buy a metro coin in Nanjing if my phone is dead?",
+    "expected_slug": "transportasi-dalam-kota",
+    "must_refuse": false
+  },
+  {
+    "question": "Makanan khas Nanjing apa yang harus dicoba?",
+    "expected_slug": "kuliner-dan-tempat-makan",
+    "must_refuse": false
+  },
+  {
+    "question": "Di mana kawasan kuliner 1912 dan naik metro apa ke sana?",
+    "expected_slug": "kuliner-dan-tempat-makan",
+    "must_refuse": false
+  },
+  {
+    "question": "What is the iconic food in Nanjing?",
+    "expected_slug": "kuliner-dan-tempat-makan",
+    "must_refuse": false
+  },
+  {
+    "question": "Saya sakit dan perlu ke rumah sakit di Nanjing, apa yang harus dibawa?",
+    "expected_slug": "kesehatan-dan-darurat",
+    "must_refuse": false
+  },
+  {
+    "question": "Rumah sakit mana di Nanjing yang dekat stasiun metro?",
+    "expected_slug": "kesehatan-dan-darurat",
+    "must_refuse": false
+  },
+  {
+    "question": "How do I see a doctor in Nanjing as an international student?",
+    "expected_slug": "kesehatan-dan-darurat",
+    "must_refuse": false
+  },
+  {
+    "question": "Kalau saya sakit di Nanjing, apa yang harus dilakukan?",
+    "expected_slug": "kesehatan-dan-darurat",
+    "must_refuse": false
+  },
+  {
+    "question": "Saya demam dan batuk, harus ke mana?",
+    "expected_slug": "kesehatan-dan-darurat",
+    "must_refuse": false
+  },
+  {
+    "question": "Bagaimana cuaca di Nanjing sepanjang tahun?",
+    "expected_slug": "musim-dan-cuaca",
+    "must_refuse": false
+  },
+  {
+    "question": "Pakaian apa yang perlu dibawa untuk musim dingin di Nanjing?",
+    "expected_slug": "musim-dan-cuaca",
+    "must_refuse": false
+  },
+  {
+    "question": "What is the weather like in Nanjing in summer?",
+    "expected_slug": "musim-dan-cuaca",
+    "must_refuse": false
+  },
+  {
+    "question": "Nomor darurat apa yang dipakai di Tiongkok?",
+    "expected_slug": "nomor-penting-dan-kontak",
+    "must_refuse": false
+  },
+  {
+    "question": "Nomor telepon KBRI Beijing dan KJRI Shanghai?",
+    "expected_slug": "nomor-penting-dan-kontak",
+    "must_refuse": false
+  },
+  {
+    "question": "What are the emergency numbers in China?",
+    "expected_slug": "nomor-penting-dan-kontak",
+    "must_refuse": false
+  },
+  {
+    "question": "Tempat wisata di Nanjing yang gratis dan bisa dicapai pakai metro?",
+    "expected_slug": "spot-wisata-dan-rekreasi",
+    "must_refuse": false
+  },
+  {
+    "question": "Berapa tiket masuk 中华门 Zhonghua Gate dan buka jam berapa?",
+    "expected_slug": "spot-wisata-dan-rekreasi",
+    "must_refuse": false
+  },
+  {
+    "question": "Ada rekomendasi taman dan museum untuk akhir pekan di Nanjing?",
+    "expected_slug": "spot-wisata-dan-rekreasi",
+    "must_refuse": false
+  },
+  {
+    "question": "Bagaimana cara perpanjang paspor Indonesia di Tiongkok?",
+    "expected_slug": "perpanjangan-paspor-dan-skb",
+    "must_refuse": false
+  },
+  {
+    "question": "Apa syarat mengurus Surat Keterangan Belajar?",
+    "expected_slug": "perpanjangan-paspor-dan-skb",
+    "must_refuse": false
+  },
+  {
+    "question": "Where do I renew my Indonesian passport in China?",
+    "expected_slug": "perpanjangan-paspor-dan-skb",
+    "must_refuse": false
+  },
+  {
+    "question": "Bahasa Mandarin dasar untuk tanya arah dan belanja?",
+    "expected_slug": "bahasa-mandarin-sehari-hari",
+    "must_refuse": false
+  },
+  {
+    "question": "Bagaimana bilang saya tidak paham dalam bahasa Mandarin?",
+    "expected_slug": "bahasa-mandarin-sehari-hari",
+    "must_refuse": false
+  },
+  {
+    "question": "Useful Chinese phrases for daily life in Nanjing?",
+    "expected_slug": "bahasa-mandarin-sehari-hari",
+    "must_refuse": false
+  },
+  {
+    "question": "WhatsApp dan LINE diblokir, harus pakai apa?",
+    "expected_slug": "vpn-dan-akses-internet",
+    "must_refuse": false
+  },
+  {
+    "question": "Berapa harga VPN setahun dan untuk berapa perangkat?",
+    "expected_slug": "vpn-dan-akses-internet",
+    "must_refuse": false
+  },
+  {
+    "question": "VPN sebaiknya dipasang sebelum berangkat atau setelah sampai China?",
+    "expected_slug": "vpn-dan-akses-internet",
+    "must_refuse": false
+  },
+  {
+    "question": "Power bank boleh masuk bagasi pesawat?",
+    "expected_slug": "packing-dan-kirim-barang",
+    "must_refuse": false
+  },
+  {
+    "question": "Cara kirim koper ke China dan apa yang harus dideklarasikan?",
+    "expected_slug": "packing-dan-kirim-barang",
+    "must_refuse": false
+  },
+  {
+    "question": "Koper saya hilang di bandara, apa yang harus dilakukan?",
+    "expected_slug": "packing-dan-kirim-barang",
+    "must_refuse": false
+  },
+  {
+    "question": "Urutan apa yang harus beres di minggu pertama di Nanjing?",
+    "expected_slug": "minggu-pertama-checklist",
+    "must_refuse": false
+  },
+  {
+    "question": "Kapan dan di mana registrasi ke universitas dilakukan?",
+    "expected_slug": "minggu-pertama-checklist",
+    "must_refuse": false
+  },
+  {
+    "question": "Alamat masjid di Nanjing dan naik metro apa?",
+    "expected_slug": "tempat-ibadah-di-nanjing",
+    "must_refuse": false
+  },
+  {
+    "question": "Di mana gereja Kristen berbahasa Inggris di Nanjing?",
+    "expected_slug": "tempat-ibadah-di-nanjing",
+    "must_refuse": false
+  },
+  {
+    "question": "Mahasiswa asing boleh kerja part time di China?",
+    "expected_slug": "kerja-magang-dan-sim",
+    "must_refuse": false
+  },
+  {
+    "question": "Apakah SIM internasional berlaku untuk mengemudi di China?",
+    "expected_slug": "kerja-magang-dan-sim",
+    "must_refuse": false
+  },
+  {
+    "question": "Apa akibatnya kerja tanpa anotasi di visa pelajar?",
+    "expected_slug": "kerja-magang-dan-sim",
+    "must_refuse": false
+  },
+  {
+    "question": "Hari libur nasional China apa saja dan dampaknya ke perjalanan?",
+    "expected_slug": "festival-dan-hari-libur",
+    "must_refuse": false
+  },
+  {
+    "question": "Apakah toko dan layanan tutup selama Golden Week?",
+    "expected_slug": "festival-dan-hari-libur",
+    "must_refuse": false
+  },
+  {
+    "question": "What are the public holidays in China and travel tips?",
+    "expected_slug": "festival-dan-hari-libur",
+    "must_refuse": false
+  },
+  {
+    "question": "Aplikasi peta apa yang dipakai di China selain Google Maps?",
+    "expected_slug": "aplikasi-pembayaran-dan-sim-card",
+    "must_refuse": false
+  },
+  {
+    "question": "Cara pasang aplikasi kalau tidak ada Google Play?",
+    "expected_slug": "aplikasi-pembayaran-dan-sim-card",
+    "must_refuse": false
+  },
+  {
+    "question": "Berapa biaya berobat di rumah sakit publik Nanjing?",
+    "expected_slug": "kesehatan-dan-darurat",
+    "must_refuse": false
+  },
+  {
+    "question": "Berapa biaya makan di restoran western di Nanjing?",
+    "expected_slug": "kuliner-dan-tempat-makan",
+    "must_refuse": false
+  },
+  {
+    "question": "Bagaimana bilang taruh pesanan di depan pintu dalam Mandarin?",
+    "expected_slug": "bahasa-mandarin-sehari-hari",
+    "must_refuse": false
+  },
+  {
+    "question": "Where can I worship in Nanjing?",
+    "expected_slug": "tempat-ibadah-di-nanjing",
+    "must_refuse": false
+  },
+  {
+    "question": "Is there a mosque or church near the campus?",
+    "expected_slug": "tempat-ibadah-di-nanjing",
+    "must_refuse": false
+  },
+  {
+    "question": "How do I ship my boxes to Nanjing before I fly?",
+    "expected_slug": "packing-dan-kirim-barang",
+    "must_refuse": false
+  },
+  {
+    "question": "What should I pack for the first weeks in China?",
+    "expected_slug": "packing-dan-kirim-barang",
+    "must_refuse": false
+  },
+  {
+    "question": "What can I buy after arriving instead of bringing it?",
+    "expected_slug": "packing-dan-kirim-barang",
+    "must_refuse": false
+  },
+  {
+    "question": "How do I get internet access without Google working?",
+    "expected_slug": "vpn-dan-akses-internet",
+    "must_refuse": false
+  },
+  {
+    "question": "Which VPN should I install before landing in China?",
+    "expected_slug": "vpn-dan-akses-internet",
+    "must_refuse": false
+  },
+  {
+    "question": "When is the next public holiday in China?",
+    "expected_slug": "festival-dan-hari-libur",
+    "must_refuse": false
+  },
+  {
+    "question": "What do I have to do in my first week after arriving?",
+    "expected_slug": "minggu-pertama-checklist",
+    "must_refuse": false
+  },
+  {
+    "question": "Can I get an internship while studying?",
+    "expected_slug": "kerja-magang-dan-sim",
+    "must_refuse": false
+  },
+  {
+    "question": "How do I renew my passport at the embassy?",
+    "expected_slug": "perpanjangan-paspor-dan-skb",
     "must_refuse": false
   }
 ]

@@ -6,9 +6,9 @@ import sanitizeHtml from "sanitize-html";
 import { improveIndonesianText, improveEventDescriptionHtml, groqChat, type ImproveContext } from "@/lib/groq";
 import { sanitizeDescriptionHtml } from "@/lib/sanitize-description-html";
 import { askGuide } from "@/lib/guide-answer";
-import { annotateHanziPinyin } from "@/lib/pinyin";
 import { and, eq } from "drizzle-orm";
 import { db } from "@/db";
+import type { ChatPlace } from "@/lib/chat-places";
 import { aiQueryLog, users } from "@/db/schema";
 import { UUID_RE } from "@/lib/uuid";
 
@@ -97,6 +97,9 @@ export type ChatResult = {
   // Sumber jawaban, pertanyaan lanjutan, dan id baris log untuk tombol
   // suka/tidak suka. Widget chat menampilkan ketiganya di bawah balasan.
   citations: ChatCitation[];
+  // Tombol tempat: hanya tempat yang jawaban itu sebut, urut kemunculannya di
+  // teks jawaban, tautannya dari baris korpus tempat itu.
+  places: ChatPlace[];
   followUps: string[];
   logId: string;
 };
@@ -123,13 +126,13 @@ export async function chatWithAIAction(history: { role: "user" | "assistant"; co
       const field = parsed.field as ProfileField;
       const value = String(parsed.value ?? "").trim();
       if ((PROFILE_FIELDS as readonly string[]).includes(field) && value && value.length <= FIELD_MAX[field]) {
-        return { reply: "", profileEdit: { field, value }, citations: [], followUps: [], logId: answer.logId };
+        return { reply: "", profileEdit: { field, value }, citations: [], followUps: [], places: [], logId: answer.logId };
       }
     } catch {
       // fall through to normal reply
     }
   }
-  return { reply: annotateHanziPinyin(raw), citations: answer.citations, followUps: answer.followUps, logId: answer.logId };
+  return { reply: raw, citations: answer.citations, followUps: answer.followUps, places: answer.places, logId: answer.logId };
 }
 
 /**

@@ -1,8 +1,8 @@
 ## Di mana Nanjing
 
-Nanjing adalah ibu kota Provinsi Jiangsu (江苏) di bagian timur Tiongkok, dan sebelumnya disebut Nanking. Kota ini terletak tidak jauh dari Shanghai: naik kereta cepat sekitar 1 sampai 1,5 jam.
+Nanjing adalah ibu kota Provinsi Jiangsu (江苏), Republik Rakyat Tiongkok (中华人民共和国), di bagian timur Tiongkok, dan sebelumnya disebut Nanking. Kota ini terletak tidak jauh dari Shanghai: naik kereta cepat sekitar 1 sampai 1,5 jam.
 
-Menurut buku panduan, Nanjing adalah kota terbesar kedua di wilayah timur Tiongkok dengan populasi 9.577.000 jiwa. Kota ini berada di pusat delta Sungai Yangtze (di sumber aksara untuk sungai ini tercetak 黄河). Selama beratus-ratus tahun Nanjing menjadi pusat politik dan ekonomi kawasan delta Sungai Yangtze, sekaligus penghubung pengangkutan di bagian timur Tiongkok dan kawasan muara sungai. Julukannya antara lain "Ibu kota Ilmu, Sains, Kebudayaan, Kesenian dan Pariwisata" dan "Ibu kota Surga".
+Menurut buku panduan, Nanjing adalah kota terbesar kedua di wilayah timur Tiongkok dengan populasi 9.577.000 jiwa. Kota ini berada di pusat delta Sungai Yangtze (di sumber aksara untuk sungai ini tercetak 黄河). Selama beratus-ratus tahun Nanjing menjadi pusat politik dan ekonomi kawasan delta Sungai Yangtze, sekaligus penghubung pengangkutan di bagian timur Tiongkok dan kawasan muara sungai. Julukannya antara lain "Ibu kota Ilmu, Sains, Kebudayaan, Kesenian dan Pariwisata" dan "Ibu kota Surga". Sejak dahulu kala Nanjing disebut sebagai pusat kebudayaan, edukasi, penelitian, politik, ekonomi, jaringan transportasi, dan pariwisata.
 
 Nanjing juga salah satu dari empat ibu kota kuno Tiongkok. Kota ini menjadi ibu kota sepuluh dinasti atau kerajaan dan pemerintahan Republik Tiongkok, tercatat sejak abad ke-3 Masehi sampai 1949.
 
@@ -10,7 +10,7 @@ Bagi mahasiswa, Nanjing dikenal sebagai kota pelajar karena banyak universitas t
 
 ## Empat musim
 
-Musim Semi (春天). Suhu berkisar 28–32 Celsius, anginnya hangat, dan sering mendung yang berpotensi hujan. Sumber menyarankan pakai tabir surya dan membawa payung. Musim ini pas untuk ke taman melihat bunga sakura atau bunga plum, olahraga sore, dan jalan-jalan. Tempat rekomendasi: Mochou lake, Danau Xianlin, Lubo Garden, Xuanwu Lake, Mei Hua Shan Festival.
+Musim Semi (春天). Suhu berkisar 8–22 Celsius, anginnya hangat, dan sering mendung yang berpotensi hujan. Tabel musim di salah satu buku panduan menulis 28–32 untuk musim semi; di bagian musim panas buku yang sama angkanya 33, jadi 28–32 itu kutipan yang salah tempat dan rentang 8–22 yang dipakai artikel ini. Sumber menyarankan pakai tabir surya dan membawa payung. Musim ini pas untuk ke taman melihat bunga sakura atau bunga plum, olahraga sore, dan jalan-jalan. Tempat rekomendasi: Mochou lake, Danau Xianlin, Lubo Garden, Xuanwu Lake, Mei Hua Shan Festival.
 
 Musim Panas (夏天). Rata-rata suhu 33°C, cenderung terik, dengan sedikit kemungkinan hujan. Sumber menyarankan tabir surya SPF tinggi, topi, dan baju katun. Aktivitas yang disebut cocok: hiking, traveling, bekerja, bersih-bersih kamar, atau ikut summer camp. Tempat rekomendasi: Xuanwu Lake, Nanjing Datusha, Qingliang Garden, Yangzte River.
 

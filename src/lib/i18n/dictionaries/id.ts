@@ -1307,6 +1307,7 @@ export const id = {
   "chat.rateFailed": "Masukan tidak terkirim. Coba lagi.",
   "chat.copy": "Salin jawaban",
   "chat.rateThanks": "Terima kasih atas masukannya.",
+  "chat.placeLink": "Buka {{place}} di Amap",
   "feedback.catBug": "Bug",
   "feedback.catDesign": "Desain",
   "feedback.catFeature": "Ide",

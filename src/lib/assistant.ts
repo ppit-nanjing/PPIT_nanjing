@@ -79,6 +79,14 @@ export async function assistantChat(messages: AssistantMessage[], opts: Assistan
       lastError = new Error("Respons AI tidak valid");
       continue;
     }
+    // Model penalaran kadang menghabiskan jatah token untuk penalarannya dan
+    // mengembalikan content kosong dengan status 200. Dulu itu diteruskan
+    // sebagai jawaban, lalu askGuide menyimpannya ke cache: gelembung kosong
+    // yang bertahan untuk semua penanya. Coba model berikutnya.
+    if (content.trim().length === 0) {
+      lastError = new Error("Respons AI kosong");
+      continue;
+    }
     return content.trim();
   }
 

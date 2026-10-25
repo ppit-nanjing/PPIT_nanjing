@@ -1304,6 +1304,7 @@ export const en = {
   "chat.rateFailed": "Feedback was not sent. Try again.",
   "chat.copy": "Copy answer",
   "chat.rateThanks": "Thanks for your feedback.",
+  "chat.placeLink": "Open {{place}} in Amap",
   "feedback.catBug": "Bug",
   "feedback.catDesign": "Design",
   "feedback.catFeature": "Idea",

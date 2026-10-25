@@ -12,7 +12,7 @@ PPIT Nanjing Branch is not the head office. PPIT (Perhimpunan Pelajar Indonesia 
 
 - PPIT official website: <https://www.ppitiongkok.com/>.
 - Branch directory: open the PPIT website and press the **View All Branches** button. There you will find a list of branches by province and city along with the contacts and social media of each branch.
-- PPIT social media (headquarters, not branch channels): [Instagram @ppitiongkok](https://www.instagram.com/ppitiongkok/), [X @ppi_tiongkok](https://x.com/ppi_tiongkok), [Facebook](https://www.facebook.com/PerhimpunanPelajarIndonesiaTiongkok), and [YouTube @PPITiongkok](https://www.youtube.com/@PPITiongkok).
+- Official PPIT Nanjing branch channel: [Instagram @ppit_nanjing](https://www.instagram.com/ppit_nanjing/). PPIT headquarters social media (not branch channels): [X @ppi_tiongkok](https://x.com/ppi_tiongkok), [Facebook](https://www.facebook.com/PerhimpunanPelajarIndonesiaTiongkok), and [YouTube @PPITiongkok](https://www.youtube.com/@PPITiongkok).
 - The social media of each branch, including Nanjing, is in the branch directory (the **View All Branches** button), not in the list of headquarters channels above.
 - The Nanjing branch contact listed in the PPIT directory: ppitnanjing.partnership@gmail.com (External Secretary).
 - The website address of each branch follows the pattern `https://www.<nama-cabang>.ppitiongkok.com`. Branch subdomains are being prepared; while they are not yet active, use the branch directory on the PPIT website.

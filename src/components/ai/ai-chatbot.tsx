@@ -13,9 +13,11 @@ import {
   BookOpenText,
   ExternalLink,
   Copy,
+  Navigation,
 } from "lucide-react";
 import { chatWithAIAction, rateAnswerAction, updateProfileFieldAction, type ChatCitation } from "@/app/actions/ai";
 import { renderMarkdownLite } from "@/lib/markdown-lite";
+import type { ChatPlace } from "@/lib/chat-places";
 import { useT } from "@/lib/i18n/client";
 import { motion } from "motion/react";
 import type { TKey } from "@/lib/i18n/dictionaries/id";
@@ -29,6 +31,9 @@ type Msg = {
   citations?: ChatCitation[];
   followUps?: string[];
   logId?: string;
+  // Tombol tempat dari server. Kosong = pesan lama atau jawaban yang tidak
+  // menyebut tempat mana pun: tidak ada tautan yang dibaca dari teks jawaban.
+  places?: ChatPlace[];
   vote?: "up" | "down";
 };
 
@@ -117,6 +122,7 @@ export function ChatbotPanel() {
             citations: result.citations,
             followUps: result.followUps,
             logId: result.logId,
+            places: result.places,
           },
         ]);
       }
@@ -221,6 +227,9 @@ export function ChatbotPanel() {
           }
           const sources = m.citations ?? [];
           const followUps = m.followUps ?? [];
+          // Tombol tempat dari server: tempat yang jawabannya sebut, tautannya
+          // dari baris korpus. Widget tidak lagi membaca tautan dari teksnya.
+          const places = m.places ?? [];
           const isLast = i === messages.length - 1;
           return (
             <motion.div
@@ -233,6 +242,33 @@ export function ChatbotPanel() {
               <div className={"max-w-[85%] rounded-lg px-3 py-2 text-body-md " + bubbleClass("assistant")}>
                 {renderMarkdownLite(m.content)}
               </div>
+              {places.length > 0 && (
+                <ul className="flex w-full max-w-[85%] flex-col gap-1.5">
+                  {places.map((place) => (
+                    <li
+                      key={place.url}
+                      className="flex items-center gap-2 rounded-lg border border-outline-variant px-3 py-2"
+                    >
+                      <div className="min-w-0 flex-1">
+                        <p className="truncate text-body-md font-medium text-on-surface">{place.label}</p>
+                        {place.detail && (
+                          <p className="truncate text-label-caps text-on-surface-variant">{place.detail}</p>
+                        )}
+                      </div>
+                      <a
+                        href={place.url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        aria-label={t("chat.placeLink", { place: place.label })}
+                        title={t("chat.placeLink", { place: place.label })}
+                        className="shrink-0 rounded-md p-1.5 text-on-surface-variant hover:text-on-background focus:outline-none focus:ring-2 focus:ring-primary-container"
+                      >
+                        <Navigation size={16} />
+                      </a>
+                    </li>
+                  ))}
+                </ul>
+              )}
 
               <div className="flex flex-wrap items-center gap-x-1 gap-y-0.5 text-on-surface-variant">
                 {sources.length > 0 && (
@@ -261,10 +297,10 @@ export function ChatbotPanel() {
                         title={t("chat.rateUp")}
                         className={
                           "rounded-md p-1.5 hover:text-on-background disabled:opacity-50 " +
-                          (m.vote === "up" ? "text-primary-container" : "")
+                          (m.vote === "up" ? "bg-primary-container text-on-primary" : "")
                         }
                       >
-                        <ThumbsUp size={15} />
+                        <ThumbsUp size={15} fill={m.vote === "up" ? "currentColor" : "none"} />
                       </button>
                       <button
                         type="button"
@@ -275,10 +311,10 @@ export function ChatbotPanel() {
                         title={t("chat.rateDown")}
                         className={
                           "rounded-md p-1.5 hover:text-on-background disabled:opacity-50 " +
-                          (m.vote === "down" ? "text-error" : "")
+                          (m.vote === "down" ? "bg-error text-on-error" : "")
                         }
                       >
-                        <ThumbsDown size={15} />
+                        <ThumbsDown size={15} fill={m.vote === "down" ? "currentColor" : "none"} />
                       </button>
                     </>
                   )}
@@ -292,8 +328,7 @@ export function ChatbotPanel() {
                     {copied === i ? <Check size={15} className="text-primary-container" /> : <Copy size={15} />}
                   </button>
                   {thanked === i && (
-                    <span className="flex items-center gap-1 pl-1 text-label-caps text-primary-container">
-                      <Check size={13} />
+                    <span role="status" className="sr-only">
                       {t("chat.rateThanks")}
                     </span>
                   )}
