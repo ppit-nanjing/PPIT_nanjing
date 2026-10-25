@@ -7,6 +7,16 @@ import { BPH_PANITIA_ROLES, type EventCommitteeRole } from "@/lib/event-capabili
 export type FormKind = "pemilu" | "oprek_bph_acara" | "oprek_kepanitiaan" | "oprek_kadiv";
 
 /**
+ * Semua jenis Oprek (BPH acara, kepanitiaan, Kadiv). Pemilu BUKAN Oprek.
+ * Mengisi Oprek mewajibkan sensus lengkap: panitia perlu data diri yang
+ * terverifikasi sebelum menempatkan seseorang, walau orangnya sudah tercatat
+ * di struktur kabinet dengan sensus yang belum selesai.
+ */
+export function isOprekKind(kind: FormKind): boolean {
+  return kind.startsWith("oprek_");
+}
+
+/**
  * Form yang pelamarnya memilih divisi acara (pilihan 1/2) dan penempatannya
  * menulis divisi: Oprek Kadiv dan Oprek Kepanitiaan (anggota).
  */
