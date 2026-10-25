@@ -101,6 +101,18 @@ export function EventCreateForm({
           <CheckField name="requiresSensus" label="Hanya untuk peserta yang sudah lengkap mengisi sensus (mahasiswa Indo di China)" />
           <CheckField name="certificateForParticipants" label="Peserta mendapat e-sertifikat kehadiran" defaultChecked />
           <CheckField
+            name="certificateRequiresAttendance"
+            label="Sertifikat hanya untuk yang tercatat hadir (QR di-scan)"
+            hint="Matikan untuk acara tanpa absen QR (Zoom, dsb.): cukup terdaftar dan sudah mengisi evaluasi."
+            defaultChecked
+          />
+          <CheckField
+            name="evaluationAllowsAnonymous"
+            label="Evaluasi peserta boleh dikirim anonim"
+            hint="Matikan kalau evaluasi harus atas nama (mis. dipakai untuk mengirim sertifikat)."
+            defaultChecked
+          />
+          <CheckField
             name="volunteerSignupOpen"
             label="Buka pendaftaran volunteer publik"
             hint="Orang luar bisa melamar jadi volunteer di halaman acara."

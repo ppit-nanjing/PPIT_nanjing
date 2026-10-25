@@ -259,6 +259,8 @@ export function EventEvaluationForm({
   userName,
   divisionName,
   linkedAccount = false,
+  allowAnonymous = true,
+  defaultName,
 }: {
   slug: string;
   eventTitle: string;
@@ -285,6 +287,12 @@ export function EventEvaluationForm({
    * perangkat tidak dipakai — halaman induk sudah menangani "sudah mengisi".
    */
   linkedAccount?: boolean;
+  /**
+   * false = evaluasi selalu atas nama (kotak anonim disembunyikan; server juga
+   * mengabaikannya). Nama diisi dari `defaultName` (sensus/akun) dan bisa diubah.
+   */
+  allowAnonymous?: boolean;
+  defaultName?: string;
 }) {
   const t = useT();
   const [state, formAction, isPending] = useActionState<EvaluationFormState, FormData>(
@@ -293,6 +301,7 @@ export function EventEvaluationForm({
   );
   const [, startSubmit] = useTransition();
   const [anonymous, setAnonymous] = useState(false);
+  const showAsAnonymous = allowAnonymous && anonymous;
   const [token, setToken] = useState("");
   const [doneBefore, setDoneBefore] = useState(false);
   const [clientMissing, setClientMissing] = useState(false);
@@ -353,7 +362,9 @@ export function EventEvaluationForm({
               ? t("eval.certIssued")
               : state.certificate === "pending"
                 ? t("eval.certPending")
-                : t("eval.certNotAttended")}
+                : state.certificate === "not_registered"
+                  ? t("eval.certNotRegistered")
+                  : t("eval.certNotAttended")}
           </p>
         )}
         {state.certificate === "issued" && (
@@ -464,13 +475,23 @@ export function EventEvaluationForm({
         </section>
       ) : (
         <section className={CARD}>
-          <h2 className="text-headline-sm text-on-background">{t("eval.identity")}</h2>
-          {!anonymous && (
+          <h2 className="text-headline-sm text-on-background">{allowAnonymous ? t("eval.identity") : t("eval.identityNamed")}</h2>
+          {!showAsAnonymous && (
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <label className="flex flex-col gap-1.5">
                 <span className={LABEL}>{t("eval.name")}</span>
-                <input name="name" maxLength={80} autoComplete="name" className={INPUT} />
-                <span className="text-body-sm text-on-surface-variant">{t("eval.nameHint")}</span>
+                <input
+                  name="name"
+                  maxLength={80}
+                  autoComplete="name"
+                  defaultValue={defaultName}
+                  required={!allowAnonymous}
+                  aria-required={!allowAnonymous}
+                  className={INPUT}
+                />
+                <span className="text-body-sm text-on-surface-variant">
+                  {allowAnonymous ? t("eval.nameHint") : t("eval.nameHintNamed")}
+                </span>
               </label>
               <label className="flex flex-col gap-1.5">
                 <span className={LABEL}>{t("eval.city")}</span>
@@ -486,6 +507,7 @@ export function EventEvaluationForm({
               </label>
             </div>
           )}
+          {allowAnonymous ? (
           <label className="flex items-start gap-3">
             <input
               type="checkbox"
@@ -502,6 +524,9 @@ export function EventEvaluationForm({
               )}
             </span>
           </label>
+          ) : (
+            <p className="text-body-sm text-on-surface-variant">{t("eval.namedNote")}</p>
+          )}
         </section>
       )}
 

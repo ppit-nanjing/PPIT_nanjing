@@ -51,8 +51,9 @@ export type EvalFormState = {
   error?: "login" | "window" | "not_committee" | "not_ready" | "ratings" | "required" | "invalid" | "generic";
   // Evaluasi peserta di acara yang memberi e-sertifikat (dikirim dengan akun):
   // "issued" = sertifikat langsung terbit, "pending" = berhak tapi folder belum
-  // diunggah panitia, "not_attended" = kehadiran belum tercatat.
-  certificate?: "issued" | "pending" | "not_attended";
+  // diunggah panitia, "not_attended" = kehadiran belum tercatat (acara dengan
+  // absen QR), "not_registered" = akun belum terdaftar (acara tanpa absen QR).
+  certificate?: "issued" | "pending" | "not_attended" | "not_registered";
 };
 
 /** Bentuk pertanyaan yang dikirim ke form publik dan builder (plain data, aman lintas batas RSC). */

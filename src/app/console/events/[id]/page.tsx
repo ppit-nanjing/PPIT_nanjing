@@ -48,6 +48,7 @@ import { CommitteeEvalWindowEditor } from "@/components/console/committee-eval-w
 import { EvalAudienceTabs } from "@/components/console/eval-audience-tabs";
 import { CopyButton } from "@/components/copy-button";
 import { committeeEvalWindowState } from "@/lib/committee-evaluation";
+import { qualifiesForParticipantCertificate } from "@/lib/certificate-eligibility";
 import { ChevronRight, Download, Eye, Images } from "lucide-react";
 
 const QUESTION_TYPE_LABELS: Record<string, string> = {
@@ -431,9 +432,14 @@ export default async function ConsoleEventDetailPage({ params }: { params: Promi
   // evaluasi dengan akunnya — aturan yang sama dengan certificateCandidates
   // (src/lib/certificate-issuing.ts). Evaluasi tanpa akun tidak dihitung.
   const evaluatedUserIds = new Set(evaluations.map((e) => e.userId).filter((u): u is string => !!u));
-  const attendedRegs = registrations.filter((r) => r.reg.status === "attended");
-  const attendedNotEvaluated = attendedRegs.filter((r) => !evaluatedUserIds.has(r.reg.userId)).length;
-  const certAttendees = attendedRegs
+  // Acara tanpa absen QR (certificateRequiresAttendance = false): cukup terdaftar
+  // (terkonfirmasi atau hadir). Aturan statusnya satu sumber di certificate-eligibility.ts.
+  const certRegs = registrations.filter((r) =>
+    qualifiesForParticipantCertificate(r.reg.status, event.certificateRequiresAttendance),
+  );
+  const certBasisLabel = event.certificateRequiresAttendance ? "hadir" : "terdaftar";
+  const attendedNotEvaluated = certRegs.filter((r) => !evaluatedUserIds.has(r.reg.userId)).length;
+  const certAttendees = certRegs
     .filter((r) => evaluatedUserIds.has(r.reg.userId))
     .map((r) => ({
       userId: r.reg.userId,
@@ -444,7 +450,9 @@ export default async function ConsoleEventDetailPage({ params }: { params: Promi
       detail: canSeeRegistrantDetail ? r.userEmail : null,
       cert: certByPerson.get(`peserta:${r.reg.userId}`) ?? null,
     }));
-  const confirmedNotAttended = registrations.filter((r) => r.reg.status === "confirmed").length;
+  const confirmedNotAttended = event.certificateRequiresAttendance
+    ? registrations.filter((r) => r.reg.status === "confirmed").length
+    : 0;
   const certCommittee = committee
     .filter((m) => !!m.userId)
     .map((m) => ({
@@ -736,6 +744,18 @@ export default async function ConsoleEventDetailPage({ params }: { params: Promi
                 defaultChecked={event.certificateForParticipants}
                 label="Peserta mendapat e-sertifikat kehadiran"
                 hint="Saklar ketersediaan: kalau nyala, panitia bisa menerbitkan e-sertifikat (tautan berkas wajib) untuk peserta yang tercatat hadir."
+              />
+              <CheckField
+                name="certificateRequiresAttendance"
+                defaultChecked={event.certificateRequiresAttendance}
+                label="Sertifikat hanya untuk yang tercatat hadir (QR di-scan)"
+                hint="Matikan untuk acara tanpa absen QR (Zoom, Nanjing Diaries): sertifikat cukup untuk peserta terdaftar yang sudah mengisi evaluasi dengan akun."
+              />
+              <CheckField
+                name="evaluationAllowsAnonymous"
+                defaultChecked={event.evaluationAllowsAnonymous}
+                label="Evaluasi peserta boleh dikirim anonim"
+                hint="Matikan kalau evaluasi harus atas nama. Kotak anonim hilang dari form; nama diambil dari isian, atau dari sensus/akun kalau dikosongkan. Respons yang sudah masuk tidak berubah."
               />
               <CheckField
                 name="volunteerSignupOpen"
@@ -1128,21 +1148,32 @@ export default async function ConsoleEventDetailPage({ params }: { params: Promi
       <>
       <CollapsibleSection
         title="Sertifikat Peserta"
-        description={`${attendedRegs.length} hadir · ${certAttendees.length} berhak (sudah isi evaluasi) · ${participantCertCount} terbit`}
+        description={`${certRegs.length} ${certBasisLabel} · ${certAttendees.length} berhak (sudah isi evaluasi) · ${participantCertCount} terbit`}
       >
         {event.certificateForParticipants ? (
           <div className="flex flex-col gap-4">
             <p className="text-body-md text-on-surface-variant max-w-2xl">
-              Yang berhak: peserta yang <strong className="text-on-background">kehadirannya tercatat</strong> (QR-nya
-              di-scan di acara) <strong className="text-on-background">dan sudah mengisi evaluasi</strong> sambil masuk
-              ke akunnya. Cara paling mudah: <strong className="text-on-background">simpan tautan folder</strong> di
+              {event.certificateRequiresAttendance ? (
+                <>
+                  Yang berhak: peserta yang <strong className="text-on-background">kehadirannya tercatat</strong> (QR-nya
+                  di-scan di acara) <strong className="text-on-background">dan sudah mengisi evaluasi</strong> sambil
+                  masuk ke akunnya.
+                </>
+              ) : (
+                <>
+                  Acara ini <strong className="text-on-background">tanpa absen QR</strong>. Yang berhak: peserta yang{" "}
+                  <strong className="text-on-background">terdaftar</strong>{" "}
+                  <strong className="text-on-background">dan sudah mengisi evaluasi</strong> sambil masuk ke akunnya.
+                </>
+              )}{" "}
+              Cara paling mudah: <strong className="text-on-background">simpan tautan folder</strong> di
               bawah — semua yang sudah berhak langsung dapat sertifikat + notifikasi, dan peserta hadir yang baru
               mengisi evaluasi belakangan otomatis dapat saat evaluasinya terkirim. Tautan per orang dan &quot;Tempel
               banyak sekaligus&quot; tetap bisa dipakai kalau berkasnya beda-beda.
             </p>
             {attendedNotEvaluated > 0 && (
               <p className="text-body-sm text-on-surface-variant">
-                {attendedNotEvaluated} peserta hadir belum mengisi evaluasi (atau mengisinya tanpa masuk akun), jadi
+                {attendedNotEvaluated} peserta {certBasisLabel} belum mengisi evaluasi (atau mengisinya tanpa masuk akun), jadi
                 belum berhak. Bagikan tautan evaluasi{" "}
                 <code className="text-on-background">/events/{event.slug}/evaluasi</code> — mereka perlu masuk akun
                 untuk mengisinya.
@@ -1154,7 +1185,7 @@ export default async function ConsoleEventDetailPage({ params }: { params: Promi
                 hadir tapi belum di-scan, catat kehadirannya dulu di daftar pendaftar.
               </p>
             )}
-            {attendedRegs.length > 0 && (
+            {certRegs.length > 0 && (
               <CertificateFolder
                 eventId={id}
                 kind="peserta"
@@ -1167,9 +1198,11 @@ export default async function ConsoleEventDetailPage({ params }: { params: Promi
               kind="peserta"
               rows={certAttendees}
               emptyText={
-                attendedRegs.length === 0
-                  ? "Belum ada peserta yang tercatat hadir. Daftar ini terisi saat panitia men-scan QR peserta di acara."
-                  : "Belum ada peserta hadir yang mengisi evaluasi dengan akunnya."
+                certRegs.length === 0
+                  ? event.certificateRequiresAttendance
+                    ? "Belum ada peserta yang tercatat hadir. Daftar ini terisi saat panitia men-scan QR peserta di acara."
+                    : "Belum ada peserta yang terdaftar."
+                  : `Belum ada peserta ${certBasisLabel} yang mengisi evaluasi dengan akunnya.`
               }
             />
             {certAttendees.length > 0 && <CertificateBulkForm eventId={id} kind="peserta" />}

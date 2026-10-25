@@ -1,5 +1,5 @@
 import "server-only";
-import { and, eq, sql } from "drizzle-orm";
+import { and, eq, inArray, sql } from "drizzle-orm";
 import { db } from "@/db";
 import {
   certificates,
@@ -12,6 +12,7 @@ import {
   users,
 } from "@/db/schema";
 import { buildCertificateTitle } from "@/lib/certificate-title";
+import { participantCertificateStatuses } from "@/lib/certificate-eligibility";
 import { normalizeCertificateUrl } from "@/lib/certificate-links";
 import { logEventAudit } from "@/lib/event-audit";
 import { createTemplatedNotification } from "@/lib/notifications";
@@ -25,7 +26,10 @@ import { createTemplatedNotification } from "@/lib/notifications";
 //  2. Sertifikat PESERTA hanya untuk yang (a) kehadirannya tercatat — status
 //     "attended", artinya QR-nya di-scan — DAN (b) sudah mengisi evaluasi acara
 //     itu sambil masuk ke akunnya (event_evaluations.user_id). Evaluasi tanpa
-//     akun tidak bisa dicocokkan ke orangnya, jadi tidak dihitung.
+//     akun tidak bisa dicocokkan ke orangnya, jadi tidak dihitung. Acara tanpa
+//     absen QR (events.certificate_requires_attendance = false) melonggarkan (a)
+//     menjadi "terdaftar" (status confirmed/attended); (b) tetap wajib. Aturan
+//     status ada di src/lib/certificate-eligibility.ts.
 //  3. Sertifikat PANITIA untuk anggota kepanitiaan acara itu.
 
 export type CertificateKind = "peserta" | "panitia";
@@ -105,7 +109,7 @@ function hasLinkedEvaluation() {
 
 /** Daftar orang yang BERHAK atas sertifikat jenis ini (lihat aturan di atas). */
 export async function certificateCandidates(
-  event: { id: string; title: string },
+  event: { id: string; title: string; certificateRequiresAttendance: boolean },
   kind: CertificateKind,
 ): Promise<CertificateCandidate[]> {
   if (kind === "peserta") {
@@ -117,7 +121,7 @@ export async function certificateCandidates(
       .where(
         and(
           eq(eventRegistrations.eventId, event.id),
-          eq(eventRegistrations.status, "attended"),
+          inArray(eventRegistrations.status, participantCertificateStatuses(event.certificateRequiresAttendance)),
           hasLinkedEvaluation(),
         ),
       );
@@ -222,8 +226,9 @@ export async function issueFolderCertificatesToMissing(
 }
 
 /**
- * Dipanggil setelah peserta mengirim evaluasi dengan akunnya: kalau ia tercatat
- * hadir dan folder sertifikat peserta sudah disimpan, sertifikatnya terbit saat
+ * Dipanggil setelah peserta mengirim evaluasi dengan akunnya: kalau ia berhak
+ * (tercatat hadir; atau cukup terdaftar bila acaranya tanpa absen QR) dan folder
+ * sertifikat peserta sudah disimpan, sertifikatnya terbit saat
  * itu juga (beserta notifikasi). Mengembalikan true bila sertifikat baru terbit.
  */
 export async function issueParticipantCertificateIfEligible(eventId: string, userId: string): Promise<boolean> {
