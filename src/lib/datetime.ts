@@ -49,6 +49,11 @@ export function parseChinaLocalInput(value: unknown): Date | null {
 export const CHINA_TIME_ZONE = "Asia/Shanghai";
 export const CHINA_TZ_LABEL = "jam Tiongkok CST, UTC+8";
 
+/** Kepala kolom waktu di ekspor dan tabel: zonanya ikut tertulis. */
+export function timeHeader(header: string): string {
+  return `${header} (${CHINA_TZ_LABEL})`;
+}
+
 /** "2026-10-25 16:10" dalam jam Tiongkok. Aman dibaca Excel dan urutan teksnya = urutan waktu. */
 export function formatChinaDateTimeIso(date: Date): string {
   return new Date(date.getTime() + CHINA_OFFSET_MS).toISOString().slice(0, 16).replace("T", " ");

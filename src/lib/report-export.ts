@@ -1,5 +1,5 @@
 import ExcelJS from "exceljs";
-import { CHINA_TIME_ZONE, CHINA_TZ_LABEL, toChinaWallClock } from "@/lib/datetime";
+import { CHINA_TIME_ZONE, CHINA_TZ_LABEL, timeHeader, toChinaWallClock } from "@/lib/datetime";
 
 export type ReportColumn = {
   header: string;
@@ -24,7 +24,7 @@ const idDateTime = new Intl.DateTimeFormat("id-ID", {
 });
 
 // Kolom waktu membawa zonanya di kepala kolom, karena sel Excel tidak punya zona.
-const headerOf = (c: ReportColumn) => (c.type === "date" ? `${c.header} (${CHINA_TZ_LABEL})` : c.header);
+const headerOf = (c: ReportColumn) => (c.type === "date" ? timeHeader(c.header) : c.header);
 
 function rawValue(col: ReportColumn, row: Record<string, unknown>): string | number | Date | null {
   const v = row[col.key];
