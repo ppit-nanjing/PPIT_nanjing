@@ -18,6 +18,7 @@ import {
   deleteInactiveExportSheets,
   ensureLiveSheet,
   isSheetsConfigured,
+  markLiveSheetSynced,
   shareLiveSheetReader,
   writeLiveSheet,
   type LiveSheetKind,
@@ -79,6 +80,9 @@ async function publish(input: {
   eventId: string;
   kind: LiveSheetKind;
 }): Promise<OpenSheetResult> {
+  // Saat data mulai dibaca: perubahan sesudahnya belum tercakup sheet ini dan
+  // harus tetap memicu pembaruan (lihat markLiveSheetSynced).
+  const snapshotAt = Date.now();
   const data = await loadSheetData(input.eventId, input.kind);
   if (!data) return { ok: false, error: "Acara tidak ditemukan." };
   if (data.rows.length > MAX_ROWS) {
@@ -95,6 +99,7 @@ async function publish(input: {
   try {
     const { id, created } = await ensureLiveSheet({ eventId: input.eventId, eventTitle: data.eventTitle, kind: input.kind });
     await writeLiveSheet(id, data, input.kind, { firstWrite: created });
+    await markLiveSheetSynced(id, snapshotAt);
     await shareLiveSheetReader(id, input.email, { deleteOnFailure: created });
     // Pembersihan sheet yang lama tidak aktif jalan di belakang respons.
     after(() => deleteInactiveExportSheets().catch(() => undefined));

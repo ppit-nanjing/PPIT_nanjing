@@ -51,9 +51,55 @@ export async function loadSheetData(eventId: string, kind: LiveSheetKind): Promi
 }
 
 // Jeda sebelum menulis: perubahan beruntun (mis. seratus pendaftar dalam semenit)
-// digabung. Tiap pemicu menunggu, lalu hanya menulis kalau belum ada pembaruan
+// digabung. Tiap pembaruan menunggu, lalu hanya menulis kalau belum ada pembaruan
 // sesudahnya (lihat syncLiveSheet).
 const DEBOUNCE_MS = 3000;
+
+// Pembaruan yang masih MENUNGGU (belum mulai membaca data), per (acara, jenis) di
+// instance ini. Pemicu baru selama itu sudah tercakup: pembaruan yang menunggu
+// membaca database SESUDAH jedanya. Tanpa ini, form publik (evaluasi, pendaftaran)
+// yang dibanjiri menjadwalkan satu panggilan ke Google per kiriman.
+type Pending = { started: boolean; triggeredAt: number };
+const waiting = new Map<string, Pending>();
+const waitingKey = (eventId: string, kind: LiveSheetKind) => `${eventId}:${kind}`;
+
+/**
+ * Pesan tempat menunggu untuk tiap jenis yang belum punya pembaruan menunggu.
+ * Dipesan SINKRON saat dijadwalkan (bukan di dalam after()), supaya dua pemanggilan
+ * berurutan dalam satu tarikan napas tidak sama-sama lolos. Untuk jenis yang sudah
+ * ada pembaruan menunggu, waktu pemicunya dimajukan: pembaruan itu akan membaca
+ * database sesudah jedanya, jadi perubahan ini tercakup, dan waktunya harus ikut
+ * maju supaya tidak dianggap sudah segar oleh pembaruan lain yang terjadi sebelum
+ * perubahan ini. Diekspor hanya agar bisa diuji.
+ */
+export function reservePendingSyncs(
+  eventId: string,
+  kinds: readonly LiveSheetKind[],
+  triggeredAt: number,
+): { kind: LiveSheetKind; entry: Pending }[] {
+  const reserved: { kind: LiveSheetKind; entry: Pending }[] = [];
+  for (const kind of kinds) {
+    if (!LIVE_SHEET_KINDS.includes(kind)) continue;
+    const key = waitingKey(eventId, kind);
+    const pending = waiting.get(key);
+    if (pending && !pending.started) {
+      pending.triggeredAt = Math.max(pending.triggeredAt, triggeredAt);
+      continue;
+    }
+    const entry: Pending = { started: false, triggeredAt };
+    waiting.set(key, entry);
+    reserved.push({ kind, entry });
+  }
+  return reserved;
+}
+
+/** Lepas pesanan yang tidak jadi dijalankan, atau yang sudah selesai. */
+export function releasePendingSyncs(eventId: string, reserved: readonly { kind: LiveSheetKind; entry: Pending }[]): void {
+  for (const { kind, entry } of reserved) {
+    const key = waitingKey(eventId, kind);
+    if (waiting.get(key) === entry) waiting.delete(key);
+  }
+}
 
 /**
  * Beri tahu bahwa data acara berubah: kalau ada sheet langsung untuk acara dan
@@ -63,21 +109,26 @@ const DEBOUNCE_MS = 3000;
  */
 export function scheduleLiveSheetSync(eventId: string, kinds: readonly LiveSheetKind[]): void {
   if (!isSheetsConfigured()) return;
-  const triggeredAt = Date.now();
+  const reserved = reservePendingSyncs(eventId, kinds, Date.now());
+  if (reserved.length === 0) return;
   try {
     after(async () => {
       await new Promise((resolve) => setTimeout(resolve, DEBOUNCE_MS));
-      for (const kind of kinds) {
-        if (!LIVE_SHEET_KINDS.includes(kind)) continue;
+      for (const { kind, entry } of reserved) {
+        entry.started = true;
         try {
-          await syncLiveSheet(eventId, kind, triggeredAt, loadSheetData);
+          await syncLiveSheet(eventId, kind, entry.triggeredAt, loadSheetData);
         } catch (err) {
-          const e = err as { code?: number | string; response?: { status?: number } };
-          console.error("[live-sheet] pembaruan gagal:", kind, e.response?.status ?? e.code ?? (err as Error).message);
+          // Hanya jenis galat dan kode status: pesan galat bisa memuat data.
+          const e = err as { name?: string; code?: number | string; response?: { status?: number } };
+          console.error("[live-sheet] pembaruan gagal:", kind, e.response?.status ?? e.code ?? e.name ?? "tidak diketahui");
+        } finally {
+          releasePendingSyncs(eventId, [{ kind, entry }]);
         }
       }
     });
   } catch {
     // Dipanggil di luar konteks permintaan (skrip, uji): tidak ada yang dijadwalkan.
+    releasePendingSyncs(eventId, reserved);
   }
 }

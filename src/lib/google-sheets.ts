@@ -74,6 +74,8 @@ const DATA_TAB = "Data";
 const INFO_TAB = "Info";
 const UUID_LIKE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const CLEANUP_BATCH = 50;
+// Berapa sheet ekspor yang dibaca sekali jalan untuk disaring (jumlahnya jauh di bawah ini).
+const CLEANUP_LIST_MAX = 200;
 
 /** Sheet yang tidak berubah dan tidak diklik selama ini dihapus (30 hari). */
 export const INACTIVE_DELETE_MS = 30 * 24 * 60 * 60 * 1000;
@@ -301,7 +303,7 @@ export async function writeLiveSheet(
   opts: { firstWrite?: boolean } = {},
   deps?: GoogleClients,
 ): Promise<void> {
-  const { drive, sheets } = clients(deps);
+  const { sheets } = clients(deps);
   await sheets.spreadsheets.values.clear({ spreadsheetId: id, range: DATA_TAB });
   await sheets.spreadsheets.values.update({
     spreadsheetId: id,
@@ -360,9 +362,16 @@ export async function writeLiveSheet(
       },
     });
   }
-  // Tanda waktu pembaruan terakhir: dipakai pemicu berikutnya untuk menggabungkan
-  // rentetan perubahan menjadi satu pembaruan (lihat syncLiveSheet).
-  await drive.files.update({ fileId: id, requestBody: { appProperties: { [SYNCED_KEY]: String(Date.now()) } } });
+}
+
+/**
+ * Tandai sheet segar sampai `at`, yaitu SAAT DATA MULAI DIBACA (bukan saat
+ * penulisan selesai): perubahan yang masuk setelah itu belum tercakup dan harus
+ * tetap memicu pembaruan. Dipakai jalur klik; jalur sinkron menandainya sendiri.
+ */
+export async function markLiveSheetSynced(id: string, at: number, deps?: GoogleClients): Promise<void> {
+  const { drive } = clients(deps);
+  await drive.files.update({ fileId: id, requestBody: { appProperties: { [SYNCED_KEY]: String(at) } } });
 }
 
 /** Bagikan sheet ke satu email sebagai PEMBACA (tanpa email pemberitahuan). */
@@ -374,6 +383,11 @@ export async function shareLiveSheetReader(
 ): Promise<void> {
   const { drive } = clients(deps);
   try {
+    // Sudah punya akses (klik berikutnya, atau pengklik adalah pemilik akun itu
+    // sendiri): tidak ada yang perlu dibagikan, dan membagikan ke pemilik malah ditolak Google.
+    const existing = await drive.permissions.list({ fileId: id, fields: "permissions(emailAddress)", pageSize: 100 });
+    const target = email.trim().toLowerCase();
+    if ((existing.data.permissions ?? []).some((p) => p.emailAddress?.toLowerCase() === target)) return;
     await drive.permissions.create({
       fileId: id,
       sendNotificationEmail: false,
@@ -403,33 +417,51 @@ export async function syncLiveSheet(
   load: (eventId: string, kind: LiveSheetKind) => Promise<SheetData | null>,
   deps?: GoogleClients,
 ): Promise<"tidak-ada-sheet" | "sudah-segar" | "tidak-ada-data" | "diperbarui"> {
-  const { drive } = clients(deps);
   const live = await findLiveSheet(eventId, kind, deps);
   if (!live) return "tidak-ada-sheet";
   if (live.syncedAt >= triggeredAt) return "sudah-segar";
-  // Klaim dulu: pemicu lain yang berjalan bersamaan melihat tandanya dan mundur.
-  await drive.files.update({ fileId: live.id, requestBody: { appProperties: { [SYNCED_KEY]: String(Date.now()) } } });
-  const data = await load(eventId, kind);
-  if (!data) return "tidak-ada-data";
-  await writeLiveSheet(live.id, data, kind, {}, deps);
-  return "diperbarui";
+  // Klaim dulu, SEBELUM data dibaca: pemicu lain yang berjalan bersamaan melihat
+  // tandanya dan mundur, dan semua perubahan yang sudah tersimpan sampai saat ini
+  // ikut terbaca di bawah. Perubahan sesudahnya punya pemicu sendiri yang lebih baru.
+  await markLiveSheetSynced(live.id, Date.now(), deps);
+  try {
+    const data = await load(eventId, kind);
+    if (!data) {
+      await markLiveSheetSynced(live.id, live.syncedAt, deps).catch(() => undefined);
+      return "tidak-ada-data";
+    }
+    await writeLiveSheet(live.id, data, kind, {}, deps);
+    return "diperbarui";
+  } catch (err) {
+    // Gagal: kembalikan tandanya, kalau tidak pemicu lain yang menunggu mengira
+    // sheet sudah segar dan sheet basi sampai ada perubahan berikutnya.
+    await markLiveSheetSynced(live.id, live.syncedAt, deps).catch(() => undefined);
+    throw err;
+  }
 }
 
 /**
  * Hapus sheet ekspor yang tidak berubah dan tidak diklik selama INACTIVE_DELETE_MS.
- * (Tiap pembaruan menulis ke sheet, jadi modifiedTime Drive otomatis ikut maju.)
+ * Dasarnya penanda milik kita sendiri (ppitSyncedAt: diperbarui tiap sinkron dan
+ * tiap klik), dengan tanggal pembuatan sebagai cadangan untuk sheet tanpa penanda.
+ * BUKAN modifiedTime Drive: diuji, nilainya tidak maju setelah penulisan lewat API.
  * Dipanggil di belakang respons, jadi kegagalannya tidak boleh sampai ke pengguna.
  */
 export async function deleteInactiveExportSheets(now = Date.now(), deps?: GoogleClients): Promise<number> {
   const { drive } = clients(deps);
-  const cutoff = new Date(now - INACTIVE_DELETE_MS).toISOString();
+  const cutoff = now - INACTIVE_DELETE_MS;
   const res = await drive.files.list({
-    q: `appProperties has { key='${EXPORT_MARK_KEY}' and value='1' } and mimeType = '${SHEET_MIME}' and modifiedTime < '${cutoff}' and trashed = false`,
-    fields: "files(id)",
-    pageSize: CLEANUP_BATCH,
+    q: `appProperties has { key='${EXPORT_MARK_KEY}' and value='1' } and mimeType = '${SHEET_MIME}' and trashed = false`,
+    fields: "files(id, createdTime, appProperties)",
+    pageSize: CLEANUP_LIST_MAX,
+  });
+  const inactive = (res.data.files ?? []).filter((file) => {
+    const syncedAt = Number(file.appProperties?.[SYNCED_KEY] ?? 0) || 0;
+    const createdAt = file.createdTime ? Date.parse(file.createdTime) : 0;
+    return Math.max(syncedAt, createdAt) < cutoff;
   });
   let deleted = 0;
-  for (const file of res.data.files ?? []) {
+  for (const file of inactive.slice(0, CLEANUP_BATCH)) {
     if (!file.id) continue;
     try {
       await drive.files.delete({ fileId: file.id });
