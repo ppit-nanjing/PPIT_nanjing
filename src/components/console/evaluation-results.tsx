@@ -7,6 +7,7 @@ import type { eventEvaluations } from "@/db/schema";
 import { ConfirmButton } from "@/components/console/confirm-button";
 import { DataTable } from "@/components/console/data-table";
 import { deleteEventEvaluation } from "@/app/actions/event-evaluations";
+import { openEvaluationInSheets } from "@/app/actions/export-sheets";
 import { buildEvaluationDataset } from "@/lib/event-evaluation-dataset";
 import { datasetToTable, type TableData } from "@/lib/table-view";
 import { ratingQuestions, textQuestions, type EvaluationSection } from "@/lib/event-evaluation-template";
@@ -113,13 +114,24 @@ type ResultTab = "grafik" | "jawaban" | "respons" | "tabel";
 // Tabel baca-saja dengan kolom dan baris yang sama persis dengan file Excel/CSV
 // (dirakit oleh buildEvaluationDataset yang sama dengan rute ekspor), termasuk
 // respons bentuk standar yang tidak ditampilkan di tab lain.
-function ResultsTable({ table }: { table: TableData }) {
+function ResultsTable({
+  table,
+  eventId,
+  audience,
+  sheetsEnabled,
+}: {
+  table: TableData;
+  eventId: string;
+  audience: "peserta" | "panitia";
+  sheetsEnabled: boolean;
+}) {
   return (
     <DataTable
       label="Tabel hasil evaluasi"
       columns={table.columns}
       rows={table.rows}
       canCopy
+      onOpenSheets={sheetsEnabled ? () => openEvaluationInSheets(eventId, audience) : undefined}
       emptyText="Belum ada respons."
       note="Isinya sama dengan file Excel/CSV. Tabel ini hanya untuk dilihat; hapus respons lewat tab Respons."
     />
@@ -133,6 +145,7 @@ export function EvaluationResults({
   questions = [],
   answers = [],
   exportAudience = "peserta",
+  sheetsEnabled = false,
 }: {
   eventId: string;
   evaluations: Evaluation[];
@@ -142,6 +155,8 @@ export function EvaluationResults({
   answers?: EvalAnswerRow[];
   /** Audiens tautan ekspor: "panitia" menambahkan ?audience=panitia (gerbangnya lebih ketat). */
   exportAudience?: "peserta" | "panitia";
+  /** Server sudah dikonfigurasi membuat Google Sheet (isSheetsConfigured); kalau false tombolnya salin-tempel. */
+  sheetsEnabled?: boolean;
 }) {
   const table = useMemo(
     () =>
@@ -177,10 +192,11 @@ export function EvaluationResults({
         legacyCount={legacy.length}
         exportAudience={exportAudience}
         table={table}
+        sheetsEnabled={sheetsEnabled}
       />
     );
   }
-  return <TemplateResults eventId={eventId} evaluations={legacy} sections={sections} table={table} />;
+  return <TemplateResults eventId={eventId} evaluations={legacy} sections={sections} table={table} sheetsEnabled={sheetsEnabled} />;
 }
 
 // ---------- Template tetap (WIF / umum) ----------
@@ -190,11 +206,13 @@ function TemplateResults({
   evaluations,
   sections,
   table,
+  sheetsEnabled,
 }: {
   eventId: string;
   evaluations: LegacyEvaluation[];
   sections: EvaluationSection[];
   table: TableData;
+  sheetsEnabled: boolean;
 }) {
   const [tab, setTab] = useState<ResultTab>("grafik");
 
@@ -356,7 +374,7 @@ function TemplateResults({
         </ul>
       )}
 
-      {tab === "tabel" && <ResultsTable table={table} />}
+      {tab === "tabel" && <ResultsTable table={table} eventId={eventId} audience="peserta" sheetsEnabled={sheetsEnabled} />}
     </div>
   );
 }
@@ -418,6 +436,7 @@ function CustomResults({
   legacyCount,
   exportAudience = "peserta",
   table,
+  sheetsEnabled,
 }: {
   eventId: string;
   evaluations: Evaluation[];
@@ -426,6 +445,7 @@ function CustomResults({
   legacyCount: number;
   exportAudience?: "peserta" | "panitia";
   table: TableData;
+  sheetsEnabled: boolean;
 }) {
   const [tab, setTab] = useState<ResultTab>("grafik");
   const columns = evalColumns(questions, answers);
@@ -620,7 +640,7 @@ function CustomResults({
         </ul>
       )}
 
-      {tab === "tabel" && <ResultsTable table={table} />}
+      {tab === "tabel" && <ResultsTable table={table} eventId={eventId} audience={exportAudience} sheetsEnabled={sheetsEnabled} />}
     </div>
   );
 }

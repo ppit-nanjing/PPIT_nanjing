@@ -3,6 +3,7 @@
 import { useMemo, useState, useTransition } from "react";
 import { CheckCircle2, TriangleAlert, Search, Ban, Undo2, Rows3, Table2 } from "lucide-react";
 import { checkInRegistration, setRegistrationCancelled } from "@/app/actions/admin-events";
+import { openRegistrationsInSheets } from "@/app/actions/export-sheets";
 import { ConfirmButton } from "@/components/console/confirm-button";
 import { toast } from "sonner";
 import { ProofView } from "@/components/console/proof-view";
@@ -37,6 +38,7 @@ export function RegistrationList({
   detail = false,
   canCancel = false,
   exportHref,
+  sheetsEnabled = false,
 }: {
   eventId: string;
   registrations: Registration[];
@@ -52,6 +54,9 @@ export function RegistrationList({
   // Tautan ekspor CSV. Hanya diisi untuk yang memang boleh mengekspor; sekaligus
   // menentukan apakah tombol Salin di tampilan tabel muncul.
   exportHref?: string;
+  // Server sudah dikonfigurasi untuk membuat Google Sheet (isSheetsConfigured). Kalau
+  // false, tombol "Ke Google Sheets" memakai salin-lalu-tempel.
+  sheetsEnabled?: boolean;
 }) {
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
@@ -196,6 +201,7 @@ export function RegistrationList({
           columns={table.columns}
           rows={table.rows}
           canCopy={Boolean(exportHref)}
+          onOpenSheets={exportHref && sheetsEnabled ? () => openRegistrationsInSheets(eventId) : undefined}
           exportLinks={exportHref ? [{ label: "Unduh CSV", href: exportHref }] : []}
           emptyText="Belum ada yang mendaftar."
           note="Tabel ini hanya untuk dilihat. Check-in dan pembatalan pendaftaran ada di tampilan Daftar."
