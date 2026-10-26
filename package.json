@@ -8,12 +8,14 @@
     "start": "next start",
     "lint": "eslint",
     "check:mrz": "tsx scripts/check-mrz.ts",
+    "check:chat": "tsx scripts/check-chat-history.ts",
     "test": "tsx scripts/check-mrz.ts",
     "check:contrast": "tsx scripts/check-contrast.ts",
     "check:drift": "tsx --env-file=.env scripts/check-schema-drift.ts",
     "postinstall": "node scripts/copy-ocr-assets.mjs",
     "db:push": "drizzle-kit push",
-    "db:seed": "tsx --env-file=.env src/db/seed.ts"
+    "db:seed": "tsx --env-file=.env src/db/seed.ts",
+    "check:guidebook": "tsx scripts/check-guidebook.ts"
   },
   "dependencies": {
     "@auth/drizzle-adapter": "^1.11.3",
@@ -39,6 +41,7 @@
     "next": "16.4.3",
     "next-auth": "^5.0.0-beta.32",
     "nodemailer": "^10.2.1",
+    "pinyin-pro": "^3.29.5",
     "qrcode": "^1.5.4",
     "react": "19.2.8",
     "react-dom": "19.2.8",
@@ -54,6 +57,7 @@
     "@types/bcryptjs": "^2.4.6",
     "@types/node": "^20",
     "@types/nodemailer": "^8.0.1",
+    "@types/pg": "^8.23.1",
     "@types/qrcode": "^1.5.6",
     "@types/react": "^19",
     "@types/react-dom": "^19",
@@ -61,6 +65,7 @@
     "drizzle-kit": "^0.31.10",
     "eslint": "^9",
     "eslint-config-next": "16.4.3",
+    "pg": "^8.23.1",
     "tailwindcss": "^4",
     "tsx": "^4.23.12",
     "typescript": "^5"

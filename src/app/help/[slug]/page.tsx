@@ -9,6 +9,8 @@ import { ArrowLeft } from "lucide-react";
 import Link from "next/link";
 import { getT } from "@/lib/i18n/server";
 import { INTL_LOCALE } from "@/lib/i18n/config";
+import { renderMarkdownLite } from "@/lib/markdown-lite";
+import { annotateHanziPinyin } from "@/lib/pinyin";
 
 export default async function HelpArticleDetailPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
@@ -23,10 +25,14 @@ export default async function HelpArticleDetailPage({ params }: { params: Promis
     .where(and(eq(helpArticles.slug, slug), eq(helpArticles.isPublic, true)));
   if (!article) notFound();
 
-  const paragraphs = (article.content ?? "")
-    .split(/\n{2,}/)
-    .map((p) => p.trim())
-    .filter(Boolean);
+  // Isi artikel itu markdown (lihat src/lib/markdown-lite.tsx). Dulu halaman ini
+  // memecahnya per baris kosong, jadi **tebal**, ## judul, dan - daftar tampil
+  // apa adanya di halaman publik. Kalau locale Inggris dan terjemahannya ada,
+  // pakai versi Inggris; selain itu jatuh ke teks Indonesia.
+  const title = locale === "en" ? (article.titleEn ?? article.title) : article.title;
+  const section = locale === "en" ? (article.sectionEn ?? article.section) : article.section;
+  const content = locale === "en" ? (article.contentEn ?? article.content) : article.content;
+  const contentText = content ?? "";
 
   return (
     <div className="min-h-screen bg-background text-on-background">
@@ -41,10 +47,10 @@ export default async function HelpArticleDetailPage({ params }: { params: Promis
         </Link>
 
         <span className="text-label-caps uppercase tracking-[0.3em] text-gold-ink mb-3 block">
-          {article.section}
+          {section}
         </span>
         <h1 className="text-display-hero-mobile md:text-display-hero text-heading mb-5 leading-tight">
-          {article.title}
+          {title}
         </h1>
         <DecoRule align="start" className="mb-5" />
         <p className="text-label-caps text-on-surface-variant mb-10">
@@ -54,11 +60,7 @@ export default async function HelpArticleDetailPage({ params }: { params: Promis
         </p>
 
         <article lang={locale} className="flex flex-col gap-5 text-body-lg text-on-surface-variant leading-relaxed text-pretty">
-          {paragraphs.length > 0 ? (
-            paragraphs.map((p, i) => <p key={i}>{p}</p>)
-          ) : (
-            <p>{t("help.noContent")}</p>
-          )}
+          {contentText.trim() ? renderMarkdownLite(annotateHanziPinyin(contentText)) : <p>{t("help.noContent")}</p>}
         </article>
       </main>
 

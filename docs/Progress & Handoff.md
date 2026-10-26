@@ -2,7 +2,7 @@
 
 > Living status doc — updated as the project moves. If you're picking this up in a new AI session or as a new dev, start here, then [README.md](./README.md) for full documentation.
 
-**Last updated:** 2026-09-29
+**Last updated:** 2026-10-11
 **Repo:** https://github.com/Fx-4/PPIT_nanjing (branch `master`, repo root = the app)
 **Live:** deployed on Vercel by the project owner (project `ppit-nanjing`). Auto-deploy on push **is** connected (every commit → READY production deploy in ~2 min). ⚠️ Watch the commit-author email: Vercel rejects deploys whose tip-commit author isn't verified on the GitHub account — local `git config user.email` must stay `Haikalhelmy13@Gmail.com`.
 
@@ -61,6 +61,16 @@ Layout gates on "any admin access"; each page + its server actions additionally 
 **Uploads** — site-wide WebP pipeline, stream-based Drive media upload with a 4 MB guard, camera-permission policy fix.
 
 **Ops** — `publish-events` cron scheduled (then the stray 15-min cron removed), CSP `unsafe-eval` restricted to dev.
+
+**Akses Help Center jadi modul `guidebook`** (2026-10-11) — halaman `/console/docs` dan aksinya berhenti memakai `isAdmin` longgar. Sekarang ada kunci modul `guidebook` yang bisa dicentang per divisi di Organization Management (BPH/pusat, keputusan issue #65), rute ekspor docx menjawab 403 untuk admin yang tidak memegangnya, tautan sidebar ikut hilang, dan topik guidebook yang baru dibuat otomatis dapat masa berlaku 6 bulan. Detail + hasil uji: [Documentation & Help Center.md](./Documentation%20&%20Help%20Center.md), [Guidebook Maba.md](./Guidebook%20Maba.md).
+
+**Panduan maba jalan penuh** (2026-10-12) — halaman publik `/guidebook` (checklist tiga fase + centang progres per akun) dan chatbot Help Center yang hanya mengutip topik yang sudah ditinjau dan belum kedaluwarsa. Satu gerbang `RETRIEVABLE_ARTICLE` dipakai jalur pencarian maupun pembacaan cache, ditambah lantai relevansi (kata utuh, minimal tiga konsep atau dua konsep dengan cakupan separuh) supaya pertanyaan di luar korpus dijawab penolakan tetap, bukan tebakan. Ada kuota 15 pertanyaan sehari per akun, cache per `corpus_version`, jalur degradasi tanpa model, sakelar `guide_meta.ai_enabled`, harness mutu 38 pertanyaan, dan artikel SOP untuk pengurus. Hasil uji: [Guidebook Maba.md](./Guidebook%20Maba.md), alur chatbot: [Documentation & Help Center.md](./Documentation%20&%20Help%20Center.md).
+
+**Korpus panduan maba jadi 17 topik** (2026-10-14) — delapan topik pengetahuan sehari-hari (transportasi dalam kota, kuliner, kesehatan dan darurat, musim dan cuaca, nomor penting dan kontak, spot wisata, perpanjangan paspor dan SKB, bahasa Mandarin) ditulis di `docs/guidebook/` beserta versi Inggrisnya di `docs/guidebook/en/`, masuk database lewat `ingest-guide.ts` (delapan topik, 44 potongan pencarian baru, `corpus_version` naik), dan ditandai sudah ditinjau lewat `drizzle/0061_review_new_guidebook_topics.sql` supaya chatbot boleh mengutipnya. Harness mutunya naik dari 38 ke 66 pertanyaan dengan recall@4 60/60; enam pertanyaan yang luput di percobaan pertama diperbaiki lewat `SYNONYMS` di `src/lib/guidebook-terms.ts` plus dua tambahan isi artikel. Delapan halaman `/help/<slug>` dijawab `curl` 200 dan empat pertanyaan diuji lewat `askGuide`. Detail dan yang belum diverifikasi: [Guidebook Maba.md](./Guidebook%20Maba.md).
+
+**Celah panduan maba terhadap PDF sumber ditutup** (2026-10-14) — korpus dibandingkan dengan `A Guide to Nanjing` 2026, deck Nanjing 101, dan China Student Starter Guide VER4; hasilnya 6 topik baru (VPN dan akses internet, packing dan kirim barang, checklist minggu pertama, tempat ibadah, kerja/magang/SIM, festival dan hari libur) dan 14 artikel yang sudah ada di korpus diperluas, termasuk perbaikan angka yang salah (exit 古鸡鸣寺, exit Lubo Garden, tarif metro, biaya MCU). Korpus jadi 23 topik/146 potongan pencarian, `drizzle/0062_review_gap_topics.sql` menandai keenam topik baru sudah ditinjau, dan harness mutunya 87 pertanyaan dengan recall@4 81/81 = 1,000. Keenam topik baru belum punya terjemahan Inggris. Detail: [Guidebook Maba.md](./Guidebook%20Maba.md).
+
+**Pertanyaan Inggris ketemu bagian yang benar** (2026-10-15) — pencarian menilai judul/bagian/isi versi Indonesia dan Inggris sekaligus (kata kunci yang cocok digabung, skor tetap maksimum satu versi), dan tiap artikel dikirim ke model sebagai blok 1.800 karakter di sekitar kata kunci pertanyaannya, bukan selalu dari paragraf pembuka. Pertanyaan "How do I ship my boxes to Nanjing before I fly?" yang tadinya dijawab "panduannya tidak memuat itu" sekarang mengutip bagian `## Kirim Barang Pintu ke Pintu`. `ANSWER_FORMAT_VERSION` naik ke 7, golden set 98 pertanyaan (92 beralas jawaban) dengan recall@4 1,000. Detail: [Guidebook Maba.md](./Guidebook%20Maba.md).
 
 ## Known gaps — do these next
 

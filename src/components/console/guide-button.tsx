@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { HelpCircle, X } from "lucide-react";
+import { renderMarkdownLite } from "@/lib/markdown-lite";
 
 type Props = {
   title: string;
@@ -52,7 +53,7 @@ export function GuideButton({ title, content, docSlug }: Props) {
               </button>
             </div>
             <div className="px-5 py-4 overflow-y-auto text-body-md text-on-surface-variant whitespace-pre-wrap">
-              {content}
+              {renderMarkdownLite(content)}
             </div>
             {docSlug && (
               <div className="px-5 py-3 border-t border-outline-variant">
