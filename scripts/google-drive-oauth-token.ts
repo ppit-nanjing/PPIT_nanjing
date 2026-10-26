@@ -101,14 +101,24 @@ const server = createServer(async (req, res) => {
       console.log("\nJangan simpan di tempat lain. Tutup/bersihkan terminal ini sesudahnya.");
     }
     console.log(`Izin yang diberikan: ${tokens.scope ?? SCOPES.join(" ")}`);
+    clearTimeout(giveUp);
     server.close();
+    server.closeAllConnections();
   } catch (err) {
     res.writeHead(400, { "Content-Type": "text/plain; charset=utf-8" }).end("Gagal. Lihat terminal.");
     console.error("\nGAGAL:", err instanceof Error ? err.message : err);
+    clearTimeout(giveUp);
     server.close();
+    server.closeAllConnections();
     process.exitCode = 1;
   }
 });
+
+// Tanpa balasan Google skrip akan menunggu selamanya; menyerah setelah 5 menit.
+const giveUp = setTimeout(() => {
+  console.error("\nWaktu habis (5 menit) menunggu persetujuan Google. Jalankan ulang skrip.");
+  process.exit(1);
+}, 5 * 60 * 1000);
 
 server.listen(PORT, "127.0.0.1", () => {
   console.log("Buka alamat ini di browser, masuk sebagai AKUN ORGANISASI pemilik berkas, lalu setujui:\n");

@@ -267,7 +267,9 @@ export async function createExportSheet(
   } catch (err) {
     // Sheet yang tidak bisa dibuka siapa pun (selain pemilik) hanya sampah: buang lagi.
     await drive.files.delete({ fileId: id }).catch(() => undefined);
-    console.error("[sheets] gagal membagikan sheet:", (err as Error).message);
+    // Hanya kode status: pesan Google untuk kegagalan berbagi bisa memuat alamat email pengurus.
+    const e = err as { code?: number | string; response?: { status?: number } };
+    console.error("[sheets] gagal membagikan sheet, status:", e.response?.status ?? e.code ?? "tidak diketahui");
     throw new SheetsShareError();
   }
 

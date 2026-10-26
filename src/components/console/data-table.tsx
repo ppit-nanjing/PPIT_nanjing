@@ -380,7 +380,7 @@ export function DataTable({
               <button
                 type="button"
                 onClick={onOpenSheets ? openSheetsFromServer : copyToSheets}
-                disabled={sheetsBusy || (!onOpenSheets && processed.length === 0)}
+                disabled={sheetsBusy || (onOpenSheets ? rows.length === 0 : processed.length === 0)}
                 title={
                   onOpenSheets
                     ? "Membuat Google Sheet berisi semua baris, tanpa paspor, telepon, dan KTM (bukan hanya yang tampil atau terfilter). Hanya akunmu yang bisa membukanya dan tidak dihapus otomatis. Itu salinan: mengubahnya tidak mengubah data di website."
