@@ -97,6 +97,8 @@ async function publish(input: {
   try {
     const sheet = await createExportSheet({
       title: `PPIT ${label} - ${input.eventTitle} - ${formatChinaDateTimeIso(new Date())} (jam Tiongkok)`,
+      eventId: input.eventId,
+      eventTitle: input.eventTitle,
       header: input.header,
       rows: input.rows,
       shareWithEmail: input.email,

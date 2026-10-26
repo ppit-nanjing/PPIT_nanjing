@@ -74,13 +74,22 @@ Tombol **Ke Google Sheets** punya dua mode. Pilihan antar mode otomatis: server 
 | Cara | Disalin ke clipboard, tab Sheets kosong terbuka, Ctrl+V | Server membuat Sheet, tab terbuka langsung di sheet itu |
 | Data lewat server atau Google | Tidak | Ya, ke Google (akun organisasi) |
 | Siapa bisa membuka | Pembuat Sheet kosongnya (akunnya sendiri) | Hanya email akun pengurus yang menekan tombol, tanpa hak membagikan ulang |
-| Umur | Sesuai Drive pemilik | Tidak dihapus otomatis. Disimpan di folder "PPIT Nanjing - Ekspor Google Sheets" di Drive akun organisasi, dihapus manual oleh pemilik akunnya |
+| Umur | Sesuai Drive pemilik | Tidak dihapus otomatis. Disimpan di Drive akun organisasi, satu folder per acara, dihapus manual oleh pemilik akunnya |
 
 Gerbang mode Sheet sama dengan ekspor file: pendaftar hanya untuk BPH Kabinet, Divisi Teknologi, dan BPH Panitia acara ini (`openRegistrationsInSheets`); evaluasi untuk yang boleh mengekspor evaluasi, dan evaluasi panitia hanya BPH (`openEvaluationInSheets`). Server mengambil datanya sendiri dari database lalu membuat Sheet. Isi tabel di browser tidak dipercaya. Nilai ditulis sebagai teks (`RAW`), jadi jawaban peserta yang diawali `=` tidak berjalan sebagai rumus. Tiap pembuatan dicatat di jejak audit acara (`export.sheet`) dan dibatasi 6 kali per 10 menit per pengguna, dihitung dari jejak itu sehingga berlaku lintas instance. Maksimal 5.000 baris.
 
 ### Sheet tidak dihapus otomatis
 
-Sheet yang dibuat bertahan sampai dihapus. Aplikasi tidak menghapusnya, dan pengurus yang diajak berbagi (peran penulis) tidak bisa menghapus berkas milik akun lain. Semua sheet ada di satu folder, **PPIT Nanjing - Ekspor Google Sheets**, di Drive akun organisasi pemilik token. Yang boleh menghapus hanya pemilik akun itu: buka Drive-nya, masuk ke folder tersebut, lalu pindahkan sheet yang sudah tidak dipakai ke Sampah.
+Sheet yang dibuat bertahan sampai dihapus. Aplikasi tidak menghapusnya, dan pengurus yang diajak berbagi (peran penulis) tidak bisa menghapus berkas milik akun lain. Semua sheet ada di Drive akun organisasi pemilik token, dikelompokkan per acara:
+
+```
+PPIT Nanjing - Ekspor Google Sheets
+└── WIF 2026 X CGT                          (satu folder per acara, bernama judul acara)
+    ├── PPIT Pendaftar - WIF 2026 X CGT - 2026-10-26 16:10 (jam Tiongkok)
+    └── PPIT Evaluasi - WIF 2026 X CGT - 2026-10-26 16:20 (jam Tiongkok)
+```
+
+Folder acara dicari lewat id acara (disimpan di properti berkas), bukan lewat nama, jadi dua acara berjudul sama tidak tercampur dan folder otomatis diganti namanya kalau judul acara berubah. Folder dibuat saat ekspor pertama sebuah acara. Kalau pemilik menghapus folder, folder dibuat ulang pada ekspor berikutnya. Yang boleh menghapus sheet hanya pemilik akun itu: buka Drive-nya, masuk ke folder acara, lalu pindahkan sheet yang sudah tidak dipakai ke Sampah.
 
 Sheet pendaftar berisi nama, email, WeChat, dan jawaban formulir (paspor, telepon, dan bukti mahasiswa sudah dibuang). Karena disimpan di luar situs, bersihkan folder itu secara berkala, misalnya setelah laporan acara selesai. Jejak siapa membuat sheet apa ada di riwayat acara (`export.sheet`).
 

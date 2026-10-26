@@ -17,11 +17,13 @@ import { google } from "googleapis";
 // project klien OAuth itu, dan consent screen berstatus In production (status
 // Testing membuat refresh token kedaluwarsa tiap 7 hari).
 //
-// Sheet dimiliki akun itu dan dikumpulkan dalam satu folder khusus
-// (EXPORT_FOLDER_NAME). Tiap sheet hanya dibagikan ke satu email (pengguna yang
-// menekan tombol), tanpa hak membagikan ulang. TIDAK ada penghapusan otomatis:
-// sheet bertahan sampai pemilik akunnya menghapusnya sendiri di Drive. (Penulis
-// yang diajak berbagi tidak bisa menghapus berkas milik orang lain.)
+// Letak berkas di Drive akun itu:
+//   PPIT Nanjing - Ekspor Google Sheets / <nama acara> / <sheet>
+// Satu subfolder per acara (dicari lewat id acara, bukan nama, dan namanya
+// disusulkan kalau judul acara berubah). Tiap sheet hanya dibagikan ke satu email
+// (pengguna yang menekan tombol), tanpa hak membagikan ulang. TIDAK ada
+// penghapusan otomatis: sheet bertahan sampai pemilik akunnya menghapusnya sendiri
+// di Drive. (Penulis yang diajak berbagi tidak bisa menghapus berkas milik orang lain.)
 
 export class SheetsNotConfiguredError extends Error {
   constructor() {
@@ -48,8 +50,10 @@ export class SheetsShareError extends Error {
 // Tanda di appProperties: memudahkan mencari berkas buatan aplikasi ini.
 const EXPORT_MARK_KEY = "ppitExport";
 const EXPORT_FOLDER_KEY = "ppitExportFolder";
+const EVENT_FOLDER_KEY = "ppitExportEvent";
 const EXPORT_FOLDER_NAME = "PPIT Nanjing - Ekspor Google Sheets";
 const FOLDER_MIME = "application/vnd.google-apps.folder";
+const UUID_LIKE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 export type SheetCell = string | number;
 
@@ -57,11 +61,6 @@ export type SheetCell = string | number;
 export function isSheetsConfigured(): boolean {
   return Boolean(process.env.AUTH_GOOGLE_ID && process.env.AUTH_GOOGLE_SECRET && process.env.GOOGLE_DRIVE_REFRESH_TOKEN);
 }
-
-let cached: ReturnType<typeof buildClients> | null = null;
-// Id folder ekspor, disimpan per instance supaya tidak mencari folder di setiap
-// permintaan. Kalau folder dihapus pemiliknya, pembuatan sheet mengulang sekali.
-let exportFolderId: string | null = null;
 
 function buildClients() {
   const clientId = process.env.AUTH_GOOGLE_ID;
@@ -73,7 +72,16 @@ function buildClients() {
   return { drive: google.drive({ version: "v3", auth }), sheets: google.sheets({ version: "v4", auth }) };
 }
 
-function clients() {
+export type GoogleClients = ReturnType<typeof buildClients>;
+
+let cached: GoogleClients | null = null;
+// Id folder induk dan folder per acara, diingat per instance supaya tidak mencari
+// di setiap permintaan. Kalau pemiliknya menghapus folder, pembuatan sheet
+// mengosongkan ingatan ini dan mengulang sekali.
+let rootFolderId: string | null = null;
+const eventFolders = new Map<string, { id: string; name: string }>();
+
+function clients(): GoogleClients {
   if (!cached) cached = buildClients();
   return cached;
 }
@@ -89,8 +97,15 @@ function isNotFound(err: unknown): boolean {
   return e?.code === 404 || e?.response?.status === 404;
 }
 
-async function ensureExportFolder(drive: ReturnType<typeof buildClients>["drive"]): Promise<string> {
-  if (exportFolderId) return exportFolderId;
+// Nama folder dari judul acara: tanpa karakter kontrol, spasi dirapikan, dan
+// dipotong. Hanya label; pencarian memakai id acara.
+function folderNameFor(title: string): string {
+  const clean = title.replace(/[\u0000-\u001f\u007f]/g, " ").replace(/\s+/g, " ").trim();
+  return (clean || "Acara tanpa judul").slice(0, 100);
+}
+
+async function ensureRootFolder(drive: GoogleClients["drive"]): Promise<string> {
+  if (rootFolderId) return rootFolderId;
   const found = await drive.files.list({
     q: `mimeType = '${FOLDER_MIME}' and appProperties has { key='${EXPORT_FOLDER_KEY}' and value='1' } and trashed = false`,
     fields: "files(id)",
@@ -105,17 +120,56 @@ async function ensureExportFolder(drive: ReturnType<typeof buildClients>["drive"
     id = created.data.id ?? null;
   }
   if (!id) throw new Error("Drive tidak mengembalikan id folder ekspor");
-  exportFolderId = id;
+  rootFolderId = id;
   return id;
 }
 
-async function createSheetFile(title: string): Promise<string> {
-  const { drive } = clients();
+async function ensureEventFolder(drive: GoogleClients["drive"], eventId: string, eventTitle: string): Promise<string> {
+  if (!UUID_LIKE.test(eventId)) throw new Error("id acara tidak valid");
+  const name = folderNameFor(eventTitle);
+  const root = await ensureRootFolder(drive);
+  const known = eventFolders.get(eventId);
+  if (known) {
+    // Judul acara berubah sejak ekspor terakhir di instance ini: samakan nama foldernya.
+    if (known.name !== name) {
+      await drive.files.update({ fileId: known.id, requestBody: { name } });
+      known.name = name;
+    }
+    return known.id;
+  }
+
+  const found = await drive.files.list({
+    q: `'${root}' in parents and mimeType = '${FOLDER_MIME}' and appProperties has { key='${EVENT_FOLDER_KEY}' and value='${eventId}' } and trashed = false`,
+    fields: "files(id, name)",
+    pageSize: 1,
+  });
+  const existing = found.data.files?.[0];
+  let id = existing?.id ?? null;
+  if (id && existing?.name !== name) {
+    // Judul acara berubah sejak ekspor terakhir: samakan nama foldernya.
+    await drive.files.update({ fileId: id, requestBody: { name } });
+  }
+  if (!id) {
+    const created = await drive.files.create({
+      requestBody: { name, mimeType: FOLDER_MIME, parents: [root], appProperties: { [EVENT_FOLDER_KEY]: eventId } },
+      fields: "id",
+    });
+    id = created.data.id ?? null;
+  }
+  if (!id) throw new Error("Drive tidak mengembalikan id folder acara");
+  eventFolders.set(eventId, { id, name });
+  return id;
+}
+
+async function createSheetFile(
+  drive: GoogleClients["drive"],
+  input: { title: string; eventId: string; eventTitle: string },
+): Promise<string> {
   const create = async () => {
-    const parent = await ensureExportFolder(drive);
+    const parent = await ensureEventFolder(drive, input.eventId, input.eventTitle);
     return drive.files.create({
       requestBody: {
-        name: title.slice(0, 180),
+        name: input.title.slice(0, 180),
         mimeType: "application/vnd.google-apps.spreadsheet",
         parents: [parent],
         appProperties: { [EXPORT_MARK_KEY]: "1" },
@@ -129,9 +183,10 @@ async function createSheetFile(title: string): Promise<string> {
     try {
       res = await create();
     } catch (err) {
-      // Folder yang diingat sudah dihapus pemiliknya: cari/buat lagi, sekali saja.
-      if (!exportFolderId || !isNotFound(err)) throw err;
-      exportFolderId = null;
+      // Folder yang diingat sudah dihapus pemiliknya: lupakan dan cari/buat lagi, sekali saja.
+      if (!isNotFound(err)) throw err;
+      rootFolderId = null;
+      eventFolders.clear();
       res = await create();
     }
     if (!res.data.id) throw new Error("Drive tidak mengembalikan id sheet");
@@ -143,18 +198,24 @@ async function createSheetFile(title: string): Promise<string> {
 }
 
 /**
- * Buat Google Sheet berisi `header` + `rows` lalu bagikan ke `shareWithEmail`.
- * Nilai ditulis RAW: teks yang diawali "=" tetap teks (tidak jadi rumus), jadi
- * jawaban peserta tidak bisa menjalankan rumus di sheet pengurus.
+ * Buat Google Sheet berisi `header` + `rows` di folder acara lalu bagikan ke
+ * `shareWithEmail`. Nilai ditulis RAW: teks yang diawali "=" tetap teks (tidak
+ * jadi rumus), jadi jawaban peserta tidak bisa menjalankan rumus di sheet pengurus.
+ * `deps` hanya untuk uji; produksi memakai klien dari variabel lingkungan.
  */
-export async function createExportSheet(input: {
-  title: string;
-  header: string[];
-  rows: SheetCell[][];
-  shareWithEmail: string;
-}): Promise<{ id: string; url: string }> {
-  const { drive, sheets } = clients();
-  const id = await createSheetFile(input.title);
+export async function createExportSheet(
+  input: {
+    title: string;
+    eventId: string;
+    eventTitle: string;
+    header: string[];
+    rows: SheetCell[][];
+    shareWithEmail: string;
+  },
+  deps?: GoogleClients,
+): Promise<{ id: string; url: string }> {
+  const { drive, sheets } = deps ?? clients();
+  const id = await createSheetFile(drive, input);
 
   try {
     await sheets.spreadsheets.values.update({
