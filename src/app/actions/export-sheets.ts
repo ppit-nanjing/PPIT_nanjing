@@ -1,7 +1,6 @@
 "use server";
 
 import { and, count, eq, gt } from "drizzle-orm";
-import { after } from "next/server";
 import { db } from "@/db";
 import { auditLogs } from "@/db/schema";
 import {
@@ -17,7 +16,6 @@ import {
   SheetsNotConfiguredError,
   SheetsShareError,
   createExportSheet,
-  deleteExpiredExportSheets,
   isSheetsConfigured,
   type SheetCell,
 } from "@/lib/google-sheets";
@@ -103,7 +101,6 @@ async function publish(input: {
       rows: input.rows,
       shareWithEmail: input.email,
     });
-    after(() => deleteExpiredExportSheets().catch(() => undefined));
     return { ok: true, url: sheet.url };
   } catch (err) {
     return failure(err);

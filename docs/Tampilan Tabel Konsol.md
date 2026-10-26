@@ -74,9 +74,15 @@ Tombol **Ke Google Sheets** punya dua mode. Pilihan antar mode otomatis: server 
 | Cara | Disalin ke clipboard, tab Sheets kosong terbuka, Ctrl+V | Server membuat Sheet, tab terbuka langsung di sheet itu |
 | Data lewat server atau Google | Tidak | Ya, ke Google (akun organisasi) |
 | Siapa bisa membuka | Pembuat Sheet kosongnya (akunnya sendiri) | Hanya email akun pengurus yang menekan tombol, tanpa hak membagikan ulang |
-| Umur | Sesuai Drive pemilik | Dihapus permanen setelah 24 jam |
+| Umur | Sesuai Drive pemilik | Tidak dihapus otomatis. Disimpan di folder "PPIT Nanjing - Ekspor Google Sheets" di Drive akun organisasi, dihapus manual oleh pemilik akunnya |
 
 Gerbang mode Sheet sama dengan ekspor file: pendaftar hanya untuk BPH Kabinet, Divisi Teknologi, dan BPH Panitia acara ini (`openRegistrationsInSheets`); evaluasi untuk yang boleh mengekspor evaluasi, dan evaluasi panitia hanya BPH (`openEvaluationInSheets`). Server mengambil datanya sendiri dari database lalu membuat Sheet. Isi tabel di browser tidak dipercaya. Nilai ditulis sebagai teks (`RAW`), jadi jawaban peserta yang diawali `=` tidak berjalan sebagai rumus. Tiap pembuatan dicatat di jejak audit acara (`export.sheet`) dan dibatasi 6 kali per 10 menit per pengguna, dihitung dari jejak itu sehingga berlaku lintas instance. Maksimal 5.000 baris.
+
+### Sheet tidak dihapus otomatis
+
+Sheet yang dibuat bertahan sampai dihapus. Aplikasi tidak menghapusnya, dan pengurus yang diajak berbagi (peran penulis) tidak bisa menghapus berkas milik akun lain. Semua sheet ada di satu folder, **PPIT Nanjing - Ekspor Google Sheets**, di Drive akun organisasi pemilik token. Yang boleh menghapus hanya pemilik akun itu: buka Drive-nya, masuk ke folder tersebut, lalu pindahkan sheet yang sudah tidak dipakai ke Sampah.
+
+Sheet pendaftar berisi nama, email, WeChat, dan jawaban formulir (paspor, telepon, dan bukti mahasiswa sudah dibuang). Karena disimpan di luar situs, bersihkan folder itu secara berkala, misalnya setelah laporan acara selesai. Jejak siapa membuat sheet apa ada di riwayat acara (`export.sheet`).
 
 ### Kenapa bukan service account
 

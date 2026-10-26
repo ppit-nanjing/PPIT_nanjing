@@ -383,7 +383,7 @@ export function DataTable({
                 disabled={sheetsBusy || (!onOpenSheets && processed.length === 0)}
                 title={
                   onOpenSheets
-                    ? "Membuat Google Sheet berisi semua baris, tanpa paspor, telepon, dan KTM (bukan hanya yang tampil atau terfilter). Hanya akunmu yang bisa membukanya, dan dihapus otomatis setelah 24 jam. Itu salinan: mengubahnya tidak mengubah data di website."
+                    ? "Membuat Google Sheet berisi semua baris, tanpa paspor, telepon, dan KTM (bukan hanya yang tampil atau terfilter). Hanya akunmu yang bisa membukanya dan tidak dihapus otomatis. Itu salinan: mengubahnya tidak mengubah data di website."
                     : "Menyalin tabel (kolom yang tampil, sesuai pencarian dan filter) lalu membuka Google Sheets kosong. Tempel dengan Ctrl+V. Itu salinan: mengubah isinya tidak mengubah data di website."
                 }
                 className={`${btnCls} disabled:opacity-60`}

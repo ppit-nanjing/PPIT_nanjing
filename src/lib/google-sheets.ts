@@ -1,7 +1,7 @@
 import { google } from "googleapis";
 
-// Membuat Google Sheet sekali pakai dari data ekspor (tombol "Ke Google Sheets"
-// di tabel konsol).
+// Membuat Google Sheet dari data ekspor (tombol "Ke Google Sheets" di tabel
+// konsol).
 //
 // Memakai izin sebuah AKUN Google biasa (akun organisasi PPIT Nanjing), bukan
 // service account: service account berkuota Drive 0 sehingga Google menolak
@@ -17,11 +17,11 @@ import { google } from "googleapis";
 // project klien OAuth itu, dan consent screen berstatus In production (status
 // Testing membuat refresh token kedaluwarsa tiap 7 hari).
 //
-// Sheet-nya dimiliki akun itu, hanya dibagikan ke satu email (pengguna yang
-// menekan tombol), tanpa hak membagikan ulang, dan dihapus permanen setelah
-// SHEET_KEEP_MS. Pembersihan jalan di belakang tiap pembuatan baru (tanpa
-// cron); kalau tidak ada yang membuat sheet baru, sheet terakhir bertahan
-// sampai pembuatan berikutnya.
+// Sheet dimiliki akun itu dan dikumpulkan dalam satu folder khusus
+// (EXPORT_FOLDER_NAME). Tiap sheet hanya dibagikan ke satu email (pengguna yang
+// menekan tombol), tanpa hak membagikan ulang. TIDAK ada penghapusan otomatis:
+// sheet bertahan sampai pemilik akunnya menghapusnya sendiri di Drive. (Penulis
+// yang diajak berbagi tidak bisa menghapus berkas milik orang lain.)
 
 export class SheetsNotConfiguredError extends Error {
   constructor() {
@@ -45,9 +45,11 @@ export class SheetsShareError extends Error {
   }
 }
 
+// Tanda di appProperties: memudahkan mencari berkas buatan aplikasi ini.
 const EXPORT_MARK_KEY = "ppitExport";
-export const SHEET_KEEP_MS = 24 * 60 * 60 * 1000;
-const CLEANUP_BATCH = 50;
+const EXPORT_FOLDER_KEY = "ppitExportFolder";
+const EXPORT_FOLDER_NAME = "PPIT Nanjing - Ekspor Google Sheets";
+const FOLDER_MIME = "application/vnd.google-apps.folder";
 
 export type SheetCell = string | number;
 
@@ -57,6 +59,9 @@ export function isSheetsConfigured(): boolean {
 }
 
 let cached: ReturnType<typeof buildClients> | null = null;
+// Id folder ekspor, disimpan per instance supaya tidak mencari folder di setiap
+// permintaan. Kalau folder dihapus pemiliknya, pembuatan sheet mengulang sekali.
+let exportFolderId: string | null = null;
 
 function buildClients() {
   const clientId = process.env.AUTH_GOOGLE_ID;
@@ -79,29 +84,62 @@ function isInvalidGrant(err: unknown): boolean {
   return e?.response?.data?.error === "invalid_grant" || /invalid_grant/i.test(e?.message ?? "");
 }
 
-/**
- * Hapus sheet ekspor yang sudah lewat SHEET_KEEP_MS. Dipanggil di belakang
- * respons (after()), jadi kegagalannya tidak boleh sampai ke pengguna.
- */
-export async function deleteExpiredExportSheets(now = Date.now()): Promise<number> {
-  const { drive } = clients();
-  const cutoff = new Date(now - SHEET_KEEP_MS).toISOString();
-  const res = await drive.files.list({
-    q: `appProperties has { key='${EXPORT_MARK_KEY}' and value='1' } and createdTime < '${cutoff}'`,
+function isNotFound(err: unknown): boolean {
+  const e = err as { code?: number | string; response?: { status?: number } } | null;
+  return e?.code === 404 || e?.response?.status === 404;
+}
+
+async function ensureExportFolder(drive: ReturnType<typeof buildClients>["drive"]): Promise<string> {
+  if (exportFolderId) return exportFolderId;
+  const found = await drive.files.list({
+    q: `mimeType = '${FOLDER_MIME}' and appProperties has { key='${EXPORT_FOLDER_KEY}' and value='1' } and trashed = false`,
     fields: "files(id)",
-    pageSize: CLEANUP_BATCH,
+    pageSize: 1,
   });
-  let deleted = 0;
-  for (const file of res.data.files ?? []) {
-    if (!file.id) continue;
-    try {
-      await drive.files.delete({ fileId: file.id });
-      deleted++;
-    } catch (err) {
-      console.error("[sheets] gagal menghapus sheet kedaluwarsa:", (err as Error).message);
-    }
+  let id = found.data.files?.[0]?.id ?? null;
+  if (!id) {
+    const created = await drive.files.create({
+      requestBody: { name: EXPORT_FOLDER_NAME, mimeType: FOLDER_MIME, appProperties: { [EXPORT_FOLDER_KEY]: "1" } },
+      fields: "id",
+    });
+    id = created.data.id ?? null;
   }
-  return deleted;
+  if (!id) throw new Error("Drive tidak mengembalikan id folder ekspor");
+  exportFolderId = id;
+  return id;
+}
+
+async function createSheetFile(title: string): Promise<string> {
+  const { drive } = clients();
+  const create = async () => {
+    const parent = await ensureExportFolder(drive);
+    return drive.files.create({
+      requestBody: {
+        name: title.slice(0, 180),
+        mimeType: "application/vnd.google-apps.spreadsheet",
+        parents: [parent],
+        appProperties: { [EXPORT_MARK_KEY]: "1" },
+        writersCanShare: false,
+      },
+      fields: "id",
+    });
+  };
+  try {
+    let res;
+    try {
+      res = await create();
+    } catch (err) {
+      // Folder yang diingat sudah dihapus pemiliknya: cari/buat lagi, sekali saja.
+      if (!exportFolderId || !isNotFound(err)) throw err;
+      exportFolderId = null;
+      res = await create();
+    }
+    if (!res.data.id) throw new Error("Drive tidak mengembalikan id sheet");
+    return res.data.id;
+  } catch (err) {
+    if (isInvalidGrant(err)) throw new SheetsAuthExpiredError();
+    throw err;
+  }
 }
 
 /**
@@ -116,24 +154,7 @@ export async function createExportSheet(input: {
   shareWithEmail: string;
 }): Promise<{ id: string; url: string }> {
   const { drive, sheets } = clients();
-
-  let id: string;
-  try {
-    const created = await drive.files.create({
-      requestBody: {
-        name: input.title.slice(0, 180),
-        mimeType: "application/vnd.google-apps.spreadsheet",
-        appProperties: { [EXPORT_MARK_KEY]: "1" },
-        writersCanShare: false,
-      },
-      fields: "id",
-    });
-    if (!created.data.id) throw new Error("Drive tidak mengembalikan id sheet");
-    id = created.data.id;
-  } catch (err) {
-    if (isInvalidGrant(err)) throw new SheetsAuthExpiredError();
-    throw err;
-  }
+  const id = await createSheetFile(input.title);
 
   try {
     await sheets.spreadsheets.values.update({
@@ -171,6 +192,7 @@ export async function createExportSheet(input: {
       },
     });
   } catch (err) {
+    // Sheet setengah jadi yang tidak pernah dibagikan hanya sampah: buang lagi.
     await drive.files.delete({ fileId: id }).catch(() => undefined);
     throw err;
   }
@@ -182,7 +204,7 @@ export async function createExportSheet(input: {
       requestBody: { type: "user", role: "writer", emailAddress: input.shareWithEmail },
     });
   } catch (err) {
-    // Sheet yang tidak bisa dibuka siapa pun hanya sampah: buang lagi.
+    // Sheet yang tidak bisa dibuka siapa pun (selain pemilik) hanya sampah: buang lagi.
     await drive.files.delete({ fileId: id }).catch(() => undefined);
     console.error("[sheets] gagal membagikan sheet:", (err as Error).message);
     throw new SheetsShareError();
