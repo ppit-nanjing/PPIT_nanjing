@@ -1,6 +1,7 @@
 "use server";
 
 import { and, count, eq, gt } from "drizzle-orm";
+import { after } from "next/server";
 import { db } from "@/db";
 import { auditLogs } from "@/db/schema";
 import {
@@ -9,28 +10,27 @@ import {
   hasEvaluationExportAccess,
 } from "@/lib/event-access";
 import { logEventAudit } from "@/lib/event-audit";
-import { loadEvaluationExport } from "@/lib/event-evaluation-export";
 import { isEvalAudience } from "@/lib/event-evaluation-questions";
 import {
   SheetsAuthExpiredError,
   SheetsNotConfiguredError,
   SheetsShareError,
-  createExportSheet,
+  deleteInactiveExportSheets,
+  ensureLiveSheet,
   isSheetsConfigured,
-  type SheetCell,
+  shareLiveSheetReader,
+  writeLiveSheet,
+  type LiveSheetKind,
 } from "@/lib/google-sheets";
-import { formatChinaDateTimeIso } from "@/lib/datetime";
-import { exportCellText } from "@/lib/registration-export";
-import { loadRegistrationExport } from "@/lib/registration-export-load";
-import { getSiteOrigin } from "@/lib/site";
-import { datasetToTable } from "@/lib/table-view";
+import { loadSheetData } from "@/lib/live-sheets";
 import { UUID_RE } from "@/lib/uuid";
 
-// Tombol "Buka di Google Sheets" di tabel konsol (pendaftar dan evaluasi acara).
-// Sheet-nya SALINAN sekali jalan: tidak ada yang membaca balik dari sheet, jadi
-// mengubah isinya tidak mengubah data di website, dan data baru tidak muncul di
-// sheet yang sudah dibuat. Lihat src/lib/google-sheets.ts untuk umur dan
-// kepemilikannya.
+// Tombol "Ke Google Sheets" di tabel konsol (pendaftar dan evaluasi acara).
+// Membuat Google Sheet LANGSUNG untuk (acara, jenis data) kalau belum ada,
+// menyegarkannya kalau sudah, dan membagikannya ke pengklik sebagai PEMBACA.
+// Sesudahnya sheet diperbarui otomatis tiap data berubah (scheduleLiveSheetSync
+// di live-sheets.ts). Satu arah: tidak ada yang membaca balik dari sheet, jadi
+// mengubah isinya tidak mengubah data di website. Lihat src/lib/google-sheets.ts.
 
 export type OpenSheetResult = { ok: true; url: string } | { ok: false; error: string };
 
@@ -58,7 +58,7 @@ function failure(err: unknown): OpenSheetResult {
 
 // Batas per pengguna dihitung dari jejak audit (bukan memori instance), jadi
 // berlaku lintas instance serverless: satu akun tidak bisa menyalakan ratusan
-// sheet di akun Google organisasi.
+// penulisan ke akun Google organisasi.
 async function tooManyRecent(userId: string): Promise<boolean> {
   const [row] = await db
     .select({ n: count() })
@@ -77,33 +77,28 @@ async function publish(input: {
   userId: string;
   email: string;
   eventId: string;
-  kind: "pendaftar" | "evaluasi-peserta" | "evaluasi-panitia";
-  eventTitle: string;
-  header: string[];
-  rows: SheetCell[][];
+  kind: LiveSheetKind;
 }): Promise<OpenSheetResult> {
-  if (input.rows.length > MAX_ROWS) {
-    return { ok: false, error: `Datanya ${input.rows.length} baris, terlalu besar untuk tombol ini. Pakai Unduh.` };
+  const data = await loadSheetData(input.eventId, input.kind);
+  if (!data) return { ok: false, error: "Acara tidak ditemukan." };
+  if (data.rows.length > MAX_ROWS) {
+    return { ok: false, error: `Datanya ${data.rows.length} baris, terlalu besar untuk tombol ini. Pakai Unduh.` };
   }
   if (await tooManyRecent(input.userId)) {
     return { ok: false, error: "Terlalu sering membuat Google Sheet. Tunggu beberapa menit lalu coba lagi." };
   }
-  // Dicatat SEBELUM membuat: percobaan yang gagal pun menghitung ke batas di atas.
+  // Dicatat SEBELUM menulis: percobaan yang gagal pun menghitung ke batas di atas.
   await logEventAudit(input.userId, input.eventId, "export.sheet", {
-    after: { kind: input.kind, rows: input.rows.length },
+    after: { kind: input.kind, rows: data.rows.length },
   });
 
-  const label = { pendaftar: "Pendaftar", "evaluasi-peserta": "Evaluasi", "evaluasi-panitia": "Evaluasi Panitia" }[input.kind];
   try {
-    const sheet = await createExportSheet({
-      title: `PPIT ${label} - ${input.eventTitle} - ${formatChinaDateTimeIso(new Date())} (jam Tiongkok)`,
-      eventId: input.eventId,
-      eventTitle: input.eventTitle,
-      header: input.header,
-      rows: input.rows,
-      shareWithEmail: input.email,
-    });
-    return { ok: true, url: sheet.url };
+    const { id, created } = await ensureLiveSheet({ eventId: input.eventId, eventTitle: data.eventTitle, kind: input.kind });
+    await writeLiveSheet(id, data, input.kind, { firstWrite: created });
+    await shareLiveSheetReader(id, input.email, { deleteOnFailure: created });
+    // Pembersihan sheet yang lama tidak aktif jalan di belakang respons.
+    after(() => deleteInactiveExportSheets().catch(() => undefined));
+    return { ok: true, url: `https://docs.google.com/spreadsheets/d/${id}/edit` };
   } catch (err) {
     return failure(err);
   }
@@ -117,9 +112,9 @@ function sessionEmail(access: Awaited<ReturnType<typeof getEventAccess>>): { use
 }
 
 /**
- * Pendaftar acara -> Google Sheet. Gerbangnya sama dengan ekspor CSV (BPH
- * Kabinet, Divisi Teknologi, BPH Panitia acara ini). Kolom paspor, telepon, dan
- * bukti mahasiswa TIDAK ikut.
+ * Pendaftar acara -> Google Sheet langsung. Gerbangnya sama dengan ekspor CSV
+ * (BPH Kabinet, Divisi Teknologi, BPH Panitia acara ini). Kolom paspor, telepon,
+ * dan bukti mahasiswa TIDAK ikut.
  */
 export async function openRegistrationsInSheets(eventId: string): Promise<OpenSheetResult> {
   if (!UUID_RE.test(eventId)) return { ok: false, error: "Acara tidak ditemukan." };
@@ -130,26 +125,15 @@ export async function openRegistrationsInSheets(eventId: string): Promise<OpenSh
   if (!isSheetsConfigured()) return { ok: false, error: NOT_CONFIGURED };
   const who = sessionEmail(access);
   if (!who) return { ok: false, error: "Akunmu tidak punya email, jadi sheet tidak bisa dibagikan." };
-
   try {
-    const loaded = await loadRegistrationExport(eventId, await getSiteOrigin());
-    if (!loaded) return { ok: false, error: "Acara tidak ditemukan." };
-    const keep = loaded.data.header.map((h) => !h.sensitive);
-    return await publish({
-      ...who,
-      eventId,
-      kind: "pendaftar",
-      eventTitle: loaded.eventTitle,
-      header: loaded.data.header.filter((_, i) => keep[i]).map((h) => h.label),
-      rows: loaded.data.lines.map((line) => line.filter((_, i) => keep[i]).map(exportCellText)),
-    });
+    return await publish({ ...who, eventId, kind: "pendaftar" });
   } catch (err) {
     return failure(err);
   }
 }
 
 /**
- * Respons evaluasi acara -> Google Sheet. Gerbangnya sama dengan ekspor
+ * Respons evaluasi acara -> Google Sheet langsung. Gerbangnya sama dengan ekspor
  * Excel/CSV evaluasi; evaluasi panitia lebih ketat (BPH saja).
  */
 export async function openEvaluationInSheets(eventId: string, audience: string): Promise<OpenSheetResult> {
@@ -162,21 +146,8 @@ export async function openEvaluationInSheets(eventId: string, audience: string):
   if (!isSheetsConfigured()) return { ok: false, error: NOT_CONFIGURED };
   const who = sessionEmail(access);
   if (!who) return { ok: false, error: "Akunmu tidak punya email, jadi sheet tidak bisa dibagikan." };
-
   try {
-    const loaded = await loadEvaluationExport(eventId, audience);
-    if (!loaded) return { ok: false, error: "Acara tidak ditemukan." };
-    // Sel dan judul kolom persis seperti di tabel layar dan file ekspor
-    // (waktu dalam jam Tiongkok, nama anonim dikosongkan).
-    const table = datasetToTable(loaded.dataset);
-    return await publish({
-      ...who,
-      eventId,
-      kind: audience === "panitia" ? "evaluasi-panitia" : "evaluasi-peserta",
-      eventTitle: loaded.title,
-      header: table.columns.map((c) => c.header),
-      rows: table.rows.map((r) => table.columns.map((c) => r.cells[c.key] ?? "")),
-    });
+    return await publish({ ...who, eventId, kind: audience === "panitia" ? "evaluasi-panitia" : "evaluasi-peserta" });
   } catch (err) {
     return failure(err);
   }
