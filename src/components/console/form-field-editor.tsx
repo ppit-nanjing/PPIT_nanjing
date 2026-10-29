@@ -67,6 +67,7 @@ export function FormFieldEditor({
   isQuiz,
   actions,
   divisionField,
+  excludeTypes = [],
 }: {
   field: MembershipFieldDef;
   index: number;
@@ -75,6 +76,8 @@ export function FormFieldEditor({
   actions: FormFieldActions;
   /** Hanya untuk baris DIVISION_FIELD_KEY di form Oprek berdivisi. */
   divisionField?: DivisionFieldInfo;
+  /** Jenis jawaban yang disembunyikan dari pilihan (formulir tidak mendukung unggahan). */
+  excludeTypes?: MembershipFieldDef["type"][];
 }) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
@@ -282,7 +285,7 @@ export function FormFieldEditor({
                       value={type}
                       onChange={(e) => setType(e.target.value as MembershipFieldDef["type"])}
                       className="w-full"
-                      options={ALL_TYPES.map((t) => ({ value: t, label: FIELD_TYPE_LABELS[t] }))}
+                      options={ALL_TYPES.filter((t) => !excludeTypes.includes(t) || t === field.type).map((t) => ({ value: t, label: FIELD_TYPE_LABELS[t] }))}
                     />
                   </div>
                   <CheckboxField name="required" defaultChecked={field.required} label="Wajib diisi" className="text-body-md text-on-background self-end pb-3" />

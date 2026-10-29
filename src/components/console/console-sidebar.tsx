@@ -24,6 +24,7 @@ import {
   Link2,
   Folder,
   FileText,
+  ListChecks,
   PanelLeftClose,
   PanelLeftOpen,
 } from "lucide-react";
@@ -46,6 +47,8 @@ type NavItem = {
   // supaya tiap koor bisa bikin form Oprek BPH untuk prokernya. Flag ini
   // hanya visibilitas; gerbang sebenarnya ada di page/action masing-masing.
   coordinatorToo?: boolean;
+  // Hanya tampil untuk yang boleh membuat Formulir Kustom (session.user.canCreateSurvey).
+  needsCustomForms?: boolean;
 };
 
 // `module: null` = always visible to anyone who got past the layout gate
@@ -67,6 +70,9 @@ const GROUPS: { title: string; items: NavItem[] }[] = [
       { href: "/console/inventory", label: "Inventaris", icon: Package, module: "inventory" },
       { href: "/console/membership", label: "Pendaftaran", icon: UserPlus, module: "membership" },
       { href: "/console/forms", label: "Formulir", icon: FileText, module: "forms", bphCommitteeToo: true, coordinatorToo: true },
+      // Formulir dikelola di /formulir (di luar konsol, supaya anggota kabinet biasa juga bisa memakainya);
+      // halaman itu menyaring haknya sendiri, jadi menunya tampil untuk semua yang masuk konsol.
+      { href: "/formulir", label: "Formulir Kustom", icon: ListChecks, module: null, needsCustomForms: true },
       { href: "/console/jobs", label: "Lowongan", icon: Briefcase, module: "career" },
       { href: "/console/sensus", label: "Sensus", icon: ClipboardCheck, module: ["sensus", "sensus-verify"] },
       { href: "/console/ranting/sensus", label: "Sensus Ranting", icon: ClipboardCheck, module: "sensus-ranting" },
@@ -94,6 +100,7 @@ function NavContent({
   isCommittee = false,
   isBphCommittee = false,
   isCoordinator = false,
+  canCreateSurvey = false,
   pathname,
   onNavigate,
   collapsed = false,
@@ -102,6 +109,7 @@ function NavContent({
   isCommittee?: boolean;
   isBphCommittee?: boolean;
   isCoordinator?: boolean;
+  canCreateSurvey?: boolean;
   pathname: string;
   onNavigate: () => void;
   collapsed?: boolean;
@@ -114,13 +122,14 @@ function NavContent({
       {GROUPS.map((group) => {
         const items = group.items.filter(
           (i) =>
-            i.module === null ||
+            (!i.needsCustomForms || canCreateSurvey) &&
+            (i.module === null ||
             (Array.isArray(i.module)
               ? i.module.some((m) => hasModuleAccess(scope, m))
               : hasModuleAccess(scope, i.module)) ||
             (i.committeeToo && isCommittee) ||
             (i.bphCommitteeToo && isBphCommittee) ||
-            (i.coordinatorToo && isCoordinator),
+            (i.coordinatorToo && isCoordinator)),
         );
         if (items.length === 0) return null;
         return (
@@ -169,12 +178,14 @@ export function ConsoleSidebar({
   isCommittee = false,
   isBphCommittee = false,
   isCoordinator = false,
+  canCreateSurvey = false,
 }: {
   userName: string;
   scope: "full" | string[] | null;
   isCommittee?: boolean;
   isBphCommittee?: boolean;
   isCoordinator?: boolean;
+  canCreateSurvey?: boolean;
 }) {
   const [open, setOpen] = useState(false);
   // Lipat = rail ikon saja di desktop. Pilihan diingat per browser supaya
@@ -222,7 +233,7 @@ export function ConsoleSidebar({
             {collapsed ? <PanelLeftOpen size={18} /> : <PanelLeftClose size={18} />}
           </button>
         </div>
-        <NavContent scope={scope} isCommittee={isCommittee} isBphCommittee={isBphCommittee} isCoordinator={isCoordinator} pathname={pathname} onNavigate={() => {}} collapsed={collapsed} />
+        <NavContent scope={scope} isCommittee={isCommittee} isBphCommittee={isBphCommittee} isCoordinator={isCoordinator} canCreateSurvey={canCreateSurvey} pathname={pathname} onNavigate={() => {}} collapsed={collapsed} />
         <Link
           href="/"
           title={collapsed ? "Kembali ke Situs" : undefined}
@@ -256,7 +267,7 @@ export function ConsoleSidebar({
                 <X size={22} />
               </button>
             </div>
-            <NavContent scope={scope} isCommittee={isCommittee} isBphCommittee={isBphCommittee} isCoordinator={isCoordinator} pathname={pathname} onNavigate={() => setOpen(false)} />
+            <NavContent scope={scope} isCommittee={isCommittee} isBphCommittee={isBphCommittee} isCoordinator={isCoordinator} canCreateSurvey={canCreateSurvey} pathname={pathname} onNavigate={() => setOpen(false)} />
             <Link
               href="/"
               onClick={() => setOpen(false)}

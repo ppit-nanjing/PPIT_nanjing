@@ -4,7 +4,17 @@
 
 import { BPH_PANITIA_ROLES, type EventCommitteeRole } from "@/lib/event-capabilities";
 
-export type FormKind = "pemilu" | "oprek_bph_acara" | "oprek_kepanitiaan" | "oprek_kadiv";
+export type FormKind = "pemilu" | "oprek_bph_acara" | "oprek_kepanitiaan" | "oprek_kadiv" | "survei";
+
+/**
+ * Formulir = formulir kustom (riset pasar, kuesioner) buatan anggota kabinet atau
+ * panitia acara. Bukan Oprek/Pemilu: tidak ada lamaran, status, atau penempatan
+ * panitia, dan jawabannya di form_responses. Halaman dan aksi Oprek/Pemilu harus
+ * menolak form jenis ini.
+ */
+export function isSurveyKind(kind: FormKind): boolean {
+  return kind === "survei";
+}
 
 /**
  * Semua jenis Oprek (BPH acara, kepanitiaan, Kadiv). Pemilu BUKAN Oprek.
@@ -77,6 +87,7 @@ export const FORM_KIND_LABEL: Record<FormKind, string> = {
   oprek_bph_acara: "Oprek BPH Acara",
   oprek_kepanitiaan: "Oprek Kepanitiaan",
   oprek_kadiv: "Oprek Kadiv",
+  survei: "Formulir Kustom",
 };
 
 // Rute tab per jenis form (dipakai navigasi console & revalidate).
@@ -86,6 +97,8 @@ export const FORM_TAB_PATH: Record<FormKind, string> = {
   oprek_kepanitiaan: "/console/forms/oprek-kepanitiaan",
   // Oprek Kadiv tinggal di tab yang sama dengan Oprek anggota.
   oprek_kadiv: "/console/forms/oprek-kepanitiaan",
+  // Formulir dikelola di luar konsol (anggota kabinet biasa tidak masuk konsol).
+  survei: "/formulir",
 };
 
 // Posisi BPH Acara yang boleh dibuka di Oprek BPH — SATU sumber dengan

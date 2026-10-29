@@ -2,8 +2,10 @@
 
 import { and, count, eq, gt } from "drizzle-orm";
 import { after } from "next/server";
+import { auth } from "@/auth";
 import { db } from "@/db";
-import { auditLogs } from "@/db/schema";
+import { auditLogs, forms } from "@/db/schema";
+import { canManageForm, getFormsAccess } from "@/lib/form-access";
 import {
   canReadCommitteeEvaluation,
   getEventAccess,
@@ -84,7 +86,7 @@ async function publish(input: {
   // harus tetap memicu pembaruan (lihat markLiveSheetSynced).
   const snapshotAt = Date.now();
   const data = await loadSheetData(input.eventId, input.kind);
-  if (!data) return { ok: false, error: "Acara tidak ditemukan." };
+  if (!data) return { ok: false, error: "Data tidak ditemukan." };
   if (data.rows.length > MAX_ROWS) {
     return { ok: false, error: `Datanya ${data.rows.length} baris, terlalu besar untuk tombol ini. Pakai Unduh.` };
   }
@@ -92,9 +94,23 @@ async function publish(input: {
     return { ok: false, error: "Terlalu sering membuat Google Sheet. Tunggu beberapa menit lalu coba lagi." };
   }
   // Dicatat SEBELUM menulis: percobaan yang gagal pun menghitung ke batas di atas.
-  await logEventAudit(input.userId, input.eventId, "export.sheet", {
-    after: { kind: input.kind, rows: data.rows.length },
-  });
+  // Formulir kustom dicatat sebagai entitas "form" (id-nya bukan id acara).
+  if (input.kind === "formulir") {
+    await db
+      .insert(auditLogs)
+      .values({
+        actorUserId: input.userId,
+        entityType: "form",
+        entityId: input.eventId,
+        action: "export.sheet",
+        afterJson: { kind: input.kind, rows: data.rows.length },
+      })
+      .catch((err) => console.error("[audit] form export.sheet failed:", err));
+  } else {
+    await logEventAudit(input.userId, input.eventId, "export.sheet", {
+      after: { kind: input.kind, rows: data.rows.length },
+    });
+  }
 
   try {
     const { id, created } = await ensureLiveSheet({ eventId: input.eventId, eventTitle: data.eventTitle, kind: input.kind });
@@ -153,6 +169,30 @@ export async function openEvaluationInSheets(eventId: string, audience: string):
   if (!who) return { ok: false, error: "Akunmu tidak punya email, jadi sheet tidak bisa dibagikan." };
   try {
     return await publish({ ...who, eventId, kind: audience === "panitia" ? "evaluasi-panitia" : "evaluasi-peserta" });
+  } catch (err) {
+    return failure(err);
+  }
+}
+
+/**
+ * Jawaban formulir kustom -> Google Sheet langsung (diperbarui otomatis tiap ada
+ * jawaban baru). Gerbangnya canManageForm, sama dengan halaman hasil dan ekspor CSV/Excel:
+ * pembuat yang masih berhak, BPH Panitia acara terikat, dan pemegang full/modul forms.
+ * Biodata (nama, universitas, kota) ikut kalau formulirnya memintanya; user_id tidak.
+ */
+export async function openFormInSheets(formId: string): Promise<OpenSheetResult> {
+  if (!UUID_RE.test(formId)) return { ok: false, error: "Formulir tidak ditemukan." };
+  const access = await getFormsAccess();
+  if (!access) return { ok: false, error: "Masuk dulu untuk mengekspor." };
+  const [form] = await db.select().from(forms).where(eq(forms.id, formId));
+  if (!form || form.kind !== "survei" || !(await canManageForm(form, access))) {
+    return { ok: false, error: "Kamu tidak punya akses untuk mengekspor formulir ini." };
+  }
+  if (!isSheetsConfigured()) return { ok: false, error: NOT_CONFIGURED };
+  const email = (await auth())?.user?.email?.trim();
+  if (!email || !email.includes("@")) return { ok: false, error: "Akunmu tidak punya email, jadi sheet tidak bisa dibagikan." };
+  try {
+    return await publish({ userId: access.userId, email, eventId: form.id, kind: "formulir" });
   } catch (err) {
     return failure(err);
   }

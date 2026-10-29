@@ -41,6 +41,9 @@ export type FormsAccess = {
   bphEventIds: string[];
   // Acara tempat user ini Kadiv (kelola Oprek anggota acara itu).
   kadivEventIds: string[];
+  // Semua acara tempat user ini panitia (peran apa pun). Dipakai modul Formulir:
+  // panitia boleh membuat formulir untuk acaranya.
+  committeeEventIds: string[];
 };
 
 export const getFormsAccess = cache(async (): Promise<FormsAccess | null> => {
@@ -75,6 +78,7 @@ export const getFormsAccess = cache(async (): Promise<FormsAccess | null> => {
     canKepanitiaanTab,
     bphEventIds,
     kadivEventIds,
+    committeeEventIds: [...new Set(committeeRows.map((r) => r.eventId))],
   };
 });
 
@@ -121,12 +125,51 @@ export async function canManageForm(
   }
   if (acc.isFull || acc.canForms) return true;
   if (form.kind === "pemilu") return false;
+  if (form.kind === "survei") return canManageSurvey(form, acc);
   if (form.createdBy && form.createdBy === acc.userId) return true;
   if (form.eventId) {
     const eventAccess = await getEventAccess(form.eventId);
     if (eventAccess.isBphPanitia) return true;
     // Kadiv mengelola Oprek anggota acaranya (bukan Oprek Kadiv/BPH).
     if (form.kind === "oprek_kepanitiaan" && eventAccess.role === "kadiv") return true;
+  }
+  return false;
+}
+
+/**
+ * Pembuat formulir masih berhak mengelola formulirnya selama masih berhak MEMBUAT:
+ * anggota kabinet, atau panitia acara tempat formulir itu terikat. Orang yang sudah
+ * keluar dari keduanya tidak otomatis memegang hasil formulir (yang bisa memuat
+ * biodata) selamanya. `isCabinetMember` dihitung pemanggil supaya fungsi ini murni.
+ */
+export function isSurveyCreatorEligible(
+  access: Pick<FormsAccess, "committeeEventIds">,
+  isCabinetMember: boolean,
+  eventId: string | null,
+): boolean {
+  if (isCabinetMember) return true;
+  return eventId !== null && access.committeeEventIds.includes(eventId);
+}
+
+// Kelola formulir: pembuat yang masih berhak, atau BPH Panitia acara terikatnya.
+// Pemegang full/modul forms sudah lolos di canManageForm sebelum sampai sini.
+async function canManageSurvey(
+  form: Pick<FormRow, "eventId" | "createdBy">,
+  acc: FormsAccess,
+): Promise<boolean> {
+  if (form.createdBy && form.createdBy === acc.userId) {
+    const membership = await getCabinetMembership(acc.userId);
+    // Akun yang dibekukan kehilangan hak pembuat (sesi lama bisa masih hidup).
+    if (
+      membership?.status !== "suspended" &&
+      isSurveyCreatorEligible(acc, membership?.isCabinetMember === true, form.eventId)
+    ) {
+      return true;
+    }
+  }
+  if (form.eventId) {
+    const eventAccess = await getEventAccess(form.eventId);
+    if (eventAccess.isBphPanitia) return true;
   }
   return false;
 }

@@ -27,6 +27,8 @@ export async function GET(req: NextRequest, ctx: { params: Promise<{ formId: str
   if (!(await canManageForm(form, access))) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
+  // Formulir punya ekspor sendiri (/api/formulir/[formId]/export); jawabannya bukan lamaran.
+  if (form.kind === "survei") return NextResponse.json({ error: "Not found" }, { status: 404 });
 
   const format = new URL(req.url).searchParams.get("format") === "xlsx" ? "xlsx" : "csv";
 

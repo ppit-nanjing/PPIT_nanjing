@@ -58,6 +58,7 @@ export const id = {
   "accountMenu.myProfile": "Profil Saya",
   "accountMenu.submissions": "Riwayat Pengajuan",
   "accountMenu.console": "Masuk ke Console",
+  "accountMenu.surveys": "Formulir Kustom",
   "accountMenu.logout": "Logout",
   "accountMenu.login": "Login",
 
@@ -476,6 +477,7 @@ export const id = {
   "forms.form.choicePlaceholder": "Pilih divisi",
   "forms.form.divisionDisclaimer": "Pilihan divisi terbuka untuk pengurus, tetapi tidak disarankan mendaftar di divisi/proker yang sama jika kamu sudah memegang tanggung jawab BPH Inti/Koor.",
   "forms.form.submit": "Kirim Lamaran",
+  "forms.form.submitSurvey": "Kirim Jawaban",
   "forms.form.submitting": "Mengirim...",
   "forms.form.previewBtn": "Pratinjau",
   "forms.form.noDivisionsTitle": "Formulir ini belum bisa diisi",
@@ -483,6 +485,7 @@ export const id = {
   "forms.form.noDivisionsPreview": "Acara ini belum punya divisi kepanitiaan. Pelamar tidak bisa mengirim sampai divisi dibuat di halaman Kegiatan → Struktur Kepanitiaan.",
   "forms.form.errSummary": "Ada {{n}} isian yang perlu diperbaiki di atas.",
   "forms.form.errRequired": "Wajib diisi.",
+  "forms.form.errFormat": "Format isian ini belum benar.",
   "forms.form.errCheckbox": "Centang dulu ya.",
   "forms.form.errMultiselect": "Pilih minimal satu.",
   "forms.form.errGridRows": "Isi semua baris dulu ya.",
