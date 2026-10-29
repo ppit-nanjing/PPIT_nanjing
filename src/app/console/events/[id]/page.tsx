@@ -68,6 +68,10 @@ function CollapsibleSection(props: ComponentProps<typeof CollapsibleSectionBase>
   return <CollapsibleSectionBase defaultOpen={false} {...props} />;
 }
 
+// Tombol "Ke Google Sheets" (aksi server di halaman ini) membuat sheet lewat belasan panggilan ke Google;
+// beri ruang lebih dari batas bawaan supaya pembuatan pertama sebuah acara tidak terpotong.
+export const maxDuration = 60;
+
 export default async function ConsoleEventDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const access = await requireEventConsoleAccess(id);

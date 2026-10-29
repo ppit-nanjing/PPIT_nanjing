@@ -13,6 +13,7 @@ import { isUniqueViolation } from "@/lib/db-errors";
 import { logEventAudit } from "@/lib/event-audit";
 import { type EvalFormState, type EvalQuestionRow, validateEvalAnswer } from "@/lib/event-evaluation-questions";
 import { loadEvaluationQuestions } from "@/lib/event-evaluation-queries";
+import { scheduleLiveSheetSync } from "@/lib/live-sheets";
 
 export type EventEvaluationFormState = EvalFormState;
 
@@ -202,6 +203,7 @@ export async function submitEventEvaluation(
     return { error: "generic" };
   }
 
+  scheduleLiveSheetSync(event.id, ["evaluasi-peserta"]);
   revalidatePath(`/events/${slug}/evaluasi`);
   if (!responder.userId) return { ok: true };
   revalidatePath("/profile");
@@ -286,6 +288,7 @@ async function submitCustomEvaluation(
     return { error: "generic" };
   }
 
+  scheduleLiveSheetSync(eventId, ["evaluasi-peserta"]);
   revalidatePath(`/events/${slug}/evaluasi`);
   if (!responder.userId) return { ok: true };
   revalidatePath("/profile");
@@ -318,6 +321,9 @@ export async function deleteEventEvaluation(formData: FormData): Promise<void> {
     await logEventAudit(access.session.user.id, eventId, "committee_evaluation.deleted", {
       after: { evaluationId: id },
     });
+  }
+  if (deleted.length > 0) {
+    scheduleLiveSheetSync(eventId, [row.audience === "panitia" ? "evaluasi-panitia" : "evaluasi-peserta"]);
   }
   revalidatePath(`/console/events/${eventId}`);
 }

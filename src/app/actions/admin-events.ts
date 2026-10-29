@@ -15,6 +15,7 @@ import { issueParticipantCertificateIfEligible } from "@/lib/certificate-issuing
 import { checkInBlockReason, checkInClosedReason } from "@/lib/event-checkin";
 import { WIF_2026_KELOMPOK, normalizeNameForKelompok } from "@/lib/wif-2026-kelompok";
 import { sanitizeDescriptionHtml } from "@/lib/sanitize-description-html";
+import { scheduleLiveSheetSync } from "@/lib/live-sheets";
 
 async function requireAdmin() {
   const session = await auth();
@@ -601,6 +602,7 @@ export async function checkInRegistration(
     .update(eventRegistrations)
     .set({ status: "attended", checkedInAt: new Date(), checkedInBy: session.user.id })
     .where(and(eq(eventRegistrations.id, registrationId), eq(eventRegistrations.eventId, eventId)));
+  scheduleLiveSheetSync(eventId, ["pendaftar"]);
   await issueCertificateAfterCheckIn(eventId, registration.userId);
 
   if (registration.userId) {
@@ -654,6 +656,7 @@ export async function setRegistrationCancelled(
     .update(eventRegistrations)
     .set({ status: next })
     .where(and(eq(eventRegistrations.id, registrationId), eq(eventRegistrations.eventId, eventId)));
+  scheduleLiveSheetSync(eventId, ["pendaftar"]);
 
   await logEventAudit(
     access.session.user.id,
@@ -716,6 +719,7 @@ export async function checkInByToken(token: string, eventId: string, dryRun = fa
     .update(eventRegistrations)
     .set({ status: "attended", checkedInAt: new Date(), checkedInBy: session.user.id })
     .where(eq(eventRegistrations.id, registration.id));
+  scheduleLiveSheetSync(eventId, ["pendaftar"]);
   await issueCertificateAfterCheckIn(eventId, registration.userId);
   if (registration.userId) {
     await createTemplatedNotification({
@@ -812,6 +816,7 @@ export async function checkInByUserId(eventId: string, userId: string, dryRun = 
     .update(eventRegistrations)
     .set({ status: "attended", checkedInAt: new Date(), checkedInBy: session.user.id })
     .where(eq(eventRegistrations.id, registration.id));
+  scheduleLiveSheetSync(eventId, ["pendaftar"]);
   await issueCertificateAfterCheckIn(eventId, registration.userId);
   await createTemplatedNotification({
     userId: registration.userId!,

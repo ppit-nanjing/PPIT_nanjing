@@ -66,32 +66,44 @@ Menambah tabel di modul lain: rakit `TableData` di server atau lewat fungsi murn
 
 ## Google Sheets
 
-Tombol **Ke Google Sheets** punya dua mode. Pilihan antar mode otomatis: server memakai mode Sheet kalau `GOOGLE_DRIVE_REFRESH_TOKEN` terisi.
+Tombol **Ke Google Sheets** punya dua mode. Server memakai mode Sheet kalau `GOOGLE_DRIVE_REFRESH_TOKEN` terisi (lihat "Menyalakan mode Sheet"), selain itu salin-tempel.
 
-| | Salin-tempel (tanpa token) | Sheet dari server (dengan token) |
+| | Salin-tempel (tanpa token) | Sheet langsung (dengan token) |
 |---|---|---|
 | Isi | Kolom yang tampil, sesuai pencarian dan filter | Semua baris, tanpa kolom paspor, telepon, dan bukti mahasiswa |
-| Cara | Disalin ke clipboard, tab Sheets kosong terbuka, Ctrl+V | Server membuat Sheet, tab terbuka langsung di sheet itu |
+| Cara | Disalin ke clipboard, tab Sheets kosong terbuka, Ctrl+V | Server membuat sheet, tab terbuka langsung di sheet itu |
+| Diperbarui | Tidak. Salinan satu kali | **Otomatis** beberapa detik setelah datanya berubah |
 | Data lewat server atau Google | Tidak | Ya, ke Google (akun organisasi) |
-| Siapa bisa membuka | Pembuat Sheet kosongnya (akunnya sendiri) | Hanya email akun pengurus yang menekan tombol, tanpa hak membagikan ulang |
-| Umur | Sesuai Drive pemilik | Tidak dihapus otomatis. Disimpan di Drive akun organisasi, satu folder per acara, dihapus manual oleh pemilik akunnya |
+| Siapa bisa membuka | Pembuat Sheet kosongnya (akunnya sendiri) | Pemilik (akun organisasi) dan tiap pengurus yang pernah menekan tombol, sebagai **pembaca** |
 
-Gerbang mode Sheet sama dengan ekspor file: pendaftar hanya untuk BPH Kabinet, Divisi Teknologi, dan BPH Panitia acara ini (`openRegistrationsInSheets`); evaluasi untuk yang boleh mengekspor evaluasi, dan evaluasi panitia hanya BPH (`openEvaluationInSheets`). Server mengambil datanya sendiri dari database lalu membuat Sheet. Isi tabel di browser tidak dipercaya. Nilai ditulis sebagai teks (`RAW`), jadi jawaban peserta yang diawali `=` tidak berjalan sebagai rumus. Tiap pembuatan dicatat di jejak audit acara (`export.sheet`) dan dibatasi 6 kali per 10 menit per pengguna, dihitung dari jejak itu sehingga berlaku lintas instance. Maksimal 5.000 baris.
+### Cara kerja sheet langsung
 
-### Sheet tidak dihapus otomatis
+- **Satu sheet per acara dan jenis data**: pendaftar, evaluasi peserta, evaluasi panitia. Klik pertama membuatnya. Klik berikutnya (oleh siapa pun yang berhak) tidak membuat file baru: sheet yang sama disegarkan, dan pengklik baru ikut dibagikan sebagai pembaca.
+- **Pembaruan otomatis.** Pendaftaran baru, pembatalan atau pemulihan, check-in (manual dan scan), verifikasi pembayaran, serta respons evaluasi yang masuk atau dihapus memanggil `scheduleLiveSheetSync()` (`src/lib/live-sheets.ts`). Pemanggilan itu jalan di belakang respons (`after()`), menunggu 3 detik, lalu menimpa isi sheet kalau ada. Perubahan beruntun digabung: tiap sheet menyimpan waktu pembaruan terakhirnya (`ppitSyncedAt` di properti berkas), dan pemicu yang sudah tercakup pembaruan lain berhenti tanpa menulis. Perubahan terbaru selalu ikut tertulis. Kegagalan Google atau token yang mati **tidak pernah** menggagalkan pendaftaran atau check-in; yang rugi hanya sheet yang terlambat.
+- **Satu arah.** Website menimpa sheet. Tidak ada yang membaca sheet balik, jadi edit di sheet tidak mengubah data di website dan akan tertimpa pembaruan berikutnya. Pembaca memang tidak bisa mengedit. Untuk menyimpan salinan: **File > Buat salinan**.
+- **Tab Info** di tiap sheet memuat waktu pembaruan terakhir (jam Tiongkok), acara, jumlah baris, dan catatan "hanya baca".
+- **Yang tidak memicu pembaruan:** perubahan profil sensus (kolom Cabang dan Kampus), perubahan judul acara, dan status bayar yang tidak mengubah status pendaftaran. Pembaruan berikutnya, atau satu klik pada tombol, menyegarkannya.
+- **Umur.** Sheet yang tidak berubah dan tidak diklik 30 hari dihapus permanen (`deleteInactiveExportSheets()`, berjalan di belakang klik berikutnya, tanpa cron). Karena tiap pembaruan menulis ke sheet, sheet acara yang masih ramai tidak pernah dihapus. Pemilik akun organisasi juga boleh menghapus sheet kapan saja di Drive-nya. Klik berikutnya membuatnya lagi.
 
-Sheet yang dibuat bertahan sampai dihapus. Aplikasi tidak menghapusnya, dan pengurus yang diajak berbagi (peran penulis) tidak bisa menghapus berkas milik akun lain. Semua sheet ada di Drive akun organisasi pemilik token, dikelompokkan per acara:
+Gerbang sama dengan ekspor file: pendaftar hanya untuk BPH Kabinet, Divisi Teknologi, dan BPH Panitia acara ini (`openRegistrationsInSheets`); evaluasi untuk yang boleh mengekspor evaluasi, dan evaluasi panitia hanya BPH (`openEvaluationInSheets`). Server mengambil datanya sendiri dari database (`loadSheetData()`). Isi tabel di browser tidak dipercaya. Nilai ditulis sebagai teks (`RAW`), jadi jawaban peserta yang diawali `=` tidak berjalan sebagai rumus. Tiap klik dicatat di jejak audit acara (`export.sheet`) dan dibatasi 6 kali per 10 menit per pengguna, dihitung dari jejak itu sehingga berlaku lintas instance. Maksimal 5.000 baris.
+
+Letak di Drive akun organisasi:
 
 ```
 PPIT Nanjing - Ekspor Google Sheets
-└── WIF 2026 X CGT                          (satu folder per acara, bernama judul acara)
-    ├── PPIT Pendaftar - WIF 2026 X CGT - 2026-10-26 16:10 (jam Tiongkok)
-    └── PPIT Evaluasi - WIF 2026 X CGT - 2026-10-26 16:20 (jam Tiongkok)
+└── WIF 2026 X CGT                  (satu folder per acara, bernama judul acara)
+    ├── PPIT Pendaftar - WIF 2026 X CGT (langsung)
+    └── PPIT Evaluasi - WIF 2026 X CGT (langsung)
 ```
 
-Folder acara dicari lewat id acara (disimpan di properti berkas), bukan lewat nama, jadi dua acara berjudul sama tidak tercampur dan folder otomatis diganti namanya kalau judul acara berubah. Folder dibuat saat ekspor pertama sebuah acara. Kalau pemilik menghapus folder, folder dibuat ulang pada ekspor berikutnya. Yang boleh menghapus sheet hanya pemilik akun itu: buka Drive-nya, masuk ke folder acara, lalu pindahkan sheet yang sudah tidak dipakai ke Sampah.
+Folder acara dicari lewat id acara (properti berkas), bukan nama, jadi dua acara berjudul sama tidak tercampur dan foldernya diganti nama kalau judul acara berubah. Kalau pemilik menghapus folder atau sheet, dibuat ulang pada klik berikutnya.
 
-Sheet pendaftar berisi nama, email, WeChat, dan jawaban formulir (paspor, telepon, dan bukti mahasiswa sudah dibuang). Karena disimpan di luar situs, bersihkan folder itu secara berkala, misalnya setelah laporan acara selesai. Jejak siapa membuat sheet apa ada di riwayat acara (`export.sheet`).
+### Privasi
+
+Sheet pendaftar berisi nama, email, WeChat, dan jawaban formulir (paspor, telepon, dan bukti mahasiswa dibuang). Sheet itu ada di luar situs dan terus diperbarui, jadi:
+
+- Hanya pengurus yang berhak mengekspor yang menerima izin baca. **Izin itu tidak dicabut otomatis** kalau jabatan orangnya berubah. Pembatasnya: sheet hilang sendiri setelah 30 hari tanpa perubahan, dan pemilik akun dapat menghapusnya kapan saja. Setelah acara selesai dan laporan beres, hapus sheet-nya.
+- Tidak ada izin "siapa saja yang punya tautan". Akun lain yang membuka tautannya diminta izin akses.
 
 ### Kenapa bukan service account
 
@@ -112,7 +124,7 @@ Hanya dikerjakan sekali oleh Divisi Teknologi.
 
 1. Di Google Cloud (project klien OAuth `AUTH_GOOGLE_ID`), aktifkan **Google Sheets API** dan **Google Drive API**.
 2. Di klien OAuth "Web application" yang sama, tambahkan Authorized redirect URI `http://localhost:53682/oauth2callback`.
-3. Di **OAuth consent screen**, pastikan status **In production**. Status Testing membuat refresh token kedaluwarsa tiap 7 hari dan tombolnya diam-diam jatuh ke pesan galat. Scope yang dipakai `drive.file` bukan scope sensitif, jadi tidak perlu verifikasi Google.
+3. Di **OAuth consent screen** (Google Auth Platform), pastikan status **In production**. Status Testing membuat refresh token kedaluwarsa tiap 7 hari dan tombolnya diam-diam jatuh ke pesan galat. Untuk **Publish app**, halaman **Branding** wajib terisi: nama aplikasi, email dukungan, halaman utama, kebijakan privasi (`/privacy`), ketentuan layanan (`/terms`), Authorized domain `ppitiongkok.com`, dan email kontak pengembang. **Jangan unggah logo**: logo mewajibkan verifikasi merek Google, yang butuh bukti kepemilikan domain di Search Console (percobaan 2026-10-26 ditolak: domain belum terverifikasi dan logo dinilai kurang unik). Scope `drive.file` bukan scope sensitif, jadi tanpa logo tidak perlu verifikasi.
 4. Di komputer sendiri jalankan `npx tsx --env-file=.env scripts/google-drive-oauth-token.ts --write-env`. Buka alamat yang dicetak, **masuk sebagai akun organisasi yang akan memiliki berkasnya** (bukan akun pribadi), lalu setujui. Token ditulis ke `.env` lokal tanpa dicetak. Tanpa `--write-env`, token dicetak di terminal.
 5. Isi `GOOGLE_DRIVE_REFRESH_TOKEN` di Vercel (Production) lewat dashboard, lalu deploy ulang.
 
