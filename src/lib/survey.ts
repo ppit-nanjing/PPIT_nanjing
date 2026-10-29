@@ -1,4 +1,4 @@
-// Logika murni modul Formulir (formulir kustom buatan anggota kabinet / panitia acara):
+// Logika murni modul Formulir (formulir kustom buatan pengurus kabinet / panitia acara):
 // pemeriksaan jawaban, biodata, status buka-tutup, ringkasan hasil, dan dataset
 // tabel/ekspor. Tanpa database dan tanpa @/auth, jadi aman diimpor dari klien dan
 // bisa diuji langsung. Dokumentasi: docs/Formulir.md.
@@ -312,6 +312,14 @@ export function parseManualBiodata(src: AnswerSource): { biodata: SurveyBiodata 
     return { biodata: null, error: `Biodata maksimal ${SURVEY_BIODATA_MAX} karakter per isian.` };
   }
   return { biodata: { fullName, university, city }, error: null };
+}
+
+/**
+ * Kota isian biodata menyebut Nanjing (huruf besar/kecil, ejaan lama, atau aksara
+ * Tionghoa). Dipakai untuk mengajak pengisi yang belum sensus agar mengisi sensus.
+ */
+export function isNanjingCity(city: string): boolean {
+  return /nanjing|nanking|南京/i.test(city);
 }
 
 /**

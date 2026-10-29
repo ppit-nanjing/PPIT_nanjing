@@ -334,7 +334,7 @@ const { handlers, auth: uncachedAuth, signIn, signOut } = NextAuth({
       session.user.isCommittee = ctx.isCommittee === true;
       // Kadiv acara (kelola Oprek anggota acaranya) — menu Formulir ikut tampil.
       session.user.isEventKadiv = (ctx.committeeRoles ?? []).includes("kadiv");
-      // Menu Formulir: anggota kabinet (punya baris department_members), panitia, atau admin penuh.
+      // Menu Formulir: pengurus kabinet (punya baris department_members), panitia, atau admin penuh.
       session.user.canCreateSurvey = scope === "full" || ctx.memberships.length > 0 || ctx.isCommittee === true;
       session.user.isBphCommittee = (ctx.committeeRoles ?? []).some((role) =>
         isBphPanitiaRole(role as EventCommitteeRole),

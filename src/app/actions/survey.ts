@@ -19,6 +19,7 @@ import {
   SURVEY_TITLE_MAX,
   biodataFromSensus,
   cleanText,
+  isNanjingCity,
   parseManualBiodata,
   parseSurveyAnswers,
   surveyOpenState,
@@ -27,7 +28,7 @@ import {
 import { getSurveyAccess, listSurveyEvents } from "@/lib/survey-access";
 import { UUID_RE } from "@/lib/uuid";
 
-// Server Actions modul Formulir (formulir kustom buatan anggota kabinet / panitia
+// Server Actions modul Formulir (formulir kustom buatan pengurus kabinet / panitia
 // acara). Pembuat dan pengelola diperiksa lewat survey-access.ts dan canManageForm;
 // pengisi lewat submitSurvey. Setiap aksi memeriksa haknya sendiri di server.
 // Dokumentasi: docs/Formulir.md.
@@ -56,7 +57,7 @@ export async function createSurvey(formData: FormData) {
     if (!allowed.some((e) => e.id === eventIdRaw)) redirect("/formulir?error=event");
     eventId = eventIdRaw;
   } else if (!sa.canCreateUnbound) {
-    // Panitia yang bukan anggota kabinet hanya boleh membuat formulir untuk acaranya.
+    // Panitia yang bukan pengurus kabinet hanya boleh membuat formulir untuk acaranya.
     redirect("/formulir?error=event");
   }
 
@@ -272,5 +273,8 @@ export async function submitSurvey(formData: FormData) {
   scheduleLiveSheetSync(form.id, ["formulir"]);
   revalidatePath("/formulir");
   revalidatePath(`/formulir/${form.id}`);
-  redirect(`${back}/terkirim`);
+  // Biodata diisi sendiri dengan kota Nanjing = belum tercatat di sensus (yang sudah
+  // sensus lengkap memakai biodata sensusnya): halaman terkirim mengajaknya mengisi sensus.
+  const inviteSensus = biodataSource === "manual" && biodata !== null && isNanjingCity(biodata.city);
+  redirect(inviteSensus ? `${back}/terkirim?sensus=1` : `${back}/terkirim`);
 }

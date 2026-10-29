@@ -7,7 +7,7 @@ import { BPH_PANITIA_ROLES, type EventCommitteeRole } from "@/lib/event-capabili
 export type FormKind = "pemilu" | "oprek_bph_acara" | "oprek_kepanitiaan" | "oprek_kadiv" | "survei";
 
 /**
- * Formulir = formulir kustom (riset pasar, kuesioner) buatan anggota kabinet atau
+ * Formulir = formulir kustom (riset pasar, kuesioner) buatan pengurus kabinet atau
  * panitia acara. Bukan Oprek/Pemilu: tidak ada lamaran, status, atau penempatan
  * panitia, dan jawabannya di form_responses. Halaman dan aksi Oprek/Pemilu harus
  * menolak form jenis ini.
@@ -97,7 +97,7 @@ export const FORM_TAB_PATH: Record<FormKind, string> = {
   oprek_kepanitiaan: "/console/forms/oprek-kepanitiaan",
   // Oprek Kadiv tinggal di tab yang sama dengan Oprek anggota.
   oprek_kadiv: "/console/forms/oprek-kepanitiaan",
-  // Formulir dikelola di luar konsol (anggota kabinet biasa tidak masuk konsol).
+  // Formulir dikelola di luar konsol (pengurus kabinet biasa tidak masuk konsol).
   survei: "/formulir",
 };
 

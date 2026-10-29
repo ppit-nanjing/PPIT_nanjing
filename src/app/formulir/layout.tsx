@@ -7,9 +7,9 @@ export const metadata = {
   robots: { index: false, follow: false },
 };
 
-// Area pembuat formulir (anggota kabinet dan panitia acara). Di luar /console
+// Area pembuat formulir (pengurus kabinet dan panitia acara). Di luar /console
 // karena layout konsol hanya menerima admin/koordinator/panitia dan dashboardnya
-// menampilkan data yang tidak untuk semua anggota kabinet. Setiap halaman di
+// menampilkan data yang tidak untuk semua pengurus kabinet. Setiap halaman di
 // sini tetap memeriksa haknya sendiri (src/lib/survey-access.ts).
 export default function FormulirLayout({ children }: { children: React.ReactNode }) {
   return (

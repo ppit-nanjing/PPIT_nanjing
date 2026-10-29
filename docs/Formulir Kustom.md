@@ -10,12 +10,12 @@ Jangan tertukar dengan [Formulir & Oprek](./Formulir%20&%20Oprek.md): itu formul
 |---|---|
 | Halaman pembuat | `/formulir` (daftar dan buat), `/formulir/[formId]` (tab Pertanyaan, Hasil, Pengaturan) |
 | Halaman pengisi | `/f/[id]` (jalur pendek untuk dibagikan di grup WeChat), `/f/[id]/terkirim` |
-| Siapa yang membuat | Anggota kabinet (punya baris `department_members`), panitia acara (peran apa pun) untuk acaranya, dan pemegang full/modul `forms` |
-| Siapa yang melihat hasil | Pembuat (selama masih anggota kabinet / panitia acaranya), BPH Panitia acara terikatnya, pemegang full/modul `forms` |
+| Siapa yang membuat | Pengurus kabinet (punya baris `department_members`), panitia acara (peran apa pun) untuk acaranya, dan pemegang full/modul `forms` |
+| Siapa yang melihat hasil | Pembuat (selama masih pengurus kabinet / panitia acaranya), BPH Panitia acara terikatnya, pemegang full/modul `forms` |
 | Siapa yang mengisi | Pilihan per formulir: **wajib login** (bawaan, satu akun satu jawaban) atau **boleh tanpa login** |
 | Hasil | Grafik per pertanyaan, tabel, Google Sheet langsung, unduhan CSV dan Excel (waktu **jam Tiongkok, CST**) |
 
-Menunya ada di sidebar konsol ("Formulir Kustom") dan di menu akun (untuk anggota kabinet yang tidak masuk konsol). **Sengaja di luar `/console`**: layout konsol hanya menerima admin, koordinator, dan panitia, dan dashboard konsol menampilkan data (pesan masukan, nama pendaftar) yang tidak untuk semua anggota kabinet. Gerbang masuk konsol tidak dilonggarkan.
+Menunya ada di sidebar konsol ("Formulir Kustom") dan di menu akun (untuk pengurus kabinet yang tidak masuk konsol). **Sengaja di luar `/console`**: layout konsol hanya menerima admin, koordinator, dan panitia, dan dashboard konsol menampilkan data (pesan masukan, nama pendaftar) yang tidak untuk semua pengurus kabinet. Gerbang masuk konsol tidak dilonggarkan.
 
 ## Data (migrasi `0057_survei.sql`)
 
@@ -49,9 +49,13 @@ Kalau `collect_biodata` menyala:
 - Akun yang sensusnya **lengkap**: nama, universitas, dan kota (cabang) **diambil dari sensus di server** dan tampil hanya-baca. Hanya tiga isian itu yang disalin. Paspor, telepon, jenis kelamin, dan data sensus lain tidak pernah ikut.
 - Akun yang sensusnya belum lengkap, atau pengisi publik: mengisi sendiri (nama wajib, dua lainnya boleh kosong). Dicek di klien (supaya jawaban tidak hilang) dan di server.
 
+**Ajakan sensus.** Pengisi yang mengisi biodata sendiri dengan kota Nanjing (`isNanjingCity`: "Nanjing", "Nanking", atau 南京) berarti belum tercatat di sensus. Setelah mengirim, `submitSurvey` mengarahkan ke `/f/[id]/terkirim?sensus=1`, dan halaman itu menampilkan kartu ajakan: tombol "Isi sensus sekarang" untuk yang sudah login (kembali ke halaman terkirim sesudahnya), atau "Buat akun" dan "Masuk" (lalu langsung ke `/sensus`) untuk pengisi publik. Bendera `?sensus=1` hanya menampilkan tautan dan tidak membuka apa pun; yang ternyata sudah sensus lengkap tidak diajak lagi. Untuk kota lain tidak ada ajakan.
+
 Kalau `collect_biodata` mati, nama tidak ditampilkan di hasil. Untuk formulir wajib login, `user_id` tetap disimpan (dasar satu akun satu jawaban) tetapi **tidak pernah dipilih** oleh halaman hasil, ekspor, maupun Sheet. Halaman isi menyampaikannya ke pengisi.
 
 ## Hasil
+
+Pembuat melihat jawaban di **`/formulir`** (menu "Formulir Kustom" di sidebar konsol atau menu akun): tiap kartu formulir menampilkan jumlah jawabannya, dan membukanya membawa ke `/formulir/[formId]`. Tab **Hasil** (dengan lencana jumlah jawaban) berisi ringkasan, tabel, Google Sheet, dan unduhan. Belum ada notifikasi saat jawaban baru masuk.
 
 Tab **Hasil** di `/formulir/[formId]`:
 

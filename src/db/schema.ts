@@ -1724,7 +1724,7 @@ export const eventEvaluationAnswers = pgTable(
 // Kepanitiaan (anggota). Bentuknya sama dengan kepanitiaan (pilihan divisi 1/2).
 //
 // formulir (migrasi 0057): formulir kustom ala Google Forms (riset pasar, kuesioner).
-// Dibuat anggota kabinet atau panitia acara, boleh tanpa acara, dan SATU acara
+// Dibuat pengurus kabinet atau panitia acara, boleh tanpa acara, dan SATU acara
 // boleh punya banyak formulir. Jawabannya di form_responses, bukan form_applications.
 export const formKindEnum = pgEnum("form_kind", ["pemilu", "oprek_bph_acara", "oprek_kepanitiaan", "oprek_kadiv", "survei"]);
 

@@ -23,7 +23,7 @@ export default async function FormulirHubPage({ searchParams }: { searchParams: 
         <p className="text-body-lg text-on-surface-variant max-w-2xl">
           Buat formulir sendiri ala Google Forms, dengan judul dan pertanyaan bebas: riset pasar, kuesioner, atau
           pengumpulan masukan. Hasilnya tampil sebagai grafik dan tabel, bisa dibuka di Google Sheets, dan diunduh
-          sebagai CSV atau Excel (jam Tiongkok, CST). Hanya anggota kabinet dan panitia acara yang bisa membuatnya;
+          sebagai CSV atau Excel (jam Tiongkok, CST). Hanya pengurus kabinet dan panitia acara yang bisa membuatnya;
           hasilnya dilihat pembuat, BPH Panitia acara terikatnya, dan admin.
         </p>
       </header>
