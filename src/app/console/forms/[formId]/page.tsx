@@ -14,6 +14,7 @@ import {
   updateFormSettings,
 } from "@/app/actions/forms";
 import { requireFormManage } from "@/lib/form-access";
+import { redirect } from "next/navigation";
 import { getEventAccess } from "@/lib/event-access";
 import { CollapsibleSection } from "@/components/console/collapsible-section";
 import { ConfirmButton } from "@/components/console/confirm-button";
@@ -43,6 +44,8 @@ const ADD_TYPES: MembershipFieldDef["type"][] = [
 export default async function FormManagePage({ params }: { params: Promise<{ formId: string }> }) {
   const { formId } = await params;
   const { form } = await requireFormManage(formId);
+  // Formulir dikelola dari /formulir, bukan dari halaman Oprek ini.
+  if (form.kind === "survei") redirect(`/formulir/${form.id}`);
 
   const [fields, eventRows, applicantCountRows, divisionRows, applications] = await Promise.all([
     db.select().from(formFields).where(eq(formFields.formId, form.id)).orderBy(asc(formFields.orderIndex)),

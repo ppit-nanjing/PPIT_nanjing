@@ -1,10 +1,11 @@
 "use client";
 
-import { useRef, useState, type FormEvent } from "react";
+import { useRef, useState, type FormEvent, type ReactNode } from "react";
 import { useFormStatus } from "react-dom";
 import { AlertCircle, Info, Loader2, Star } from "lucide-react";
 import type { MembershipFieldDef } from "@/lib/membership-form";
 import { GRID_TYPES, isSectionType } from "@/lib/membership-form";
+import { isSurveyFieldType, isValidFormat, surveyMaxLength } from "@/lib/survey";
 import { ImageUploadCropper } from "@/components/upload/image-upload-cropper";
 import { FileUploadField } from "@/components/upload/file-upload-field";
 import { Select } from "@/components/console/form";
@@ -26,6 +27,11 @@ type Props = {
   prefill?: { fullName: string; divisionName: string | null };
   action?: (formData: FormData) => void;
   preview?: boolean;
+  // Survei: blok di atas pertanyaan (biodata responden, kolom jebakan bot).
+  lead?: ReactNode;
+  // Survei: nama input polos di `lead` yang wajib terisi. Diperiksa di klien supaya
+  // pengisi tidak kehilangan jawabannya karena penolakan dari server.
+  leadRequired?: string[];
 };
 
 function isEmpty(f: MembershipFieldDef, value: string, multi: string[]): boolean {
@@ -34,7 +40,7 @@ function isEmpty(f: MembershipFieldDef, value: string, multi: string[]): boolean
   return !value.trim();
 }
 
-function SubmitButton({ preview, blocked }: { preview?: boolean; blocked?: boolean }) {
+function SubmitButton({ preview, blocked, survey }: { preview?: boolean; blocked?: boolean; survey?: boolean }) {
   const t = useT();
   const { pending } = useFormStatus();
   return (
@@ -44,7 +50,11 @@ function SubmitButton({ preview, blocked }: { preview?: boolean; blocked?: boole
       className="deco-btn bg-accent text-on-accent text-label-caps uppercase py-3.5 rounded-md hover:brightness-95 transition-[filter] flex items-center justify-center gap-2 disabled:opacity-60 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-container focus-visible:ring-offset-2 focus-visible:ring-offset-surface-container-lowest"
     >
       {pending && !preview && <Loader2 size={16} className="animate-spin" />}
-      {preview ? t("forms.form.previewBtn") : pending ? t("forms.form.submitting") : t("forms.form.submit")}
+      {preview
+        ? t("forms.form.previewBtn")
+        : pending
+          ? t("forms.form.submitting")
+          : t(survey ? "forms.form.submitSurvey" : "forms.form.submit")}
     </button>
   );
 }
@@ -62,6 +72,8 @@ export function FormRenderer({
   prefill,
   action,
   preview,
+  lead,
+  leadRequired = [],
 }: Props) {
   const t = useT();
   const [values, setValues] = useState<Record<string, string>>({});
@@ -102,6 +114,9 @@ export function FormRenderer({
     // sendiri), jadi dibaca langsung dari form saat submit.
     const liveData = new FormData(e.currentTarget);
 
+    for (const name of leadRequired) {
+      if (!String(liveData.get(name) ?? "").trim()) next[name] = t("forms.form.errRequired");
+    }
     if (kind === "oprek_bph_acara" && !position) next.sys_position = t("forms.form.errRequired");
     if (isDivisionOprekKind(kind)) {
       if (!choice1) next.sys_choice1 = t("forms.form.errRequired");
@@ -110,6 +125,8 @@ export function FormRenderer({
 
     for (const f of fields) {
       if (f.type === "section") continue;
+      // Survei tidak mendukung unggahan: pertanyaan lama bertipe itu tidak dirender maupun diperiksa.
+      if (kind === "survei" && !isSurveyFieldType(f.type)) continue;
       const v = values[f.key] ?? "";
 
       if (f.type === "file" || f.type === "image") {
@@ -146,6 +163,12 @@ export function FormRenderer({
             : f.type === "multiselect"
               ? t("forms.form.errMultiselect")
               : t("forms.form.errRequired");
+        continue;
+      }
+      // Survei: format email/URL/telepon/tanggal/jam/angka dicek di sini dengan aturan yang sama
+      // dengan server, supaya salah ketik tidak membuang seluruh isian lewat penolakan server.
+      if (kind === "survei" && v.trim() && !isValidFormat(f.type, v.trim())) {
+        next[f.key] = t("forms.form.errFormat");
         continue;
       }
       const val = f.config?.validations;
@@ -255,6 +278,11 @@ export function FormRenderer({
     <form ref={formRef} action={preview ? undefined : action} onSubmit={handleSubmit} className="flex flex-col gap-6" noValidate>
       <input type="hidden" name="formId" value={formId} />
 
+      {lead}
+      {leadRequired.map((name) => (
+        <div key={name}>{errorBox(name)}</div>
+      ))}
+
       {/* Kolom sistem — identitas read-only dari akun + Struktur Organisasi */}
       {prefill && (
         <section className="bg-surface-container-lowest border border-outline-variant rounded-xl p-5">
@@ -306,6 +334,7 @@ export function FormRenderer({
 
       {/* Pertanyaan kustom */}
       {fields.map((f) => {
+        if (kind === "survei" && !isSurveyFieldType(f.type)) return null;
         const fieldId = `field-${f.key}`;
         const invalid = Boolean(errors[f.key]);
 
@@ -467,6 +496,7 @@ export function FormRenderer({
                 id={`${fieldId}-input`}
                 name={f.key}
                 rows={4}
+                maxLength={kind === "survei" ? surveyMaxLength(f.type) : undefined}
                 value={values[f.key] ?? ""}
                 placeholder={f.placeholder}
                 onChange={(e) => update(f.key, e.target.value)}
@@ -478,6 +508,7 @@ export function FormRenderer({
                 id={`${fieldId}-input`}
                 type={f.type === "time" ? "time" : f.type}
                 name={f.key}
+                maxLength={kind === "survei" ? surveyMaxLength(f.type) : undefined}
                 value={values[f.key] ?? ""}
                 placeholder={f.placeholder}
                 onChange={(e) => update(f.key, e.target.value)}
@@ -502,7 +533,7 @@ export function FormRenderer({
           <AlertCircle size={14} aria-hidden /> {t("forms.form.errSummary", { n: errorCount })}
         </p>
       )}
-      <SubmitButton preview={preview} blocked={noDivisions} />
+      <SubmitButton preview={preview} blocked={noDivisions} survey={kind === "survei"} />
     </form>
   );
 }

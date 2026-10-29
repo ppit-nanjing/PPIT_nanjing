@@ -1722,7 +1722,11 @@ export const eventEvaluationAnswers = pgTable(
 
 // oprek_kadiv (migrasi 0052): rekrutmen Kadiv per divisi acara, sebelum Oprek
 // Kepanitiaan (anggota). Bentuknya sama dengan kepanitiaan (pilihan divisi 1/2).
-export const formKindEnum = pgEnum("form_kind", ["pemilu", "oprek_bph_acara", "oprek_kepanitiaan", "oprek_kadiv"]);
+//
+// formulir (migrasi 0057): formulir kustom ala Google Forms (riset pasar, kuesioner).
+// Dibuat anggota kabinet atau panitia acara, boleh tanpa acara, dan SATU acara
+// boleh punya banyak formulir. Jawabannya di form_responses, bukan form_applications.
+export const formKindEnum = pgEnum("form_kind", ["pemilu", "oprek_bph_acara", "oprek_kepanitiaan", "oprek_kadiv", "survei"]);
 
 export const formApplicationStatusEnum = pgEnum("form_application_status", [
   "pending",
@@ -1750,6 +1754,13 @@ export const forms = pgTable(
     // hanya pengurus kabinet PPIT Nanjing) — untuk acara lintas cabang seperti
     // SKR, yang pelamarnya bisa dari PPIT lain. Pemilu selalu khusus kabinet.
     openToAllAccounts: boolean("open_to_all_accounts").notNull().default(false),
+    // Migrasi 0057 (khusus formulir): boleh diisi TANPA login. Default false = wajib
+    // login, satu akun satu jawaban. Tanpa login tidak ada batas satu jawaban per
+    // orang, hanya pembatas laju (lihat src/app/actions/survey.ts).
+    allowPublic: boolean("allow_public").notNull().default(false),
+    // Migrasi 0057 (khusus formulir): minta biodata responden (nama, kampus, kota).
+    // Akun dengan sensus lengkap diambil dari sensus, selain itu diisi manual.
+    collectBiodata: boolean("collect_biodata").notNull().default(false),
     opensAt: timestamp("opens_at"),
     closesAt: timestamp("closes_at"),
     confirmationMessage: text("confirmation_message")
@@ -1773,10 +1784,11 @@ export const forms = pgTable(
     index("forms_kind_idx").on(t.kind),
     index("forms_event_idx").on(t.eventId),
     // Satu acara = satu form per jenis (Oprek BPH / Oprek Kepanitiaan);
-    // event_id NULL (Pemilu) dikecualikan. Migrasi: 0050.
+    // event_id NULL (Pemilu) dikecualikan, begitu juga formulir (satu acara boleh
+    // punya banyak formulir). Migrasi: 0050, dilonggarkan di 0057.
     uniqueIndex("forms_kind_event_unique_idx")
       .on(t.kind, t.eventId)
-      .where(sql`${t.eventId} IS NOT NULL`),
+      .where(sql`${t.eventId} IS NOT NULL AND ${t.kind} <> 'survei'`),
   ],
 );
 
@@ -1849,6 +1861,42 @@ export const formApplications = pgTable(
     index("form_applications_form_idx").on(t.formId, t.submittedAt),
   ],
 );
+
+// Jawaban survei (forms.kind = 'survei', migrasi 0057). Satu baris = satu pengisi.
+// user_id terisi untuk pengisi yang login (dasar satu akun satu jawaban) dan NULL
+// untuk pengisi publik. Identitas hanya ikut ke hasil lewat `biodata` ketika formulir
+// meminta biodata; user_id sendiri tidak pernah ditampilkan di hasil.
+export type SurveyBiodata = { fullName: string; university: string; city: string };
+
+export const formResponses = pgTable(
+  "form_responses",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    formId: uuid("form_id")
+      .notNull()
+      .references(() => forms.id, { onDelete: "cascade" }),
+    // Cascade (bukan set null): biodata memuat nama pengisi, jadi jawaban ikut terhapus
+    // bersama akunnya, sama seperti form_applications. Jawaban publik (NULL) tidak terpengaruh.
+    userId: uuid("user_id").references(() => users.id, { onDelete: "cascade" }),
+    // Snapshot saat mengirim (disalin, bukan dibaca live): dari sensus_profiles
+    // untuk akun yang sensusnya lengkap ("sensus"), selain itu diisi pengisi
+    // ("manual"). NULL kalau formulir tidak meminta biodata.
+    biodata: jsonb("biodata").$type<SurveyBiodata>(),
+    biodataSource: text("biodata_source"),
+    // Satu nilai per form_fields.key; grid disimpan sebagai objek {rowIndex: nilai},
+    // multiselect sebagai array, checkbox sebagai boolean.
+    answers: jsonb("answers").$type<Record<string, unknown>>().notNull().default({}),
+    submittedAt: timestamp("submitted_at").notNull().defaultNow(),
+  },
+  (t) => [
+    uniqueIndex("form_responses_form_user_idx")
+      .on(t.formId, t.userId)
+      .where(sql`${t.userId} IS NOT NULL`),
+    index("form_responses_form_idx").on(t.formId, t.submittedAt),
+  ],
+);
+
+export type FormResponseRow = typeof formResponses.$inferSelect;
 
 // Divisi kabinet penanggung jawab acara (proker). Biasanya satu; proker
 // gabungan boleh beberapa baris. Terpisah dari event_divisions (divisi

@@ -59,6 +59,8 @@ export default async function FormFillPage({
 
   const [form] = await db.select().from(forms).where(eq(forms.id, id));
   if (!form) notFound();
+  // Formulir punya halaman isi sendiri (/f/[id]).
+  if (form.kind === "survei") redirect(`/f/${form.id}`);
 
   // Formulir yang terikat acara yang sudah di Sampah tidak bisa dibuka lagi
   // (acara di Sampah hanya dikelola dari bagian Sampah di menu Kegiatan).

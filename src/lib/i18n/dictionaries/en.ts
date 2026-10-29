@@ -55,6 +55,7 @@ export const en = {
   "accountMenu.myProfile": "My Profile",
   "accountMenu.submissions": "My Submissions",
   "accountMenu.console": "Go to Console",
+  "accountMenu.surveys": "Custom Forms",
   "accountMenu.logout": "Log out",
   "accountMenu.login": "Log in",
 
@@ -473,6 +474,7 @@ export const en = {
   "forms.form.choicePlaceholder": "Choose a division",
   "forms.form.divisionDisclaimer": "Division choices are open to committee members, but we recommend not applying to the same division/proker if you already hold a core BPH/Koor responsibility.",
   "forms.form.submit": "Submit Application",
+  "forms.form.submitSurvey": "Submit Answers",
   "forms.form.submitting": "Submitting...",
   "forms.form.previewBtn": "Preview",
   "forms.form.noDivisionsTitle": "This form can't be filled in yet",
@@ -480,6 +482,7 @@ export const en = {
   "forms.form.noDivisionsPreview": "This event has no committee divisions yet. Applicants can't submit until divisions are created under Events → Committee Structure.",
   "forms.form.errSummary": "{{n}} field(s) above need fixing.",
   "forms.form.errRequired": "Required.",
+  "forms.form.errFormat": "This entry is not in a valid format.",
   "forms.form.errCheckbox": "Please check this box.",
   "forms.form.errMultiselect": "Pick at least one.",
   "forms.form.errGridRows": "Please answer every row.",

@@ -10,6 +10,7 @@ import {
 import { exportCellText } from "@/lib/registration-export";
 import { loadRegistrationExport } from "@/lib/registration-export-load";
 import { getSiteUrl } from "@/lib/site-url";
+import { loadSurvey, surveyTable } from "@/lib/survey-load";
 import { datasetToTable } from "@/lib/table-view";
 
 // Sisi database dari sheet langsung (mesin Google-nya ada di google-sheets.ts):
@@ -28,6 +29,18 @@ function siteOrigin(): string {
  * acara tidak ada.
  */
 export async function loadSheetData(eventId: string, kind: LiveSheetKind): Promise<SheetData | null> {
+  // Formulir kustom: `eventId` di sini adalah id FORMULIR. Kolom dan baris sama dengan
+  // tabel di layar dan berkas ekspor (waktu jam Tiongkok CST); user_id tidak ikut.
+  if (kind === "formulir") {
+    const loaded = await loadSurvey(eventId);
+    if (!loaded) return null;
+    const table = surveyTable(loaded);
+    return {
+      eventTitle: loaded.form.title,
+      header: table.columns.map((c) => c.header),
+      rows: table.rows.map((r) => table.columns.map((c) => r.cells[c.key] ?? "")),
+    };
+  }
   if (kind === "pendaftar") {
     const loaded = await loadRegistrationExport(eventId, siteOrigin());
     if (!loaded) return null;

@@ -36,6 +36,7 @@ export default async function ConsoleLayout({ children }: { children: React.Reac
           // Menu Formulir untuk pengelola Oprek acara: BPH Acara ATAU Kadiv.
           isBphCommittee={session.user.isBphCommittee || session.user.isEventKadiv}
           isCoordinator={session.user.isCoordinator}
+          canCreateSurvey={session.user.canCreateSurvey}
         />
       </div>
       {/* Fluid, bukan max-width terpusat: begitu sidebar dilipat, konten ikut

@@ -2,6 +2,8 @@
 
 > Bagian dari [Information Architecture](./Information%20Architecture.md). Audit terhadap kode: **2026-10-12** (modul dibangun bertahap; lihat [Status](#status-fase)).
 
+> Formulir buatan sendiri untuk riset pasar/kuesioner (judul dan pertanyaan bebas, wajib login atau publik) ada di dokumen lain: [Formulir Kustom](./Formulir%20Kustom.md). Ia memakai tabel `forms`/`form_fields` yang sama (jenis `survei`) tetapi bukan Oprek/Pemilu: tidak ada lamaran, status, atau penempatan panitia.
+
 Modul **Formulir** di console adalah rumah empat alur formulir internal kabinet:
 
 | Tab | Isi | Pengelola |

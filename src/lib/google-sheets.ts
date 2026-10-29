@@ -51,14 +51,17 @@ export class SheetsShareError extends Error {
 }
 
 export type SheetCell = string | number;
-export type LiveSheetKind = "pendaftar" | "evaluasi-peserta" | "evaluasi-panitia";
+// "formulir" = jawaban formulir kustom (kind "survei"). Kuncinya id FORMULIR (bukan id acara):
+// mesin di sini hanya butuh id berbentuk UUID, jadi dipakai apa adanya.
+export type LiveSheetKind = "pendaftar" | "evaluasi-peserta" | "evaluasi-panitia" | "formulir";
 export type SheetData = { eventTitle: string; header: string[]; rows: SheetCell[][] };
 
-export const LIVE_SHEET_KINDS: readonly LiveSheetKind[] = ["pendaftar", "evaluasi-peserta", "evaluasi-panitia"];
+export const LIVE_SHEET_KINDS: readonly LiveSheetKind[] = ["pendaftar", "evaluasi-peserta", "evaluasi-panitia", "formulir"];
 const KIND_LABEL: Record<LiveSheetKind, string> = {
   pendaftar: "Pendaftar",
   "evaluasi-peserta": "Evaluasi",
   "evaluasi-panitia": "Evaluasi Panitia",
+  formulir: "Formulir",
 };
 
 // appProperties berkas (hanya terlihat oleh klien OAuth ini).
@@ -318,7 +321,7 @@ export async function writeLiveSheet(
     requestBody: {
       values: [
         ["Diperbarui (jam Tiongkok CST, UTC+8)", formatChinaDateTimeIso(new Date())],
-        ["Acara", data.eventTitle],
+        [kind === "formulir" ? "Formulir" : "Acara", data.eventTitle],
         ["Isi", `${KIND_LABEL[kind]}: ${data.rows.length} baris`],
         [
           "Catatan",
@@ -362,6 +365,19 @@ export async function writeLiveSheet(
       },
     });
   }
+}
+
+/**
+ * Hapus sheet langsung untuk (id, jenis) kalau ada. Dipakai saat formulir kustom
+ * dihapus: tanpa ini jawabannya (termasuk biodata) tetap terbaca pembaca sheet
+ * sampai pembersihan 30 hari. Folder per formulir dibiarkan (kosong, hanya judulnya).
+ */
+export async function deleteLiveSheet(eventId: string, kind: LiveSheetKind, deps?: GoogleClients): Promise<boolean> {
+  const { drive } = clients(deps);
+  const live = await findLiveSheet(eventId, kind, deps);
+  if (!live) return false;
+  await drive.files.delete({ fileId: live.id });
+  return true;
 }
 
 /**

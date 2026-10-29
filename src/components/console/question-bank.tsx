@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { Plus, Search } from "lucide-react";
-import { QUESTION_BANK, FIELD_TYPE_LABELS, type QuestionTemplate } from "@/lib/membership-form";
+import { QUESTION_BANK, FIELD_TYPE_LABELS, type MembershipFieldType, type QuestionTemplate } from "@/lib/membership-form";
 import { SubmitButton } from "@/components/console/submit-button";
 
 // `action` dikirim sebagai prop supaya bank pertanyaan yang sama dipakai modul
@@ -12,21 +12,30 @@ import { SubmitButton } from "@/components/console/submit-button";
 export function QuestionBank({
   action,
   hiddenFields,
+  excludeTypes = [],
 }: {
   action: (formData: FormData) => void | Promise<void>;
   hiddenFields?: Record<string, string>;
+  /** Template berjenis ini tidak ditampilkan (formulir tidak mendukung unggahan). */
+  excludeTypes?: MembershipFieldType[];
 }) {
   const [query, setQuery] = useState("");
   const q = query.trim().toLowerCase();
 
+  const allowed = QUESTION_BANK.map((c) => ({
+    ...c,
+    templates: c.templates.filter((t) => !excludeTypes.includes(t.type)),
+  })).filter((c) => c.templates.length > 0);
   const categories = q
-    ? QUESTION_BANK.map((c) => ({
-        ...c,
-        templates: c.templates.filter(
-          (t) => t.label.toLowerCase().includes(q) || t.type.toLowerCase().includes(q)
-        ),
-      })).filter((c) => c.templates.length > 0)
-    : QUESTION_BANK;
+    ? allowed
+        .map((c) => ({
+          ...c,
+          templates: c.templates.filter(
+            (t) => t.label.toLowerCase().includes(q) || t.type.toLowerCase().includes(q)
+          ),
+        }))
+        .filter((c) => c.templates.length > 0)
+    : allowed;
 
   // Card chrome + heading come from the CollapsibleSection this sits inside.
   // Container query (@container), bukan breakpoint layar: bank ini dipakai di
