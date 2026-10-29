@@ -32,10 +32,10 @@ const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const MIN_PASSWORD = 8;
 
 function deriveName(email: string): string {
-  const local = email.split("@")[0] || "Anggota";
+  const local = email.split("@")[0] || "Nanjinger";
   const parts = local.split(/[._-]+/).filter(Boolean);
   const pretty = parts.map((p) => p.charAt(0).toUpperCase() + p.slice(1)).join(" ");
-  return pretty || "Anggota PPIT";
+  return pretty || "Nanjinger";
 }
 
 // Email/password sign-UP: create a local account, then auto sign-in.

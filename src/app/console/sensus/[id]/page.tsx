@@ -88,7 +88,7 @@ export default async function ConsoleSensusDetailPage({ params }: { params: Prom
         </span>
       </div>
       <p className="text-body-md text-on-surface-variant mb-4">
-        Diisi sendiri oleh anggota lewat halaman Sensus &middot; terakhir diperbarui {fmtDate(s.updatedAt)}
+        Diisi sendiri oleh Nanjinger lewat halaman Sensus &middot; terakhir diperbarui {fmtDate(s.updatedAt)}
       </p>
       <div className="flex flex-wrap items-center gap-3 mb-8">
         <Link

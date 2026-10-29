@@ -106,7 +106,7 @@ export function UsersConsole({
               aria-label="Filter kategori"
             >
               <option value="all">Semua Kategori</option>
-              <option value="member">Anggota PPIT (punya divisi)</option>
+              <option value="member">Pengurus kabinet (punya divisi)</option>
               <option value="noDivision">Belum ada divisi</option>
               <option value="noRole">Belum ada akses admin</option>
             </Select>
