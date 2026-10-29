@@ -15,7 +15,7 @@ Jangan tertukar dengan [Formulir & Oprek](./Formulir%20&%20Oprek.md): itu formul
 | Siapa yang mengisi | Pilihan per formulir: **wajib login** (bawaan, satu akun satu jawaban) atau **boleh tanpa login** |
 | Hasil | Grafik per pertanyaan, tabel, Google Sheet langsung, unduhan CSV dan Excel (waktu **jam Tiongkok, CST**) |
 
-Menunya ada di sidebar konsol ("Formulir Kustom") dan di menu akun (untuk pengurus kabinet yang tidak masuk konsol). **Sengaja di luar `/console`**: layout konsol hanya menerima admin, koordinator, dan panitia, dan dashboard konsol menampilkan data (pesan masukan, nama pendaftar) yang tidak untuk semua pengurus kabinet. Gerbang masuk konsol tidak dilonggarkan.
+Letaknya di **tab Formulir** konsol: hub `/console/forms` (sidebar "Formulir") punya kartu "Formulir Kustom" yang menaut ke `/formulir`, dan hub itu terbuka juga untuk pengurus kabinet dan panitia yang tidak punya tab Oprek/Pemilu (mereka hanya melihat kartu itu). Menu akun juga menaut langsung, untuk pengurus yang tidak masuk konsol. **Sengaja di luar `/console`**: layout konsol hanya menerima admin, koordinator, dan panitia, dan dashboard konsol menampilkan data (pesan masukan, nama pendaftar) yang tidak untuk semua pengurus kabinet. Gerbang masuk konsol tidak dilonggarkan.
 
 ## Data (migrasi `0057_survei.sql`)
 
@@ -55,7 +55,7 @@ Kalau `collect_biodata` mati, nama tidak ditampilkan di hasil. Untuk formulir wa
 
 ## Hasil
 
-Pembuat melihat jawaban di **`/formulir`** (menu "Formulir Kustom" di sidebar konsol atau menu akun): tiap kartu formulir menampilkan jumlah jawabannya, dan membukanya membawa ke `/formulir/[formId]`. Tab **Hasil** (dengan lencana jumlah jawaban) berisi ringkasan, tabel, Google Sheet, dan unduhan. Belum ada notifikasi saat jawaban baru masuk.
+Pembuat melihat jawaban di **`/formulir`** (kartu "Formulir Kustom" di tab Formulir konsol, atau menu akun): tiap kartu formulir menampilkan jumlah jawabannya, dan membukanya membawa ke `/formulir/[formId]`. Tab **Hasil** (dengan lencana jumlah jawaban) berisi ringkasan, tabel, Google Sheet, dan unduhan. Pembuat juga mendapat **pemberitahuan di website** (lonceng dan `/notifications`) saat ada jawaban baru: satu pemberitahuan belum-dibaca per formulir, jumlahnya diperbarui oleh jawaban berikutnya (`src/lib/survey-notify.ts`, memakai tabel `notifications` tanpa migrasi), dengan tautan "Lihat hasil". Setelah dibaca, jawaban berikutnya membuat yang baru. Jawaban dari pembuat sendiri tidak diberitahukan. Belum ada email.
 
 Tab **Hasil** di `/formulir/[formId]`:
 
@@ -76,6 +76,6 @@ Tab **Hasil** di `/formulir/[formId]`:
 
 ## Hal yang sengaja belum ada
 
-- Mengedit jawaban setelah dikirim, batas jumlah jawaban, dan notifikasi ke pembuat saat ada jawaban baru.
+- Mengedit jawaban setelah dikirim, batas jumlah jawaban, dan email ke pembuat saat ada jawaban baru (pemberitahuan di website sudah ada).
 - Terjemahan Inggris untuk halaman pembuat dan teks sekitar form isi (pertanyaan buatan pembuat tidak diterjemahkan otomatis). Tombol dan galat bawaan form mengikuti kamus `forms.form.*`.
 - Pengisi tanpa login tidak punya batas "satu jawaban per orang": hanya pembatas laju dan kolom jebakan. Untuk pemilihan atau data yang harus unik, pakai formulir wajib login.

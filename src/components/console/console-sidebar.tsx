@@ -24,7 +24,6 @@ import {
   Link2,
   Folder,
   FileText,
-  ListChecks,
   PanelLeftClose,
   PanelLeftOpen,
 } from "lucide-react";
@@ -47,8 +46,9 @@ type NavItem = {
   // supaya tiap koor bisa bikin form Oprek BPH untuk prokernya. Flag ini
   // hanya visibilitas; gerbang sebenarnya ada di page/action masing-masing.
   coordinatorToo?: boolean;
-  // Hanya tampil untuk yang boleh membuat Formulir Kustom (session.user.canCreateSurvey).
-  needsCustomForms?: boolean;
+  // Juga tampil untuk yang boleh membuat Formulir Kustom (session.user.canCreateSurvey): kartu
+  // Formulir Kustom ada di hub Formulir, jadi hub itu harus terjangkau oleh mereka.
+  customFormsToo?: boolean;
 };
 
 // `module: null` = always visible to anyone who got past the layout gate
@@ -69,10 +69,7 @@ const GROUPS: { title: string; items: NavItem[] }[] = [
       { href: "/console/work-ledger", label: "Work Ledger", icon: ClipboardList, module: "events" },
       { href: "/console/inventory", label: "Inventaris", icon: Package, module: "inventory" },
       { href: "/console/membership", label: "Pendaftaran", icon: UserPlus, module: "membership" },
-      { href: "/console/forms", label: "Formulir", icon: FileText, module: "forms", bphCommitteeToo: true, coordinatorToo: true },
-      // Formulir dikelola di /formulir (di luar konsol, supaya pengurus kabinet biasa juga bisa memakainya);
-      // halaman itu menyaring haknya sendiri, jadi menunya tampil untuk semua yang masuk konsol.
-      { href: "/formulir", label: "Formulir Kustom", icon: ListChecks, module: null, needsCustomForms: true },
+      { href: "/console/forms", label: "Formulir", icon: FileText, module: "forms", bphCommitteeToo: true, coordinatorToo: true, customFormsToo: true },
       { href: "/console/jobs", label: "Lowongan", icon: Briefcase, module: "career" },
       { href: "/console/sensus", label: "Sensus", icon: ClipboardCheck, module: ["sensus", "sensus-verify"] },
       { href: "/console/ranting/sensus", label: "Sensus Ranting", icon: ClipboardCheck, module: "sensus-ranting" },
@@ -122,14 +119,14 @@ function NavContent({
       {GROUPS.map((group) => {
         const items = group.items.filter(
           (i) =>
-            (!i.needsCustomForms || canCreateSurvey) &&
-            (i.module === null ||
+            i.module === null ||
             (Array.isArray(i.module)
               ? i.module.some((m) => hasModuleAccess(scope, m))
               : hasModuleAccess(scope, i.module)) ||
             (i.committeeToo && isCommittee) ||
             (i.bphCommitteeToo && isBphCommittee) ||
-            (i.coordinatorToo && isCoordinator)),
+            (i.coordinatorToo && isCoordinator) ||
+            (i.customFormsToo && canCreateSurvey),
         );
         if (items.length === 0) return null;
         return (

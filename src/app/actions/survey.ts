@@ -12,6 +12,7 @@ import { parseChinaLocalInput } from "@/lib/datetime";
 import { requireFormManage } from "@/lib/form-access";
 import { deleteLiveSheet, isSheetsConfigured } from "@/lib/google-sheets";
 import { scheduleLiveSheetSync } from "@/lib/live-sheets";
+import { notifyCreatorOfResponse } from "@/lib/survey-notify";
 import {
   SURVEY_DESCRIPTION_MAX,
   SURVEY_HONEYPOT_FIELD,
@@ -267,7 +268,21 @@ export async function submitSurvey(formData: FormData) {
   }
 
   // Unik (form, user): dua kiriman bersamaan dari akun yang sama menyisakan satu.
-  await db.insert(formResponses).values({ formId: form.id, userId, biodata, biodataSource, answers }).onConflictDoNothing();
+  const inserted = await db
+    .insert(formResponses)
+    .values({ formId: form.id, userId, biodata, biodataSource, answers })
+    .onConflictDoNothing()
+    .returning({ id: formResponses.id });
+
+  // Pembuat diberi tahu di belakang respons (satu pemberitahuan belum-dibaca per formulir,
+  // lihat survey-notify.ts). Kiriman ganda yang ditolak indeks unik tidak diberitahukan.
+  if (inserted.length > 0) {
+    after(() =>
+      notifyCreatorOfResponse(form, userId).catch((err) => {
+        console.error("[formulir] gagal memberi tahu pembuat:", err instanceof Error ? err.name : "tidak diketahui");
+      }),
+    );
+  }
 
   // Google Sheet langsung (kalau ada) diperbarui beberapa detik lagi, di belakang respons.
   scheduleLiveSheetSync(form.id, ["formulir"]);
