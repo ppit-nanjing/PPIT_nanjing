@@ -14,6 +14,7 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
 
 - This repository is the public website and administration console for PPIT Nanjing, serving Indonesian students in and around Nanjing. It includes public content, membership and census flows, events, inventory, organization management, notifications, documents, and reports.
 - Treat current source code, `package.json`, and configuration files as the implementation truth. Use `docs/README.md` as the product and design index, but verify technical claims against the code before acting; several documents describe an earlier target state.
+- Terminology (decided by the org): the people in the PPIT Nanjing cabinet are **pengurus kabinet** (never "anggota kabinet"); everyone else in the community is a **Nanjinger**, not an "anggota". Keep "anggota" only for the event committee role `anggota`, the stored role name "Anggota Divisi", and formal legal text (AD/ART, Terms).
 - Keep changes focused on the requested behavior. Do not refactor adjacent features, change dependencies, rewrite copy, or modify generated files unless the task requires it.
 - Preserve the generated Next.js block at the top of this file exactly. `next dev` may regenerate it.
 

@@ -138,7 +138,7 @@ export default async function ConsoleSensusPage({ searchParams }: { searchParams
         <div>
           <h1 className="text-headline-md sm:text-headline-lg text-on-background mb-2">Sensus</h1>
           <p className="text-body-md text-on-surface-variant max-w-2xl">
-            Data mahasiswa yang diisi sendiri anggota lewat halaman Sensus, lengkap dengan bukti kartu
+            Data mahasiswa yang diisi sendiri oleh Nanjinger lewat halaman Sensus, lengkap dengan bukti kartu
             mahasiswa / LOA. Dipakai untuk memverifikasi status mahasiswa dan rekap ke PPI Tiongkok pusat.
           </p>
         </div>

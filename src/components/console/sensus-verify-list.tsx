@@ -52,7 +52,7 @@ export function SensusVerifyList({
       <div className="mb-6">
         <h1 className="text-headline-md sm:text-headline-lg text-on-background mb-2">Verifikasi Mahasiswa</h1>
         <p className="text-body-md text-on-surface-variant max-w-2xl">
-          Nama, kampus, dan bukti kartu mahasiswa / LOA yang diisi anggota lewat halaman Sensus — untuk
+          Nama, kampus, dan bukti kartu mahasiswa / LOA yang diisi Nanjinger lewat halaman Sensus — untuk
           memverifikasi status mahasiswa. Data lengkap (paspor, kontak, dsb.) hanya untuk BPH &amp; Divisi
           Teknologi.
         </p>
