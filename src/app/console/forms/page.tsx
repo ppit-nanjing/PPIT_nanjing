@@ -1,16 +1,25 @@
 import { count } from "drizzle-orm";
-import { ClipboardList, Crown, UserPlus, Vote } from "lucide-react";
+import { ClipboardList, Crown, ListChecks, UserPlus, Vote } from "lucide-react";
 import Link from "next/link";
+import { redirect } from "next/navigation";
 import { db } from "@/db";
 import { forms, membershipApplications } from "@/db/schema";
-import { requireFormsHub } from "@/lib/form-access";
+import { getFormsAccess } from "@/lib/form-access";
+import { getSurveyAccess } from "@/lib/survey-access";
 
 export const metadata = { title: "Formulir" };
 
 // Hub modul Formulir: 4 pintu (Pendaftaran PPIT lama + 3 formulir kabinet).
 // Isi tiap tab dibangun bertahap — lihat docs/Formulir & Oprek.md.
 export default async function ConsoleFormsPage() {
-  const access = await requireFormsHub();
+  // Hub terbuka untuk yang punya salah satu tab Formulir ATAU boleh membuat Formulir Kustom
+  // (pengurus kabinet / panitia): mereka hanya melihat kartu yang menjadi haknya.
+  const access = await getFormsAccess();
+  if (!access) redirect("/login");
+  const customForms = await getSurveyAccess();
+  if (!access.canPemilu && !access.canBphTab && !access.canKepanitiaanTab && !customForms?.canCreate) {
+    redirect("/console");
+  }
 
   const [formCounts, membershipCountRows] = await Promise.all([
     db.select({ kind: forms.kind, n: count() }).from(forms).groupBy(forms.kind),
@@ -28,7 +37,8 @@ export default async function ConsoleFormsPage() {
       <div className="mb-8">
         <h1 className="text-headline-md sm:text-headline-lg text-on-background">Formulir</h1>
         <p className="text-body-md text-on-surface-variant mt-1">
-          Formulir internal kabinet PPIT: pendaftaran anggota, Pemilu, Oprek BPH Acara, dan Oprek Kepanitiaan.
+          Formulir internal kabinet PPIT: pendaftaran anggota, Pemilu, Oprek BPH Acara, dan Oprek Kepanitiaan, plus
+          Formulir Kustom untuk riset pasar dan kuesioner.
         </p>
       </div>
 
@@ -85,6 +95,20 @@ export default async function ConsoleFormsPage() {
             <span className={countClass}>
               {countOf("oprek_kadiv")} Oprek Kadiv · {countOf("oprek_kepanitiaan")} Oprek anggota
             </span>
+          </Link>
+        )}
+
+        {customForms?.canCreate && (
+          <Link href="/formulir" className={cardClass}>
+            <span className="flex items-center gap-2 text-on-background">
+              <ListChecks size={18} className="text-primary-container" />
+              <span className="text-headline-md">Formulir Kustom</span>
+            </span>
+            <span className="text-body-md text-on-surface-variant">
+              Buat formulir sendiri untuk riset pasar, kuesioner, atau masukan. Hasilnya grafik, tabel, Google Sheets,
+              dan unduhan CSV/Excel. Untuk pengurus kabinet dan panitia acara.
+            </span>
+            <span className={countClass}>Buka Formulir Kustom</span>
           </Link>
         )}
       </div>
