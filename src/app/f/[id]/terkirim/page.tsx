@@ -67,9 +67,9 @@ export default async function SurveySubmittedPage({
               Satu langkah lagi: isi sensus PPIT Nanjing
             </h2>
             <p className="text-body-md text-on-surface-variant mb-5">
-              Kamu mengisi kota Nanjing, tapi belum tercatat di sensus. Sensus membantu pengurus mengenal mahasiswa
-              Indonesia di Nanjing, dan dibutuhkan untuk mendaftar acara tertentu, meminjam inventaris, dan melamar
-              lowongan lewat website. Cukup beberapa menit.
+              Kamu mengisi kota Nanjing. Kalau kamu mahasiswa Indonesia di Nanjing, kamu belum tercatat di sensus.
+              Sensus membantu pengurus mengenal mahasiswa Indonesia di Nanjing, dan dibutuhkan untuk mendaftar acara
+              tertentu, meminjam inventaris, dan melamar lowongan lewat website. Cukup beberapa menit.
             </p>
             {userId ? (
               <Link
