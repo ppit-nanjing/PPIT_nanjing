@@ -8,8 +8,8 @@ import { getCabinetMembership, getCoordinatorEventIds, getFormsAccess, type Form
 // Gerbang server modul Formulir. Formulir dibuat dan dikelola dari /formulir, BUKAN
 // dari /console: layout konsol hanya menerima admin/koordinator/panitia, dan
 // dashboard konsol menampilkan data (pesan masukan, nama pendaftar) yang tidak
-// untuk semua anggota kabinet. Siapa yang boleh apa:
-// - MEMBUAT: anggota kabinet (formulir kabinet, atau terikat acara) dan panitia
+// untuk semua pengurus kabinet. Siapa yang boleh apa:
+// - MEMBUAT: pengurus kabinet (formulir kabinet, atau terikat acara) dan panitia
 //   acara (hanya untuk acaranya). Pemegang full/modul forms bebas.
 // - MENGELOLA + MELIHAT HASIL: pembuat yang masih berhak, BPH Panitia acara
 //   terikatnya, pemegang full/modul forms (canManageForm di form-access.ts).
@@ -50,7 +50,7 @@ export type SurveyEventOption = { id: string; title: string };
 
 /**
  * Acara yang boleh dipasangi formulir oleh user ini. Pemegang full/modul forms:
- * semua acara. Lainnya: acara tempat dia panitia; anggota kabinet juga acara
+ * semua acara. Lainnya: acara tempat dia panitia; pengurus kabinet juga acara
  * yang dia buat atau yang divisi penanggung jawabnya divisinya (pola yang sama
  * dengan getCoordinatorEventIds). Acara di Sampah tidak pernah masuk.
  */
@@ -63,7 +63,7 @@ export async function listSurveyEvents(sa: SurveyAccess): Promise<SurveyEventOpt
     scope = undefined;
   } else {
     // Acara yang dibuat atau yang divisi penanggung jawabnya divisinya: aturan yang sama dengan
-    // pembuat Oprek BPH (getCoordinatorEventIds), hanya untuk anggota kabinet.
+    // pembuat Oprek BPH (getCoordinatorEventIds), hanya untuk pengurus kabinet.
     const coordinated = sa.isCabinetMember ? ((await getCoordinatorEventIds(access)) ?? []) : [];
     const ids = [...new Set([...access.committeeEventIds, ...coordinated])];
     scope = ids.length > 0 ? inArray(events.id, ids) : sql`false`;

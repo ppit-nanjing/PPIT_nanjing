@@ -138,7 +138,7 @@ export async function canManageForm(
 
 /**
  * Pembuat formulir masih berhak mengelola formulirnya selama masih berhak MEMBUAT:
- * anggota kabinet, atau panitia acara tempat formulir itu terikat. Orang yang sudah
+ * pengurus kabinet, atau panitia acara tempat formulir itu terikat. Orang yang sudah
  * keluar dari keduanya tidak otomatis memegang hasil formulir (yang bisa memuat
  * biodata) selamanya. `isCabinetMember` dihitung pemanggil supaya fungsi ini murni.
  */

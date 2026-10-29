@@ -70,7 +70,7 @@ const GROUPS: { title: string; items: NavItem[] }[] = [
       { href: "/console/inventory", label: "Inventaris", icon: Package, module: "inventory" },
       { href: "/console/membership", label: "Pendaftaran", icon: UserPlus, module: "membership" },
       { href: "/console/forms", label: "Formulir", icon: FileText, module: "forms", bphCommitteeToo: true, coordinatorToo: true },
-      // Formulir dikelola di /formulir (di luar konsol, supaya anggota kabinet biasa juga bisa memakainya);
+      // Formulir dikelola di /formulir (di luar konsol, supaya pengurus kabinet biasa juga bisa memakainya);
       // halaman itu menyaring haknya sendiri, jadi menunya tampil untuk semua yang masuk konsol.
       { href: "/formulir", label: "Formulir Kustom", icon: ListChecks, module: null, needsCustomForms: true },
       { href: "/console/jobs", label: "Lowongan", icon: Briefcase, module: "career" },
