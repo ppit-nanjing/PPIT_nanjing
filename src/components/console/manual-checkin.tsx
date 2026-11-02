@@ -1,13 +1,15 @@
 "use client";
 
 import { useState, useTransition, useRef } from "react";
-import { Search, UserRound, CheckCircle2, BadgeCheck } from "lucide-react";
-import { toast } from "sonner";
+import { useRouter } from "next/navigation";
+import { Search, UserRound, CheckCircle2, BadgeCheck, FlaskConical, CircleAlert } from "lucide-react";
 import {
   searchCheckInCandidates,
   checkInByUserId,
   checkInCommitteeByUserId,
 } from "@/app/actions/admin-events";
+import { CHECK_IN_BLOCK_DOOR_MESSAGE, CHECK_IN_BLOCK_LABEL } from "@/lib/event-checkin";
+import { UndoCheckInButton } from "@/components/console/undo-checkin-button";
 
 type Candidate = Awaited<ReturnType<typeof searchCheckInCandidates>>[number];
 
@@ -15,8 +17,17 @@ type Candidate = Awaited<ReturnType<typeof searchCheckInCandidates>>[number];
 // QR, atau QR belum sempat terbit. Validasi persis sama dengan jalur scan QR
 // (lihat checkInByUserId/checkInCommitteeByUserId di admin-events.ts) - cuma
 // jalur pencariannya beda, bukan jalur aksesnya.
+//
+// Umpan balik tampil di dalam kartu ini (bukan toast): halaman scan berada di
+// luar /console, jadi tidak ada <Toaster/> di sana. Toast dulu hilang diam-diam,
+// dan check-in peserta yang belum lunas gagal tanpa terlihat.
 type KindFilter = "all" | "participant" | "committee";
 type StatusFilter = "all" | "in" | "out";
+type Feedback = {
+  tone: "ok" | "practice" | "error";
+  text: string;
+  undo?: { kind: Candidate["kind"]; userId: string; name: string };
+};
 
 const selectCls =
   "bg-soft-gray rounded-md px-3 py-2 text-body-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-container";
@@ -27,8 +38,10 @@ export function ManualCheckIn({ eventId, practice = false }: { eventId: string; 
   const [kindFilter, setKindFilter] = useState<KindFilter>("all");
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
   const [checkingKey, setCheckingKey] = useState<string | null>(null);
+  const [feedback, setFeedback] = useState<Feedback | null>(null);
   const [isPending, startTransition] = useTransition();
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const router = useRouter();
 
   const filteredResults = results.filter((r) => {
     if (kindFilter !== "all" && r.kind !== kindFilter) return false;
@@ -52,30 +65,43 @@ export function ManualCheckIn({ eventId, practice = false }: { eventId: string; 
     }, 300);
   }
 
+  function setAttended(c: Candidate, alreadyAttended: boolean) {
+    setResults((prev) => prev.map((r) => (r.kind === c.kind && r.userId === c.userId ? { ...r, alreadyAttended } : r)));
+  }
+
   function handleCheckIn(c: Candidate) {
     const key = `${c.kind}:${c.userId}`;
     setCheckingKey(key);
+    setFeedback(null);
     startTransition(async () => {
       const action = c.kind === "committee" ? checkInCommitteeByUserId(eventId, c.userId, practice) : checkInByUserId(eventId, c.userId, practice);
       const res = await action;
       setCheckingKey(null);
       if (!res.ok) {
-        toast.error(
-          res.reason === "closed"
-            ? "Check-in sudah ditutup."
-            : res.reason
-              ? "Tidak bisa check-in — periksa status pembayaran/pendaftaran."
-              : "Tidak ditemukan."
-        );
+        const reason = "reason" in res ? res.reason : null;
+        setFeedback({
+          tone: "error",
+          text:
+            reason === "closed"
+              ? `${c.name}: check-in sudah ditutup.`
+              : reason === "unpaid" || reason === "cancelled"
+                ? `${c.name}: ${CHECK_IN_BLOCK_DOOR_MESSAGE[reason]}`
+                : `${c.name}: tidak ditemukan, coba cari ulang namanya.`,
+        });
         return;
       }
       const kelompokSuffix = c.kelompok ? ` — Kelompok ${c.kelompok.kelompok} (${c.kelompok.warna})` : "";
       if ("dryRun" in res && res.dryRun) {
-        toast.success(`${c.name} — valid (mode latihan, tidak dicatat).${kelompokSuffix}`);
+        setFeedback({ tone: "practice", text: `${c.name} — valid (mode latihan, tidak dicatat).${kelompokSuffix}` });
         return;
       }
-      toast.success((res.already ? `${c.name} sudah check-in sebelumnya.` : `${c.name} berhasil check-in.`) + kelompokSuffix);
-      setResults((prev) => prev.map((r) => (r.kind === c.kind && r.userId === c.userId ? { ...r, alreadyAttended: true } : r)));
+      setFeedback({
+        tone: "ok",
+        text: (res.already ? `${c.name} sudah check-in sebelumnya.` : `${c.name} berhasil check-in.`) + kelompokSuffix,
+        undo: res.already ? undefined : { kind: c.kind, userId: c.userId, name: c.name },
+      });
+      setAttended(c, true);
+      router.refresh(); // hitungan hadir di atas halaman ikut naik
     });
   }
 
@@ -95,6 +121,43 @@ export function ManualCheckIn({ eventId, practice = false }: { eventId: string; 
           />
         </div>
       </label>
+
+      {feedback && (
+        <div
+          role={feedback.tone === "error" ? "alert" : "status"}
+          className={`flex flex-col gap-2 rounded-md border p-3 sm:flex-row sm:items-center sm:justify-between ${
+            feedback.tone === "error"
+              ? "border-error bg-error-container text-on-error-container"
+              : feedback.tone === "practice"
+                ? "border-amber-300 bg-amber-100 text-amber-900"
+                : "border-outline-variant bg-surface-container-low text-on-background"
+          }`}
+        >
+          <p className="flex items-start gap-2 text-body-md">
+            {feedback.tone === "error" ? (
+              <CircleAlert size={18} className="mt-0.5 shrink-0" aria-hidden="true" />
+            ) : feedback.tone === "practice" ? (
+              <FlaskConical size={18} className="mt-0.5 shrink-0" aria-hidden="true" />
+            ) : (
+              <CheckCircle2 size={18} className="mt-0.5 shrink-0 text-primary-container" aria-hidden="true" />
+            )}
+            <span>{feedback.text}</span>
+          </p>
+          {feedback.undo && (
+            <UndoCheckInButton
+              eventId={eventId}
+              kind={feedback.undo.kind}
+              userId={feedback.undo.userId}
+              onUndone={() => {
+                const u = feedback.undo!;
+                setAttended({ kind: u.kind, userId: u.userId } as Candidate, false);
+                setFeedback({ tone: "ok", text: `Check-in ${u.name} dibatalkan.` });
+                router.refresh();
+              }}
+            />
+          )}
+        </div>
+      )}
 
       {query.trim().length >= 2 && (
         <>
@@ -140,18 +203,25 @@ export function ManualCheckIn({ eventId, practice = false }: { eventId: string; 
                       {c.kind === "committee" ? (c.label ?? "Panitia") : "Peserta"}
                       {c.kelompok && ` · Kelompok ${c.kelompok.kelompok} (${c.kelompok.warna})`}
                     </p>
+                    {c.blocked && !c.alreadyAttended && (
+                      <p className="mt-0.5 text-body-sm text-on-surface-variant">{CHECK_IN_BLOCK_DOOR_MESSAGE[c.blocked]}</p>
+                    )}
                   </div>
                 </div>
                 {c.alreadyAttended ? (
                   <span className="shrink-0 inline-flex items-center gap-1 text-label-caps uppercase tracking-wide text-primary-container">
                     <CheckCircle2 size={14} aria-hidden /> Hadir
                   </span>
+                ) : c.blocked ? (
+                  <span className="shrink-0 rounded-md border border-error px-2.5 py-1.5 text-label-caps uppercase tracking-wide text-error">
+                    {CHECK_IN_BLOCK_LABEL[c.blocked]}
+                  </span>
                 ) : (
                   <button
                     type="button"
                     onClick={() => handleCheckIn(c)}
                     disabled={checkingKey === key}
-                    className="shrink-0 bg-primary-container text-on-primary text-label-caps uppercase tracking-wide px-3 py-1.5 rounded-md hover:bg-primary transition-colors disabled:opacity-50"
+                    className="shrink-0 min-h-11 bg-primary-container text-on-primary text-label-caps uppercase tracking-wide px-4 py-2 rounded-md hover:bg-primary transition-colors disabled:opacity-50"
                   >
                     {checkingKey === key ? "..." : "Check-in"}
                   </button>

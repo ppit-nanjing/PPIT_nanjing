@@ -2,7 +2,7 @@
 
 import { useMemo, useState, useTransition } from "react";
 import { CheckCircle2, TriangleAlert, Search, Ban, Undo2, Rows3, Table2 } from "lucide-react";
-import { checkInRegistration, setRegistrationCancelled } from "@/app/actions/admin-events";
+import { checkInRegistration, setRegistrationCancelled, undoCheckInRegistration } from "@/app/actions/admin-events";
 import { openRegistrationsInSheets } from "@/app/actions/export-sheets";
 import { ConfirmButton } from "@/components/console/confirm-button";
 import { toast } from "sonner";
@@ -136,8 +136,38 @@ export function RegistrationList({
     toast.success(cancelled ? "Pendaftaran dibatalkan." : "Pendaftaran dipulihkan.");
   }
 
+  // Koreksi salah check-in: untuk yang berhak membatalkan pendaftaran (BPH panitia + BPH Kabinet).
+  // Petugas pintu membatalkan check-in buatannya sendiri langsung dari halaman scan (10 menit).
+  async function undoCheckInOf(registrationId: string) {
+    const res = await undoCheckInRegistration(registrationId, eventId);
+    if (!res.ok) {
+      throw new Error(
+        res.reason === "forbidden"
+          ? "Kamu tidak punya izin membatalkan check-in ini."
+          : res.reason === "expired"
+            ? "Sudah lewat batas waktu pembatalan. Minta BPH panitia yang membatalkan."
+            : "Check-in ini sudah tidak tercatat. Muat ulang halaman.",
+      );
+    }
+  }
+
   const CheckInButton = ({ r }: { r: Registration }) => {
-    if (r.status === "attended") return null;
+    if (r.status === "attended") {
+      if (!canCancel) return null;
+      return (
+        <ConfirmButton
+          onConfirm={() => undoCheckInOf(r.id)}
+          title="Batalkan check-in?"
+          message={`${r.userName ?? "Peserta ini"} tidak lagi tercatat hadir. Statusnya kembali ke terkonfirmasi dan pembatalan ini tercatat di Riwayat Audit.`}
+          confirmLabel="Ya, batalkan"
+          danger={false}
+          successMessage="Check-in dibatalkan."
+          className="inline-flex items-center gap-1 text-label-caps text-on-surface-variant hover:text-on-background"
+        >
+          <Undo2 size={13} aria-hidden /> Batalkan check-in
+        </ConfirmButton>
+      );
+    }
     if (r.checkInBlocked) {
       return (
         <span
@@ -246,7 +276,13 @@ export function RegistrationList({
 
       <CollapsibleRecordList
         records={filtered}
-        countLabel={(n) => (isFiltered ? `${n} dari ${registrations.length} pendaftar` : `${n} pendaftar`)}
+        // Header halaman menghitung yang aktif saja; daftar ini memuat semua baris, jadi sebut yang
+        // dibatalkan supaya dua angka itu tidak tampak saling bertentangan (44 vs 48).
+        countLabel={(n) => {
+          const cancelled = filtered.filter((r) => r.status === "cancelled").length;
+          const base = isFiltered ? `${n} dari ${registrations.length} pendaftar` : `${n} pendaftar`;
+          return cancelled > 0 ? `${base} (${cancelled} dibatalkan)` : base;
+        }}
         emptyText={isFiltered ? "Tidak ada pendaftar yang cocok dengan filter." : "Belum ada yang mendaftar."}
         banner={
           error ? (
@@ -269,7 +305,7 @@ export function RegistrationList({
             : [];
           return (
             <>
-              <div className="flex flex-col gap-0.5 text-label-caps text-on-surface-variant">
+              <div className="flex flex-col gap-0.5 text-body-sm text-on-surface-variant">
                 {detail && r.userEmail && (
                   <span className="break-all normal-case">{r.userEmail}</span>
                 )}
@@ -304,7 +340,7 @@ export function RegistrationList({
                   <span>
                     Daftar:{" "}
                     <span className="text-on-background normal-case">
-                      {new Date(r.registeredAt).toLocaleDateString("id-ID", { dateStyle: "medium" })}
+                      {new Date(r.registeredAt).toLocaleDateString("id-ID", { timeZone: "Asia/Shanghai", dateStyle: "medium" })}
                     </span>
                   </span>
                 )}
@@ -312,7 +348,7 @@ export function RegistrationList({
                   <span>
                     Check-in:{" "}
                     <span className="text-on-background normal-case">
-                      {new Date(r.checkedInAt).toLocaleString("id-ID", { dateStyle: "medium", timeStyle: "short" })}
+                      {new Date(r.checkedInAt).toLocaleString("id-ID", { timeZone: "Asia/Shanghai", dateStyle: "medium", timeStyle: "short" })}
                       {r.checkedInByName && ` · oleh ${r.checkedInByName}`}
                     </span>
                   </span>

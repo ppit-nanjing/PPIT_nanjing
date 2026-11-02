@@ -1,14 +1,17 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { CheckCircle2, XCircle, UserRound, ScanLine, BadgeCheck } from "lucide-react";
+import { CheckCircle2, XCircle, UserRound, ScanLine, BadgeCheck, Undo2 } from "lucide-react";
 import { checkInByToken, checkInCommitteeByToken } from "@/app/actions/admin-events";
+import { CHECK_IN_BLOCK_DOOR_MESSAGE } from "@/lib/event-checkin";
+import { UndoCheckInButton } from "@/components/console/undo-checkin-button";
 
-type Status = "pending" | "done" | "invalid";
+type Status = "pending" | "done" | "invalid" | "undone";
 
+// Petugas pintu belum tentu punya akses panel Verifikasi Pembayaran, jadi pesannya
+// menyebut apa yang dilakukan di tempat (lihat CHECK_IN_BLOCK_DOOR_MESSAGE).
 const BLOCK_MESSAGE: Record<string, string> = {
-  cancelled: "Pendaftaran ini dibatalkan.",
-  unpaid: "Pembayaran belum terverifikasi — verifikasi dulu di halaman acara.",
+  ...CHECK_IN_BLOCK_DOOR_MESSAGE,
   closed: "Acara sudah berakhir — pintu check-in ditutup otomatis.",
 };
 
@@ -37,6 +40,7 @@ export function ScanCheckIn({
   token,
   eventId,
   kind,
+  userId,
   name,
   email,
   label,
@@ -47,6 +51,8 @@ export function ScanCheckIn({
   token: string;
   eventId: string;
   kind: "participant" | "committee";
+  // Untuk "Batalkan check-in"; null kalau tiketnya tidak terikat akun.
+  userId: string | null;
   name: string | null;
   email: string | null;
   label: string | null;
@@ -85,16 +91,38 @@ export function ScanCheckIn({
     };
   }, [token, eventId, kind, practice]);
 
+  if (status === "undone") {
+    return (
+      <div role="status" className="mb-8 rounded-xl border border-outline-variant bg-surface-container-lowest p-6 flex flex-col items-center text-center">
+        <Undo2 className="mb-3 text-on-surface-variant" size={40} aria-hidden="true" />
+        <p className="text-body-lg text-on-background font-semibold">Check-in dibatalkan</p>
+        <p className="mt-1 text-body-md text-on-surface-variant">{name ?? "(tanpa nama)"} belum tercatat hadir.</p>
+        <a
+          href={scanPath}
+          className="mt-5 inline-flex items-center gap-2 bg-primary-container text-on-primary text-label-caps uppercase tracking-wide px-6 py-3 rounded-md hover:bg-primary transition-colors"
+        >
+          <ScanLine size={16} aria-hidden="true" /> Scan Berikutnya
+        </a>
+      </div>
+    );
+  }
+
   if (status === "invalid") {
     return (
-      <div className="mb-8 rounded-xl border border-red-300 bg-surface-container-lowest p-6 flex flex-col items-center text-center">
-        <XCircle className="text-red-500 mb-3" size={40} />
+      <div role="alert" className="mb-8 rounded-xl border border-error bg-surface-container-lowest p-6 flex flex-col items-center text-center">
+        <XCircle className="text-error mb-3" size={40} aria-hidden="true" />
         <p className="text-body-lg text-on-background font-semibold">
           {blockReason && BLOCK_MESSAGE[blockReason] ? "Tidak bisa check-in" : "Token tidak valid"}
         </p>
         {blockReason && BLOCK_MESSAGE[blockReason] && (
           <p className="mt-1 text-body-md text-on-surface-variant">{BLOCK_MESSAGE[blockReason]}</p>
         )}
+        <a
+          href={scanPath}
+          className="mt-5 inline-flex items-center gap-2 border border-outline-variant text-on-surface-variant text-label-caps uppercase tracking-wide px-6 py-3 rounded-md hover:bg-surface-container-low transition-colors"
+        >
+          <ScanLine size={16} aria-hidden="true" /> Scan Berikutnya
+        </a>
       </div>
     );
   }
@@ -140,12 +168,12 @@ export function ScanCheckIn({
         <UserRound size={16} />
         <span className="text-body-md">{name ?? "(tanpa nama)"}</span>
       </div>
-      {email && <p className="text-label-caps text-on-surface-variant">{email}</p>}
+      {email && <p className="text-body-sm text-on-surface-variant">{email}</p>}
       {kelompok && (
         <div className="mt-3 inline-flex items-center gap-2 rounded-full border border-outline-variant bg-background px-4 py-2">
           <span
             className="inline-block w-5 h-5 rounded-full border border-outline-variant shrink-0"
-            style={{ backgroundColor: KELOMPOK_SWATCH[kelompok.warna.toLowerCase()] ?? "#cbd5e1" }}
+            style={{ backgroundColor: KELOMPOK_SWATCH[kelompok.warna.toLowerCase()] ?? "var(--color-outline-variant)" }}
             aria-hidden="true"
           />
           <span className="text-body-md font-semibold text-on-background">
@@ -159,6 +187,11 @@ export function ScanCheckIn({
       >
         <ScanLine size={16} /> Scan Berikutnya
       </a>
+      {!practice && !already && userId && (
+        <div className="mt-3">
+          <UndoCheckInButton eventId={eventId} kind={kind} userId={userId} onUndone={() => setStatus("undone")} />
+        </div>
+      )}
     </div>
   );
 }
