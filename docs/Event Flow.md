@@ -65,7 +65,7 @@ Acara seperti Fun Hike hanya menerima pendaftar yang sensusnya lengkap. Karena d
 
 ## Pertanyaan kustom
 
-Admin bisa menambah pertanyaan per acara (`event_questions`): teks, textarea, select, radio, multiselect, `file` (unggah satu berkas). Jawaban di `event_registrations.answers_json`, tampil ke admin di daftar pendaftar & ekspor. Di console ada **Pratinjau form pendaftaran** (details di section Pertanyaan Pendaftaran) yang merender pertanyaan dengan komponen field yang sama dengan form publik (`src/components/events/event-question-fields.tsx`); semua kontrol nonaktif dan tidak ada data yang terkirim/tersimpan.
+Admin bisa menambah pertanyaan per acara (`event_questions`): teks, textarea, select, radio, multiselect, `file` (unggah satu berkas). **Pertanyaan teks yang labelnya persis sama dengan isian sensus terisi otomatis** dari sensus pendaftar yang sudah lengkap (`src/lib/event-question-prefill.ts`): "Nama Lengkap"/"Nama", "Asal Kampus"/"Universitas", "Jurusan"/"Program Studi", "Angkatan"/"Tahun Masuk", "Kota Studi". Pencocokan label persis (bukan sebagian), dan hanya nilai awal: pendaftar masih bisa mengubahnya. Paspor, telepon, dan WeChat sengaja tidak ikut karena jawaban kustom terlihat seluruh panitia; untuk itu pakai biodata lengkap (`requires_biodata`). Jawaban di `event_registrations.answers_json`, tampil ke admin di daftar pendaftar & ekspor. Di console ada **Pratinjau form pendaftaran** (details di section Pertanyaan Pendaftaran) yang merender pertanyaan dengan komponen field yang sama dengan form publik (`src/components/events/event-question-fields.tsx`); semua kontrol nonaktif dan tidak ada data yang terkirim/tersimpan.
 
 ## Mode Latihan (uji form pendaftaran)
 

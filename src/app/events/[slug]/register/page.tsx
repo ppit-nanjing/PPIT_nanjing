@@ -16,6 +16,7 @@ import {
 } from "@/db/schema";
 import { NON_STUDENT_BRANCH } from "@/lib/membership-status";
 import { hasCompletedSensus } from "@/lib/sensus-gate";
+import { sensusKeyForLabel } from "@/lib/event-question-prefill";
 import { getEventAccess } from "@/lib/event-access";
 import { getEventSeats } from "@/lib/event-capacity";
 import { feeTierAt, amountForTier, hasEarlyBirdDiscount } from "@/lib/event-fee";
@@ -111,6 +112,25 @@ export default async function EventRegisterPage({
     .where(eq(eventQuestions.eventId, event.id))
     .orderBy(eventQuestions.orderIndex, eventQuestions.id);
 
+  // Pertanyaan teks yang labelnya sama dengan isian sensus (mis. "Nama Lengkap", "Asal Kampus")
+  // terisi otomatis dari sensus yang lengkap; tetap bisa diubah.
+  const questionDefaults: Record<string, string> = {};
+  const prefillKeys = questions.flatMap((q) => {
+    const key = q.type === "text" ? sensusKeyForLabel(q.label) : null;
+    return key ? [{ id: q.id, key }] : [];
+  });
+  if (sensusComplete && prefillKeys.length > 0) {
+    const [sp] = await db.select().from(sensusProfiles).where(eq(sensusProfiles.userId, userId));
+    const values = {
+      fullName: sp?.fullName ?? "",
+      university: sp?.university ?? "",
+      major: sp?.major ?? "",
+      entryYear: sp?.entryYear != null ? String(sp.entryYear) : "",
+      branch: sp?.branch ?? "",
+    };
+    for (const { id, key } of prefillKeys) if (values[key]) questionDefaults[id] = values[key];
+  }
+
   let biodata: { sensusComplete: boolean; defaults: BiodataDefaults; cityOptions: string[] } | null = null;
   if (event.requiresBiodata) {
     const [profile] = await db.select().from(sensusProfiles).where(eq(sensusProfiles.userId, userId));
@@ -182,7 +202,7 @@ export default async function EventRegisterPage({
               <span className="text-xs text-on-surface-variant">{t("events.branchHint")}</span>
             </label>
           )}
-          <EventQuestionFields questions={questions} fileHint={t("events.fileHint")} />
+          <EventQuestionFields questions={questions} fileHint={t("events.fileHint")} defaults={questionDefaults} />
         </>
       ),
     });
