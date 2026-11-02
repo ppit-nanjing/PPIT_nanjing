@@ -16,7 +16,7 @@ import {
 } from "@/db/schema";
 import { NON_STUDENT_BRANCH } from "@/lib/membership-status";
 import { hasCompletedSensus } from "@/lib/sensus-gate";
-import { sensusKeyForLabel } from "@/lib/event-question-prefill";
+import { handleFromLink, profileKeyForLabel, sensusKeyForLabel } from "@/lib/event-question-prefill";
 import { getEventAccess } from "@/lib/event-access";
 import { getEventSeats } from "@/lib/event-capacity";
 import { feeTierAt, amountForTier, hasEarlyBirdDiscount } from "@/lib/event-fee";
@@ -129,6 +129,28 @@ export default async function EventRegisterPage({
       branch: sp?.branch ?? "",
     };
     for (const { id, key } of prefillKeys) if (values[key]) questionDefaults[id] = values[key];
+  }
+  // Tautan sosial di profil akun (LinkedIn, Instagram, GitHub, Spotify, TikTok), tanpa syarat sensus.
+  const profileKeys = questions.flatMap((q) => {
+    const m = q.type === "text" ? profileKeyForLabel(q.label) : null;
+    return m ? [{ id: q.id, ...m }] : [];
+  });
+  if (profileKeys.length > 0) {
+    const [u] = await db
+      .select({
+        linkedin: users.linkedinUrl,
+        instagram: users.instagramUrl,
+        github: users.githubUrl,
+        spotify: users.spotifyUrl,
+        tiktok: users.tiktokUrl,
+      })
+      .from(users)
+      .where(eq(users.id, userId));
+    for (const { id, key, handle } of profileKeys) {
+      const raw = u?.[key]?.trim();
+      // Nama pengguna hanya diambil dari URL untuk platform yang bentuknya /<nama>.
+      if (raw) questionDefaults[id] = handle && (key === "instagram" || key === "github" || key === "tiktok") ? handleFromLink(raw) : raw;
+    }
   }
 
   let biodata: { sensusComplete: boolean; defaults: BiodataDefaults; cityOptions: string[] } | null = null;
