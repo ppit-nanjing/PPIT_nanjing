@@ -154,11 +154,12 @@ export const NOTIFICATION_TEMPLATES: NotificationTemplateDef[] = [
     key: "borrow_rejected",
     group: "Peminjaman",
     label: "Peminjaman ditolak",
-    trigger: "Dikirim saat admin menolak permintaan peminjaman barang.",
-    variables: [],
+    trigger: "Dikirim saat admin menolak permintaan peminjaman barang. Admin wajib menulis alasannya.",
+    // reasonLine = " Alasan: ..." (kosong kalau tidak ada); jangan dihapus dari isi template.
+    variables: ["reasonLine"],
     defaultSubject: "Permintaan peminjaman ditolak",
     defaultBody:
-      "Maaf, permintaan peminjaman barang kamu ditolak. Cek detail di riwayat pengajuan.",
+      "Maaf, permintaan peminjaman barang kamu ditolak.{{reasonLine}} Cek detail di riwayat pengajuan.",
   },
   {
     key: "borrow_overdue",

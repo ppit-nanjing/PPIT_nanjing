@@ -4,6 +4,7 @@ import { useState, useTransition } from "react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { Pencil, KeyRound, Trash2 } from "lucide-react";
+import { toast } from "sonner";
 import {
   updateUserRole,
   assignUserDepartment,
@@ -119,7 +120,7 @@ export function UserTable({
           <thead className="sticky top-0 z-10 bg-surface-container-low text-label-caps uppercase tracking-wide text-on-surface-variant">
             <tr>
               <th className="text-left px-3 py-2">Pengguna</th>
-              <th className="text-left px-3 py-2">Role / Ruang Lingkup</th>
+              <th className="text-left px-3 py-2">Divisi &amp; peran</th>
               <th className="text-left px-3 py-2">Status</th>
               <th className="text-right px-3 py-2">Aksi</th>
             </tr>
@@ -187,7 +188,86 @@ function UserRow({
   const [editing, setEditing] = useState(false);
   const [name, setName] = useState(user.name ?? "");
   const [email, setEmail] = useState(user.email);
-  const [, startTransition] = useTransition();
+  const [pending, startTransition] = useTransition();
+
+  // Divisi & status hanya DIAJUKAN di sini; baru berlaku setelah "Terapkan".
+  // Dulu tiap perubahan <select> langsung tersimpan, sehingga satu tekan panah
+  // di keyboard sudah memindahkan divisi (dan menghapus jabatan kepala unit).
+  const deptDirty = departmentId !== (user.departmentId ?? "");
+  const statusDirty = status !== user.status;
+  const dirty = deptDirty || statusDirty;
+  const summary = [
+    deptDirty ? `Divisi: ${scopeLabel(byId.get(user.departmentId ?? ""), byId)} → ${scopeLabel(byId.get(departmentId), byId)}` : null,
+    statusDirty ? `Status: ${STATUS_LABEL[user.status]} → ${STATUS_LABEL[status]}` : null,
+  ].filter((x): x is string => x !== null);
+  const label = user.name ?? user.email;
+
+  function discard() {
+    setDepartmentId(user.departmentId ?? "");
+    setStatus(user.status);
+  }
+  async function applyChanges() {
+    if (deptDirty) await assignUserDepartment(user.id, departmentId, user.position);
+    if (statusDirty) await updateUserStatus(user.id, status);
+    router.refresh();
+  }
+  function apply() {
+    startTransition(async () => {
+      try {
+        await applyChanges();
+        toast.success(`Perubahan untuk ${label} diterapkan.`);
+      } catch {
+        discard();
+        toast.error(`Perubahan untuk ${label} gagal diterapkan. Muat ulang halaman lalu coba lagi.`);
+      }
+    });
+  }
+  // Menonaktifkan / menangguhkan mengunci orangnya keluar: minta konfirmasi tersendiri.
+  const lockout = statusDirty && status !== "active";
+  const pendingBar = dirty ? (
+    <div
+      role="group"
+      aria-label={`Perubahan belum diterapkan untuk ${label}`}
+      className="flex flex-wrap items-center gap-x-4 gap-y-2 rounded-md border border-tertiary-container/50 bg-surface-container-low px-3 py-2 text-body-sm text-on-background"
+    >
+      <p className="min-w-0 flex-1">
+        <span className="font-semibold">Belum diterapkan.</span> {summary.join(" · ")}
+        {deptDirty && " Mengubah divisi mengubah modul konsol yang bisa dibuka orang ini."}
+      </p>
+      <div className="flex gap-2">
+        {lockout ? (
+          <ConfirmButton
+            onConfirm={applyChanges}
+            title={`${status === "suspended" ? "Tangguhkan" : "Nonaktifkan"} ${label}?`}
+            message={`${label} tidak akan bisa masuk sampai statusnya dikembalikan ke Aktif.`}
+            confirmLabel="Ya, terapkan"
+            danger={status === "suspended"}
+            successMessage={`Perubahan untuk ${label} diterapkan.`}
+            className="min-h-9 rounded-md bg-primary-container px-3 text-label-caps uppercase tracking-wide text-on-primary transition-colors hover:bg-primary"
+          >
+            Terapkan
+          </ConfirmButton>
+        ) : (
+          <button
+            type="button"
+            onClick={apply}
+            disabled={pending}
+            className="min-h-9 rounded-md bg-primary-container px-3 text-label-caps uppercase tracking-wide text-on-primary transition-colors hover:bg-primary disabled:opacity-50"
+          >
+            {pending ? "Menerapkan..." : "Terapkan"}
+          </button>
+        )}
+        <button
+          type="button"
+          onClick={discard}
+          disabled={pending}
+          className="min-h-9 rounded-md border border-outline-variant px-3 text-label-caps uppercase tracking-wide text-on-surface-variant transition-colors hover:text-on-background disabled:opacity-50"
+        >
+          Batalkan
+        </button>
+      </div>
+    </div>
+  ) : null;
 
   // Options: assignable departments, plus the user's current one if not assignable.
   const options = departments.some((d) => d.id === user.departmentId)
@@ -327,19 +407,16 @@ function UserRow({
           {avatar}
           <div className="min-w-0">
             <p className="font-medium text-on-background truncate">{user.name ?? "(tanpa nama)"}</p>
-            <p className="text-label-caps text-on-surface-variant truncate">{user.email}</p>
+            <p className="text-body-sm text-on-surface-variant truncate">{user.email}</p>
           </div>
         </div>
 
         <div className="flex flex-col gap-1">
-          <span className={labelCls}>Role / Ruang Lingkup</span>
+          <span className={labelCls}>Divisi</span>
           <Select
             value={departmentId}
-            onChange={(e) => {
-              setDepartmentId(e.target.value);
-              startTransition(() => assignUserDepartment(user.id, e.target.value, user.position));
-            }}
-            className={selectClsFull}
+            onChange={(e) => setDepartmentId(e.target.value)}
+            className={`${selectClsFull}${deptDirty ? " ring-2 ring-tertiary-container" : ""}`}
             aria-label="Divisi"
           >
             <option value="">— Belum ada —</option>
@@ -349,19 +426,15 @@ function UserRow({
               </option>
             ))}
           </Select>
-          {roleName && <p className={labelCls}>Akses: {roleName}</p>}
+          {roleName && <p className="text-body-sm text-on-surface-variant">Peran: {roleName}</p>}
         </div>
 
         <div className="flex flex-col gap-1">
           <span className={labelCls}>Status</span>
           <Select
             value={status}
-            onChange={(e) => {
-              const next = e.target.value as Row["status"];
-              setStatus(next);
-              startTransition(() => updateUserStatus(user.id, next));
-            }}
-            className={selectClsFull}
+            onChange={(e) => setStatus(e.target.value as Row["status"])}
+            className={`${selectClsFull}${statusDirty ? " ring-2 ring-tertiary-container" : ""}`}
             aria-label="Status pengguna"
           >
             <option value="active">Aktif</option>
@@ -369,6 +442,8 @@ function UserRow({
             <option value="suspended">Ditangguhkan</option>
           </Select>
         </div>
+
+        {pendingBar}
 
         <div className="flex gap-2">
           <button
@@ -408,13 +483,14 @@ function UserRow({
   }
 
   return (
+    <>
     <tr className="border-t border-outline-variant">
       <td className="px-3 py-2 max-w-[7.5rem]">
         <div className="flex items-center gap-2 min-w-0" title={`${user.name ?? "(tanpa nama)"} · ${user.email}`}>
           {avatar}
           <div className="min-w-0">
             <p className="font-medium text-on-background truncate">{user.name ?? "(tanpa nama)"}</p>
-            <p className="text-label-caps text-on-surface-variant truncate">{user.email}</p>
+            <p className="text-body-sm text-on-surface-variant truncate">{user.email}</p>
           </div>
         </div>
       </td>
@@ -428,11 +504,8 @@ function UserRow({
             outcome dependent on Tailwind's internal stylesheet order). */}
         <select
           value={departmentId}
-          onChange={(e) => {
-            setDepartmentId(e.target.value);
-            startTransition(() => assignUserDepartment(user.id, e.target.value, user.position));
-          }}
-          className={selectClsTableDept}
+          onChange={(e) => setDepartmentId(e.target.value)}
+          className={`${selectClsTableDept}${deptDirty ? " ring-2 ring-tertiary-container" : ""}`}
           aria-label="Divisi"
           title={scopeLabel(options.find((d) => d.id === departmentId), byId)}
         >
@@ -444,20 +517,16 @@ function UserRow({
           ))}
         </select>
         {roleName && (
-          <p className="text-label-caps text-on-surface-variant mt-1 truncate" title={`Akses: ${roleName}`}>
-            Akses: {roleName}
+          <p className="text-body-sm text-on-surface-variant mt-1 truncate" title={`Peran: ${roleName}`}>
+            Peran: {roleName}
           </p>
         )}
       </td>
       <td className="px-3 py-2 max-w-[10rem]">
         <select
           value={status}
-          onChange={(e) => {
-            const next = e.target.value as Row["status"];
-            setStatus(next);
-            startTransition(() => updateUserStatus(user.id, next));
-          }}
-          className={selectClsTableStatus}
+          onChange={(e) => setStatus(e.target.value as Row["status"])}
+          className={`${selectClsTableStatus}${statusDirty ? " ring-2 ring-tertiary-container" : ""}`}
           aria-label="Status pengguna"
           title={STATUS_LABEL[status]}
         >
@@ -479,9 +548,9 @@ function UserRow({
             onClick={() => setEditing(true)}
             title="Edit"
             aria-label="Edit"
-            className="p-1.5 rounded-md border border-outline-variant text-on-surface-variant hover:text-on-background transition-colors"
+            className="p-2 rounded-md border border-outline-variant text-on-surface-variant hover:text-on-background transition-colors"
           >
-            <Pencil size={15} aria-hidden />
+            <Pencil size={16} aria-hidden />
           </button>
           {user.hasPassword && (
             <ConfirmButton
@@ -492,9 +561,9 @@ function UserRow({
               danger={false}
               successMessage="Link reset password terkirim."
               aria-label="Reset Sandi"
-              className="p-1.5 rounded-md border border-outline-variant text-on-surface-variant hover:text-on-background transition-colors"
+              className="p-2 rounded-md border border-outline-variant text-on-surface-variant hover:text-on-background transition-colors"
             >
-              <KeyRound size={15} aria-hidden />
+              <KeyRound size={16} aria-hidden />
             </ConfirmButton>
           )}
           <ConfirmButton
@@ -505,12 +574,20 @@ function UserRow({
             title="Hapus pengguna?"
             message="Tindakan ini tidak dapat dibatalkan."
             aria-label="Hapus"
-            className="p-1.5 rounded-md border border-error/40 text-error hover:bg-error/10 transition-colors"
+            className="p-2 rounded-md border border-error/40 text-error hover:bg-error/10 transition-colors"
           >
-            <Trash2 size={15} aria-hidden />
+            <Trash2 size={16} aria-hidden />
           </ConfirmButton>
         </div>
       </td>
     </tr>
+    {pendingBar && (
+      <tr className="bg-surface-container-low">
+        <td colSpan={4} className="px-3 py-2">
+          {pendingBar}
+        </td>
+      </tr>
+    )}
+    </>
   );
 }

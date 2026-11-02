@@ -50,7 +50,7 @@ flowchart TD
 | `/inventory/borrow/success` | Konfirmasi, status "menunggu persetujuan Divisi Logistik" |
 | `/inventory/contribute` | Form sumbang (permanen) / pinjamkan sementara barang pribadi |
 | `/inventory/request-new` | Form usul pengadaan — barang, alasan, estimasi biaya (RMB), urgensi. Ini **usulan**, pembelian tetap offline. |
-| `/console/inventory` | Antrean approve/reject peminjaman, konfirmasi pengembalian, reservasi acara, catat peminjaman eksternal |
+| `/console/inventory` | Antrean approve/reject peminjaman, konfirmasi pengembalian, reservasi acara, catat peminjaman eksternal. Baris yang dibuka menampilkan peminjam, barang, dan periode; **menolak wajib menulis alasan** (dikirim ke peminjam lewat notifikasi `borrow_rejected`; peminjam luar tanpa akun diberi tahu manual) |
 | `/console/inventory/audit-log` | `inventory_audit_logs` — added / adjusted / damaged / retired / lent_external / returned_external |
 
 ## Aturan

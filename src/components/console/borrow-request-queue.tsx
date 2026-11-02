@@ -52,6 +52,9 @@ const STATUS_TONE: Record<Request["status"], BadgeTone> = {
 export function BorrowRequestQueue({ requests }: { requests: Request[] }) {
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
+  // Penolakan butuh alasan: formulir kecil di baris yang bersangkutan, bukan satu klik.
+  const [rejectId, setRejectId] = useState<string | null>(null);
+  const [reason, setReason] = useState("");
 
   function run(fn: () => Promise<unknown>) {
     setError(null);
@@ -89,8 +92,25 @@ export function BorrowRequestQueue({ requests }: { requests: Request[] }) {
       })}
       renderDetail={(r) => (
         <>
+          {/* Siapa, apa, dan kapan harus terlihat di tempat keputusan diambil (subjudul
+              baris tertutup hilang begitu baris dibuka). */}
+          <dl className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 text-body-sm">
+            <dt className="text-on-surface-variant">Peminjam</dt>
+            <dd className="min-w-0 break-words text-on-background">
+              {r.userName ?? r.borrowerName ?? "Anonim"}
+              {r.userEmail && <span className="text-on-surface-variant"> · {r.userEmail}</span>}
+            </dd>
+            <dt className="text-on-surface-variant">Barang</dt>
+            <dd className="text-on-background">
+              {r.itemName} × {r.quantity}
+            </dd>
+            <dt className="text-on-surface-variant">Periode</dt>
+            <dd className="text-on-background">
+              {r.requestedFrom ?? "?"} – {r.requestedTo ?? "?"}
+            </dd>
+          </dl>
           {r.borrowerName && (
-            <p className="text-label-caps text-on-surface-variant break-all">
+            <p className="text-body-sm text-on-surface-variant break-all">
               Pihak luar ·{" "}
               {[r.borrowerEmail, r.borrowerWechat && `WeChat: ${r.borrowerWechat}`, r.borrowerPhone]
                 .filter(Boolean)
@@ -98,7 +118,7 @@ export function BorrowRequestQueue({ requests }: { requests: Request[] }) {
             </p>
           )}
           {r.purpose && <p className="text-body-md text-on-surface-variant">{r.purpose}</p>}
-          <div className="flex flex-col gap-1 text-label-caps text-on-surface-variant">
+          <div className="flex flex-col gap-1 text-body-sm text-on-surface-variant">
             {r.usageLocation && (
               <span className="flex items-center gap-1.5">
                 <MapPin size={13} aria-hidden /> Lokasi pakai:{" "}
@@ -116,24 +136,78 @@ export function BorrowRequestQueue({ requests }: { requests: Request[] }) {
             </p>
           )}
 
-          {r.status === "pending" && (
-            <div className="flex flex-wrap gap-2">
-              <button
-                disabled={isPending}
-                onClick={() => run(() => approveBorrowRequest(r.id))}
-                className="flex items-center gap-1 rounded-md bg-primary-container/10 px-3 py-1.5 text-label-caps text-primary-container transition-colors hover:bg-primary-container/20 disabled:opacity-50 motion-reduce:transition-none"
+          {r.status === "pending" &&
+            (rejectId === r.id ? (
+              <form
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  run(async () => {
+                    await rejectBorrowRequest(r.id, reason);
+                    setRejectId(null);
+                    setReason("");
+                  });
+                }}
+                className="flex flex-col gap-2 rounded-md border border-error/40 p-3"
               >
-                <Check size={14} /> Setujui
-              </button>
-              <button
-                disabled={isPending}
-                onClick={() => run(() => rejectBorrowRequest(r.id))}
-                className="flex items-center gap-1 rounded-md bg-error-container px-3 py-1.5 text-label-caps text-on-error-container transition-opacity hover:opacity-80 disabled:opacity-50 motion-reduce:transition-none"
-              >
-                <X size={14} /> Tolak
-              </button>
-            </div>
-          )}
+                <label className="flex flex-col gap-1">
+                  <span className="text-label-caps uppercase tracking-wide text-on-surface-variant">Alasan penolakan</span>
+                  <textarea
+                    value={reason}
+                    onChange={(e) => setReason(e.target.value)}
+                    rows={2}
+                    maxLength={300}
+                    required={!r.borrowerName}
+                    autoFocus
+                    placeholder="mis. Barang dipakai acara lain pada tanggal itu"
+                    className="w-full rounded-md bg-soft-gray p-2.5 text-body-md focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-container"
+                  />
+                </label>
+                <p className="text-body-sm text-on-surface-variant">
+                  {r.borrowerName
+                    ? "Peminjam luar tidak punya akun, jadi sampaikan alasannya sendiri."
+                    : "Alasan ini dikirim ke peminjam lewat notifikasi."}
+                </p>
+                <div className="flex flex-wrap gap-2">
+                  <button
+                    type="submit"
+                    disabled={isPending}
+                    className="flex items-center gap-1 rounded-md bg-error-container px-3 py-2 text-label-caps text-on-error-container transition-opacity hover:opacity-80 disabled:opacity-50 motion-reduce:transition-none"
+                  >
+                    <X size={14} /> Tolak pengajuan
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setRejectId(null);
+                      setReason("");
+                    }}
+                    className="rounded-md border border-outline-variant px-3 py-2 text-label-caps text-on-surface-variant transition-colors hover:text-on-background"
+                  >
+                    Batal
+                  </button>
+                </div>
+              </form>
+            ) : (
+              <div className="flex flex-wrap gap-2">
+                <button
+                  disabled={isPending}
+                  onClick={() => run(() => approveBorrowRequest(r.id))}
+                  className="flex items-center gap-1 rounded-md bg-primary-container/10 px-3 py-2 text-label-caps text-primary-container transition-colors hover:bg-primary-container/20 disabled:opacity-50 motion-reduce:transition-none"
+                >
+                  <Check size={14} /> Setujui
+                </button>
+                <button
+                  disabled={isPending}
+                  onClick={() => {
+                    setRejectId(r.id);
+                    setReason("");
+                  }}
+                  className="flex items-center gap-1 rounded-md bg-error-container px-3 py-2 text-label-caps text-on-error-container transition-opacity hover:opacity-80 disabled:opacity-50 motion-reduce:transition-none"
+                >
+                  <X size={14} /> Tolak…
+                </button>
+              </div>
+            ))}
           {r.status === "approved" && (
             <div className="flex flex-wrap items-center gap-3">
               <button

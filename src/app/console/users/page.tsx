@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import { db } from "@/db";
 import { users, roles, departments, departmentMembers } from "@/db/schema";
 import { UsersConsole } from "@/components/console/users-console";
@@ -9,6 +10,8 @@ import { getGuide } from "@/lib/guides";
 import { Field, fieldInput, FormActions, primaryBtn } from "@/components/console/form";
 import { SubmitButton } from "@/components/console/submit-button";
 import { Download } from "lucide-react";
+
+export const metadata: Metadata = { title: "Pengguna" };
 
 export default async function ConsoleUsersPage() {
   await requireModuleAccess("users");
@@ -51,8 +54,9 @@ export default async function ConsoleUsersPage() {
       </p>
       <div className="mb-8">
         <CollapsibleSection
-          title="Undang Anggota"
+          title="Undang Pengguna Baru"
           description="Buat akun untuk orang yang belum pernah masuk — supaya bisa langsung ditugaskan ke kepanitiaan"
+          defaultOpen={false}
         >
           <form action={inviteUsers} className="flex flex-col gap-3 max-w-2xl">
             <Field
@@ -76,8 +80,7 @@ atau email saja: seseorang@contoh.com`}
               akun <strong>dilewati</strong>, bukan ditimpa, jadi menempel daftar yang sama dua kali aman.
             </p>
             <p className="text-xs text-on-surface-variant">
-              Belum ada email undangan otomatis — beri tahu mereka lewat WeChat/WhatsApp. Penyedia email belum
-              disiapkan (lihat <code>GMAIL_USER</code> di <code>.env.example</code>).
+              Belum ada email undangan otomatis — beri tahu mereka lewat WeChat/WhatsApp.
             </p>
             <FormActions>
               <SubmitButton successMessage="Akun undangan dibuat." className={primaryBtn}>

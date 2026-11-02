@@ -1,10 +1,11 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, useRef, useState } from "react";
 import type { ContentFormState } from "@/app/actions/admin-content";
 import { ImageUploadCropper } from "@/components/upload/image-upload-cropper";
 import { AIReviewButton } from "@/components/ai/ai-review-popup";
 import { CheckboxField } from "@/components/console/form";
+import { ConfirmButton } from "@/components/console/confirm-button";
 import { useActionToast } from "@/components/console/submit-button";
 import { NewsArticleEditor } from "@/components/console/news-article-editor";
 
@@ -39,9 +40,14 @@ export function NewsArticleForm({
   useActionToast(isPending, state.error, "Artikel tersimpan.");
   const alreadyPublished = !!initial?.published;
   const isArchived = !!initial?.archived;
+  // Publikasi pertama = email massal ke semua pelanggan, tak bisa ditarik. Karena itu
+  // tombol simpan berubah menjadi tombol konfirmasi saat kotak "Publikasikan" dicentang.
+  const [willPublish, setWillPublish] = useState(alreadyPublished);
+  const formRef = useRef<HTMLFormElement>(null);
+  const willEmail = willPublish && !alreadyPublished && emailReady && subscriberCount > 0;
 
   return (
-    <form action={formAction} className="flex flex-col gap-6">
+    <form ref={formRef} action={formAction} className="flex flex-col gap-6">
       {eventId && <input type="hidden" name="eventId" value={eventId} />}
       {state.error && (
         <p role="alert" className="bg-error-container/40 text-on-error-container text-body-md px-4 py-3 rounded-lg">
@@ -83,7 +89,8 @@ export function NewsArticleForm({
       </div>
       <CheckboxField
         name="publish"
-        defaultChecked={alreadyPublished}
+        checked={willPublish}
+        onChange={(e) => setWillPublish(e.target.checked)}
         label={
           alreadyPublished
             ? "Dipublikasikan"
@@ -94,33 +101,48 @@ export function NewsArticleForm({
         className="text-on-background"
       />
       {isArchived && !alreadyPublished ? (
-        <p className="text-label-caps text-on-surface-variant -mt-3">
+        <p className="text-body-sm text-on-surface-variant -mt-3">
           Berita ini diarsipkan. Menyimpan tanpa mencentang “Publikasikan” tidak mengubah statusnya — pakai tombol
           Pulihkan di atas untuk mengembalikannya ke draf.
         </p>
       ) : alreadyPublished ? (
-        <p className="text-label-caps text-on-surface-variant -mt-3">
+        <p className="text-body-sm text-on-surface-variant -mt-3">
           Sudah dipublikasikan — email pengumuman sudah terkirim ke pelanggan saat pertama kali dipublikasikan, dan
           tidak dikirim ulang lewat perubahan ini.
         </p>
       ) : emailReady ? (
-        <p className="text-label-caps text-on-surface-variant -mt-3">
+        <p className="text-body-sm text-on-surface-variant -mt-3">
           Mempublikasikan otomatis mengirim email ke <span className="text-on-background">{subscriberCount}</span>{" "}
-          anggota yang berlangganan pengumuman.
+          Nanjinger yang berlangganan pengumuman. Email yang sudah terkirim tidak bisa ditarik kembali, jadi cek
+          judul dan isinya dulu.
         </p>
       ) : (
-        <p className="text-label-caps text-on-surface-variant -mt-3 bg-error-container/30 border border-error/40 rounded-md p-3">
+        <p className="text-body-sm text-on-surface-variant -mt-3 bg-error-container/30 border border-error/40 rounded-md p-3">
           <span className="text-on-background font-medium">Email pengumuman belum aktif</span> &mdash; {subscriberCount}{" "}
-          anggota berlangganan tapi tidak akan menerima email sampai <code>GMAIL_USER</code> +{" "}
-          <code>GMAIL_APP_PASSWORD</code> diisi di Vercel.
+          Nanjinger berlangganan tapi tidak akan menerima email sampai Divisi Teknologi mengaktifkan pengiriman email.
+          Berita tetap tampil di situs.
         </p>
       )}
-      <button
-        type="submit"
-        className="self-start bg-primary-container text-on-primary text-label-caps uppercase tracking-wide px-6 py-3 rounded-md hover:bg-primary transition-colors"
-      >
-        {submitLabel}
-      </button>
+      {willEmail ? (
+        <ConfirmButton
+          onConfirm={() => formRef.current?.requestSubmit()}
+          title="Publikasikan dan kirim email?"
+          message={`Berita ini langsung tampil di situs dan emailnya dikirim ke ${subscriberCount} pelanggan pengumuman. Email yang sudah terkirim tidak bisa ditarik kembali.`}
+          confirmLabel="Ya, publikasikan"
+          danger={false}
+          successMessage=""
+          className="self-start bg-primary-container text-on-primary text-label-caps uppercase tracking-wide px-6 py-3 rounded-md hover:bg-primary transition-colors"
+        >
+          Publikasikan &amp; kirim email
+        </ConfirmButton>
+      ) : (
+        <button
+          type="submit"
+          className="self-start bg-primary-container text-on-primary text-label-caps uppercase tracking-wide px-6 py-3 rounded-md hover:bg-primary transition-colors"
+        >
+          {submitLabel}
+        </button>
+      )}
     </form>
   );
 }
