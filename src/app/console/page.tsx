@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import { desc, eq, sql, isNull } from "drizzle-orm";
 import { db } from "@/db";
 import {
@@ -8,9 +9,13 @@ import {
   users,
 } from "@/db/schema";
 import { redirect } from "next/navigation";
+import { cookies } from "next/headers";
 import { auth } from "@/auth";
 import { CollapsibleSection } from "@/components/console/collapsible-section";
 import { GuideButton } from "@/components/console/guide-button";
+import { StartHere } from "@/components/console/start-here";
+import { START_HIDDEN_COOKIE, buildStartGuide } from "@/lib/console-start";
+import { moduleLabel } from "@/lib/console-nav";
 import { getGuide } from "@/lib/guides";
 import { ArrowRight, type LucideIcon } from "lucide-react";
 import Link from "next/link";
@@ -112,10 +117,15 @@ function timeAgo(d: Date) {
   if (hr < 24) return `${hr} jam lalu`;
   const day = Math.floor(hr / 24);
   if (day < 30) return `${day} hari lalu`;
-  return d.toLocaleDateString("id-ID");
+  return d.toLocaleDateString("id-ID", { timeZone: "Asia/Shanghai" });
 }
 
-export default async function ConsoleDashboardPage() {
+export const metadata: Metadata = { title: "Dashboard" };
+
+export default async function ConsoleDashboardPage({ searchParams }: { searchParams: Promise<{ akses?: string }> }) {
+  const { akses } = await searchParams;
+  const blockedModule = moduleLabel(akses);
+  const blockedFeature = akses === "fitur";
   // A ranting board member's only surface is their own-campus census summary -
   // the org-wide dashboard below would just be noise (and shows counts they have
   // no other page to act on). Send them straight there.
@@ -124,6 +134,16 @@ export default async function ConsoleDashboardPage() {
   if (Array.isArray(scope) && scope.length === 1 && scope[0] === "sensus-ranting") {
     redirect("/console/ranting/sensus");
   }
+
+  // Kartu "Mulai dari sini": isinya hanya bergantung pada akses akun (tanpa query), disembunyikan lewat cookie.
+  const start = buildStartGuide({
+    scope: scope ?? null,
+    isCommittee: session?.user.isCommittee,
+    isBphCommittee: session?.user.isBphCommittee || session?.user.isEventKadiv,
+    isCoordinator: session?.user.isCoordinator,
+    canCreateSurvey: session?.user.canCreateSurvey,
+  });
+  const startHidden = (await cookies()).get(START_HIDDEN_COOKIE)?.value === "1";
 
   const now = new Date();
   const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
@@ -208,7 +228,7 @@ export default async function ConsoleDashboardPage() {
     ...recentMembers.map((m) => ({
       time: m.createdAt,
       href: `/console/membership/${m.id}`,
-      text: `Lamaran membership: ${m.fullName}`,
+      text: `Lamaran rekrutmen: ${m.fullName}`,
       attention: m.status === "pending",
     })),
   ]
@@ -235,7 +255,7 @@ export default async function ConsoleDashboardPage() {
     { icon: Briefcase, label: "Lowongan", value: openJobs, sub: `${totalApps} lamaran` },
     {
       icon: UserCheck,
-      label: "Membership",
+      label: "Rekrutmen",
       value: totalMembers,
       sub: [membersTrend, `${pendingMembers} menunggu · rekrutmen ${isRecruitOpen ? "dibuka" : "ditutup"}`].filter(Boolean).join(" · "),
       attention: pendingMembers > 0,
@@ -245,7 +265,7 @@ export default async function ConsoleDashboardPage() {
   ];
 
   const attentionItems = [
-    { icon: UserCheck, label: "Lamaran membership menunggu", count: pendingMembers, href: "/console/membership" },
+    { icon: UserCheck, label: "Lamaran rekrutmen menunggu", count: pendingMembers, href: "/console/membership" },
     { icon: MessageSquare, label: "Masukan baru", count: newFeedback, href: "/console/feedback" },
     { icon: UserPlus, label: "Pendaftaran kegiatan menunggu", count: pendingRegs, href: "/console/events" },
     { icon: Package, label: "Permintaan peminjaman", count: pendingBorrow + overdueBorrow, href: "/console/inventory" },
@@ -264,7 +284,7 @@ export default async function ConsoleDashboardPage() {
     { icon: Users, label: "Daftar Anggota", href: "/console/users" },
   ];
 
-  const today = new Date().toLocaleDateString("id-ID", { weekday: "long", day: "numeric", month: "long", year: "numeric" });
+  const today = new Date().toLocaleDateString("id-ID", { timeZone: "Asia/Shanghai", weekday: "long", day: "numeric", month: "long", year: "numeric" });
 
   return (
     <div className="px-4 py-6 sm:px-6 lg:px-8 lg:py-10">
@@ -276,9 +296,29 @@ export default async function ConsoleDashboardPage() {
         {guide && <GuideButton title={guide.title} content={guide.content} docSlug="dashboard" />}
       </div>
 
+      {(blockedModule || blockedFeature) && (
+        <p role="status" className="mb-6 rounded-lg border border-outline-variant bg-surface-container-low px-4 py-3 text-body-md text-on-background">
+          {blockedModule ? (
+            <>
+              <span className="font-semibold">Akun ini belum memegang modul {blockedModule}.</span> Menu yang tampil di
+              sidebar adalah yang bisa kamu buka. Kalau pekerjaanmu butuh modul itu, minta BPH menambahkannya untuk
+              divisimu di Organisasi.
+            </>
+          ) : (
+            <>
+              <span className="font-semibold">Akun ini belum punya izin untuk halaman itu.</span> Izin fitur di sebuah
+              acara diatur oleh BPH panitia acara tersebut (atau BPH kabinet). Tanyakan ke mereka kalau kamu perlu
+              mengerjakannya.
+            </>
+          )}
+        </p>
+      )}
+
+      <StartHere name={session?.user.name ?? null} steps={start.steps} modules={start.modules} initialHidden={startHidden} />
+
       <div className="flex flex-col gap-6">
         <CollapsibleSection title="Ringkasan" description="Angka utama di seluruh modul.">
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
+          <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-5 gap-4">
             {stats.map((s) => (
               <div key={s.label} className="bg-surface-container-low border border-outline-variant rounded-lg p-5 flex flex-col gap-2">
                 <div className="flex items-center gap-2 text-on-surface-variant">
@@ -306,7 +346,7 @@ export default async function ConsoleDashboardPage() {
                   <span className="text-label-caps bg-primary-container text-on-primary px-2.5 py-1 rounded-full shrink-0">{a.count}</span>
                   <a
                     href={a.href}
-                    className="flex items-center gap-1 text-label-caps text-primary-container hover:text-primary transition-colors shrink-0"
+                    className="flex min-h-11 items-center gap-1 px-2 text-label-caps text-primary-container hover:text-primary transition-colors shrink-0"
                   >
                     Tinjau <ArrowRight size={14} />
                   </a>
