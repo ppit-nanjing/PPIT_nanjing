@@ -107,11 +107,11 @@ export default async function MembershipDetailPage({ params }: { params: Promise
       <p className="text-body-md text-on-surface-variant mb-8">
         Periode {app.batchLabel ?? "-"} &middot; Terkirim{" "}
         {app.submittedAt
-          ? new Date(app.submittedAt).toLocaleString("id-ID", { dateStyle: "medium", timeStyle: "short" })
+          ? new Date(app.submittedAt).toLocaleString("id-ID", { timeZone: "Asia/Shanghai", dateStyle: "medium", timeStyle: "short" })
           : "-"}
 
         {app.reviewedAt
-          ? ` &middot; Diperbarui ${new Date(app.reviewedAt).toLocaleString("id-ID", { dateStyle: "medium", timeStyle: "short" })}`
+          ? ` · Diperbarui ${new Date(app.reviewedAt).toLocaleString("id-ID", { timeZone: "Asia/Shanghai", dateStyle: "medium", timeStyle: "short" })}`
           : ""}
       </p>
 
@@ -215,7 +215,7 @@ export default async function MembershipDetailPage({ params }: { params: Promise
             ]}
           />
           {emailStatus === "ready" && (
-            <p className="text-label-caps text-on-surface-variant mt-3">
+            <p className="text-body-sm text-on-surface-variant mt-3">
               Memilih &ldquo;{STATUS_LABEL.accepted}&rdquo; atau &ldquo;{STATUS_LABEL.rejected}&rdquo; otomatis mengirim
               email pengumuman ke <span className="text-on-background">{app.email}</span>
               {emailFrom ? <> dari <span className="text-on-background">{emailFrom}</span></> : null}. Teksnya bisa
@@ -223,28 +223,28 @@ export default async function MembershipDetailPage({ params }: { params: Promise
             </p>
           )}
           {emailStatus === "testing" && (
-            <p className="text-label-caps text-on-surface-variant mt-3 bg-error-container/30 border border-error/40 rounded-md p-3">
-              <span className="text-on-background font-medium">Email belum bisa dikirim ke pendaftar.</span> Resend masih
-              memakai pengirim uji coba, yang hanya bisa mengirim ke alamat pemilik akun Resend &mdash; email ke{" "}
-              {app.email} akan ditolak. Pakai Gmail PPIT dengan mengisi <code>GMAIL_USER</code> dan{" "}
-              <code>GMAIL_APP_PASSWORD</code>, atau verifikasi domain sendiri di resend.com/domains lalu set{" "}
-              <code>EMAIL_FROM</code>.
+            <p className="text-body-sm text-on-surface-variant mt-3 bg-error-container/30 border border-error/40 rounded-md p-3">
+              <span className="text-on-background font-medium">Email belum bisa dikirim ke pendaftar.</span> Pengirim
+              email masih berupa uji coba yang hanya bisa mengirim ke pemilik akunnya, jadi email ke {app.email} akan
+              ditolak. Keputusanmu tetap tersimpan; minta Divisi Teknologi menyelesaikan pengaturan email.
             </p>
           )}
           {emailStatus === "off" && (
-            <p className="text-label-caps text-on-surface-variant mt-3">
-              Email pengumuman <span className="text-on-background">belum aktif</span> &mdash; isi{" "}
-              <code>GMAIL_USER</code> + <code>GMAIL_APP_PASSWORD</code> di Vercel supaya keputusan terkirim otomatis
-              ke pendaftar.
+            <p className="text-body-sm text-on-surface-variant mt-3">
+              Email pengumuman <span className="text-on-background">belum aktif</span>. Keputusanmu tetap tersimpan,
+              tapi pendaftar tidak mendapat email sampai Divisi Teknologi mengaktifkannya.
             </p>
           )}
-          {/* Decision emails are irreversible - keep them opt-out per save, not automatic. */}
-          <CheckboxField
-            name="notifyApplicant"
-            defaultChecked
-            label="Kirim email pengumuman ke pendaftar saat status berubah jadi Diterima/Ditolak"
-            className="mt-3 text-on-background"
-          />
+          {/* Decision emails are irreversible - keep them opt-out per save, not automatic. Tanpa
+              pengirim email yang siap, kotaknya disembunyikan (tidak ada email yang bisa dikirim). */}
+          {emailStatus === "ready" && (
+            <CheckboxField
+              name="notifyApplicant"
+              defaultChecked
+              label="Kirim email pengumuman ke pendaftar saat status berubah jadi Diterima/Ditolak"
+              className="mt-3 text-on-background"
+            />
+          )}
           <SubmitButton
             successMessage="Status pendaftar tersimpan."
             className="mt-4 bg-primary-container text-on-primary text-label-caps uppercase tracking-wide px-6 py-3 rounded-md hover:bg-primary transition-colors"
@@ -287,7 +287,7 @@ export default async function MembershipDetailPage({ params }: { params: Promise
                   mengubah status menjadi{" "}
                   <span className="text-on-background">{STATUS_LABEL[after.status ?? ""] ?? after.status ?? "-"}</span>
                   {" · "}
-                  {new Date(log.createdAt).toLocaleString("id-ID", { dateStyle: "medium", timeStyle: "short" })}
+                  {new Date(log.createdAt).toLocaleString("id-ID", { timeZone: "Asia/Shanghai", dateStyle: "medium", timeStyle: "short" })}
                   {after.decisionEmail && (
                     <span className="text-label-caps">
                       {" "}· email{" "}

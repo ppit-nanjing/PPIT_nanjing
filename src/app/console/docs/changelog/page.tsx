@@ -40,7 +40,7 @@ export default async function ChangelogPage() {
                   v{n.version}
                 </span>
                 <span className="text-label-caps text-on-surface-variant">
-                  {new Date(n.publishedAt).toLocaleDateString("id-ID")}
+                  {new Date(n.publishedAt).toLocaleDateString("id-ID", { timeZone: "Asia/Shanghai" })}
                 </span>
               </div>
               <p className="text-body-md text-on-background font-medium">{n.summary}</p>

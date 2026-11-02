@@ -250,7 +250,8 @@ export async function requireEventCapability(
 ): Promise<EventAccess & { session: Session }> {
   const access = await getEventAccess(eventId);
   if (!access.session) redirect("/login");
-  if (!access.can(capability)) redirect("/console");
+  // ?akses=fitur: dashboard menjelaskan bahwa izin fiturnya yang belum ada (bukan seluruh modul).
+  if (!access.can(capability)) redirect("/console?akses=fitur");
   return access as EventAccess & { session: Session };
 }
 

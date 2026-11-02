@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import { eq } from "drizzle-orm";
 import { db } from "@/db";
 import { departments, departmentMembers, users } from "@/db/schema";
@@ -7,6 +8,8 @@ import { GuideButton } from "@/components/console/guide-button";
 import { getGuide } from "@/lib/guides";
 import { requireModuleAccess } from "@/lib/admin-scope";
 import Link from "next/link";
+
+export const metadata: Metadata = { title: "Organisasi" };
 
 export default async function ConsoleOrganizationPage() {
   const session = await requireModuleAccess("organization");

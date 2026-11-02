@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import { desc, sql } from "drizzle-orm";
 import { db } from "@/db";
 import { newsArticles, galleryAlbums } from "@/db/schema";
@@ -63,6 +64,8 @@ function NewsRow({ a }: { a: Article }) {
     </div>
   );
 }
+
+export const metadata: Metadata = { title: "Konten" };
 
 export default async function ConsoleContentPage() {
   await requireModuleAccess("content");

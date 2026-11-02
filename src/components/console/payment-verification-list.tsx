@@ -50,7 +50,7 @@ export function PaymentVerificationList({ payments }: { payments: PaymentRow[] }
       })}
       renderDetail={(p) => (
         <>
-          <div className="flex flex-col gap-0.5 text-label-caps text-on-surface-variant">
+          <div className="flex flex-col gap-0.5 text-body-sm text-on-surface-variant">
             {p.email && <span className="break-all normal-case">{p.email}</span>}
             {(p.expected != null || p.feeLabel) && (
               <span>
@@ -64,7 +64,7 @@ export function PaymentVerificationList({ payments }: { payments: PaymentRow[] }
             <span>
               Daftar:{" "}
               <span className="text-on-background normal-case">
-                {new Date(p.registeredAt).toLocaleString("id-ID", { dateStyle: "medium", timeStyle: "short" })}
+                {new Date(p.registeredAt).toLocaleString("id-ID", { timeZone: "Asia/Shanghai", dateStyle: "medium", timeStyle: "short" })}
               </span>
             </span>
           </div>

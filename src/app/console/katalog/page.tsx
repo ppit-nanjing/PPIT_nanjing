@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import { requireModuleAccess, hasModuleAccess } from "@/lib/admin-scope";
 import { CollapsibleSection } from "@/components/console/collapsible-section";
 import { GuideButton } from "@/components/console/guide-button";
@@ -102,6 +103,8 @@ function Row({
     </li>
   );
 }
+
+export const metadata: Metadata = { title: "Kota & Katalog" };
 
 export default async function ConsoleKatalogPage() {
   const session = await requireModuleAccess("content");
@@ -316,7 +319,7 @@ export default async function ConsoleKatalogPage() {
                 <p className="text-body-md text-on-background">
                   {d.name} {d.nameZh && <span className="text-on-surface-variant">{d.nameZh}</span>}
                 </p>
-                {d.description && <p className="text-label-caps text-on-surface-variant">{d.description.slice(0, 90)}</p>}
+                {d.description && <p className="text-body-sm text-on-surface-variant">{d.description.slice(0, 90)}</p>}
               </Row>
             ))
           )}

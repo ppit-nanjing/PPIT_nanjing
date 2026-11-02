@@ -509,6 +509,16 @@ h4, h5, h6 {
 }
 
 
+/* Cincin fokus keyboard bawaan untuk semua kontrol. Di @layer base (bukan tanpa lapisan)
+   supaya utilitas seperti focus:outline-none dan focus-visible:ring-* di komponen tetap
+   menang; kontrol tanpa gaya fokus sendiri tidak lagi bergantung pada ring bawaan browser. */
+@layer base {
+  :where(a[href], button, summary, [role="button"], [tabindex]:not([tabindex="-1"])):focus-visible {
+    outline: 2px solid var(--color-primary-container);
+    outline-offset: 2px;
+  }
+}
+
 /* The ornament classes live in @layer components on purpose: unlayered CSS always beats
    Tailwind utilities, so a plain .deco-frame { position: relative } would silently
    break any element that also says `sticky` or `absolute`. In the components layer a

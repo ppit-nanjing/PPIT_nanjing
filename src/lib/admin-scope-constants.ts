@@ -50,7 +50,7 @@ export const ASSIGNABLE_SCOPE_KEYS: { key: string; label: string }[] = [
   { key: "users", label: "Pengguna (sensitif — hanya BPH)" },
   { key: "organization", label: "Organisasi (sensitif — hanya BPH)" },
   { key: "feedback", label: "Masukan Pengguna (sensitif — hanya BPH)" },
-  { key: "membership", label: "Pendaftaran Anggota (rekrutmen)" },
+  { key: "membership", label: "Rekrutmen pengurus (lamaran masuk kabinet)" },
   { key: "forms", label: "Formulir & Oprek (Pemilu, BPH Acara, Kepanitiaan)" },
   { key: "links", label: "Tautan (short link)" },
   { key: "documents", label: "Dokumen (Google Drive)" },

@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import { eq, desc, and, isNull } from "drizzle-orm";
 import { db } from "@/db";
 import { inventoryItems, borrowRequests, users, itemContributions, procurementRequests, externalLoans, itemReservations, events } from "@/db/schema";
@@ -19,6 +20,8 @@ import { conditionLabel, INVENTORY_CONDITIONS, CONDITION_LABEL } from "@/lib/inv
 import { fieldInput as input, primaryBtn, Select } from "@/components/console/form";
 import { SubmitButton } from "@/components/console/submit-button";
 
+
+export const metadata: Metadata = { title: "Inventaris" };
 
 export default async function ConsoleInventoryPage() {
   await requireModuleAccess("inventory");

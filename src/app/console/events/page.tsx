@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import { sql, inArray, eq, and, asc, desc, isNull, isNotNull } from "drizzle-orm";
 import { redirect } from "next/navigation";
 import { auth } from "@/auth";
@@ -16,6 +17,8 @@ import { Plus } from "lucide-react";
 import Link from "next/link";
 import { EventCreateForm } from "@/components/console/event-create-form";
 import { ConfirmButton } from "@/components/console/confirm-button";
+
+export const metadata: Metadata = { title: "Kegiatan" };
 
 export default async function ConsoleEventsPage() {
   const session = await auth();
@@ -40,7 +43,7 @@ export default async function ConsoleEventsPage() {
         .where(and(eq(eventCommittee.userId, session.user.id), isNull(events.deletedAt)));
   const committeeEventIds = [...new Set(committeeRows.map((r) => r.eventId))];
 
-  if (!canManageEvents && committeeEventIds.length === 0) redirect("/console");
+  if (!canManageEvents && committeeEventIds.length === 0) redirect("/console?akses=events");
 
   const scopedIds = isFullAdmin || !canManageEvents ? [] : (await getScopedEventIds()) ?? [];
   // Full admin = semua; pemegang modul = acara hasil scope (buat ∪ divisi PJ ∪
@@ -141,7 +144,7 @@ export default async function ConsoleEventsPage() {
                 <div className="min-w-0">
                   <p className="text-body-md font-medium text-on-background truncate">{e.title}</p>
                   <p className="text-label-caps text-on-surface-variant">
-                    {e.startAt ? new Date(e.startAt).toLocaleDateString("id-ID") : "Belum dijadwalkan"}
+                    {e.startAt ? new Date(e.startAt).toLocaleDateString("id-ID", { timeZone: "Asia/Shanghai" }) : "Belum dijadwalkan"}
                   </p>
                 </div>
                 <span className="text-label-caps uppercase tracking-wide bg-surface-container-low px-2.5 py-1 rounded shrink-0">

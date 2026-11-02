@@ -173,7 +173,7 @@ export default async function EditJobPostingPage({ params }: { params: Promise<{
                     </span>
                     <span className="block text-body-sm text-on-surface-variant truncate">
                       {a.email} &middot;{" "}
-                      {new Date(a.appliedAt).toLocaleDateString("id-ID", { dateStyle: "medium" })}
+                      {new Date(a.appliedAt).toLocaleDateString("id-ID", { timeZone: "Asia/Shanghai", dateStyle: "medium" })}
                     </span>
                   </span>
                   <span className="text-label-caps uppercase tracking-wide bg-surface-container-low text-on-surface-variant px-2 py-1 rounded shrink-0">

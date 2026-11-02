@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, type ReactNode } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import { ChevronRight } from "lucide-react";
 
 // Daftar rekaman yang bisa dibuka-tutup per baris — dipakai untuk semua panel
@@ -60,6 +60,19 @@ export function CollapsibleRecordList<T extends { id: string }>({
     });
   const allOpen = records.length > 0 && records.every((r) => open.has(r.id));
 
+  // Setelah sebuah aksi (Setujui, Tolak, ...) tombolnya hilang dari baris dan fokus keyboard
+  // jatuh ke <body>. Kembalikan ke tombol buka-tutup baris itu, supaya pengguna keyboard
+  // tidak harus menekan Tab dari awal halaman lagi.
+  const toggleRefs = useRef(new Map<string, HTMLButtonElement | null>());
+  const lastActedRow = useRef<string | null>(null);
+  useEffect(() => {
+    const id = lastActedRow.current;
+    if (id && document.activeElement === document.body) {
+      toggleRefs.current.get(id)?.focus();
+      lastActedRow.current = null;
+    }
+  });
+
   if (records.length === 0) {
     return <p className="py-2 text-body-md text-on-surface-variant">{emptyText}</p>;
   }
@@ -97,6 +110,9 @@ export function CollapsibleRecordList<T extends { id: string }>({
             <li key={r.id} className="border-b border-outline-variant/60 last:border-0">
               <button
                 type="button"
+                ref={(el) => {
+                  toggleRefs.current.set(r.id, el);
+                }}
                 onClick={() => toggle(r.id)}
                 aria-expanded={isOpen}
                 className="flex w-full items-start gap-2.5 px-3 py-3 text-left transition-colors hover:bg-surface-container-low/60 motion-reduce:transition-none sm:gap-3 sm:px-4"
@@ -119,13 +135,20 @@ export function CollapsibleRecordList<T extends { id: string }>({
                     </span>
                   )}
                   {!isOpen && s.subtitle != null && s.subtitle !== "" && (
-                    <span className="w-full truncate text-label-caps text-on-surface-variant">{s.subtitle}</span>
+                    <span className="w-full truncate text-body-sm text-on-surface-variant">{s.subtitle}</span>
                   )}
                 </span>
               </button>
 
               {isOpen && (
-                <div className="flex flex-col gap-3 px-3 pb-4 pl-9 sm:px-4 sm:pl-11">{renderDetail(r)}</div>
+                <div
+                  onClickCapture={() => {
+                    lastActedRow.current = r.id;
+                  }}
+                  className="flex flex-col gap-3 px-3 pb-4 pl-9 sm:px-4 sm:pl-11"
+                >
+                  {renderDetail(r)}
+                </div>
               )}
             </li>
           );

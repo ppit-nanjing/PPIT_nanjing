@@ -476,7 +476,7 @@ function MemberList({ rows, certified }: { rows: MemberRow[]; certified?: Set<st
             {m.checkedInAt && (
               <span
                 className="text-primary-container"
-                title={`Hadir ${new Date(m.checkedInAt).toLocaleString("id-ID", { dateStyle: "medium", timeStyle: "short" })}${m.checkedInByName ? ` · di-scan oleh ${m.checkedInByName}` : ""}`}
+                title={`Hadir ${new Date(m.checkedInAt).toLocaleString("id-ID", { timeZone: "Asia/Shanghai", dateStyle: "medium", timeStyle: "short" })}${m.checkedInByName ? ` · di-scan oleh ${m.checkedInByName}` : ""}`}
               >
                 {" · "}
                 <UserCheck size={12} className="inline align-[-1px]" aria-hidden /> hadir

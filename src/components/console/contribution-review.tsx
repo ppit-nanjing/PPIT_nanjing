@@ -47,7 +47,7 @@ export function ContributionReview({
               <p className="text-body-md font-semibold text-on-background">{c.name}</p>
               <p className="text-label-caps text-on-surface-variant">
                 {c.contributionType === "donate" ? "Sumbangan" : "Pinjamkan"} &middot; Kondisi: {c.condition}
-                {c.category ? ` &middot; ${c.category}` : ""}
+                {c.category ? ` · ${c.category}` : ""}
               </p>
               {c.userName && (
                 <p className="text-label-caps text-on-surface-variant">

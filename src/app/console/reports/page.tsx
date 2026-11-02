@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import { asc, desc, eq } from "drizzle-orm";
 import { db } from "@/db";
 import { coverageCities, departments, reports, sensusProfiles, users } from "@/db/schema";
@@ -19,6 +20,8 @@ const REPORT_TYPE_LABEL: Record<string, string> = {
   student_export: "Ekspor Data Mahasiswa",
   custom: "Kustom",
 };
+
+export const metadata: Metadata = { title: "Laporan" };
 
 export default async function ConsoleReportsPage() {
   const session = await requireModuleAccess("reports");
@@ -167,11 +170,11 @@ export default async function ConsoleReportsPage() {
                   >
                     <div className="min-w-0">
                       <p className="text-on-background">{REPORT_TYPE_LABEL[report.type] ?? report.type}</p>
-                      {params.note && <p className="text-label-caps text-on-surface-variant truncate">&ldquo;{params.note}&rdquo;</p>}
+                      {params.note && <p className="text-body-sm text-on-surface-variant truncate">&ldquo;{params.note}&rdquo;</p>}
                     </div>
                     <div className="flex items-center gap-4 shrink-0">
                       <span className="text-on-surface-variant text-label-caps">
-                        {generatedByName ?? "—"} &middot; {report.generatedAt.toLocaleString("id-ID")}
+                        {generatedByName ?? "—"} &middot; {report.generatedAt.toLocaleString("id-ID", { timeZone: "Asia/Shanghai" })}
                       </span>
                       {/* Re-run regenerates the file server-side - the route never stored one. */}
                       <a

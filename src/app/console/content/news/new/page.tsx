@@ -27,7 +27,7 @@ export default async function NewNewsArticlePage({
   const hasContent = hasModuleAccess(session.user.adminScope ?? null, "content");
   let scopedEventId: string | null = null;
   if (!hasContent) {
-    if (!eventId || !(await getEventAccess(eventId)).can("event.postArticle")) redirect("/console");
+    if (!eventId || !(await getEventAccess(eventId)).can("event.postArticle")) redirect("/console?akses=content");
     scopedEventId = eventId;
   }
 

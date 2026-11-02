@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { HelpCircle, X } from "lucide-react";
 
 type Props = {
@@ -16,10 +16,29 @@ type Props = {
 // you're already halfway through.
 export function GuideButton({ title, content, docSlug }: Props) {
   const [open, setOpen] = useState(false);
+  const triggerRef = useRef<HTMLButtonElement>(null);
+  const closeRef = useRef<HTMLButtonElement>(null);
+
+  // Perilaku dialog: Esc menutup, fokus pindah ke tombol tutup saat dibuka dan kembali ke tombol
+  // "Panduan" saat ditutup (sama seperti ConfirmButton).
+  useEffect(() => {
+    if (!open) return;
+    closeRef.current?.focus();
+    const trigger = triggerRef.current;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setOpen(false);
+    };
+    window.addEventListener("keydown", onKey);
+    return () => {
+      window.removeEventListener("keydown", onKey);
+      trigger?.focus();
+    };
+  }, [open]);
 
   return (
     <>
       <button
+        ref={triggerRef}
         type="button"
         onClick={() => setOpen(true)}
         className="flex items-center gap-1.5 border border-outline-variant text-on-surface-variant text-label-caps uppercase tracking-wide px-3.5 py-2 rounded-md hover:bg-surface-container-low hover:text-on-background transition-colors shrink-0"
@@ -43,6 +62,7 @@ export function GuideButton({ title, content, docSlug }: Props) {
             <div className="flex items-start justify-between gap-3 px-5 py-4 border-b border-outline-variant">
               <h2 className="text-headline-sm text-on-background">{title}</h2>
               <button
+                ref={closeRef}
                 type="button"
                 onClick={() => setOpen(false)}
                 aria-label="Tutup panduan"

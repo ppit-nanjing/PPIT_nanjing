@@ -101,7 +101,7 @@ export default async function MembershipResponsesPage() {
                   </span>
                 </td>
                 <td className="px-5 py-3 text-on-surface-variant">
-                  {a.submittedAt ? new Date(a.submittedAt).toLocaleString("id-ID", { dateStyle: "medium", timeStyle: "short" }) : "-"}
+                  {a.submittedAt ? new Date(a.submittedAt).toLocaleString("id-ID", { timeZone: "Asia/Shanghai", dateStyle: "medium", timeStyle: "short" }) : "-"}
                 </td>
                 <td className="px-5 py-3 text-on-surface-variant">{a.batchLabel ?? "-"}</td>
               </tr>
@@ -120,7 +120,7 @@ export default async function MembershipResponsesPage() {
                 <a href={`/console/membership/${a.id}`} className="font-medium text-primary-container hover:text-primary">
                   {a.fullName}
                 </a>
-                <p className="text-label-caps text-on-surface-variant">{a.email}</p>
+                <p className="text-body-sm text-on-surface-variant">{a.email}</p>
               </div>
               <dl className="grid grid-cols-2 gap-x-4 gap-y-2 text-body-md">
                 <div>
@@ -138,7 +138,7 @@ export default async function MembershipResponsesPage() {
                 <div>
                   <dt className="text-label-caps text-on-surface-variant">Terkirim</dt>
                   <dd className="text-on-background">
-                    {a.submittedAt ? new Date(a.submittedAt).toLocaleString("id-ID", { dateStyle: "medium", timeStyle: "short" }) : "-"}
+                    {a.submittedAt ? new Date(a.submittedAt).toLocaleString("id-ID", { timeZone: "Asia/Shanghai", dateStyle: "medium", timeStyle: "short" }) : "-"}
                   </dd>
                 </div>
                 <div>

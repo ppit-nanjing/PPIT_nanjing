@@ -30,7 +30,7 @@ export default async function ConsoleAlbumDetailPage({ params }: { params: Promi
   if (!allowed && album.eventId) {
     allowed = (await getEventAccess(album.eventId)).can("event.manageGallery");
   }
-  if (!allowed) redirect("/console");
+  if (!allowed) redirect("/console?akses=content");
   const backHref = !hasContent && album.eventId ? `/console/events/${album.eventId}` : "/console/content";
   const photos = await db.select().from(galleryPhotos).where(eq(galleryPhotos.albumId, albumId));
 
@@ -88,18 +88,18 @@ export default async function ConsoleAlbumDetailPage({ params }: { params: Promi
         <form action={setAlbumDriveUrl.bind(null, albumId)} className="flex flex-col gap-3 sm:flex-row sm:items-end mb-10">
           <label className="flex-1 flex flex-col gap-1">
             <span className="text-label-caps uppercase tracking-wide text-on-surface-variant">
-              Pengunjung mengambil foto lengkap lewat link ini
+              Pengunjung mengambil foto lengkap lewat tautan ini (harus bisa dibuka dari Tiongkok; Google Drive/Photos sering terblokir tanpa VPN)
             </span>
             <input
               name="driveUrl"
               type="url"
               defaultValue={album.driveUrl ?? ""}
-              placeholder="https://drive.google.com/..."
+              placeholder="https://…"
               className="bg-soft-gray rounded-md p-3 text-body-md"
             />
           </label>
           <SubmitButton
-            successMessage="Link Google Drive tersimpan."
+            successMessage="Tautan album tersimpan."
             className="bg-primary-container text-on-primary text-label-caps uppercase tracking-wide px-5 py-3 rounded-md hover:bg-primary transition-colors shrink-0"
           >
             Simpan Link

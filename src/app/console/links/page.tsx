@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import { and, desc, eq, ilike, type SQL } from "drizzle-orm";
 import Link from "next/link";
 import QRCode from "qrcode";
@@ -27,6 +28,8 @@ const STATUS_CLASS: Record<string, string> = {
   inactive: "bg-outline-variant/40 text-on-surface-variant",
   expired: "bg-error-container/40 text-on-error-container",
 };
+
+export const metadata: Metadata = { title: "Tautan" };
 
 export default async function ConsoleLinksPage({
   searchParams,
@@ -215,7 +218,7 @@ export default async function ConsoleLinksPage({
                     <Link href={`/console/links/${l.id}`} className="font-medium text-primary-container hover:text-primary">
                       {l.title}
                     </Link>
-                    <div className="text-label-caps text-on-surface-variant truncate max-w-[260px]">{l.slug}</div>
+                    <div className="text-body-sm text-on-surface-variant truncate max-w-[260px]">{l.slug}</div>
                   </td>
                   <td className="px-5 py-3">
                     <CopyLinkButton slug={l.slug} />
@@ -228,7 +231,7 @@ export default async function ConsoleLinksPage({
                     <span className={`px-2.5 py-1 rounded-full text-label-caps ${STATUS_CLASS[st]}`}>{statusLabel[st]}</span>
                   </td>
                   <td className="px-5 py-3 text-on-surface-variant">
-                    {l.createdAt ? new Date(l.createdAt).toLocaleString("id-ID", { dateStyle: "medium" }) : "-"}
+                    {l.createdAt ? new Date(l.createdAt).toLocaleString("id-ID", { timeZone: "Asia/Shanghai", dateStyle: "medium" }) : "-"}
                   </td>
                   <td className="px-5 py-3">
                     <div className="flex items-center gap-3">
