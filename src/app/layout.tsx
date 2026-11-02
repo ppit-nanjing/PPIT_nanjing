@@ -1,34 +1,5 @@
 import type { Metadata } from "next";
-import {
-  Cinzel,
-  Josefin_Sans,
-  Cormorant_Garamond,
-  Plus_Jakarta_Sans,
-  Spectral,
-  Poppins,
-  Fredoka,
-  Bebas_Neue,
-  Caveat,
-  Inter,
-  Manrope,
-  Playfair_Display,
-  Lora,
-  Merriweather,
-  Anton,
-  Oswald,
-  Baloo_2,
-  Quicksand,
-  Pacifico,
-  Dancing_Script,
-  Kalam,
-  Indie_Flower,
-  Permanent_Marker,
-  Great_Vibes,
-  Shadows_Into_Light,
-  JetBrains_Mono,
-  Space_Mono,
-  IBM_Plex_Mono,
-} from "next/font/google";
+import localFont from "next/font/local";
 import { Providers } from "@/components/providers";
 import { OnboardingModal } from "@/components/onboarding-modal";
 import { HelpCenter } from "@/components/ai/help-center";
@@ -41,87 +12,114 @@ import { LocaleProvider } from "@/lib/i18n/client";
 import { INTRO_GATE } from "@/lib/intro-gate";
 import "./globals.css";
 
-// next/font/google downloads and self-hosts the font at build time - no runtime
-// request to fonts.googleapis.com ever happens (important for reachability from
-// mainland China, see docs/Tech Stack.md).
+// Font files are vendored in ./fonts and loaded with next/font/local, so no
+// build step calls fonts.googleapis.com any more. next/font/google fetched the
+// CSS and the woff2 files during `next build`, and Google intermittently answers
+// with extensionless /l/font?kit=... URLs that Turbopack's font resolver rejects
+// ("next/font/google queries have exactly one entry", vercel/next.js#99114) -
+// with 28 families that flaked roughly every other deployment. Self-hosting also
+// keeps Chinese readers off Google's CDN (docs/Tech Stack.md).
 //
 // Art Deco + Art Nouveau type system (redesign 2026-10):
 // - Cinzel: display face for headings, eyebrows/labels, buttons, statistic numerals.
 // - Josefin Sans: body and UI text, including the dense console tables.
 // - Cormorant Garamond (italic only): leadership quotes.
-// All three are variable fonts, so no `weight` list: one clean query per font
-// avoids the discrete-weight resolver failure documented at Manrope below.
-const cinzel = Cinzel({ variable: "--font-cinzel", subsets: ["latin"], weight: "variable" });
-const josefin = Josefin_Sans({ variable: "--font-josefin", subsets: ["latin"], weight: "variable" });
-const cormorant = Cormorant_Garamond({ variable: "--font-cormorant", subsets: ["latin"], style: "italic", weight: "variable" });
+// All three are variable fonts; the weight range covers every weight the site uses.
+const cinzel = localFont({ src: "./fonts/cinzel.woff2", variable: "--font-cinzel", weight: "400 900" });
+const josefin = localFont({ src: "./fonts/josefin-sans.woff2", variable: "--font-josefin", weight: "100 700" });
+const cormorant = localFont({
+  src: [{ path: "./fonts/cormorant-garamond-italic.woff2", weight: "300 700", style: "italic" }],
+  variable: "--font-cormorant",
+});
 
 // The former site faces (Plus Jakarta Sans body, Spectral headings). They are no
 // longer the site typography; they stay loaded ONLY so the event-description font
 // picker can still offer them (src/lib/event-description-style.ts).
 // preload: false, so a visitor downloads them only when an event actually uses one.
-// Plus Jakarta Sans is a variable font on Google Fonts, so it takes weight:
-// "variable" like Manrope below; requesting discrete weights trips the Turbopack
-// font resolver ("queries have exactly one entry") in a production build.
-const jakarta = Plus_Jakarta_Sans({
+// (The weight ranges below come from the vendored files, not from Google.)
+const jakarta = localFont({
+  src: "./fonts/plus-jakarta-sans.woff2",
   variable: "--font-jakarta",
-  subsets: ["latin"],
-  weight: "variable",
+  weight: "200 800",
   preload: false,
 });
-const spectral = Spectral({
+const spectral = localFont({
+  src: [
+    { path: "./fonts/spectral-400.woff2", weight: "400" },
+    { path: "./fonts/spectral-600.woff2", weight: "600" },
+    { path: "./fonts/spectral-800.woff2", weight: "800" },
+  ],
   variable: "--font-spectral",
-  subsets: ["latin"],
-  weight: ["400", "600", "800"],
   preload: false,
 });
 
 // Optional per-event description typography (src/lib/event-description-style.ts)
 // - admins can match an event's card to its poster's mood, grouped into 6
-// categories in the picker. Same self-hosting reasoning as above; weights
-// kept to 2 per font (regular + a bold-ish step, or just the 1 available
-// weight for single-weight display/script faces). Every one has preload: false:
-// next/font otherwise injects a <link rel="preload"> for each on EVERY page, which
-// measured ~710 KB of fonts per page load for readers behind the Great Firewall
-// who almost never see an event that uses one. With it off, the @font-face is still
-// declared and the file downloads only when an element actually uses the font. Suffixed "-g" (raw next/font
-// var) because globals.css wraps each with CJK/generic fallbacks into the
-// final --font-poppins etc. used by the font-* utilities - same two-step
-// pattern as --font-jakarta -> --font-sans above.
+// categories in the picker. Every one has preload: false: next/font otherwise
+// injects a <link rel="preload"> for each on EVERY page, which measured ~710 KB
+// of fonts per page load for readers behind the Great Firewall who almost never
+// see an event that uses one. With it off, the @font-face is still declared and
+// the file downloads only when an element actually uses the font. Suffixed "-g"
+// (raw next/font var) because globals.css wraps each with CJK/generic fallbacks
+// into the final --font-poppins etc. used by the font-* utilities - same
+// two-step pattern as --font-jakarta -> --font-sans above.
 // Bersih & Modern
-const poppins = Poppins({ variable: "--font-poppins-g", subsets: ["latin"], weight: ["400", "700"], preload: false });
-const inter = Inter({ variable: "--font-inter-g", subsets: ["latin"], weight: ["400", "700"], preload: false });
-// Manrope is variable-only on Google Fonts (no static per-weight files) -
-// requesting discrete weight: ["400","700"] worked in local dev/build but
-// broke Turbopack's font resolver on Vercel's build ("next/font/google
-// queries have exactly one entry", 12 failures - one per unicode-range
-// subset block Google splits it into). weight: "variable" requests the
-// actual variable axis in one clean query instead of two colliding ones.
-const manrope = Manrope({ variable: "--font-manrope-g", subsets: ["latin"], weight: "variable", preload: false });
+const poppins = localFont({
+  src: [
+    { path: "./fonts/poppins-400.woff2", weight: "400" },
+    { path: "./fonts/poppins-700.woff2", weight: "700" },
+  ],
+  variable: "--font-poppins-g",
+  preload: false,
+});
+const inter = localFont({ src: "./fonts/inter.woff2", variable: "--font-inter-g", weight: "100 900", preload: false });
+const manrope = localFont({ src: "./fonts/manrope.woff2", variable: "--font-manrope-g", weight: "200 800", preload: false });
 // Serif & Elegan
-const playfair = Playfair_Display({ variable: "--font-playfair-g", subsets: ["latin"], weight: ["400", "700"], preload: false });
-const lora = Lora({ variable: "--font-lora-g", subsets: ["latin"], weight: ["400", "700"], preload: false });
-const merriweather = Merriweather({ variable: "--font-merriweather-g", subsets: ["latin"], weight: ["400", "700"], preload: false });
+const playfair = localFont({ src: "./fonts/playfair-display.woff2", variable: "--font-playfair-g", weight: "400 900", preload: false });
+const lora = localFont({ src: "./fonts/lora.woff2", variable: "--font-lora-g", weight: "400 700", preload: false });
+const merriweather = localFont({ src: "./fonts/merriweather.woff2", variable: "--font-merriweather-g", weight: "300 900", preload: false });
 // Tegas & Poster
-const bebasNeue = Bebas_Neue({ variable: "--font-bebas-g", subsets: ["latin"], weight: ["400"], preload: false });
-const anton = Anton({ variable: "--font-anton-g", subsets: ["latin"], weight: ["400"], preload: false });
-const oswald = Oswald({ variable: "--font-oswald-g", subsets: ["latin"], weight: ["400", "700"], preload: false });
+const bebasNeue = localFont({ src: "./fonts/bebas-neue.woff2", variable: "--font-bebas-g", weight: "400", preload: false });
+const anton = localFont({ src: "./fonts/anton.woff2", variable: "--font-anton-g", weight: "400", preload: false });
+const oswald = localFont({ src: "./fonts/oswald.woff2", variable: "--font-oswald-g", weight: "200 700", preload: false });
 // Playful & Santai
-const fredoka = Fredoka({ variable: "--font-fredoka-g", subsets: ["latin"], weight: ["400", "600"], preload: false });
-const baloo = Baloo_2({ variable: "--font-baloo-g", subsets: ["latin"], weight: ["400", "700"], preload: false });
-const quicksand = Quicksand({ variable: "--font-quicksand-g", subsets: ["latin"], weight: ["400", "700"], preload: false });
+const fredoka = localFont({ src: "./fonts/fredoka.woff2", variable: "--font-fredoka-g", weight: "300 700", preload: false });
+const baloo = localFont({ src: "./fonts/baloo-2.woff2", variable: "--font-baloo-g", weight: "400 800", preload: false });
+const quicksand = localFont({ src: "./fonts/quicksand.woff2", variable: "--font-quicksand-g", weight: "300 700", preload: false });
 // Tulisan Tangan
-const caveat = Caveat({ variable: "--font-caveat-g", subsets: ["latin"], weight: ["400", "700"], preload: false });
-const pacifico = Pacifico({ variable: "--font-pacifico-g", subsets: ["latin"], weight: ["400"], preload: false });
-const dancingScript = Dancing_Script({ variable: "--font-dancing-g", subsets: ["latin"], weight: ["400", "700"], preload: false });
-const kalam = Kalam({ variable: "--font-kalam-g", subsets: ["latin"], weight: ["400", "700"], preload: false });
-const indieFlower = Indie_Flower({ variable: "--font-indieflower-g", subsets: ["latin"], weight: ["400"], preload: false });
-const permanentMarker = Permanent_Marker({ variable: "--font-permanentmarker-g", subsets: ["latin"], weight: ["400"], preload: false });
-const greatVibes = Great_Vibes({ variable: "--font-greatvibes-g", subsets: ["latin"], weight: ["400"], preload: false });
-const shadowsIntoLight = Shadows_Into_Light({ variable: "--font-shadows-g", subsets: ["latin"], weight: ["400"], preload: false });
+const caveat = localFont({ src: "./fonts/caveat.woff2", variable: "--font-caveat-g", weight: "400 700", preload: false });
+const pacifico = localFont({ src: "./fonts/pacifico.woff2", variable: "--font-pacifico-g", weight: "400", preload: false });
+const dancingScript = localFont({ src: "./fonts/dancing-script.woff2", variable: "--font-dancing-g", weight: "400 700", preload: false });
+const kalam = localFont({
+  src: [
+    { path: "./fonts/kalam-400.woff2", weight: "400" },
+    { path: "./fonts/kalam-700.woff2", weight: "700" },
+  ],
+  variable: "--font-kalam-g",
+  preload: false,
+});
+const indieFlower = localFont({ src: "./fonts/indie-flower.woff2", variable: "--font-indieflower-g", weight: "400", preload: false });
+const permanentMarker = localFont({ src: "./fonts/permanent-marker.woff2", variable: "--font-permanentmarker-g", weight: "400", preload: false });
+const greatVibes = localFont({ src: "./fonts/great-vibes.woff2", variable: "--font-greatvibes-g", weight: "400", preload: false });
+const shadowsIntoLight = localFont({ src: "./fonts/shadows-into-light.woff2", variable: "--font-shadows-g", weight: "400", preload: false });
 // Monospace & Teknis
-const jetbrainsMono = JetBrains_Mono({ variable: "--font-jetbrains-g", subsets: ["latin"], weight: ["400", "700"], preload: false });
-const spaceMono = Space_Mono({ variable: "--font-spacemono-g", subsets: ["latin"], weight: ["400", "700"], preload: false });
-const plexMono = IBM_Plex_Mono({ variable: "--font-plexmono-g", subsets: ["latin"], weight: ["400", "700"], preload: false });
+const jetbrainsMono = localFont({ src: "./fonts/jetbrains-mono.woff2", variable: "--font-jetbrains-g", weight: "100 800", preload: false });
+const spaceMono = localFont({
+  src: [
+    { path: "./fonts/space-mono-400.woff2", weight: "400" },
+    { path: "./fonts/space-mono-700.woff2", weight: "700" },
+  ],
+  variable: "--font-spacemono-g",
+  preload: false,
+});
+const plexMono = localFont({
+  src: [
+    { path: "./fonts/ibm-plex-mono-400.woff2", weight: "400" },
+    { path: "./fonts/ibm-plex-mono-700.woff2", weight: "700" },
+  ],
+  variable: "--font-plexmono-g",
+  preload: false,
+});
 
 // generateMetadata, not a static object, so the tab title follows the reader's
 // language. Crawlers carry no locale cookie, so they always see the id default

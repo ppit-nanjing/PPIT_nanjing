@@ -102,6 +102,21 @@ const nextConfig: NextConfig = {
       bodySizeLimit: "4mb",
     },
   },
+  // `pg` is a devDependency, loaded through createRequire in src/db/index.ts so
+  // the Neon driver stays the only client in the production bundle. That also
+  // hides it from Vercel's file tracing, so a deployment pointed at a plain
+  // Postgres (DB_DRIVER=pg, e.g. a preview wired to the Docker database) used to
+  // die at runtime with MODULE_NOT_FOUND. These globs pull the driver and its
+  // dependencies into the function; they copy nothing when `pg` is absent.
+  outputFileTracingIncludes: {
+    "/**": [
+      "node_modules/pg/**",
+      "node_modules/pg-*/**",
+      "node_modules/pgpass/**",
+      "node_modules/postgres-*/**",
+      "node_modules/split2/**",
+    ],
+  },
   // No "X-Powered-By: Next.js" response header (it only helps fingerprinting).
   poweredByHeader: false,
   images: {
