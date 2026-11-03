@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import { CheckCircle2, XCircle, UserRound, ScanLine, BadgeCheck, Undo2 } from "lucide-react";
 import { checkInByToken, checkInCommitteeByToken } from "@/app/actions/admin-events";
 import { CHECK_IN_BLOCK_DOOR_MESSAGE } from "@/lib/event-checkin";
@@ -64,6 +65,7 @@ export function ScanCheckIn({
   // acara lain atau nama tidak cocok di daftar.
   kelompok?: { kelompok: number; warna: string } | null;
 }) {
+  const router = useRouter();
   const [status, setStatus] = useState<Status>("pending");
   const [already, setAlready] = useState(false);
   const [blockReason, setBlockReason] = useState<string | null>(null);
@@ -81,6 +83,9 @@ export function ScanCheckIn({
         } else {
           setAlready(res.already);
           setStatus("done");
+          // Hitungan hadir di atas halaman ikut naik (jalur cari-nama sudah begitu). Token tetap di URL,
+          // jadi kartu ini tidak ikut hilang; "Batalkan" sengaja tidak me-refresh karena URL-nya sudah dibersihkan.
+          if (!practice && !res.already) router.refresh();
         }
       })
       .catch(() => {
@@ -89,7 +94,7 @@ export function ScanCheckIn({
     return () => {
       cancelled = true;
     };
-  }, [token, eventId, kind, practice]);
+  }, [token, eventId, kind, practice, router]);
 
   if (status === "undone") {
     return (
