@@ -111,7 +111,7 @@ export default async function ConsoleLinksPage({
           Unduh CSV
         </a>
       </div>
-      <p className="text-body-md text-on-surface-variant mb-4">
+      <p className="text-body-md text-on-surface-variant mb-4 max-w-[62ch]">
         Tautan pendek <code>nanjing.ppitiongkok.com/l/xxx</code> untuk menyebarkan dokumentasi & berkas.
       </p>
 
@@ -181,7 +181,7 @@ export default async function ConsoleLinksPage({
             ))}
           </div>
         )}
-        <p className="text-body-sm text-on-surface-variant mt-3">
+        <p className="text-body-sm text-on-surface-variant mt-3 max-w-[62ch]">
           Periode yang ditandai Aktif adalah yang dipakai modul Dokumen untuk menentukan folder mana yang bisa
           dibuka anggota. Cuma satu periode yang bisa aktif sekaligus &mdash; menandai satu otomatis menonaktifkan
           yang lain.

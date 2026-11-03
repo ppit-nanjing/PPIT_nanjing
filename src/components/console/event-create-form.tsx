@@ -65,7 +65,7 @@ export function EventCreateForm({
               <legend className="text-label-caps uppercase tracking-wide text-on-surface-variant px-1">
                 Divisi Penanggung Jawab (opsional)
               </legend>
-              <p className="text-body-sm text-on-surface-variant -mt-1">
+              <p className="text-body-sm text-on-surface-variant -mt-1 max-w-[62ch]">
                 Divisi kabinet pemilik acara/proker ini (boleh lebih dari satu untuk proker gabungan). Anggota divisi
                 itu otomatis bisa mengelola acaranya di menu Kegiatan <strong>selama divisinya memegang centang
                 &quot;Kegiatan&quot; di Organisasi</strong> — baris PJ menyempitkan akses, bukan memberi modul baru.

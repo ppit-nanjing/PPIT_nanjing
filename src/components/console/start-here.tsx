@@ -50,7 +50,7 @@ export function StartHere({
           <h2 id="start-here-title" className="text-headline-sm text-on-background">
             Mulai dari sini
           </h2>
-          <p className="mt-1 max-w-[70ch] text-body-md text-on-surface-variant">
+          <p className="mt-1 max-w-[62ch] text-body-md text-on-surface-variant">
             {firstName ? `Halo, ${firstName}. ` : ""}
             Ini langkah awal yang cocok untuk akunmu. Membuka dan melihat halaman tidak mengubah data apa pun.
           </p>
@@ -80,7 +80,7 @@ export function StartHere({
             </span>
             <span className="min-w-0 flex-1">
               <span className="block text-body-md font-medium text-on-background">{s.title}</span>
-              <span className="mt-0.5 block max-w-[70ch] text-body-sm text-on-surface-variant">{s.why}</span>
+              <span className="mt-0.5 block max-w-[62ch] text-body-sm text-on-surface-variant">{s.why}</span>
             </span>
             <Link
               href={s.href}
@@ -94,7 +94,7 @@ export function StartHere({
 
       {modules.length > 0 && (
         <details className="group mt-4">
-          <summary className="cursor-pointer text-label-caps uppercase tracking-wide text-on-surface-variant transition-colors hover:text-on-background">
+          <summary className="cursor-pointer text-body-sm font-medium text-on-surface-variant transition-colors hover:text-on-background">
             Apa saja yang bisa kamu buka ({modules.length})
           </summary>
           <dl className="mt-3 grid gap-x-6 gap-y-2 sm:grid-cols-2">

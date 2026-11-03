@@ -46,12 +46,12 @@ export function ContributionReview({
           <div className="flex items-start justify-between gap-4">
             <div>
               <p className="text-body-md font-semibold text-on-background">{c.name}</p>
-              <p className="text-label-caps text-on-surface-variant">
+              <p className="text-body-sm text-on-surface-variant">
                 {c.contributionType === "donate" ? "Sumbangan" : "Pinjamkan"} &middot; Kondisi: {c.condition}
                 {c.category ? ` · ${c.category}` : ""}
               </p>
               {c.userName && (
-                <p className="text-label-caps text-on-surface-variant">
+                <p className="text-body-sm text-on-surface-variant">
                   {c.userName} ({c.userEmail})
                 </p>
               )}
@@ -59,7 +59,7 @@ export function ContributionReview({
           </div>
 
           <label className="flex flex-col gap-2">
-            <span className="text-label-caps uppercase tracking-wide text-on-surface-variant">
+            <span className="text-body-sm font-medium text-on-surface-variant">
               Gabung ke barang existing (kosongkan = buat barang baru)
             </span>
             <Select name="existingItemId" defaultValue="" className="w-full">

@@ -254,7 +254,7 @@ export default async function ConsoleSensusPage({ searchParams }: { searchParams
                       >
                         <div className="min-w-0 flex-1">
                           <p className="text-body-md text-on-background truncate">{who}</p>
-                          <p className="text-label-caps text-on-surface-variant truncate">
+                          <p className="text-body-sm text-on-surface-variant truncate">
                             {[s.university, s.branch, s.degreeLevel].filter(Boolean).join(" · ") || "Data belum lengkap"}
                           </p>
                         </div>
@@ -268,11 +268,11 @@ export default async function ConsoleSensusPage({ searchParams }: { searchParams
                             <FileX2 size={18} className="text-outline" />
                           )}
                         </span>
-                        <span className={`shrink-0 text-label-caps px-2.5 py-1 rounded-full ${STATUS_BADGE[ms]}`}>
+                        <span className={`shrink-0 text-body-sm font-medium px-2.5 py-0.5 rounded-full ${STATUS_BADGE[ms]}`}>
                           {MEMBERSHIP_LABEL[ms]}
                         </span>
                         <span
-                          className={`shrink-0 text-label-caps px-2.5 py-1 rounded-full ${
+                          className={`shrink-0 text-body-sm font-medium px-2.5 py-0.5 rounded-full ${
                             s.completionStatus === "complete"
                               ? "bg-primary-container/15 text-primary-container"
                               : "bg-error-container/30 text-on-error-container"

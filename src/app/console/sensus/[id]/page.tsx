@@ -74,11 +74,11 @@ export default async function ConsoleSensusDetailPage({ params }: { params: Prom
       </Link>
       <div className="flex flex-wrap items-center gap-3 mt-2 mb-1">
         <h1 className="text-headline-md sm:text-headline-lg text-on-background">{who}</h1>
-        <span className="text-label-caps px-2.5 py-1 rounded-full bg-surface-container-high text-on-surface-variant">
+        <span className="text-body-sm font-medium px-2.5 py-0.5 rounded-full bg-surface-container-high text-on-surface-variant">
           {MEMBERSHIP_LABEL[ms]}
         </span>
         <span
-          className={`text-label-caps px-2.5 py-1 rounded-full ${
+          className={`text-body-sm font-medium px-2.5 py-0.5 rounded-full ${
             s.completionStatus === "complete"
               ? "bg-primary-container/15 text-primary-container"
               : "bg-error-container/30 text-on-error-container"
@@ -193,7 +193,7 @@ export default async function ConsoleSensusDetailPage({ params }: { params: Prom
                       {log.action === "deleted" ? "Dihapus" : "Diperbarui"} oleh{" "}
                       {actorName ?? actorEmail ?? "pengurus"}
                     </span>
-                    <span className="text-label-caps text-on-surface-variant">
+                    <span className="text-body-sm text-on-surface-variant">
                       {new Date(log.createdAt).toLocaleString("id-ID", { timeZone: "Asia/Shanghai", dateStyle: "medium", timeStyle: "short" })}
                     </span>
                   </div>
