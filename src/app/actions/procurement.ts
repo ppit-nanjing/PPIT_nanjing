@@ -64,11 +64,14 @@ export async function reviewProcurement(formData: FormData) {
       .where(eq(procurementRequests.id, id));
     await notify(req.userId, req.itemName, true);
   } else if (decision === "reject" && req.status === "pending") {
+    // Pengusul diberi tahu lewat notifikasi, jadi alasannya wajib (formulirnya juga memeriksa ini).
+    const reason = String(formData.get("reason") ?? "").trim().slice(0, 300);
+    if (reason.length < 3) throw new Error("Tulis alasan penolakan supaya pengusul tahu kenapa.");
     await db
       .update(procurementRequests)
       .set({ status: "rejected", reviewedBy: actorId, reviewedAt: new Date() })
       .where(eq(procurementRequests.id, id));
-    await notify(req.userId, req.itemName, false);
+    await notify(req.userId, req.itemName, false, reason);
   } else if (decision === "fulfill" && req.status === "approved") {
     await db
       .update(procurementRequests)
@@ -82,11 +85,11 @@ export async function reviewProcurement(formData: FormData) {
 // Approved and rejected are separate templates rather than one template with a
 // {{verb}} placeholder, so an admin can word each outcome independently (a
 // rejection usually wants a softer tone than an approval).
-async function notify(userId: string, itemName: string, approved: boolean) {
+async function notify(userId: string, itemName: string, approved: boolean, reason = "") {
   await createTemplatedNotification({
     userId,
     templateKey: approved ? "procurement_approved" : "procurement_rejected",
-    variables: { itemName },
+    variables: { itemName, reasonLine: reason ? ` Alasan: ${reason}` : "" },
     relatedEntityType: "procurement_request",
     relatedEntityId: userId,
   });

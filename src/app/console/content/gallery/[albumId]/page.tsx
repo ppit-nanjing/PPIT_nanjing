@@ -84,12 +84,10 @@ export default async function ConsoleAlbumDetailPage({ params }: { params: Promi
         </form>
       </CollapsibleSection>
 
-      <CollapsibleSection title="Link Google Drive Semua Foto" defaultOpen>
+      <CollapsibleSection title="Tautan Album Lengkap" defaultOpen>
         <form action={setAlbumDriveUrl.bind(null, albumId)} className="flex flex-col gap-3 sm:flex-row sm:items-end mb-10">
           <label className="flex-1 flex flex-col gap-1">
-            <span className="text-label-caps uppercase tracking-wide text-on-surface-variant">
-              Pengunjung mengambil foto lengkap lewat tautan ini (harus bisa dibuka dari Tiongkok; Google Drive/Photos sering terblokir tanpa VPN)
-            </span>
+            <span className="text-label-caps uppercase tracking-wide text-on-surface-variant">Tautan album lengkap</span>
             <input
               name="driveUrl"
               type="url"
@@ -97,6 +95,9 @@ export default async function ConsoleAlbumDetailPage({ params }: { params: Promi
               placeholder="https://…"
               className="bg-soft-gray rounded-md p-3 text-body-md"
             />
+          <span className="text-body-sm text-on-surface-variant">
+              Pengunjung mengambil foto lengkap lewat tautan ini. Pastikan bisa dibuka dari Tiongkok: Google Drive/Photos sering terblokir tanpa VPN.
+            </span>
           </label>
           <SubmitButton
             successMessage="Tautan album tersimpan."

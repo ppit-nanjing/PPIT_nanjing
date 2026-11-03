@@ -142,8 +142,11 @@ export function CollapsibleRecordList<T extends { id: string }>({
 
               {isOpen && (
                 <div
-                  onClickCapture={() => {
-                    lastActedRow.current = r.id;
+                  onClickCapture={(e) => {
+                    // Hanya klik pada kontrol sungguhan; klik di teks biasa tidak boleh memicu pemulihan fokus.
+                    if ((e.target as HTMLElement).closest("button, a, input, select, textarea, summary, label")) {
+                      lastActedRow.current = r.id;
+                    }
                   }}
                   className="flex flex-col gap-3 px-3 pb-4 pl-9 sm:px-4 sm:pl-11"
                 >

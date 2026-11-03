@@ -66,11 +66,14 @@ export async function reviewContribution(formData: FormData) {
   if (!contribution || contribution.status !== "pending") return;
 
   if (decision === "reject") {
+    // Pengusul diberi tahu lewat notifikasi, jadi alasannya wajib (formulirnya juga memeriksa ini).
+    const reason = String(formData.get("reason") ?? "").trim().slice(0, 300);
+    if (reason.length < 3) throw new Error("Tulis alasan penolakan supaya pengusul tahu kenapa.");
     await db
       .update(itemContributions)
       .set({ status: "rejected", reviewedBy: actorId, reviewedAt: new Date() })
       .where(eq(itemContributions.id, id));
-    await notifyContributor(contribution.userId, contribution.name, false);
+    await notifyContributor(contribution.userId, contribution.name, false, reason);
     revalidatePath("/console/inventory");
     return;
   }
@@ -122,11 +125,11 @@ export async function reviewContribution(formData: FormData) {
   }
 }
 
-async function notifyContributor(userId: string, itemName: string, approved: boolean) {
+async function notifyContributor(userId: string, itemName: string, approved: boolean, reason = "") {
   await createTemplatedNotification({
     userId,
     templateKey: approved ? "contribution_approved" : "contribution_rejected",
-    variables: { itemName },
+    variables: { itemName, reasonLine: reason ? ` Alasan: ${reason}` : "" },
     relatedEntityType: "item_contribution",
     relatedEntityId: userId,
   });

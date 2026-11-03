@@ -144,7 +144,7 @@ export default async function ConsoleEventsPage() {
                 <div className="min-w-0">
                   <p className="text-body-md font-medium text-on-background truncate">{e.title}</p>
                   <p className="text-label-caps text-on-surface-variant">
-                    {e.startAt ? new Date(e.startAt).toLocaleDateString("id-ID", { timeZone: "Asia/Shanghai" }) : "Belum dijadwalkan"}
+                    {e.startAt ? new Date(e.startAt).toLocaleDateString("id-ID", { timeZone: "Asia/Shanghai", dateStyle: "medium" }) : "Belum dijadwalkan"}
                   </p>
                 </div>
                 <span className="text-label-caps uppercase tracking-wide bg-surface-container-low px-2.5 py-1 rounded shrink-0">

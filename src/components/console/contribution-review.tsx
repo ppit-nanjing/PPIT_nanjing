@@ -4,6 +4,7 @@ import { useTransition } from "react";
 import { toast } from "sonner";
 import { reviewContribution } from "@/app/actions/contributions";
 import { Select } from "@/components/console/form";
+import { RejectWithReason } from "@/components/console/reject-with-reason";
 
 type Contribution = {
   id: string;
@@ -81,15 +82,7 @@ export function ContributionReview({
             >
               Setujui
             </button>
-            <button
-              type="submit"
-              name="decision"
-              value="reject"
-              disabled={pending}
-              className="text-label-caps uppercase tracking-wide px-5 py-2.5 rounded-md border border-outline-variant text-secondary hover:text-on-background transition-colors disabled:opacity-60"
-            >
-              Tolak
-            </button>
+            <RejectWithReason disabled={pending} />
           </div>
         </form>
       ))}

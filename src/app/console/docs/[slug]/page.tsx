@@ -27,7 +27,7 @@ export default async function HelpArticlePage({ params }: { params: Promise<{ sl
       <h1 className="text-headline-md sm:text-headline-lg text-on-background mb-2">{article.title}</h1>
       <p className="text-body-sm text-on-surface-variant mb-8 flex flex-wrap items-center gap-x-2">
         <span>
-          Diperbarui {new Date(article.updatedAt).toLocaleDateString("id-ID", { timeZone: "Asia/Shanghai" })}
+          Diperbarui {new Date(article.updatedAt).toLocaleDateString("id-ID", { timeZone: "Asia/Shanghai", dateStyle: "medium" })}
           {authorName ? ` oleh ${authorName}` : ""}
         </span>
         {article.isPublic && (

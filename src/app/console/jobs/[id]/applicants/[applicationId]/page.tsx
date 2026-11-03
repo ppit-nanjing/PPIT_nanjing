@@ -151,7 +151,7 @@ export default async function JobApplicantPage({
                 label: JOB_APPLICATION_STATUS_LABEL[value],
               }))}
             />
-            <p className="text-label-caps text-on-surface-variant mt-3">
+            <p className="text-body-sm text-on-surface-variant mt-3">
               Notifikasi ke pelamar hanya dikirim saat status benar-benar berubah, dan tidak bisa ditarik.
               Menyimpan ulang status yang sama tidak mengirim apa pun.
             </p>

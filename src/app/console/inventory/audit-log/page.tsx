@@ -65,7 +65,7 @@ export default async function InventoryAuditLogPage() {
                   </td>
                   <td className="px-5 py-3 text-body-sm text-on-surface-variant">{actorName ?? actorEmail ?? "Sistem"}</td>
                   <td className="px-5 py-3 text-label-caps text-on-surface-variant">
-                    {new Date(log.createdAt).toLocaleString("id-ID", { timeZone: "Asia/Shanghai" })}
+                    {new Date(log.createdAt).toLocaleString("id-ID", { timeZone: "Asia/Shanghai", dateStyle: "medium", timeStyle: "short" })}
                   </td>
                 </tr>
               ))}
@@ -97,7 +97,7 @@ export default async function InventoryAuditLogPage() {
                   <span className="text-on-surface-variant">{actorName ?? actorEmail ?? "Sistem"}</span>
                 </p>
                 <p className="text-label-caps text-on-surface-variant">
-                  {new Date(log.createdAt).toLocaleString("id-ID", { timeZone: "Asia/Shanghai" })}
+                  {new Date(log.createdAt).toLocaleString("id-ID", { timeZone: "Asia/Shanghai", dateStyle: "medium", timeStyle: "short" })}
                 </p>
               </div>
             ))

@@ -189,7 +189,16 @@ export function ScanCheckIn({
       </a>
       {!practice && !already && userId && (
         <div className="mt-3">
-          <UndoCheckInButton eventId={eventId} kind={kind} userId={userId} onUndone={() => setStatus("undone")} />
+          <UndoCheckInButton
+            eventId={eventId}
+            kind={kind}
+            userId={userId}
+            onUndone={() => {
+              // Token dibuang dari URL: memuat ulang halaman ini tidak boleh men-check-in orangnya lagi.
+              window.history.replaceState(null, "", scanPath);
+              setStatus("undone");
+            }}
+          />
         </div>
       )}
     </div>

@@ -322,7 +322,7 @@ export function EventCommitteeStructure({
       {unassigned.length > 0 && (
         <section className="bg-surface-container-lowest border border-outline-variant rounded-xl p-5">
           <h3 className="text-headline-sm text-on-background mb-1">Tanpa divisi</h3>
-          <p className="text-label-caps text-on-surface-variant mb-3">
+          <p className="text-body-sm text-on-surface-variant mb-3">
             Panitia inti, atau ditugaskan sebelum struktur divisi dibuat.
             {divisions.length > 0 && (
               <>
@@ -463,7 +463,7 @@ function JobDesc({ text }: { text: string }) {
 
 function MemberList({ rows, certified }: { rows: MemberRow[]; certified?: Set<string> }) {
   if (rows.length === 0) {
-    return <p className="text-label-caps text-on-surface-variant mt-2">Belum ada yang ditugaskan.</p>;
+    return <p className="text-body-sm text-on-surface-variant mt-2">Belum ada yang ditugaskan.</p>;
   }
   return (
     <ul className="flex flex-col gap-1 mt-2">

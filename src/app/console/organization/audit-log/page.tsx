@@ -31,7 +31,7 @@ export default async function OrganizationAuditLogPage() {
                   {log.action === "created" ? "Dibuat" : log.action === "updated" ? "Diperbarui" : "Diurutkan ulang"}
                 </span>
                 <span className="text-label-caps text-on-surface-variant">
-                  {new Date(log.createdAt).toLocaleString("id-ID", { timeZone: "Asia/Shanghai" })}
+                  {new Date(log.createdAt).toLocaleString("id-ID", { timeZone: "Asia/Shanghai", dateStyle: "medium", timeStyle: "short" })}
                 </span>
               </div>
               <p className="text-label-caps text-on-surface-variant">

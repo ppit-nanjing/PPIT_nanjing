@@ -37,7 +37,6 @@ export function NewsArticleForm({
   eventId?: string;
 }) {
   const [state, formAction, isPending] = useActionState<ContentFormState, FormData>(action, {});
-  useActionToast(isPending, state.error, "Artikel tersimpan.");
   const alreadyPublished = !!initial?.published;
   const isArchived = !!initial?.archived;
   // Publikasi pertama = email massal ke semua pelanggan, tak bisa ditarik. Karena itu
@@ -45,6 +44,7 @@ export function NewsArticleForm({
   const [willPublish, setWillPublish] = useState(alreadyPublished);
   const formRef = useRef<HTMLFormElement>(null);
   const willEmail = willPublish && !alreadyPublished && emailReady && subscriberCount > 0;
+  useActionToast(isPending, state.error, willPublish ? "Artikel dipublikasikan." : "Artikel tersimpan.");
 
   return (
     <form ref={formRef} action={formAction} className="flex flex-col gap-6">

@@ -519,6 +519,17 @@ h4, h5, h6 {
   }
 }
 
+/* Pemenggalan baris di konsol (Impeccable typeset): judul seimbang, isi tanpa kata yatim di baris terakhir.
+   Progresif: browser yang tak mengenalinya memakai pemenggalan bawaan. */
+@layer base {
+  #console-main :is(h1, h2, h3, [role="heading"]) {
+    text-wrap: balance;
+  }
+  #console-main :is(p, li, dd) {
+    text-wrap: pretty;
+  }
+}
+
 /* The ornament classes live in @layer components on purpose: unlayered CSS always beats
    Tailwind utilities, so a plain .deco-frame { position: relative } would silently
    break any element that also says `sticky` or `absolute`. In the components layer a

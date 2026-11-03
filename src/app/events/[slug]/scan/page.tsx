@@ -206,20 +206,27 @@ export default async function EventScanPage({
 
             {!t && <QrScanner practiceMode={practiceMode} />}
 
-            <form method="get" className="flex flex-col gap-3 sm:flex-row">
-              {practiceMode && <input type="hidden" name="practice" value="1" />}
-              <input
-                name="t"
-                placeholder="Tempel/salin token QR manual"
-                className="flex-1 bg-soft-gray rounded-md p-3 text-body-md"
-              />
-              <button
-                type="submit"
-                className="deco-btn bg-accent text-on-accent text-label-caps uppercase px-6 py-3 rounded-md hover:brightness-95 transition-[filter]"
-              >
-                Cek Token
-              </button>
-            </form>
+            {/* Token manual jarang dipakai: dilipat supaya pencarian nama (yang sering dipakai) naik. */}
+            <details className="mb-6 rounded-md border border-outline-variant">
+              <summary className="cursor-pointer list-none px-4 py-3 text-label-caps uppercase tracking-wide text-on-surface-variant hover:text-on-background">
+                Punya token QR? Masukkan manual
+              </summary>
+              <form method="get" className="flex flex-col gap-3 border-t border-outline-variant p-3 sm:flex-row">
+                {practiceMode && <input type="hidden" name="practice" value="1" />}
+                <input
+                  name="t"
+                  aria-label="Token QR"
+                  placeholder="Tempel/salin token QR"
+                  className="flex-1 bg-soft-gray rounded-md p-3 text-body-md"
+                />
+                <button
+                  type="submit"
+                  className="deco-btn bg-accent text-on-accent text-label-caps uppercase px-6 py-3 rounded-md hover:brightness-95 transition-[filter]"
+                >
+                  Cek Token
+                </button>
+              </form>
+            </details>
 
             {!t && <ManualCheckIn eventId={event.id} practice={practiceMode} />}
 

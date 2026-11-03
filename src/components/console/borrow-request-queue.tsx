@@ -2,6 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { Check, X, RotateCcw, Hand, PackageCheck, MapPin, TriangleAlert } from "lucide-react";
+import { toast } from "sonner";
 import {
   approveBorrowRequest,
   rejectBorrowRequest,
@@ -56,11 +57,12 @@ export function BorrowRequestQueue({ requests }: { requests: Request[] }) {
   const [rejectId, setRejectId] = useState<string | null>(null);
   const [reason, setReason] = useState("");
 
-  function run(fn: () => Promise<unknown>) {
+  function run(fn: () => Promise<unknown>, done?: string) {
     setError(null);
     startTransition(async () => {
       try {
         await fn();
+        if (done) toast.success(done);
       } catch (e) {
         setError(e instanceof Error ? e.message : "Aksi gagal. Muat ulang halaman lalu coba lagi.");
       }
@@ -145,7 +147,7 @@ export function BorrowRequestQueue({ requests }: { requests: Request[] }) {
                     await rejectBorrowRequest(r.id, reason);
                     setRejectId(null);
                     setReason("");
-                  });
+                  }, r.borrowerName ? "Pengajuan ditolak." : "Pengajuan ditolak. Peminjam diberi tahu lewat notifikasi.");
                 }}
                 className="flex flex-col gap-2 rounded-md border border-error/40 p-3"
               >
@@ -191,7 +193,7 @@ export function BorrowRequestQueue({ requests }: { requests: Request[] }) {
               <div className="flex flex-wrap gap-2">
                 <button
                   disabled={isPending}
-                  onClick={() => run(() => approveBorrowRequest(r.id))}
+                  onClick={() => run(() => approveBorrowRequest(r.id), "Pengajuan disetujui.")}
                   className="flex items-center gap-1 rounded-md bg-primary-container/10 px-3 py-2 text-label-caps text-primary-container transition-colors hover:bg-primary-container/20 disabled:opacity-50 motion-reduce:transition-none"
                 >
                   <Check size={14} /> Setujui
@@ -212,14 +214,14 @@ export function BorrowRequestQueue({ requests }: { requests: Request[] }) {
             <div className="flex flex-wrap items-center gap-3">
               <button
                 disabled={isPending}
-                onClick={() => run(() => markHandedOver(r.id))}
+                onClick={() => run(() => markHandedOver(r.id), "Barang ditandai dipinjam.")}
                 className="flex items-center gap-1 rounded-md bg-primary-container/10 px-3 py-1.5 text-label-caps text-primary-container transition-colors hover:bg-primary-container/20 disabled:opacity-50 motion-reduce:transition-none"
               >
                 <Hand size={14} /> Serahkan Barang (Tandai Dipinjam)
               </button>
               <button
                 disabled={isPending}
-                onClick={() => run(() => markReturned(r.id))}
+                onClick={() => run(() => markReturned(r.id), "Pengembalian dicatat.")}
                 className="flex items-center gap-1 text-label-caps text-on-surface-variant transition-colors hover:text-primary-container disabled:opacity-50 motion-reduce:transition-none"
               >
                 <RotateCcw size={14} /> Batalkan / Langsung Dikembalikan
@@ -229,7 +231,7 @@ export function BorrowRequestQueue({ requests }: { requests: Request[] }) {
           {(r.status === "borrowed" || r.status === "overdue") && (
             <button
               disabled={isPending}
-              onClick={() => run(() => markReturned(r.id))}
+              onClick={() => run(() => markReturned(r.id), "Pengembalian dicatat.")}
               className={`flex w-fit items-center gap-1 rounded-md px-3 py-1.5 text-label-caps transition-colors disabled:opacity-50 motion-reduce:transition-none ${
                 wantsReturn(r) ? "bg-primary-container text-on-primary hover:bg-primary" : "text-primary-container hover:text-primary"
               }`}

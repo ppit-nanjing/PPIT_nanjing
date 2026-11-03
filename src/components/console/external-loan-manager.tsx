@@ -111,11 +111,11 @@ export function ExternalLoanManager({ items, loans }: { items: Item[]; loans: Lo
                   <p className="text-label-caps text-on-surface-variant">
                     {l.borrowerName}
                     {l.borrowerContact ? ` (${l.borrowerContact})` : ""} &middot; {l.quantity} unit &middot; keluar{" "}
-                    {new Date(l.loanedAt).toLocaleDateString("id-ID", { timeZone: "Asia/Shanghai" })}
+                    {new Date(l.loanedAt).toLocaleDateString("id-ID", { timeZone: "Asia/Shanghai", dateStyle: "medium" })}
                   </p>
                   {l.expectedReturnAt && (
                     <p className="text-label-caps text-on-surface-variant">
-                      Perkiraan kembali: {new Date(l.expectedReturnAt).toLocaleDateString("id-ID", { timeZone: "Asia/Shanghai" })}
+                      Perkiraan kembali: {new Date(l.expectedReturnAt).toLocaleDateString("id-ID", { timeZone: "Asia/Shanghai", dateStyle: "medium" })}
                     </p>
                   )}
                 </div>

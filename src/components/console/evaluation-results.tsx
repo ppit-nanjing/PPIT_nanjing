@@ -267,7 +267,7 @@ function TemplateResults({
                 <div className="mt-4">
                   <Distribution values={values} tall />
                 </div>
-                <div className="mt-1 flex justify-between text-[10px] text-on-surface-variant">
+                <div className="mt-1 flex justify-between text-xs text-on-surface-variant">
                   <span>1</span>
                   <span>10</span>
                 </div>
@@ -533,7 +533,7 @@ function CustomResults({
                   <div className="mt-4">
                     <Distribution values={values} tall scale={scale} />
                   </div>
-                  <div className="mt-1 flex justify-between text-[10px] text-on-surface-variant">
+                  <div className="mt-1 flex justify-between text-xs text-on-surface-variant">
                     <span>1</span>
                     <span>{scale}</span>
                   </div>

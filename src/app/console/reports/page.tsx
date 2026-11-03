@@ -174,7 +174,7 @@ export default async function ConsoleReportsPage() {
                     </div>
                     <div className="flex items-center gap-4 shrink-0">
                       <span className="text-on-surface-variant text-label-caps">
-                        {generatedByName ?? "—"} &middot; {report.generatedAt.toLocaleString("id-ID", { timeZone: "Asia/Shanghai" })}
+                        {generatedByName ?? "—"} &middot; {report.generatedAt.toLocaleString("id-ID", { timeZone: "Asia/Shanghai", dateStyle: "medium", timeStyle: "short" })}
                       </span>
                       {/* Re-run regenerates the file server-side - the route never stored one. */}
                       <a
@@ -213,7 +213,7 @@ export default async function ConsoleReportsPage() {
 
         <CollapsibleSection title="Status Keanggotaan">
           <SummaryList items={byMembership} />
-          <p className="text-label-caps text-on-surface-variant mt-3">
+          <p className="text-body-sm text-on-surface-variant mt-3">
             Diturunkan dari sensus + kota, bukan kolom tersendiri. &ldquo;Tamu&rdquo; = sensusnya belum lengkap, jadi
             belum bisa dibedakan antara warga Nanjing yang belum sempat mengisi dan tamu dari luar — jawaban kota di
             form pendaftaran acara yang memisahkan keduanya.

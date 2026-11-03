@@ -554,6 +554,13 @@ export default async function ConsoleEventDetailPage({ params }: { params: Promi
             )}
           </section>
 
+          {!canVerifyPayments && event.isPaid && (
+            <p className="rounded-xl border border-outline-variant bg-surface-container-lowest p-4 text-body-sm text-on-surface-variant">
+              <span className="font-medium text-on-background">Verifikasi pembayaran</span> dikerjakan bendahara atau BPH
+              panitia acara ini. Peserta yang belum lunas belum bisa check-in; arahkan mereka ke bendahara.
+            </p>
+          )}
+
           {canVerifyPayments && event.isPaid && (
             <CollapsibleSection
               title="Verifikasi Pembayaran"

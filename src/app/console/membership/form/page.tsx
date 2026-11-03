@@ -100,7 +100,7 @@ export default async function MembershipFormPage() {
           <div className="flex flex-col gap-2">
             <span className="text-label-caps uppercase tracking-wide text-on-surface-variant">Tautan Spreadsheet (opsional)</span>
             <input name="spreadsheetUrl" placeholder="https://docs.google.com/spreadsheets/..." defaultValue={meta.spreadsheetUrl ?? ""} className="bg-soft-gray rounded-md p-3 text-body-md" />
-            <span className="text-label-caps text-on-surface-variant">Muncul sebagai tombol &ldquo;Buka Spreadsheet&rdquo; di halaman Jawaban.</span>
+            <span className="text-body-sm text-on-surface-variant">Muncul sebagai tombol &ldquo;Buka Spreadsheet&rdquo; di halaman Jawaban.</span>
           </div>
           <SubmitButton
             successMessage="Setelan formulir tersimpan."

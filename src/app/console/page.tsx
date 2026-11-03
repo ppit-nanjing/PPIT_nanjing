@@ -117,7 +117,7 @@ function timeAgo(d: Date) {
   if (hr < 24) return `${hr} jam lalu`;
   const day = Math.floor(hr / 24);
   if (day < 30) return `${day} hari lalu`;
-  return d.toLocaleDateString("id-ID", { timeZone: "Asia/Shanghai" });
+  return d.toLocaleDateString("id-ID", { timeZone: "Asia/Shanghai", dateStyle: "medium" });
 }
 
 export const metadata: Metadata = { title: "Dashboard" };

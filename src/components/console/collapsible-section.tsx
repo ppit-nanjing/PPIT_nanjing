@@ -58,7 +58,7 @@ export function CollapsibleSection({
         </button>
       </div>
       {mounted ? (
-        <div id={panelId} hidden={!open} className="px-4 pb-5 sm:px-6 sm:pb-6">
+        <div id={panelId} hidden={!open} onInvalidCapture={() => setOpen(true)} className="px-4 pb-5 sm:px-6 sm:pb-6">
           {children}
         </div>
       ) : null}

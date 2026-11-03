@@ -86,9 +86,9 @@ function AccessFields({ dept, isFullAdmin }: { dept: Department; isFullAdmin: bo
         className="text-on-background"
       />
       {!isFullAdmin && (
-        <p className="text-label-caps text-on-surface-variant">Hanya BPH yang dapat mengubah akses penuh &amp; modul sensitif.</p>
+        <p className="text-body-sm text-on-surface-variant">Hanya BPH yang dapat mengubah akses penuh &amp; modul sensitif.</p>
       )}
-      <p className="text-label-caps text-on-surface-variant uppercase tracking-wide mt-1">
+      <p className="text-body-sm text-on-surface-variant mt-1">
         Modul admin yang bisa diakses (untuk anggota dengan role &apos;scoped&apos;)
       </p>
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5">
@@ -129,7 +129,7 @@ function HeadSelect({ dept, members }: { dept: Department; members: Member[] }) 
         ))}
       </Select>
       {members.length === 0 && (
-        <span className="text-label-caps text-on-surface-variant normal-case">
+        <span className="text-body-sm text-on-surface-variant normal-case">
           Belum ada anggota di sini — tambahkan lewat halaman Pengguna dulu, baru bisa dipilih jadi kepala.
         </span>
       )}

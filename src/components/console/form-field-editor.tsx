@@ -362,7 +362,7 @@ export function FormFieldEditor({
                     <div className="flex flex-col gap-2">
                       <span className="text-label-caps uppercase tracking-wide text-on-surface-variant">Keterangan untuk Peserta (opsional)</span>
                       <input name="helpText" defaultValue={field.helpText ?? ""} className="bg-surface-container-lowest rounded-md p-3 text-body-md" />
-                      <span className="text-label-caps text-on-surface-variant">Penjelasan tambahan di bawah pertanyaan.</span>
+                      <span className="text-body-sm text-on-surface-variant">Penjelasan tambahan di bawah pertanyaan.</span>
                     </div>
                     {type === "number" && (
                       <div className="grid grid-cols-2 gap-4">
@@ -390,7 +390,7 @@ export function FormFieldEditor({
                         onChange={(e) => setCfg((c) => ({ ...c, imageUrl: e.target.value.trim() || undefined }))}
                         className="bg-surface-container-lowest rounded-md p-3 text-body-md"
                       />
-                      <span className="text-label-caps text-on-surface-variant">Tampil sebaris di bawah pertanyaan (sama seperti Google Form).</span>
+                      <span className="text-body-sm text-on-surface-variant">Tampil sebaris di bawah pertanyaan (sama seperti Google Form).</span>
                     </div>
                     {isQuiz && (
                       <div className="flex flex-col gap-4 bg-tertiary-container/10 rounded-md p-3">
@@ -461,7 +461,7 @@ function AnswerKeyEditor({
       /* keep empty */
     }
     if (rows.length === 0 || options.length === 0) {
-      return <p className="text-label-caps text-on-surface-variant">Isi baris &amp; kolom dulu untuk memilih kunci jawaban.</p>;
+      return <p className="text-body-sm text-on-surface-variant">Isi baris &amp; kolom dulu untuk memilih kunci jawaban.</p>;
     }
     const multi = type === "grid_checkbox";
     const set = (rowIdx: number, col: string, checked: boolean) => {
@@ -528,7 +528,7 @@ function AnswerKeyEditor({
             {o}
           </label>
         ))}
-        <span className="text-label-caps text-on-surface-variant">Semua pilihan yang dicentang harus dipilih peserta agar dianggap benar.</span>
+        <span className="text-body-sm text-on-surface-variant">Semua pilihan yang dicentang harus dipilih peserta agar dianggap benar.</span>
       </div>
     );
   }
@@ -558,7 +558,7 @@ function AnswerKeyEditor({
   return (
     <>
       <input value={value} onChange={(e) => onChange(e.target.value)} className={cell} />
-      <span className="text-label-caps text-on-surface-variant">Dicocokkan persis, tanpa membedakan huruf besar/kecil.</span>
+      <span className="text-body-sm text-on-surface-variant">Dicocokkan persis, tanpa membedakan huruf besar/kecil.</span>
     </>
   );
 }

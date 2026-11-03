@@ -23,7 +23,7 @@ export function buildStartGuide(a: NavAccess): { modules: StartModule[]; steps: 
   if (has("events")) {
     tasks.push({
       title: "Buka kegiatan yang jadi tanggung jawabmu",
-      why: "Bagian yang butuh tindakan, seperti verifikasi pembayaran dan volunteer yang menunggu, terbuka otomatis.",
+      why: "Bagian yang butuh tindakan, seperti volunteer yang menunggu, terbuka otomatis.",
       href: "/console/events",
       cta: "Buka Kegiatan",
     });
