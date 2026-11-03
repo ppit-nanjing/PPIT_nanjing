@@ -143,6 +143,12 @@ export function BorrowRequestQueue({ requests }: { requests: Request[] }) {
               <form
                 onSubmit={(e) => {
                   e.preventDefault();
+                  // Server menolak alasan < 3 huruf dengan error, tapi di produksi pesan error server
+                  // tidak sampai ke layar (diganti pesan umum), jadi periksa dulu di sini.
+                  if (!r.borrowerName && reason.trim().length < 3) {
+                    setError("Tulis alasan penolakan supaya peminjam tahu kenapa.");
+                    return;
+                  }
                   run(async () => {
                     await rejectBorrowRequest(r.id, reason);
                     setRejectId(null);

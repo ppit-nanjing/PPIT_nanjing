@@ -217,8 +217,10 @@ function UserRow({
         await applyChanges();
         toast.success(`Perubahan untuk ${label} diterapkan.`);
       } catch {
-        discard();
-        toast.error(`Perubahan untuk ${label} gagal diterapkan. Muat ulang halaman lalu coba lagi.`);
+        // Bisa jadi separuhnya sudah tersimpan (divisi berhasil, status gagal). Muat ulang supaya baris
+        // menampilkan keadaan sebenarnya; sisa perubahan tetap tampil sebagai "belum diterapkan".
+        router.refresh();
+        toast.error(`Perubahan untuk ${label} belum sepenuhnya diterapkan. Periksa barisnya, lalu coba lagi.`);
       }
     });
   }
