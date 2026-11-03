@@ -13,7 +13,7 @@
 
 ## Fungsi
 
-- Tabel semua member terdaftar — filter by role/departemen/status, aksi per-baris (edit, nonaktifkan, ubah role).
+- Tabel semua member terdaftar — filter by role/departemen/status, aksi per-baris (edit, nonaktifkan, ubah role). **Ganti divisi atau status hanya mengajukan perubahan**: baris menandai pilihan baru dan menampilkan "Belum diterapkan" dengan ringkasan; baru tersimpan setelah *Terapkan* (menonaktifkan/menangguhkan meminta konfirmasi tambahan). Sebelumnya setiap perubahan `<select>` langsung tersimpan, sehingga satu tekan panah mengganti divisi dan menghapus jabatan kepala unit.
 - Tambah user manual oleh admin (di luar alur self-register [Join Us](./Join%20Us%20Flow.md)) — untuk kasus seperti input pengurus baru langsung.
 - Dua halaman *Guide* menunjukkan role & permission cukup kompleks untuk butuh dokumentasi in-app — konsisten dengan model [ROLE](./Data%20Dictionary.md)/[PERMISSION](./Data%20Dictionary.md) granular (bukan sekadar 2-3 role datar).
 

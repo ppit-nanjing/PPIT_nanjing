@@ -98,7 +98,7 @@ export default async function JobApplicantPage({
       <h1 className="text-headline-md sm:text-headline-lg text-on-background mt-2 mb-1">{applicantName}</h1>
       <p className="text-body-md text-on-surface-variant mb-8">
         Melamar {app.jobTitle} di {app.company} &middot;{" "}
-        {new Date(app.appliedAt).toLocaleString("id-ID", { dateStyle: "medium", timeStyle: "short" })}
+        {new Date(app.appliedAt).toLocaleString("id-ID", { timeZone: "Asia/Shanghai", dateStyle: "medium", timeStyle: "short" })}
       </p>
 
       <CollapsibleSection title="Data Pelamar">
@@ -151,7 +151,7 @@ export default async function JobApplicantPage({
                 label: JOB_APPLICATION_STATUS_LABEL[value],
               }))}
             />
-            <p className="text-label-caps text-on-surface-variant mt-3">
+            <p className="text-body-sm text-on-surface-variant mt-3">
               Notifikasi ke pelamar hanya dikirim saat status benar-benar berubah, dan tidak bisa ditarik.
               Menyimpan ulang status yang sama tidak mengirim apa pun.
             </p>
@@ -206,7 +206,7 @@ export default async function JobApplicantPage({
                     {JOB_APPLICATION_STATUS_LABEL[after.status as JobApplicationStatus] ?? after.status ?? "-"}
                   </span>
                   {" · "}
-                  {new Date(log.createdAt).toLocaleString("id-ID", { dateStyle: "medium", timeStyle: "short" })}
+                  {new Date(log.createdAt).toLocaleString("id-ID", { timeZone: "Asia/Shanghai", dateStyle: "medium", timeStyle: "short" })}
                   {after.notified === false && <span className="text-label-caps"> · pelamar tidak diberi notifikasi</span>}
                 </li>
               );

@@ -18,7 +18,7 @@ export default async function ConsoleFormsPage() {
   if (!access) redirect("/login");
   const customForms = await getSurveyAccess();
   if (!access.canPemilu && !access.canBphTab && !access.canKepanitiaanTab && !customForms?.canCreate) {
-    redirect("/console");
+    redirect("/console?akses=forms");
   }
 
   const [formCounts, membershipCountRows] = await Promise.all([
@@ -37,8 +37,8 @@ export default async function ConsoleFormsPage() {
       <div className="mb-8">
         <h1 className="text-headline-md sm:text-headline-lg text-on-background">Formulir</h1>
         <p className="text-body-md text-on-surface-variant mt-1">
-          Formulir internal kabinet PPIT: pendaftaran anggota, Pemilu, Oprek BPH Acara, dan Oprek Kepanitiaan, plus
-          Formulir Kustom untuk riset pasar dan kuesioner.
+          Formulir internal kabinet PPIT: rekrutmen pengurus, Pemilu, Oprek (open recruitment) BPH Acara dan
+          Kepanitiaan, plus Formulir Kustom untuk riset pasar dan kuesioner.
         </p>
       </div>
 
@@ -47,10 +47,10 @@ export default async function ConsoleFormsPage() {
           <Link href="/console/forms/pendaftaran" className={cardClass}>
             <span className="flex items-center gap-2 text-on-background">
               <UserPlus size={18} className="text-primary-container" />
-              <span className="text-headline-md">Pendaftaran PPIT</span>
+              <span className="text-headline-md">Rekrutmen Pengurus</span>
             </span>
             <span className="text-body-md text-on-surface-variant">
-              Formulir rekrutmen anggota (halaman Join Us): kelola pertanyaan, respons, dan ekspor.
+              Formulir rekrutmen pengurus (halaman Join Us): kelola pertanyaan, respons, dan ekspor.
             </span>
             <span className={countClass}>{membershipCount} jawaban</span>
           </Link>

@@ -25,9 +25,9 @@ export default async function HelpArticlePage({ params }: { params: Promise<{ sl
         {article.section}
       </span>
       <h1 className="text-headline-md sm:text-headline-lg text-on-background mb-2">{article.title}</h1>
-      <p className="text-label-caps text-on-surface-variant mb-8 flex flex-wrap items-center gap-x-2">
+      <p className="text-body-sm text-on-surface-variant mb-8 flex flex-wrap items-center gap-x-2">
         <span>
-          Diperbarui {new Date(article.updatedAt).toLocaleDateString("id-ID")}
+          Diperbarui {new Date(article.updatedAt).toLocaleDateString("id-ID", { timeZone: "Asia/Shanghai", dateStyle: "medium" })}
           {authorName ? ` oleh ${authorName}` : ""}
         </span>
         {article.isPublic && (
@@ -55,7 +55,7 @@ export default async function HelpArticlePage({ params }: { params: Promise<{ sl
       </div>
 
       <div className="print:hidden">
-        <CollapsibleSection title="Edit Panduan Ini">
+        <CollapsibleSection title="Edit Panduan Ini" defaultOpen={false}>
           <form action={upsertHelpArticle.bind(null, article.id)} className="flex flex-col gap-4">
             <TextField name="title" label="Judul" required defaultValue={article.title} />
             <SelectField

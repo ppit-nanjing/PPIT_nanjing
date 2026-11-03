@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import { and, desc, eq, inArray, isNull, sql, type SQL } from "drizzle-orm";
 import { db } from "@/db";
 import {
@@ -8,9 +9,13 @@ import {
   users,
 } from "@/db/schema";
 import { redirect } from "next/navigation";
+import { cookies } from "next/headers";
 import { auth } from "@/auth";
 import { CollapsibleSection } from "@/components/console/collapsible-section";
 import { GuideButton } from "@/components/console/guide-button";
+import { StartHere } from "@/components/console/start-here";
+import { START_HIDDEN_COOKIE, buildStartGuide } from "@/lib/console-start";
+import { moduleLabel } from "@/lib/console-nav";
 import { hasModuleAccess, type AdminModule } from "@/lib/admin-scope";
 import { getScopedEventIds } from "@/lib/event-access";
 import { getGuide } from "@/lib/guides";
@@ -221,7 +226,7 @@ function timeAgo(d: Date) {
   if (hr < 24) return `${hr} jam lalu`;
   const day = Math.floor(hr / 24);
   if (day < 30) return `${day} hari lalu`;
-  return d.toLocaleDateString("id-ID");
+  return d.toLocaleDateString("id-ID", { timeZone: "Asia/Shanghai", dateStyle: "medium" });
 }
 
 // "a", "a dan b", "a, b, dan c"
@@ -250,6 +255,7 @@ function DashboardLanding({
   isCoordinator,
   canManageOprek,
   canCreateSurvey,
+  top,
 }: {
   name: string | null | undefined;
   scope: "full" | string[] | null;
@@ -257,6 +263,8 @@ function DashboardLanding({
   isCoordinator: boolean;
   canManageOprek: boolean;
   canCreateSurvey: boolean;
+  // Catatan akses ditolak + kartu "Mulai dari sini" (sama dengan dashboard penuh).
+  top: React.ReactNode;
 }) {
   // Same visibility rules as the sidebar (console-sidebar.tsx): these links are
   // only offered where the destination page admits the viewer. (The "events"
@@ -297,6 +305,8 @@ function DashboardLanding({
         </p>
       </div>
 
+      {top}
+
       <CollapsibleSection title="Yang Bisa Dibuka" description="Jalan pintas sesuai peran akun ini.">
         {links.length > 0 ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
@@ -323,7 +333,12 @@ function DashboardLanding({
   );
 }
 
-export default async function ConsoleDashboardPage() {
+export const metadata: Metadata = { title: "Dashboard" };
+
+export default async function ConsoleDashboardPage({ searchParams }: { searchParams: Promise<{ akses?: string }> }) {
+  const { akses } = await searchParams;
+  const blockedModule = moduleLabel(akses);
+  const blockedFeature = akses === "fitur";
   const session = await auth();
   if (!session) redirect("/login");
   const scope = session.user.adminScope ?? null;
@@ -339,6 +354,38 @@ export default async function ConsoleDashboardPage() {
     DASHBOARD_MODULES.map((m) => [m, hasModuleAccess(scope, m)]),
   ) as DashboardAccess;
 
+  // Dipakai dashboard penuh maupun landing: tanpa query (murni dari akses akun); kartu disembunyikan lewat cookie.
+  const start = buildStartGuide({
+    scope,
+    isCommittee: session.user.isCommittee,
+    isBphCommittee: session.user.isBphCommittee || session.user.isEventKadiv,
+    isCoordinator: session.user.isCoordinator,
+    canCreateSurvey: session.user.canCreateSurvey,
+  });
+  const startHidden = (await cookies()).get(START_HIDDEN_COOKIE)?.value === "1";
+  const top = (
+    <>
+      {(blockedModule || blockedFeature) && (
+        <p role="status" className="mb-6 rounded-lg border border-outline-variant bg-surface-container-low px-4 py-3 text-body-md text-on-background">
+          {blockedModule ? (
+            <>
+              <span className="font-semibold">Akun ini belum memegang modul {blockedModule}.</span> Menu yang tampil di
+              sidebar adalah yang bisa kamu buka. Kalau pekerjaanmu butuh modul itu, minta BPH menambahkannya untuk
+              divisimu di Organisasi.
+            </>
+          ) : (
+            <>
+              <span className="font-semibold">Akun ini belum punya izin untuk halaman itu.</span> Izin fitur di sebuah
+              acara diatur oleh BPH panitia acara tersebut (atau BPH kabinet). Tanyakan ke mereka kalau kamu perlu
+              mengerjakannya.
+            </>
+          )}
+        </p>
+      )}
+      <StartHere name={session.user.name ?? null} steps={start.steps} modules={start.modules} initialHidden={startHidden} />
+    </>
+  );
+
   // No module with anything on the dashboard: no org-wide reads at all (not even
   // the guide), just the landing.
   if (!DASHBOARD_MODULES.some((m) => access[m])) {
@@ -350,6 +397,7 @@ export default async function ConsoleDashboardPage() {
         isCoordinator={session.user.isCoordinator}
         canManageOprek={session.user.isBphCommittee || session.user.isEventKadiv}
         canCreateSurvey={session.user.canCreateSurvey}
+        top={top}
       />
     );
   }
@@ -425,7 +473,7 @@ export default async function ConsoleDashboardPage() {
     ...recentMembers.map((m) => ({
       time: m.createdAt,
       href: `/console/membership/${m.id}`,
-      text: `Lamaran membership: ${m.fullName}`,
+      text: `Lamaran rekrutmen: ${m.fullName}`,
       attention: m.status === "pending",
     })),
   ]
@@ -461,7 +509,7 @@ export default async function ConsoleDashboardPage() {
     const membersTrend = weeklyTrend(membership.thisWeek, membership.lastWeek);
     stats.push({
       icon: UserCheck,
-      label: "Membership",
+      label: "Rekrutmen",
       value: membership.total,
       sub: [membersTrend, `${membership.pending} menunggu · rekrutmen ${membership.recruitOpen ? "dibuka" : "ditutup"}`].filter(Boolean).join(" · "),
       attention: membership.pending > 0,
@@ -477,7 +525,7 @@ export default async function ConsoleDashboardPage() {
 
   // Counts of modules the viewer lacks are absent (0 here) and filtered out.
   const attentionItems = [
-    { icon: UserCheck, label: "Lamaran membership menunggu", count: membership?.pending ?? 0, href: "/console/membership" },
+    { icon: UserCheck, label: "Lamaran rekrutmen menunggu", count: membership?.pending ?? 0, href: "/console/membership" },
     { icon: MessageSquare, label: "Masukan baru", count: feedbackCounts?.unread ?? 0, href: "/console/feedback" },
     { icon: UserPlus, label: "Pendaftaran kegiatan menunggu", count: eventCounts?.pendingRegs ?? 0, href: "/console/events" },
     { icon: Package, label: "Permintaan peminjaman", count: (inventory?.pendingBorrow ?? 0) + (inventory?.overdueBorrow ?? 0), href: "/console/inventory" },
@@ -500,7 +548,7 @@ export default async function ConsoleDashboardPage() {
   ];
   const quickActions = allQuickActions.filter((q) => access[q.module]);
 
-  const today = new Date().toLocaleDateString("id-ID", { weekday: "long", day: "numeric", month: "long", year: "numeric" });
+  const today = new Date().toLocaleDateString("id-ID", { timeZone: "Asia/Shanghai", weekday: "long", day: "numeric", month: "long", year: "numeric" });
 
   return (
     <div className="px-4 py-6 sm:px-6 lg:px-8 lg:py-10">
@@ -512,12 +560,14 @@ export default async function ConsoleDashboardPage() {
         {guide && <GuideButton title={guide.title} content={guide.content} docSlug="dashboard" />}
       </div>
 
+      {top}
+
       <div className="flex flex-col gap-6">
         <CollapsibleSection
           title="Ringkasan"
           description={scope === "full" ? "Angka utama di seluruh modul." : "Angka utama dari modul yang aksesnya diberikan ke akun ini."}
         >
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
+          <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-5 gap-4">
             {stats.map((s) => (
               <div key={s.label} className="bg-surface-container-low border border-outline-variant rounded-lg p-5 flex flex-col gap-2">
                 <div className="flex items-center gap-2 text-on-surface-variant">
@@ -546,7 +596,7 @@ export default async function ConsoleDashboardPage() {
                     <span className="text-label-caps bg-primary-container text-on-primary px-2.5 py-1 rounded-full shrink-0">{a.count}</span>
                     <a
                       href={a.href}
-                      className="flex items-center gap-1 text-label-caps text-primary-container hover:text-primary transition-colors shrink-0"
+                      className="flex min-h-11 items-center gap-1 px-2 text-label-caps text-primary-container hover:text-primary transition-colors shrink-0"
                     >
                       Tinjau <ArrowRight size={14} />
                     </a>

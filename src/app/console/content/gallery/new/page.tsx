@@ -32,16 +32,16 @@ export default async function NewGalleryAlbumPage() {
           />
           <label className="flex flex-col gap-2">
             <span className="text-label-caps uppercase tracking-wide text-on-surface-variant">
-              Link Google Drive Semua Foto (opsional)
+              Tautan Album Lengkap (opsional)
             </span>
             <input
               name="driveUrl"
               type="url"
-              placeholder="https://drive.google.com/..."
+              placeholder="https://…"
               className="bg-soft-gray rounded-md p-3 text-body-md"
             />
             <span className="text-body-sm text-on-surface-variant">
-              Halaman publik hanya menampilkan foto highlight — pengunjung mengambil foto lengkap lewat link ini.
+              Halaman publik hanya menampilkan foto highlight — pengunjung mengambil foto lengkap lewat tautan ini. Pastikan bisa dibuka dari Tiongkok: Google Drive/Photos sering terblokir tanpa VPN, jadi pilih penyimpanan yang terbuka di sana (mis. Baidu Netdisk).
             </span>
           </label>
 

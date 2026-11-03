@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import { eq } from "drizzle-orm";
 import { BellRing } from "lucide-react";
 import { db } from "@/db";
@@ -8,6 +9,8 @@ import { NotificationTemplateEditor } from "@/components/console/notification-te
 import { GuideButton } from "@/components/console/guide-button";
 import { getGuide } from "@/lib/guides";
 import { emailSenderStatus } from "@/lib/email";
+
+export const metadata: Metadata = { title: "Notifikasi" };
 
 export default async function ConsoleNotificationsPage() {
   await requireModuleAccess("notifications");
@@ -71,8 +74,8 @@ export default async function ConsoleNotificationsPage() {
             <>
               Pengiriman email keputusan membership{" "}
               {emailStatus === "testing"
-                ? "masih memakai pengirim uji coba Resend (hanya sampai ke pemilik akun) — lengkapi Gmail PPIT atau verifikasi domain."
-                : "belum aktif — isi GMAIL_USER + GMAIL_APP_PASSWORD di Vercel untuk mengaktifkannya."}
+                ? "masih memakai pengirim uji coba (hanya sampai ke pemilik akunnya) — minta Divisi Teknologi melengkapi pengaturannya."
+                : "belum aktif — minta Divisi Teknologi mengaktifkannya."}
             </>
           )}
         </p>
@@ -95,7 +98,7 @@ export default async function ConsoleNotificationsPage() {
                   customized={Boolean(row)}
                   updatedAt={
                     row?.updatedAt
-                      ? new Date(row.updatedAt).toLocaleDateString("id-ID", {
+                      ? new Date(row.updatedAt).toLocaleDateString("id-ID", { timeZone: "Asia/Shanghai",
                           day: "numeric",
                           month: "long",
                           year: "numeric",

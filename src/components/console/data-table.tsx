@@ -100,7 +100,7 @@ function HeaderLabel({ column }: { column: TableColumn }) {
   return (
     <span className="flex flex-col text-left">
       <span>{column.header.slice(0, cut)}</span>
-      <span className="text-[0.65rem] font-normal normal-case tracking-normal opacity-80">{column.header.slice(cut + 1)}</span>
+      <span className="text-xs font-normal normal-case tracking-normal opacity-80">{column.header.slice(cut + 1)}</span>
     </span>
   );
 }

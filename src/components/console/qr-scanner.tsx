@@ -177,7 +177,7 @@ export function QrScanner({ practiceMode = false }: { practiceMode?: boolean }) 
 
   return (
     <div className="mb-8 flex flex-col gap-3">
-      <div className="relative overflow-hidden rounded-xl border border-outline-variant bg-black aspect-square w-full max-w-sm mx-auto">
+      <div className="relative overflow-hidden rounded-xl border border-outline-variant bg-black aspect-[4/3] sm:aspect-square w-full max-w-sm mx-auto">
         <video ref={videoRef} className="w-full h-full object-cover" muted playsInline />
         <canvas ref={canvasRef} className="hidden" />
         {status !== "scanning" && status !== "starting" && (

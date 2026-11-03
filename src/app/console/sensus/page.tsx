@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import { asc, desc, eq } from "drizzle-orm";
 import Link from "next/link";
 import { redirect } from "next/navigation";
@@ -39,12 +40,14 @@ function one(v: string | string[] | undefined): string {
   return (Array.isArray(v) ? v[0] : v) ?? "";
 }
 
+export const metadata: Metadata = { title: "Sensus" };
+
 export default async function ConsoleSensusPage({ searchParams }: { searchParams: SearchParams }) {
   const session = await auth();
   if (!session) redirect("/login");
   const full = hasModuleAccess(session.user.adminScope, "sensus");
   const canVerify = hasModuleAccess(session.user.adminScope, "sensus-verify");
-  if (!full && !canVerify) redirect("/console");
+  if (!full && !canVerify) redirect("/console?akses=sensus");
 
   const sp = await searchParams;
   const q = one(sp.q).trim();

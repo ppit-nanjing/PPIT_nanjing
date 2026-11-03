@@ -352,7 +352,7 @@ export default async function FormManagePage({ params }: { params: Promise<{ for
                       <span className="block text-body-sm text-on-surface-variant truncate">
                         {a.cabinetDivision}
                         {summary ? ` · ${summary}` : ""} &middot;{" "}
-                        {new Date(a.submittedAt).toLocaleDateString("id-ID", { dateStyle: "medium" })}
+                        {new Date(a.submittedAt).toLocaleDateString("id-ID", { timeZone: "Asia/Shanghai", dateStyle: "medium" })}
                       </span>
                     </span>
                     <span

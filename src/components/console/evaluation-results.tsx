@@ -44,7 +44,7 @@ function isLegacy(e: Evaluation): e is LegacyEvaluation {
 }
 
 function formatWhen(date: Date | string): string {
-  return new Date(date).toLocaleString("id-ID", { dateStyle: "medium", timeStyle: "short" });
+  return new Date(date).toLocaleString("id-ID", { timeZone: "Asia/Shanghai", dateStyle: "medium", timeStyle: "short" });
 }
 
 function respondentLabel(e: Evaluation): string {
@@ -267,7 +267,7 @@ function TemplateResults({
                 <div className="mt-4">
                   <Distribution values={values} tall />
                 </div>
-                <div className="mt-1 flex justify-between text-[10px] text-on-surface-variant">
+                <div className="mt-1 flex justify-between text-xs text-on-surface-variant">
                   <span>1</span>
                   <span>10</span>
                 </div>
@@ -345,7 +345,7 @@ function TemplateResults({
                         <span className="ml-2 text-body-sm font-normal text-on-surface-variant">{e.respondentCity}</span>
                       ) : null}
                     </p>
-                    <p className="text-label-caps text-on-surface-variant">{formatWhen(e.createdAt)}</p>
+                    <p className="text-body-sm text-on-surface-variant">{formatWhen(e.createdAt)}</p>
                   </div>
                   <DeleteResponse eventId={eventId} id={e.id} />
                 </div>
@@ -533,7 +533,7 @@ function CustomResults({
                   <div className="mt-4">
                     <Distribution values={values} tall scale={scale} />
                   </div>
-                  <div className="mt-1 flex justify-between text-[10px] text-on-surface-variant">
+                  <div className="mt-1 flex justify-between text-xs text-on-surface-variant">
                     <span>1</span>
                     <span>{scale}</span>
                   </div>
@@ -617,7 +617,7 @@ function CustomResults({
                         <span className="ml-2 text-body-sm font-normal text-on-surface-variant">{e.respondentCity}</span>
                       ) : null}
                     </p>
-                    <p className="text-label-caps text-on-surface-variant">{formatWhen(e.createdAt)}</p>
+                    <p className="text-body-sm text-on-surface-variant">{formatWhen(e.createdAt)}</p>
                   </div>
                   <DeleteResponse eventId={eventId} id={e.id} />
                 </div>

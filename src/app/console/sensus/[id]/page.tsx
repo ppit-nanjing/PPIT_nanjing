@@ -21,7 +21,7 @@ function fmtDate(value: string | Date | null | undefined): string {
   if (!value) return "—";
   const d = typeof value === "string" ? new Date(value) : value;
   if (Number.isNaN(d.getTime())) return String(value);
-  return d.toLocaleDateString("id-ID", { dateStyle: "medium" });
+  return d.toLocaleDateString("id-ID", { timeZone: "Asia/Shanghai", dateStyle: "medium" });
 }
 
 function Field({ label, children }: { label: string; children: ReactNode }) {
@@ -117,7 +117,7 @@ export default async function ConsoleSensusDetailPage({ params }: { params: Prom
               )}
               <div className="min-w-0">
                 <p className="text-body-md text-on-background truncate">{v(row.userName)}</p>
-                <p className="text-label-caps text-on-surface-variant truncate">{v(row.userEmail)}</p>
+                <p className="text-body-sm text-on-surface-variant truncate">{v(row.userEmail)}</p>
               </div>
             </div>
           </Group>
@@ -194,7 +194,7 @@ export default async function ConsoleSensusDetailPage({ params }: { params: Prom
                       {actorName ?? actorEmail ?? "pengurus"}
                     </span>
                     <span className="text-label-caps text-on-surface-variant">
-                      {new Date(log.createdAt).toLocaleString("id-ID", { dateStyle: "medium", timeStyle: "short" })}
+                      {new Date(log.createdAt).toLocaleString("id-ID", { timeZone: "Asia/Shanghai", dateStyle: "medium", timeStyle: "short" })}
                     </span>
                   </div>
                   <p className="text-on-surface-variant mt-0.5">

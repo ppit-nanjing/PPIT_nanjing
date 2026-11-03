@@ -499,7 +499,7 @@ export default async function ConsoleEventDetailPage({ params }: { params: Promi
         <h1 className="text-headline-md sm:text-headline-lg text-on-background mb-2">{event.title}</h1>
         <p className="text-body-md text-on-surface-variant">
           {activeRegistrationCount} terdaftar &middot; {attended} hadir
-          {event.capacity ? ` &middot; kapasitas ${event.capacity}` : ""}
+          {event.capacity ? ` · kapasitas ${event.capacity}` : ""}
         </p>
         {access.locked && !access.isFullAdmin && (
           <p className="mt-3 rounded-lg border border-outline-variant bg-surface-container-low px-4 py-3 text-body-md text-on-surface-variant">
@@ -523,7 +523,105 @@ export default async function ConsoleEventDetailPage({ params }: { params: Promi
       {/* Layar lebar: kerja utama di kiri; ringkasan + antrean tindakan
           (volunteer, verifikasi bayar) menempel di kolom kanan. */}
       <div className="grid grid-cols-1 xl:grid-cols-[minmax(0,1fr)_400px] gap-6 items-start">
-        <div className="flex flex-col gap-6 min-w-0">
+        {/* Kolom samping: ringkasan + antrean tindakan. Ditaruh SEBELUM kolom kerja di DOM: di layar sempit
+            (HP, laptop kecil) tugas harian (scanner, verifikasi bayar, volunteer) tampil di atas, bukan
+            di dasar halaman yang panjang; urutan Tab pun sama dengan urutan tampilan. Di layar lebar
+            penempatan kolomnya dinyatakan eksplisit. */}
+        <aside className="flex flex-col gap-6 min-w-0 xl:col-start-2 xl:row-start-1 xl:sticky xl:top-6">
+          <section className="bg-surface-container-lowest border border-outline-variant rounded-xl p-5 flex flex-col gap-3">
+            <p className="text-label-caps uppercase tracking-wide text-on-surface-variant">Ringkasan</p>
+            <div className="grid grid-cols-3 gap-2 text-center">
+              <div className="bg-surface-container-low rounded-lg py-3">
+                <p className="text-headline-sm text-on-background font-semibold">{activeRegistrationCount}</p>
+                <p className="text-label-caps text-on-surface-variant">Terdaftar</p>
+              </div>
+              <div className="bg-surface-container-low rounded-lg py-3">
+                <p className="text-headline-sm text-on-background font-semibold">{attended}</p>
+                <p className="text-label-caps text-on-surface-variant">Hadir</p>
+              </div>
+              <div className="bg-surface-container-low rounded-lg py-3">
+                <p className="text-headline-sm text-on-background font-semibold">{event.capacity ?? "—"}</p>
+                <p className="text-label-caps text-on-surface-variant">Kuota</p>
+              </div>
+            </div>
+            {can("event.scanAttendance") && (
+              <a
+                href={`/events/${event.slug}/scan`}
+                className="inline-flex items-center justify-center gap-2 border border-outline-variant text-on-background text-label-caps uppercase tracking-wide px-4 py-2 rounded-md hover:bg-surface-container-low transition-colors"
+              >
+                Buka Scanner Check-in
+              </a>
+            )}
+          </section>
+
+          {!canVerifyPayments && event.isPaid && (
+            <p className="rounded-xl border border-outline-variant bg-surface-container-lowest p-4 text-body-sm text-on-surface-variant">
+              <span className="font-medium text-on-background">Verifikasi pembayaran</span> dikerjakan bendahara atau BPH
+              panitia acara ini. Peserta yang belum lunas belum bisa check-in; arahkan mereka ke bendahara.
+            </p>
+          )}
+
+          {canVerifyPayments && event.isPaid && (
+            <CollapsibleSection
+              title="Verifikasi Pembayaran"
+              description={`${pendingPayments.filter((p) => p.status === "submitted").length} menunggu verifikasi`}
+              defaultOpen={pendingPayments.some((p) => p.status === "submitted")}
+            >
+              <p className="text-body-md text-on-surface-variant mb-1">
+                Bukti diunggah sendiri oleh peserta — cocokkan ketiganya dengan mutasi Alipay/rekening:
+              </p>
+              <ul className="text-body-sm text-on-surface-variant mb-4 list-disc pl-5">
+                <li>
+                  <strong className="text-on-background">Nominal</strong>{" "}
+                  {feeOptions.length > 0
+                    ? "sesuai kategori tarif tiap peserta (tertera di bawah)"
+                    : event.feeCny != null
+                      ? `persis ¥${event.feeCny}`
+                      : "sesuai kesepakatan (belum diisi)"}
+                </li>
+                <li><strong className="text-on-background">Nama pengirim</strong> cocok dengan peserta</li>
+                <li><strong className="text-on-background">Waktu transfer</strong> setelah tanggal daftar</li>
+              </ul>
+              <PaymentVerificationList
+                payments={pendingPayments.map((p) => ({ ...p, registeredAt: p.registeredAt.toISOString() }))}
+              />
+            </CollapsibleSection>
+          )}
+
+          {can("event.manageVolunteers") && (
+          <CollapsibleSection
+            title="Pendaftar Volunteer"
+            description={
+              event.volunteerSignupOpen
+                ? `${pendingVolunteers.length} menunggu keputusan`
+                : volunteerApps.length > 0
+                  ? `${volunteerApps.length} lamaran (ditutup)`
+                  : "pendaftaran tutup"
+            }
+            defaultOpen={pendingVolunteers.length > 0}
+          >
+            {!event.volunteerSignupOpen && (
+              <p className="text-body-md text-on-surface-variant mb-4">
+                Pendaftaran publik sedang <strong className="text-on-background">tutup</strong>. Centang
+                &quot;Buka pendaftaran volunteer&quot; di form Edit.
+              </p>
+            )}
+            <VolunteerApplicationList
+              applications={volunteerApps.map((v) => ({
+                id: v.app.id,
+                fullName: v.app.fullName,
+                email: v.app.email,
+                whatsapp: v.app.whatsapp,
+                note: v.app.note,
+                status: v.app.status,
+                divisionName: v.divisionName,
+                accountName: v.accountName,
+              }))}
+            />
+          </CollapsibleSection>
+          )}
+        </aside>
+        <div className="flex flex-col gap-6 min-w-0 xl:col-start-1 xl:row-start-1">
       {/* Tautan pendek pendaftaran & evaluasi — fitur DASAR: bisa dibuat
           sekali klik di sini, tanpa membuka modul Tautan. */}
       {can("event.editContent") && (
@@ -1022,7 +1120,7 @@ export default async function ConsoleEventDetailPage({ params }: { params: Promi
           <strong className="text-on-background">Early bird (¥)</strong> = tarif untuk yang mendaftar sebelum{" "}
           <strong className="text-on-background">
             {event.earlyBirdUntil
-              ? new Date(event.earlyBirdUntil).toLocaleString("id-ID", { dateStyle: "medium", timeStyle: "short" })
+              ? new Date(event.earlyBirdUntil).toLocaleString("id-ID", { timeZone: "Asia/Shanghai", dateStyle: "medium", timeStyle: "short" })
               : "Batas harga early bird"}
           </strong>{" "}
           (atur di form Edit, bagian HTM). Kosong = kategori ini tidak diskon. Tahap ditentukan dari
@@ -1584,7 +1682,7 @@ export default async function ConsoleEventDetailPage({ params }: { params: Promi
                   {EVENT_AUDIT_ACTION_LABEL[a.log.action as EventAuditAction] ?? a.log.action}
                 </span>
                 <span className="text-label-caps text-on-surface-variant">
-                  {a.actorName ?? "(sistem)"} · {new Date(a.log.createdAt).toLocaleString("id-ID", { dateStyle: "short", timeStyle: "short" })}
+                  {a.actorName ?? "(sistem)"} · {new Date(a.log.createdAt).toLocaleString("id-ID", { timeZone: "Asia/Shanghai", dateStyle: "short", timeStyle: "short" })}
                 </span>
               </li>
             ))}
@@ -1753,97 +1851,20 @@ export default async function ConsoleEventDetailPage({ params }: { params: Promi
           }
         />
       </CollapsibleSection>
+
+      {can("event.delete") && (
+        <section className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-error/30 bg-surface-container-lowest p-5">
+          <div className="min-w-0">
+            <p className="text-body-md font-medium text-on-background">Pindahkan kegiatan ke Sampah</p>
+            <p className="text-body-sm text-on-surface-variant">
+              Hilang dari situs publik dan akses panitia. Datanya tetap tersimpan dan bisa dipulihkan dari Sampah.
+            </p>
+          </div>
+          <DeleteEventButton eventId={id} label="Pindahkan ke Sampah" />
+        </section>
+      )}
         </div>
 
-        {/* Kolom samping: ringkasan + antrean tindakan */}
-        <aside className="flex flex-col gap-6 min-w-0 xl:sticky xl:top-6">
-          <section className="bg-surface-container-lowest border border-outline-variant rounded-xl p-5 flex flex-col gap-3">
-            <p className="text-label-caps uppercase tracking-wide text-on-surface-variant">Ringkasan</p>
-            <div className="grid grid-cols-3 gap-2 text-center">
-              <div className="bg-surface-container-low rounded-lg py-3">
-                <p className="text-headline-sm text-on-background font-semibold">{activeRegistrationCount}</p>
-                <p className="text-label-caps text-on-surface-variant">Terdaftar</p>
-              </div>
-              <div className="bg-surface-container-low rounded-lg py-3">
-                <p className="text-headline-sm text-on-background font-semibold">{attended}</p>
-                <p className="text-label-caps text-on-surface-variant">Hadir</p>
-              </div>
-              <div className="bg-surface-container-low rounded-lg py-3">
-                <p className="text-headline-sm text-on-background font-semibold">{event.capacity ?? "—"}</p>
-                <p className="text-label-caps text-on-surface-variant">Kuota</p>
-              </div>
-            </div>
-            {can("event.scanAttendance") && (
-              <a
-                href={`/events/${event.slug}/scan`}
-                className="inline-flex items-center justify-center gap-2 border border-outline-variant text-on-background text-label-caps uppercase tracking-wide px-4 py-2 rounded-md hover:bg-surface-container-low transition-colors"
-              >
-                Buka Scanner Check-in
-              </a>
-            )}
-            {can("event.delete") && <DeleteEventButton eventId={id} label="Hapus Kegiatan" />}
-          </section>
-
-          {canVerifyPayments && event.isPaid && (
-            <CollapsibleSection
-              title="Verifikasi Pembayaran"
-              description={`${pendingPayments.filter((p) => p.status === "submitted").length} menunggu verifikasi`}
-              defaultOpen={pendingPayments.some((p) => p.status === "submitted")}
-            >
-              <p className="text-body-md text-on-surface-variant mb-1">
-                Bukti diunggah sendiri oleh peserta — cocokkan ketiganya dengan mutasi Alipay/rekening:
-              </p>
-              <ul className="text-body-sm text-on-surface-variant mb-4 list-disc pl-5">
-                <li>
-                  <strong className="text-on-background">Nominal</strong>{" "}
-                  {feeOptions.length > 0
-                    ? "sesuai kategori tarif tiap peserta (tertera di bawah)"
-                    : event.feeCny != null
-                      ? `persis ¥${event.feeCny}`
-                      : "sesuai kesepakatan (belum diisi)"}
-                </li>
-                <li><strong className="text-on-background">Nama pengirim</strong> cocok dengan peserta</li>
-                <li><strong className="text-on-background">Waktu transfer</strong> setelah tanggal daftar</li>
-              </ul>
-              <PaymentVerificationList
-                payments={pendingPayments.map((p) => ({ ...p, registeredAt: p.registeredAt.toISOString() }))}
-              />
-            </CollapsibleSection>
-          )}
-
-          {can("event.manageVolunteers") && (
-          <CollapsibleSection
-            title="Pendaftar Volunteer"
-            description={
-              event.volunteerSignupOpen
-                ? `${pendingVolunteers.length} menunggu keputusan`
-                : volunteerApps.length > 0
-                  ? `${volunteerApps.length} lamaran (ditutup)`
-                  : "pendaftaran tutup"
-            }
-            defaultOpen={pendingVolunteers.length > 0}
-          >
-            {!event.volunteerSignupOpen && (
-              <p className="text-body-md text-on-surface-variant mb-4">
-                Pendaftaran publik sedang <strong className="text-on-background">tutup</strong>. Centang
-                &quot;Buka pendaftaran volunteer&quot; di form Edit.
-              </p>
-            )}
-            <VolunteerApplicationList
-              applications={volunteerApps.map((v) => ({
-                id: v.app.id,
-                fullName: v.app.fullName,
-                email: v.app.email,
-                whatsapp: v.app.whatsapp,
-                note: v.app.note,
-                status: v.app.status,
-                divisionName: v.divisionName,
-                accountName: v.accountName,
-              }))}
-            />
-          </CollapsibleSection>
-          )}
-        </aside>
       </div>
     </div>
   );

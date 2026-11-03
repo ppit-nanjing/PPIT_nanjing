@@ -109,7 +109,11 @@ interface SelectProps extends Omit<SelectHTMLAttributes<HTMLSelectElement>, "chi
  */
 export function Select({ options, placeholder, children, className = "", ...rest }: SelectProps) {
   return (
-    <select {...rest} className={`${selectInput} ${className}`}>
+    // key = defaultValue: React tidak menyinkronkan defaultValue sebuah <select> setelah mount, sedangkan
+    // <form action> di React 19 mereset kolom ke nilai awal setelah aksi selesai. Tanpa key ini, pilihan
+    // yang baru disimpan (status pendaftar, status acara, status bayar) tampak "kembali" ke nilai lama
+    // padahal tersimpan. Remount saat defaultValue berubah (setelah revalidasi) memperbaikinya.
+    <select key={rest.defaultValue === undefined ? undefined : String(rest.defaultValue)} {...rest} className={`${selectInput} ${className}`}>
       {(placeholder || rest.required) && (
         // Selalu disabled: opsi kosong yang bisa dipilih lagi tidak pernah
         // diinginkan di <select> wajib maupun yang punya placeholder.

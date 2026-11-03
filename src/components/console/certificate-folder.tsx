@@ -63,7 +63,7 @@ export function CertificateFolder({
           type="url"
           pattern="https://.+"
           defaultValue={folderUrl}
-          placeholder="https://drive.google.com/drive/folders/…"
+          placeholder="https://…"
           aria-label="Tautan folder sertifikat"
           className={FIELD}
         />

@@ -34,7 +34,14 @@ export const CHECK_IN_BLOCK_LABEL: Record<CheckInBlock, string> = {
 
 export const CHECK_IN_BLOCK_MESSAGE: Record<CheckInBlock, string> = {
   cancelled: "Pendaftaran ini dibatalkan — tidak bisa check-in.",
-  unpaid: "Pembayaran belum terverifikasi. Verifikasi dulu di panel Verifikasi Pembayaran, baru peserta bisa check-in.",
+  unpaid: "Pembayaran belum terverifikasi. Bendahara atau BPH panitia memverifikasinya di panel Verifikasi Pembayaran; setelah itu peserta bisa check-in.",
+};
+
+// Versi untuk petugas pintu, yang biasanya TIDAK punya akses panel Verifikasi
+// Pembayaran: bilang apa yang harus dilakukan di tempat, bukan menyuruh membuka panel.
+export const CHECK_IN_BLOCK_DOOR_MESSAGE: Record<CheckInBlock, string> = {
+  cancelled: "Pendaftaran dibatalkan, belum bisa masuk.",
+  unpaid: "Pembayaran belum terverifikasi. Arahkan ke bendahara dulu.",
 };
 
 // Pintu check-in menutup otomatis begitu acara berakhir (Spesifikasi §11 —
