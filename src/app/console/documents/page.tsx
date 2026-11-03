@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { db } from "@/db";
 import { managementPeriods } from "@/db/schema";
@@ -9,6 +10,8 @@ import { DriveExplorer } from "@/components/documents/drive-explorer";
 import { PeriodPicker } from "@/components/documents/period-picker";
 import { GuideButton } from "@/components/console/guide-button";
 import { getGuide } from "@/lib/guides";
+
+export const metadata: Metadata = { title: "Dokumen" };
 
 export default async function ConsoleDocumentsPage({
   searchParams,

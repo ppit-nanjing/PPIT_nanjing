@@ -34,7 +34,7 @@ export default async function EditNewsArticlePage({ params }: { params: Promise<
   if (!allowed && article.eventId) {
     allowed = (await getEventAccess(article.eventId)).can("event.postArticle");
   }
-  if (!allowed) redirect("/console");
+  if (!allowed) redirect("/console?akses=content");
   const backHref = !hasContent && article.eventId ? `/console/events/${article.eventId}` : "/console/content";
   const [{ value: subscriberCount }] = await db
     .select({ value: count() })

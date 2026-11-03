@@ -258,7 +258,7 @@ export function NewsArticleEditor({
           disabledReason="Blok teks yang ingin diperbaiki terlebih dahulu."
           onImproved={(improved) => editor.chain().focus().insertContentAt(editor.state.selection, improved).run()}
         />
-        <span className="text-label-caps text-on-surface-variant">Blok teks untuk memakai bantuan AI; gambar tidak akan diubah.</span>
+        <span className="text-body-sm text-on-surface-variant">Blok teks untuk memakai bantuan AI; gambar tidak akan diubah.</span>
       </div>
       {uploadError && <p role="alert" className="text-body-sm text-error">{uploadError}</p>}
       <input ref={fileInputRef} type="file" accept="image/png,image/jpeg,image/webp,image/gif" className="hidden" onChange={(event) => { const file = event.target.files?.[0]; event.target.value = ""; if (file) void uploadInlineImage(file); }} />

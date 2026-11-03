@@ -159,7 +159,7 @@ export function MultiPhotoUpload({ albumId }: { albumId?: string }) {
                 {it.error ? (
                   <div className="w-full h-full flex flex-col items-center justify-center gap-1 p-2 text-center">
                     <AlertCircle size={18} className="text-error" />
-                    <span className="text-label-caps text-error break-all line-clamp-2">{it.name}</span>
+                    <span className="text-body-sm text-error break-all line-clamp-2">{it.name}</span>
                     <span className="text-label-caps text-on-surface-variant">gagal diunggah</span>
                   </div>
                 ) : it.url ? (
@@ -183,7 +183,7 @@ export function MultiPhotoUpload({ albumId }: { albumId?: string }) {
                 ) : (
                   <div className="w-full h-full flex flex-col items-center justify-center gap-1 p-2 text-center">
                     <Loader2 size={16} className="animate-spin text-on-surface-variant" />
-                    <span className="text-label-caps text-on-surface-variant break-all line-clamp-2">{it.name}</span>
+                    <span className="text-body-sm text-on-surface-variant break-all line-clamp-2">{it.name}</span>
                   </div>
                 )}
                 {!working && !saving && (

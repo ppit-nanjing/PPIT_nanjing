@@ -15,6 +15,8 @@ export { ASSIGNABLE_SCOPE_KEYS, hasModuleAccess } from "@/lib/admin-scope-consta
 export async function requireModuleAccess(mod: AdminModule) {
   const session = await auth();
   if (!session) redirect("/login");
-  if (!hasModuleAccess(session.user.adminScope, mod)) redirect("/console");
+  // ?akses=<modul> supaya dashboard bisa menjelaskan kenapa orang itu mendarat di sini,
+  // bukan terpental diam-diam (lihat AccessNotice di console/page.tsx).
+  if (!hasModuleAccess(session.user.adminScope, mod)) redirect(`/console?akses=${encodeURIComponent(mod)}`);
   return session;
 }

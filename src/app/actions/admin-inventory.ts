@@ -162,10 +162,14 @@ export async function markHandedOver(requestId: string) {
   revalidatePath("/console/inventory");
 }
 
-export async function rejectBorrowRequest(requestId: string) {
+export async function rejectBorrowRequest(requestId: string, reason = "") {
   const actorId = await requireAdmin();
   const [request] = await db.select().from(borrowRequests).where(eq(borrowRequests.id, requestId));
   if (!request) return;
+  // Peminjam berakun diberi tahu lewat notifikasi, jadi alasannya wajib. Peminjam
+  // luar tidak punya akun: alasannya disampaikan pengurus sendiri.
+  const cleanReason = reason.trim().slice(0, 300);
+  if (request.userId && cleanReason.length < 3) throw new Error("Tulis alasan penolakan supaya peminjam tahu kenapa.");
   await db
     .update(borrowRequests)
     .set({ status: "rejected", approvedBy: actorId })
@@ -174,6 +178,7 @@ export async function rejectBorrowRequest(requestId: string) {
   await createTemplatedNotification({
     userId: request.userId,
     templateKey: "borrow_rejected",
+    variables: { reasonLine: cleanReason ? ` Alasan: ${cleanReason}` : "" },
     relatedEntityType: "borrow_request",
     relatedEntityId: requestId,
   });

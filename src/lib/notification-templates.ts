@@ -154,11 +154,12 @@ export const NOTIFICATION_TEMPLATES: NotificationTemplateDef[] = [
     key: "borrow_rejected",
     group: "Peminjaman",
     label: "Peminjaman ditolak",
-    trigger: "Dikirim saat admin menolak permintaan peminjaman barang.",
-    variables: [],
+    trigger: "Dikirim saat admin menolak permintaan peminjaman barang. Admin wajib menulis alasannya.",
+    // reasonLine = " Alasan: ..." (kosong kalau tidak ada); jangan dihapus dari isi template.
+    variables: ["reasonLine"],
     defaultSubject: "Permintaan peminjaman ditolak",
     defaultBody:
-      "Maaf, permintaan peminjaman barang kamu ditolak. Cek detail di riwayat pengajuan.",
+      "Maaf, permintaan peminjaman barang kamu ditolak.{{reasonLine}} Cek detail di riwayat pengajuan.",
   },
   {
     key: "borrow_overdue",
@@ -183,10 +184,11 @@ export const NOTIFICATION_TEMPLATES: NotificationTemplateDef[] = [
     key: "contribution_rejected",
     group: "Sumbangan Barang",
     label: "Sumbangan ditolak",
-    trigger: "Dikirim saat admin menolak barang sumbangan dari anggota.",
-    variables: ["itemName"],
+    trigger: "Dikirim saat admin menolak barang sumbangan dari anggota. Admin wajib menulis alasannya.",
+    // reasonLine = " Alasan: ..." (jangan dihapus dari isi template).
+    variables: ["itemName", "reasonLine"],
     defaultSubject: "Sumbangan ditolak",
-    defaultBody: 'Maaf, sumbangan "{{itemName}}" tidak dapat kami terima saat ini.',
+    defaultBody: 'Maaf, sumbangan "{{itemName}}" tidak dapat kami terima saat ini.{{reasonLine}}',
   },
   {
     key: "procurement_approved",
@@ -201,10 +203,11 @@ export const NOTIFICATION_TEMPLATES: NotificationTemplateDef[] = [
     key: "procurement_rejected",
     group: "Usulan Pengadaan",
     label: "Usulan pengadaan ditolak",
-    trigger: "Dikirim saat admin menolak usulan pembelian barang baru.",
-    variables: ["itemName"],
+    trigger: "Dikirim saat admin menolak usulan pembelian barang baru. Admin wajib menulis alasannya.",
+    // reasonLine = " Alasan: ..." (jangan dihapus dari isi template).
+    variables: ["itemName", "reasonLine"],
     defaultSubject: "Usulan pengadaan ditolak",
-    defaultBody: 'Usulan barang "{{itemName}}" telah ditolak oleh admin.',
+    defaultBody: 'Usulan barang "{{itemName}}" telah ditolak oleh admin.{{reasonLine}}',
   },
   {
     key: "job_application_status_changed",

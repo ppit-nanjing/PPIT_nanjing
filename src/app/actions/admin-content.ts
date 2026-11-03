@@ -99,6 +99,10 @@ export async function upsertNewsArticle(
   // Inline instead of thrown - a thrown Error here would dump the admin into
   // the route error boundary with the whole article lost.
   if (!title) return { error: "Judul wajib diisi." };
+  // Berita kosong tidak boleh dipublikasikan (apalagi dengan email massal): simpan sebagai draf dulu.
+  if (publish && !content && !contentHtml) {
+    return { error: "Isi berita masih kosong. Tulis isinya dulu, atau simpan sebagai draf tanpa mencentang Publikasikan." };
+  }
 
   let article: typeof newsArticles.$inferSelect;
   // Only a fresh transition into "published" should email subscribers -

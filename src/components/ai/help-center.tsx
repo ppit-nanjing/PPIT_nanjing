@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { X, Bot, MessageSquarePlus } from "lucide-react";
 import { ChatbotPanel } from "@/components/ai/ai-chatbot";
 import { FeedbackPanel } from "@/components/feedback/feedback-widget";
@@ -35,6 +35,20 @@ export function HelpCenter({ authed }: { authed: boolean }) {
   function close() {
     setOpen(false);
   }
+
+  // Esc menutup panel (sama seperti dialog lain di situs), kecuali saat IME sedang menyusun teks atau
+  // kolom ketik berisi tulisan: pesan yang sedang diketik tidak boleh hilang karena salah tekan.
+  useEffect(() => {
+    if (!open) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key !== "Escape" || e.isComposing) return;
+      const el = document.activeElement;
+      if ((el instanceof HTMLTextAreaElement || el instanceof HTMLInputElement) && el.value.trim() !== "") return;
+      setOpen(false);
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [open]);
 
   return (
     <>

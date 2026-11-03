@@ -1,9 +1,12 @@
+import type { Metadata } from "next";
 import { db } from "@/db";
 import { helpArticles } from "@/db/schema";
 import { Plus, FileText, History } from "lucide-react";
 import { CollapsibleSection } from "@/components/console/collapsible-section";
 import { GuideButton } from "@/components/console/guide-button";
 import Link from "next/link";
+
+export const metadata: Metadata = { title: "Dokumentasi" };
 
 export default async function ConsoleDocsPage() {
   const articles = await db.select().from(helpArticles);

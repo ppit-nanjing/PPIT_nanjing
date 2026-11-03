@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import { requireModuleAccess } from "@/lib/admin-scope";
 import { listFeedback } from "@/app/actions/feedback";
 import { FeedbackInbox, type FeedbackRow } from "@/components/feedback/feedback-inbox";
@@ -6,6 +7,8 @@ import { getGuide } from "@/lib/guides";
 
 // /console is intentionally not named /admin (see docs/Information Architecture.md) to
 // keep it off casual URL-guessing - the real gate is the session/scope check, not the name.
+export const metadata: Metadata = { title: "Masukan Pengguna" };
+
 export default async function ConsoleFeedbackPage() {
   await requireModuleAccess("feedback");
 

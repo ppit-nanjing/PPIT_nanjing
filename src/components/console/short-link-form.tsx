@@ -82,7 +82,7 @@ export function ShortLinkForm({
           placeholder="https://drive.google.com/..."
           className={fieldInput}
         />
-        <span className="text-label-caps text-on-surface-variant">
+        <span className="text-body-sm text-on-surface-variant">
           Tujuan penerusan (Google Drive, Vercel Blob, dll). Catatan: Drive diblokir di Tiongkok.
         </span>
       </label>

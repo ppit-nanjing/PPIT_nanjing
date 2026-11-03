@@ -12,7 +12,7 @@ import { logEventAudit } from "@/lib/event-audit";
 import { UUID_RE } from "@/lib/uuid";
 import { createTemplatedNotification } from "@/lib/notifications";
 import { issueParticipantCertificateIfEligible } from "@/lib/certificate-issuing";
-import { checkInBlockReason, checkInClosedReason } from "@/lib/event-checkin";
+import { checkInBlockReason, checkInClosedReason, type CheckInBlock } from "@/lib/event-checkin";
 import { WIF_2026_KELOMPOK, normalizeNameForKelompok } from "@/lib/wif-2026-kelompok";
 import { sanitizeDescriptionHtml } from "@/lib/sanitize-description-html";
 import { scheduleLiveSheetSync } from "@/lib/live-sheets";
@@ -878,13 +878,14 @@ export async function searchCheckInCandidates(eventId: string, query: string) {
   const pattern = `%${q}%`;
 
   // Kelompok/warna WIF 2026 - lookup statis, khusus acara ini.
-  const [eventRow] = await db.select({ slug: events.slug }).from(events).where(eq(events.id, eventId));
+  const [eventRow] = await db.select({ slug: events.slug, isPaid: events.isPaid }).from(events).where(eq(events.id, eventId));
   const isWif2026 = eventRow?.slug === "wif-2026";
 
   const participants = await db
     .select({
       userId: eventRegistrations.userId,
       status: eventRegistrations.status,
+      paymentStatus: eventRegistrations.paymentStatus,
       accountName: users.name,
       sensusFullName: sensusProfiles.fullName,
     })
@@ -930,6 +931,9 @@ export async function searchCheckInCandidates(eventId: string, query: string) {
         name,
         label: null as string | null,
         alreadyAttended: p.status === "attended",
+        // Aturan yang sama dengan check-in-nya sendiri: petugas melihat SEBELUM mengetuk
+        // bahwa peserta ini belum bisa masuk (belum lunas / dibatalkan), bukan sesudahnya.
+        blocked: p.status === "attended" ? null : checkInBlockReason({ status: p.status, paymentStatus: p.paymentStatus }, eventRow?.isPaid ?? false),
         kelompok: entry ? { kelompok: entry.kelompok, warna: entry.warna } : null,
       };
     }),
@@ -939,9 +943,78 @@ export async function searchCheckInCandidates(eventId: string, query: string) {
       name: c.sensusFullName ?? c.accountName ?? "(tanpa nama)",
       label: c.divisionName ? `${c.divisionName} · ${c.role}` : c.role,
       alreadyAttended: !!c.checkedInAt,
+      blocked: null as CheckInBlock | null,
       kelompok: null as { kelompok: number; warna: string } | null,
     })),
   ];
+}
+
+// Batalkan check-in yang salah ketuk. Petugas pintu hanya boleh membatalkan
+// check-in buatannya sendiri dalam UNDO_WINDOW_MS; pemegang event.manageRegistrants
+// (BPH panitia, BPH Kabinet) boleh kapan pun. Sertifikat yang terbit saat check-in
+// tidak dicabut (shortcut: itu hanya terjadi kalau evaluasi sudah diisi, jarang di hari-H).
+const UNDO_WINDOW_MS = 10 * 60 * 1000;
+
+export async function undoCheckIn(
+  eventId: string,
+  kind: "participant" | "committee",
+  userId: string,
+): Promise<{ ok: true } | { ok: false; reason: "forbidden" | "notfound" | "expired" }> {
+  const access = await getEventAccess(eventId);
+  if (!access.session || !access.can("event.scanAttendance")) return { ok: false, reason: "forbidden" };
+  const me = access.session.user.id;
+  const canCorrectAny = access.can("event.manageRegistrants");
+  const mayUndo = (by: string | null, at: Date | null) =>
+    canCorrectAny || (by === me && at != null && Date.now() - at.getTime() <= UNDO_WINDOW_MS);
+
+  if (kind === "committee") {
+    const [row] = await db
+      .select({ id: eventCommittee.id, checkedInAt: eventCommittee.checkedInAt, checkedInBy: eventCommittee.checkedInBy })
+      .from(eventCommittee)
+      .where(and(eq(eventCommittee.eventId, eventId), eq(eventCommittee.userId, userId)));
+    if (!row?.checkedInAt) return { ok: false, reason: "notfound" };
+    if (!mayUndo(row.checkedInBy, row.checkedInAt)) return { ok: false, reason: "expired" };
+    await db.update(eventCommittee).set({ checkedInAt: null, checkedInBy: null }).where(eq(eventCommittee.id, row.id));
+  } else {
+    const [row] = await db
+      .select({
+        id: eventRegistrations.id,
+        status: eventRegistrations.status,
+        paymentStatus: eventRegistrations.paymentStatus,
+        checkedInAt: eventRegistrations.checkedInAt,
+        checkedInBy: eventRegistrations.checkedInBy,
+      })
+      .from(eventRegistrations)
+      .where(and(eq(eventRegistrations.eventId, eventId), eq(eventRegistrations.userId, userId)));
+    if (!row || row.status !== "attended") return { ok: false, reason: "notfound" };
+    if (!mayUndo(row.checkedInBy, row.checkedInAt)) return { ok: false, reason: "expired" };
+    await db
+      .update(eventRegistrations)
+      .set({
+        status: row.paymentStatus === "verified" || row.paymentStatus === "not_required" ? "confirmed" : "pending",
+        checkedInAt: null,
+        checkedInBy: null,
+      })
+      .where(eq(eventRegistrations.id, row.id));
+    scheduleLiveSheetSync(eventId, ["pendaftar"]);
+  }
+  await logEventAudit(me, eventId, "checkin.undone", { before: { kind, userId } });
+  revalidatePath(`/console/events/${eventId}`);
+  return { ok: true };
+}
+
+// Jalur dari daftar pendaftar di konsol (baris hanya membawa id pendaftaran). Aturan siapa
+// yang boleh tetap satu: lihat undoCheckIn.
+export async function undoCheckInRegistration(
+  registrationId: string,
+  eventId: string,
+): Promise<{ ok: true } | { ok: false; reason: "forbidden" | "notfound" | "expired" }> {
+  const [reg] = await db
+    .select({ userId: eventRegistrations.userId })
+    .from(eventRegistrations)
+    .where(and(eq(eventRegistrations.id, registrationId), eq(eventRegistrations.eventId, eventId)));
+  if (!reg) return { ok: false, reason: "notfound" };
+  return undoCheckIn(eventId, "participant", reg.userId);
 }
 
 // Sampah (soft delete). Tidak ada peran kepanitiaan yang boleh menghapus
