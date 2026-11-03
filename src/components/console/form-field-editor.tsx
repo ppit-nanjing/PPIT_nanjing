@@ -280,9 +280,13 @@ export function FormFieldEditor({
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div className="flex flex-col gap-2">
                     <span className="text-label-caps uppercase tracking-wide text-on-surface-variant">Jenis Jawaban</span>
+                    {/* defaultValue, bukan value: <form action> di React 19 mereset kolom setelah simpan, dan
+                        <select> terkontrol kembali ke opsi pertama padahal state `type` tidak berubah. Simpan
+                        kedua dari editor yang masih terbuka lalu mengirim "Teks Pendek" dan diam-diam mengubah
+                        pertanyaan pilihan jadi isian teks. Select memasang ulang dirinya saat defaultValue berubah. */}
                     <Select
                       name="type"
-                      value={type}
+                      defaultValue={field.type}
                       onChange={(e) => setType(e.target.value as MembershipFieldDef["type"])}
                       className="w-full"
                       options={ALL_TYPES.filter((t) => !excludeTypes.includes(t) || t === field.type).map((t) => ({ value: t, label: FIELD_TYPE_LABELS[t] }))}
