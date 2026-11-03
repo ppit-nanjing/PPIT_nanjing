@@ -190,6 +190,22 @@ function UserRow({
   const [email, setEmail] = useState(user.email);
   const [pending, startTransition] = useTransition();
 
+  // Tiap pengguna dirender dua kali (baris tabel dan kartu HP), masing-masing dengan state sendiri.
+  // Setelah satu sisi menyimpan, props sisi lainnya berubah tetapi state-nya tidak, sehingga ia tampak
+  // punya perubahan "belum diterapkan" yang justru membalikkan yang baru disimpan (terlihat kalau lebar
+  // layar berpindah ke tata letak lain). Ikuti props yang berubah ("sesuaikan state saat props berubah").
+  const savedDepartmentId = user.departmentId ?? "";
+  const [prevSavedDepartmentId, setPrevSavedDepartmentId] = useState(savedDepartmentId);
+  if (savedDepartmentId !== prevSavedDepartmentId) {
+    setPrevSavedDepartmentId(savedDepartmentId);
+    setDepartmentId(savedDepartmentId);
+  }
+  const [prevSavedStatus, setPrevSavedStatus] = useState(user.status);
+  if (user.status !== prevSavedStatus) {
+    setPrevSavedStatus(user.status);
+    setStatus(user.status);
+  }
+
   // Divisi & status hanya DIAJUKAN di sini; baru berlaku setelah "Terapkan".
   // Dulu tiap perubahan <select> langsung tersimpan, sehingga satu tekan panah
   // di keyboard sudah memindahkan divisi (dan menghapus jabatan kepala unit).
