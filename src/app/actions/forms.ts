@@ -233,7 +233,8 @@ export async function updateFormSettings(formData: FormData) {
 export async function deleteForm(formData: FormData) {
   const id = String(formData.get("id") ?? "");
   const { form, access } = await requireFormManage(id);
-  // Formulir dihapus lewat deleteSurvey (survey.ts).
+  // Formulir kustom dipindah ke Sampah lewat trashForm (form-lifecycle.ts) dan dihapus permanen lewat
+  // deleteSurveyPermanently (survey.ts), bukan lewat aksi ini.
   if (isSurveyKind(form.kind)) notFound();
   // Lamaran ikut terhapus (cascade). Penugasan panitia hasil lamaran yang
   // diterima dilepas dengan aturan yang sama seperti hapus satu lamaran, dan

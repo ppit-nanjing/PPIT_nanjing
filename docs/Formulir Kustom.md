@@ -66,12 +66,24 @@ Tab **Hasil** di `/formulir/[formId]`:
 - **Hapus jawaban** (jawaban iseng/ganda): hanya pengelola formulir. `formId` dikunci di `WHERE`.
 - Memuat paling banyak 5.000 jawaban terbaru (`SURVEY_RESPONSE_LIMIT`); ekspor CSV/Excel sampai 20.000.
 
+## Arsip dan Sampah (migrasi `0058_forms_archive_trash.sql`)
+
+Khusus Formulir Kustom (jenis `survei`). Pemilu dan Oprek tidak memakainya dan tetap dihapus seperti sebelumnya.
+
+- Kolom baru di `forms`: `archived_at`, `archived_by`, `deleted_at`, `deleted_by` (NULL = aktif). Migrasi **harus diterapkan ke produksi sebelum kode dirilis** (semua query `select *` dari `forms` membacanya; `npm run check:drift` memeriksanya).
+- **Arsip** (tab Pengaturan > "Arsip dan Sampah" di halaman kelola, atau bagian Arsip di `/formulir`): `archiveForm` menutup formulirnya (`is_open = false`) dan menyembunyikannya dari daftar aktif. Jawaban tetap bisa dibuka dan diekspor. Toggle "Buka untuk pengisian" dikunci selama diarsipkan, dan `updateSurveySettings` memaksanya tertutup. "Keluarkan dari Arsip" (`unarchiveForm`) tidak membukanya lagi.
+- **Sampah** (soft delete): `trashForm` mengisi `deleted_at`/`deleted_by` dan menutup formulir. Ia hilang dari semua halaman: `canManageForm` menolaknya untuk semua orang (halaman kelola, ekspor CSV/Excel, Google Sheet, berkas pribadi), `/f/[id]` dan `/f/[id]/terkirim` 404, dan `submitSurvey` menolaknya. Pertanyaan dan jawaban utuh. `restoreForm` mengembalikannya dalam keadaan **Tutup** (ke Arsip kalau sebelumnya diarsipkan). Google Sheet langsungnya dibiarkan sampai hapus permanen.
+- **Siapa**: arsip, sampah, dan pulihkan = siapa pun yang boleh mengelola formulirnya (pembuat yang masih berhak, BPH Panitia acara terikat, pemegang full/modul `forms`). **Hapus permanen** (`deleteSurveyPermanently`, perilaku "Hapus" lama: cascade pertanyaan dan jawaban, hapus Google Sheet langsung) hanya untuk formulir yang sudah di Sampah dan hanya BPH Kabinet atau pemegang modul `forms`.
+- Gerbang Sampah: `requireTrashedFormManage` / `canManageTrashedForm` di `form-access.ts` (hak yang sama dengan `canManageForm` tanpa kunci Sampah). Daftar memakai `lifecycleFilter` dan `formLifecycleColumns` (`src/lib/form-lifecycle.ts`); `listManageableSurveys(sa, state)` memilih aktif/arsip/sampah. Kartu hitungan di hub `/console/forms` hanya menghitung yang aktif.
+- Setiap perubahan tercatat di `audit_logs` (`entity_type = "form"`; aksi `form.archived`, `form.unarchived`, `form.trashed`, `form.restored`, `form.deleted`).
+- Query baru yang menampilkan atau menerima formulir kustom harus menyaring `isNull(forms.deletedAt)` (atau lewat `canManageForm`).
+
 ## Akses di kode
 
 - `src/lib/survey-access.ts`: `getSurveyAccess`, `requireSurveyHub`, `listSurveyEvents`, `listManageableSurveys`.
 - `src/lib/form-access.ts`: `canManageForm` punya cabang untuk jenis kustom (`canManageSurvey`): pembuat **yang masih berhak membuat** (`isSurveyCreatorEligible`), atau BPH Panitia acara terikat; pemegang full/modul `forms` lolos lebih awal. Dipakai halaman kelola, aksi builder, ekspor, dan aksi Sheet.
 - Flag sesi `canCreateSurvey` (`src/auth.ts`) hanya untuk menampilkan menu; gerbangnya tetap di halaman dan aksi.
-- Halaman, aksi, dan rute Oprek **menolak** formulir kustom: `/forms/[id]` dan `/forms/[id]/submitted` mengalihkan ke `/f/[id]`, `/console/forms/[formId]` ke `/formulir/[formId]`, ekspor Oprek menjawab 404, `submitFormApplication` mengalihkan, `updateFormSettings` dan `deleteForm` memberi 404. `createForm` tidak menerima jenis ini.
+- Halaman, aksi, dan rute Oprek **menolak** formulir kustom: `/forms/[id]` dan `/forms/[id]/submitted` mengalihkan ke `/f/[id]`, `/console/forms/[formId]` ke `/formulir/[formId]`, ekspor Oprek menjawab 404, `submitFormApplication` mengalihkan, `updateFormSettings` dan `deleteForm` memberi 404 (hapus permanen formulir kustom: `deleteSurveyPermanently`). `createForm` tidak menerima jenis ini.
 - Mesin pencari: `/f/` dan `/formulir` dilarang di `src/app/robots.ts`; halaman isi juga `noindex`. Judul formulir khusus-login tidak dibocorkan ke pratinjau tautan.
 
 ## Hal yang sengaja belum ada

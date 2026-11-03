@@ -2,6 +2,7 @@ import { ArrowLeft, ClipboardList, Globe, Lock } from "lucide-react";
 import Link from "next/link";
 import { auth } from "@/auth";
 import { SurveyCreate } from "@/components/survey/survey-create";
+import { SurveyShelf } from "@/components/survey/survey-shelf";
 import { SURVEY_STATE_LABEL, surveyOpenState, type SurveyOpenState } from "@/lib/survey";
 import { listManageableSurveys, listSurveyEvents, requireSurveyHub } from "@/lib/survey-access";
 
@@ -18,7 +19,13 @@ export default async function FormulirHubPage({ searchParams }: { searchParams: 
   // Yang masuk konsol kembali ke tab Formulir; pengurus yang tidak masuk konsol ke beranda.
   const user = (await auth())?.user;
   const inConsole = Boolean(user?.isAdmin || user?.isCoordinator || user?.isCommittee);
-  const [surveys, events] = await Promise.all([listManageableSurveys(sa), listSurveyEvents(sa)]);
+  const [surveys, archived, trashed, events] = await Promise.all([
+    listManageableSurveys(sa),
+    listManageableSurveys(sa, "archived"),
+    listManageableSurveys(sa, "trashed"),
+    listSurveyEvents(sa),
+  ]);
+
 
   return (
     <div className="flex flex-col gap-8">
@@ -89,6 +96,7 @@ export default async function FormulirHubPage({ searchParams }: { searchParams: 
             })}
           </ul>
         )}
+        <SurveyShelf archived={archived} trashed={trashed} canPurge={sa.access.isFull || sa.access.canForms} />
       </section>
     </div>
   );

@@ -23,11 +23,11 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
   const base = { robots: { index: false, follow: false } };
   if (!UUID_RE.test(id)) return { title: "Formulir", ...base };
   const [form] = await db
-    .select({ title: forms.title, allowPublic: forms.allowPublic })
+    .select({ title: forms.title, allowPublic: forms.allowPublic, deletedAt: forms.deletedAt })
     .from(forms)
     .where(and(eq(forms.id, id), eq(forms.kind, "survei")));
-  // Judul formulir khusus akun tidak dibocorkan ke pratinjau tautan.
-  return { title: form && form.allowPublic ? form.title : "Formulir", ...base };
+  // Judul formulir khusus akun (atau yang sudah di Sampah) tidak dibocorkan ke pratinjau tautan.
+  return { title: form && !form.deletedAt && form.allowPublic ? form.title : "Formulir", ...base };
 }
 
 function Shell({ children }: { children: React.ReactNode }) {
@@ -68,7 +68,7 @@ export default async function SurveyFillPage({
   const { error } = await searchParams;
 
   const [form] = await db.select().from(forms).where(and(eq(forms.id, id), eq(forms.kind, "survei")));
-  if (!form) notFound();
+  if (!form || form.deletedAt) notFound();
 
   // Formulir acara yang sudah di Sampah tidak bisa dibuka lagi.
   let eventTitle: string | null = null;
