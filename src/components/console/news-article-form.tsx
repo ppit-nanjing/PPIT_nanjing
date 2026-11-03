@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useRef, useState } from "react";
+import { useActionState, useRef, useState, useTransition } from "react";
 import type { ContentFormState } from "@/app/actions/admin-content";
 import { ImageUploadCropper } from "@/components/upload/image-upload-cropper";
 import { AIReviewButton } from "@/components/ai/ai-review-popup";
@@ -37,6 +37,7 @@ export function NewsArticleForm({
   eventId?: string;
 }) {
   const [state, formAction, isPending] = useActionState<ContentFormState, FormData>(action, {});
+  const [, startTransition] = useTransition();
   const alreadyPublished = !!initial?.published;
   const isArchived = !!initial?.archived;
   // Publikasi pertama = email massal ke semua pelanggan, tak bisa ditarik. Karena itu
@@ -47,7 +48,18 @@ export function NewsArticleForm({
   useActionToast(isPending, state.error, willPublish ? "Artikel dipublikasikan." : "Artikel tersimpan.");
 
   return (
-    <form ref={formRef} action={formAction} className="flex flex-col gap-6">
+    // Sengaja bukan <form action>: React 19 mereset kolom setelah aksi selesai, termasuk saat server hanya
+    // mengembalikan error validasi. Judul yang baru diketik ikut terhapus dan kotak "Publikasikan" kembali
+    // kosong walau tombolnya masih bertuliskan "kirim email". Kirim manual supaya isian tetap utuh.
+    <form
+      ref={formRef}
+      onSubmit={(e) => {
+        e.preventDefault();
+        const data = new FormData(e.currentTarget);
+        startTransition(() => formAction(data));
+      }}
+      className="flex flex-col gap-6"
+    >
       {eventId && <input type="hidden" name="eventId" value={eventId} />}
       {state.error && (
         <p role="alert" className="bg-error-container/40 text-on-error-container text-body-md px-4 py-3 rounded-lg">

@@ -1,17 +1,22 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useRef, useState, useTransition } from "react";
+import { toast } from "sonner";
 import { updateMembershipStatus } from "@/app/actions/membership";
 import { Select, CheckboxField } from "@/components/console/form";
-import { SubmitButton } from "@/components/console/submit-button";
 import { ConfirmButton } from "@/components/console/confirm-button";
 
 const BTN =
-  "mt-4 bg-primary-container text-on-primary text-label-caps uppercase tracking-wide px-6 py-3 rounded-md hover:bg-primary transition-colors";
+  "mt-4 bg-primary-container text-on-primary text-label-caps uppercase tracking-wide px-6 py-3 rounded-md hover:bg-primary transition-colors disabled:opacity-60";
+const SAVED = "Status pendaftar tersimpan.";
 
 // Formulir keputusan rekrutmen. Keputusan Diterima/Ditolak mengirim email ke pendaftar dan email tidak
 // bisa ditarik, jadi saat email akan benar-benar keluar, tombol simpan berganti menjadi dialog konfirmasi
 // (pola yang sama dengan publikasi berita).
+//
+// Sengaja bukan <form action>: React 19 mereset kolom setelah aksi selesai. Pilihan status kembali ke
+// opsi pertama dan kotak email kembali tercentang, padahal state di sini tidak ikut berubah, jadi layar
+// menampilkan hal yang tidak sama dengan yang tersimpan (dan tombol bisa salah menilai apakah email keluar).
 export function MembershipStatusForm({
   id,
   status,
@@ -31,13 +36,25 @@ export function MembershipStatusForm({
 }) {
   const [value, setValue] = useState(status);
   const [notify, setNotify] = useState(true);
+  const [pending, startTransition] = useTransition();
   const formRef = useRef<HTMLFormElement>(null);
   const finalDecision = value === "accepted" || value === "rejected";
   // Server hanya mengirim saat status berubah menjadi keputusan akhir (lihat updateMembershipStatus).
   const emailWillGoOut = emailStatus === "ready" && notify && finalDecision && value !== status;
+  const save = () => updateMembershipStatus(new FormData(formRef.current ?? undefined));
 
   return (
-    <form ref={formRef} action={updateMembershipStatus} className="bg-surface-container-lowest border border-outline-variant rounded-xl p-6">
+    <form
+      ref={formRef}
+      onSubmit={(e) => {
+        e.preventDefault();
+        startTransition(async () => {
+          await save();
+          toast.success(SAVED);
+        });
+      }}
+      className="bg-surface-container-lowest border border-outline-variant rounded-xl p-6"
+    >
       <h2 className="text-headline-md text-on-background mb-4">Status</h2>
       <input type="hidden" name="id" value={id} />
       <Select
@@ -87,20 +104,20 @@ export function MembershipStatusForm({
       )}
       {emailWillGoOut ? (
         <ConfirmButton
-          onConfirm={() => formRef.current?.requestSubmit()}
+          onConfirm={save}
           title={`${value === "accepted" ? "Terima" : "Tolak"} ${applicantName}?`}
           message={`${applicantName} langsung menerima email "${labels[value as "accepted" | "rejected"]}" di ${email}. Email yang sudah terkirim tidak bisa ditarik kembali.`}
           confirmLabel="Ya, simpan & kirim email"
           danger={value === "rejected"}
-          successMessage="Status pendaftar tersimpan."
+          successMessage={SAVED}
           className={BTN}
         >
           Simpan &amp; Kirim Email
         </ConfirmButton>
       ) : (
-        <SubmitButton successMessage="Status pendaftar tersimpan." className={BTN}>
+        <button type="submit" disabled={pending} className={BTN}>
           Simpan Status
-        </SubmitButton>
+        </button>
       )}
     </form>
   );
