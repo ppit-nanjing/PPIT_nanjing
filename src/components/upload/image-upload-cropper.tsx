@@ -276,7 +276,7 @@ export function ImageUploadCropper({
         ) : (
           <ImageIcon className="text-secondary" size={28} />
         )}
-        <p className="text-label-caps text-on-surface-variant text-center">
+        <p className="text-body-sm text-on-surface-variant text-center">
           {displayUrl
             ? t("upload.replaceImage")
             : t("upload.dropImageShort")}
