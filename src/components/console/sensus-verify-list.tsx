@@ -105,12 +105,12 @@ export function SensusVerifyList({
                 <div key={s.id} className="flex flex-wrap items-center gap-x-4 gap-y-2 py-3">
                   <div className="min-w-0 flex-1">
                     <p className="text-body-md text-on-background truncate">{who}</p>
-                    <p className="text-label-caps text-on-surface-variant truncate">
+                    <p className="text-body-sm text-on-surface-variant truncate">
                       {s.university || "Kampus belum diisi"}
                     </p>
                   </div>
                   <span
-                    className={`shrink-0 text-label-caps px-2.5 py-1 rounded-full ${
+                    className={`shrink-0 text-body-sm font-medium px-2.5 py-0.5 rounded-full ${
                       s.completionStatus === "complete"
                         ? "bg-primary-container/15 text-primary-container"
                         : "bg-error-container/30 text-on-error-container"

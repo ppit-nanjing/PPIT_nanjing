@@ -30,13 +30,13 @@ export default async function ConsoleFormsPage() {
 
   const cardClass =
     "flex flex-col gap-2 bg-surface-container-lowest border border-outline-variant rounded-lg p-6 hover:border-muted-gold hover:bg-surface-container-low transition-colors";
-  const countClass = "text-label-caps uppercase tracking-wide text-on-surface-variant";
+  const countClass = "text-body-sm text-on-surface-variant";
 
   return (
     <div className="px-4 py-6 sm:px-6 lg:px-8 lg:py-10 max-w-5xl">
       <div className="mb-8">
         <h1 className="text-headline-md sm:text-headline-lg text-on-background">Formulir</h1>
-        <p className="text-body-md text-on-surface-variant mt-1">
+        <p className="text-body-md text-on-surface-variant mt-1 max-w-[62ch]">
           Formulir internal kabinet PPIT: rekrutmen pengurus, Pemilu, Oprek (open recruitment) BPH Acara dan
           Kepanitiaan, plus Formulir Kustom untuk riset pasar dan kuesioner.
         </p>

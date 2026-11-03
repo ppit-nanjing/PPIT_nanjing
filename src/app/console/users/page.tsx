@@ -46,7 +46,7 @@ export default async function ConsoleUsersPage() {
         <h1 className="text-headline-md sm:text-headline-lg text-on-background">Manajemen Pengguna</h1>
         {guide && <GuideButton title={guide.title} content={guide.content} docSlug="pengguna" />}
       </div>
-      <p className="text-body-md text-on-surface-variant mb-8">
+      <p className="text-body-md text-on-surface-variant mb-8 max-w-[62ch]">
         {rows.length} pengguna terdaftar. Akun muncul otomatis saat masuk dengan Google atau mendaftar kata sandi.{" "}
         <a href="/api/console/users/export" download className="text-primary-container hover:text-primary inline-flex items-center gap-1">
           <Download size={13} aria-hidden /> Export ke CSV

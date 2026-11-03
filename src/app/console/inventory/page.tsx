@@ -203,11 +203,11 @@ export default async function ConsoleInventoryPage() {
                   <Package size={16} className="text-secondary" />
                   <h3 className="text-body-md font-semibold text-on-background">{item.name}</h3>
                 </div>
-                <p className="text-label-caps text-on-surface-variant">
+                <p className="text-body-sm text-on-surface-variant">
                   {item.availableQuantity} / {item.totalQuantity} tersedia &middot; {conditionLabel(item.condition)}
                 </p>
                 {(item.category || item.location || item.custodian) && (
-                  <p className="text-label-caps text-on-surface-variant mt-1">
+                  <p className="text-body-sm text-on-surface-variant mt-1">
                     {[item.category, item.location, item.custodian && `Pemegang: ${item.custodian}`]
                       .filter(Boolean)
                       .join(" · ")}

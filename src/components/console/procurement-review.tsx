@@ -77,7 +77,7 @@ export function ProcurementReview({ requests }: { requests: Request[] }) {
                 className="h-24 w-24 shrink-0 rounded-md border border-outline-variant object-cover"
               />
             )}
-            <div className="min-w-0 text-label-caps text-on-surface-variant">
+            <div className="min-w-0 text-body-sm text-on-surface-variant">
               <p>
                 Urgensi: <span className="text-on-background normal-case">{r.urgency}</span>
                 {r.estimatedCost != null ? ` · ~RMB ${r.estimatedCost}` : ""}

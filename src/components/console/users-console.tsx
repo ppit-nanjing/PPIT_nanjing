@@ -114,7 +114,7 @@ export function UsersConsole({
 
           <UserTable users={filtered} roles={roles} departments={departments} />
 
-          <p className="text-body-sm text-on-surface-variant mt-4 leading-relaxed">
+          <p className="text-body-sm text-on-surface-variant mt-4 max-w-[62ch] leading-relaxed">
             Kolom <strong>Divisi &amp; peran</strong> menunjukkan divisi pengguna (mis. BPH, Program &amp; Acara · Akademia).
             Mengubah divisi atau status hanya mengajukan perubahan: tekan <strong>Terapkan</strong> supaya tersimpan.
             Akses admin (penuh/terbatas) diatur lewat tombol Edit. Masukkan ke Divisi Teknologi memberi akses penuh otomatis.

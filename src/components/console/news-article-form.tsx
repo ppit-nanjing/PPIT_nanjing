@@ -113,17 +113,17 @@ export function NewsArticleForm({
         className="text-on-background"
       />
       {isArchived && !alreadyPublished ? (
-        <p className="text-body-sm text-on-surface-variant -mt-3">
+        <p className="text-body-sm text-on-surface-variant -mt-3 max-w-[62ch]">
           Berita ini diarsipkan. Menyimpan tanpa mencentang “Publikasikan” tidak mengubah statusnya — pakai tombol
           Pulihkan di atas untuk mengembalikannya ke draf.
         </p>
       ) : alreadyPublished ? (
-        <p className="text-body-sm text-on-surface-variant -mt-3">
+        <p className="text-body-sm text-on-surface-variant -mt-3 max-w-[62ch]">
           Sudah dipublikasikan — email pengumuman sudah terkirim ke pelanggan saat pertama kali dipublikasikan, dan
           tidak dikirim ulang lewat perubahan ini.
         </p>
       ) : emailReady ? (
-        <p className="text-body-sm text-on-surface-variant -mt-3">
+        <p className="text-body-sm text-on-surface-variant -mt-3 max-w-[62ch]">
           Mempublikasikan otomatis mengirim email ke <span className="text-on-background">{subscriberCount}</span>{" "}
           Nanjinger yang berlangganan pengumuman. Email yang sudah terkirim tidak bisa ditarik kembali, jadi cek
           judul dan isinya dulu.

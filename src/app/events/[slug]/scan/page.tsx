@@ -208,7 +208,7 @@ export default async function EventScanPage({
 
             {/* Token manual jarang dipakai: dilipat supaya pencarian nama (yang sering dipakai) naik. */}
             <details className="mb-6 rounded-md border border-outline-variant">
-              <summary className="cursor-pointer list-none px-4 py-3 text-label-caps uppercase tracking-wide text-on-surface-variant hover:text-on-background">
+              <summary className="cursor-pointer list-none px-4 py-3 text-body-sm font-medium text-on-surface-variant hover:text-on-background">
                 Punya token QR? Masukkan manual
               </summary>
               <form method="get" className="flex flex-col gap-3 border-t border-outline-variant p-3 sm:flex-row">

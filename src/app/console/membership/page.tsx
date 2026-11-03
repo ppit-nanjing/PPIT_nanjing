@@ -229,7 +229,7 @@ export default async function ConsoleMembershipPage() {
           ))
         )}
       </div>
-      <p className="text-body-sm text-on-surface-variant mt-4">
+      <p className="text-body-sm text-on-surface-variant mt-4 max-w-[62ch]">
         Klik nama pendaftar untuk melihat detail, mengubah status, menambahkan catatan, atau menghapus.
       </p>
     </div>
