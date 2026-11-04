@@ -17,16 +17,16 @@ export default async function FormulirHubPage({ searchParams }: { searchParams: 
   const { error } = await searchParams;
   // Yang masuk konsol kembali ke tab Formulir; pengurus yang tidak masuk konsol ke beranda.
   const user = (await auth())?.user;
-  const inConsole = Boolean(user?.isAdmin || user?.isCoordinator || user?.isCommittee || user?.canCreateEvent);
+  const inConsole = Boolean(user?.isAdmin || user?.isCoordinator || user?.isCommittee);
   const [surveys, events] = await Promise.all([listManageableSurveys(sa), listSurveyEvents(sa)]);
 
   return (
     <div className="flex flex-col gap-8">
       <Link
-        href={inConsole ? "/console/forms" : "/"}
+        href={inConsole || user?.canCreateEvent ? "/console/forms" : "/"}
         className="inline-flex items-center gap-2 self-start text-label-caps uppercase tracking-wide text-on-surface-variant hover:text-on-background"
       >
-        <ArrowLeft size={16} /> {inConsole ? "Kembali ke Formulir" : "Kembali ke beranda"}
+        <ArrowLeft size={16} /> {inConsole || user?.canCreateEvent ? "Kembali ke Formulir" : "Kembali ke beranda"}
       </Link>
       <header>
         <h1 className="text-headline-lg text-on-background mb-2">Formulir Kustom</h1>
