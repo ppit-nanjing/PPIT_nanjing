@@ -15,6 +15,9 @@
 export type NotificationTemplateKey =
   | "event_checkin"
   | "event_registration"
+  | "event_approval_requested"
+  | "event_approval_approved"
+  | "event_approval_rejected"
   | "payment_proof_submitted"
   | "payment_verified"
   | "payment_rejected"
@@ -52,6 +55,34 @@ export type NotificationTemplateDef = {
 };
 
 export const NOTIFICATION_TEMPLATES: NotificationTemplateDef[] = [
+  {
+    key: "event_approval_requested",
+    group: "Kegiatan",
+    label: "Acara menunggu persetujuan",
+    trigger: "Dikirim ke BPH Kabinet saat pengurus atau panitia mengajukan acara.",
+    variables: ["eventTitle", "requesterName"],
+    defaultSubject: "Acara menunggu persetujuan",
+    defaultBody: '{{requesterName}} mengajukan "{{eventTitle}}". Buka acaranya untuk menyetujui atau menolak.',
+  },
+  {
+    key: "event_approval_approved",
+    group: "Kegiatan",
+    label: "Acara disetujui",
+    trigger: "Dikirim ke pengaju saat BPH Kabinet menyetujui acaranya.",
+    variables: ["eventTitle"],
+    defaultSubject: "Acara disetujui",
+    defaultBody: '"{{eventTitle}}" sudah disetujui BPH Kabinet. Kamu bisa menerbitkan atau menjadwalkannya saat sudah siap.',
+  },
+  {
+    key: "event_approval_rejected",
+    group: "Kegiatan",
+    label: "Pengajuan acara ditolak",
+    trigger: "Dikirim ke pengaju saat BPH Kabinet menolak acaranya. BPH wajib menulis alasannya.",
+    // reasonLine = " Alasan: ..." (jangan dihapus dari isi template).
+    variables: ["eventTitle", "reasonLine"],
+    defaultSubject: "Pengajuan acara belum disetujui",
+    defaultBody: '"{{eventTitle}}" belum disetujui BPH Kabinet.{{reasonLine}} Kamu bisa memperbaikinya lalu mengajukan lagi.',
+  },
   {
     key: "event_checkin",
     group: "Kegiatan",

@@ -25,6 +25,7 @@ function hrefFor(item: NItem): string | null {
   if (item.relatedEntityType === "event_registration") return "/profile/submissions";
   if (item.relatedEntityType === "job" && item.relatedEntityId) return `/jobs/${item.relatedEntityId}/applied`;
   if (item.relatedEntityType === "certificate") return "/profile#aktivitas";
+  if (item.relatedEntityType === "event_approval" && item.relatedEntityId) return `/console/events/${item.relatedEntityId}?bagian=publik`;
   return null;
 }
 

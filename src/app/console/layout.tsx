@@ -18,11 +18,12 @@ export default async function ConsoleLayout({ children }: { children: React.Reac
   if (!session) redirect("/login");
 
   // Kabinet admin (module scope) ATAU panitia di minimal satu acara ATAU
-  // koordinator divisi (menu Formulir/Oprek). Panitia non-admin masuk untuk
-  // mengurus acaranya sendiri; sidebar-nya cuma menampilkan "Kegiatan"
-  // (yang di dalamnya sudah disaring ke acara dia). Semua flag ini sudah
-  // dihitung di sesi (satu query gabungan) - tidak ada query tambahan di sini.
-  if (!session.user.isAdmin && !session.user.isCoordinator && !session.user.isCommittee) {
+  // koordinator divisi (menu Formulir/Oprek) ATAU pengurus kabinet (boleh membuat
+  // draf acara). Yang non-admin masuk untuk mengurus acaranya sendiri; sidebar-nya
+  // cuma menampilkan "Kegiatan" (yang di dalamnya sudah disaring ke acara dia).
+  // Semua flag ini sudah dihitung di sesi (satu query gabungan) - tidak ada query
+  // tambahan di sini.
+  if (!session.user.isAdmin && !session.user.isCoordinator && !session.user.isCommittee && !session.user.canCreateEvent) {
     redirect("/");
   }
 
@@ -49,6 +50,7 @@ export default async function ConsoleLayout({ children }: { children: React.Reac
           isBphCommittee={session.user.isBphCommittee || session.user.isEventKadiv}
           isCoordinator={session.user.isCoordinator}
           canCreateSurvey={session.user.canCreateSurvey}
+          canCreateEvent={session.user.canCreateEvent}
         />
       </div>
       {/* Fluid, bukan max-width terpusat: begitu sidebar dilipat, konten ikut

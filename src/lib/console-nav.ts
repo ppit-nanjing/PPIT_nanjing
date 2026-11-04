@@ -45,6 +45,8 @@ export type NavItem = {
   // Juga tampil untuk yang boleh membuat Formulir Kustom (session.user.canCreateSurvey): kartu
   // Formulir Kustom ada di hub Formulir, jadi hub itu harus terjangkau oleh mereka.
   customFormsToo?: boolean;
+  // Juga tampil untuk yang boleh membuat draf acara (session.user.canCreateEvent).
+  eventCreatorToo?: boolean;
 };
 
 // `module: null` = always visible to anyone who got past the layout gate
@@ -65,7 +67,7 @@ export const NAV_GROUPS: { title: string; items: NavItem[] }[] = [
     items: [
       { href: "/console/users", label: "Pengguna", hint: "Akun, divisi, dan status pengurus", icon: Users, module: "users" },
       { href: "/console/organization", label: "Organisasi", hint: "Struktur kabinet, divisi, dan anggotanya", icon: Building2, module: "organization" },
-      { href: "/console/events", label: "Kegiatan", hint: "Acara: pendaftar, pembayaran, panitia, dan sertifikat", icon: CalendarDays, module: "events", committeeToo: true },
+      { href: "/console/events", label: "Kegiatan", hint: "Acara: pendaftar, pembayaran, panitia, dan sertifikat", icon: CalendarDays, module: "events", committeeToo: true, eventCreatorToo: true },
       { href: "/console/work-ledger", label: "Work Ledger", hint: "Beban kerja panitia, pembayaran, dan sertifikat lintas acara", icon: ClipboardList, module: "events" },
       { href: "/console/inventory", label: "Inventaris", hint: "Barang organisasi, peminjaman, dan pengembalian", icon: Package, module: "inventory" },
       { href: "/console/membership", label: "Rekrutmen", hint: "Lamaran masuk kabinet (rekrutmen pengurus)", icon: UserPlus, module: "membership" },
@@ -95,6 +97,7 @@ export type NavAccess = {
   isBphCommittee?: boolean;
   isCoordinator?: boolean;
   canCreateSurvey?: boolean;
+  canCreateEvent?: boolean;
 };
 
 export function canSeeNavItem(item: NavItem, a: NavAccess): boolean {
@@ -106,7 +109,8 @@ export function canSeeNavItem(item: NavItem, a: NavAccess): boolean {
     (!!item.committeeToo && !!a.isCommittee) ||
     (!!item.bphCommitteeToo && !!a.isBphCommittee) ||
     (!!item.coordinatorToo && !!a.isCoordinator) ||
-    (!!item.customFormsToo && !!a.canCreateSurvey)
+    (!!item.customFormsToo && !!a.canCreateSurvey) ||
+    (!!item.eventCreatorToo && !!a.canCreateEvent)
   );
 }
 

@@ -5,9 +5,10 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { auth } from "@/auth";
 import { db } from "@/db";
-import { events, eventRegistrations, eventQuestions, eventCommittee, eventFeeOptions, eventDivisions, eventResponsibleDepartments, departments, departmentMembers, galleryAlbums, users, sensusProfiles } from "@/db/schema";
+import { events, eventRegistrations, eventQuestions, eventCommittee, eventFeeOptions, eventDivisions, eventResponsibleDepartments, departments, departmentMembers, galleryAlbums, roles, users, sensusProfiles } from "@/db/schema";
 import { hasModuleAccess } from "@/lib/admin-scope";
 import { getEventAccess, requireEventCapability } from "@/lib/event-access";
+import { HIDDEN_EVENT_STATUSES, isReleaseTransition } from "@/lib/event-capabilities";
 import { logEventAudit } from "@/lib/event-audit";
 import { UUID_RE } from "@/lib/uuid";
 import { createTemplatedNotification } from "@/lib/notifications";
@@ -16,12 +17,6 @@ import { checkInBlockReason, checkInClosedReason, type CheckInBlock } from "@/li
 import { WIF_2026_KELOMPOK, normalizeNameForKelompok } from "@/lib/wif-2026-kelompok";
 import { sanitizeDescriptionHtml } from "@/lib/sanitize-description-html";
 import { scheduleLiveSheetSync } from "@/lib/live-sheets";
-
-async function requireAdmin() {
-  const session = await auth();
-  if (!hasModuleAccess(session?.user?.adminScope ?? null, "events")) throw new Error("Forbidden");
-  return session!.user.id;
-}
 
 function slugify(title: string) {
   return (
@@ -83,7 +78,12 @@ function parseFinalAttendeeCount(formData: FormData): number | null {
 export type EventFormState = { error?: string };
 
 export async function createEvent(_prev: EventFormState, formData: FormData): Promise<EventFormState> {
-  const actorId = await requireAdmin();
+  // Semua pengurus kabinet boleh membuat draf. Hanya BPH Kabinet yang acaranya
+  // otomatis disetujui dan boleh langsung menjadwalkan rilis.
+  const session = await auth();
+  if (!session?.user?.id || !session.user.canCreateEvent) throw new Error("Forbidden");
+  const actorId = session.user.id;
+  const isFull = session.user.adminScope === "full";
   const title = String(formData.get("title") ?? "").trim();
   if (!title) return { error: "Judul wajib diisi." };
   // Same fee rule as updateEvent's parseFeeCny, but returned inline instead of
@@ -108,7 +108,7 @@ export async function createEvent(_prev: EventFormState, formData: FormData): Pr
     return { error: "Waktu selesai harus setelah waktu mulai." };
   }
 
-  const scheduledPublishAt = formData.get("scheduledPublishAt")
+  const scheduledPublishAt = isFull && formData.get("scheduledPublishAt")
     ? new Date(String(formData.get("scheduledPublishAt")))
     : null;
   // "intent=draft" forces a plain draft even when a publish schedule is set;
@@ -144,6 +144,8 @@ export async function createEvent(_prev: EventFormState, formData: FormData): Pr
       status,
       scheduledPublishAt,
       createdBy: actorId,
+      approvedAt: isFull ? new Date() : null,
+      approvedBy: isFull ? actorId : null,
       isPaid: formData.get("isPaid") === "on",
       feeCny: parseFeeCny(formData),
       paymentInstructions: String(formData.get("paymentInstructions") ?? "").trim() || null,
@@ -164,13 +166,16 @@ export async function createEvent(_prev: EventFormState, formData: FormData): Pr
   // memberi divisi itu akses otomatis ke acara ini (event-access.ts).
   // Non-full admin hanya boleh menandai divisinya sendiri: baris PJ memberi
   // akses ke acara, dan mengubahnya untuk divisi lain adalah hak full admin
-  // (lihat setEventResponsibleDepartments).
-  const requestedDeptIds = formData
-    .getAll("departmentId")
-    .map((v) => String(v))
-    .filter((v) => UUID_RE.test(v));
+  // (lihat setEventResponsibleDepartments). Pengurus tanpa modul Kegiatan tidak
+  // boleh menandai sama sekali: baris PJ juga membuka Oprek BPH bagi koordinator
+  // divisi itu (getCoordinatorEventIds), padahal acaranya belum disetujui.
+  const requestedDeptIds = hasModuleAccess(session.user.adminScope ?? null, "events")
+    ? formData
+        .getAll("departmentId")
+        .map((v) => String(v))
+        .filter((v) => UUID_RE.test(v))
+    : [];
   if (requestedDeptIds.length > 0) {
-    const isFull = (await auth())?.user?.adminScope === "full";
     const validDepts = await db
       .select({ id: departments.id })
       .from(departments)
@@ -211,7 +216,7 @@ async function revalidateEventPaths(id: string, slug?: string | null) {
 
 /** Bagian 1–2: identitas acara + aturan pendaftaran + HTM + jadwal rilis. */
 export async function updateEventInfo(id: string, formData: FormData) {
-  await requireEventCapability(id, "event.editInfo");
+  const access = await requireEventCapability(id, "event.editInfo");
   const title = String(formData.get("title") ?? "").trim();
   if (!title) throw new Error("Judul wajib diisi");
   const locationUrlRaw = String(formData.get("locationUrl") ?? "").trim();
@@ -229,13 +234,17 @@ export async function updateEventInfo(id: string, formData: FormData) {
   }
 
   const [before] = await db
-    .select({ status: events.status, slug: events.slug })
+    .select({ status: events.status, slug: events.slug, scheduledPublishAt: events.scheduledPublishAt, approvedAt: events.approvedAt })
     .from(events)
     .where(eq(events.id, id));
 
-  const scheduledPublishAt = formData.get("scheduledPublishAt")
-    ? new Date(String(formData.get("scheduledPublishAt")))
-    : null;
+  // Jadwal rilis adalah cara lain menerbitkan, jadi tunduk pada izin yang sama.
+  // Tanpa izin, nilai kiriman diabaikan dan jadwal lama dibiarkan.
+  const scheduledPublishAt = !access.canRelease
+    ? before?.scheduledPublishAt ?? null
+    : formData.get("scheduledPublishAt")
+      ? new Date(String(formData.get("scheduledPublishAt")))
+      : null;
   const isPaid = formData.get("isPaid") === "on";
 
   await db
@@ -258,9 +267,6 @@ export async function updateEventInfo(id: string, formData: FormData) {
       capacity: formData.get("capacity") ? Number(formData.get("capacity")) : null,
       requiresSensus: formData.get("requiresSensus") === "on",
       requiresBiodata: formData.get("requiresBiodata") === "on",
-      certificateForParticipants: formData.get("certificateForParticipants") === "on",
-      certificateRequiresAttendance: formData.get("certificateRequiresAttendance") === "on",
-      evaluationAllowsAnonymous: formData.get("evaluationAllowsAnonymous") === "on",
       volunteerSignupOpen: formData.get("volunteerSignupOpen") === "on",
       scheduledPublishAt,
       isPaid,
@@ -278,8 +284,10 @@ export async function updateEventInfo(id: string, formData: FormData) {
   // rilis otomatis saat waktunya tiba. Kebalikannya juga: jadwal dikosongkan
   // pada acara "scheduled" -> kembali "draft", supaya tidak nyangkut selamanya
   // (publishDueEvents menyaring scheduledPublishAt is not null).
-  if (scheduledPublishAt && before?.status === "draft") {
-    await db.update(events).set({ status: "scheduled" }).where(eq(events.id, id));
+  if (access.canRelease && scheduledPublishAt && before?.status === "draft") {
+    // BPH Kabinet yang menjadwalkan acara sekaligus menyetujuinya.
+    const stamp = access.isFullAdmin && !before.approvedAt ? { approvedAt: new Date(), approvedBy: access.session.user.id } : {};
+    await db.update(events).set({ status: "scheduled", ...stamp }).where(eq(events.id, id));
   } else if (!scheduledPublishAt && before?.status === "scheduled") {
     await db.update(events).set({ status: "draft" }).where(eq(events.id, id));
   }
@@ -295,6 +303,21 @@ export async function updateEventInfo(id: string, formData: FormData) {
       .where(and(eq(eventRegistrations.eventId, id), eq(eventRegistrations.paymentStatus, "not_required")));
   }
 
+  await revalidateEventPaths(id, before?.slug);
+}
+
+/** Aturan sertifikat & evaluasi, di tab Pasca-Acara. Wewenang yang sama dengan Info & Pengaturan. */
+export async function updateEventCertificateSettings(id: string, formData: FormData) {
+  await requireEventCapability(id, "event.editInfo");
+  const [before] = await db.select({ slug: events.slug }).from(events).where(eq(events.id, id));
+  await db
+    .update(events)
+    .set({
+      certificateForParticipants: formData.get("certificateForParticipants") === "on",
+      certificateRequiresAttendance: formData.get("certificateRequiresAttendance") === "on",
+      evaluationAllowsAnonymous: formData.get("evaluationAllowsAnonymous") === "on",
+    })
+    .where(eq(events.id, id));
   await revalidateEventPaths(id, before?.slug);
 }
 
@@ -374,7 +397,10 @@ export async function setEventStatus(formData: FormData) {
   const status = String(formData.get("status") ?? "");
   if (!id || !status) throw new Error("eventId dan status wajib diisi");
 
-  const [before] = await db.select({ status: events.status, slug: events.slug }).from(events).where(eq(events.id, id));
+  const [before] = await db
+    .select({ status: events.status, slug: events.slug, approvedAt: events.approvedAt })
+    .from(events)
+    .where(eq(events.id, id));
 
   // "Buka / tutup pendaftaran" = tukar published <-> registration_closed. Itu
   // fitur DASAR panitia (event.registrationToggle). Perubahan status lain
@@ -382,22 +408,30 @@ export async function setEventStatus(formData: FormData) {
   const isRegistrationToggle =
     (before?.status === "published" && status === "registration_closed") ||
     (before?.status === "registration_closed" && status === "published");
-  const { session } = await requireEventCapability(
+  const { session, canRelease, isFullAdmin } = await requireEventCapability(
     id,
     isRegistrationToggle ? "event.registrationToggle" : "event.publish",
   );
   const actorId = session.user.id;
 
+  // Selain buka/tutup pendaftaran, status baru boleh berubah setelah disetujui BPH Kabinet.
+  // Ini sengaja menahan "cancelled" juga: halaman publik acara batal tetap bisa dibuka lewat tautan.
+  if (!isRegistrationToggle && !canRelease) throw new Error("Acara ini belum disetujui BPH Kabinet.");
+  // Kalau BPH sendiri yang menerbitkan, itu sekaligus persetujuannya.
+  const stamp =
+    isFullAdmin && before && !before.approvedAt && isReleaseTransition(before.status, status)
+      ? { approvedAt: new Date(), approvedBy: actorId }
+      : {};
+
   await db
     .update(events)
-    .set({ status: status as (typeof events.status.enumValues)[number] })
+    .set({ status: status as (typeof events.status.enumValues)[number], ...stamp })
     .where(eq(events.id, id));
 
-  const hiddenFromPublic = ["draft", "scheduled", "cancelled"];
   const auditAction =
     status === "published" && before?.status !== "published"
       ? "event.published"
-      : before?.status === "published" && hiddenFromPublic.includes(status)
+      : before?.status === "published" && HIDDEN_EVENT_STATUSES.includes(status)
         ? "event.unpublished"
         : "event.status";
   await logEventAudit(actorId, id, auditAction, { before: { status: before?.status }, after: { status } });
@@ -408,6 +442,101 @@ export async function setEventStatus(formData: FormData) {
   revalidatePath("/console/events");
   revalidatePath(`/console/events/${id}`);
   if (before?.slug) revalidatePath(`/events/${before.slug}`);
+}
+
+// ---------- Persetujuan BPH Kabinet ----------
+
+// Hanya BPH sungguhan yang dikabari. Divisi Teknologi juga boleh memutuskan
+// (adminScope "full"), tapi bukan pemilik keputusan ini.
+async function notifyBphOfApprovalRequest(eventId: string, eventTitle: string, requester: { id: string; name?: string | null }) {
+  const bph = await db
+    .select({ id: users.id })
+    .from(users)
+    .innerJoin(roles, eq(users.roleId, roles.id))
+    .where(and(eq(roles.accessTier, "full"), eq(users.status, "active")));
+  const results = await Promise.allSettled(
+    bph
+      .filter((user) => user.id !== requester.id)
+      .map((user) =>
+        createTemplatedNotification({
+          userId: user.id,
+          templateKey: "event_approval_requested",
+          variables: { eventTitle, requesterName: requester.name || "Seorang pengurus" },
+          relatedEntityType: "event_approval",
+          relatedEntityId: eventId,
+        }),
+      ),
+  );
+  // Pengajuannya sudah tersimpan dan tampil di antrean, jadi notifikasi gagal tidak membatalkannya.
+  for (const result of results) {
+    if (result.status === "rejected") console.error("[event-approval] notify failed:", result.reason);
+  }
+}
+
+export async function requestEventApproval(formData: FormData) {
+  const eventId = String(formData.get("eventId") ?? "");
+  if (!UUID_RE.test(eventId)) throw new Error("Acara tidak valid.");
+  const { session } = await requireEventCapability(eventId, "event.publish");
+
+  const [requested] = await db
+    .update(events)
+    .set({ approvalRequestedAt: new Date(), approvalRequestedBy: session.user.id })
+    .where(and(eq(events.id, eventId), eq(events.status, "draft"), isNull(events.approvedAt), isNull(events.approvalRequestedAt)))
+    .returning({ title: events.title });
+  // Sudah diajukan atau sudah disetujui (klik ganda, tab lama): tidak ada yang perlu dilakukan.
+  if (!requested) return;
+
+  await logEventAudit(session.user.id, eventId, "event.approval_requested");
+  await notifyBphOfApprovalRequest(eventId, requested.title, session.user);
+  revalidatePath(`/console/events/${eventId}`);
+  revalidatePath("/console/events");
+  revalidatePath("/console");
+}
+
+// Tombol di formnya mengirim decision=approve atau decision=reject. Menolak wajib
+// beralasan karena alasannya diteruskan ke pengaju lewat notifikasi.
+export async function reviewEventApproval(formData: FormData) {
+  const eventId = String(formData.get("eventId") ?? "");
+  if (!UUID_RE.test(eventId)) throw new Error("Acara tidak valid.");
+  const { session } = await requireEventCapability(eventId, "event.approve");
+
+  const decision = String(formData.get("decision") ?? "");
+  if (decision !== "approve" && decision !== "reject") throw new Error("Keputusan tidak valid.");
+  const reason = String(formData.get("reason") ?? "").trim().slice(0, 300);
+  if (decision === "reject" && reason.length < 3) throw new Error("Tulis alasan penolakan supaya pengaju tahu kenapa.");
+
+  const pending = and(eq(events.id, eventId), eq(events.status, "draft"), isNull(events.approvedAt), isNotNull(events.approvalRequestedAt));
+  const [row] = await db.select({ title: events.title, requestedBy: events.approvalRequestedBy }).from(events).where(pending);
+  // Pengajuan dibaca dulu karena menolak mengosongkan kolom pengaju. Syaratnya diulang saat
+  // menulis: kalau dua BPH memutuskan bersamaan, hanya yang pertama yang berlaku dan memberi kabar.
+  const approve = decision === "approve";
+  const [decided] = row
+    ? await db
+        .update(events)
+        .set(approve ? { approvedAt: new Date(), approvedBy: session.user.id } : { approvalRequestedAt: null, approvalRequestedBy: null })
+        .where(pending)
+        .returning({ id: events.id })
+    : [];
+
+  if (decided) {
+    await logEventAudit(session.user.id, eventId, approve ? "event.approved" : "event.approval_rejected", approve ? undefined : { after: { reason } });
+    try {
+      await createTemplatedNotification({
+        userId: row.requestedBy,
+        templateKey: approve ? "event_approval_approved" : "event_approval_rejected",
+        variables: approve ? { eventTitle: row.title } : { eventTitle: row.title, reasonLine: ` Alasan: ${reason}` },
+        relatedEntityType: "event_approval",
+        relatedEntityId: eventId,
+      });
+    } catch (err) {
+      // Keputusan dan alasannya sudah tersimpan, dan terlihat di halaman acara.
+      console.error("[event-approval] notify failed:", err);
+    }
+  }
+
+  revalidatePath(`/console/events/${eventId}`);
+  revalidatePath("/console/events");
+  revalidatePath("/console");
 }
 
 // ---------- Pertanyaan pendaftaran kustom per-acara ----------
@@ -1023,9 +1152,13 @@ export async function undoCheckInRegistration(
 // semua data turunannya (pendaftar, panitia, evaluasi, album yang tertaut)
 // dibiarkan utuh. getEventAccess menolak acara di Sampah untuk siapa pun dan
 // semua halaman/daftar publik menyaring deleted_at, jadi efeknya bagi pengguna
-// sama dengan terhapus — bedanya bisa dipulihkan.
+// sama dengan terhapus — bedanya bisa dipulihkan. Pembuat acara juga boleh membuang
+// drafnya sendiri selama belum disetujui, supaya draf percobaan tidak menumpuk.
 export async function deleteEvent(eventId: string) {
-  const { session } = await requireEventCapability(eventId, "event.delete");
+  const access = await getEventAccess(eventId);
+  const session = access.session;
+  if (!session) redirect("/login");
+  if (!access.can("event.delete") && !access.canDeleteOwnDraft) redirect("/console?akses=fitur");
   const [moved] = await db
     .update(events)
     .set({ deletedAt: new Date(), deletedBy: session.user.id })

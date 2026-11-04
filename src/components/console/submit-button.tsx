@@ -13,6 +13,9 @@ type Props = {
   successMessage?: string;
   disabled?: boolean;
   "aria-label"?: string;
+  /** Untuk form dengan beberapa tombol kirim (mis. name="decision"). */
+  name?: string;
+  value?: string;
 };
 
 // Drop-in replacement for a plain `<button type="submit">` inside a
@@ -34,6 +37,8 @@ export function SubmitButton({
   successMessage = "Tersimpan.",
   disabled,
   "aria-label": ariaLabel,
+  name,
+  value,
 }: Props) {
   const { pending } = useFormStatus();
   const wasPending = useRef(false);
@@ -44,7 +49,7 @@ export function SubmitButton({
   }, [pending, successMessage]);
 
   return (
-    <button type="submit" disabled={disabled || pending} className={className} aria-label={ariaLabel}>
+    <button type="submit" name={name} value={value} disabled={disabled || pending} className={className} aria-label={ariaLabel}>
       {pending ? (pendingLabel ?? children) : children}
     </button>
   );

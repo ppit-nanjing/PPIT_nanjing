@@ -115,7 +115,7 @@ export function AccountMenu({ compact = false }: { compact?: boolean }) {
               <ClipboardList size={16} /> {t("accountMenu.surveys")}
             </Link>
           )}
-          {session.user.isAdmin && (
+          {(session.user.isAdmin || session.user.canCreateEvent) && (
             <Link
               href="/console"
               className="flex items-center gap-2 px-4 py-2 text-sm text-primary-container font-medium hover:bg-surface-container-high transition-colors"

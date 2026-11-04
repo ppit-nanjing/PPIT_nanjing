@@ -457,6 +457,13 @@ export const events = pgTable("events", {
   deletedBy: uuid("deleted_by").references(() => users.id, { onDelete: "set null" }),
   departmentId: uuid("department_id").references(() => departments.id),
   createdBy: uuid("created_by").references(() => users.id),
+  // Persetujuan BPH Kabinet (migrasi 0059). Semua pengurus kabinet boleh membuat
+  // draf, tapi draf baru bisa diterbitkan/dijadwalkan setelah approvedAt terisi.
+  // Ditolak = approvalRequestedAt dikosongkan lagi; alasannya ada di audit_logs.
+  approvalRequestedAt: timestamp("approval_requested_at"),
+  approvalRequestedBy: uuid("approval_requested_by").references(() => users.id, { onDelete: "set null" }),
+  approvedAt: timestamp("approved_at"),
+  approvedBy: uuid("approved_by").references(() => users.id, { onDelete: "set null" }),
   // The HTM ("berbayar") toggle itself - kept separate from feeCny because the
   // fee is often unknown at creation (depends on whether a sponsor comes
   // through): an admin can mark an event paid and fill the amount in later.

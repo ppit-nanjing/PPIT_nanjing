@@ -67,7 +67,16 @@ Setiap perubahan di sini (buat/ubah/urutkan) otomatis tercatat di Log Audit (lin
     slug: "kegiatan",
     section: SERING_DIPAKAI,
     title: "Kegiatan — Buat & Kelola Acara",
-    content: `Field Buat/Edit Kegiatan (form "Info & Pengaturan Acara" terbagi 2 bagian; tiap field ada label + keterangan)
+    content: `Alur persetujuan BPH Kabinet
+- Semua pengurus kabinet boleh membuat acara. Acaranya mulai sebagai draf yang belum tampil di situs publik, jadi aman untuk dicoba-coba.
+- Kalau sudah siap: buka acaranya, tab Publik, Status & Publikasi, lalu "Ajukan ke BPH". BPH Kabinet mendapat notifikasi.
+- BPH Kabinet membuka acaranya lalu menekan "Setujui" atau "Tolak". Menolak wajib menulis alasan. Alasannya dikirim ke pengaju dan tampil di halaman acara. Yang ditolak boleh diperbaiki lalu diajukan lagi.
+- Menyetujui belum menerbitkan acara. Setelah disetujui, pembuat atau BPH Panitia yang menerbitkan atau menjadwalkannya saat sudah siap.
+- Selama belum disetujui, pembuat hanya bisa menyiapkan isi acara (info, deskripsi, pertanyaan, tarif) dan boleh menghapus drafnya sendiri. Tautan pendek baru bisa dibuat setelah disetujui.
+- Pembuat tidak bisa menyusun panitia. Kalau acaranya butuh panitia, BPH Kabinet menunjuk Ketua Pelaksana (boleh pembuatnya) di Struktur Kepanitiaan, lalu Ketua yang menyusun timnya.
+- Acara buatan BPH Kabinet tidak perlu diajukan.
+
+Field Buat/Edit Kegiatan (form "Info & Pengaturan Acara" terbagi 2 bagian; tiap field ada label + keterangan)
 - Judul: wajib.
 - Kategori, Lokasi: teks bebas. Kategori jadi tab filter di /events; untuk acara online, tulis platformnya di Lokasi (mis. "Zoom Meeting (Online)").
 - Link peta 1/2: opsional, untuk acara offline — teks Lokasi di halaman publik jadi tombol petunjuk arah.
@@ -76,13 +85,12 @@ Setiap perubahan di sini (buat/ubah/urutkan) otomatis tercatat di Log Audit (lin
 - "Hanya peserta yang sensusnya lengkap": centang kalau mau membatasi pendaftar.
 - Gambar Sampul: upload atau tempel URL, rasio 16:9.
 - Batas Pendaftaran: opsional — lewat tanggal ini, pendaftaran otomatis ditutup. Kosongkan kalau tidak ada batas.
-- Jadwal Rilis Publikasi: opsional — kalau diisi, acara tetap tersembunyi ("Terjadwal") sampai tanggal itu, lalu terbit otomatis. Kosongkan kalau mau tetap Draft sampai dipublikasikan manual.
+- Jadwal Rilis Publikasi: opsional, baru bisa diisi setelah acara disetujui BPH Kabinet — kalau diisi, acara tetap tersembunyi ("Terjadwal") sampai tanggal itu, lalu terbit otomatis. Kosongkan kalau mau tetap Draft sampai dipublikasikan manual.
 - Agenda: teks bebas, satu baris per item.
 - Info Setelah Daftar + QR Kontak: tampil di halaman tiket peserta SETELAH mendaftar (bukan di halaman publik) — taruh di sini tautan masuk acara online (Zoom dll.) atau ajakan masuk grup WeChat.
 
 Soal status (draft/terjadwal/terbit/dst)
-- Tombol "Buat & Lanjut Edit" mengikuti Jadwal Rilis Publikasi (kalau diisi → terjadwal, kalau kosong → draft).
-- Tombol "Simpan sebagai Draft" SELALU memaksa jadi draft, walau Jadwal Rilis Publikasi sudah diisi.
+- Form buat acara milik BPH Kabinet: tombol "Buat & Lanjut Edit" mengikuti Jadwal Rilis Publikasi (kalau diisi → terjadwal, kalau kosong → draft), dan tombol "Simpan sebagai Draft" SELALU memaksa jadi draft, walau Jadwal Rilis Publikasi sudah diisi. Pengurus lain cuma melihat "Buat & Lanjut Edit", dan acaranya selalu jadi draft.
 - Kalau kamu isi Jadwal Rilis Publikasi tapi status manual masih "draft", sistem otomatis mengubahnya jadi "terjadwal" — jangan bingung kalau statusnya berubah sendiri.
 
 Struktur Kepanitiaan
@@ -94,7 +102,7 @@ Field di halaman detail acara: divisi kabinet pemilik acara/proker ini (boleh le
 Pertanyaan Pendaftaran
 Di halaman detail acara. Kosong = form pendaftaran standar. Tambahkan pertanyaan (Teks Pendek/Panjang, Dropdown, Pilihan, Pilih Banyak) bila acaranya butuh — mis. preferensi makanan atau ukuran kaos; centang "Wajib diisi" supaya tidak bisa dilewati. Jawabannya muncul di kolom Peserta pada Daftar Pendaftar. Menghapus pertanyaan tidak menghapus jawaban yang sudah tersimpan, cuma berhenti ditampilkan.
 
-Hapus kegiatan & Sampah (khusus BPH Kabinet)
+Hapus kegiatan & Sampah (khusus BPH Kabinet; pembuat hanya bisa membuang drafnya sendiri yang belum disetujui)
 - Tombol "Hapus" tidak langsung menghapus: kegiatan dipindah ke Sampah. Kegiatan di Sampah hilang dari situs publik, dari daftar kegiatan, dan dari akses panitia, tapi pendaftar, panitia, evaluasi, dan datanya tetap tersimpan. Formulir/Oprek milik acara itu juga tidak bisa diisi lagi.
 - Bagian "Sampah" ada di bawah Daftar Kegiatan. "Pulihkan" mengembalikan kegiatan dengan status semula — kalau statusnya publik, langsung tampil lagi di situs.
 - "Hapus Permanen" hanya bisa dari Sampah dan TIDAK bisa dibatalkan: pendaftar, panitia, evaluasi ikut terhapus. Album galeri yang tertaut tidak ikut terhapus, hanya dilepas tautannya. Sertifikat yang sudah terbit tetap ada.

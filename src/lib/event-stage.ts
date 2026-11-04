@@ -1,4 +1,4 @@
-import { committeeLockAt, isCommitteeLocked } from "@/lib/event-capabilities";
+import { committeeLockAt, eventApprovalState, isCommitteeLocked } from "@/lib/event-capabilities";
 import type { EventStatusTone } from "@/components/console/event-status-mark";
 
 // Tahap hidup acara untuk tampilan konsol. Berbeda dari events.status: acara berstatus
@@ -13,10 +13,17 @@ type EventTiming = {
   endAt: Date | string | null;
 };
 
-type EventSchedule = EventTiming & {
-  scheduledPublishAt: Date | string | null;
-  registrationDeadline: Date | string | null;
+type EventApproval = {
+  status: string;
+  approvedAt: Date | string | null;
+  approvalRequestedAt: Date | string | null;
 };
+
+type EventSchedule = EventTiming &
+  EventApproval & {
+    scheduledPublishAt: Date | string | null;
+    registrationDeadline: Date | string | null;
+  };
 
 const TIME_ZONE = "Asia/Shanghai";
 
@@ -31,21 +38,33 @@ export function eventStage(ev: EventTiming, now: Date = new Date()): EventStage 
   return "tayang";
 }
 
-export function eventStatusChip(status: string, stage: EventStage): { label: string; tone: EventStatusTone } {
+export function eventStatusChip(ev: EventApproval, stage: EventStage): { label: string; tone: EventStatusTone } {
   switch (stage) {
     case "dibatalkan":
       return { label: "Dibatalkan", tone: "alarm" };
-    case "persiapan":
-      return status === "scheduled" ? { label: "Terjadwal", tone: "gold" } : { label: "Draf", tone: "neutral" };
+    case "persiapan": {
+      if (ev.status === "scheduled") return { label: "Terjadwal", tone: "gold" };
+      const approval = eventApprovalState(ev);
+      if (approval === "diajukan") return { label: "Menunggu Persetujuan", tone: "gold" };
+      return approval === "disetujui" ? { label: "Draf · Disetujui", tone: "jade" } : { label: "Draf", tone: "neutral" };
+    }
     case "berlangsung":
       return { label: "Berlangsung", tone: "gold" };
     case "tayang":
-      return status === "registration_closed"
+      return ev.status === "registration_closed"
         ? { label: "Pendaftaran Ditutup", tone: "neutral" }
         : { label: "Dipublikasikan", tone: "jade" };
     default:
       return { label: "Selesai", tone: "neutral" };
   }
+}
+
+/** Langkah berikutnya bagi acara yang masih disiapkan. */
+export function eventPreparationNote(ev: EventApproval & { scheduledPublishAt: Date | string | null }): string {
+  const approval = eventApprovalState(ev);
+  if (approval === "belum") return "Belum diajukan ke BPH";
+  if (approval === "diajukan") return "Menunggu persetujuan BPH";
+  return ev.scheduledPublishAt ? `Rilis ${eventDayLabel(ev.scheduledPublishAt)}` : "Rilis belum dijadwalkan";
 }
 
 export function eventDayLabel(date: Date | string, style: "short" | "long" = "short"): string {
@@ -105,11 +124,12 @@ export function eventLifecycle(ev: EventSchedule, now: Date = new Date()): Event
   const end = ev.endAt ?? ev.startAt;
   const lock = end ? committeeLockAt(ev) : null;
   const notes: Partial<Record<EventStage, string | null>> = {
-    persiapan: ev.scheduledPublishAt
-      ? `Rilis ${eventDayLabel(ev.scheduledPublishAt)}`
-      : stage === "persiapan"
-        ? "Rilis belum dijadwalkan"
-        : null,
+    persiapan:
+      stage === "persiapan"
+        ? eventPreparationNote(ev)
+        : ev.scheduledPublishAt
+          ? `Rilis ${eventDayLabel(ev.scheduledPublishAt)}`
+          : null,
     tayang: ev.registrationDeadline ? `Daftar s.d. ${eventDayLabel(ev.registrationDeadline)}` : null,
     berlangsung: ev.startAt ? eventDayLabel(ev.startAt) : "Tanggal belum diisi",
     pasca: end ? `Sejak ${eventDayLabel(end)}` : null,
