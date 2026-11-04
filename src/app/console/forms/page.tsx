@@ -1,4 +1,5 @@
 import { count } from "drizzle-orm";
+import { lifecycleFilter } from "@/lib/form-lifecycle";
 import { ClipboardList, Crown, ListChecks, UserPlus, Vote } from "lucide-react";
 import Link from "next/link";
 import { redirect } from "next/navigation";
@@ -22,7 +23,8 @@ export default async function ConsoleFormsPage() {
   }
 
   const [formCounts, membershipCountRows] = await Promise.all([
-    db.select({ kind: forms.kind, n: count() }).from(forms).groupBy(forms.kind),
+    // Hanya formulir aktif: yang di Arsip atau Sampah ada di bagian tersendiri tiap tab.
+    db.select({ kind: forms.kind, n: count() }).from(forms).where(lifecycleFilter("active")).groupBy(forms.kind),
     access.canMembership ? db.select({ n: count() }).from(membershipApplications) : Promise.resolve([]),
   ]);
   const countOf = (kind: string) => formCounts.find((c) => c.kind === kind)?.n ?? 0;

@@ -4,6 +4,7 @@ import { and, desc, eq, inArray, isNull, or, sql } from "drizzle-orm";
 import { db } from "@/db";
 import { events, forms } from "@/db/schema";
 import { getCabinetMembership, getCoordinatorEventIds, getFormsAccess, type FormsAccess } from "@/lib/form-access";
+import { formLifecycleColumns, lifecycleFilter, type FormLifecycle } from "@/lib/form-lifecycle";
 
 // Gerbang server modul Formulir. Formulir dibuat dan dikelola dari /formulir, BUKAN
 // dari /console: layout konsol hanya menerima admin/koordinator/panitia, dan
@@ -88,15 +89,19 @@ export type SurveyListRow = {
   createdAt: Date;
   createdByMe: boolean;
   responseCount: number;
+  archivedAt: Date | null;
+  deletedAt: Date | null;
+  deletedByName: string | null;
 };
 
 /**
  * Formulir yang boleh dikelola user ini, terbaru dulu. Syarat sama dengan
  * canManageForm untuk formulir: full/modul forms melihat semuanya; lainnya
  * melihat buatannya sendiri (selama masih berhak membuat) dan formulir acara
- * tempat dia BPH Panitia. Formulir di acara yang masuk Sampah disembunyikan.
+ * tempat dia BPH Panitia. Formulir di acara yang masuk Sampah disembunyikan. `state` memilih daftar aktif
+ * (bawaan), Arsip, atau Sampah (migrasi 0058).
  */
-export async function listManageableSurveys(sa: SurveyAccess): Promise<SurveyListRow[]> {
+export async function listManageableSurveys(sa: SurveyAccess, state: FormLifecycle = "active"): Promise<SurveyListRow[]> {
   const { access } = sa;
   const mine = and(
     eq(forms.createdBy, access.userId),
@@ -124,10 +129,11 @@ export async function listManageableSurveys(sa: SurveyAccess): Promise<SurveyLis
       createdAt: forms.createdAt,
       createdBy: forms.createdBy,
       responseCount: sql<number>`(select count(*)::int from form_responses fr where fr.form_id = ${forms.id})`,
+      ...formLifecycleColumns,
     })
     .from(forms)
     .leftJoin(events, eq(events.id, forms.eventId))
-    .where(and(eq(forms.kind, "survei"), or(isNull(forms.eventId), isNull(events.deletedAt)), scope))
+    .where(and(eq(forms.kind, "survei"), or(isNull(forms.eventId), isNull(events.deletedAt)), lifecycleFilter(state), scope))
     .orderBy(desc(forms.createdAt))
     .limit(300);
 

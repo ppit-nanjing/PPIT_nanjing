@@ -1776,6 +1776,15 @@ export const forms = pgTable(
     // Posisi BPH Acara yang dibuka (oprek_bph_acara), subset label
     // event_committee_role: ketua/wakil/sekretaris/bendahara/supervisor.
     bphRoles: text("bph_roles").array().notNull().default([]),
+    // Migrasi 0058, khusus Formulir Kustom (kind "survei"; NULL untuk jenis lain). Arsip: formulir
+    // selesai, ditutup, hilang dari daftar aktif, jawabannya tetap terbuka. Sampah (soft delete):
+    // hilang dari semua halaman dan tidak bisa dikelola siapa pun sampai dipulihkan. Query yang
+    // menampilkan atau menerima formulir kustom harus menyaring isNull(forms.deletedAt); gerbang
+    // pengelolaan (canManageForm) sudah melakukannya.
+    archivedAt: timestamp("archived_at"),
+    archivedBy: uuid("archived_by").references(() => users.id, { onDelete: "set null" }),
+    deletedAt: timestamp("deleted_at"),
+    deletedBy: uuid("deleted_by").references(() => users.id, { onDelete: "set null" }),
     createdBy: uuid("created_by").references(() => users.id, { onDelete: "set null" }),
     createdAt: timestamp("created_at").notNull().defaultNow(),
     updatedAt: timestamp("updated_at").notNull().defaultNow(),

@@ -128,7 +128,7 @@ export async function canReadPrivateFile(
         .limit(MAX_MATCHING_ROWS);
       for (const formId of new Set(rows.map((r) => r.formId))) {
         const [form] = await db
-          .select({ kind: forms.kind, eventId: forms.eventId, createdBy: forms.createdBy })
+          .select({ kind: forms.kind, eventId: forms.eventId, createdBy: forms.createdBy, deletedAt: forms.deletedAt })
           .from(forms)
           .where(eq(forms.id, formId));
         if (form && (await canManageForm(form))) return true;
