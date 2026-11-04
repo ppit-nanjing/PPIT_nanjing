@@ -50,7 +50,10 @@ import { EvalAudienceTabs } from "@/components/console/eval-audience-tabs";
 import { CopyButton } from "@/components/copy-button";
 import { committeeEvalWindowState } from "@/lib/committee-evaluation";
 import { qualifiesForParticipantCertificate } from "@/lib/certificate-eligibility";
-import { ChevronRight, Download, Eye, Images } from "lucide-react";
+import { EventAdminPanel, type EventPanelTab } from "@/components/console/event-admin-panel";
+import { EventConsoleHeader } from "@/components/console/event-console-header";
+import { eventDayLabel, eventLifecycle, eventStage, eventStatusChip, eventTimeLabel } from "@/lib/event-stage";
+import { Download, Eye, Images } from "lucide-react";
 
 const QUESTION_TYPE_LABELS: Record<string, string> = {
   text: "Teks Pendek",
@@ -63,10 +66,14 @@ const QUESTION_TYPE_LABELS: Record<string, string> = {
 
 // Semua bagian halaman kegiatan tertutup saat halaman dibuka (halamannya panjang);
 // bagian yang memang butuh tindakan (mis. verifikasi bayar, volunteer menunggu)
-// membuka dirinya lewat defaultOpen eksplisit di pemakaiannya.
+// membuka dirinya lewat defaultOpen eksplisit di pemakaiannya. Tiap bagian menjadi
+// satu baris dalam SECTION_GROUP, dengan keadaan terkininya di sisi kanan.
 function CollapsibleSection(props: ComponentProps<typeof CollapsibleSectionBase>) {
-  return <CollapsibleSectionBase defaultOpen={false} {...props} />;
+  return <CollapsibleSectionBase defaultOpen={false} flush {...props} />;
 }
+
+const SECTION_GROUP =
+  "flex flex-col divide-y divide-outline-variant overflow-hidden rounded-xl border border-outline-variant bg-surface-container-lowest";
 
 // Tombol "Ke Google Sheets" (aksi server di halaman ini) membuat sheet lewat belasan panggilan ke Google;
 // beri ruang lebih dari batas bawaan supaya pembuatan pertama sebuah acara tidak terpotong.
@@ -492,440 +499,89 @@ export default async function ConsoleEventDetailPage({ params }: { params: Promi
     if (a.questionId) committeeAnswerCountMap[a.questionId] = (committeeAnswerCountMap[a.questionId] ?? 0) + 1;
   }
 
+  // ===== Kepala halaman & panel admin =====
+  const stage = eventStage(event);
+  const chip = eventStatusChip(event.status, stage);
+  const isPubliclyVisible = event.status === "published" || event.status === "registration_closed" || event.status === "completed";
+  const canSeePayments = canVerifyPayments && event.isPaid;
+  const canManageVolunteers = can("event.manageVolunteers");
+  const showQueue = canSeePayments || canManageVolunteers;
+  const pendingPaymentCount = canSeePayments ? pendingPayments.filter((p) => p.status === "submitted").length : 0;
+  const pendingVolunteerCount = canManageVolunteers ? pendingVolunteers.length : 0;
+  // Bagian yang terbuka mengikuti tahap acara; antrean keputusan selalu didahulukan.
+  const defaultTab: EventPanelTab =
+    stage === "persiapan"
+      ? "publik"
+      : pendingPaymentCount + pendingVolunteerCount > 0 || stage === "tayang" || stage === "berlangsung"
+        ? "internal"
+        : "pasca";
+  const hasPublicSettings =
+    can("event.editContent") ||
+    can("event.editInfo") ||
+    can("event.publish") ||
+    can("event.registrationToggle") ||
+    can("event.registrationForm") ||
+    can("event.feeTiers");
+  const headerStart = event.startAt ? new Date(event.startAt) : null;
+  const headerEnd = event.endAt ? new Date(event.endAt) : null;
+  const headerDateLabel = headerStart
+    ? [
+        eventDayLabel(headerStart, "long"),
+        [eventTimeLabel(headerStart), headerEnd ? eventTimeLabel(headerEnd) : null].filter(Boolean).join(" – "),
+      ]
+        .filter(Boolean)
+        .join(" · ")
+    : null;
+  const agendaItemCount = (event.agenda ?? "").split("\n").filter((line) => line.trim()).length;
+  const hasDescription = !!(event.descriptionHtml?.trim() || event.description?.trim());
+
   return (
-    <div className="py-2">
+    <div className="mx-auto w-full max-w-[var(--container-max)]">
       <FlashToast />
-      <header className="mb-8">
-        <h1 className="text-headline-md sm:text-headline-lg text-on-background mb-2">{event.title}</h1>
-        <p className="text-body-md text-on-surface-variant">
-          {activeRegistrationCount} terdaftar &middot; {attended} hadir
-          {event.capacity ? ` · kapasitas ${event.capacity}` : ""}
+      <EventConsoleHeader
+        title={event.title}
+        coverImageUrl={event.coverImageUrl}
+        category={event.category}
+        sensusOnly={event.requiresSensus}
+        chipLabel={chip.label}
+        chipTone={chip.tone}
+        dateLabel={headerDateLabel}
+        location={event.location}
+        registered={activeRegistrationCount}
+        attended={attended}
+        capacity={event.capacity}
+        finalAttendeeCount={event.finalAttendeeCount}
+        committee={canManageCommittee ? { members: committee.length, divisions: divisions.length } : null}
+        queue={showQueue ? { payments: pendingPaymentCount, volunteers: pendingVolunteerCount } : null}
+        steps={eventLifecycle(event)}
+        publicHref={isPubliclyVisible ? `/events/${event.slug}` : null}
+        scanHref={can("event.scanAttendance") ? `/events/${event.slug}/scan` : null}
+        scanIsPrimary={stage === "tayang" || stage === "berlangsung"}
+      />
+      {access.locked && !access.isFullAdmin && (
+        <p className="mt-4 rounded-lg border border-outline-variant bg-surface-container-low px-4 py-3 text-body-md text-on-surface-variant">
+          Acara ini <strong className="text-on-background">terkunci</strong> — sudah lewat 2 minggu setelah
+          selesai. Panitia hanya bisa melihat; perubahan lewat BPH Kabinet.
         </p>
-        {access.locked && !access.isFullAdmin && (
-          <p className="mt-3 rounded-lg border border-outline-variant bg-surface-container-low px-4 py-3 text-body-md text-on-surface-variant">
-            Acara ini <strong className="text-on-background">terkunci</strong> — sudah lewat 2 minggu setelah
-            selesai. Panitia hanya bisa melihat; perubahan lewat BPH Kabinet.
-          </p>
-        )}
-        {can("event.takeOver") && access.role == null && (
-          <form action={takeOverEvent} className="mt-3">
-            <input type="hidden" name="eventId" value={id} />
-            <SubmitButton
-              successMessage="Acara diambil alih."
-              className="inline-flex items-center gap-2 rounded-md border border-outline-variant px-4 py-2 text-label-caps uppercase tracking-wide text-on-background hover:bg-surface-container-low transition-colors"
-            >
-              Ambil Alih Acara (BPH)
-            </SubmitButton>
-          </form>
-        )}
-      </header>
-
-      {/* Layar lebar: kerja utama di kiri; ringkasan + antrean tindakan
-          (volunteer, verifikasi bayar) menempel di kolom kanan. */}
-      <div className="grid grid-cols-1 xl:grid-cols-[minmax(0,1fr)_400px] gap-6 items-start">
-        {/* Kolom samping: ringkasan + antrean tindakan. Ditaruh SEBELUM kolom kerja di DOM: di layar sempit
-            (HP, laptop kecil) tugas harian (scanner, verifikasi bayar, volunteer) tampil di atas, bukan
-            di dasar halaman yang panjang; urutan Tab pun sama dengan urutan tampilan. Di layar lebar
-            penempatan kolomnya dinyatakan eksplisit. */}
-        <aside className="flex flex-col gap-6 min-w-0 xl:col-start-2 xl:row-start-1 xl:sticky xl:top-6">
-          <section className="bg-surface-container-lowest border border-outline-variant rounded-xl p-5 flex flex-col gap-3">
-            <p className="text-label-caps uppercase tracking-wide text-on-surface-variant">Ringkasan</p>
-            <div className="grid grid-cols-3 gap-2 text-center">
-              <div className="bg-surface-container-low rounded-lg py-3">
-                <p className="text-headline-sm text-on-background font-semibold">{activeRegistrationCount}</p>
-                <p className="text-label-caps text-on-surface-variant">Terdaftar</p>
-              </div>
-              <div className="bg-surface-container-low rounded-lg py-3">
-                <p className="text-headline-sm text-on-background font-semibold">{attended}</p>
-                <p className="text-label-caps text-on-surface-variant">Hadir</p>
-              </div>
-              <div className="bg-surface-container-low rounded-lg py-3">
-                <p className="text-headline-sm text-on-background font-semibold">{event.capacity ?? "—"}</p>
-                <p className="text-label-caps text-on-surface-variant">Kuota</p>
-              </div>
-            </div>
-            {can("event.scanAttendance") && (
-              <a
-                href={`/events/${event.slug}/scan`}
-                className="inline-flex items-center justify-center gap-2 border border-outline-variant text-on-background text-label-caps uppercase tracking-wide px-4 py-2 rounded-md hover:bg-surface-container-low transition-colors"
-              >
-                Buka Scanner Check-in
-              </a>
-            )}
-          </section>
-
-          {!canVerifyPayments && event.isPaid && (
-            <p className="rounded-xl border border-outline-variant bg-surface-container-lowest p-4 text-body-sm text-on-surface-variant">
-              <span className="font-medium text-on-background">Verifikasi pembayaran</span> dikerjakan bendahara atau BPH
-              panitia acara ini. Peserta yang belum lunas belum bisa check-in; arahkan mereka ke bendahara.
-            </p>
-          )}
-
-          {canVerifyPayments && event.isPaid && (
-            <CollapsibleSection
-              title="Verifikasi Pembayaran"
-              description={`${pendingPayments.filter((p) => p.status === "submitted").length} menunggu verifikasi`}
-              defaultOpen={pendingPayments.some((p) => p.status === "submitted")}
-            >
-              <p className="text-body-md text-on-surface-variant mb-1">
-                Bukti diunggah sendiri oleh peserta — cocokkan ketiganya dengan mutasi Alipay/rekening:
-              </p>
-              <ul className="text-body-sm text-on-surface-variant mb-4 list-disc pl-5">
-                <li>
-                  <strong className="text-on-background">Nominal</strong>{" "}
-                  {feeOptions.length > 0
-                    ? "sesuai kategori tarif tiap peserta (tertera di bawah)"
-                    : event.feeCny != null
-                      ? `persis ¥${event.feeCny}`
-                      : "sesuai kesepakatan (belum diisi)"}
-                </li>
-                <li><strong className="text-on-background">Nama pengirim</strong> cocok dengan peserta</li>
-                <li><strong className="text-on-background">Waktu transfer</strong> setelah tanggal daftar</li>
-              </ul>
-              <PaymentVerificationList
-                payments={pendingPayments.map((p) => ({ ...p, registeredAt: p.registeredAt.toISOString() }))}
-              />
-            </CollapsibleSection>
-          )}
-
-          {can("event.manageVolunteers") && (
-          <CollapsibleSection
-            title="Pendaftar Volunteer"
-            description={
-              event.volunteerSignupOpen
-                ? `${pendingVolunteers.length} menunggu keputusan`
-                : volunteerApps.length > 0
-                  ? `${volunteerApps.length} lamaran (ditutup)`
-                  : "pendaftaran tutup"
-            }
-            defaultOpen={pendingVolunteers.length > 0}
-          >
-            {!event.volunteerSignupOpen && (
-              <p className="text-body-md text-on-surface-variant mb-4">
-                Pendaftaran publik sedang <strong className="text-on-background">tutup</strong>. Centang
-                &quot;Buka pendaftaran volunteer&quot; di form Edit.
-              </p>
-            )}
-            <VolunteerApplicationList
-              applications={volunteerApps.map((v) => ({
-                id: v.app.id,
-                fullName: v.app.fullName,
-                email: v.app.email,
-                whatsapp: v.app.whatsapp,
-                note: v.app.note,
-                status: v.app.status,
-                divisionName: v.divisionName,
-                accountName: v.accountName,
-              }))}
-            />
-          </CollapsibleSection>
-          )}
-        </aside>
-        <div className="flex flex-col gap-6 min-w-0 xl:col-start-1 xl:row-start-1">
-      {/* Tautan pendek pendaftaran & evaluasi — fitur DASAR: bisa dibuat
-          sekali klik di sini, tanpa membuka modul Tautan. */}
-      {can("event.editContent") && (
-      <CollapsibleSection
-        title="Tautan Pendaftaran & Evaluasi"
-        description="tautan pendek + QR untuk dibagikan (WeChat dsb)"
-      >
-        <EventShareLinks
-          eventId={id}
-          status={event.status}
-          scheduledPublishLabel={
-            event.scheduledPublishAt
-              ? new Date(event.scheduledPublishAt).toLocaleString("id-ID", {
-                  dateStyle: "long",
-                  timeStyle: "short",
-                  timeZone: "Asia/Shanghai",
-                })
-              : null
-          }
-          daftar={{
-            directUrl: shareDirect.daftar,
-            slug: daftarShareLink?.slug ?? null,
-            qrDataUrl: daftarShareLink ? shareQrBySlug.get(daftarShareLink.slug) ?? null : null,
-          }}
-          evaluasi={{
-            directUrl: shareDirect.evaluasi,
-            slug: evaluasiShareLink?.slug ?? null,
-            qrDataUrl: evaluasiShareLink ? shareQrBySlug.get(evaluasiShareLink.slug) ?? null : null,
-          }}
-        />
-      </CollapsibleSection>
       )}
-
-      {/* Deskripsi & agenda — fitur DASAR: semua panitia acara bisa. */}
-      {can("event.editContent") && (
-      <CollapsibleSection title="Deskripsi & Agenda" description="Teks yang tampil di halaman acara publik.">
-        <form action={updateEventContent.bind(null, id)} className="flex flex-col gap-4">
-          <EventDescriptionEditor
-            defaults={{
-              description: event.description ?? "",
-              descriptionHtml: event.descriptionHtml,
-            }}
-          />
-          <textarea
-            id="event-agenda"
-            name="agenda"
-            defaultValue={event.agenda ?? ""}
-            placeholder={"Agenda/Jadwal (satu baris per item, contoh:\n18:00 - Registrasi\n19:00 - Pembukaan)"}
-            rows={3}
-            className="bg-soft-gray rounded-md p-3 text-body-md resize-none"
-          />
-          <div className="flex flex-col gap-1">
-            <span className="text-label-caps uppercase tracking-wide text-on-surface-variant">Info Setelah Daftar</span>
-            <textarea
-              name="confirmationInfo"
-              defaultValue={event.confirmationInfo ?? ""}
-              placeholder={"Muncul di halaman tiket peserta setelah mereka mendaftar (contoh:\nMasuk grup WeChat WIF 2026 — add salah satu:\nWechat ID: rhpxzz (Gwen)\nWechat ID: athayamzzra (Athaya))"}
-              rows={3}
-              className="bg-soft-gray rounded-md p-3 text-body-md resize-none"
-            />
-            <p className="text-xs text-on-surface-variant">Tidak tampil di halaman acara publik — hanya pendaftar yang melihatnya.</p>
-          </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <ImageUploadCropper
-              name="confirmationContactQr1Url"
-              folder="events"
-              label="QR Kontak 1 (opsional)"
-              defaultValue={event.confirmationContactQr1Url ?? ""}
-              hint="Screenshot QR 'tambah kontak' (WeChat dsb). Tampil berdampingan dengan Info Setelah Daftar di atas."
-            />
-            <ImageUploadCropper
-              name="confirmationContactQr2Url"
-              folder="events"
-              label="QR Kontak 2 (opsional)"
-              defaultValue={event.confirmationContactQr2Url ?? ""}
-              hint="Kontak kedua, kalau ada. Kosongkan kalau cukup satu."
-            />
-          </div>
-          <AIReviewButton
-            context="event"
-            fields={[
-              { id: "event-description", label: "Deskripsi" },
-              { id: "event-agenda", label: "Agenda" },
-            ]}
-          />
+      {can("event.takeOver") && access.role == null && (
+        <form action={takeOverEvent} className="mt-4">
+          <input type="hidden" name="eventId" value={id} />
           <SubmitButton
-            successMessage="Deskripsi & agenda tersimpan."
-            className="self-start bg-primary-container text-on-primary text-label-caps uppercase tracking-wide px-6 py-3 rounded-md hover:bg-primary transition-colors"
+            successMessage="Acara diambil alih."
+            className="inline-flex items-center gap-2 rounded-md border border-outline-variant px-4 py-2 text-label-caps uppercase tracking-wide text-on-background hover:bg-surface-container-low transition-colors"
           >
-            Simpan Deskripsi &amp; Agenda
+            Ambil Alih Acara (BPH)
           </SubmitButton>
         </form>
-      </CollapsibleSection>
       )}
 
-      {/* Info & pengaturan acara — wewenang BPH Panitia (event.editInfo). */}
-      {can("event.editInfo") && (
-      <details className="group bg-surface-container-lowest border border-outline-variant rounded-xl overflow-hidden">
-        <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-4 py-3 sm:px-6 sm:py-4 hover:bg-surface-container-low/60 transition-colors [&::-webkit-details-marker]:hidden">
-          <span className="text-headline-sm text-on-background">Info &amp; Pengaturan Acara</span>
-          <ChevronRight size={20} className="text-on-surface-variant shrink-0 transition-transform group-open:rotate-90" aria-hidden="true" />
-        </summary>
-        <form action={updateEventInfo.bind(null, id)} className="px-6 pb-6 flex flex-col gap-4">
-          {/* Bagian 1 - identitas acara */}
-          <details className="border border-outline-variant rounded-lg">
-            <summary className="px-4 py-3 cursor-pointer text-label-caps uppercase tracking-wide text-primary-container">
-              1 · Info Acara
-            </summary>
-            <div className="px-4 pb-4 flex flex-col gap-4">
-              <p className="text-body-sm text-on-surface-variant">
-                Isi lengkap supaya pengurus berikutnya paham konteks acaranya. Bagian ini menentukan tampilan di
-                halaman publik dan kartu di /events.
-              </p>
-              <label className="flex flex-col gap-1.5">
-                <span className="text-label-caps uppercase tracking-wide text-on-surface-variant">Judul acara *</span>
-                <input id="event-title" name="title" defaultValue={event.title} required placeholder="mis. Nanjing Diaries" className="bg-soft-gray rounded-md p-3 text-body-md" />
-                <span className="text-xs text-on-surface-variant">Tampil sebagai judul di halaman acara publik dan kartu daftar /events.</span>
-              </label>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <label className="flex flex-col gap-1.5">
-                  <span className="text-label-caps uppercase tracking-wide text-on-surface-variant">Kategori</span>
-                  <input id="event-category" name="category" defaultValue={event.category ?? ""} placeholder="mis. Webinar / Lomba / Sosialisasi" className="bg-soft-gray rounded-md p-3 text-body-md" />
-                  <span className="text-xs text-on-surface-variant">Jadi tab filter di /events. Boleh dikosongkan.</span>
-                </label>
-                <label className="flex flex-col gap-1.5">
-                  <span className="text-label-caps uppercase tracking-wide text-on-surface-variant">Lokasi (teks)</span>
-                  <input id="event-location" name="location" defaultValue={event.location ?? ""} placeholder="mis. Zoom Meeting (Online)" className="bg-soft-gray rounded-md p-3 text-body-md" />
-                  <span className="text-xs text-on-surface-variant">Untuk acara online tulis platformnya; tautan masuk (Zoom dll.) taruh di &ldquo;Info Setelah Daftar&rdquo;.</span>
-                </label>
-              </div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <label className="flex flex-col gap-1.5">
-                  <span className="text-label-caps uppercase tracking-wide text-on-surface-variant">Link peta 1 (opsional)</span>
-                  <input
-                    name="locationUrl"
-                    type="url"
-                    defaultValue={event.locationUrl ?? ""}
-                    placeholder="https://… (Amap)"
-                    className="bg-soft-gray rounded-md p-3 text-body-md"
-                  />
-                </label>
-                <label className="flex flex-col gap-1.5">
-                  <span className="text-label-caps uppercase tracking-wide text-on-surface-variant">Link peta 2 (opsional)</span>
-                  <input
-                    name="locationUrl2"
-                    type="url"
-                    defaultValue={event.locationUrl2 ?? ""}
-                    placeholder="https://… (Baidu Maps)"
-                    className="bg-soft-gray rounded-md p-3 text-body-md"
-                  />
-                </label>
-              </div>
-              <p className="text-xs text-on-surface-variant -mt-2">Kalau salah satu/semuanya diisi, teks Lokasi di halaman publik jadi tombol petunjuk arah. Untuk acara online, kosongkan saja.</p>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <label className="flex flex-col gap-1">
-                  <span className="text-label-caps uppercase tracking-wide text-on-surface-variant">Mulai</span>
-                  <input
-                    name="startAt"
-                    type="datetime-local"
-                    defaultValue={event.startAt ? toDateLocalInput(new Date(event.startAt)) : ""}
-                    className="bg-soft-gray rounded-md p-3 text-body-md"
-                  />
-                  <span className="text-xs text-on-surface-variant">Kapan acara dimulai.</span>
-                </label>
-                <label className="flex flex-col gap-1">
-                  <span className="text-label-caps uppercase tracking-wide text-on-surface-variant">Selesai</span>
-                  <input
-                    name="endAt"
-                    type="datetime-local"
-                    defaultValue={event.endAt ? toDateLocalInput(new Date(event.endAt)) : ""}
-                    className="bg-soft-gray rounded-md p-3 text-body-md"
-                  />
-                  <span className="text-xs text-on-surface-variant">
-                    Kapan acara berakhir. Dipakai untuk menghitung kunci kepanitiaan 14 hari setelah acara.
-                  </span>
-                </label>
-              </div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <label className="flex flex-col gap-1">
-                  <span className="text-label-caps uppercase tracking-wide text-on-surface-variant">Kapasitas</span>
-                  <input name="capacity" type="number" min={1} defaultValue={event.capacity ?? ""} placeholder="mis. 60" className="bg-soft-gray rounded-md p-3 text-body-md" />
-                  <span className="text-xs text-on-surface-variant">Batas jumlah pendaftar (sisa kuota tampil di halaman publik). Kosong = tanpa batas.</span>
-                </label>
-              </div>
-              <ImageUploadCropper
-                name="coverImageUrl"
-                folder="events"
-                label="Gambar Sampul"
-                placeholder="Tempel URL atau unggah gambar"
-                defaultValue={event.coverImageUrl ?? ""}
-                aspect={16 / 9}
-                allowPaste
-                hint="Ideal 1920 × 1080 px (16:9) — gambar di-crop & dikompres otomatis."
-              />
-              <EventThemeFields
-                defaults={{
-                  themeBg: event.themeBg,
-                  themeAccent: event.themeAccent,
-                  themeAccent2: event.themeAccent2,
-                }}
-              />
-            </div>
-          </details>
-
-          {/* Bagian 2 - aturan pendaftaran & HTM + jadwal rilis */}
-          <details className="border border-outline-variant rounded-lg">
-            <summary className="px-4 py-3 cursor-pointer text-label-caps uppercase tracking-wide text-primary-container">
-              2 · Pendaftaran, Biaya &amp; Jadwal Rilis
-            </summary>
-            <div className="px-4 pb-4 flex flex-col gap-4">
-              <CheckField
-                name="requiresSensus"
-                defaultChecked={event.requiresSensus}
-                label="Hanya untuk peserta yang sudah lengkap mengisi sensus (mahasiswa Indo di China)"
-                hint="Pendaftar wajib sudah melengkapi sensus; kota/kampus/WeChat otomatis diambil dari data sensus, tidak ditanya ulang di form."
-              />
-              <CheckField
-                name="requiresBiodata"
-                defaultChecked={event.requiresBiodata}
-                label="Kumpulkan biodata lengkap peserta saat mendaftar (WIF dsb.)"
-                hint="Nama, paspor, WeChat, no. HP China, kota/ranting, universitas, angkatan, bukti mahasiswa aktif. Peserta yang sensusnya lengkap tidak mengetik ulang — datanya diambil dari sensus."
-              />
-              <CheckField
-                name="certificateForParticipants"
-                defaultChecked={event.certificateForParticipants}
-                label="Peserta mendapat e-sertifikat kehadiran"
-                hint="Saklar ketersediaan: kalau nyala, panitia bisa menerbitkan e-sertifikat (tautan berkas wajib) untuk peserta yang tercatat hadir."
-              />
-              <CheckField
-                name="certificateRequiresAttendance"
-                defaultChecked={event.certificateRequiresAttendance}
-                label="Sertifikat hanya untuk yang tercatat hadir (QR di-scan)"
-                hint="Matikan untuk acara tanpa absen QR (Zoom, Nanjing Diaries): sertifikat cukup untuk peserta terdaftar yang sudah mengisi evaluasi dengan akun."
-              />
-              <CheckField
-                name="evaluationAllowsAnonymous"
-                defaultChecked={event.evaluationAllowsAnonymous}
-                label="Evaluasi peserta boleh dikirim anonim"
-                hint="Matikan kalau evaluasi harus atas nama. Kotak anonim hilang dari form; nama diambil dari isian, atau dari sensus/akun kalau dikosongkan. Respons yang sudah masuk tidak berubah."
-              />
-              <CheckField
-                name="volunteerSignupOpen"
-                defaultChecked={event.volunteerSignupOpen}
-                label="Buka pendaftaran volunteer publik"
-                hint="Orang luar bisa melamar jadi volunteer di halaman acara"
-              />
-              <HtmFields
-                defaultIsPaid={event.isPaid}
-                defaultFeeCny={event.feeCny}
-                defaultInstructions={event.paymentInstructions}
-                defaultQrUrl={event.paymentQrUrl}
-                defaultAlipayUid={event.alipayUid}
-                defaultEarlyBirdUntil={
-                  event.earlyBirdUntil ? toDateLocalInput(new Date(event.earlyBirdUntil)) : ""
-                }
-              />
-              {event.isPaid && (
-                <p className="text-xs text-on-surface-variant">
-                  Butuh tarif bertingkat (mis. Freshmen ¥5 / Non-freshmen ¥10)? Atur di bagian
-                  &ldquo;Kategori Tarif&rdquo; di bawah — kalau ada minimal satu kategori, peserta wajib memilih
-                  saat mendaftar dan nominal itu yang dipakai, bukan angka tunggal di atas.
-                </p>
-              )}
-              <div className="flex flex-col gap-1">
-                <span className="text-label-caps uppercase tracking-wide text-on-surface-variant">Batas pendaftaran</span>
-                <input
-                  name="registrationDeadline"
-                  type="datetime-local"
-                  defaultValue={event.registrationDeadline ? toDateLocalInput(new Date(event.registrationDeadline)) : ""}
-                  className="bg-soft-gray rounded-md p-3 text-body-md"
-                />
-                <p className="text-xs text-on-surface-variant">Batas waktu peserta boleh mendaftar. Lewat dari ini tombol daftar tertutup otomatis. Kosongkan bila tak ada batas.</p>
-              </div>
-              <div className="flex flex-col gap-1">
-                <span className="text-label-caps uppercase tracking-wide text-on-surface-variant">Jadwal rilis publikasi (opsional)</span>
-                <input
-                  name="scheduledPublishAt"
-                  type="datetime-local"
-                  defaultValue={event.scheduledPublishAt ? toDateLocalInput(new Date(event.scheduledPublishAt)) : ""}
-                  className="bg-soft-gray rounded-md p-3 text-body-md"
-                />
-                <p className="text-xs text-on-surface-variant">Isi bila acara mau tampil ke publik hanya SETELAH tanggal/waktu ini (status &quot;Terjadwal&quot; dulu, rilis sendiri nanti). Kosongkan = tetap Draf, rilis saat kamu klik Publikasikan.</p>
-              </div>
-            </div>
-          </details>
-
-          <AIReviewButton
-            context="event"
-            fields={[
-              { id: "event-title", label: "Judul" },
-              { id: "event-category", label: "Kategori" },
-              { id: "event-location", label: "Lokasi" },
-            ]}
-          />
-          <SubmitButton
-            successMessage="Info & pengaturan tersimpan."
-            className="self-start bg-primary-container text-on-primary text-label-caps uppercase tracking-wide px-6 py-3 rounded-md hover:bg-primary transition-colors"
-          >
-            Simpan Info &amp; Pengaturan
-          </SubmitButton>
-        </form>
-      </details>
-      )}
-
+      <EventAdminPanel
+        defaultTab={defaultTab}
+        pendingInternal={pendingPaymentCount + pendingVolunteerCount}
+        publik={
+          hasPublicSettings ? (
+        <div className={SECTION_GROUP}>
       {/* Status & publikasi. Buka/tutup pendaftaran = fitur DASAR; ganti status
           lain = wewenang BPH Panitia (event.publish). */}
       {(can("event.publish") || can("event.registrationToggle")) && (
@@ -974,17 +630,271 @@ export default async function ConsoleEventDetailPage({ params }: { params: Promi
         )}
       </CollapsibleSection>
       )}
+      {/* Info & pengaturan acara — wewenang BPH Panitia (event.editInfo). */}
+      {can("event.editInfo") && (
+      <CollapsibleSection
+        title="Info & Pengaturan Acara"
+        description={[headerStart ? eventDayLabel(headerStart) : "Tanggal belum diisi", event.capacity ? `Kapasitas ${event.capacity}` : null, event.isPaid ? "Berbayar" : "Gratis"].filter(Boolean).join(" · ")}
+      >
+        <form action={updateEventInfo.bind(null, id)} className="flex flex-col gap-4">
+          {/* Bagian 1 - identitas acara */}
+          <details open className="border border-outline-variant rounded-lg">
+            <summary className="px-4 py-3 cursor-pointer text-label-caps uppercase tracking-wide text-primary-container">
+              Info Acara
+            </summary>
+            <div className="px-4 pb-4 flex flex-col gap-4">
+              <label className="flex flex-col gap-1.5">
+                <span className="text-label-caps uppercase tracking-wide text-on-surface-variant">Judul acara *</span>
+                <input id="event-title" name="title" defaultValue={event.title} required placeholder="mis. Nanjing Diaries" className="bg-soft-gray rounded-md p-3 text-body-md" />
+              </label>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <label className="flex flex-col gap-1.5">
+                  <span className="text-label-caps uppercase tracking-wide text-on-surface-variant">Kategori</span>
+                  <input id="event-category" name="category" defaultValue={event.category ?? ""} placeholder="mis. Webinar / Lomba / Sosialisasi" className="bg-soft-gray rounded-md p-3 text-body-md" />
+                  <span className="text-xs text-on-surface-variant">Jadi tab filter di /events.</span>
+                </label>
+                <label className="flex flex-col gap-1.5">
+                  <span className="text-label-caps uppercase tracking-wide text-on-surface-variant">Lokasi (teks)</span>
+                  <input id="event-location" name="location" defaultValue={event.location ?? ""} placeholder="mis. Zoom Meeting (Online)" className="bg-soft-gray rounded-md p-3 text-body-md" />
+                  <span className="text-xs text-on-surface-variant">Tautan Zoom dll. taruh di &ldquo;Info Setelah Daftar&rdquo;, bukan di sini.</span>
+                </label>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <label className="flex flex-col gap-1.5">
+                  <span className="text-label-caps uppercase tracking-wide text-on-surface-variant">Link peta 1 (opsional)</span>
+                  <input
+                    name="locationUrl"
+                    type="url"
+                    defaultValue={event.locationUrl ?? ""}
+                    placeholder="https://… (Amap)"
+                    className="bg-soft-gray rounded-md p-3 text-body-md"
+                  />
+                </label>
+                <label className="flex flex-col gap-1.5">
+                  <span className="text-label-caps uppercase tracking-wide text-on-surface-variant">Link peta 2 (opsional)</span>
+                  <input
+                    name="locationUrl2"
+                    type="url"
+                    defaultValue={event.locationUrl2 ?? ""}
+                    placeholder="https://… (Baidu Maps)"
+                    className="bg-soft-gray rounded-md p-3 text-body-md"
+                  />
+                </label>
+              </div>
+              <p className="text-xs text-on-surface-variant -mt-2">Kalau diisi, Lokasi di halaman publik jadi tombol petunjuk arah.</p>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <label className="flex flex-col gap-1">
+                  <span className="text-label-caps uppercase tracking-wide text-on-surface-variant">Mulai</span>
+                  <input
+                    name="startAt"
+                    type="datetime-local"
+                    defaultValue={event.startAt ? toDateLocalInput(new Date(event.startAt)) : ""}
+                    className="bg-soft-gray rounded-md p-3 text-body-md"
+                  />
+                </label>
+                <label className="flex flex-col gap-1">
+                  <span className="text-label-caps uppercase tracking-wide text-on-surface-variant">Selesai</span>
+                  <input
+                    name="endAt"
+                    type="datetime-local"
+                    defaultValue={event.endAt ? toDateLocalInput(new Date(event.endAt)) : ""}
+                    className="bg-soft-gray rounded-md p-3 text-body-md"
+                  />
+                  <span className="text-xs text-on-surface-variant">Kepanitiaan terkunci 14 hari setelah waktu ini.</span>
+                </label>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <label className="flex flex-col gap-1">
+                  <span className="text-label-caps uppercase tracking-wide text-on-surface-variant">Kapasitas</span>
+                  <input name="capacity" type="number" min={1} defaultValue={event.capacity ?? ""} placeholder="mis. 60" className="bg-soft-gray rounded-md p-3 text-body-md" />
+                  <span className="text-xs text-on-surface-variant">Kosong = tanpa batas.</span>
+                </label>
+              </div>
+              <ImageUploadCropper
+                name="coverImageUrl"
+                folder="events"
+                label="Gambar Sampul"
+                placeholder="Tempel URL atau unggah gambar"
+                defaultValue={event.coverImageUrl ?? ""}
+                aspect={16 / 9}
+                allowPaste
+                hint="Ideal 1920 × 1080 px (16:9)."
+              />
+              <EventThemeFields
+                defaults={{
+                  themeBg: event.themeBg,
+                  themeAccent: event.themeAccent,
+                  themeAccent2: event.themeAccent2,
+                }}
+              />
+            </div>
+          </details>
 
+          {/* Bagian 2 - aturan pendaftaran & HTM + jadwal rilis */}
+          <details className="border border-outline-variant rounded-lg">
+            <summary className="px-4 py-3 cursor-pointer text-label-caps uppercase tracking-wide text-primary-container">
+              Pendaftaran, Biaya &amp; Jadwal Rilis
+            </summary>
+            <div className="px-4 pb-4 flex flex-col gap-4">
+              <CheckField
+                name="requiresSensus"
+                defaultChecked={event.requiresSensus}
+                label="Hanya untuk peserta dengan sensus lengkap"
+                hint="Kota, kampus, dan WeChat diambil dari sensus."
+              />
+              <CheckField
+                name="requiresBiodata"
+                defaultChecked={event.requiresBiodata}
+                label="Kumpulkan biodata lengkap peserta saat mendaftar (WIF dsb.)"
+                hint="Termasuk paspor dan bukti mahasiswa aktif. Yang sensusnya lengkap tidak perlu mengetik ulang."
+              />
+              <CheckField
+                name="certificateForParticipants"
+                defaultChecked={event.certificateForParticipants}
+                label="Peserta mendapat e-sertifikat kehadiran"
+              />
+              <CheckField
+                name="certificateRequiresAttendance"
+                defaultChecked={event.certificateRequiresAttendance}
+                label="Sertifikat hanya untuk yang tercatat hadir (QR di-scan)"
+                hint="Matikan untuk acara tanpa absen QR. Cukup terdaftar dan mengisi evaluasi dengan akun."
+              />
+              <CheckField
+                name="evaluationAllowsAnonymous"
+                defaultChecked={event.evaluationAllowsAnonymous}
+                label="Evaluasi peserta boleh dikirim anonim"
+                hint="Matikan kalau evaluasi harus atas nama. Respons yang sudah masuk tidak berubah."
+              />
+              <CheckField
+                name="volunteerSignupOpen"
+                defaultChecked={event.volunteerSignupOpen}
+                label="Buka pendaftaran volunteer publik"
+                hint="Orang luar bisa melamar dari halaman acara."
+              />
+              <HtmFields
+                defaultIsPaid={event.isPaid}
+                defaultFeeCny={event.feeCny}
+                defaultInstructions={event.paymentInstructions}
+                defaultQrUrl={event.paymentQrUrl}
+                defaultAlipayUid={event.alipayUid}
+                defaultEarlyBirdUntil={
+                  event.earlyBirdUntil ? toDateLocalInput(new Date(event.earlyBirdUntil)) : ""
+                }
+              />
+              {event.isPaid && (
+                <p className="text-xs text-on-surface-variant">
+                  Tarif bertingkat diatur di &ldquo;Kategori Tarif&rdquo; dan menggantikan angka di atas.
+                </p>
+              )}
+              <div className="flex flex-col gap-1">
+                <span className="text-label-caps uppercase tracking-wide text-on-surface-variant">Batas pendaftaran</span>
+                <input
+                  name="registrationDeadline"
+                  type="datetime-local"
+                  defaultValue={event.registrationDeadline ? toDateLocalInput(new Date(event.registrationDeadline)) : ""}
+                  className="bg-soft-gray rounded-md p-3 text-body-md"
+                />
+                <p className="text-xs text-on-surface-variant">Lewat dari ini pendaftaran tertutup otomatis. Kosong = tanpa batas.</p>
+              </div>
+              <div className="flex flex-col gap-1">
+                <span className="text-label-caps uppercase tracking-wide text-on-surface-variant">Jadwal rilis publikasi (opsional)</span>
+                <input
+                  name="scheduledPublishAt"
+                  type="datetime-local"
+                  defaultValue={event.scheduledPublishAt ? toDateLocalInput(new Date(event.scheduledPublishAt)) : ""}
+                  className="bg-soft-gray rounded-md p-3 text-body-md"
+                />
+                <p className="text-xs text-on-surface-variant">Acara terbit sendiri pada waktu ini. Kosong = tetap Draf sampai dipublikasikan manual.</p>
+              </div>
+            </div>
+          </details>
+
+          <AIReviewButton
+            context="event"
+            fields={[
+              { id: "event-title", label: "Judul" },
+              { id: "event-category", label: "Kategori" },
+              { id: "event-location", label: "Lokasi" },
+            ]}
+          />
+          <SubmitButton
+            successMessage="Info & pengaturan tersimpan."
+            className="self-start bg-primary-container text-on-primary text-label-caps uppercase tracking-wide px-6 py-3 rounded-md hover:bg-primary transition-colors"
+          >
+            Simpan Info &amp; Pengaturan
+          </SubmitButton>
+        </form>
+      </CollapsibleSection>
+      )}
+      {/* Deskripsi & agenda — fitur DASAR: semua panitia acara bisa. */}
+      {can("event.editContent") && (
+      <CollapsibleSection
+        title="Deskripsi & Agenda"
+        description={`${hasDescription ? "Deskripsi terisi" : "Deskripsi kosong"} · ${agendaItemCount} butir agenda`}
+      >
+        <form action={updateEventContent.bind(null, id)} className="flex flex-col gap-4">
+          <EventDescriptionEditor
+            defaults={{
+              description: event.description ?? "",
+              descriptionHtml: event.descriptionHtml,
+            }}
+          />
+          <textarea
+            id="event-agenda"
+            name="agenda"
+            defaultValue={event.agenda ?? ""}
+            placeholder={"Agenda/Jadwal (satu baris per item, contoh:\n18:00 - Registrasi\n19:00 - Pembukaan)"}
+            rows={3}
+            className="bg-soft-gray rounded-md p-3 text-body-md resize-none"
+          />
+          <div className="flex flex-col gap-1">
+            <span className="text-label-caps uppercase tracking-wide text-on-surface-variant">Info Setelah Daftar</span>
+            <textarea
+              name="confirmationInfo"
+              defaultValue={event.confirmationInfo ?? ""}
+              placeholder="mis. grup WeChat, tautan Zoom"
+              rows={3}
+              className="bg-soft-gray rounded-md p-3 text-body-md resize-none"
+            />
+            <p className="text-xs text-on-surface-variant">Muncul di tiket, hanya terlihat oleh pendaftar.</p>
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <ImageUploadCropper
+              name="confirmationContactQr1Url"
+              folder="events"
+              label="QR Kontak 1 (opsional)"
+              defaultValue={event.confirmationContactQr1Url ?? ""}
+              hint="Screenshot QR tambah kontak (WeChat dsb)."
+            />
+            <ImageUploadCropper
+              name="confirmationContactQr2Url"
+              folder="events"
+              label="QR Kontak 2 (opsional)"
+              defaultValue={event.confirmationContactQr2Url ?? ""}
+            />
+          </div>
+          <AIReviewButton
+            context="event"
+            fields={[
+              { id: "event-description", label: "Deskripsi" },
+              { id: "event-agenda", label: "Agenda" },
+            ]}
+          />
+          <SubmitButton
+            successMessage="Deskripsi & agenda tersimpan."
+            className="self-start bg-primary-container text-on-primary text-label-caps uppercase tracking-wide px-6 py-3 rounded-md hover:bg-primary transition-colors"
+          >
+            Simpan Deskripsi &amp; Agenda
+          </SubmitButton>
+        </form>
+      </CollapsibleSection>
+      )}
       {can("event.registrationForm") && (
       <CollapsibleSection
         title="Pertanyaan Pendaftaran"
-        description={questions.length > 0 ? `${questions.length} pertanyaan` : "tidak ada — form standar"}
+        description={questions.length > 0 ? `${questions.length} pertanyaan` : "Form standar"}
       >
-        <p className="text-body-md text-on-surface-variant mb-4 max-w-2xl">
-          Kosong = pendaftar cuma isi form standar. Tambahkan pertanyaan di bawah bila acara ini butuh
-          (mis. preferensi makanan, ukuran kaos); pertanyaannya muncul di form pendaftaran publik dan
-          jawabannya tampil di Daftar Pendaftar.
-        </p>
+        <p className="text-body-md text-on-surface-variant mb-4 max-w-2xl">Jawabannya tampil di Daftar Pendaftar.</p>
         <div className="flex flex-col gap-3">
           {questions.map((q, i) => (
             <form
@@ -1081,8 +991,7 @@ export default async function ConsoleEventDetailPage({ params }: { params: Promi
           </summary>
           <div className="flex flex-col gap-4 border-t border-outline-variant p-4">
             <p role="note" className="rounded-lg border border-primary-container/40 bg-primary-container/10 px-4 py-3 text-body-md text-on-background">
-              Ini hanya pratinjau — tidak ada data yang terkirim atau tersimpan. Form aslinya ada di halaman pendaftaran
-              publik (<code>/events/{event.slug}/register</code>).
+              Pratinjau saja, tidak ada yang tersimpan.
             </p>
             {questions.length === 0 ? (
               <p className="text-body-md text-on-surface-variant">
@@ -1097,35 +1006,25 @@ export default async function ConsoleEventDetailPage({ params }: { params: Promi
         </details>
       </CollapsibleSection>
       )}
-
       {can("event.feeTiers") && (
       <CollapsibleSection
         title="Kategori Tarif"
-        description={feeOptions.length > 0 ? `${feeOptions.length} kategori` : "tidak ada — tarif tunggal"}
+        description={feeOptions.length > 0 ? `${feeOptions.length} kategori` : "Tarif tunggal"}
       >
-        <p className="text-body-md text-on-surface-variant mb-4 max-w-2xl">
-          Kosong = pakai satu nominal (angka HTM di form Edit). Tambahkan kategori bila tarifnya
-          bertingkat — <strong className="text-on-background">Freshmen ¥5 / Non-freshmen ¥10</strong> untuk WIF,
-          satu baris flat untuk booth, satu baris per nomor untuk olahraga. Peserta wajib memilih satu
-          saat mendaftar, dan nominal kategori itulah yang harus dibayar.
-        </p>
-        <p className="text-body-md text-on-surface-variant mb-4 max-w-2xl">
-          <strong className="text-on-background">Kuota</strong> = batas pendaftar per kategori. Kosong = tanpa
-          batas per-kategori (hanya Kapasitas acara yang berlaku). Begitu satu kategori penuh, pendaftaran
-          kategori itu saja yang tertutup — kategori lain jalan terus. WIF 2026:
-          {" "}<strong className="text-on-background">Freshmen 130 · Non-freshmen 20</strong> (jumlahnya = 150,
-          sama dengan Kapasitas peserta; panitia ditugaskan lewat Struktur Kepanitiaan, tidak makan jatah ini).
-        </p>
-        <p className="text-body-md text-on-surface-variant mb-4 max-w-2xl">
-          <strong className="text-on-background">Early bird (¥)</strong> = tarif untuk yang mendaftar sebelum{" "}
-          <strong className="text-on-background">
+        <ul className="mb-4 flex max-w-2xl list-disc flex-col gap-1 pl-5 text-body-sm text-on-surface-variant">
+          <li>Kalau ada kategori, peserta wajib memilih satu dan membayar nominalnya.</li>
+          <li>
+            <strong className="text-on-background">Kuota</strong>: kosong = hanya Kapasitas acara yang berlaku. Kategori
+            yang penuh tertutup sendiri. Panitia tidak memakai kuota ini.
+          </li>
+          <li>
+            <strong className="text-on-background">Early bird</strong>: untuk yang mendaftar sebelum{" "}
             {event.earlyBirdUntil
               ? new Date(event.earlyBirdUntil).toLocaleString("id-ID", { timeZone: "Asia/Shanghai", dateStyle: "medium", timeStyle: "short" })
-              : "Batas harga early bird"}
-          </strong>{" "}
-          (atur di form Edit, bagian HTM). Kosong = kategori ini tidak diskon. Tahap ditentukan dari
-          kapan peserta mendaftar, bukan kapan dia bayar.
-        </p>
+              : "batas yang diatur di Info & Pengaturan Acara"}
+            . Dihitung dari waktu daftar, bukan waktu bayar.
+          </li>
+        </ul>
         <div className="flex flex-col gap-3">
           {feeOptionRows.map((o) => (
             <form
@@ -1220,230 +1119,110 @@ export default async function ConsoleEventDetailPage({ params }: { params: Promi
         </form>
       </CollapsibleSection>
       )}
-
+      {/* Tautan pendek pendaftaran & evaluasi — fitur DASAR: bisa dibuat
+          sekali klik di sini, tanpa membuka modul Tautan. */}
+      {can("event.editContent") && (
       <CollapsibleSection
-        title="Divisi Penanggung Jawab"
-        description="Divisi kabinet yang bertanggung jawab atas acara/proker ini (boleh lebih dari satu). Anggota divisi ini otomatis bisa mengelola acaranya di menu Kegiatan selama divisinya memegang centang &quot;Kegiatan&quot; di Organisasi. Hanya admin penuh yang bisa mengubahnya."
-        defaultOpen={false}
+        title="Tautan Pendaftaran & Evaluasi"
+        description={daftarShareLink && evaluasiShareLink ? "Tautan pendek & QR sudah dibuat" : "Belum ada tautan pendek"}
       >
-        <EventResponsibleDepartments
+        <EventShareLinks
           eventId={id}
-          departments={allDepartments}
-          selected={responsibleRows.map((r) => r.departmentId)}
-          canEdit={access.isFullAdmin}
-        />
-      </CollapsibleSection>
-
-      {can("event.manageCommittee") && (
-      <CollapsibleSection
-        title="Struktur Kepanitiaan"
-        description={`${divisions.length} divisi · ${committee.length} panitia`}
-      >
-        <EventCommitteeStructure
-          eventId={id}
-          divisions={divisions}
-          members={committee}
-          candidates={candidates}
-          certifiedUserIds={committeeCertUserIds}
+          status={event.status}
+          scheduledPublishLabel={
+            event.scheduledPublishAt
+              ? new Date(event.scheduledPublishAt).toLocaleString("id-ID", {
+                  dateStyle: "long",
+                  timeStyle: "short",
+                  timeZone: "Asia/Shanghai",
+                })
+              : null
+          }
+          daftar={{
+            directUrl: shareDirect.daftar,
+            slug: daftarShareLink?.slug ?? null,
+            qrDataUrl: daftarShareLink ? shareQrBySlug.get(daftarShareLink.slug) ?? null : null,
+          }}
+          evaluasi={{
+            directUrl: shareDirect.evaluasi,
+            slug: evaluasiShareLink?.slug ?? null,
+            qrDataUrl: evaluasiShareLink ? shareQrBySlug.get(evaluasiShareLink.slug) ?? null : null,
+          }}
         />
       </CollapsibleSection>
       )}
-
-      {can("event.issueCertificates") && (
-      <>
-      <CollapsibleSection
-        title="Sertifikat Peserta"
-        description={`${certRegs.length} ${certBasisLabel} · ${certAttendees.length} berhak (sudah isi evaluasi) · ${participantCertCount} terbit`}
-      >
-        {event.certificateForParticipants ? (
-          <div className="flex flex-col gap-4">
-            <p className="text-body-md text-on-surface-variant max-w-2xl">
-              {event.certificateRequiresAttendance ? (
-                <>
-                  Yang berhak: peserta yang <strong className="text-on-background">kehadirannya tercatat</strong> (QR-nya
-                  di-scan di acara) <strong className="text-on-background">dan sudah mengisi evaluasi</strong> sambil
-                  masuk ke akunnya.
-                </>
-              ) : (
-                <>
-                  Acara ini <strong className="text-on-background">tanpa absen QR</strong>. Yang berhak: peserta yang{" "}
-                  <strong className="text-on-background">terdaftar</strong>{" "}
-                  <strong className="text-on-background">dan sudah mengisi evaluasi</strong> sambil masuk ke akunnya.
-                </>
-              )}{" "}
-              Cara paling mudah: <strong className="text-on-background">simpan tautan folder</strong> di
-              bawah — semua yang sudah berhak langsung dapat sertifikat + notifikasi, dan peserta hadir yang baru
-              mengisi evaluasi belakangan otomatis dapat saat evaluasinya terkirim. Tautan per orang dan &quot;Tempel
-              banyak sekaligus&quot; tetap bisa dipakai kalau berkasnya beda-beda.
-            </p>
-            {attendedNotEvaluated > 0 && (
-              <p className="text-body-sm text-on-surface-variant">
-                {attendedNotEvaluated} peserta {certBasisLabel} belum mengisi evaluasi (atau mengisinya tanpa masuk akun), jadi
-                belum berhak. Bagikan tautan evaluasi{" "}
-                <code className="text-on-background">/events/{event.slug}/evaluasi</code> — mereka perlu masuk akun
-                untuk mengisinya.
-              </p>
-            )}
-            {confirmedNotAttended > 0 && (
-              <p className="text-body-sm text-on-surface-variant">
-                {confirmedNotAttended} pendaftar terkonfirmasi belum tercatat hadir, jadi belum berhak. Kalau ada yang
-                hadir tapi belum di-scan, catat kehadirannya dulu di daftar pendaftar.
-              </p>
-            )}
-            {certRegs.length > 0 && (
-              <CertificateFolder
-                eventId={id}
-                kind="peserta"
-                folderUrl={event.certificateFolderPesertaUrl ?? ""}
-                eligibleCount={certAttendees.length}
-              />
-            )}
-            <CertificateRoster
-              eventId={id}
-              kind="peserta"
-              rows={certAttendees}
-              emptyText={
-                certRegs.length === 0
-                  ? event.certificateRequiresAttendance
-                    ? "Belum ada peserta yang tercatat hadir. Daftar ini terisi saat panitia men-scan QR peserta di acara."
-                    : "Belum ada peserta yang terdaftar."
-                  : `Belum ada peserta ${certBasisLabel} yang mengisi evaluasi dengan akunnya.`
-              }
-            />
-            {certAttendees.length > 0 && <CertificateBulkForm eventId={id} kind="peserta" />}
-          </div>
-        ) : (
-          <p className="text-body-md text-on-surface-variant max-w-2xl">
-            Acara ini tidak memberi e-sertifikat kehadiran. Centang &quot;Peserta mendapat e-sertifikat
-            kehadiran&quot; di form Edit di atas bila berubah pikiran.
-          </p>
-        )}
-      </CollapsibleSection>
-
-      <CollapsibleSection
-        title="Sertifikat Panitia"
-        description={`${certCommittee.length} panitia · ${committeeCertCount} terbit`}
-      >
-        <div className="flex flex-col gap-4">
-          <p className="text-body-md text-on-surface-variant max-w-2xl">
-            Untuk semua anggota kepanitiaan acara ini (susunannya di &quot;Struktur Kepanitiaan&quot;). Sama seperti
-            peserta: <strong className="text-on-background">sertifikat baru terbit saat tautan berkasnya
-            disimpan</strong>. Judulnya dirakit otomatis dari peran, divisi, dan nama acara. Untuk banyak orang
-            sekaligus: &quot;Tempel banyak sekaligus&quot; atau tautan folder di bawah.
-          </p>
-          {certCommittee.length > 0 && (
-            <CertificateFolder
-              eventId={id}
-              kind="panitia"
-              folderUrl={event.certificateFolderPanitiaUrl ?? ""}
-              eligibleCount={certCommittee.length}
-            />
-          )}
-          <CertificateRoster
-            eventId={id}
-            kind="panitia"
-            rows={certCommittee}
-            emptyText="Belum ada panitia. Susun kepanitiaan dulu di section Struktur Kepanitiaan."
-          />
-          {certCommittee.length > 0 && <CertificateBulkForm eventId={id} kind="panitia" />}
         </div>
-      </CollapsibleSection>
-      </>
-      )}
-
-      {canPostArticle && (
-      <CollapsibleSection title="Artikel Berita Acara" description={`${eventArticles.length} artikel`}>
-        <div className="flex flex-col gap-3">
-          <a
-            href={`/console/content/news/new?eventId=${id}`}
-            className="self-start inline-flex items-center gap-2 bg-primary-container text-on-primary text-label-caps uppercase tracking-wide px-5 py-2.5 rounded-md hover:bg-primary transition-colors"
-          >
-            + Tulis Artikel
-          </a>
-          {eventArticles.length === 0 ? (
-            <p className="text-body-md text-on-surface-variant">Belum ada artikel untuk acara ini.</p>
           ) : (
-            <ul className="flex flex-col gap-1.5">
-              {eventArticles.map((a) => (
-                <li key={a.id}>
-                  <a
-                    href={`/console/content/news/${a.id}`}
-                    className="flex items-center justify-between gap-3 rounded-lg border border-outline-variant bg-surface-container-lowest px-4 py-2.5 hover:bg-surface-container-low transition-colors"
-                  >
-                    <span className="text-body-md text-on-background truncate">{a.title}</span>
-                    <span className="text-label-caps uppercase tracking-wide text-on-surface-variant shrink-0">
-                      {{ draft: "Draf", published: "Tayang", archived: "Arsip" }[a.status] ?? a.status}
-                    </span>
-                  </a>
-                </li>
-              ))}
-            </ul>
+            <p className="rounded-lg border border-dashed border-outline-variant p-4 text-body-md text-on-surface-variant">
+              Akun ini tidak memegang pengaturan publik untuk acara ini.
+            </p>
+          )
+        }
+        internal={
+          <div className="flex flex-col gap-4">
+          {!canVerifyPayments && event.isPaid && (
+            <p className="rounded-xl border border-outline-variant bg-surface-container-lowest p-4 text-body-sm text-on-surface-variant">
+              <span className="font-medium text-on-background">Verifikasi pembayaran</span> dikerjakan bendahara atau BPH
+              panitia acara ini. Peserta yang belum lunas belum bisa check-in; arahkan mereka ke bendahara.
+            </p>
           )}
-        </div>
-      </CollapsibleSection>
-      )}
-
-      {canManageGallery && (
-      <CollapsibleSection
-        title="Galeri Foto Acara"
-        description={linkedAlbum ? `Album: ${linkedAlbum.title} · ${albumPhotoCount} foto` : "belum ada album"}
-      >
-        {linkedAlbum ? (
-          <div className="flex flex-col gap-3">
-            <p className="text-body-md text-on-surface-variant max-w-2xl">
-              Foto highlight album ini tampil di halaman acara publik. Unggah & atur foto di halaman album.
-            </p>
-            <a
-              href={`/console/content/gallery/${linkedAlbum.id}`}
-              className="self-start inline-flex items-center gap-2 bg-primary-container text-on-primary text-label-caps uppercase tracking-wide px-5 py-2.5 rounded-md hover:bg-primary transition-colors"
+        <div className={SECTION_GROUP}>
+          {canVerifyPayments && event.isPaid && (
+            <CollapsibleSection
+              title="Verifikasi Pembayaran"
+              description={`${pendingPayments.filter((p) => p.status === "submitted").length} menunggu verifikasi`}
+              defaultOpen={pendingPayments.some((p) => p.status === "submitted")}
             >
-              <Images size={15} aria-hidden /> Kelola Album Foto
-            </a>
-          </div>
-        ) : (
-          <form action={createEventGalleryAlbum} className="flex flex-col gap-3 max-w-md">
-            <input type="hidden" name="eventId" value={id} />
-            <p className="text-body-md text-on-surface-variant">
-              Buat album foto untuk acara ini. Kamu akan diarahkan ke halaman album untuk mengunggah foto.
-            </p>
-            <input
-              name="title"
-              required
-              defaultValue={`Dokumentasi ${event.title}`}
-              placeholder="Judul album *"
-              className="bg-soft-gray rounded-md p-3 text-body-md"
+              <p className="text-body-md text-on-surface-variant mb-1">Cocokkan dengan mutasi Alipay/rekening:</p>
+              <ul className="text-body-sm text-on-surface-variant mb-4 list-disc pl-5">
+                <li>
+                  <strong className="text-on-background">Nominal</strong>{" "}
+                  {feeOptions.length > 0
+                    ? "sesuai kategori tarif tiap peserta (tertera di bawah)"
+                    : event.feeCny != null
+                      ? `persis ¥${event.feeCny}`
+                      : "sesuai kesepakatan (belum diisi)"}
+                </li>
+                <li><strong className="text-on-background">Nama pengirim</strong> cocok dengan peserta</li>
+                <li><strong className="text-on-background">Waktu transfer</strong> setelah tanggal daftar</li>
+              </ul>
+              <PaymentVerificationList
+                payments={pendingPayments.map((p) => ({ ...p, registeredAt: p.registeredAt.toISOString() }))}
+              />
+            </CollapsibleSection>
+          )}
+          {can("event.manageVolunteers") && (
+          <CollapsibleSection
+            title="Pendaftar Volunteer"
+            description={
+              event.volunteerSignupOpen
+                ? `${pendingVolunteers.length} menunggu keputusan`
+                : volunteerApps.length > 0
+                  ? `${volunteerApps.length} lamaran (ditutup)`
+                  : "Pendaftaran tutup"
+            }
+            defaultOpen={pendingVolunteers.length > 0}
+          >
+            {!event.volunteerSignupOpen && (
+              <p className="text-body-md text-on-surface-variant mb-4">
+                Pendaftaran publik sedang <strong className="text-on-background">tutup</strong>. Centang
+                &quot;Buka pendaftaran volunteer publik&quot; di Info &amp; Pengaturan Acara (tab Publik).
+              </p>
+            )}
+            <VolunteerApplicationList
+              applications={volunteerApps.map((v) => ({
+                id: v.app.id,
+                fullName: v.app.fullName,
+                email: v.app.email,
+                whatsapp: v.app.whatsapp,
+                note: v.app.note,
+                status: v.app.status,
+                divisionName: v.divisionName,
+                accountName: v.accountName,
+              }))}
             />
-            <SubmitButton
-              successMessage="Album foto dibuat."
-              className="self-start bg-primary-container text-on-primary text-label-caps uppercase tracking-wide px-5 py-2.5 rounded-md hover:bg-primary transition-colors"
-            >
-              <Images size={15} className="inline -mt-0.5 mr-1.5" aria-hidden /> Buat Album Foto
-            </SubmitButton>
-          </form>
-        )}
-      </CollapsibleSection>
-      )}
-
-      {canBorrowAssets && (
-      <CollapsibleSection
-        title="Reservasi Aset (Inventaris)"
-        description={`${assetReservations.length} aset diblokir untuk acara ini`}
-      >
-        <ReservationManager
-          items={assetItems}
-          lockedEventId={id}
-          reservations={assetReservations.map((x) => ({
-            id: x.r.id,
-            itemName: x.itemName ?? "(barang dihapus)",
-            reason: x.r.reason,
-            reservedFrom: x.r.reservedFrom,
-            reservedTo: x.r.reservedTo,
-            eventTitle: null,
-          }))}
-        />
-      </CollapsibleSection>
-      )}
-
+          </CollapsibleSection>
+          )}
       {can("event.viewRegistrants") && (
       <CollapsibleSection title="Daftar Pendaftar" description={`${activeRegistrationCount} terdaftar · ${attended} hadir`}>
         {registrations.length > 0 && canExportRegistrants && (
@@ -1457,9 +1236,7 @@ export default async function ConsoleEventDetailPage({ params }: { params: Promi
         )}
         {!canSeeRegistrantDetail && (
           <p className="text-xs text-on-surface-variant mb-3">
-            Kamu melihat versi ringkas (nama, kota, kampus, WeChat, tarif, status). Biodata lengkap (paspor,
-            KTM, kontak, jurusan, email, jawaban) &amp; ekspor CSV tampil untuk BPH Kabinet, Divisi Teknologi,
-            dan BPH Panitia acara ini.
+            Versi ringkas. Biodata lengkap dan ekspor CSV hanya untuk BPH Kabinet, Divisi Teknologi, dan BPH Panitia acara ini.
           </p>
         )}
         <RegistrationList
@@ -1509,19 +1286,93 @@ export default async function ConsoleEventDetailPage({ params }: { params: Promi
         />
       </CollapsibleSection>
       )}
-
+      {can("event.manageCommittee") && (
+      <CollapsibleSection
+        title="Struktur Kepanitiaan"
+        description={`${divisions.length} divisi · ${committee.length} panitia`}
+      >
+        <EventCommitteeStructure
+          eventId={id}
+          divisions={divisions}
+          members={committee}
+          candidates={candidates}
+          certifiedUserIds={committeeCertUserIds}
+        />
+      </CollapsibleSection>
+      )}
+      {canBorrowAssets && (
+      <CollapsibleSection
+        title="Reservasi Aset (Inventaris)"
+        description={`${assetReservations.length} aset diblokir`}
+      >
+        <ReservationManager
+          items={assetItems}
+          lockedEventId={id}
+          reservations={assetReservations.map((x) => ({
+            id: x.r.id,
+            itemName: x.itemName ?? "(barang dihapus)",
+            reason: x.r.reason,
+            reservedFrom: x.r.reservedFrom,
+            reservedTo: x.r.reservedTo,
+            eventTitle: null,
+          }))}
+        />
+      </CollapsibleSection>
+      )}
+      <CollapsibleSection
+        title="Divisi Penanggung Jawab"
+        description={responsibleRows.length > 0 ? `${responsibleRows.length} divisi` : "Belum ada"}
+      >
+        <p className="text-body-md text-on-surface-variant mb-4 max-w-2xl">
+          Anggotanya bisa mengelola acara ini, selama divisinya memegang centang &quot;Kegiatan&quot; di Organisasi. Hanya
+          admin penuh yang bisa mengubah.
+        </p>
+        <EventResponsibleDepartments
+          eventId={id}
+          departments={allDepartments}
+          selected={responsibleRows.map((r) => r.departmentId)}
+          canEdit={access.isFullAdmin}
+        />
+      </CollapsibleSection>
+      {canViewAuditLog && (
+      <CollapsibleSection title="Riwayat Audit" description={`${auditRows.length} catatan terakhir`}>
+        {auditRows.length === 0 ? (
+          <p className="text-body-md text-on-surface-variant">Belum ada aktivitas tercatat.</p>
+        ) : (
+          <ul className="flex flex-col gap-1.5">
+            {auditRows.map((a) => (
+              <li key={a.log.id} className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5 border-b border-outline-variant/50 pb-1.5">
+                <span className="text-body-sm text-on-background">
+                  {EVENT_AUDIT_ACTION_LABEL[a.log.action as EventAuditAction] ?? a.log.action}
+                </span>
+                <span className="text-label-caps text-on-surface-variant">
+                  {a.actorName ?? "(sistem)"} · {new Date(a.log.createdAt).toLocaleString("id-ID", { timeZone: "Asia/Shanghai", dateStyle: "short", timeStyle: "short" })}
+                </span>
+              </li>
+            ))}
+          </ul>
+        )}
+      </CollapsibleSection>
+      )}
+        </div>
+          </div>
+        }
+        pasca={
+        <div className={SECTION_GROUP}>
       {/* Laporan pasca-acara — fitur DASAR: semua panitia (Humas/Dokumentasi
           biasanya yang mengisi). */}
       {can("event.postEventReport") && (
       <CollapsibleSection
         title="Setelah Acara"
-        description="Kehadiran nyata + dokumentasi. Diisi setelah acara selesai."
+        description={
+          event.finalAttendeeCount != null || event.recapVideoUrl
+            ? [event.finalAttendeeCount != null ? `${event.finalAttendeeCount} hadir` : null, event.recapVideoUrl ? "Ada video recap" : null].filter(Boolean).join(" · ")
+            : "Belum diisi"
+        }
       >
         <form action={updateEventPostReport.bind(null, id)} className="flex flex-col gap-4">
           <p className="text-xs text-on-surface-variant">
-            Begitu acara lewat (status &quot;Selesai&quot; atau tanggalnya sudah lewat), halaman publik
-            berganti ke tampilan pasca-acara: angka kehadiran nyata menggantikan kapasitas, dan muncul
-            bagian dokumentasi.
+            Begitu acara lewat, halaman publik menampilkan angka kehadiran dan dokumentasi ini.
           </p>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div className="flex flex-col gap-1">
@@ -1535,8 +1386,7 @@ export default async function ConsoleEventDetailPage({ params }: { params: Promi
                 className="bg-soft-gray rounded-md p-3 text-body-md"
               />
               <p className="text-xs text-on-surface-variant">
-                Ketik manual — tidak diambil dari check-in QR. Check-in portal saat ini: {attended}.
-                Kosongkan untuk tetap pakai angka terdaftar.
+                Check-in portal saat ini: {attended}. Kosong = pakai angka terdaftar.
               </p>
             </div>
             <div className="flex flex-col gap-1">
@@ -1547,7 +1397,6 @@ export default async function ConsoleEventDetailPage({ params }: { params: Promi
                 placeholder="mis. 80 online · 40 offline"
                 className="bg-soft-gray rounded-md p-3 text-body-md"
               />
-              <p className="text-xs text-on-surface-variant">Teks bebas di bawah angka. Kosongkan bila tak perlu.</p>
             </div>
           </div>
           <div className="flex flex-col gap-1">
@@ -1559,7 +1408,7 @@ export default async function ConsoleEventDetailPage({ params }: { params: Promi
               placeholder="https://... (YouTube, Bilibili, Drive)"
               className="bg-soft-gray rounded-md p-3 text-body-md"
             />
-            <p className="text-xs text-on-surface-variant">Muncul sebagai tombol &quot;Tonton Recap&quot; di bagian dokumentasi. Tidak di-embed.</p>
+            <p className="text-xs text-on-surface-variant">Tampil sebagai tombol &quot;Tonton Recap&quot;.</p>
           </div>
           <div className="flex flex-col gap-1">
             <span className="text-label-caps uppercase tracking-wide text-on-surface-variant">Album Dokumentasi (Galeri Foto)</span>
@@ -1573,8 +1422,7 @@ export default async function ConsoleEventDetailPage({ params }: { params: Promi
               ))}
             </Select>
             <p className="text-xs text-on-surface-variant">
-              Foto highlight album ini tampil di halaman acara + tautan album lengkap.
-              Fotonya diunggah tim konten di{" "}
+              Fotonya diunggah di{" "}
               <a href={linkedAlbum ? `/console/content/gallery/${linkedAlbum.id}` : "/console/content/gallery/new"} className="text-primary-container underline">
                 {linkedAlbum ? "album ini" : "Konten › Galeri › Album Baru"}
               </a>.
@@ -1589,7 +1437,312 @@ export default async function ConsoleEventDetailPage({ params }: { params: Promi
         </form>
       </CollapsibleSection>
       )}
+      {canManageGallery && (
+      <CollapsibleSection
+        title="Galeri Foto Acara"
+        description={linkedAlbum ? `Album: ${linkedAlbum.title} · ${albumPhotoCount} foto` : "Belum ada album"}
+      >
+        {linkedAlbum ? (
+          <div className="flex flex-col gap-3">
+            <p className="text-body-md text-on-surface-variant max-w-2xl">Foto highlight tampil di halaman acara publik.</p>
+            <a
+              href={`/console/content/gallery/${linkedAlbum.id}`}
+              className="self-start inline-flex items-center gap-2 bg-primary-container text-on-primary text-label-caps uppercase tracking-wide px-5 py-2.5 rounded-md hover:bg-primary transition-colors"
+            >
+              <Images size={15} aria-hidden /> Kelola Album Foto
+            </a>
+          </div>
+        ) : (
+          <form action={createEventGalleryAlbum} className="flex flex-col gap-3 max-w-md">
+            <input type="hidden" name="eventId" value={id} />
+            <input
+              name="title"
+              required
+              defaultValue={`Dokumentasi ${event.title}`}
+              placeholder="Judul album *"
+              className="bg-soft-gray rounded-md p-3 text-body-md"
+            />
+            <SubmitButton
+              successMessage="Album foto dibuat."
+              className="self-start bg-primary-container text-on-primary text-label-caps uppercase tracking-wide px-5 py-2.5 rounded-md hover:bg-primary transition-colors"
+            >
+              <Images size={15} className="inline -mt-0.5 mr-1.5" aria-hidden /> Buat Album Foto
+            </SubmitButton>
+          </form>
+        )}
+      </CollapsibleSection>
+      )}
+      {canPostArticle && (
+      <CollapsibleSection title="Artikel Berita Acara" description={`${eventArticles.length} artikel`}>
+        <div className="flex flex-col gap-3">
+          <a
+            href={`/console/content/news/new?eventId=${id}`}
+            className="self-start inline-flex items-center gap-2 bg-primary-container text-on-primary text-label-caps uppercase tracking-wide px-5 py-2.5 rounded-md hover:bg-primary transition-colors"
+          >
+            + Tulis Artikel
+          </a>
+          {eventArticles.length === 0 ? (
+            <p className="text-body-md text-on-surface-variant">Belum ada artikel untuk acara ini.</p>
+          ) : (
+            <ul className="flex flex-col gap-1.5">
+              {eventArticles.map((a) => (
+                <li key={a.id}>
+                  <a
+                    href={`/console/content/news/${a.id}`}
+                    className="flex items-center justify-between gap-3 rounded-lg border border-outline-variant bg-surface-container-lowest px-4 py-2.5 hover:bg-surface-container-low transition-colors"
+                  >
+                    <span className="text-body-md text-on-background truncate">{a.title}</span>
+                    <span className="text-label-caps uppercase tracking-wide text-on-surface-variant shrink-0">
+                      {{ draft: "Draf", published: "Tayang", archived: "Arsip" }[a.status] ?? a.status}
+                    </span>
+                  </a>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+      </CollapsibleSection>
+      )}
+      {can("event.issueCertificates") && (
+      <>
+      <CollapsibleSection
+        title="Sertifikat Peserta"
+        description={`${certRegs.length} ${certBasisLabel} · ${certAttendees.length} berhak · ${participantCertCount} terbit`}
+      >
+        {event.certificateForParticipants ? (
+          <div className="flex flex-col gap-4">
+            <p className="text-body-md text-on-surface-variant max-w-2xl">
+              Yang berhak: peserta yang{" "}
+              <strong className="text-on-background">
+                {event.certificateRequiresAttendance ? "tercatat hadir (QR di-scan)" : "terdaftar"}
+              </strong>{" "}
+              dan <strong className="text-on-background">mengisi evaluasi dengan akunnya</strong>. Menyimpan tautan folder
+              langsung menerbitkan untuk semua yang berhak; yang berhak belakangan otomatis menyusul.
+            </p>
+            {attendedNotEvaluated > 0 && (
+              <p className="text-body-sm text-on-surface-variant">
+                {attendedNotEvaluated} peserta {certBasisLabel} belum mengisi evaluasi dengan akunnya. Bagikan{" "}
+                <code className="text-on-background">/events/{event.slug}/evaluasi</code>.
+              </p>
+            )}
+            {confirmedNotAttended > 0 && (
+              <p className="text-body-sm text-on-surface-variant">
+                {confirmedNotAttended} pendaftar belum tercatat hadir. Kalau hadir tapi belum di-scan, catat di Daftar
+                Pendaftar.
+              </p>
+            )}
+            {certRegs.length > 0 && (
+              <CertificateFolder
+                eventId={id}
+                kind="peserta"
+                folderUrl={event.certificateFolderPesertaUrl ?? ""}
+                eligibleCount={certAttendees.length}
+              />
+            )}
+            <CertificateRoster
+              eventId={id}
+              kind="peserta"
+              rows={certAttendees}
+              emptyText={
+                certRegs.length === 0
+                  ? event.certificateRequiresAttendance
+                    ? "Belum ada peserta yang tercatat hadir. Daftar ini terisi saat panitia men-scan QR peserta di acara."
+                    : "Belum ada peserta yang terdaftar."
+                  : `Belum ada peserta ${certBasisLabel} yang mengisi evaluasi dengan akunnya.`
+              }
+            />
+            {certAttendees.length > 0 && <CertificateBulkForm eventId={id} kind="peserta" />}
+          </div>
+        ) : (
+          <p className="text-body-md text-on-surface-variant max-w-2xl">
+            Acara ini tidak memberi e-sertifikat kehadiran. Centang &quot;Peserta mendapat e-sertifikat
+            kehadiran&quot; di Info &amp; Pengaturan Acara (tab Publik) bila berubah pikiran.
+          </p>
+        )}
+      </CollapsibleSection>
 
+      <CollapsibleSection
+        title="Sertifikat Panitia"
+        description={`${certCommittee.length} panitia · ${committeeCertCount} terbit`}
+      >
+        <div className="flex flex-col gap-4">
+          <p className="text-body-md text-on-surface-variant max-w-2xl">
+            Sertifikat terbit saat tautan berkasnya disimpan. Judulnya dirakit otomatis dari peran, divisi, dan nama acara.
+          </p>
+          {certCommittee.length > 0 && (
+            <CertificateFolder
+              eventId={id}
+              kind="panitia"
+              folderUrl={event.certificateFolderPanitiaUrl ?? ""}
+              eligibleCount={certCommittee.length}
+            />
+          )}
+          <CertificateRoster
+            eventId={id}
+            kind="panitia"
+            rows={certCommittee}
+            emptyText="Belum ada panitia. Susun kepanitiaan dulu di Struktur Kepanitiaan (tab Internal)."
+          />
+          {certCommittee.length > 0 && <CertificateBulkForm eventId={id} kind="panitia" />}
+        </div>
+      </CollapsibleSection>
+      </>
+      )}
+      {/* Evaluasi peserta & panitia dalam SATU section (K7: tanpa section tambahan
+          di halaman konsol acara yang sudah panjang). Aturan B2 berlaku: isi
+          jawaban dan nama pengisi panitia hanya untuk pengelola (BPH Kabinet/
+          Teknologi atau BPH Panitia acara ini); panitia lain hanya melihat jumlah
+          pengisi dan statusnya sendiri. */}
+      <CollapsibleSection
+        title="Evaluasi Acara"
+        description={
+          [
+            `${evaluations.length} respons peserta`,
+            canManageCommitteeEval ? `${committeeEvaluations.length} respons panitia` : `${committeeEvalStats.total} panitia sudah mengisi`,
+          ].join(" · ")
+        }
+      >
+        <EvalAudienceTabs
+          peserta={
+            <EvaluationResults
+              eventId={id}
+              sheetsEnabled={sheetsEnabled}
+              evaluations={evaluations}
+              sections={evaluationTemplateForSlug(event.slug).sections}
+              questions={evalQuestions}
+              answers={evalAnswers}
+            />
+          }
+          panitia={
+            canManageCommitteeEval ? (
+              <div className="flex flex-col gap-8">
+                <div className="flex flex-col gap-2">
+                  <p className="text-label-caps uppercase tracking-wide text-on-surface-variant">Tautan pengisian untuk grup panitia</p>
+                  <div className="flex flex-wrap items-center gap-3">
+                    <code className="text-body-sm bg-surface-container-low px-2 py-1 rounded break-all">
+                      {`${shareOrigin}/events/${event.slug}/evaluasi-panitia`}
+                    </code>
+                    <CopyButton value={`${shareOrigin}/events/${event.slug}/evaluasi-panitia`} label="Salin tautan" />
+                  </div>
+                  <p className="text-body-sm text-on-surface-variant">
+                    Hanya panitia acara ini yang login yang bisa mengisi, dan hanya selama jendela di bawah terbuka.
+                  </p>
+                </div>
+                {canEditCommitteeEval ? (
+                <CommitteeEvalWindowEditor
+                  eventId={id}
+                  // Jam Tiongkok, bukan jam server: aksi simpannya membaca nilai
+                  // ini sebagai jam Tiongkok juga (parseChinaLocalInput).
+                  opensAt={event.committeeEvalOpensAt ? toChinaLocalInput(new Date(event.committeeEvalOpensAt)) : ""}
+                  closesAt={event.committeeEvalClosesAt ? toChinaLocalInput(new Date(event.committeeEvalClosesAt)) : ""}
+                  presetOpens={event.endAt ? toChinaLocalInput(new Date(event.endAt)) : toChinaLocalInput(new Date())}
+                  windowLabel={
+                    committeeEvalWindow === "open"
+                      ? "Jendela pengisian sedang TERBUKA"
+                      : committeeEvalWindow === "before"
+                        ? "Jendela pengisian belum dibuka"
+                        : committeeEvalWindow === "closed"
+                          ? "Jendela pengisian sudah ditutup"
+                          : "Jendela pengisian belum dipasang"
+                  }
+                  windowNote="Kosongkan keduanya lalu simpan untuk melepas jadwal. Saat pertama disimpan, pertanyaan template disiapkan otomatis bila tab Panitia di Pertanyaan Evaluasi masih kosong."
+                  scheduleLabel="Durasi pintasan"
+                  opensLabel="Buka"
+                  closesLabel="Tutup"
+                  presetLabel="Buka setelah acara"
+                  clearLabel="Kosongkan jadwal"
+                  saveLabel="Simpan jendela"
+                  clearConfirmNote="Status jendela dihitung otomatis dari waktu saat ini — panitia hanya bisa mengisi selama terbuka."
+                />
+                ) : (
+                  <p className="text-body-md text-on-surface-variant max-w-2xl">
+                    Acara ini sudah terkunci (14 hari setelah selesai): jendela pengisian hanya bisa diubah BPH Kabinet.
+                  </p>
+                )}
+                <EvaluationResults
+                  eventId={id}
+                  sheetsEnabled={sheetsEnabled}
+                  exportAudience="panitia"
+                  evaluations={committeeEvaluations}
+                  sections={[]}
+                  questions={committeeQuestions}
+                  answers={committeeEvalAnswers}
+                />
+              </div>
+            ) : (
+              <div className="text-body-md text-on-surface-variant max-w-2xl flex flex-col gap-2">
+                <p>
+                  {committeeEvalStats.total > 0
+                    ? `${committeeEvalStats.total} dari ${committee.length} panitia sudah mengisi${
+                        committeeEvalStats.mine > 0 ? " — termasuk kamu. Terima kasih!" : "."
+                      }`
+                    : "Belum ada yang mengisi."}
+                </p>
+                <p>
+                  Rekap lengkap (nama &amp; jawaban) hanya tampil untuk BPH. Pengisian lewat{" "}
+                  <code className="text-body-sm bg-surface-container-low px-1.5 py-0.5 rounded">
+                    /events/{event.slug}/evaluasi-panitia
+                  </code>{" "}
+                  selama jendela terbuka.
+                </p>
+              </div>
+            )
+          }
+        />
+      </CollapsibleSection>
+      {canEditEvaluationQuestions && (
+      <CollapsibleSection
+        title="Pertanyaan Evaluasi"
+        description={
+          evalQuestions.length > 0 || evalQuestionsPanitia.length > 0
+            ? `${evalQuestions.length} peserta · ${evalQuestionsPanitia.length} panitia`
+            : "Template standar"
+        }
+      >
+        <EvalAudienceTabs
+          peserta={
+            <EvaluationQuestionsBuilder
+              eventId={id}
+              slug={event.slug}
+              eventTitle={event.title}
+              audience="peserta"
+              questions={evalQuestions}
+              answerCounts={evalAnswerCounts}
+              legacyResponseCount={evaluations.filter((e) => e.ratingRegistration != null).length}
+              cityOptions={sortByCoverageOrder(cityRows, (row) => row.label).map((c) => c.label)}
+              sections={evaluationTemplateForSlug(event.slug).sections}
+            />
+          }
+          panitia={
+            // Pertanyaan yang menilai kepanitiaan disusun BPH, bukan anggota
+            // panitia yang ikut dinilai. Server action-nya memakai gerbang yang
+            // sama (requireQuestionAccess di actions/event-evaluation-questions.ts).
+            canEditCommitteeEval ? (
+              <EvaluationQuestionsBuilder
+                eventId={id}
+                slug={event.slug}
+                eventTitle={event.title}
+                audience="panitia"
+                questions={evalQuestionsPanitia}
+                answerCounts={committeeAnswerCountMap}
+                legacyResponseCount={0}
+                cityOptions={[]}
+                sections={[]}
+              />
+            ) : (
+              <p className="text-body-md text-on-surface-variant max-w-2xl">
+                {canManageCommitteeEval
+                  ? "Acara ini sudah terkunci (14 hari setelah selesai): pertanyaan evaluasi panitia hanya bisa diubah BPH Kabinet."
+                  : "Pertanyaan evaluasi panitia disusun oleh BPH Panitia atau BPH Kabinet."}
+                {evalQuestionsPanitia.length > 0
+                  ? ` Saat ini ada ${evalQuestionsPanitia.length} pertanyaan.`
+                  : " Pertanyaannya disiapkan otomatis saat BPH memasang jendela pengisian."}
+              </p>
+            )
+          }
+        />
+      </CollapsibleSection>
+      )}
       {/* Kredit / arsip kepanitiaan (Spesifikasi §10) — daftar TAMPILAN untuk
           halaman acara publik & LPJ. TIDAK memberi akses apa pun; diisi
           Sekretaris, tetap bisa walau acara sudah terkunci. */}
@@ -1599,9 +1752,7 @@ export default async function ConsoleEventDetailPage({ params }: { params: Promi
         description={`${credits.length} nama`}
       >
         <p className="text-body-md text-on-surface-variant mb-4 max-w-2xl">
-          Daftar nama panitia untuk ditampilkan di halaman acara publik (arsip / LPJ). Ini{" "}
-          <strong className="text-on-background">hanya tampilan</strong> — menambah nama di sini tidak
-          memberi akses konsol apa pun. Biasa diisi Sekretaris setelah acara.
+          Nama panitia di halaman acara publik. Tidak memberi akses konsol apa pun.
         </p>
         {credits.length > 0 && (
           <ul className="flex flex-col gap-1.5 mb-4">
@@ -1666,192 +1817,11 @@ export default async function ConsoleEventDetailPage({ params }: { params: Promi
         </form>
       </CollapsibleSection>
       )}
-
-      {canViewAuditLog && (
-      <CollapsibleSection title="Riwayat Audit" description={`${auditRows.length} catatan terakhir`}>
-        <p className="text-body-md text-on-surface-variant mb-3 max-w-2xl">
-          Siapa mengubah apa &amp; kapan — aksi keuangan, publikasi, sertifikat, susunan panitia, dan izin divisi.
-        </p>
-        {auditRows.length === 0 ? (
-          <p className="text-body-md text-on-surface-variant">Belum ada aktivitas tercatat.</p>
-        ) : (
-          <ul className="flex flex-col gap-1.5">
-            {auditRows.map((a) => (
-              <li key={a.log.id} className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5 border-b border-outline-variant/50 pb-1.5">
-                <span className="text-body-sm text-on-background">
-                  {EVENT_AUDIT_ACTION_LABEL[a.log.action as EventAuditAction] ?? a.log.action}
-                </span>
-                <span className="text-label-caps text-on-surface-variant">
-                  {a.actorName ?? "(sistem)"} · {new Date(a.log.createdAt).toLocaleString("id-ID", { timeZone: "Asia/Shanghai", dateStyle: "short", timeStyle: "short" })}
-                </span>
-              </li>
-            ))}
-          </ul>
-        )}
-      </CollapsibleSection>
-      )}
-
-      {canEditEvaluationQuestions && (
-      <CollapsibleSection
-        title="Pertanyaan Evaluasi"
-        description={
-          evalQuestions.length > 0 || evalQuestionsPanitia.length > 0
-            ? `${evalQuestions.length} peserta · ${evalQuestionsPanitia.length} panitia`
-            : "template standar"
+        </div>
         }
-      >
-        <EvalAudienceTabs
-          peserta={
-            <EvaluationQuestionsBuilder
-              eventId={id}
-              slug={event.slug}
-              eventTitle={event.title}
-              audience="peserta"
-              questions={evalQuestions}
-              answerCounts={evalAnswerCounts}
-              legacyResponseCount={evaluations.filter((e) => e.ratingRegistration != null).length}
-              cityOptions={sortByCoverageOrder(cityRows, (row) => row.label).map((c) => c.label)}
-              sections={evaluationTemplateForSlug(event.slug).sections}
-            />
-          }
-          panitia={
-            // Pertanyaan yang menilai kepanitiaan disusun BPH, bukan anggota
-            // panitia yang ikut dinilai. Server action-nya memakai gerbang yang
-            // sama (requireQuestionAccess di actions/event-evaluation-questions.ts).
-            canEditCommitteeEval ? (
-              <EvaluationQuestionsBuilder
-                eventId={id}
-                slug={event.slug}
-                eventTitle={event.title}
-                audience="panitia"
-                questions={evalQuestionsPanitia}
-                answerCounts={committeeAnswerCountMap}
-                legacyResponseCount={0}
-                cityOptions={[]}
-                sections={[]}
-              />
-            ) : (
-              <p className="text-body-md text-on-surface-variant max-w-2xl">
-                {canManageCommitteeEval
-                  ? "Acara ini sudah terkunci (14 hari setelah selesai): pertanyaan evaluasi panitia hanya bisa diubah BPH Kabinet."
-                  : "Pertanyaan evaluasi panitia disusun oleh BPH Panitia atau BPH Kabinet."}
-                {evalQuestionsPanitia.length > 0
-                  ? ` Saat ini ada ${evalQuestionsPanitia.length} pertanyaan.`
-                  : " Pertanyaannya disiapkan otomatis saat BPH memasang jendela pengisian."}
-              </p>
-            )
-          }
-        />
-      </CollapsibleSection>
-      )}
+      />
 
-      {/* Evaluasi peserta & panitia dalam SATU section (K7: tanpa section tambahan
-          di halaman konsol acara yang sudah panjang). Aturan B2 berlaku: isi
-          jawaban dan nama pengisi panitia hanya untuk pengelola (BPH Kabinet/
-          Teknologi atau BPH Panitia acara ini); panitia lain hanya melihat jumlah
-          pengisi dan statusnya sendiri. */}
-      <CollapsibleSection
-        title="Evaluasi Acara"
-        description={
-          [
-            evaluations.length > 0 ? `${evaluations.length} respons peserta` : "peserta: belum ada respons",
-            canManageCommitteeEval
-              ? committeeEvaluations.length > 0
-                ? `${committeeEvaluations.length} respons panitia`
-                : "panitia: belum ada respons"
-              : `${committeeEvalStats.total} panitia sudah mengisi`,
-          ].join(" · ")
-        }
-      >
-        <EvalAudienceTabs
-          peserta={
-            <EvaluationResults
-              eventId={id}
-              sheetsEnabled={sheetsEnabled}
-              evaluations={evaluations}
-              sections={evaluationTemplateForSlug(event.slug).sections}
-              questions={evalQuestions}
-              answers={evalAnswers}
-            />
-          }
-          panitia={
-            canManageCommitteeEval ? (
-              <div className="flex flex-col gap-8">
-                <div className="flex flex-col gap-2">
-                  <p className="text-label-caps uppercase tracking-wide text-on-surface-variant">Tautan pengisian untuk grup panitia</p>
-                  <div className="flex flex-wrap items-center gap-3">
-                    <code className="text-body-sm bg-surface-container-low px-2 py-1 rounded break-all">
-                      {`${shareOrigin}/events/${event.slug}/evaluasi-panitia`}
-                    </code>
-                    <CopyButton value={`${shareOrigin}/events/${event.slug}/evaluasi-panitia`} label="Salin tautan" />
-                  </div>
-                  <p className="text-body-sm text-on-surface-variant">
-                    Hanya panitia acara ini yang login yang bisa mengisi, dan hanya selama jendela di bawah terbuka.
-                  </p>
-                </div>
-                {canEditCommitteeEval ? (
-                <CommitteeEvalWindowEditor
-                  eventId={id}
-                  // Jam Tiongkok, bukan jam server: aksi simpannya membaca nilai
-                  // ini sebagai jam Tiongkok juga (parseChinaLocalInput).
-                  opensAt={event.committeeEvalOpensAt ? toChinaLocalInput(new Date(event.committeeEvalOpensAt)) : ""}
-                  closesAt={event.committeeEvalClosesAt ? toChinaLocalInput(new Date(event.committeeEvalClosesAt)) : ""}
-                  presetOpens={event.endAt ? toChinaLocalInput(new Date(event.endAt)) : toChinaLocalInput(new Date())}
-                  windowLabel={
-                    committeeEvalWindow === "open"
-                      ? "Jendela pengisian sedang TERBUKA"
-                      : committeeEvalWindow === "before"
-                        ? "Jendela pengisian belum dibuka"
-                        : committeeEvalWindow === "closed"
-                          ? "Jendela pengisian sudah ditutup"
-                          : "Jendela pengisian belum dipasang"
-                  }
-                  windowNote="Waktu kosong: sebelum jendela mulai / tidak pernah menutup otomatis. Mengosongkan keduanya lalu simpan = melepas jadwal. Saat jendela pertama kali disimpan, pertanyaan template kolektif otomatis disiapkan bila tab Panitia di Pertanyaan Evaluasi masih kosong."
-                  scheduleLabel="Durasi pintasan"
-                  opensLabel="Buka"
-                  closesLabel="Tutup"
-                  presetLabel="Buka setelah acara"
-                  clearLabel="Kosongkan jadwal"
-                  saveLabel="Simpan jendela"
-                  clearConfirmNote="Status jendela dihitung otomatis dari waktu saat ini — panitia hanya bisa mengisi selama terbuka."
-                />
-                ) : (
-                  <p className="text-body-md text-on-surface-variant max-w-2xl">
-                    Acara ini sudah terkunci (14 hari setelah selesai): jendela pengisian hanya bisa diubah BPH Kabinet.
-                  </p>
-                )}
-                <EvaluationResults
-                  eventId={id}
-                  sheetsEnabled={sheetsEnabled}
-                  exportAudience="panitia"
-                  evaluations={committeeEvaluations}
-                  sections={[]}
-                  questions={committeeQuestions}
-                  answers={committeeEvalAnswers}
-                />
-              </div>
-            ) : (
-              <div className="text-body-md text-on-surface-variant max-w-2xl flex flex-col gap-2">
-                <p>
-                  {committeeEvalStats.total > 0
-                    ? `${committeeEvalStats.total} dari ${committee.length} panitia sudah mengisi${
-                        committeeEvalStats.mine > 0 ? " — termasuk kamu. Terima kasih!" : "."
-                      }`
-                    : "Belum ada yang mengisi."}
-                </p>
-                <p>
-                  Rekap lengkap (nama &amp; jawaban) hanya tampil untuk BPH. Pengisian lewat{" "}
-                  <code className="text-body-sm bg-surface-container-low px-1.5 py-0.5 rounded">
-                    /events/{event.slug}/evaluasi-panitia
-                  </code>{" "}
-                  selama jendela terbuka.
-                </p>
-              </div>
-            )
-          }
-        />
-      </CollapsibleSection>
-
+      <div className="mt-8">
       {can("event.delete") && (
         <section className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-error/30 bg-surface-container-lowest p-5">
           <div className="min-w-0">
@@ -1863,8 +1833,6 @@ export default async function ConsoleEventDetailPage({ params }: { params: Promi
           <DeleteEventButton eventId={id} label="Pindahkan ke Sampah" />
         </section>
       )}
-        </div>
-
       </div>
     </div>
   );

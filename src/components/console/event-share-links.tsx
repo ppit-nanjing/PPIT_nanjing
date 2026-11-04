@@ -60,17 +60,16 @@ export function EventShareLinks({
     });
   }
 
-  const items: { kind: "daftar" | "evaluasi"; label: string; description: string; state: EventShareLinkState }[] = [
+  const items: { kind: "daftar" | "evaluasi"; label: string; description?: string; state: EventShareLinkState }[] = [
     {
       kind: "daftar",
       label: "Tautan Pendaftaran",
-      description: "Untuk dibagikan ke calon peserta (form pendaftaran publik).",
       state: rows.daftar,
     },
     {
       kind: "evaluasi",
       label: "Tautan Evaluasi",
-      description: "Kuesioner pasca-acara — bagikan setelah acara selesai.",
+      description: "Bagikan setelah acara selesai.",
       state: rows.evaluasi,
     },
   ];
@@ -83,10 +82,8 @@ export function EventShareLinks({
           className="rounded-lg border border-primary-container/40 bg-primary-container/10 px-4 py-3 text-body-md text-on-background"
         >
           Acara masih <b>{status === "draft" ? "draf" : "dijadwalkan tayang"}</b>
-          {scheduledPublishLabel ? ` (${scheduledPublishLabel})` : ""} — halaman pendaftaran & evaluasi baru terbuka
-          untuk umum setelah acara dipublikasikan; sementara ini halaman pendaftaran hanya bisa dibuka panitia
-          (mode uji coba) dan halaman evaluasi belum aktif. Tautan pendeknya boleh dibuat sekarang — otomatis
-          berfungsi begitu acara tayang.
+          {scheduledPublishLabel ? ` (${scheduledPublishLabel})` : ""}. Tautan berfungsi untuk umum begitu acara tayang;
+          sampai itu, pendaftaran hanya bisa dibuka panitia dan evaluasi belum aktif.
         </p>
       )}
       {items.map(({ kind, label, description, state }) => (
@@ -106,7 +103,7 @@ export function EventShareLinks({
               </span>
             )}
           </div>
-          <p className="text-body-sm text-on-surface-variant">{description}</p>
+          {description && <p className="text-body-sm text-on-surface-variant">{description}</p>}
           <p className="break-all text-body-sm text-on-surface-variant">
             <code className="text-on-background">{state.directUrl}</code>
           </p>

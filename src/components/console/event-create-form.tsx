@@ -36,7 +36,7 @@ export function EventCreateForm({
       {/* Bagian 1 - identitas acara */}
       <details open className="border border-outline-variant rounded-lg">
         <summary className="px-4 py-3 cursor-pointer text-label-caps uppercase tracking-wide text-primary-container">
-          1 · Info Acara
+          Info Acara
         </summary>
         <div className="px-4 pb-4 flex flex-col gap-3">
           <TextField name="title" label="Judul Kegiatan" required id="event-title" />
@@ -49,8 +49,8 @@ export function EventCreateForm({
             <TextField name="locationUrl2" label="Link peta 2 (opsional)" type="url" placeholder="mis. Baidu Maps" />
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <TextField name="startAt" label="Tanggal & jam mulai" type="datetime-local" hint="Kapan acara dimulai." />
-            <TextField name="endAt" label="Tanggal & jam selesai" type="datetime-local" hint="Kapan acara berakhir." />
+            <TextField name="startAt" label="Tanggal & jam mulai" type="datetime-local" />
+            <TextField name="endAt" label="Tanggal & jam selesai" type="datetime-local" />
           </div>
           <TextField name="capacity" label="Kapasitas" type="number" min={1} />
           <ImageUploadCropper
@@ -58,7 +58,7 @@ export function EventCreateForm({
             folder="events"
             label="Gambar Sampul"
             aspect={16 / 9}
-            hint="Ideal 1920 × 1080 px (16:9) — gambar di-crop & dikompres otomatis."
+            hint="Ideal 1920 × 1080 px (16:9)."
           />
           {departments.length > 0 && (
             <fieldset className="flex flex-col gap-2 border border-outline-variant rounded-lg p-3">
@@ -66,9 +66,7 @@ export function EventCreateForm({
                 Divisi Penanggung Jawab (opsional)
               </legend>
               <p className="text-body-sm text-on-surface-variant -mt-1 max-w-[62ch]">
-                Divisi kabinet pemilik acara/proker ini (boleh lebih dari satu untuk proker gabungan). Anggota divisi
-                itu otomatis bisa mengelola acaranya di menu Kegiatan <strong>selama divisinya memegang centang
-                &quot;Kegiatan&quot; di Organisasi</strong> — baris PJ menyempitkan akses, bukan memberi modul baru.
+                Anggotanya bisa mengelola acara ini, selama divisinya memegang centang &quot;Kegiatan&quot; di Organisasi.
               </p>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5">
                 {departments.map((d) => (
@@ -89,33 +87,33 @@ export function EventCreateForm({
       {/* Bagian 2 - aturan pendaftaran & HTM */}
       <details open className="border border-outline-variant rounded-lg">
         <summary className="px-4 py-3 cursor-pointer text-label-caps uppercase tracking-wide text-primary-container">
-          2 · Pendaftaran &amp; Biaya
+          Pendaftaran &amp; Biaya
         </summary>
         <div className="px-4 pb-4 flex flex-col gap-3">
           <TextField
             name="registrationDeadline"
             label="Batas Pendaftaran"
             type="datetime-local"
-            hint="Lewat dari ini tombol daftar tertutup otomatis. Kosongkan bila tak ada batas."
+            hint="Lewat dari ini pendaftaran tertutup otomatis. Kosong = tanpa batas."
           />
-          <CheckField name="requiresSensus" label="Hanya untuk peserta yang sudah lengkap mengisi sensus (mahasiswa Indo di China)" />
+          <CheckField name="requiresSensus" label="Hanya untuk peserta dengan sensus lengkap" />
           <CheckField name="certificateForParticipants" label="Peserta mendapat e-sertifikat kehadiran" defaultChecked />
           <CheckField
             name="certificateRequiresAttendance"
             label="Sertifikat hanya untuk yang tercatat hadir (QR di-scan)"
-            hint="Matikan untuk acara tanpa absen QR (Zoom, dsb.): cukup terdaftar dan sudah mengisi evaluasi."
+            hint="Matikan untuk acara tanpa absen QR. Cukup terdaftar dan mengisi evaluasi."
             defaultChecked
           />
           <CheckField
             name="evaluationAllowsAnonymous"
             label="Evaluasi peserta boleh dikirim anonim"
-            hint="Matikan kalau evaluasi harus atas nama (mis. dipakai untuk mengirim sertifikat)."
+            hint="Matikan kalau evaluasi harus atas nama."
             defaultChecked
           />
           <CheckField
             name="volunteerSignupOpen"
             label="Buka pendaftaran volunteer publik"
-            hint="Orang luar bisa melamar jadi volunteer di halaman acara."
+            hint="Orang luar bisa melamar dari halaman acara."
           />
           <HtmFields />
         </div>
@@ -124,7 +122,7 @@ export function EventCreateForm({
       {/* Bagian 3 - konten & jadwal rilis; jarang diisi saat awal, makanya dilipat */}
       <details className="border border-outline-variant rounded-lg">
         <summary className="px-4 py-3 cursor-pointer text-label-caps uppercase tracking-wide text-on-surface-variant">
-          3 · Deskripsi, Agenda &amp; Jadwal Rilis (opsional)
+          Deskripsi, Agenda &amp; Jadwal Rilis (opsional)
         </summary>
         <div className="px-4 pb-4 flex flex-col gap-3">
           <TextAreaField name="description" label="Deskripsi" rows={3} id="event-description" />
@@ -135,13 +133,12 @@ export function EventCreateForm({
             rows={3}
             id="event-agenda"
             placeholder={"18:00 - Registrasi\n19:00 - Pembukaan"}
-            hint="Satu baris per item."
           />
           <TextField
             name="scheduledPublishAt"
             label="Jadwal Rilis Publikasi (opsional)"
             type="datetime-local"
-            hint='Isi bila acara tampil ke publik hanya SETELAH waktu ini (status "Terjadwal", rilis sendiri). Kosongkan = langsung Draf.'
+            hint="Acara terbit sendiri pada waktu ini. Kosong = tetap Draf."
           />
         </div>
       </details>

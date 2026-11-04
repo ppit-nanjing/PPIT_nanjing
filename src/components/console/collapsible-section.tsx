@@ -9,12 +9,15 @@ export function CollapsibleSection({
   children,
   defaultOpen = true,
   className = "",
+  flush = false,
 }: {
   title: ReactNode;
   description?: ReactNode;
   children: ReactNode;
   defaultOpen?: boolean;
   className?: string;
+  /** Baris di dalam satu wadah bersama: tanpa bingkai sendiri, keterangan di sisi kanan judul. */
+  flush?: boolean;
 }) {
   const [open, setOpen] = useState(defaultOpen);
   // Isi baru dipasang saat bagian pertama kali dibuka (halaman kegiatan punya belasan
@@ -28,7 +31,7 @@ export function CollapsibleSection({
   return (
     <section
       aria-labelledby={headingId}
-      className={`bg-surface-container-lowest border border-outline-variant rounded-xl overflow-hidden ${className}`}
+      className={flush ? className : `bg-surface-container-lowest border border-outline-variant rounded-xl overflow-hidden ${className}`}
     >
       {/* Judul bagian = heading (pembaca layar bisa melompat antar-heading) dengan tombol di
           dalamnya: pola accordion standar. Sengaja role="heading", bukan <h2>: aturan global
@@ -44,10 +47,10 @@ export function CollapsibleSection({
           aria-controls={panelId}
           className="w-full flex items-center justify-between gap-3 px-4 py-3 sm:px-6 sm:py-4 text-left hover:bg-surface-container-low/60 transition-colors"
         >
-          <span className="flex flex-col">
+          <span className={flush ? "flex min-w-0 flex-1 flex-col gap-0.5 sm:flex-row sm:items-baseline sm:justify-between sm:gap-6" : "flex flex-col"}>
             <span className="text-headline-sm text-on-background">{title}</span>
             {description ? (
-              <span className="text-body-sm text-on-surface-variant mt-0.5">{description}</span>
+              <span className={`text-body-sm text-on-surface-variant ${flush ? "tabular-nums sm:text-right" : "mt-0.5"}`}>{description}</span>
             ) : null}
           </span>
           {open ? (
