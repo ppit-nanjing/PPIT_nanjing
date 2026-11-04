@@ -5,7 +5,7 @@ import QRCode from "qrcode";
 import { db } from "@/db";
 import { auditLogs, certificates, coverageCities, departments, events, eventCredits, eventDivisions, eventEvaluations, eventFeeOptions, eventQuestions, eventRegistrations, eventResponsibleDepartments, eventVolunteers, galleryAlbums, galleryPhotos, inventoryItems, itemReservations, newsArticles, sensusProfiles, shortLinks, users } from "@/db/schema";
 import { MEMBERSHIP_LABEL, effectiveBranch, membershipStatus } from "@/lib/membership-status";
-import { updateEventInfo, updateEventContent, updateEventPostReport, setEventStatus, saveEventQuestion, deleteEventQuestion, saveFeeOption, deleteFeeOption } from "@/app/actions/admin-events";
+import { updateEventInfo, updateEventCertificateSettings, updateEventContent, updateEventPostReport, setEventStatus, saveEventQuestion, deleteEventQuestion, saveFeeOption, deleteFeeOption } from "@/app/actions/admin-events";
 import { createEventGalleryAlbum } from "@/app/actions/admin-content";
 import { VolunteerApplicationList } from "@/components/console/volunteer-application-list";
 import { publishDueEvents } from "@/lib/publish-events";
@@ -789,23 +789,6 @@ export default async function ConsoleEventDetailPage({ params }: { params: Promi
                 hint="Termasuk paspor dan bukti mahasiswa aktif. Yang sensusnya lengkap tidak perlu mengetik ulang."
               />
               <CheckField
-                name="certificateForParticipants"
-                defaultChecked={event.certificateForParticipants}
-                label="Peserta mendapat e-sertifikat kehadiran"
-              />
-              <CheckField
-                name="certificateRequiresAttendance"
-                defaultChecked={event.certificateRequiresAttendance}
-                label="Sertifikat hanya untuk yang tercatat hadir (QR di-scan)"
-                hint="Matikan untuk acara tanpa absen QR. Cukup terdaftar dan mengisi evaluasi dengan akun."
-              />
-              <CheckField
-                name="evaluationAllowsAnonymous"
-                defaultChecked={event.evaluationAllowsAnonymous}
-                label="Evaluasi peserta boleh dikirim anonim"
-                hint="Matikan kalau evaluasi harus atas nama. Respons yang sudah masuk tidak berubah."
-              />
-              <CheckField
                 name="volunteerSignupOpen"
                 defaultChecked={event.volunteerSignupOpen}
                 label="Buka pendaftaran volunteer publik"
@@ -1550,6 +1533,43 @@ export default async function ConsoleEventDetailPage({ params }: { params: Promi
         </div>
       </CollapsibleSection>
       )}
+      {can("event.editInfo") && (
+      <CollapsibleSection
+        title="Aturan Sertifikat & Evaluasi"
+        description={[
+          event.certificateForParticipants
+            ? `Sertifikat untuk yang ${event.certificateRequiresAttendance ? "hadir" : "terdaftar"}`
+            : "Tanpa sertifikat peserta",
+          event.evaluationAllowsAnonymous ? "Evaluasi boleh anonim" : "Evaluasi atas nama",
+        ].join(" · ")}
+      >
+        <form action={updateEventCertificateSettings.bind(null, id)} className="flex flex-col gap-3">
+          <CheckField
+            name="certificateForParticipants"
+            defaultChecked={event.certificateForParticipants}
+            label="Peserta mendapat e-sertifikat kehadiran"
+          />
+          <CheckField
+            name="certificateRequiresAttendance"
+            defaultChecked={event.certificateRequiresAttendance}
+            label="Sertifikat hanya untuk yang tercatat hadir (QR di-scan)"
+            hint="Matikan untuk acara tanpa absen QR. Cukup terdaftar dan mengisi evaluasi dengan akun."
+          />
+          <CheckField
+            name="evaluationAllowsAnonymous"
+            defaultChecked={event.evaluationAllowsAnonymous}
+            label="Evaluasi peserta boleh dikirim anonim"
+            hint="Matikan kalau evaluasi harus atas nama. Respons yang sudah masuk tidak berubah."
+          />
+          <SubmitButton
+            successMessage="Aturan tersimpan."
+            className="self-start bg-primary-container text-on-primary text-label-caps uppercase tracking-wide px-6 py-3 rounded-md hover:bg-primary transition-colors"
+          >
+            Simpan Aturan
+          </SubmitButton>
+        </form>
+      </CollapsibleSection>
+      )}
       {can("event.issueCertificates") && (
       <>
       <CollapsibleSection
@@ -1603,7 +1623,7 @@ export default async function ConsoleEventDetailPage({ params }: { params: Promi
         ) : (
           <p className="text-body-md text-on-surface-variant max-w-2xl">
             Acara ini tidak memberi e-sertifikat kehadiran. Centang &quot;Peserta mendapat e-sertifikat
-            kehadiran&quot; di Info &amp; Pengaturan Acara (tab Publik) bila berubah pikiran.
+            kehadiran&quot; di Aturan Sertifikat &amp; Evaluasi di atas bila berubah pikiran.
           </p>
         )}
       </CollapsibleSection>

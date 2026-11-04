@@ -267,9 +267,6 @@ export async function updateEventInfo(id: string, formData: FormData) {
       capacity: formData.get("capacity") ? Number(formData.get("capacity")) : null,
       requiresSensus: formData.get("requiresSensus") === "on",
       requiresBiodata: formData.get("requiresBiodata") === "on",
-      certificateForParticipants: formData.get("certificateForParticipants") === "on",
-      certificateRequiresAttendance: formData.get("certificateRequiresAttendance") === "on",
-      evaluationAllowsAnonymous: formData.get("evaluationAllowsAnonymous") === "on",
       volunteerSignupOpen: formData.get("volunteerSignupOpen") === "on",
       scheduledPublishAt,
       isPaid,
@@ -306,6 +303,21 @@ export async function updateEventInfo(id: string, formData: FormData) {
       .where(and(eq(eventRegistrations.eventId, id), eq(eventRegistrations.paymentStatus, "not_required")));
   }
 
+  await revalidateEventPaths(id, before?.slug);
+}
+
+/** Aturan sertifikat & evaluasi, di tab Pasca-Acara. Wewenang yang sama dengan Info & Pengaturan. */
+export async function updateEventCertificateSettings(id: string, formData: FormData) {
+  await requireEventCapability(id, "event.editInfo");
+  const [before] = await db.select({ slug: events.slug }).from(events).where(eq(events.id, id));
+  await db
+    .update(events)
+    .set({
+      certificateForParticipants: formData.get("certificateForParticipants") === "on",
+      certificateRequiresAttendance: formData.get("certificateRequiresAttendance") === "on",
+      evaluationAllowsAnonymous: formData.get("evaluationAllowsAnonymous") === "on",
+    })
+    .where(eq(events.id, id));
   await revalidateEventPaths(id, before?.slug);
 }
 

@@ -64,7 +64,7 @@ Identitas: `respondent_name` + `respondent_city` (opsional) dan flag `anonymous`
 
 **Acara bersertifikat** (`events.certificate_for_participants`, bawaan nyala): evaluasi wajib login dan selalu menyimpan `user_id` (token `peserta:<userId>`), supaya sertifikat bisa dikirim ke orangnya. Di acara seperti ini kotak "anonim" hanya menyembunyikan nama dari rekap panitia; akunnya tetap tercatat di baris respons.
 
-Dua saklar per acara (migrasi `0056`, diatur di form Edit acara):
+Dua saklar per acara (migrasi `0056`, diatur di Aturan Sertifikat & Evaluasi, tab Pasca-Acara):
 
 | Saklar | Bawaan | Kalau dimatikan |
 |---|---|---|
