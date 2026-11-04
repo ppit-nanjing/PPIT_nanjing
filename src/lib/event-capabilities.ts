@@ -40,7 +40,8 @@ export type EventCapability =
   | "event.postArticle" // post artikel/berita acara
   // --- A: hanya BPH Kabinet ("full") ---
   | "event.delete" // hapus acara
-  | "event.takeOver"; // ambil alih acara yang panitianya vakum
+  | "event.takeOver" // ambil alih acara yang panitianya vakum
+  | "event.approve"; // setujui atau tolak pengajuan acara
 
 // Cermin event_committee_role di schema.ts. Scan/pendataan BUKAN peran — itu
 // kapabilitas yang dicentang per divisi (GRANTABLE_CAPABILITIES). humas/acara/
@@ -104,7 +105,73 @@ const GRANTABLE_KEYS = new Set<EventCapability>(GRANTABLE_CAPABILITIES.map((g) =
 
 // Hanya BPH Kabinet ("full"). Bukan dasar, bukan grantable, bahkan BPH Panitia
 // tidak dapat.
-export const FULL_ADMIN_ONLY_CAPABILITIES: EventCapability[] = ["event.delete", "event.takeOver"];
+export const FULL_ADMIN_ONLY_CAPABILITIES: EventCapability[] = ["event.delete", "event.takeOver", "event.approve"];
+
+// Pembuat acara tanpa modul "events", selama drafnya belum disetujui: cukup untuk
+// menyiapkan isi acara dan mengajukannya, tanpa membuka data orang lain. event.publish
+// di sini hanya berarti boleh mengajukan: menerbitkan tetap menunggu persetujuan
+// (EventAccess.canRelease).
+export const CREATOR_DRAFT_CAPABILITIES: EventCapability[] = [
+  "event.editInfo",
+  "event.editContent",
+  "event.registrationForm",
+  "event.feeTiers",
+  "event.publish",
+];
+
+/**
+ * Hak pembuat acara (bukan full admin) atas acaranya sendiri. Setelah disetujui
+ * ditambah fitur dasar panitia. event.manageCommittee sengaja tidak pernah ikut:
+ * jabatan BPH Panitia membuka biodata lengkap pendaftar, jadi pembuat tidak boleh
+ * mengangkat dirinya sendiri. Ketua Pelaksana ditunjuk BPH Kabinet.
+ */
+export function creatorHasCapability(approved: boolean, capability: EventCapability): boolean {
+  return CREATOR_DRAFT_CAPABILITIES.includes(capability) || (approved && BASIC_CAPABILITIES.includes(capability));
+}
+
+// Status yang belum atau tidak lagi tampil di situs publik.
+export const HIDDEN_EVENT_STATUSES = ["draft", "scheduled", "cancelled"];
+
+/** Perubahan status yang membuat acara tampil (atau dijadwalkan tampil) ke publik. */
+export function isReleaseTransition(from: string, to: string): boolean {
+  return HIDDEN_EVENT_STATUSES.includes(from) && to !== "draft" && to !== "cancelled";
+}
+
+/**
+ * Status yang sudah keluar dari draf juga dihitung disetujui, untuk baris yang tidak
+ * lewat alur ini (mis. skrip seed). "cancelled" tidak ikut: draf yang dibatalkan
+ * tidak boleh jadi jalan pintas menuju terbit.
+ */
+export function isEventApproved(ev: { status: string; approvedAt: Date | string | null }): boolean {
+  return ev.approvedAt != null || (ev.status !== "draft" && ev.status !== "cancelled");
+}
+
+/**
+ * Acara yang memberi hak pembuat: draf yang belum disetujui, atau yang disetujui lewat
+ * alur ini. Acara lama (dianggap disetujui, tanpa penyetuju) dan acara batal tidak,
+ * supaya orang yang sudah kehilangan modul Kegiatan tidak mendapat lagi akses ke
+ * acara yang pernah dia buat.
+ */
+export function grantsCreatorRights(ev: { status: string; approvedAt: Date | string | null; approvedBy: string | null }): boolean {
+  return ev.approvedBy != null || (ev.status === "draft" && ev.approvedAt == null);
+}
+
+/** Draf yang masih boleh dibuang pembuatnya sendiri. */
+export function isUnapprovedDraft(ev: { status: string; approvedAt: Date | string | null }): boolean {
+  return ev.status === "draft" && !isEventApproved(ev);
+}
+
+export type EventApprovalState = "belum" | "diajukan" | "disetujui";
+
+export function eventApprovalState(ev: {
+  status: string;
+  approvedAt: Date | string | null;
+  approvalRequestedAt: Date | string | null;
+}): EventApprovalState {
+  if (isEventApproved(ev)) return "disetujui";
+  // Pengajuan hanya berlaku untuk draf (lihat reviewEventApproval).
+  return ev.status === "draft" && ev.approvalRequestedAt != null ? "diajukan" : "belum";
+}
 
 // Kapabilitas yang TETAP boleh walau acara sudah terkunci (>2 minggu setelah
 // selesai): baca daftar pendaftar + audit log, DAN mengisi kredit kepanitiaan

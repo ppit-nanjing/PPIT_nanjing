@@ -63,7 +63,11 @@ type DashboardCounts = {
   sensus?: { complete: number; members: number };
   events?: {
     published: number;
+    // Bagi full admin hanya yang sudah disetujui: draf percobaan pengurus lain bukan
+    // pekerjaan BPH sampai diajukan.
     draft: number;
+    // Menunggu keputusan BPH Kabinet. Selalu 0 selain untuk full admin.
+    awaitingApproval: number;
     upcoming: number;
     regs: number;
     pendingRegs: number;
@@ -115,7 +119,10 @@ async function fetchDashboardCounts(
     const ownRegs = eventIds === null ? sql`true` : inArray(eventRegistrations.eventId, eventIds);
     cols.push(
       sql`(select count(*) from events where status = 'published' and deleted_at is null and ${ownEvents})::int as "eventsPublished"`,
-      sql`(select count(*) from events where status = 'draft' and deleted_at is null and ${ownEvents})::int as "eventsDraft"`,
+      sql`(select count(*) from events where status = 'draft' and deleted_at is null and ${eventIds === null ? sql`approved_at is not null` : ownEvents})::int as "eventsDraft"`,
+      eventIds === null
+        ? sql`(select count(*) from events where status = 'draft' and approval_requested_at is not null and approved_at is null and deleted_at is null)::int as "eventsAwaitingApproval"`
+        : sql`0 as "eventsAwaitingApproval"`,
       sql`(select count(*) from events where status = 'published' and start_at >= now() and deleted_at is null and ${ownEvents})::int as "eventsUpcoming"`,
       sql`(select count(*) from event_registrations where ${ownRegs})::int as "regsTotal"`,
       sql`(select count(*) from event_registrations where status = 'pending' and ${ownRegs})::int as "regsPending"`,
@@ -177,6 +184,7 @@ async function fetchDashboardCounts(
       ? {
           published: r.eventsPublished,
           draft: r.eventsDraft,
+          awaitingApproval: r.eventsAwaitingApproval,
           upcoming: r.eventsUpcoming,
           regs: r.regsTotal,
           pendingRegs: r.regsPending,
@@ -255,6 +263,7 @@ function DashboardLanding({
   isCoordinator,
   canManageOprek,
   canCreateSurvey,
+  canCreateEvent,
   top,
 }: {
   name: string | null | undefined;
@@ -263,6 +272,7 @@ function DashboardLanding({
   isCoordinator: boolean;
   canManageOprek: boolean;
   canCreateSurvey: boolean;
+  canCreateEvent: boolean;
   // Catatan akses ditolak + kartu "Mulai dari sini" (sama dengan dashboard penuh).
   top: React.ReactNode;
 }) {
@@ -270,11 +280,11 @@ function DashboardLanding({
   // only offered where the destination page admits the viewer. (The "events"
   // module itself is a dashboard module, so its holders never get here.)
   const links: { icon: LucideIcon; label: string; description: string; href: string }[] = [];
-  if (isCommittee) {
+  if (isCommittee || canCreateEvent) {
     links.push({
       icon: CalendarDays,
       label: "Kegiatan",
-      description: "Acara yang diikuti sebagai panitia.",
+      description: canCreateEvent ? "Buat draf acara, atau buka acara yang kamu ikuti." : "Acara yang diikuti sebagai panitia.",
       href: "/console/events",
     });
   }
@@ -361,6 +371,7 @@ export default async function ConsoleDashboardPage({ searchParams }: { searchPar
     isBphCommittee: session.user.isBphCommittee || session.user.isEventKadiv,
     isCoordinator: session.user.isCoordinator,
     canCreateSurvey: session.user.canCreateSurvey,
+    canCreateEvent: session.user.canCreateEvent,
   });
   const startHidden = (await cookies()).get(START_HIDDEN_COOKIE)?.value === "1";
   const top = (
@@ -397,6 +408,7 @@ export default async function ConsoleDashboardPage({ searchParams }: { searchPar
         isCoordinator={session.user.isCoordinator}
         canManageOprek={session.user.isBphCommittee || session.user.isEventKadiv}
         canCreateSurvey={session.user.canCreateSurvey}
+        canCreateEvent={session.user.canCreateEvent}
         top={top}
       />
     );
@@ -525,6 +537,7 @@ export default async function ConsoleDashboardPage({ searchParams }: { searchPar
 
   // Counts of modules the viewer lacks are absent (0 here) and filtered out.
   const attentionItems = [
+    { icon: CalendarDays, label: "Acara menunggu persetujuan BPH", count: eventCounts?.awaitingApproval ?? 0, href: "/console/events" },
     { icon: UserCheck, label: "Lamaran rekrutmen menunggu", count: membership?.pending ?? 0, href: "/console/membership" },
     { icon: MessageSquare, label: "Masukan baru", count: feedbackCounts?.unread ?? 0, href: "/console/feedback" },
     { icon: UserPlus, label: "Pendaftaran kegiatan menunggu", count: eventCounts?.pendingRegs ?? 0, href: "/console/events" },

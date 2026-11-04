@@ -8,17 +8,24 @@ import { ConfirmButton } from "@/components/console/confirm-button";
 export function DeleteEventButton({
   eventId,
   label = "Hapus",
+  ownDraft = false,
   className,
 }: {
   eventId: string;
   label?: string;
+  /** Pembuat membuang drafnya sendiri: dia tidak punya akses ke bagian Sampah. */
+  ownDraft?: boolean;
   className?: string;
 }) {
   return (
     <ConfirmButton
       onConfirm={() => deleteEvent(eventId)}
       title="Pindahkan ke Sampah?"
-      message="Kegiatan langsung hilang dari situs publik dan dari akses panitia. Semua datanya (pendaftar, panitia, evaluasi) tetap tersimpan dan bisa dipulihkan dari bagian Sampah di halaman Kegiatan."
+      message={
+        ownDraft
+          ? "Draf ini hilang dari daftarmu. BPH Kabinet masih bisa memulihkannya dari Sampah."
+          : "Kegiatan langsung hilang dari situs publik dan dari akses panitia. Semua datanya (pendaftar, panitia, evaluasi) tetap tersimpan dan bisa dipulihkan dari bagian Sampah di halaman Kegiatan."
+      }
       confirmLabel="Ya, pindahkan"
       successMessage="Dipindah ke Sampah."
       className={

@@ -124,7 +124,9 @@ export async function POST(req: NextRequest) {
   // requiredModule hanya truthy untuk folder admin (tak ada di ANON_FOLDERS),
   // jadi di sini sesi selalu ada - tapi tetap pakai optional chaining supaya
   // anon yang menembak folder admin dapat 403, bukan crash.
-  if (requiredModule && !hasModuleAccess(session?.user?.adminScope ?? null, requiredModule)) {
+  // Pengurus kabinet yang menyiapkan draf acara juga mengunggah sampul dan QR-nya.
+  const eventCreatorUpload = folder === "events" && session?.user?.canCreateEvent === true;
+  if (requiredModule && !eventCreatorUpload && !hasModuleAccess(session?.user?.adminScope ?? null, requiredModule)) {
     return NextResponse.json({ errorKey: "upload.errForbidden" }, { status: 403 });
   }
   if (file.size > MAX_BYTES)

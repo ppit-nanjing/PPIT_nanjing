@@ -15,10 +15,14 @@ import { useActionToast } from "@/components/console/submit-button";
 // /console/events/[id].
 export function EventCreateForm({
   departments = [],
+  canPublishDirectly = false,
 }: {
   // Divisi Penanggung Jawab (opsional) — menentukan divisi mana yang otomatis
   // boleh mengelola acara ini di menu Kegiatan (lihat event-access.ts).
   departments?: { id: string; name: string; parentId: string | null }[];
+  // BPH Kabinet: acaranya otomatis disetujui dan bisa langsung dijadwalkan. Selain
+  // itu acara selalu mulai sebagai draf (createEvent mengabaikan jadwal kiriman).
+  canPublishDirectly?: boolean;
 }) {
   const [state, formAction, isPending] = useActionState<EventFormState, FormData>(createEvent, {});
   useActionToast(isPending, state.error, "Acara dibuat.");
@@ -30,6 +34,11 @@ export function EventCreateForm({
       {state.error && (
         <p role="alert" className="bg-error-container/40 text-on-error-container text-body-md px-4 py-3 rounded-lg">
           {state.error}
+        </p>
+      )}
+      {!canPublishDirectly && (
+        <p className="text-body-md text-on-surface-variant">
+          Tersimpan sebagai draf. Acara baru bisa terbit setelah kamu ajukan dan BPH Kabinet menyetujuinya.
         </p>
       )}
 
@@ -122,7 +131,7 @@ export function EventCreateForm({
       {/* Bagian 3 - konten & jadwal rilis; jarang diisi saat awal, makanya dilipat */}
       <details className="border border-outline-variant rounded-lg">
         <summary className="px-4 py-3 cursor-pointer text-label-caps uppercase tracking-wide text-on-surface-variant">
-          Deskripsi, Agenda &amp; Jadwal Rilis (opsional)
+          {canPublishDirectly ? "Deskripsi, Agenda & Jadwal Rilis (opsional)" : "Deskripsi & Agenda (opsional)"}
         </summary>
         <div className="px-4 pb-4 flex flex-col gap-3">
           <TextAreaField name="description" label="Deskripsi" rows={3} id="event-description" />
@@ -134,12 +143,14 @@ export function EventCreateForm({
             id="event-agenda"
             placeholder={"18:00 - Registrasi\n19:00 - Pembukaan"}
           />
-          <TextField
-            name="scheduledPublishAt"
-            label="Jadwal Rilis Publikasi (opsional)"
-            type="datetime-local"
-            hint="Acara terbit sendiri pada waktu ini. Kosong = tetap Draf."
-          />
+          {canPublishDirectly && (
+            <TextField
+              name="scheduledPublishAt"
+              label="Jadwal Rilis Publikasi (opsional)"
+              type="datetime-local"
+              hint="Acara terbit sendiri pada waktu ini. Kosong = tetap Draf."
+            />
+          )}
         </div>
       </details>
 
@@ -162,14 +173,16 @@ export function EventCreateForm({
         >
           Buat &amp; Lanjut Edit
         </button>
-        <button
-          type="submit"
-          name="intent"
-          value="draft"
-          className="self-start bg-surface-container-low text-on-background text-label-caps uppercase tracking-wide px-4 py-2.5 sm:px-6 sm:py-3 rounded-md border border-outline-variant hover:bg-surface-container transition-colors"
-        >
-          Simpan sebagai Draft
-        </button>
+        {canPublishDirectly && (
+          <button
+            type="submit"
+            name="intent"
+            value="draft"
+            className="self-start bg-surface-container-low text-on-background text-label-caps uppercase tracking-wide px-4 py-2.5 sm:px-6 sm:py-3 rounded-md border border-outline-variant hover:bg-surface-container transition-colors"
+          >
+            Simpan sebagai Draft
+          </button>
+        )}
       </div>
     </form>
   );

@@ -16,7 +16,7 @@
 
 ## Tampilan konsol (2026-11)
 
-**Daftar `/console/events`** sengaja mengikuti `/events`: acara terdekat tampil besar, sisanya kartu bersampul, kegiatan lampau abu-abu. Tambahan khusus panitia: kelompok **Sedang Disiapkan** (draf + terjadwal, belum tampil di publik), jumlah terdaftar dan bilah kuota, saringan per kelompok + pencarian, serta menu `⋯` per acara (buka halaman publik, jadikan draf, pindahkan ke Sampah). Kelompok dihitung dari `eventStage()` di `src/lib/event-stage.ts`, bukan langsung dari `events.status`: acara `published` yang tanggalnya sudah lewat masuk **Sudah Lewat**.
+**Daftar `/console/events`** sengaja mengikuti `/events`: acara terdekat tampil besar, sisanya kartu bersampul, kegiatan lampau abu-abu. Tambahan khusus panitia: kelompok **Menunggu Persetujuan BPH** (paling atas, hanya kalau ada isinya) dan **Sedang Disiapkan** (draf + terjadwal, belum tampil di publik; yang sudah disetujui lebih dulu), jumlah terdaftar dan bilah kuota, saringan per kelompok + pencarian, serta menu `⋯` per acara (buka halaman publik, jadikan draf, pindahkan ke Sampah). Sedang Disiapkan dan Sudah Lewat dipotong 6 kartu dengan tombol Tampilkan Semua, supaya draf percobaan tidak menenggelamkan yang lain. Kelompok dihitung dari `eventStage()` di `src/lib/event-stage.ts`, bukan langsung dari `events.status`: acara `published` yang tanggalnya sudah lewat masuk **Sudah Lewat**.
 
 **Detail `/console/events/[id]`** punya dua lapis:
 
@@ -28,9 +28,24 @@
 
 Tab yang terbuka mengikuti tahap acara: Persiapan membuka Publik; Tayang dan Berlangsung membuka Internal; setelah itu Pasca-Acara. Kalau ada pembayaran atau volunteer menunggu keputusan, Internal didahulukan (kecuali saat Persiapan). Tab tersimpan di `?bagian=publik|internal|pasca`, jadi bisa dibagikan dan bertahan saat di-refresh. Isi semua tab tetap dirender server dengan gerbang `can()` yang sama; tab hanya mengatur yang terlihat, **bukan** batas akses. Menambah bagian baru: taruh di kelompok yang sesuai di `page.tsx`, dan isi `description`-nya dengan keadaan terkini (mis. "3 pertanyaan"), bukan penjelasan fungsi.
 
-Belum termasuk: hak menerbitkan acara yang diberikan BPH Kabinet. Saat ini `event.publish` masih melekat ke BPH Panitia, dan menyetel jadwal rilis saat membuat acara membuatnya terbit sendiri nanti.
-
 ## Fungsi
+
+### Persetujuan acara oleh BPH Kabinet (2026-11)
+
+Siapa pun di kabinet boleh menuangkan ide acara, tapi baru bisa tampil ke publik setelah disetujui BPH Kabinet. Alurnya: **buat draf → ajukan ke BPH → BPH setujui atau tolak → pembuat atau BPH Panitia menerbitkan atau menjadwalkan.** Menyetujui belum menerbitkan.
+
+- **Siapa yang boleh membuat**: `session.user.canCreateEvent`, yaitu pengurus kabinet (punya baris `department_members`, status `active`, bukan role ranting) atau full admin yang aktif. Flag ini juga membuka pintu `/console` dan menu Kegiatan. Karena dihitung ulang dari database di setiap sesi, orang yang keluar dari kabinet langsung kehilangan haknya.
+- **Hak pembuat** (`creatorHasCapability` di `src/lib/event-capabilities.ts`): sebelum disetujui hanya `CREATOR_DRAFT_CAPABILITIES` (isi acara, pertanyaan, tarif, dan mengajukan), supaya draf percobaan tidak membuka data orang lain. Setelah disetujui ditambah fitur dasar panitia (`BASIC_CAPABILITIES`). `event.manageCommittee` tidak pernah ikut, karena jabatan BPH Panitia membuka biodata lengkap pendaftar dan pembuat tidak boleh mengangkat dirinya sendiri: Ketua Pelaksana ditunjuk BPH Kabinet di Struktur Kepanitiaan. Pembuat juga boleh membuang drafnya sendiri selama belum disetujui (`canDeleteOwnDraft`); BPH Kabinet tetap bisa memulihkannya dari Sampah. Hak ini hanya berlaku untuk draf yang belum disetujui atau acara yang disetujui lewat alur ini (`grantsCreatorRights`). Acara lama (`approved_by` kosong) dan acara batal tidak memberinya, supaya orang yang sudah kehilangan modul Kegiatan tidak mendapat lagi akses ke acara lamanya.
+- **Yang digerbang** (`EventAccess.canRelease`, ditegakkan di server): `setEventStatus` untuk semua perubahan status selain buka/tutup pendaftaran. Status batal ikut ditahan karena halaman publik acara batal tetap bisa dibuka lewat tautan. `updateEventInfo` untuk jadwal rilis (nilai kiriman diabaikan bila belum boleh), dan `createEvent` (jadwal hanya untuk full admin).
+- **Yang menunggu persetujuan juga**: tautan pendek acara (`ensureEventShortLinks`), karena judulnya langsung tampil di direktori publik `/l`, dan Oprek BPH atas acara buatan sendiri (`getCoordinatorEventIds`), karena penempatannya bisa mengangkat Ketua. Pengurus tanpa modul Kegiatan juga tidak bisa menandai Divisi Penanggung Jawab saat membuat acara, supaya jalan Oprek BPH lewat baris PJ tertutup.
+- **BPH Kabinet**: acara buatannya otomatis disetujui. Kalau menerbitkan atau menjadwalkan draf yang belum pernah diajukan, itu sekaligus persetujuannya. Selama ada pengajuan yang menunggu, `canRelease` menutup jalan itu juga untuk BPH: keputusan harus lewat panel Setujui/Tolak supaya pengajunya mendapat kabar.
+- **Persetujuan berlaku untuk idenya, bukan untuk isi akhir**: setelah disetujui, pembuat masih bisa mengubah isi acara, dan menerbitkan tidak butuh persetujuan ulang. Ini keputusan alur, bukan celah.
+- **Mengajukan** (`requestEventApproval`, butuh `event.publish`): semua pengguna `users.status = 'active'` dengan role `access_tier = 'full'` mendapat notifikasi `event_approval_requested`. Divisi Teknologi boleh memutuskan tetapi tidak ikut dikabari, karena bukan pemilik keputusan ini. Kalau tidak ada yang membaca notifikasinya, antrean tetap terlihat di daftar Kegiatan dan di baris "Acara menunggu persetujuan BPH" pada dashboard.
+- **Memutuskan** (`reviewEventApproval`, butuh `event.approve`, khusus full admin): menolak wajib beralasan. Alasannya dikirim ke pengaju (`event_approval_rejected`), tercatat di Riwayat Audit, dan tampil di panel selama acara belum diajukan lagi. Pengajuan yang ditolak kembali ke draf biasa, boleh diperbaiki lalu diajukan lagi.
+- **Data**: `approval_requested_at/by`, `approved_at/by` di `events` (migrasi `drizzle/0059_event_approval.sql`). Migrasi itu menandai acara yang sudah tampil atau terjadwal sebagai disetujui. Draf lama tetap belum disetujui, jadi pemegang modul Kegiatan perlu mengajukannya, atau BPH Kabinet menerbitkannya langsung. Acara yang dibatalkan hanya bisa diaktifkan lagi oleh BPH Kabinet.
+- **Tampilan**: `eventStatusChip` dan `eventPreparationNote` di `src/lib/event-stage.ts`; panel di `src/components/console/event-approval-panel.tsx`, di bagian Status & Publikasi. Aturan murninya diperiksa `npm run check:event-approval`.
+
+Di dashboard, "Kegiatan masih draf" untuk full admin hanya menghitung draf yang sudah disetujui, supaya draf percobaan bukan pekerjaan BPH sampai diajukan.
 
 ### CRUD & siklus hidup acara
 

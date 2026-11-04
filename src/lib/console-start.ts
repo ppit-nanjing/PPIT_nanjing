@@ -34,6 +34,13 @@ export function buildStartGuide(a: NavAccess): { modules: StartModule[]; steps: 
       href: "/console/events",
       cta: "Buka Kegiatan",
     });
+  } else if (a.canCreateEvent) {
+    tasks.push({
+      title: "Coba buat acara sebagai draf",
+      why: "Draf belum tampil di situs publik, jadi aman untuk dicoba. Kalau idenya sudah matang, ajukan ke BPH Kabinet supaya bisa diterbitkan.",
+      href: "/console/events",
+      cta: "Buka Kegiatan",
+    });
   }
   if (has("inventory")) {
     tasks.push({

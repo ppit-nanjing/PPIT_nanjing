@@ -1,6 +1,6 @@
 import { cache } from "react";
 import { notFound, redirect } from "next/navigation";
-import { and, asc, eq, isNull, or, sql } from "drizzle-orm";
+import { and, asc, eq, isNotNull, isNull, or, sql } from "drizzle-orm";
 import { auth } from "@/auth";
 import { db } from "@/db";
 import { departmentMembers, departments, eventCommittee, eventResponsibleDepartments, events, forms, sensusProfiles, users } from "@/db/schema";
@@ -176,9 +176,10 @@ async function canManageSurvey(
 
 // Acara yang boleh dipakai koordinator untuk membuat form Oprek BPH: acara
 // yang divisinya tercatat sebagai Divisi Penanggung Jawab, atau yang dia buat
-// sendiri. `null` = tanpa batas (full / modul forms). Tanpa batas ini koor
-// divisi mana pun bisa membuka Oprek BPH untuk acara divisi lain lalu
-// (sebagai pembuat form) menempatkan pelamar — termasuk dirinya — jadi ketua.
+// sendiri dan sudah disetujui BPH Kabinet. `null` = tanpa batas (full / modul
+// forms). Tanpa batas ini koor divisi mana pun bisa membuka Oprek BPH untuk acara
+// divisi lain lalu (sebagai pembuat form) menempatkan pelamar — termasuk dirinya —
+// jadi ketua. Syarat disetujui menutup jalan yang sama lewat draf buatan sendiri.
 export async function getCoordinatorEventIds(access: FormsAccess): Promise<string[] | null> {
   if (access.isFull || access.canForms) return null;
   const rows = await db
@@ -188,7 +189,7 @@ export async function getCoordinatorEventIds(access: FormsAccess): Promise<strin
       and(
         isNull(events.deletedAt),
         or(
-          eq(events.createdBy, access.userId),
+          and(eq(events.createdBy, access.userId), isNotNull(events.approvedAt)),
           sql`exists (
             select 1 from ${eventResponsibleDepartments} erd
             join ${departmentMembers} dm on dm.department_id = erd.department_id

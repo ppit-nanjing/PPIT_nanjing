@@ -7,7 +7,13 @@ import { useRef } from "react";
 // penolakan peminjaman. Di dalam <details> supaya tidak butuh state per baris; kolom alasan tidak diberi
 // `required` (kolom di <details> tertutup memblokir tombol Setujui secara diam-diam), jadi validasinya
 // dilakukan di tombol tolak.
-export function RejectWithReason({ disabled }: { disabled?: boolean }) {
+export function RejectWithReason({
+  disabled,
+  placeholder = "mis. Barang serupa sudah cukup di gudang",
+}: {
+  disabled?: boolean;
+  placeholder?: string;
+}) {
   const taRef = useRef<HTMLTextAreaElement>(null);
 
   return (
@@ -28,7 +34,7 @@ export function RejectWithReason({ disabled }: { disabled?: boolean }) {
             name="reason"
             rows={2}
             maxLength={300}
-            placeholder="mis. Barang serupa sudah cukup di gudang"
+            placeholder={placeholder}
             onInput={(e) => e.currentTarget.setCustomValidity("")}
             className="w-full rounded-md bg-soft-gray p-2.5 text-body-md focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-container"
           />

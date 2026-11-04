@@ -23,6 +23,9 @@ export type EventAuditAction =
   | "event.restored"
   | "event.deleted"
   | "event.takeover"
+  | "event.approval_requested"
+  | "event.approved"
+  | "event.approval_rejected"
   | "registration.cancelled"
   | "registration.restored"
   | "checkin.undone"
@@ -73,6 +76,9 @@ export const EVENT_AUDIT_ACTION_LABEL: Record<EventAuditAction, string> = {
   "event.restored": "Acara dipulihkan dari Sampah",
   "event.deleted": "Acara dihapus permanen",
   "event.takeover": "Acara diambil alih BPH",
+  "event.approval_requested": "Acara diajukan ke BPH Kabinet",
+  "event.approved": "Acara disetujui BPH Kabinet",
+  "event.approval_rejected": "Pengajuan acara ditolak",
   "registration.cancelled": "Pendaftaran peserta dibatalkan",
   "registration.restored": "Pendaftaran peserta dipulihkan",
   "checkin.undone": "Check-in dibatalkan",

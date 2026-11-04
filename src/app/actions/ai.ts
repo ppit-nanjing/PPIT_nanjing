@@ -25,7 +25,8 @@ export async function improveTextAction(text: string, context: ImproveContext): 
   if (!session?.user?.id) throw new Error("Kamu harus masuk untuk menggunakan fitur ini");
 
   const requiredModule = CONTEXT_MODULE[context];
-  if (requiredModule && !hasModuleAccess(session.user.adminScope, requiredModule)) {
+  const eventCreator = context === "event" && session.user.canCreateEvent;
+  if (requiredModule && !eventCreator && !hasModuleAccess(session.user.adminScope, requiredModule)) {
     throw new Error("Kamu tidak punya akses untuk memproses teks ini");
   }
 
@@ -45,7 +46,7 @@ const MAX_DESCRIPTION_HTML = 8000;
 export async function improveEventDescriptionAction(html: string): Promise<string> {
   const session = await auth();
   if (!session?.user?.id) throw new Error("Kamu harus masuk untuk menggunakan fitur ini");
-  if (!hasModuleAccess(session.user.adminScope, "events")) {
+  if (!session.user.canCreateEvent && !hasModuleAccess(session.user.adminScope, "events")) {
     throw new Error("Kamu tidak punya akses untuk memproses teks ini");
   }
 
@@ -142,7 +143,8 @@ export async function suggestContentAction(
   const session = await auth();
   if (!session?.user?.id) throw new Error("Kamu harus masuk untuk menggunakan fitur ini");
   const required = context === "event" ? "events" : "content";
-  if (!hasModuleAccess(session.user.adminScope, required)) throw new Error("Kamu tidak punya akses");
+  const eventCreator = context === "event" && session.user.canCreateEvent;
+  if (!eventCreator && !hasModuleAccess(session.user.adminScope, required)) throw new Error("Kamu tidak punya akses");
 
   const text = Object.entries(fields)
     .map(([k, v]) => `${k}: ${v?.toString().trim() || "(kosong)"}`)

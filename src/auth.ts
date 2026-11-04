@@ -71,6 +71,7 @@ function getRememberMePreference(user: unknown): boolean | undefined {
 type SessionContext = {
   accessTier: string | null;
   roleName: string | null;
+  status: string | null;
   emailSubscribed: boolean | null;
   locale: string | null;
   // Kepala unit (departments.head_user_id = user ini) — dipakai isCoordinator
@@ -87,6 +88,7 @@ async function loadSessionContext(userId: string): Promise<SessionContext | null
   const result = await db.execute<SessionContext>(sql`
     select r.access_tier as "accessTier",
            r.name as "roleName",
+           u.status as "status",
            u.email_subscribed as "emailSubscribed",
            u.locale as "locale",
            -- Kepala unit dicek langsung ke departments, bukan lewat join
@@ -319,6 +321,7 @@ const { handlers, auth: uncachedAuth, signIn, signOut } = NextAuth({
         session.user.isBphCommittee = false;
         session.user.isEventKadiv = false;
         session.user.canCreateSurvey = false;
+        session.user.canCreateEvent = false;
         session.user.rantingCode = null;
         session.user.emailSubscribed = null;
         session.user.locale = null;
@@ -336,6 +339,9 @@ const { handlers, auth: uncachedAuth, signIn, signOut } = NextAuth({
       session.user.isEventKadiv = (ctx.committeeRoles ?? []).includes("kadiv");
       // Menu Formulir: pengurus kabinet (punya baris department_members), panitia, atau admin penuh.
       session.user.canCreateSurvey = scope === "full" || ctx.memberships.length > 0 || ctx.isCommittee === true;
+      // Membuat draf acara: pengurus kabinet (bukan panitia dari luar kabinet, bukan ranting) atau admin penuh.
+      session.user.canCreateEvent =
+        ctx.status === "active" && !rantingCodeFromRoleName(ctx.roleName) && (scope === "full" || ctx.memberships.length > 0);
       session.user.isBphCommittee = (ctx.committeeRoles ?? []).some((role) =>
         isBphPanitiaRole(role as EventCommitteeRole),
       );

@@ -14,6 +14,7 @@ function NavContent({
   isBphCommittee = false,
   isCoordinator = false,
   canCreateSurvey = false,
+  canCreateEvent = false,
   pathname,
   onNavigate,
   collapsed = false,
@@ -23,6 +24,7 @@ function NavContent({
   isBphCommittee?: boolean;
   isCoordinator?: boolean;
   canCreateSurvey?: boolean;
+  canCreateEvent?: boolean;
   pathname: string;
   onNavigate: () => void;
   collapsed?: boolean;
@@ -34,7 +36,7 @@ function NavContent({
     <nav className={`flex-1 py-2 overflow-y-auto ${collapsed ? "px-2" : ""}`}>
       {NAV_GROUPS.map((group) => {
         const items = group.items.filter((i) =>
-          canSeeNavItem(i, { scope, isCommittee, isBphCommittee, isCoordinator, canCreateSurvey }),
+          canSeeNavItem(i, { scope, isCommittee, isBphCommittee, isCoordinator, canCreateSurvey, canCreateEvent }),
         );
         if (items.length === 0) return null;
         return (
@@ -84,6 +86,7 @@ export function ConsoleSidebar({
   isBphCommittee = false,
   isCoordinator = false,
   canCreateSurvey = false,
+  canCreateEvent = false,
 }: {
   userName: string;
   scope: "full" | string[] | null;
@@ -91,6 +94,7 @@ export function ConsoleSidebar({
   isBphCommittee?: boolean;
   isCoordinator?: boolean;
   canCreateSurvey?: boolean;
+  canCreateEvent?: boolean;
 }) {
   const [open, setOpen] = useState(false);
   // Lipat = rail ikon saja di desktop. Pilihan diingat per browser supaya
@@ -147,7 +151,7 @@ export function ConsoleSidebar({
             {collapsed ? <PanelLeftOpen size={18} /> : <PanelLeftClose size={18} />}
           </button>
         </div>
-        <NavContent scope={scope} isCommittee={isCommittee} isBphCommittee={isBphCommittee} isCoordinator={isCoordinator} canCreateSurvey={canCreateSurvey} pathname={pathname} onNavigate={() => {}} collapsed={collapsed} />
+        <NavContent scope={scope} isCommittee={isCommittee} isBphCommittee={isBphCommittee} isCoordinator={isCoordinator} canCreateSurvey={canCreateSurvey} canCreateEvent={canCreateEvent} pathname={pathname} onNavigate={() => {}} collapsed={collapsed} />
         <Link
           href="/"
           title={collapsed ? "Kembali ke Situs" : undefined}
@@ -190,7 +194,7 @@ export function ConsoleSidebar({
                 <X size={22} />
               </button>
             </div>
-            <NavContent scope={scope} isCommittee={isCommittee} isBphCommittee={isBphCommittee} isCoordinator={isCoordinator} canCreateSurvey={canCreateSurvey} pathname={pathname} onNavigate={() => setOpen(false)} />
+            <NavContent scope={scope} isCommittee={isCommittee} isBphCommittee={isBphCommittee} isCoordinator={isCoordinator} canCreateSurvey={canCreateSurvey} canCreateEvent={canCreateEvent} pathname={pathname} onNavigate={() => setOpen(false)} />
             <Link
               href="/"
               onClick={() => setOpen(false)}

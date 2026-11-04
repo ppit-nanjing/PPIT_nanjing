@@ -29,7 +29,7 @@ Dashboard & seluruh `/admin/*` di-gate oleh role (`ROLE` bukan `member`) via mid
 
 ## Akses per modul
 
-Layout `/console` hanya memeriksa "boleh masuk konsol sama sekali" (admin, koordinator divisi, atau panitia acara), jadi `src/app/console/page.tsx` menyaring sendiri. Setiap kartu angka, baris "Perlu Perhatian", pintasan "Aksi Cepat", dan sumber "Aktivitas Terbaru" milik tepat satu modul, dan query-nya hanya dijalankan kalau pemakai memegang modul itu (`hasModuleAccess()`):
+Layout `/console` hanya memeriksa "boleh masuk konsol sama sekali" (admin, koordinator divisi, panitia acara, atau pengurus kabinet yang boleh membuat draf acara), jadi `src/app/console/page.tsx` menyaring sendiri. Setiap kartu angka, baris "Perlu Perhatian", pintasan "Aksi Cepat", dan sumber "Aktivitas Terbaru" milik tepat satu modul, dan query-nya hanya dijalankan kalau pemakai memegang modul itu (`hasModuleAccess()`):
 
 | Bagian dashboard | Modul |
 | --- | --- |

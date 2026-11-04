@@ -21,7 +21,7 @@ import { EventQuestionFields } from "@/components/events/event-question-fields";
 import { EventShareLinks } from "@/components/console/event-share-links";
 import { isSheetsConfigured } from "@/lib/google-sheets";
 import { getSiteOrigin } from "@/lib/site";
-import { EVENT_COMMITTEE_ROLE_LABEL } from "@/lib/event-capabilities";
+import { EVENT_COMMITTEE_ROLE_LABEL, eventApprovalState } from "@/lib/event-capabilities";
 import { canEditCommitteeEvaluation, canReadCommitteeEvaluation, requireEventConsoleAccess } from "@/lib/event-access";
 import { EVENT_STATUS_LABEL as STATUS_LABEL } from "@/lib/event-status-labels";
 import { EVENT_AUDIT_ACTION_LABEL, type EventAuditAction } from "@/lib/event-audit";
@@ -52,6 +52,7 @@ import { committeeEvalWindowState } from "@/lib/committee-evaluation";
 import { qualifiesForParticipantCertificate } from "@/lib/certificate-eligibility";
 import { EventAdminPanel, type EventPanelTab } from "@/components/console/event-admin-panel";
 import { EventConsoleHeader } from "@/components/console/event-console-header";
+import { EventApprovalPanel } from "@/components/console/event-approval-panel";
 import { eventDayLabel, eventLifecycle, eventStage, eventStatusChip, eventTimeLabel } from "@/lib/event-stage";
 import { Download, Eye, Images } from "lucide-react";
 
@@ -305,7 +306,8 @@ export default async function ConsoleEventDetailPage({ params }: { params: Promi
 
   // Divisi kabinet penanggung jawab acara (proker) — tabel kecil, dimuat untuk
   // semua yang bisa membuka konsol acara (read-only bila tak boleh mengubah).
-  const [allDepartments, responsibleRows] = await Promise.all([
+  const approvalState = eventApprovalState(event);
+  const [allDepartments, responsibleRows, approvalRequester, lastRejection] = await Promise.all([
     db
       .select({ id: departments.id, name: departments.name, parentId: departments.parentDepartmentId })
       .from(departments)
@@ -314,6 +316,23 @@ export default async function ConsoleEventDetailPage({ params }: { params: Promi
       .select({ departmentId: eventResponsibleDepartments.departmentId })
       .from(eventResponsibleDepartments)
       .where(eq(eventResponsibleDepartments.eventId, id)),
+    event.approvalRequestedBy
+      ? db
+          .select({ name: users.name })
+          .from(users)
+          .where(eq(users.id, event.approvalRequestedBy))
+          .then((r) => r[0]?.name ?? null)
+      : Promise.resolve(null),
+    // Menolak mengosongkan kolom pengajuan, jadi alasannya dibaca dari riwayat.
+    approvalState === "belum" && event.status === "draft"
+      ? db
+          .select({ after: auditLogs.afterJson })
+          .from(auditLogs)
+          .where(and(eq(auditLogs.entityType, "event"), eq(auditLogs.entityId, id), eq(auditLogs.action, "event.approval_rejected")))
+          .orderBy(desc(auditLogs.createdAt))
+          .limit(1)
+          .then((r) => (r[0]?.after as { reason?: string } | null)?.reason ?? null)
+      : Promise.resolve(null),
   ]);
 
   // QR tautan pendek digenerate server-side (sama seperti /console/links);
@@ -501,7 +520,10 @@ export default async function ConsoleEventDetailPage({ params }: { params: Promi
 
   // ===== Kepala halaman & panel admin =====
   const stage = eventStage(event);
-  const chip = eventStatusChip(event.status, stage);
+  const chip = eventStatusChip(event, stage);
+  const canRequestApproval = can("event.publish") && !access.isFullAdmin;
+  const approvalNeedsAction =
+    approvalState === "diajukan" ? can("event.approve") : approvalState === "belum" && event.status === "draft" && canRequestApproval;
   const isPubliclyVisible = event.status === "published" || event.status === "registration_closed" || event.status === "completed";
   const canSeePayments = canVerifyPayments && event.isPaid;
   const canManageVolunteers = can("event.manageVolunteers");
@@ -583,10 +605,25 @@ export default async function ConsoleEventDetailPage({ params }: { params: Promi
           hasPublicSettings ? (
         <div className={SECTION_GROUP}>
       {/* Status & publikasi. Buka/tutup pendaftaran = fitur DASAR; ganti status
-          lain = wewenang BPH Panitia (event.publish). */}
+          lain = wewenang BPH Panitia (event.publish), setelah disetujui BPH Kabinet. */}
       {(can("event.publish") || can("event.registrationToggle")) && (
-      <CollapsibleSection title="Status & Publikasi" description={STATUS_LABEL[event.status] ?? event.status}>
-        {can("event.publish") ? (
+      <CollapsibleSection
+        title="Status & Publikasi"
+        description={event.status === "draft" ? chip.label : STATUS_LABEL[event.status] ?? event.status}
+        defaultOpen={approvalNeedsAction}
+      >
+        <div className="flex flex-col gap-4">
+        <EventApprovalPanel
+          eventId={id}
+          state={approvalState}
+          isDraft={event.status === "draft"}
+          canRequest={canRequestApproval}
+          canReview={can("event.approve")}
+          requestedBy={approvalRequester}
+          requestedAt={event.approvalRequestedAt ? eventDayLabel(event.approvalRequestedAt, "long") : null}
+          rejectionReason={lastRejection}
+        />
+        {access.canRelease ? (
           <form action={setEventStatus} className="flex flex-wrap items-end gap-3">
             <input type="hidden" name="eventId" value={id} />
             <label className="flex flex-col gap-1 min-w-[12rem]">
@@ -623,11 +660,14 @@ export default async function ConsoleEventDetailPage({ params }: { params: Promi
               {event.status === "published" ? "Tutup Pendaftaran" : "Buka Pendaftaran"}
             </SubmitButton>
           </form>
-        ) : (
+        ) : !can("event.publish") ? (
           <p className="text-body-md text-on-surface-variant">
             Pendaftaran hanya bisa dibuka/tutup saat acara sudah dipublikasikan.
           </p>
-        )}
+        ) : event.status !== "draft" ? (
+          <p className="text-body-md text-on-surface-variant">Hanya BPH Kabinet yang bisa mengaktifkan lagi acara ini.</p>
+        ) : null}
+        </div>
       </CollapsibleSection>
       )}
       {/* Info & pengaturan acara — wewenang BPH Panitia (event.editInfo). */}
@@ -798,13 +838,19 @@ export default async function ConsoleEventDetailPage({ params }: { params: Promi
               </div>
               <div className="flex flex-col gap-1">
                 <span className="text-label-caps uppercase tracking-wide text-on-surface-variant">Jadwal rilis publikasi (opsional)</span>
-                <input
-                  name="scheduledPublishAt"
-                  type="datetime-local"
-                  defaultValue={event.scheduledPublishAt ? toDateLocalInput(new Date(event.scheduledPublishAt)) : ""}
-                  className="bg-soft-gray rounded-md p-3 text-body-md"
-                />
-                <p className="text-xs text-on-surface-variant">Acara terbit sendiri pada waktu ini. Kosong = tetap Draf sampai dipublikasikan manual.</p>
+                {access.canRelease ? (
+                  <>
+                    <input
+                      name="scheduledPublishAt"
+                      type="datetime-local"
+                      defaultValue={event.scheduledPublishAt ? toDateLocalInput(new Date(event.scheduledPublishAt)) : ""}
+                      className="bg-soft-gray rounded-md p-3 text-body-md"
+                    />
+                    <p className="text-xs text-on-surface-variant">Acara terbit sendiri pada waktu ini. Kosong = tetap Draf sampai dipublikasikan manual.</p>
+                  </>
+                ) : (
+                  <p className="text-body-sm text-on-surface-variant">Bisa diatur setelah acara disetujui BPH Kabinet.</p>
+                )}
               </div>
             </div>
           </details>
@@ -1120,8 +1166,9 @@ export default async function ConsoleEventDetailPage({ params }: { params: Promi
       </CollapsibleSection>
       )}
       {/* Tautan pendek pendaftaran & evaluasi — fitur DASAR: bisa dibuat
-          sekali klik di sini, tanpa membuka modul Tautan. */}
-      {can("event.editContent") && (
+          sekali klik di sini, tanpa membuka modul Tautan. Judulnya tampil di
+          direktori publik /l, jadi baru muncul setelah acara disetujui. */}
+      {can("event.editContent") && (access.approved || access.isFullAdmin) && (
       <CollapsibleSection
         title="Tautan Pendaftaran & Evaluasi"
         description={daftarShareLink && evaluasiShareLink ? "Tautan pendek & QR sudah dibuat" : "Belum ada tautan pendek"}
@@ -1831,6 +1878,12 @@ export default async function ConsoleEventDetailPage({ params }: { params: Promi
             </p>
           </div>
           <DeleteEventButton eventId={id} label="Pindahkan ke Sampah" />
+        </section>
+      )}
+      {access.canDeleteOwnDraft && (
+        <section className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-error/30 bg-surface-container-lowest p-5">
+          <p className="min-w-0 text-body-md font-medium text-on-background">Hapus draf ini</p>
+          <DeleteEventButton eventId={id} label="Hapus Draf" ownDraft />
         </section>
       )}
       </div>

@@ -17,7 +17,7 @@ export default async function FormulirHubPage({ searchParams }: { searchParams: 
   const { error } = await searchParams;
   // Yang masuk konsol kembali ke tab Formulir; pengurus yang tidak masuk konsol ke beranda.
   const user = (await auth())?.user;
-  const inConsole = Boolean(user?.isAdmin || user?.isCoordinator || user?.isCommittee);
+  const inConsole = Boolean(user?.isAdmin || user?.isCoordinator || user?.isCommittee || user?.canCreateEvent);
   const [surveys, events] = await Promise.all([listManageableSurveys(sa), listSurveyEvents(sa)]);
 
   return (

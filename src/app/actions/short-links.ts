@@ -248,13 +248,15 @@ export async function createManagementPeriod(
 //  - pencocokan tautan lama memakai AKHIRAN path, bukan URL penuh, supaya
 //    tautan absolute lama (domain lama) tetap dikenali dan tidak dobel.
 // Gerbangnya `event.editContent` (fitur dasar semua panitia acara); barisnya
-// tetap tercatat di /console/links seperti tautan lain.
+// tetap tercatat di /console/links seperti tautan lain. Judul tautan langsung tampil
+// di direktori publik /l, jadi acaranya harus sudah disetujui BPH Kabinet dulu.
 export type EventShortLinkInfo = { slug: string; shortUrl: string; qrDataUrl: string; created: boolean };
 
 export async function ensureEventShortLinks(
   eventId: string,
 ): Promise<{ daftar: EventShortLinkInfo; evaluasi: EventShortLinkInfo }> {
-  const { session } = await requireEventCapability(eventId, "event.editContent");
+  const { session, approved, isFullAdmin } = await requireEventCapability(eventId, "event.editContent");
+  if (!approved && !isFullAdmin) throw new Error("Tautan pendek bisa dibuat setelah acara disetujui BPH Kabinet.");
 
   const [event] = await db
     .select({ slug: events.slug, title: events.title })

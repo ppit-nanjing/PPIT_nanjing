@@ -10,6 +10,7 @@
     "check:mrz": "tsx scripts/check-mrz.ts",
     "test": "tsx scripts/check-mrz.ts",
     "check:contrast": "tsx scripts/check-contrast.ts",
+    "check:event-approval": "tsx scripts/check-event-approval.ts",
     "check:drift": "tsx --env-file=.env scripts/check-schema-drift.ts",
     "postinstall": "node scripts/copy-ocr-assets.mjs",
     "db:push": "drizzle-kit push",

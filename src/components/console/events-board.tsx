@@ -14,7 +14,7 @@ import { EventStatusMark, type EventStatusTone } from "@/components/console/even
 // bersampul, kegiatan lampau abu-abu) ditambah yang hanya perlu panitia: acara yang masih
 // disiapkan, kuota, dan aksi per acara. Semua label & tanggal dihitung di server.
 
-export type EventBoardGroup = "datang" | "disiapkan" | "selesai";
+export type EventBoardGroup = "menunggu" | "datang" | "disiapkan" | "selesai";
 
 export type BoardEvent = {
   id: string;
@@ -31,7 +31,7 @@ export type BoardEvent = {
   dayLabel: string | null;
   timeLabel: string | null;
   countdownLabel: string | null;
-  scheduledLabel: string | null;
+  preparationNote: string;
   registered: number;
   attended: number;
   capacity: number | null;
@@ -40,12 +40,14 @@ export type BoardEvent = {
   isPublic: boolean;
   canMoveToDraft: boolean;
   canDelete: boolean;
+  deleteAsOwner: boolean;
 };
 
-const PAST_PREVIEW = 6;
+const CARD_PREVIEW = 6;
 
 const FILTERS: { key: "semua" | EventBoardGroup; label: string }[] = [
   { key: "semua", label: "Semua" },
+  { key: "menunggu", label: "Menunggu Persetujuan" },
   { key: "datang", label: "Akan Datang" },
   { key: "disiapkan", label: "Disiapkan" },
   { key: "selesai", label: "Sudah Lewat" },
@@ -59,7 +61,7 @@ function seatsLine(event: BoardEvent): string {
       ? `${event.finalAttendeeCount} hadir`
       : `${event.attended} hadir · ${event.registered} terdaftar`;
   }
-  if (event.group === "disiapkan") return event.scheduledLabel ?? "Rilis belum dijadwalkan";
+  if (event.group === "menunggu" || event.group === "disiapkan") return event.preparationNote;
   return event.capacity != null ? `${event.registered} / ${event.capacity} terdaftar` : `${event.registered} terdaftar`;
 }
 
@@ -146,7 +148,8 @@ function EventMenu({ event }: { event: BoardEvent }) {
           {event.canDelete && (
             <DeleteEventButton
               eventId={event.id}
-              label="Pindahkan ke Sampah"
+              label={event.deleteAsOwner ? "Hapus Draf" : "Pindahkan ke Sampah"}
+              ownDraft={event.deleteAsOwner}
               className={`${item} text-error hover:bg-error-container/30`}
             />
           )}
@@ -262,16 +265,46 @@ function BoardSection({ title, children }: { title: string; children: React.Reac
   );
 }
 
+function CardGrid({ events }: { events: BoardEvent[] }) {
+  return (
+    <div className={GRID}>
+      {events.map((event) => (
+        <EventBoardCard key={event.id} event={event} />
+      ))}
+    </div>
+  );
+}
+
+function CappedCardGrid({ events, showAll }: { events: BoardEvent[]; showAll: boolean }) {
+  const [expanded, setExpanded] = useState(false);
+  const shown = showAll || expanded ? events : events.slice(0, CARD_PREVIEW);
+  return (
+    <>
+      <CardGrid events={shown} />
+      {shown.length < events.length && (
+        <button
+          type="button"
+          onClick={() => setExpanded(true)}
+          className="self-start rounded-md border border-outline-variant px-4 py-2 text-label-caps uppercase tracking-wide text-on-background transition-colors hover:bg-surface-container-low"
+        >
+          Tampilkan Semua ({events.length})
+        </button>
+      )}
+    </>
+  );
+}
+
 export function EventsBoard({ events, emptyText }: { events: BoardEvent[]; emptyText: string }) {
-  const [filter, setFilter] = useState<(typeof FILTERS)[number]["key"]>("semua");
+  const [chosenFilter, setFilter] = useState<(typeof FILTERS)[number]["key"]>("semua");
   const [query, setQuery] = useState("");
-  const [showAllPast, setShowAllPast] = useState(false);
 
   const counts = useMemo(() => {
-    const result: Record<(typeof FILTERS)[number]["key"], number> = { semua: events.length, datang: 0, disiapkan: 0, selesai: 0 };
+    const result: Record<(typeof FILTERS)[number]["key"], number> = { semua: events.length, menunggu: 0, datang: 0, disiapkan: 0, selesai: 0 };
     for (const event of events) result[event.group] += 1;
     return result;
   }, [events]);
+  // Tab Menunggu hilang saat antreannya habis, jadi pilihannya tidak boleh tertinggal.
+  const filter = chosenFilter === "menunggu" && counts.menunggu === 0 ? "semua" : chosenFilter;
 
   const needle = query.trim().toLowerCase();
   const visible = useMemo(
@@ -288,11 +321,13 @@ export function EventsBoard({ events, emptyText }: { events: BoardEvent[]; empty
     return <p className="rounded-lg border border-dashed border-outline-variant p-6 text-body-md text-on-surface-variant">{emptyText}</p>;
   }
 
+  const awaiting = visible.filter((event) => event.group === "menunggu");
   const upcoming = visible.filter((event) => event.group === "datang");
   const preparing = visible.filter((event) => event.group === "disiapkan");
   const past = visible.filter((event) => event.group === "selesai");
   const [featured, ...otherUpcoming] = upcoming;
-  const shownPast = showAllPast || needle || filter === "selesai" ? past : past.slice(0, PAST_PREVIEW);
+  // Tampilan yang sudah disaring atau dicari tidak perlu dipotong lagi.
+  const showAll = !!needle || filter !== "semua";
 
   return (
     <div className="flex flex-col gap-10">
@@ -302,7 +337,7 @@ export function EventsBoard({ events, emptyText }: { events: BoardEvent[]; empty
           aria-label="Saring kegiatan"
           className="flex min-w-0 gap-1 overflow-x-auto overflow-y-hidden border-b border-outline-variant xl:border-b-0"
         >
-          {FILTERS.map((option) => (
+          {FILTERS.filter((option) => option.key !== "menunggu" || counts.menunggu > 0).map((option) => (
             <button
               key={option.key}
               type="button"
@@ -337,6 +372,12 @@ export function EventsBoard({ events, emptyText }: { events: BoardEvent[]; empty
         </p>
       )}
 
+      {awaiting.length > 0 && (
+        <BoardSection title="Menunggu Persetujuan BPH">
+          <CardGrid events={awaiting} />
+        </BoardSection>
+      )}
+
       {featured && (
         <BoardSection title="Terdekat">
           <FeaturedEventCard event={featured} />
@@ -345,40 +386,19 @@ export function EventsBoard({ events, emptyText }: { events: BoardEvent[]; empty
 
       {otherUpcoming.length > 0 && (
         <BoardSection title="Akan Datang">
-          <div className={GRID}>
-            {otherUpcoming.map((event) => (
-              <EventBoardCard key={event.id} event={event} />
-            ))}
-          </div>
+          <CardGrid events={otherUpcoming} />
         </BoardSection>
       )}
 
       {preparing.length > 0 && (
         <BoardSection title="Sedang Disiapkan">
-          <div className={GRID}>
-            {preparing.map((event) => (
-              <EventBoardCard key={event.id} event={event} />
-            ))}
-          </div>
+          <CappedCardGrid events={preparing} showAll={showAll} />
         </BoardSection>
       )}
 
       {past.length > 0 && (
         <BoardSection title="Sudah Lewat">
-          <div className={GRID}>
-            {shownPast.map((event) => (
-              <EventBoardCard key={event.id} event={event} />
-            ))}
-          </div>
-          {shownPast.length < past.length && (
-            <button
-              type="button"
-              onClick={() => setShowAllPast(true)}
-              className="self-start rounded-md border border-outline-variant px-4 py-2 text-label-caps uppercase tracking-wide text-on-background transition-colors hover:bg-surface-container-low"
-            >
-              Tampilkan Semua ({past.length})
-            </button>
-          )}
+          <CappedCardGrid events={past} showAll={showAll} />
         </BoardSection>
       )}
     </div>
