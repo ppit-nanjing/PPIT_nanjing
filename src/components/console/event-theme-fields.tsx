@@ -7,9 +7,9 @@ const HEX = /^#[0-9a-fA-F]{6}$/;
 type Row = { name: string; label: string; hint: string };
 
 const ROWS: Row[] = [
-  { name: "themeBg", label: "Latar halaman", hint: "Warna terang — mis. krem poster. Jadi latar halaman acara (mode terang)." },
-  { name: "themeAccent", label: "Aksen utama", hint: "Kartu, garis timeline agenda, chip di hero." },
-  { name: "themeAccent2", label: "Aksen kedua", hint: "Kartu samping (tanggal/lokasi/daftar)." },
+  { name: "themeBg", label: "Latar halaman", hint: "Warna terang. Hanya berlaku di mode terang." },
+  { name: "themeAccent", label: "Aksen utama", hint: "Kartu, timeline agenda, chip." },
+  { name: "themeAccent2", label: "Aksen kedua", hint: "Kartu samping." },
 ];
 
 export function EventThemeFields({
@@ -31,10 +31,7 @@ export function EventThemeFields({
     <div className="flex flex-col gap-3 rounded-lg border border-outline-variant p-4">
       <div className="flex flex-col gap-0.5">
         <span className="text-label-caps uppercase tracking-wide text-primary-container">Warna Halaman (opsional)</span>
-        <p className="text-xs text-on-surface-variant">
-          Bikin halaman acara senada dengan poster. Kosongkan ketiganya = pakai tema situs biasa. Tombol daftar
-          tetap warna situs (biar kontras aman).
-        </p>
+        <p className="text-xs text-on-surface-variant">Isi ketiganya, atau kosongkan untuk memakai tema situs.</p>
       </div>
 
       {ROWS.map((r) => {
@@ -55,7 +52,7 @@ export function EventThemeFields({
                 name={r.name}
                 value={v}
                 onChange={(e) => set(r.name, e.target.value.trim())}
-                placeholder="#RRGGBB — kosongkan untuk pakai tema situs"
+                placeholder="#RRGGBB"
                 className={`flex-1 rounded-md bg-soft-gray p-2.5 text-body-md ${valid ? "" : "ring-2 ring-error"}`}
               />
             </div>

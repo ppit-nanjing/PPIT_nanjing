@@ -14,6 +14,22 @@
 | Guide: Event Coordination & QR Check-in | `guide_event_management_admin_console` |
 | Work Ledger — kepanitiaan, verifikasi pembayaran & sertifikat lintas-acara | `/console/work-ledger` |
 
+## Tampilan konsol (2026-11)
+
+**Daftar `/console/events`** sengaja mengikuti `/events`: acara terdekat tampil besar, sisanya kartu bersampul, kegiatan lampau abu-abu. Tambahan khusus panitia: kelompok **Sedang Disiapkan** (draf + terjadwal, belum tampil di publik), jumlah terdaftar dan bilah kuota, saringan per kelompok + pencarian, serta menu `⋯` per acara (buka halaman publik, jadikan draf, pindahkan ke Sampah). Kelompok dihitung dari `eventStage()` di `src/lib/event-stage.ts`, bukan langsung dari `events.status`: acara `published` yang tanggalnya sudah lewat masuk **Sudah Lewat**.
+
+**Detail `/console/events/[id]`** punya dua lapis:
+
+- **Kepala** (`event-console-header.tsx`): cermin kepala halaman publik (sampul, judul, tanggal, lokasi), lalu angka terdaftar, hadir, panitia, dan antrean keputusan, lalu lima tahap acara (Persiapan, Tayang, Berlangsung, Pasca-Acara, Terkunci) beserta tanggalnya. Tombol Scanner Check-in selalu di layar pertama.
+- **Panel Admin** (`event-admin-panel.tsx`) dengan tiga tab. Isi tiap bagian tidak berubah; hanya tempatnya:
+  - **Publik**: Status & Publikasi, Info & Pengaturan Acara, Deskripsi & Agenda, Pertanyaan Pendaftaran, Kategori Tarif, Tautan Pendaftaran & Evaluasi.
+  - **Internal**: Verifikasi Pembayaran, Pendaftar Volunteer, Daftar Pendaftar, Struktur Kepanitiaan, Reservasi Aset, Divisi Penanggung Jawab, Riwayat Audit.
+  - **Pasca-Acara**: Setelah Acara, Galeri Foto, Artikel Berita, Sertifikat Peserta & Panitia, Evaluasi Acara, Pertanyaan Evaluasi, Kredit / Arsip.
+
+Tab yang terbuka mengikuti tahap acara: Persiapan membuka Publik; Tayang dan Berlangsung membuka Internal; setelah itu Pasca-Acara. Kalau ada pembayaran atau volunteer menunggu keputusan, Internal didahulukan (kecuali saat Persiapan). Tab tersimpan di `?bagian=publik|internal|pasca`, jadi bisa dibagikan dan bertahan saat di-refresh. Isi semua tab tetap dirender server dengan gerbang `can()` yang sama; tab hanya mengatur yang terlihat, **bukan** batas akses. Menambah bagian baru: taruh di kelompok yang sesuai di `page.tsx`, dan isi `description`-nya dengan keadaan terkini (mis. "3 pertanyaan"), bukan penjelasan fungsi.
+
+Belum termasuk: hak menerbitkan acara yang diberikan BPH Kabinet. Saat ini `event.publish` masih melekat ke BPH Panitia, dan menyetel jadwal rilis saat membuat acara membuatnya terbit sendiri nanti.
+
 ## Fungsi
 
 ### CRUD & siklus hidup acara
@@ -41,7 +57,7 @@ Halaman `/events/[slug]` punya dua wajah. Pemicunya: status `completed` **atau**
 - **Pra-acara**: kapasitas `X / Y` + bar + sisa slot, tombol daftar, agenda di sidebar, form volunteer.
 - **Pasca-acara**: bar kapasitas & tombol daftar hilang, diganti "Acara ini sudah selesai."; agenda sidebar disembunyikan (timeline di kolom kiri tetap sebagai arsip); muncul bagian **Dokumentasi & Materi**; dan kotak **Isi Evaluasi** menuju kuesioner pasca-acara.
 
-Yang diisi panitia lewat form Edit acara → seksi **"4 · Setelah Acara"** (fitur dasar semua panitia acara; pemegang modul Kegiatan yang sudah di-scope ke acara itu juga bisa):
+Yang diisi panitia lewat Panel Admin → tab **Pasca-Acara** → **Setelah Acara** (fitur dasar semua panitia acara; pemegang modul Kegiatan yang sudah di-scope ke acara itu juga bisa):
 
 - **Jumlah Hadir (Final)** (`events.final_attendee_count`) — diketik manual, bukan dari check-in QR (acara Zoom/webinar sering tanpa pendaftaran portal). Kosong = halaman tetap memakai angka terdaftar.
 - **Rincian Kehadiran** (`events.attendance_note`) — teks bebas mis. "80 online · 40 offline".
