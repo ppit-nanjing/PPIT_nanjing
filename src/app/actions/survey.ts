@@ -1,15 +1,15 @@
 "use server";
 
-import { and, asc, count, eq, gt, isNull } from "drizzle-orm";
+import { and, asc, count, eq, gt, isNotNull, isNull } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { headers } from "next/headers";
 import { after } from "next/server";
 import { notFound, redirect } from "next/navigation";
 import { auth } from "@/auth";
 import { db } from "@/db";
-import { events, formFields, formResponses, forms, sensusProfiles, users } from "@/db/schema";
+import { auditLogs, events, formFields, formResponses, forms, sensusProfiles, users } from "@/db/schema";
 import { parseChinaLocalInput } from "@/lib/datetime";
-import { requireFormManage } from "@/lib/form-access";
+import { requireFormManage, requireTrashedFormManage } from "@/lib/form-access";
 import { deleteLiveSheet, isSheetsConfigured } from "@/lib/google-sheets";
 import { scheduleLiveSheetSync } from "@/lib/live-sheets";
 import { notifyCreatorOfResponse } from "@/lib/survey-notify";
@@ -107,7 +107,8 @@ export async function updateSurveySettings(formData: FormData) {
       title: title || form.title,
       description: description || null,
       confirmationMessage: confirmation || DEFAULT_CONFIRMATION,
-      isOpen: formData.get("isOpen") === "on",
+      // Formulir di Arsip tetap tertutup: keluarkan dari Arsip dulu.
+      isOpen: !form.archivedAt && formData.get("isOpen") === "on",
       allowPublic: formData.get("allowPublic") === "on",
       collectBiodata: formData.get("collectBiodata") === "on",
       opensAt,
@@ -123,10 +124,22 @@ export async function updateSurveySettings(formData: FormData) {
   revalidatePath(`/f/${form.id}`);
 }
 
-export async function deleteSurvey(formData: FormData) {
-  const form = await loadSurveyForManage(formData);
+// Hapus permanen: perilaku "Hapus" lama (migrasi 0058 memindahkan "Hapus" ke Sampah, lihat
+// form-lifecycle.ts). Hanya untuk formulir yang SUDAH di Sampah, dan hanya BPH Kabinet atau pemegang modul
+// Formulir: pembuat dan BPH Panitia cukup bisa memulihkannya.
+export async function deleteSurveyPermanently(formData: FormData) {
+  const { form, access } = await requireTrashedFormManage(String(formData.get("id") ?? ""));
+  if (form.kind !== "survei" || (!access.isFull && !access.canForms)) notFound();
+  // Dicatat SEBELUM dihapus; audit_logs.entity_id tidak ber-FK ke forms, jadi catatannya tetap ada.
+  await db.insert(auditLogs).values({
+    actorUserId: access.userId,
+    entityType: "form",
+    entityId: form.id,
+    action: "form.deleted",
+    afterJson: { title: form.title, kind: form.kind },
+  });
   // Pertanyaan dan semua jawaban ikut terhapus (cascade).
-  await db.delete(forms).where(eq(forms.id, form.id));
+  await db.delete(forms).where(and(eq(forms.id, form.id), isNotNull(forms.deletedAt)));
   // Google Sheet langsung (kalau ada) ikut dihapus di belakang respons: kalau tidak,
   // jawaban dan biodatanya tetap terbaca pembaca sheet sampai pembersihan 30 hari.
   if (isSheetsConfigured()) {
@@ -137,8 +150,8 @@ export async function deleteSurvey(formData: FormData) {
       }),
     );
   }
+  // Dipanggil dari bagian Sampah di daftar: cukup menyegarkan daftarnya (tanpa redirect, supaya toast tampil).
   revalidatePath("/formulir");
-  redirect("/formulir");
 }
 
 export async function deleteSurveyResponse(formData: FormData) {
@@ -191,7 +204,8 @@ export async function submitSurvey(formData: FormData) {
   const formId = String(formData.get("formId") ?? "");
   if (!UUID_RE.test(formId)) notFound();
   const [form] = await db.select().from(forms).where(and(eq(forms.id, formId), eq(forms.kind, "survei")));
-  if (!form) notFound();
+  // Formulir di Sampah dianggap tidak ada (halaman isi juga 404).
+  if (!form || form.deletedAt) notFound();
   const back = `/f/${form.id}`;
 
   // Acara di Sampah: formulir terkunci untuk semua orang (halaman isi juga 404).

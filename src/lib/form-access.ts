@@ -112,6 +112,18 @@ export async function requireKepanitiaanTab(): Promise<FormsAccess> {
 // BPH Acara sebuah acara boleh mengelola form oprek acara itu; pembuat form
 // (koor) boleh mengelola formnya sendiri; pemilu hanya full/modul.
 export async function canManageForm(
+  form: Pick<FormRow, "kind" | "eventId" | "createdBy" | "deletedAt">,
+  access?: FormsAccess | null,
+): Promise<boolean> {
+  // Formulir di Sampah terkunci untuk SEMUA orang (halaman kelola, ekspor, sheet, file): pulihkan
+  // dulu dari bagian Sampah. Aksi Sampah memakai canManageTrashedForm.
+  if (form.deletedAt) return false;
+  return canManageTrashedForm(form, access);
+}
+
+// Hak yang sama dengan canManageForm tanpa kunci Sampah: untuk melihat, memulihkan, dan menghapus
+// permanen formulir yang SUDAH di Sampah oleh orang yang dulu boleh mengelolanya.
+export async function canManageTrashedForm(
   form: Pick<FormRow, "kind" | "eventId" | "createdBy">,
   access?: FormsAccess | null,
 ): Promise<boolean> {
@@ -211,6 +223,18 @@ export async function requireFormManage(formId: string): Promise<{ form: FormRow
   const [form] = await db.select().from(forms).where(eq(forms.id, formId));
   if (!form) notFound();
   if (!(await canManageForm(form, access))) notFound();
+  return { form, access };
+}
+
+// Gerbang aksi Sampah (pulihkan, hapus permanen): formulir HARUS sudah di Sampah, dan pemakai harus
+// berhak mengelolanya. 404 untuk yang lain, supaya keberadaan formulir tidak bocor.
+export async function requireTrashedFormManage(formId: string): Promise<{ form: FormRow; access: FormsAccess }> {
+  const access = await getFormsAccess();
+  if (!access) redirect("/login");
+  if (!UUID_RE.test(formId)) notFound();
+  const [form] = await db.select().from(forms).where(eq(forms.id, formId));
+  if (!form || !form.deletedAt) notFound();
+  if (!(await canManageTrashedForm(form, access))) notFound();
   return { form, access };
 }
 

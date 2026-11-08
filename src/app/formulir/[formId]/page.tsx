@@ -12,7 +12,8 @@ import {
   moveFormField,
   updateFormField,
 } from "@/app/actions/forms";
-import { deleteSurvey, deleteSurveyResponse, updateSurveySettings } from "@/app/actions/survey";
+import { archiveForm, trashForm, unarchiveForm } from "@/app/actions/form-lifecycle";
+import { deleteSurveyResponse, updateSurveySettings } from "@/app/actions/survey";
 import { CheckboxField, Select, TextAreaField, TextField, ToggleSwitch } from "@/components/console/form";
 import { CollapsibleSection } from "@/components/console/collapsible-section";
 import { ConfirmButton } from "@/components/console/confirm-button";
@@ -131,6 +132,12 @@ export default async function SurveyManagePage({
             {form.isOpen
               ? "Formulir dibuka, tapi di luar rentang waktunya. Halaman isi menampilkan keterangan."
               : "Formulir masih ditutup. Buka lewat tab Pengaturan kalau pertanyaannya sudah siap, baru bagikan tautannya."}
+          </p>
+        )}
+        {form.archivedAt && (
+          <p role="status" className="mt-3 rounded-lg border border-outline-variant bg-surface-container-low px-4 py-3 text-body-md text-on-background">
+            Formulir ini diarsipkan: tertutup untuk pengisian, tapi jawabannya tetap bisa dibuka dan diekspor. Keluarkan dari Arsip
+            (di bagian paling bawah halaman ini) untuk memakainya lagi.
           </p>
         )}
       </header>
@@ -395,7 +402,12 @@ function SettingsTab({
             name="isOpen"
             label="Buka untuk pengisian"
             defaultChecked={form.isOpen}
-            hint="Kalau dimatikan, halaman isi menampilkan keterangan ditutup dan jawaban baru ditolak."
+            disabled={Boolean(form.archivedAt)}
+            hint={
+              form.archivedAt
+                ? "Formulir di Arsip tetap tertutup. Keluarkan dari Arsip dulu."
+                : "Kalau dimatikan, halaman isi menampilkan keterangan ditutup dan jawaban baru ditolak."
+            }
           />
           <ToggleSwitch
             name="allowPublic"
@@ -431,16 +443,51 @@ function SettingsTab({
         </form>
       </CollapsibleSection>
 
-      <CollapsibleSection title="Hapus formulir" description="Menghapus formulir beserta semua pertanyaan dan jawabannya." defaultOpen={false}>
-        <ConfirmButton
-          title="Hapus formulir?"
-          message={`"${form.title}" beserta SEMUA pertanyaan dan jawabannya (${responseCount}) dihapus permanen. Untuk sekadar menghentikan pengisian, matikan "Buka untuk pengisian" di Setelan.`}
-          action={deleteSurvey}
-          payload={{ id: form.id }}
-          className="text-label-caps uppercase tracking-wide text-error hover:opacity-80 px-4 py-2.5 rounded-md border border-error/40 hover:bg-error-container/30 transition-colors"
-        >
-          Hapus formulir
-        </ConfirmButton>
+      <CollapsibleSection
+        title="Arsip dan Sampah"
+        description="Arsipkan formulir yang sudah selesai, atau pindahkan ke Sampah. Keduanya bisa dibatalkan."
+        defaultOpen={false}
+      >
+        <div className="flex flex-wrap items-center gap-3">
+          {form.archivedAt ? (
+            <ConfirmButton
+              title="Keluarkan dari Arsip?"
+              message={`"${form.title}" kembali ke daftar aktif dalam keadaan Tutup. Buka lagi di Pengaturan kalau mau menerima jawaban.`}
+              confirmLabel="Ya, keluarkan"
+              action={unarchiveForm}
+              payload={{ id: form.id }}
+              danger={false}
+              successMessage="Formulir dikeluarkan dari Arsip."
+              className="text-label-caps uppercase tracking-wide text-on-surface-variant hover:text-on-background px-3 py-2 rounded-md hover:bg-surface-container-low transition-colors border border-outline-variant"
+            >
+              Keluarkan dari Arsip
+            </ConfirmButton>
+          ) : (
+            <ConfirmButton
+              title="Arsipkan formulir?"
+              message={`"${form.title}" ditutup dan pindah ke Arsip. Jawabannya (${responseCount}) tetap bisa dibuka dan diekspor.`}
+              confirmLabel="Ya, arsipkan"
+              action={archiveForm}
+              payload={{ id: form.id }}
+              danger={false}
+              successMessage="Formulir diarsipkan."
+              className="text-label-caps uppercase tracking-wide text-on-surface-variant hover:text-on-background px-3 py-2 rounded-md hover:bg-surface-container-low transition-colors border border-outline-variant"
+            >
+              Arsipkan formulir
+            </ConfirmButton>
+          )}
+          <ConfirmButton
+            title="Pindahkan ke Sampah?"
+            message={`"${form.title}" ditutup dan tidak bisa dibuka siapa pun, tapi pertanyaan dan ${responseCount} jawabannya utuh dan bisa dipulihkan dari bagian Sampah di daftar Formulir Kustom.`}
+            confirmLabel="Ya, ke Sampah"
+            action={trashForm}
+            payload={{ id: form.id }}
+            successMessage="Formulir dipindahkan ke Sampah."
+            className="text-label-caps uppercase tracking-wide text-error hover:opacity-80 px-3 py-2 rounded-md hover:bg-error-container/30 transition-colors border border-error/40"
+          >
+            Pindahkan ke Sampah
+          </ConfirmButton>
+        </div>
       </CollapsibleSection>
     </div>
   );

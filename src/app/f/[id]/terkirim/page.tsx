@@ -30,7 +30,7 @@ export default async function SurveySubmittedPage({
   const { sensus } = await searchParams;
 
   const [form] = await db.select().from(forms).where(and(eq(forms.id, id), eq(forms.kind, "survei")));
-  if (!form) notFound();
+  if (!form || form.deletedAt) notFound();
   if (form.eventId) {
     const [ev] = await db.select({ deletedAt: events.deletedAt }).from(events).where(eq(events.id, form.eventId));
     if (!ev || ev.deletedAt) notFound();
