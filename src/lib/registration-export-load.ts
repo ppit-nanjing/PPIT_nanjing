@@ -26,6 +26,7 @@ export async function loadRegistrationExport(
         answersJson: eventRegistrations.answersJson,
         feeOptionId: eventRegistrations.feeOptionId,
         biodataJson: eventRegistrations.biodataJson,
+        attendanceMode: eventRegistrations.attendanceMode,
         // Kota/kampus/WeChat untuk acara tanpa blok biodata (mis. Fun Hike
         // requiresSensus — pertanyaan itu tidak ditanya ulang di form).
         sensusBranch: sensusProfiles.branch,

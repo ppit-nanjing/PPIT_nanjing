@@ -55,6 +55,7 @@ import { EventConsoleHeader } from "@/components/console/event-console-header";
 import { EventApprovalPanel } from "@/components/console/event-approval-panel";
 import { eventDayLabel, eventLifecycle, eventStage, eventStatusChip, eventTimeLabel } from "@/lib/event-stage";
 import { Download, Eye, Images } from "lucide-react";
+import { ATTENDANCE_MODE_LABEL, parseAttendanceMode } from "@/lib/event-attendance-mode";
 
 const QUESTION_TYPE_LABELS: Record<string, string> = {
   text: "Teks Pendek",
@@ -789,6 +790,12 @@ export default async function ConsoleEventDetailPage({ params }: { params: Promi
                 hint="Termasuk paspor dan bukti mahasiswa aktif. Yang sensusnya lengkap tidak perlu mengetik ulang."
               />
               <CheckField
+                name="offersAttendanceMode"
+                defaultChecked={event.offersAttendanceMode}
+                label="Tanyakan hadir online atau offline saat mendaftar (NYALA dsb.)"
+                hint="Peserta wajib memilih. Tiketnya lalu menampilkan QR grup sesuai pilihan; unggah kedua QR di bagian Deskripsi & Agenda."
+              />
+              <CheckField
                 name="volunteerSignupOpen"
                 defaultChecked={event.volunteerSignupOpen}
                 label="Buka pendaftaran volunteer publik"
@@ -900,6 +907,22 @@ export default async function ConsoleEventDetailPage({ params }: { params: Promi
               folder="events"
               label="QR Kontak 2 (opsional)"
               defaultValue={event.confirmationContactQr2Url ?? ""}
+            />
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <ImageUploadCropper
+              name="groupQrOnlineUrl"
+              folder="events"
+              label="QR Grup Online (opsional)"
+              defaultValue={event.groupQrOnlineUrl ?? ""}
+              hint="Tampil di tiket peserta yang memilih online. Hanya terpakai bila “Tanyakan hadir online atau offline” menyala."
+            />
+            <ImageUploadCropper
+              name="groupQrOfflineUrl"
+              folder="events"
+              label="QR Grup Offline (opsional)"
+              defaultValue={event.groupQrOfflineUrl ?? ""}
+              hint="Tampil di tiket peserta yang memilih offline."
             />
           </div>
           <AIReviewButton
@@ -1288,6 +1311,10 @@ export default async function ConsoleEventDetailPage({ params }: { params: Promi
             answers: canSeeRegistrantDetail ? r.reg.answersJson ?? {} : {},
             feeLabel: feeLabelFor(r.reg.feeOptionId, r.reg.registeredAt),
             feeCategory: r.reg.feeOptionId ? feeOptionById.get(r.reg.feeOptionId)?.label ?? null : null,
+            attendanceMode: (() => {
+              const m = parseAttendanceMode(r.reg.attendanceMode);
+              return m ? ATTENDANCE_MODE_LABEL[m] : null;
+            })(),
             // WeChat ID = bagian dari versi ringkas (Humas menghubungi peserta).
             // Snapshot biodata (acara requiresBiodata) menang; acara lain
             // (requiresSensus) mengambil dari sensus.

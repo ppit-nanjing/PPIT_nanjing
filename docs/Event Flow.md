@@ -67,6 +67,17 @@ Acara seperti Fun Hike hanya menerima pendaftar yang sensusnya lengkap. Karena d
 
 Admin bisa menambah pertanyaan per acara (`event_questions`): teks, textarea, select, radio, multiselect, `file` (unggah satu berkas). **Pertanyaan teks yang labelnya persis sama dengan isian sensus terisi otomatis** dari sensus pendaftar yang sudah lengkap (`src/lib/event-question-prefill.ts`): "Nama Lengkap"/"Nama", "Asal Kampus"/"Universitas", "Jurusan"/"Program Studi", "Angkatan"/"Tahun Masuk", "Kota Studi". Pencocokan label persis (bukan sebagian), dan hanya nilai awal: pendaftar masih bisa mengubahnya. Pertanyaan teks berlabel **LinkedIn, Instagram, GitHub, Spotify, atau TikTok** (juga "Akun/Link/URL/Username …") diisi dari tautan di profil akun, tanpa syarat sensus; label "Username Instagram/GitHub/TikTok" hanya mengambil namanya dari URL. Paspor, telepon, dan WeChat sengaja tidak ikut karena jawaban kustom terlihat seluruh panitia; untuk itu pakai biodata lengkap (`requires_biodata`). Jawaban di `event_registrations.answers_json`, tampil ke admin di daftar pendaftar & ekspor. Di console ada **Pratinjau form pendaftaran** (details di section Pertanyaan Pendaftaran) yang merender pertanyaan dengan komponen field yang sama dengan form publik (`src/components/events/event-question-fields.tsx`); semua kontrol nonaktif dan tidak ada data yang terkirim/tersimpan.
 
+## Pilihan hadir online / offline (`offers_attendance_mode`)
+
+Dipakai acara seperti NYALA yang bisa diikuti online maupun offline, dengan grup (WeChat) terpisah. Migrasi `0060_event_attendance_mode.sql` (**terapkan ke produksi sebelum kode dirilis**, lalu `npm run check:drift`).
+
+- **Panitia**: di konsol acara, centang "Tanyakan hadir online atau offline saat mendaftar" (Pendaftaran, Biaya & Jadwal Rilis), lalu unggah **QR Grup Online** dan **QR Grup Offline** di Deskripsi & Agenda. Kolom QR selalu tampil supaya menyimpan form dengan saklar mati tidak menghapusnya.
+- **Peserta**: form pendaftaran menampilkan pilihan **Online / Offline** (wajib) di langkah Pertanyaan. `runRegistration` memvalidasi ulang di server (galat `?err=attendance`) dan menyimpannya di `event_registrations.attendance_mode` (`online` | `offline`). Acara tanpa saklar mengabaikan kiriman itu.
+- **Tiket**: kartu "Langkah Berikutnya" menampilkan **hanya QR grup sesuai pilihan** peserta. Kalau QR-nya belum diunggah, muncul catatan "belum tersedia". Pendaftaran lama (tanpa pilihan) tidak mendapat kartu ini.
+- **Konsol & ekspor**: kolom "Hadir Via" muncul di tabel pendaftar, CSV, dan Google Sheet bila ada yang memilih.
+- Pilihan ini **tidak mengubah** QR check-in: panitia tetap memakai status pendaftaran seperti biasa. Untuk acara yang pesertanya online tidak perlu di-scan, matikan "Sertifikat hanya untuk yang tercatat hadir" di Pasca-Acara.
+- Kode: `src/lib/event-attendance-mode.ts`, `src/app/actions/events.ts` (`runRegistration`), `src/app/events/[slug]/register/page.tsx`, `src/app/events/[slug]/ticket/page.tsx`, `updateEvent`/`updateEventContent` di `src/app/actions/admin-events.ts`.
+
 ## Mode Latihan (uji form pendaftaran)
 
 Panitia/admin bisa mencoba form pendaftaran tanpa mendaftar sungguhan: buka `/events/<slug>/register?practice=1` (tombol **Coba Form Pendaftaran (Mode Latihan)** di kotak "Panitia" pada halaman acara). Syaratnya akses konsol acara itu (BPH/modul Kegiatan atau peran panitia); untuk orang lain `?practice=1` diabaikan dan form berjalan normal.

@@ -18,6 +18,7 @@ import { INTL_LOCALE } from "@/lib/i18n/config";
 import { submitPaymentProof } from "@/app/actions/committee";
 import { buildAlipayTransferLink } from "@/lib/alipay-deeplink";
 import { feeTierAt, amountForTier } from "@/lib/event-fee";
+import { parseAttendanceMode } from "@/lib/event-attendance-mode";
 import { FileUpload } from "@/components/upload/file-upload";
 
 // Payment-status -> dictionary key. The console keeps its own Indonesian-only
@@ -98,10 +99,15 @@ export default async function EventTicketPage({ params }: { params: Promise<{ sl
   // mendesak setelah daftar — dulu ada DI BAWAH kartu QR, jadi peserta yang
   // tidak scroll melewatkannya. Sekarang: kalau ada, ia jadi kartu pertama +
   // menonjol, dan di layar lebar berdampingan dengan kartu QR.
+  // Acara dengan pilihan online/offline (NYALA): peserta hanya melihat QR grup
+  // sesuai pilihannya. Pendaftaran lama tanpa pilihan tidak mendapat kartu ini.
+  const attendanceMode = event.offersAttendanceMode ? parseAttendanceMode(registration.attendanceMode) : null;
+  const groupQrUrl = attendanceMode === "online" ? event.groupQrOnlineUrl : attendanceMode === "offline" ? event.groupQrOfflineUrl : null;
   const hasNextSteps = !!(
     event.confirmationInfo ||
     event.confirmationContactQr1Url ||
-    event.confirmationContactQr2Url
+    event.confirmationContactQr2Url ||
+    attendanceMode
   );
 
   const fmtCal = (d: Date) => d.toISOString().replace(/[-:]/g, "").replace(/\.\d{3}/, "");
@@ -150,6 +156,31 @@ export default async function EventTicketPage({ params }: { params: Promise<{ sl
               </h2>
               {event.confirmationInfo && (
                 <p className="text-body-md text-on-surface-variant whitespace-pre-line">{event.confirmationInfo}</p>
+              )}
+              {attendanceMode && (
+                <div className="mt-4 flex flex-col items-center gap-2 rounded-lg bg-surface-container-lowest p-4 text-center">
+                  <h3 className="text-label-caps uppercase tracking-wide text-gold-ink">
+                    {attendanceMode === "online" ? t("ticket.groupQrOnlineTitle") : t("ticket.groupQrOfflineTitle")}
+                  </h3>
+                  {groupQrUrl ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      src={groupQrUrl}
+                      alt={t("ticket.groupQrAlt", {
+                        mode: attendanceMode === "online" ? t("ticket.modeOnline") : t("ticket.modeOffline"),
+                      })}
+                      width={200}
+                      height={200}
+                      className="rounded-lg border border-outline-variant bg-white p-1"
+                    />
+                  ) : (
+                    <p className="text-body-sm text-on-surface-variant">
+                      {t("ticket.groupQrPending", {
+                        mode: attendanceMode === "online" ? t("ticket.modeOnline") : t("ticket.modeOffline"),
+                      })}
+                    </p>
+                  )}
+                </div>
               )}
               {(event.confirmationContactQr1Url || event.confirmationContactQr2Url) && (
                 <div className="flex flex-wrap justify-center gap-6 mt-4">

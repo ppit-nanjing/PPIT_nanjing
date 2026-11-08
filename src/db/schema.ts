@@ -527,6 +527,14 @@ export const events = pgTable("events", {
   // baru layak jadi tabel seperti event_fee_options.
   confirmationContactQr1Url: text("confirmation_contact_qr1_url"),
   confirmationContactQr2Url: text("confirmation_contact_qr2_url"),
+  // Pilihan hadir online/offline (migrasi 0060, mis. NYALA). Saklar NYALA = form
+  // pendaftaran menanyakan "Online atau Offline?" (wajib), jawabannya disimpan di
+  // event_registrations.attendance_mode, dan tiket menampilkan QR grup yang
+  // cocok: groupQrOnlineUrl atau groupQrOfflineUrl. Keduanya QR gambar (blob
+  // folder "events"), sama pola dengan confirmationContactQr*.
+  offersAttendanceMode: boolean("offers_attendance_mode").notNull().default(false),
+  groupQrOnlineUrl: text("group_qr_online_url"),
+  groupQrOfflineUrl: text("group_qr_offline_url"),
   // Warna halaman acara (opsional) - biar halaman terasa senada dengan poster.
   // Ketiganya HEX (#rrggbb). Semua null = pakai tema situs seperti biasa.
   //  themeBg      : latar halaman (warna terang, mis. krem poster)
@@ -598,6 +606,9 @@ export const eventRegistrations = pgTable(
     // supaya ekspor daftar peserta selalu utuh tanpa peduli jalur mana dan tanpa
     // ikut berubah kalau sensus orangnya di-update belakangan.
     biodataJson: jsonb("biodata_json").$type<EventBiodata>(),
+    // "online" | "offline" - hanya terisi untuk acara offersAttendanceMode
+    // (migrasi 0060). NULL = acara tanpa pilihan itu, atau pendaftaran lama.
+    attendanceMode: text("attendance_mode"),
   },
   (t) => [uniqueIndex("event_user_unique").on(t.eventId, t.userId)]
 );

@@ -267,6 +267,7 @@ export async function updateEventInfo(id: string, formData: FormData) {
       capacity: formData.get("capacity") ? Number(formData.get("capacity")) : null,
       requiresSensus: formData.get("requiresSensus") === "on",
       requiresBiodata: formData.get("requiresBiodata") === "on",
+      offersAttendanceMode: formData.get("offersAttendanceMode") === "on",
       volunteerSignupOpen: formData.get("volunteerSignupOpen") === "on",
       scheduledPublishAt,
       isPaid,
@@ -321,6 +322,12 @@ export async function updateEventCertificateSettings(id: string, formData: FormD
   await revalidateEventPaths(id, before?.slug);
 }
 
+/** URL gambar QR yang dirender sebagai <img> di tiket: hanya https:// atau path situs, selain itu dibuang. */
+function imageUrlOrNull(value: FormDataEntryValue | null): string | null {
+  const v = String(value ?? "").trim();
+  return v.startsWith("https://") || (v.startsWith("/") && !v.startsWith("//")) ? v : null;
+}
+
 /** Bagian 3: deskripsi, agenda, info setelah daftar. Fitur DASAR panitia. */
 export async function updateEventContent(id: string, formData: FormData) {
   await requireEventCapability(id, "event.editContent");
@@ -346,6 +353,8 @@ export async function updateEventContent(id: string, formData: FormData) {
       confirmationInfo: String(formData.get("confirmationInfo") ?? "").trim() || null,
       confirmationContactQr1Url: String(formData.get("confirmationContactQr1Url") ?? "").trim() || null,
       confirmationContactQr2Url: String(formData.get("confirmationContactQr2Url") ?? "").trim() || null,
+      groupQrOnlineUrl: imageUrlOrNull(formData.get("groupQrOnlineUrl")),
+      groupQrOfflineUrl: imageUrlOrNull(formData.get("groupQrOfflineUrl")),
     })
     .where(eq(events.id, id));
   await revalidateEventPaths(id, before?.slug);
