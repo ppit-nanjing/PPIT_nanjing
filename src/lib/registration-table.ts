@@ -30,6 +30,8 @@ export interface Registration {
   // berubah antar waktu (early bird / normal / digratiskan sponsor). feeLabel
   // di atas tidak stabil untuk ini karena beda nominal = beda string.
   feeCategory?: string | null;
+  // "Online" | "Offline" (acara dengan pilihan hadir); null = tidak ada pilihan / data lama.
+  attendanceMode?: string | null;
   // WeChat ID — bagian dari versi RINGKAS (Humas menghubungi peserta). Diambil
   // dari snapshot biodata atau fallback sensus di server; null kalau dua-duanya
   // kosong.
@@ -96,6 +98,7 @@ export function buildRegistrationTable(
   detail: boolean,
 ): TableData {
   const anyFee = registrations.some((r) => r.feeLabel);
+  const anyMode = registrations.some((r) => r.attendanceMode);
   const biodataKeys = detail
     ? Object.keys(BIODATA_LABEL).filter(
         (k) => !COVERED_BY_OWN_COLUMN.has(k) && registrations.some((r) => r.biodata?.[k]),
@@ -112,6 +115,7 @@ export function buildRegistrationTable(
     { key: "university", header: "Kampus", kind: "text" },
     { key: "wechatId", header: "WeChat ID", kind: "text" },
     ...(anyFee ? [{ key: "fee", header: "Kategori Tarif", kind: "text" } as TableColumn] : []),
+    ...(anyMode ? [{ key: "attendanceMode", header: "Hadir Via", kind: "text" } as TableColumn] : []),
     { key: "checkedInAt", header: timeHeader("Waktu Check-in"), kind: "date" },
     { key: "checkedInBy", header: "Di-check-in oleh", kind: "text" },
     ...biodataKeys.map(
@@ -134,6 +138,7 @@ export function buildRegistrationTable(
       university: r.university ?? "",
       wechatId: r.wechatId ?? "",
       fee: r.feeLabel ?? "",
+      attendanceMode: r.attendanceMode ?? "",
       checkedInAt: r.checkedInAt ? formatChinaDateTimeIso(new Date(r.checkedInAt)) : "",
       checkedInBy: r.checkedInByName ?? "",
     };

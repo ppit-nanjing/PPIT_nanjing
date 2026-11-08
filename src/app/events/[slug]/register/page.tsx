@@ -15,6 +15,7 @@ import {
   users,
 } from "@/db/schema";
 import { NON_STUDENT_BRANCH } from "@/lib/membership-status";
+import { ATTENDANCE_MODES } from "@/lib/event-attendance-mode";
 import { hasCompletedSensus } from "@/lib/sensus-gate";
 import { handleFromLink, profileKeyForLabel, sensusKeyForLabel } from "@/lib/event-question-prefill";
 import { getEventAccess } from "@/lib/event-access";
@@ -56,7 +57,9 @@ export default async function EventRegisterPage({
           ? t("events.regErrCategoryFull")
           : err === "biodata"
             ? t("events.regErrBiodata")
-            : t("events.regErrGeneric");
+            : err === "attendance"
+              ? t("events.regErrAttendance")
+              : t("events.regErrGeneric");
 
   const [event] = await db.select().from(events).where(and(eq(events.slug, slug), isNull(events.deletedAt)));
   if (!event) notFound();
@@ -201,12 +204,33 @@ export default async function EventRegisterPage({
     });
   }
 
-  if (askBranch || questions.length > 0) {
+  if (askBranch || questions.length > 0 || event.offersAttendanceMode) {
     steps.push({
       id: "questions",
       title: t("events.stepQuestions"),
       content: (
         <>
+          {event.offersAttendanceMode && (
+            <fieldset className="flex flex-col gap-2 text-left border-0 p-0 m-0">
+              <legend className="text-label-caps uppercase tracking-wide text-on-surface-variant p-0">
+                {t("events.attendanceQuestion")}
+                <span className="text-error" aria-hidden="true"> *</span>
+              </legend>
+              {ATTENDANCE_MODES.map((mode) => (
+                <label key={mode} className="flex items-center gap-2 rounded-md bg-soft-gray p-2.5 text-body-md cursor-pointer">
+                  <input
+                    type="radio"
+                    name="attendanceMode"
+                    value={mode}
+                    required
+                    className="h-4 w-4 accent-[var(--color-primary-container)]"
+                  />
+                  {mode === "online" ? t("events.attendanceOnline") : t("events.attendanceOffline")}
+                </label>
+              ))}
+              <span className="text-xs text-on-surface-variant">{t("events.attendanceHint")}</span>
+            </fieldset>
+          )}
           {askBranch && (
             <label className="flex flex-col gap-2 text-left">
               <span className="text-label-caps uppercase tracking-wide text-on-surface-variant">

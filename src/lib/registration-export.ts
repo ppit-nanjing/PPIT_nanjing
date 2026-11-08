@@ -1,6 +1,7 @@
 import { formatChinaDateTimeIso, timeHeader } from "@/lib/datetime";
 import { amountForTier, feeTierAt } from "@/lib/event-fee";
 import { effectiveBranch } from "@/lib/membership-status";
+import { ATTENDANCE_MODE_LABEL, parseAttendanceMode } from "@/lib/event-attendance-mode";
 
 // Kolom + baris ekspor pendaftar acara (murni, tanpa database), SATU sumber untuk file CSV
 // (/api/console/events/[id]/registrations/export) dan Google Sheet. Kolom data
@@ -46,6 +47,7 @@ export type RegistrationExportRow = {
   answersJson: Record<string, unknown> | null;
   feeOptionId: string | null;
   biodataJson: Partial<Record<BiodataKey, string>> | null;
+  attendanceMode?: string | null;
   sensusBranch: string | null;
   sensusCompletion: string | null;
   sensusUniversity: string | null;
@@ -93,6 +95,7 @@ export function buildRegistrationExport(input: RegistrationExportInput): Registr
   };
   const anyFee = feeOptions.length > 0;
   const anyBiodata = rows.some((r) => r.biodataJson);
+  const anyMode = rows.some((r) => r.attendanceMode);
 
   const header: RegistrationExport["header"] = [
     { label: "Nama", sensitive: false },
@@ -108,6 +111,7 @@ export function buildRegistrationExport(input: RegistrationExportInput): Registr
           { label: "WeChat ID", sensitive: false },
         ]),
     ...(anyFee ? [{ label: "Kategori Tarif", sensitive: false }] : []),
+    ...(anyMode ? [{ label: "Hadir Via", sensitive: false }] : []),
     ...(anyBiodata ? BIODATA_COLS.map((c) => ({ label: c.label, sensitive: Boolean(c.sensitive) })) : []),
     ...questions.map((q) => ({ label: q.label, sensitive: false })),
   ];
@@ -124,6 +128,7 @@ export function buildRegistrationExport(input: RegistrationExportInput): Registr
       effectiveBranch(r.sensusCompletion === "complete" ? r.sensusBranch : null, r.branch) ?? "",
       ...(anyBiodata ? [] : [r.sensusUniversity ?? "", r.sensusWechat ?? ""]),
       ...(anyFee ? [feeLabelFor(r.feeOptionId, r.registeredAt)] : []),
+      ...(anyMode ? [(() => { const m = parseAttendanceMode(r.attendanceMode); return m ? ATTENDANCE_MODE_LABEL[m] : ""; })()] : []),
       ...(anyBiodata ? BIODATA_COLS.map((c) => absUrl(bio?.[c.key]) ?? "") : []),
       ...questions.map((q) => {
         const v = answers[q.id];

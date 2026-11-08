@@ -12,6 +12,7 @@ import { NON_STUDENT_BRANCH } from "@/lib/membership-status";
 import { createTemplatedNotification } from "@/lib/notifications";
 import { getEventSeats } from "@/lib/event-capacity";
 import { feeTierAt, amountForTier } from "@/lib/event-fee";
+import { parseAttendanceMode } from "@/lib/event-attendance-mode";
 import { isValidPassport } from "@/lib/sensus-form";
 import { getEventAccess } from "@/lib/event-access";
 import { scrubForeignPrivateUrl } from "@/lib/private-files";
@@ -195,6 +196,14 @@ async function runRegistration(eventId: string, slugArg: string, formData: FormD
       if (q.required && !answers[q.id]) redirect(registerErrUrl(slug, "question", practice));
     }
 
+    // Pilihan hadir online/offline (acara offersAttendanceMode, mis. NYALA):
+    // wajib salah satu dari dua nilai sah. Acara tanpa saklar itu mengabaikan
+    // kiriman apa pun supaya nilainya tidak bisa diselundupkan lewat POST.
+    const attendanceMode = event.offersAttendanceMode
+      ? parseAttendanceMode(String(formData?.get("attendanceMode") ?? ""))
+      : null;
+    if (event.offersAttendanceMode && !attendanceMode) redirect(registerErrUrl(slug, "attendance", practice));
+
     // Kategori tarif (event_fee_options). Kalau acara berbayar DAN punya
     // kategori, peserta wajib memilih salah satu - dan pilihannya harus milik
     // acara ini, bukan id acara lain yang ditempel lewat form.
@@ -305,6 +314,7 @@ async function runRegistration(eventId: string, slugArg: string, formData: FormD
       answersJson: answers,
       feeOptionId,
       biodataJson,
+      attendanceMode,
     });
     // Sheet langsung acara ini (kalau ada) ikut diperbarui; tidak pernah menunda atau menggagalkan pendaftaran.
     scheduleLiveSheetSync(eventId, ["pendaftar"]);
