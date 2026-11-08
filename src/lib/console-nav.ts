@@ -126,6 +126,7 @@ const MODULE_LABEL: Record<AdminModule, string> = {
   "sensus-ranting": "Sensus Ranting",
   "sensus-verify": "Verifikasi Sensus",
   content: "Konten",
+  guidebook: "Guidebook Maba",
   feedback: "Masukan Pengguna",
   membership: "Rekrutmen",
   forms: "Formulir",

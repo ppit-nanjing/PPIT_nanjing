@@ -50,3 +50,6 @@ next-env.d.ts
 
 # graphify architecture graph (local build artifact)
 graphify-out/
+
+# hasil ekstraksi PDF + draf lokal untuk ingest guidebook (bukan bagian app)
+tmp/
