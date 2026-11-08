@@ -23,8 +23,12 @@ export type EventAuditAction =
   | "event.restored"
   | "event.deleted"
   | "event.takeover"
+  | "event.approval_requested"
+  | "event.approved"
+  | "event.approval_rejected"
   | "registration.cancelled"
   | "registration.restored"
+  | "checkin.undone"
   | "committee.assigned"
   | "committee.removed"
   | "division.grants"
@@ -33,7 +37,8 @@ export type EventAuditAction =
   | "credit.removed"
   | "asset.reserved"
   | "asset.released"
-  | "committee_evaluation.deleted";
+  | "committee_evaluation.deleted"
+  | "export.sheet";
 
 export async function logEventAudit(
   actorId: string | null | undefined,
@@ -71,8 +76,12 @@ export const EVENT_AUDIT_ACTION_LABEL: Record<EventAuditAction, string> = {
   "event.restored": "Acara dipulihkan dari Sampah",
   "event.deleted": "Acara dihapus permanen",
   "event.takeover": "Acara diambil alih BPH",
+  "event.approval_requested": "Acara diajukan ke BPH Kabinet",
+  "event.approved": "Acara disetujui BPH Kabinet",
+  "event.approval_rejected": "Pengajuan acara ditolak",
   "registration.cancelled": "Pendaftaran peserta dibatalkan",
   "registration.restored": "Pendaftaran peserta dipulihkan",
+  "checkin.undone": "Check-in dibatalkan",
   "committee.assigned": "Panitia ditugaskan",
   "committee.removed": "Panitia dikeluarkan",
   "division.grants": "Izin fitur divisi diubah",
@@ -82,4 +91,5 @@ export const EVENT_AUDIT_ACTION_LABEL: Record<EventAuditAction, string> = {
   "asset.reserved": "Aset direservasi",
   "asset.released": "Reservasi aset dilepas",
   "committee_evaluation.deleted": "Jawaban evaluasi panitia dihapus",
+  "export.sheet": "Data diekspor ke Google Sheets",
 };

@@ -24,10 +24,13 @@ export function EventQuestionFields({
   questions,
   preview = false,
   fileHint,
+  defaults,
 }: {
   questions: EventQuestionRow[];
   preview?: boolean;
   fileHint?: string;
+  /** Nilai awal per id pertanyaan (teks), mis. dari sensus. Tetap bisa diubah pendaftar. */
+  defaults?: Record<string, string>;
 }) {
   return (
     <>
@@ -45,7 +48,13 @@ export function EventQuestionFields({
               )}
             </legend>
             {q.type === "text" && (
-              <input name={q.id} required={q.required && !preview} disabled={preview} className={FIELD_CLASS} />
+              <input
+                name={q.id}
+                required={q.required && !preview}
+                disabled={preview}
+                defaultValue={defaults?.[q.id]}
+                className={FIELD_CLASS}
+              />
             )}
             {q.type === "textarea" && (
               <textarea

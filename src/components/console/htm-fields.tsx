@@ -38,7 +38,7 @@ export function HtmFields({
         <div className="flex flex-col gap-3 pl-4 border-l-2 border-outline-variant ml-1">
           <Field
             label="Biaya (CNY)"
-            hint="Belum tahu pasti karena masih menunggu sponsor? Kosongkan dulu, isi belakangan lewat Edit."
+            hint="Boleh diisi belakangan."
           >
             <input
               name="feeCny"
@@ -53,7 +53,7 @@ export function HtmFields({
 
           <Field
             label="Batas harga early bird (opsional)"
-            hint="Peserta yang mendaftar sampai tanggal/jam ini kena tarif early bird tiap kategori (diisi per kategori di bagian 'Kategori Tarif' di bawah); setelahnya tarif normal. Kosongkan bila tidak ada tahap early bird."
+            hint="Sampai waktu ini berlaku tarif early bird, yang diisi per kategori di Kategori Tarif."
           >
             <input
               name="earlyBirdUntil"
@@ -80,12 +80,12 @@ export function HtmFields({
             folder="events"
             label="QR Alipay Bendahara"
             defaultValue={defaultQrUrl ?? ""}
-            hint="Screenshot/unduhan QR pribadi bendahara dari app Alipay. Tampil di tiket peserta untuk discan."
+            hint="Tampil di tiket peserta."
           />
 
           <Field
             label="Alipay UID Bendahara (opsional)"
-            hint='Alternatif QR deeplink yang mengisi nominal & catatan otomatis. Cek UID: Alipay → Saya → foto profil → "支付宝会员号". Bukan API resmi — verifikasi bukti tetap manual.'
+            hint='Mengisi nominal & catatan otomatis. Cek di Alipay → Saya → foto profil → "支付宝会员号". Verifikasi bukti tetap manual.'
           >
             <input
               name="alipayUid"

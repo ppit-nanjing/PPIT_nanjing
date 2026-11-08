@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import { asc, desc, eq } from "drizzle-orm";
 import Link from "next/link";
 import { redirect } from "next/navigation";
@@ -39,12 +40,14 @@ function one(v: string | string[] | undefined): string {
   return (Array.isArray(v) ? v[0] : v) ?? "";
 }
 
+export const metadata: Metadata = { title: "Sensus" };
+
 export default async function ConsoleSensusPage({ searchParams }: { searchParams: SearchParams }) {
   const session = await auth();
   if (!session) redirect("/login");
   const full = hasModuleAccess(session.user.adminScope, "sensus");
   const canVerify = hasModuleAccess(session.user.adminScope, "sensus-verify");
-  if (!full && !canVerify) redirect("/console");
+  if (!full && !canVerify) redirect("/console?akses=sensus");
 
   const sp = await searchParams;
   const q = one(sp.q).trim();
@@ -138,7 +141,7 @@ export default async function ConsoleSensusPage({ searchParams }: { searchParams
         <div>
           <h1 className="text-headline-md sm:text-headline-lg text-on-background mb-2">Sensus</h1>
           <p className="text-body-md text-on-surface-variant max-w-2xl">
-            Data mahasiswa yang diisi sendiri anggota lewat halaman Sensus, lengkap dengan bukti kartu
+            Data mahasiswa yang diisi sendiri oleh Nanjinger lewat halaman Sensus, lengkap dengan bukti kartu
             mahasiswa / LOA. Dipakai untuk memverifikasi status mahasiswa dan rekap ke PPI Tiongkok pusat.
           </p>
         </div>
@@ -251,7 +254,7 @@ export default async function ConsoleSensusPage({ searchParams }: { searchParams
                       >
                         <div className="min-w-0 flex-1">
                           <p className="text-body-md text-on-background truncate">{who}</p>
-                          <p className="text-label-caps text-on-surface-variant truncate">
+                          <p className="text-body-sm text-on-surface-variant truncate">
                             {[s.university, s.branch, s.degreeLevel].filter(Boolean).join(" · ") || "Data belum lengkap"}
                           </p>
                         </div>
@@ -265,11 +268,11 @@ export default async function ConsoleSensusPage({ searchParams }: { searchParams
                             <FileX2 size={18} className="text-outline" />
                           )}
                         </span>
-                        <span className={`shrink-0 text-label-caps px-2.5 py-1 rounded-full ${STATUS_BADGE[ms]}`}>
+                        <span className={`shrink-0 text-body-sm font-medium px-2.5 py-0.5 rounded-full ${STATUS_BADGE[ms]}`}>
                           {MEMBERSHIP_LABEL[ms]}
                         </span>
                         <span
-                          className={`shrink-0 text-label-caps px-2.5 py-1 rounded-full ${
+                          className={`shrink-0 text-body-sm font-medium px-2.5 py-0.5 rounded-full ${
                             s.completionStatus === "complete"
                               ? "bg-primary-container/15 text-primary-container"
                               : "bg-error-container/30 text-on-error-container"

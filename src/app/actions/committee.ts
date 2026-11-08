@@ -22,6 +22,7 @@ import {
   saveCertificateLinks,
 } from "@/lib/certificate-issuing";
 import { normalizeCertificateUrl, parseCertificateBulk, personKey } from "@/lib/certificate-links";
+import { scheduleLiveSheetSync } from "@/lib/live-sheets";
 
 // Committee membership is per-event on purpose: the treasurer of one event is
 // not necessarily the cabinet treasurer, which is the exact complaint in the
@@ -700,6 +701,7 @@ export async function updatePaymentStatus(formData: FormData) {
       .set({ status: "confirmed", qrCodeToken: row.qrCodeToken ?? randomUUID() })
       .where(eq(eventRegistrations.id, id));
   }
+  if (row?.eventId) scheduleLiveSheetSync(row.eventId, ["pendaftar"]);
 
   // Beri tahu peserta hasil verifikasinya - selama ini diam-diam.
   if (row?.userId && (status === "verified" || status === "rejected")) {

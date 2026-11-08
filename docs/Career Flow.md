@@ -115,7 +115,7 @@ Rancangannya, supaya Divisi Teknologi berikutnya tidak menemukannya ulang:
 - `job_postings.company_id` **nullable dan aditif**; kolom teks `company` dipertahankan sebagai nama tampil. **Jangan backfill** dari teks lama ke `companies` — itu mengarang identitas yang tidak pernah diverifikasi manusia (filosofi di `schema.ts`, komentar `sensus_profiles`).
 - Gate `requireCompletedSensus` **tidak boleh** dipakai untuk pendaftaran perusahaan (itu memeriksa status mahasiswa).
 - Lowongan perusahaan yang sudah terverifikasi langsung tayang; admin tetap bisa menutup/menghapus.
-- **Peringatan kebocoran data:** `src/app/console/page.tsx` (dashboard `/console`) tidak punya gate modul sendiri dan menampilkan teks masukan, nama peserta, dan pelamar pengurus ke siapa pun yang lolos layout. Sebelum recruiter diizinkan masuk `/console`, dashboard harus mengalihkan mereka ke `/console/jobs`, dan seluruh halaman `/console/**` harus diaudit untuk gate modulnya sendiri. Alternatif yang lebih ketat: area terpisah `/company/*`.
+- **Peringatan kebocoran data (sebagian sudah diatasi):** dashboard `/console` (`src/app/console/page.tsx`) kini menyaring setiap angka, daftar, dan pintasan menurut modul pemegangnya, dan pemakai tanpa modul dashboard hanya melihat landing tanpa query ([Admin Dashboard](./Admin%20Dashboard.md) § Akses per modul). Yang masih harus dilakukan sebelum recruiter diizinkan masuk `/console`: seluruh halaman `/console/**` harus diaudit untuk gate modulnya sendiri. Alternatif yang lebih ketat: area terpisah `/company/*`.
 
 ### Kebutuhan tambahan untuk sisi perusahaan (2026-10-01, belum dirancang)
 

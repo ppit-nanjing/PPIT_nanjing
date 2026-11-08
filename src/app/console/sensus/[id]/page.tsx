@@ -21,7 +21,7 @@ function fmtDate(value: string | Date | null | undefined): string {
   if (!value) return "—";
   const d = typeof value === "string" ? new Date(value) : value;
   if (Number.isNaN(d.getTime())) return String(value);
-  return d.toLocaleDateString("id-ID", { dateStyle: "medium" });
+  return d.toLocaleDateString("id-ID", { timeZone: "Asia/Shanghai", dateStyle: "medium" });
 }
 
 function Field({ label, children }: { label: string; children: ReactNode }) {
@@ -74,11 +74,11 @@ export default async function ConsoleSensusDetailPage({ params }: { params: Prom
       </Link>
       <div className="flex flex-wrap items-center gap-3 mt-2 mb-1">
         <h1 className="text-headline-md sm:text-headline-lg text-on-background">{who}</h1>
-        <span className="text-label-caps px-2.5 py-1 rounded-full bg-surface-container-high text-on-surface-variant">
+        <span className="text-body-sm font-medium px-2.5 py-0.5 rounded-full bg-surface-container-high text-on-surface-variant">
           {MEMBERSHIP_LABEL[ms]}
         </span>
         <span
-          className={`text-label-caps px-2.5 py-1 rounded-full ${
+          className={`text-body-sm font-medium px-2.5 py-0.5 rounded-full ${
             s.completionStatus === "complete"
               ? "bg-primary-container/15 text-primary-container"
               : "bg-error-container/30 text-on-error-container"
@@ -88,7 +88,7 @@ export default async function ConsoleSensusDetailPage({ params }: { params: Prom
         </span>
       </div>
       <p className="text-body-md text-on-surface-variant mb-4">
-        Diisi sendiri oleh anggota lewat halaman Sensus &middot; terakhir diperbarui {fmtDate(s.updatedAt)}
+        Diisi sendiri oleh Nanjinger lewat halaman Sensus &middot; terakhir diperbarui {fmtDate(s.updatedAt)}
       </p>
       <div className="flex flex-wrap items-center gap-3 mb-8">
         <Link
@@ -117,7 +117,7 @@ export default async function ConsoleSensusDetailPage({ params }: { params: Prom
               )}
               <div className="min-w-0">
                 <p className="text-body-md text-on-background truncate">{v(row.userName)}</p>
-                <p className="text-label-caps text-on-surface-variant truncate">{v(row.userEmail)}</p>
+                <p className="text-body-sm text-on-surface-variant truncate">{v(row.userEmail)}</p>
               </div>
             </div>
           </Group>
@@ -193,8 +193,8 @@ export default async function ConsoleSensusDetailPage({ params }: { params: Prom
                       {log.action === "deleted" ? "Dihapus" : "Diperbarui"} oleh{" "}
                       {actorName ?? actorEmail ?? "pengurus"}
                     </span>
-                    <span className="text-label-caps text-on-surface-variant">
-                      {new Date(log.createdAt).toLocaleString("id-ID", { dateStyle: "medium", timeStyle: "short" })}
+                    <span className="text-body-sm text-on-surface-variant">
+                      {new Date(log.createdAt).toLocaleString("id-ID", { timeZone: "Asia/Shanghai", dateStyle: "medium", timeStyle: "short" })}
                     </span>
                   </div>
                   <p className="text-on-surface-variant mt-0.5">

@@ -1,4 +1,5 @@
 import { desc } from "drizzle-orm";
+import { CHINA_TIME_ZONE, CHINA_TZ_LABEL, formatChinaDateIso } from "@/lib/datetime";
 import { db } from "@/db";
 import { membershipApplications, membershipFormFields } from "@/db/schema";
 import { requireModuleAccess } from "@/lib/admin-scope";
@@ -44,7 +45,7 @@ export async function GET(req: Request) {
     "Jurusan",
     "WhatsApp",
     "Status",
-    "Tanggal Kirim",
+    `Tanggal Kirim (${CHINA_TZ_LABEL})`,
     ...answerFields.flatMap((f) =>
       isGrid(f.type) ? gridRows(f).map((r) => `${f.label} — ${r}`) : [f.label],
     ),
@@ -60,7 +61,7 @@ export async function GET(req: Request) {
       app.major,
       app.whatsapp,
       app.status,
-      app.submittedAt ? new Date(app.submittedAt).toLocaleDateString("id-ID", { dateStyle: "medium" }) : "",
+      app.submittedAt ? new Date(app.submittedAt).toLocaleDateString("id-ID", { dateStyle: "medium", timeZone: CHINA_TIME_ZONE }) : "",
       ...answerFields.flatMap((f) => {
         if (isGrid(f.type)) {
           const raw = responses[f.key ?? ""];
@@ -80,7 +81,7 @@ export async function GET(req: Request) {
   return new Response(csv, {
     headers: {
       "Content-Type": "text/csv; charset=utf-8",
-      "Content-Disposition": `attachment; filename="ppit-membership-${new Date().toISOString().slice(0, 10)}.csv"`,
+      "Content-Disposition": `attachment; filename="ppit-membership-${formatChinaDateIso(new Date())}.csv"`,
       "Cache-Control": "no-store",
     },
   });

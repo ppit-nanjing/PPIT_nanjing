@@ -11,9 +11,14 @@ import {
   type EventCommitteeRole,
   BRIDGE_EXCLUDED_CAPABILITIES,
   LOCK_EXEMPT_CAPABILITIES,
+  creatorHasCapability,
+  eventApprovalState,
+  grantsCreatorRights,
   hasEventCapability,
   isBphPanitiaRole,
   isCommitteeLocked,
+  isEventApproved,
+  isUnapprovedDraft,
 } from "@/lib/event-capabilities";
 import { UUID_RE } from "@/lib/uuid";
 
@@ -43,10 +48,22 @@ export type EventAccess = {
   // termasuk BPH Kabinet: acara di Sampah dikelola dari /console/events
   // (pulihkan / hapus permanen), bukan dari halaman acaranya.
   trashed: boolean;
-  // Jembatan modul yang sudah di-scope: scope "events" + (pembuat acara ATAU
-  // divisinya jadi PJ acara ini), selama EVENT_RBAC_STRICT masih false.
+  // Jalan masuk ke konsol acara ini tanpa jabatan panitia. Jembatan modul yang
+  // sudah di-scope: scope "events" + (pembuat acara ATAU divisinya jadi PJ acara
+  // ini), selama EVENT_RBAC_STRICT masih false; atau pembuat acara (isCreator).
   // Full admin selalu true (tidak terpengaruh scoping).
   moduleBridge: boolean;
+  // Pembuat acara ini yang masih pengurus kabinet (session.user.canCreateEvent),
+  // untuk acara yang lewat alur persetujuan (lihat grantsCreatorRights).
+  isCreator: boolean;
+  // Sudah disetujui BPH Kabinet (isEventApproved).
+  approved: boolean;
+  // Boleh membuat acara tampil ke publik: menerbitkan atau menjadwalkan rilis.
+  // Yang lain perlu event.publish DAN persetujuan. BPH Kabinet selalu boleh, kecuali
+  // selama ada pengajuan yang menunggu: putuskan dulu, supaya pengajunya mendapat kabar.
+  canRelease: boolean;
+  // Pembuat boleh membuang drafnya sendiri selama belum disetujui.
+  canDeleteOwnDraft: boolean;
   // Kapabilitas yang dicentang untuk divisi orang ini (subset GRANTABLE_*).
   divisionGrants: string[];
   // Acara sudah >2 minggu pasca-selesai: panitia hanya bisa BACA, ubah lewat
@@ -62,6 +79,10 @@ const DENIED: EventAccess = {
   isFullAdmin: false,
   trashed: false,
   moduleBridge: false,
+  isCreator: false,
+  approved: false,
+  canRelease: false,
+  canDeleteOwnDraft: false,
   divisionGrants: [],
   locked: false,
   can: () => false,
@@ -92,6 +113,8 @@ export const getEventAccess = cache(async function getEventAccess(
   let locked = false;
   let trashed = false;
   let scopedBridge: boolean | null = null;
+  let createdByMe = false;
+  let eventState: { status: string; approvedAt: Date | null; approvedBy: string | null; approvalRequestedAt: Date | null } | null = null;
 
   // "Pemakai ini anggota divisi PJ acara ini?" — satu ekspresi SQL yang sama
   // dipakai di dua tempat (bukan panitia & panitia-yang-juga-pemegang-modul).
@@ -111,6 +134,10 @@ export const getEventAccess = cache(async function getEventAccess(
         startAt: events.startAt,
         endAt: events.endAt,
         deletedAt: events.deletedAt,
+        createdBy: events.createdBy,
+        approvedAt: events.approvedAt,
+        approvedBy: events.approvedBy,
+        approvalRequestedAt: events.approvalRequestedAt,
       })
       .from(eventCommittee)
       // divisi HARUS milik acara yang sama — kalau tidak, baris panitia yang
@@ -133,6 +160,8 @@ export const getEventAccess = cache(async function getEventAccess(
       divisionGrants = row.divisionGrants ?? [];
       locked = isCommitteeLocked({ status: row.status, startAt: row.startAt, endAt: row.endAt });
       trashed = row.deletedAt != null;
+      createdByMe = row.createdBy === session.user.id;
+      eventState = row;
     } else {
       // Bukan panitia (BPH Kabinet / pemegang modul) — tetap perlu tahu status
       // kunci, apakah acaranya di Sampah, dan (untuk scoping) pembuat & PJ.
@@ -143,6 +172,9 @@ export const getEventAccess = cache(async function getEventAccess(
           endAt: events.endAt,
           deletedAt: events.deletedAt,
           createdBy: events.createdBy,
+          approvedAt: events.approvedAt,
+          approvedBy: events.approvedBy,
+          approvalRequestedAt: events.approvalRequestedAt,
           pjMatch: pjMatchExpr,
         })
         .from(events)
@@ -150,6 +182,8 @@ export const getEventAccess = cache(async function getEventAccess(
       if (ev) {
         if (!isFullAdmin) locked = isCommitteeLocked(ev);
         trashed = ev.deletedAt != null;
+        createdByMe = ev.createdBy === session.user.id;
+        eventState = ev;
         if (needScopedBridge) {
           scopedBridge = ev.createdBy === session.user.id || ev.pjMatch === true;
         }
@@ -171,7 +205,23 @@ export const getEventAccess = cache(async function getEventAccess(
     if (m) scopedBridge = m.createdBy === session.user.id || m.pjMatch === true;
   }
 
-  const moduleBridge = !EVENT_RBAC_STRICT && hasEventsModule && (isFullAdmin || scopedBridge === true);
+  const moduleScoped = !EVENT_RBAC_STRICT && hasEventsModule && (isFullAdmin || scopedBridge === true);
+  // Mantan pengurus kehilangan hak pembuat: flag sesi dihitung ulang dari database.
+  const isCreator =
+    !isFullAdmin && createdByMe && session.user.canCreateEvent && eventState !== null && grantsCreatorRights(eventState);
+  const approved = eventState !== null && isEventApproved(eventState);
+  const awaitingReview = eventState !== null && eventApprovalState(eventState) === "diajukan";
+
+  const can = (capability: EventCapability) => {
+    if (isFullAdmin) return true;
+    // Acara terkunci: panitia (& moduleBridge) hanya boleh kapabilitas BACA.
+    if (locked && !LOCK_EXEMPT_CAPABILITIES.includes(capability)) return false;
+    return (
+      (isCreator && creatorHasCapability(approved, capability)) ||
+      (moduleScoped && !BRIDGE_EXCLUDED_CAPABILITIES.includes(capability)) ||
+      hasEventCapability(role, capability, divisionGrants)
+    );
+  };
 
   return {
     session,
@@ -179,18 +229,14 @@ export const getEventAccess = cache(async function getEventAccess(
     isBphPanitia: isBphPanitiaRole(role),
     isFullAdmin,
     trashed: false,
-    moduleBridge,
+    moduleBridge: moduleScoped || isCreator,
+    isCreator,
+    approved,
+    canRelease: !awaitingReview && (isFullAdmin || (approved && can("event.publish"))),
+    canDeleteOwnDraft: isCreator && eventState !== null && isUnapprovedDraft(eventState),
     divisionGrants,
     locked,
-    can: (capability) => {
-      if (isFullAdmin) return true;
-      // Acara terkunci: panitia (& moduleBridge) hanya boleh kapabilitas BACA.
-      if (locked && !LOCK_EXEMPT_CAPABILITIES.includes(capability)) return false;
-      return (
-        (moduleBridge && !BRIDGE_EXCLUDED_CAPABILITIES.includes(capability)) ||
-        hasEventCapability(role, capability, divisionGrants)
-      );
-    },
+    can,
   };
 });
 
@@ -250,7 +296,8 @@ export async function requireEventCapability(
 ): Promise<EventAccess & { session: Session }> {
   const access = await getEventAccess(eventId);
   if (!access.session) redirect("/login");
-  if (!access.can(capability)) redirect("/console");
+  // ?akses=fitur: dashboard menjelaskan bahwa izin fiturnya yang belum ada (bukan seluruh modul).
+  if (!access.can(capability)) redirect("/console?akses=fitur");
   return access as EventAccess & { session: Session };
 }
 
@@ -264,6 +311,13 @@ export async function requireEventCapability(
  * - Ubah: sama, tapi BPH Panitia tunduk pada kunci kepanitiaan 14 hari setelah
  *   acara (setelahnya hanya BPH Kabinet), sama seperti kapabilitas panitia lain.
  */
+// Gerbang dasar ekspor evaluasi acara (file Excel/CSV dan Google Sheet): ada
+// sesi, dan orangnya punya jalan masuk ke konsol acara ini. Evaluasi PANITIA
+// masih perlu canReadCommitteeEvaluation di atasnya.
+export function hasEvaluationExportAccess(access: EventAccess): boolean {
+  return Boolean(access.session) && (access.isFullAdmin || access.moduleBridge || access.role != null);
+}
+
 export function canReadCommitteeEvaluation(access: EventAccess): boolean {
   return access.isFullAdmin || access.isBphPanitia;
 }

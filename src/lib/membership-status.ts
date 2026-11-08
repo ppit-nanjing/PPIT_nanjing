@@ -65,7 +65,7 @@ export type MembershipStatus =
   | "tamu";
 
 export const MEMBERSHIP_LABEL: Record<MembershipStatus, string> = {
-  anggota: "Anggota (PPIT Nanjing)",
+  anggota: "Nanjinger (PPIT Nanjing)",
   cabang_lain: "Cabang lain",
   tamu: "Tamu",
 };

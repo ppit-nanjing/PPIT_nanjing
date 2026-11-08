@@ -4,6 +4,7 @@ import { useTransition } from "react";
 import { toast } from "sonner";
 import { reviewContribution } from "@/app/actions/contributions";
 import { Select } from "@/components/console/form";
+import { RejectWithReason } from "@/components/console/reject-with-reason";
 
 type Contribution = {
   id: string;
@@ -45,12 +46,12 @@ export function ContributionReview({
           <div className="flex items-start justify-between gap-4">
             <div>
               <p className="text-body-md font-semibold text-on-background">{c.name}</p>
-              <p className="text-label-caps text-on-surface-variant">
+              <p className="text-body-sm text-on-surface-variant">
                 {c.contributionType === "donate" ? "Sumbangan" : "Pinjamkan"} &middot; Kondisi: {c.condition}
-                {c.category ? ` &middot; ${c.category}` : ""}
+                {c.category ? ` · ${c.category}` : ""}
               </p>
               {c.userName && (
-                <p className="text-label-caps text-on-surface-variant">
+                <p className="text-body-sm text-on-surface-variant">
                   {c.userName} ({c.userEmail})
                 </p>
               )}
@@ -58,7 +59,7 @@ export function ContributionReview({
           </div>
 
           <label className="flex flex-col gap-2">
-            <span className="text-label-caps uppercase tracking-wide text-on-surface-variant">
+            <span className="text-body-sm font-medium text-on-surface-variant">
               Gabung ke barang existing (kosongkan = buat barang baru)
             </span>
             <Select name="existingItemId" defaultValue="" className="w-full">
@@ -81,15 +82,7 @@ export function ContributionReview({
             >
               Setujui
             </button>
-            <button
-              type="submit"
-              name="decision"
-              value="reject"
-              disabled={pending}
-              className="text-label-caps uppercase tracking-wide px-5 py-2.5 rounded-md border border-outline-variant text-secondary hover:text-on-background transition-colors disabled:opacity-60"
-            >
-              Tolak
-            </button>
+            <RejectWithReason disabled={pending} />
           </div>
         </form>
       ))}

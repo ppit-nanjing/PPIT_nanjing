@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import { desc, eq, sql } from "drizzle-orm";
 import { Plus } from "lucide-react";
 import Image from "next/image";
@@ -9,6 +10,8 @@ import { isJobExpired, JOB_TYPE_LABEL, type JobType } from "@/lib/job-applicatio
 import { FlashToast } from "@/components/console/flash-toast";
 import { GuideButton } from "@/components/console/guide-button";
 import { getGuide } from "@/lib/guides";
+
+export const metadata: Metadata = { title: "Lowongan" };
 
 export default async function ConsoleJobsPage() {
   await requireModuleAccess("career");

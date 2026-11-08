@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, type ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { useSession } from "next-auth/react";
 import { AnimatePresence, motion } from "motion/react";
 import { X, Bot, MessageSquarePlus, type LucideIcon } from "lucide-react";
@@ -97,6 +97,20 @@ export function HelpCenter({ authed }: { authed: boolean }) {
 
   // Satu panel terbuka pada satu waktu.
   const [openId, setOpenId] = useState<PanelId | null>(null);
+
+  // Esc menutup panel (sama seperti dialog lain di situs), kecuali saat IME sedang menyusun teks atau
+  // kolom ketik berisi tulisan: pesan yang sedang diketik tidak boleh hilang karena salah tekan.
+  useEffect(() => {
+    if (!openId) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key !== "Escape" || e.isComposing) return;
+      const el = document.activeElement;
+      if ((el instanceof HTMLTextAreaElement || el instanceof HTMLInputElement) && el.value.trim() !== "") return;
+      setOpenId(null);
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [openId]);
 
   return (
     <div className="pointer-events-none fixed z-[70] right-4 bottom-24 sm:right-6 sm:bottom-6">

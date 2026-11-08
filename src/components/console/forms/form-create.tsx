@@ -16,6 +16,8 @@ const PLACEHOLDER: Record<FormKind, string> = {
   oprek_bph_acara: "mis. Oprek BPH — WIF 2027",
   oprek_kepanitiaan: "mis. Oprek Anggota Kepanitiaan — WIF 2027",
   oprek_kadiv: "mis. Oprek Kadiv — WIF 2027",
+  // Formulir dibuat dari /formulir (SurveyCreate), bukan kartu ini; diisi demi tipe.
+  survei: "mis. Riset pasar makanan Indonesia",
 };
 
 // Kartu "Buat Formulir Baru" untuk tab Pemilu / Oprek BPH / Oprek Kepanitiaan.

@@ -1,4 +1,5 @@
 import { desc } from "drizzle-orm";
+import { CHINA_TZ_LABEL, formatChinaDateIso, formatChinaDateTimeIso } from "@/lib/datetime";
 import { NextResponse } from "next/server";
 import { auth } from "@/auth";
 import { db } from "@/db";
@@ -41,8 +42,8 @@ export async function GET() {
     "Pesan",
     "Status",
     "Bukti",
-    "Dilaporkan",
-    "Diverifikasi",
+    `Dilaporkan (${CHINA_TZ_LABEL})`,
+    `Diverifikasi (${CHINA_TZ_LABEL})`,
     "Catatan",
   ];
   const lines = [header.map(csvCell).join(",")];
@@ -56,8 +57,8 @@ export async function GET() {
         d.message ?? "",
         STATUS_LABEL[d.status] ?? d.status,
         d.proofUrl ?? "",
-        d.createdAt.toISOString(),
-        d.verifiedAt ? d.verifiedAt.toISOString() : "",
+        formatChinaDateTimeIso(d.createdAt),
+        d.verifiedAt ? formatChinaDateTimeIso(d.verifiedAt) : "",
         d.note ?? "",
       ]
         .map(csvCell)
@@ -69,7 +70,7 @@ export async function GET() {
   return new NextResponse(csv, {
     headers: {
       "Content-Type": "text/csv; charset=utf-8",
-      "Content-Disposition": `attachment; filename="donasi-${new Date().toISOString().slice(0, 10)}.csv"`,
+      "Content-Disposition": `attachment; filename="donasi-${formatChinaDateIso(new Date())}.csv"`,
       // URL identik tiap kali - tanpa no-store, klik ulang bisa menyajikan
       // snapshot cache dan donasi terbaru hilang dari CSV.
       "Cache-Control": "no-store",

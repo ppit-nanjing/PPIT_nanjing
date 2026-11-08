@@ -22,6 +22,13 @@ declare module "next-auth" {
       isBphCommittee: boolean;
       // Kadiv di minimal satu acara (role event_committee "kadiv").
       isEventKadiv: boolean;
+      // Boleh membuat formulir: pengurus kabinet, panitia acara, atau admin penuh.
+      // Hanya visibilitas menu; gerbang sebenarnya src/lib/survey-access.ts.
+      canCreateSurvey: boolean;
+      // Boleh membuat draf acara: pengurus kabinet aktif, atau admin penuh yang aktif.
+      // Juga membuka pintu /console dan menu Kegiatan. Menerbitkan tetap butuh
+      // persetujuan BPH Kabinet (EventAccess.canRelease di src/lib/event-access.ts).
+      canCreateEvent: boolean;
       // Set only for users with a "[INA]/[JIA] …Ranting" role - which campus
       // sub-branch they belong to. Drives the filter on /console/ranting/sensus.
       // null for everyone else. See src/lib/rantings.ts.

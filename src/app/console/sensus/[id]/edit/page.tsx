@@ -102,7 +102,7 @@ export default async function EditSensusPage({ params }: { params: Promise<{ id:
               <ProofView url={s.studentCardUrl} label={`Bukti mahasiswa — ${who}`} />
             </div>
             {s.studentCardUrl && (
-              <CheckboxField name="clearStudentCard" label="Hapus berkas kartu ini (minta anggota unggah ulang lewat /sensus)" />
+              <CheckboxField name="clearStudentCard" label="Hapus berkas kartu ini (minta Nanjinger unggah ulang lewat /sensus)" />
             )}
             <CheckboxField name="agreeTerms" label="Setuju Syarat & Ketentuan" defaultChecked={s.agreeTerms} />
             <CheckboxField name="subscribeNewsletter" label="Berlangganan Newsletter" defaultChecked={s.subscribeNewsletter} />

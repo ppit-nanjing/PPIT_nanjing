@@ -1,11 +1,15 @@
 "use client";
 
-import { useState, type ReactNode } from "react";
-import { BarChart3, Download, ListChecks, Trash2, Users } from "lucide-react";
+import { useMemo, useState, type ReactNode } from "react";
+import { BarChart3, Download, ListChecks, Table2, Trash2, Users } from "lucide-react";
 import type { InferSelectModel } from "drizzle-orm";
 import type { eventEvaluations } from "@/db/schema";
 import { ConfirmButton } from "@/components/console/confirm-button";
+import { DataTable } from "@/components/console/data-table";
 import { deleteEventEvaluation } from "@/app/actions/event-evaluations";
+import { openEvaluationInSheets } from "@/app/actions/export-sheets";
+import { buildEvaluationDataset } from "@/lib/event-evaluation-dataset";
+import { datasetToTable, type TableData } from "@/lib/table-view";
 import { ratingQuestions, textQuestions, type EvaluationSection } from "@/lib/event-evaluation-template";
 import { type EvalQuestionRow, SCALE_MAX, isScaleType } from "@/lib/event-evaluation-questions";
 import {
@@ -40,7 +44,7 @@ function isLegacy(e: Evaluation): e is LegacyEvaluation {
 }
 
 function formatWhen(date: Date | string): string {
-  return new Date(date).toLocaleString("id-ID", { dateStyle: "medium", timeStyle: "short" });
+  return new Date(date).toLocaleString("id-ID", { timeZone: "Asia/Shanghai", dateStyle: "medium", timeStyle: "short" });
 }
 
 function respondentLabel(e: Evaluation): string {
@@ -102,7 +106,37 @@ const TAB_LIST = [
   { id: "grafik", label: "Grafik", icon: <BarChart3 size={14} aria-hidden="true" /> },
   { id: "jawaban", label: "Jawaban", icon: <ListChecks size={14} aria-hidden="true" /> },
   { id: "respons", label: "Respons", icon: <Users size={14} aria-hidden="true" /> },
+  { id: "tabel", label: "Tabel", icon: <Table2 size={14} aria-hidden="true" /> },
 ];
+
+type ResultTab = "grafik" | "jawaban" | "respons" | "tabel";
+
+// Tabel baca-saja dengan kolom dan baris yang sama persis dengan file Excel/CSV
+// (dirakit oleh buildEvaluationDataset yang sama dengan rute ekspor), termasuk
+// respons bentuk standar yang tidak ditampilkan di tab lain.
+function ResultsTable({
+  table,
+  eventId,
+  audience,
+  sheetsEnabled,
+}: {
+  table: TableData;
+  eventId: string;
+  audience: "peserta" | "panitia";
+  sheetsEnabled: boolean;
+}) {
+  return (
+    <DataTable
+      label="Tabel hasil evaluasi"
+      columns={table.columns}
+      rows={table.rows}
+      canCopy
+      onOpenSheets={sheetsEnabled ? () => openEvaluationInSheets(eventId, audience) : undefined}
+      emptyText="Belum ada respons."
+      note="Isinya sama dengan file Excel/CSV. Tabel ini hanya untuk dilihat; hapus respons lewat tab Respons."
+    />
+  );
+}
 
 export function EvaluationResults({
   eventId,
@@ -111,6 +145,7 @@ export function EvaluationResults({
   questions = [],
   answers = [],
   exportAudience = "peserta",
+  sheetsEnabled = false,
 }: {
   eventId: string;
   evaluations: Evaluation[];
@@ -120,7 +155,17 @@ export function EvaluationResults({
   answers?: EvalAnswerRow[];
   /** Audiens tautan ekspor: "panitia" menambahkan ?audience=panitia (gerbangnya lebih ketat). */
   exportAudience?: "peserta" | "panitia";
+  /** Server sudah dikonfigurasi membuat Google Sheet (isSheetsConfigured); kalau false tombolnya salin-tempel. */
+  sheetsEnabled?: boolean;
 }) {
+  const table = useMemo(
+    () =>
+      datasetToTable(
+        buildEvaluationDataset({ audience: exportAudience, sections, rows: evaluations, questions, answers }),
+      ),
+    [exportAudience, sections, evaluations, questions, answers],
+  );
+
   // Tab Panitia: keadaan kosongnya harus menunjuk tautan evaluasi PANITIA. Pesan
   // kosong milik peserta (TemplateResults/CustomResults) menyuruh membagikan
   // /events/<slug>/evaluasi ke grup peserta - kalau itu yang dibagikan ke grup
@@ -146,10 +191,12 @@ export function EvaluationResults({
         answers={answers}
         legacyCount={legacy.length}
         exportAudience={exportAudience}
+        table={table}
+        sheetsEnabled={sheetsEnabled}
       />
     );
   }
-  return <TemplateResults eventId={eventId} evaluations={legacy} sections={sections} />;
+  return <TemplateResults eventId={eventId} evaluations={legacy} sections={sections} table={table} sheetsEnabled={sheetsEnabled} />;
 }
 
 // ---------- Template tetap (WIF / umum) ----------
@@ -158,12 +205,16 @@ function TemplateResults({
   eventId,
   evaluations,
   sections,
+  table,
+  sheetsEnabled,
 }: {
   eventId: string;
   evaluations: LegacyEvaluation[];
   sections: EvaluationSection[];
+  table: TableData;
+  sheetsEnabled: boolean;
 }) {
-  const [tab, setTab] = useState<"grafik" | "jawaban" | "respons">("grafik");
+  const [tab, setTab] = useState<ResultTab>("grafik");
 
   if (evaluations.length === 0) {
     return (
@@ -216,7 +267,7 @@ function TemplateResults({
                 <div className="mt-4">
                   <Distribution values={values} tall />
                 </div>
-                <div className="mt-1 flex justify-between text-[10px] text-on-surface-variant">
+                <div className="mt-1 flex justify-between text-xs text-on-surface-variant">
                   <span>1</span>
                   <span>10</span>
                 </div>
@@ -294,7 +345,7 @@ function TemplateResults({
                         <span className="ml-2 text-body-sm font-normal text-on-surface-variant">{e.respondentCity}</span>
                       ) : null}
                     </p>
-                    <p className="text-label-caps text-on-surface-variant">{formatWhen(e.createdAt)}</p>
+                    <p className="text-body-sm text-on-surface-variant">{formatWhen(e.createdAt)}</p>
                   </div>
                   <DeleteResponse eventId={eventId} id={e.id} />
                 </div>
@@ -322,6 +373,8 @@ function TemplateResults({
           })}
         </ul>
       )}
+
+      {tab === "tabel" && <ResultsTable table={table} eventId={eventId} audience="peserta" sheetsEnabled={sheetsEnabled} />}
     </div>
   );
 }
@@ -382,6 +435,8 @@ function CustomResults({
   answers,
   legacyCount,
   exportAudience = "peserta",
+  table,
+  sheetsEnabled,
 }: {
   eventId: string;
   evaluations: Evaluation[];
@@ -389,8 +444,10 @@ function CustomResults({
   answers: EvalAnswerRow[];
   legacyCount: number;
   exportAudience?: "peserta" | "panitia";
+  table: TableData;
+  sheetsEnabled: boolean;
 }) {
-  const [tab, setTab] = useState<"grafik" | "jawaban" | "respons">("grafik");
+  const [tab, setTab] = useState<ResultTab>("grafik");
   const columns = evalColumns(questions, answers);
   const byEvaluation = answersByEvaluation(answers);
 
@@ -476,7 +533,7 @@ function CustomResults({
                   <div className="mt-4">
                     <Distribution values={values} tall scale={scale} />
                   </div>
-                  <div className="mt-1 flex justify-between text-[10px] text-on-surface-variant">
+                  <div className="mt-1 flex justify-between text-xs text-on-surface-variant">
                     <span>1</span>
                     <span>{scale}</span>
                   </div>
@@ -560,7 +617,7 @@ function CustomResults({
                         <span className="ml-2 text-body-sm font-normal text-on-surface-variant">{e.respondentCity}</span>
                       ) : null}
                     </p>
-                    <p className="text-label-caps text-on-surface-variant">{formatWhen(e.createdAt)}</p>
+                    <p className="text-body-sm text-on-surface-variant">{formatWhen(e.createdAt)}</p>
                   </div>
                   <DeleteResponse eventId={eventId} id={e.id} />
                 </div>
@@ -582,6 +639,8 @@ function CustomResults({
           })}
         </ul>
       )}
+
+      {tab === "tabel" && <ResultsTable table={table} eventId={eventId} audience={exportAudience} sheetsEnabled={sheetsEnabled} />}
     </div>
   );
 }

@@ -97,6 +97,8 @@ Data sensus/pendataan detail mahasiswa — terpisah dari `USER` dasar karena for
 | scheduled_publish_at | timestamp nullable | publish otomatis begitu waktu ini terlewati |
 | department_id | uuid FK → DEPARTMENT nullable | Panitia penyelenggara |
 | created_by | uuid FK → USER | |
+| approval_requested_at, approval_requested_by | timestamp, uuid FK → USER, nullable | pengajuan ke BPH Kabinet yang sedang menunggu; dikosongkan lagi bila ditolak |
+| approved_at, approved_by | timestamp, uuid FK → USER, nullable | persetujuan BPH Kabinet, syarat acara boleh diterbitkan (lihat [Event Management](./Event%20Management.md)) |
 | is_paid | boolean | penanda acara berbayar (HTM), dipisah dari nominalnya karena nominal sering baru pasti belakangan (menunggu sponsor) |
 | fee_cny | int nullable | null = gratis / belum ditetapkan |
 | payment_instructions | text nullable | instruksi transfer untuk peserta |

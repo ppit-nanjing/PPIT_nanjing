@@ -59,8 +59,8 @@ export default async function SensusAuditLogPage() {
                         </>
                       ) : null}
                     </span>
-                    <span className="text-label-caps text-on-surface-variant">
-                      {new Date(log.createdAt).toLocaleString("id-ID", { dateStyle: "medium", timeStyle: "short" })}
+                    <span className="text-body-sm text-on-surface-variant">
+                      {new Date(log.createdAt).toLocaleString("id-ID", { timeZone: "Asia/Shanghai", dateStyle: "medium", timeStyle: "short" })}
                     </span>
                   </div>
                   <p className="text-on-surface-variant mt-0.5">

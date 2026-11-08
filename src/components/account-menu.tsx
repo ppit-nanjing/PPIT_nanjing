@@ -3,7 +3,7 @@
 import { useSession, signOut } from "next-auth/react";
 import { useState } from "react";
 import { usePathname, useSearchParams } from "next/navigation";
-import { ChevronDown, ShieldCheck, User, LogOut, Inbox } from "lucide-react";
+import { ChevronDown, ShieldCheck, User, LogOut, Inbox, ClipboardList } from "lucide-react";
 import { useT } from "@/lib/i18n/client";
 import Image from "next/image";
 import Link from "next/link";
@@ -110,7 +110,12 @@ export function AccountMenu({ compact = false }: { compact?: boolean }) {
           <Link href="/profile/submissions" className="flex items-center gap-2 px-4 py-2 text-sm hover:bg-surface-container-high transition-colors">
             <Inbox size={16} /> {t("accountMenu.submissions")}
           </Link>
-          {session.user.isAdmin && (
+          {session.user.canCreateSurvey && (
+            <Link href="/formulir" className="flex items-center gap-2 px-4 py-2 text-sm hover:bg-surface-container-high transition-colors">
+              <ClipboardList size={16} /> {t("accountMenu.surveys")}
+            </Link>
+          )}
+          {(session.user.isAdmin || session.user.canCreateEvent) && (
             <Link
               href="/console"
               className="flex items-center gap-2 px-4 py-2 text-sm text-primary-container font-medium hover:bg-surface-container-high transition-colors"

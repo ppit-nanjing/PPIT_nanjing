@@ -1,5 +1,5 @@
 import { and, desc, eq, sql } from "drizzle-orm";
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { Download } from "lucide-react";
 import { db } from "@/db";
 import { auditLogs, guideChunks, guideMeta, helpArticles, users } from "@/db/schema";
@@ -13,10 +13,16 @@ import { ghostBtn } from "@/components/console/form";
 import { renderMarkdownLite } from "@/lib/markdown-lite";
 import { CHUNKER_VERSION } from "@/lib/guide-chunker";
 import { articleSignatureSql, expiryStatus, guidePhaseLabel } from "@/lib/guidebook-topic";
-import { requireModuleAccess } from "@/lib/admin-scope";
+import { auth } from "@/auth";
+import { hasModuleAccess } from "@/lib/admin-scope";
 
 export default async function HelpArticlePage({ params }: { params: Promise<{ slug: string }> }) {
-  await requireModuleAccess("guidebook");
+  // Membaca Help Center terbuka untuk semua pengurus. Menulis, ekspor Word, dan
+  // panel guidebook tetap butuh modul "guidebook" — aksi dan route export sudah
+  // menegakkannya sendiri, jadi di sini hanya visibilitas.
+  const session = await auth();
+  if (!session) redirect("/login");
+  const canManageGuides = hasModuleAccess(session.user.adminScope, "guidebook");
 
   const { slug } = await params;
   const [row] = await db
@@ -79,9 +85,9 @@ export default async function HelpArticlePage({ params }: { params: Promise<{ sl
         {article.section}
       </span>
       <h1 className="text-headline-md sm:text-headline-lg text-on-background mb-2">{article.title}</h1>
-      <p className="text-label-caps text-on-surface-variant mb-8 flex flex-wrap items-center gap-x-2">
+      <p className="text-body-sm text-on-surface-variant mb-8 flex flex-wrap items-center gap-x-2">
         <span>
-          Diperbarui {new Date(article.updatedAt).toLocaleDateString("id-ID")}
+          Diperbarui {new Date(article.updatedAt).toLocaleDateString("id-ID", { timeZone: "Asia/Shanghai", dateStyle: "medium" })}
           {authorName ? ` oleh ${authorName}` : ""}
         </span>
         {article.isPublic && (
@@ -106,17 +112,19 @@ export default async function HelpArticlePage({ params }: { params: Promise<{ sl
       {/* print:hidden - Fase 2: dua sumber (Word/PDF) diturunkan dari artikel
           yang sama, bukan dokumen SOP terpisah yang harus dijaga manual. */}
       <div className="flex flex-wrap items-center gap-x-4 gap-y-2 mb-10 text-label-caps print:hidden">
-        <a
-          href={`/api/console/docs/${article.slug}/export`}
-          download
-          className="text-primary-container hover:text-primary inline-flex items-center gap-1"
-        >
-          <Download size={13} aria-hidden /> Unduh sebagai Word
-        </a>
+        {canManageGuides && (
+          <a
+            href={`/api/console/docs/${article.slug}/export`}
+            download
+            className="text-primary-container hover:text-primary inline-flex items-center gap-1"
+          >
+            <Download size={13} aria-hidden /> Unduh sebagai Word
+          </a>
+        )}
         <PrintButton />
       </div>
 
-      {isTopic && (
+      {isTopic && canManageGuides && (
         <div className="flex flex-col gap-4 mb-10 print:hidden">
           <CollapsibleSection
             title="Status Topik Guidebook"
@@ -276,16 +284,18 @@ export default async function HelpArticlePage({ params }: { params: Promise<{ sl
         </div>
       )}
 
-      <div className="print:hidden">
-        <CollapsibleSection title="Edit Panduan Ini">
-          <ArticleForm
-            article={article}
-            signature={signature}
-            submitLabel="Simpan Perubahan"
-            successMessage="Panduan tersimpan."
-          />
-        </CollapsibleSection>
-      </div>
+      {canManageGuides && (
+        <div className="print:hidden">
+          <CollapsibleSection title="Edit Panduan Ini" defaultOpen={false}>
+            <ArticleForm
+              article={article}
+              signature={signature}
+              submitLabel="Simpan Perubahan"
+              successMessage="Panduan tersimpan."
+            />
+          </CollapsibleSection>
+        </div>
+      )}
     </div>
   );
 }

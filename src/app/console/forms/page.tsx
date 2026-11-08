@@ -1,16 +1,25 @@
 import { count } from "drizzle-orm";
-import { ClipboardList, Crown, UserPlus, Vote } from "lucide-react";
+import { ClipboardList, Crown, ListChecks, UserPlus, Vote } from "lucide-react";
 import Link from "next/link";
+import { redirect } from "next/navigation";
 import { db } from "@/db";
 import { forms, membershipApplications } from "@/db/schema";
-import { requireFormsHub } from "@/lib/form-access";
+import { getFormsAccess } from "@/lib/form-access";
+import { getSurveyAccess } from "@/lib/survey-access";
 
 export const metadata = { title: "Formulir" };
 
 // Hub modul Formulir: 4 pintu (Pendaftaran PPIT lama + 3 formulir kabinet).
 // Isi tiap tab dibangun bertahap — lihat docs/Formulir & Oprek.md.
 export default async function ConsoleFormsPage() {
-  const access = await requireFormsHub();
+  // Hub terbuka untuk yang punya salah satu tab Formulir ATAU boleh membuat Formulir Kustom
+  // (pengurus kabinet / panitia): mereka hanya melihat kartu yang menjadi haknya.
+  const access = await getFormsAccess();
+  if (!access) redirect("/login");
+  const customForms = await getSurveyAccess();
+  if (!access.canPemilu && !access.canBphTab && !access.canKepanitiaanTab && !customForms?.canCreate) {
+    redirect("/console?akses=forms");
+  }
 
   const [formCounts, membershipCountRows] = await Promise.all([
     db.select({ kind: forms.kind, n: count() }).from(forms).groupBy(forms.kind),
@@ -21,14 +30,15 @@ export default async function ConsoleFormsPage() {
 
   const cardClass =
     "flex flex-col gap-2 bg-surface-container-lowest border border-outline-variant rounded-lg p-6 hover:border-muted-gold hover:bg-surface-container-low transition-colors";
-  const countClass = "text-label-caps uppercase tracking-wide text-on-surface-variant";
+  const countClass = "text-body-sm text-on-surface-variant";
 
   return (
     <div className="px-4 py-6 sm:px-6 lg:px-8 lg:py-10 max-w-5xl">
       <div className="mb-8">
         <h1 className="text-headline-md sm:text-headline-lg text-on-background">Formulir</h1>
-        <p className="text-body-md text-on-surface-variant mt-1">
-          Formulir internal kabinet PPIT: pendaftaran anggota, Pemilu, Oprek BPH Acara, dan Oprek Kepanitiaan.
+        <p className="text-body-md text-on-surface-variant mt-1 max-w-[62ch]">
+          Formulir internal kabinet PPIT: rekrutmen pengurus, Pemilu, Oprek (open recruitment) BPH Acara dan
+          Kepanitiaan, plus Formulir Kustom untuk riset pasar dan kuesioner.
         </p>
       </div>
 
@@ -37,10 +47,10 @@ export default async function ConsoleFormsPage() {
           <Link href="/console/forms/pendaftaran" className={cardClass}>
             <span className="flex items-center gap-2 text-on-background">
               <UserPlus size={18} className="text-primary-container" />
-              <span className="text-headline-md">Pendaftaran PPIT</span>
+              <span className="text-headline-md">Rekrutmen Pengurus</span>
             </span>
             <span className="text-body-md text-on-surface-variant">
-              Formulir rekrutmen anggota (halaman Join Us): kelola pertanyaan, respons, dan ekspor.
+              Formulir rekrutmen pengurus (halaman Join Us): kelola pertanyaan, respons, dan ekspor.
             </span>
             <span className={countClass}>{membershipCount} jawaban</span>
           </Link>
@@ -85,6 +95,20 @@ export default async function ConsoleFormsPage() {
             <span className={countClass}>
               {countOf("oprek_kadiv")} Oprek Kadiv · {countOf("oprek_kepanitiaan")} Oprek anggota
             </span>
+          </Link>
+        )}
+
+        {customForms?.canCreate && (
+          <Link href="/formulir" className={cardClass}>
+            <span className="flex items-center gap-2 text-on-background">
+              <ListChecks size={18} className="text-primary-container" />
+              <span className="text-headline-md">Formulir Kustom</span>
+            </span>
+            <span className="text-body-md text-on-surface-variant">
+              Buat formulir sendiri untuk riset pasar, kuesioner, atau masukan. Hasilnya grafik, tabel, Google Sheets,
+              dan unduhan CSV/Excel. Untuk pengurus kabinet dan panitia acara.
+            </span>
+            <span className={countClass}>Buka Formulir Kustom</span>
           </Link>
         )}
       </div>

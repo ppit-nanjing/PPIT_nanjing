@@ -2,92 +2,9 @@
 
 import { useEffect, useState } from "react";
 import { usePathname } from "next/navigation";
-import {
-  Menu,
-  X,
-  MessageSquare,
-  LayoutDashboard,
-  ArrowLeft,
-  Users,
-  Building2,
-  CalendarDays,
-  Package,
-  FileBarChart,
-  BookOpen,
-  Images,
-  Store,
-  ClipboardList,
-  ClipboardCheck,
-  UserPlus,
-  Briefcase,
-  BellRing,
-  Link2,
-  Folder,
-  FileText,
-  PanelLeftClose,
-  PanelLeftOpen,
-} from "lucide-react";
-import { hasModuleAccess, type AdminModule } from "@/lib/admin-scope-constants";
+import { Menu, X, ArrowLeft, PanelLeftClose, PanelLeftOpen } from "lucide-react";
+import { NAV_GROUPS, canSeeNavItem } from "@/lib/console-nav";
 import Link from "next/link";
-
-type NavItem = {
-  href: string;
-  label: string;
-  icon: typeof LayoutDashboard;
-  // Satu modul, atau beberapa (tampil kalau punya salah satu — mis. Sensus
-  // untuk pemegang "sensus" ATAU "sensus-verify").
-  module: AdminModule | AdminModule[] | null;
-  // Juga tampil untuk panitia acara (non-admin) walau tidak punya modul-nya.
-  committeeToo?: boolean;
-  // Khusus BPH Acara (ketua/wakil/sekretaris/bendahara/supervisor) — menu
-  // Formulir/Oprek Kepanitiaan. Panitia biasa tidak dapat menu ini.
-  bphCommitteeToo?: boolean;
-  // Juga tampil untuk Koordinator Divisi (role scoped) — mis. menu Formulir,
-  // supaya tiap koor bisa bikin form Oprek BPH untuk prokernya. Flag ini
-  // hanya visibilitas; gerbang sebenarnya ada di page/action masing-masing.
-  coordinatorToo?: boolean;
-};
-
-// `module: null` = always visible to anyone who got past the layout gate
-// (Dashboard is meta/support, not sensitive management). Dokumentasi pindah ke
-// modul "guidebook" pada 2026-10-11 supaya tautannya tidak muncul untuk admin
-// yang halaman /console/docs-nya memang sudah ditolak.
-// `module: "users"/"organization"/"feedback"` aren't delegable via
-// adminModuleScope (no seed row lists them) - full tier only.
-const GROUPS: { title: string; items: NavItem[] }[] = [
-  {
-    title: "Utama",
-    items: [{ href: "/console", label: "Dashboard", icon: LayoutDashboard, module: null }],
-  },
-  {
-    title: "Manajemen",
-    items: [
-      { href: "/console/users", label: "Pengguna", icon: Users, module: "users" },
-      { href: "/console/organization", label: "Organisasi", icon: Building2, module: "organization" },
-      { href: "/console/events", label: "Kegiatan", icon: CalendarDays, module: "events", committeeToo: true },
-      { href: "/console/work-ledger", label: "Work Ledger", icon: ClipboardList, module: "events" },
-      { href: "/console/inventory", label: "Inventaris", icon: Package, module: "inventory" },
-      { href: "/console/membership", label: "Pendaftaran", icon: UserPlus, module: "membership" },
-      { href: "/console/forms", label: "Formulir", icon: FileText, module: "forms", bphCommitteeToo: true, coordinatorToo: true },
-      { href: "/console/jobs", label: "Lowongan", icon: Briefcase, module: "career" },
-      { href: "/console/sensus", label: "Sensus", icon: ClipboardCheck, module: ["sensus", "sensus-verify"] },
-      { href: "/console/ranting/sensus", label: "Sensus Ranting", icon: ClipboardCheck, module: "sensus-ranting" },
-      { href: "/console/content", label: "Konten", icon: Images, module: "content" },
-      { href: "/console/katalog", label: "Kota & Katalog", icon: Store, module: "content" },
-    ],
-  },
-  {
-    title: "Sistem",
-    items: [
-      { href: "/console/reports", label: "Laporan", icon: FileBarChart, module: "reports" },
-      { href: "/console/notifications", label: "Notifikasi", icon: BellRing, module: "notifications" },
-      { href: "/console/docs", label: "Dokumentasi", icon: BookOpen, module: "guidebook" },
-      { href: "/console/feedback", label: "Masukan Pengguna", icon: MessageSquare, module: "feedback" },
-      { href: "/console/links", label: "Tautan", icon: Link2, module: "links" },
-      { href: "/console/documents", label: "Dokumen", icon: Folder, module: "documents" },
-    ],
-  },
-];
 
 const COLLAPSE_KEY = "console.sidebar.collapsed";
 
@@ -96,6 +13,8 @@ function NavContent({
   isCommittee = false,
   isBphCommittee = false,
   isCoordinator = false,
+  canCreateSurvey = false,
+  canCreateEvent = false,
   pathname,
   onNavigate,
   collapsed = false,
@@ -104,6 +23,8 @@ function NavContent({
   isCommittee?: boolean;
   isBphCommittee?: boolean;
   isCoordinator?: boolean;
+  canCreateSurvey?: boolean;
+  canCreateEvent?: boolean;
   pathname: string;
   onNavigate: () => void;
   collapsed?: boolean;
@@ -113,16 +34,9 @@ function NavContent({
 
   return (
     <nav className={`flex-1 py-2 overflow-y-auto ${collapsed ? "px-2" : ""}`}>
-      {GROUPS.map((group) => {
-        const items = group.items.filter(
-          (i) =>
-            i.module === null ||
-            (Array.isArray(i.module)
-              ? i.module.some((m) => hasModuleAccess(scope, m))
-              : hasModuleAccess(scope, i.module)) ||
-            (i.committeeToo && isCommittee) ||
-            (i.bphCommitteeToo && isBphCommittee) ||
-            (i.coordinatorToo && isCoordinator),
+      {NAV_GROUPS.map((group) => {
+        const items = group.items.filter((i) =>
+          canSeeNavItem(i, { scope, isCommittee, isBphCommittee, isCoordinator, canCreateSurvey, canCreateEvent }),
         );
         if (items.length === 0) return null;
         return (
@@ -141,7 +55,7 @@ function NavContent({
                   href={item.href}
                   onClick={onNavigate}
                   aria-current={active ? "page" : undefined}
-                  title={collapsed ? item.label : undefined}
+                  title={collapsed ? `${item.label}: ${item.hint}` : item.hint}
                   className={`relative flex items-center text-body-md transition-colors ${
                     collapsed ? "justify-center px-0 py-3" : "gap-3 px-6 py-3"
                   } ${
@@ -171,18 +85,31 @@ export function ConsoleSidebar({
   isCommittee = false,
   isBphCommittee = false,
   isCoordinator = false,
+  canCreateSurvey = false,
+  canCreateEvent = false,
 }: {
   userName: string;
   scope: "full" | string[] | null;
   isCommittee?: boolean;
   isBphCommittee?: boolean;
   isCoordinator?: boolean;
+  canCreateSurvey?: boolean;
+  canCreateEvent?: boolean;
 }) {
   const [open, setOpen] = useState(false);
   // Lipat = rail ikon saja di desktop. Pilihan diingat per browser supaya
   // admin tidak mengulang setiap pindah halaman.
   const [collapsed, setCollapsed] = useState(false);
   const pathname = usePathname();
+
+  useEffect(() => {
+    if (!open) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setOpen(false);
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [open]);
 
   useEffect(() => {
     // Bukan setState sinkron: disalurkan lewat rAF supaya tidak memicu
@@ -212,19 +139,19 @@ export function ConsoleSidebar({
           {!collapsed && (
             <div className="min-w-0">
               <p className="text-headline-md font-bold text-primary uppercase tracking-tight">Console</p>
-              <p className="text-label-caps text-on-surface-variant mt-1 truncate">{userName}</p>
+              <p className="text-body-sm text-on-surface-variant mt-1 truncate">{userName}</p>
             </div>
           )}
           <button
             onClick={toggleCollapse}
             aria-label={collapsed ? "Buka sidebar" : "Lipat sidebar"}
             aria-expanded={!collapsed}
-            className="p-1.5 rounded-md text-on-surface-variant hover:bg-surface-container-low hover:text-on-background transition-colors"
+            className="grid h-10 w-10 place-items-center rounded-md text-on-surface-variant hover:bg-surface-container-low hover:text-on-background transition-colors"
           >
             {collapsed ? <PanelLeftOpen size={18} /> : <PanelLeftClose size={18} />}
           </button>
         </div>
-        <NavContent scope={scope} isCommittee={isCommittee} isBphCommittee={isBphCommittee} isCoordinator={isCoordinator} pathname={pathname} onNavigate={() => {}} collapsed={collapsed} />
+        <NavContent scope={scope} isCommittee={isCommittee} isBphCommittee={isBphCommittee} isCoordinator={isCoordinator} canCreateSurvey={canCreateSurvey} canCreateEvent={canCreateEvent} pathname={pathname} onNavigate={() => {}} collapsed={collapsed} />
         <Link
           href="/"
           title={collapsed ? "Kembali ke Situs" : undefined}
@@ -240,25 +167,34 @@ export function ConsoleSidebar({
       {/* Mobile top bar */}
       <div className="md:hidden sticky top-0 z-40 flex items-center justify-between bg-surface-container-lowest border-b border-outline-variant px-4 py-3">
         <span className="text-headline-md font-bold text-primary uppercase tracking-tight">Console</span>
-        <button onClick={() => setOpen(true)} aria-label="Buka menu" className="text-on-background">
+        <button onClick={() => setOpen(true)} aria-label="Buka menu" aria-haspopup="dialog" className="-mr-2 grid h-11 w-11 place-items-center rounded-md text-on-background">
           <Menu size={22} />
         </button>
       </div>
 
       {/* Mobile drawer */}
       {open && (
-        <div className="md:hidden fixed inset-0 z-50 bg-black/50" onClick={() => setOpen(false)}>
+        <div
+          className="md:hidden fixed inset-0 z-50 bg-black/50"
+          onClick={() => setOpen(false)}
+          role="dialog"
+          aria-modal="true"
+          aria-label="Menu konsol"
+        >
           <aside
             className="w-64 h-full bg-surface-container-lowest border-r border-outline-variant flex flex-col"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex items-center justify-between px-6 py-6 border-b border-outline-variant">
-              <p className="text-headline-md font-bold text-primary uppercase tracking-tight">Console</p>
-              <button onClick={() => setOpen(false)} aria-label="Tutup menu" className="text-secondary">
+              <div className="min-w-0">
+                <p className="text-headline-md font-bold text-primary uppercase tracking-tight">Console</p>
+                <p className="text-body-sm text-on-surface-variant mt-1 truncate">{userName}</p>
+              </div>
+              <button onClick={() => setOpen(false)} aria-label="Tutup menu" className="-mr-2 grid h-11 w-11 place-items-center rounded-md text-secondary">
                 <X size={22} />
               </button>
             </div>
-            <NavContent scope={scope} isCommittee={isCommittee} isBphCommittee={isBphCommittee} isCoordinator={isCoordinator} pathname={pathname} onNavigate={() => setOpen(false)} />
+            <NavContent scope={scope} isCommittee={isCommittee} isBphCommittee={isBphCommittee} isCoordinator={isCoordinator} canCreateSurvey={canCreateSurvey} canCreateEvent={canCreateEvent} pathname={pathname} onNavigate={() => setOpen(false)} />
             <Link
               href="/"
               onClick={() => setOpen(false)}

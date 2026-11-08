@@ -1,6 +1,7 @@
 "use client";
 
 import { useTransition } from "react";
+import { RejectWithReason } from "@/components/console/reject-with-reason";
 import { toast } from "sonner";
 import Image from "next/image";
 import { reviewProcurement } from "@/app/actions/procurement";
@@ -76,7 +77,7 @@ export function ProcurementReview({ requests }: { requests: Request[] }) {
                 className="h-24 w-24 shrink-0 rounded-md border border-outline-variant object-cover"
               />
             )}
-            <div className="min-w-0 text-label-caps text-on-surface-variant">
+            <div className="min-w-0 text-body-sm text-on-surface-variant">
               <p>
                 Urgensi: <span className="text-on-background normal-case">{r.urgency}</span>
                 {r.estimatedCost != null ? ` · ~RMB ${r.estimatedCost}` : ""}
@@ -104,15 +105,7 @@ export function ProcurementReview({ requests }: { requests: Request[] }) {
                   >
                     Setujui
                   </button>
-                  <button
-                    type="submit"
-                    name="decision"
-                    value="reject"
-                    disabled={pending}
-                    className="rounded-md border border-outline-variant px-5 py-2.5 text-label-caps uppercase tracking-wide text-secondary transition-colors hover:text-on-background disabled:opacity-60 motion-reduce:transition-none"
-                  >
-                    Tolak
-                  </button>
+                  <RejectWithReason disabled={pending} />
                 </>
               )}
               {r.status === "approved" && (

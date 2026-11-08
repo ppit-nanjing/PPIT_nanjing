@@ -23,6 +23,8 @@ export default async function FormSubmittedPage({ params }: { params: Promise<{ 
 
   const [form] = await db.select().from(forms).where(eq(forms.id, id));
   if (!form) notFound();
+  // Formulir punya halaman terkirim sendiri (/f/[id]/terkirim).
+  if (form.kind === "survei") redirect(`/f/${form.id}/terkirim`);
 
   const session = await auth();
   if (!session?.user?.id) {

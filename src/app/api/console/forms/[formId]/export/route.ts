@@ -1,4 +1,5 @@
 import { asc, eq } from "drizzle-orm";
+import { formatChinaDateIso } from "@/lib/datetime";
 import { NextResponse, type NextRequest } from "next/server";
 import { db } from "@/db";
 import { eventDivisions, formApplications, formFields, forms, sensusProfiles, users } from "@/db/schema";
@@ -26,6 +27,8 @@ export async function GET(req: NextRequest, ctx: { params: Promise<{ formId: str
   if (!(await canManageForm(form, access))) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
+  // Formulir punya ekspor sendiri (/api/formulir/[formId]/export); jawabannya bukan lamaran.
+  if (form.kind === "survei") return NextResponse.json({ error: "Not found" }, { status: 404 });
 
   const format = new URL(req.url).searchParams.get("format") === "xlsx" ? "xlsx" : "csv";
 
@@ -134,7 +137,7 @@ export async function GET(req: NextRequest, ctx: { params: Promise<{ formId: str
     rows,
   };
 
-  const date = new Date().toISOString().slice(0, 10);
+  const date = formatChinaDateIso(new Date());
   const filename = `formulir-${form.kind}-${form.id.slice(0, 8)}-${date}.${format}`;
 
   if (format === "xlsx") {

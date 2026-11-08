@@ -49,8 +49,8 @@ export default async function EventScanPage({
   // KEPANITIAAN (event_committee.attendance_token) - peserta dicoba lebih dulu,
   // karena jauh lebih sering discan.
   let lookup:
-    | { kind: "participant"; name: string | null; email: string | null; alreadyAttended: boolean; label: null; kelompok: { kelompok: number; warna: string } | null }
-    | { kind: "committee"; name: string | null; email: string | null; alreadyAttended: boolean; label: string | null; kelompok: null }
+    | { kind: "participant"; userId: string | null; name: string | null; email: string | null; alreadyAttended: boolean; label: null; kelompok: { kelompok: number; warna: string } | null }
+    | { kind: "committee"; userId: string | null; name: string | null; email: string | null; alreadyAttended: boolean; label: string | null; kelompok: null }
     | null = null;
 
   // Kelompok/warna WIF 2026 - lookup statis, khusus acara ini (lihat
@@ -59,7 +59,7 @@ export default async function EventScanPage({
 
   if (t) {
     const [row] = await db
-      .select({ name: users.name, email: users.email, status: eventRegistrations.status, sensusFullName: sensusProfiles.fullName })
+      .select({ userId: eventRegistrations.userId, name: users.name, email: users.email, status: eventRegistrations.status, sensusFullName: sensusProfiles.fullName })
       .from(eventRegistrations)
       .leftJoin(users, eq(eventRegistrations.userId, users.id))
       .leftJoin(sensusProfiles, eq(eventRegistrations.userId, sensusProfiles.userId))
@@ -70,6 +70,7 @@ export default async function EventScanPage({
       const kelompokEntry = isWif2026 ? WIF_2026_KELOMPOK[normalizeNameForKelompok(nameForKelompok)] ?? null : null;
       lookup = {
         kind: "participant",
+        userId: row.userId,
         name: row.name,
         email: row.email,
         alreadyAttended: row.status === "attended",
@@ -79,6 +80,7 @@ export default async function EventScanPage({
     } else {
       const [committee] = await db
         .select({
+          userId: eventCommittee.userId,
           name: users.name,
           email: users.email,
           checkedInAt: eventCommittee.checkedInAt,
@@ -94,6 +96,7 @@ export default async function EventScanPage({
         const roleLabel = EVENT_COMMITTEE_ROLE_LABEL[committee.role as EventCommitteeRole] ?? committee.role;
         lookup = {
           kind: "committee",
+          userId: committee.userId,
           name: committee.name,
           email: committee.email,
           alreadyAttended: !!committee.checkedInAt,
@@ -140,8 +143,16 @@ export default async function EventScanPage({
         </Link>
 
         <h1 className="text-headline-md sm:text-headline-lg text-heading mb-1">{event.title}</h1>
-        <p className="text-body-md text-on-surface-variant mb-4">
+        <p className="text-body-md text-on-surface-variant mb-2">
           Scan QR tiket peserta atau tiket kepanitiaan untuk mencatat kehadiran.
+        </p>
+        <p className="text-body-md text-on-background mb-4">
+          <span className="font-semibold">{attendedCount}</span> hadir dari {registeredCount} terdaftar
+          {committeeTotal > 0 && (
+            <>
+              {" "}&middot; panitia <span className="font-semibold">{committeeAttended}</span>/{committeeTotal}
+            </>
+          )}
         </p>
 
         {!closed && practiceMode && (
@@ -161,17 +172,6 @@ export default async function EventScanPage({
             </div>
           </div>
         )}
-        {!closed && !practiceMode && (
-          <div className="mb-6">
-            <Link
-              href={toggleHref}
-              className="inline-flex items-center gap-2 text-label-caps uppercase tracking-wide text-on-surface-variant hover:text-on-background border border-outline-variant rounded-md px-3 py-2 transition-colors"
-            >
-              <FlaskConical size={14} aria-hidden="true" /> Aktifkan Mode Latihan
-            </Link>
-          </div>
-        )}
-
         {closed ? (
           <div className="mb-8 rounded-lg border border-outline-variant bg-surface-container-lowest p-6 flex flex-col items-center text-center">
             <CalendarX className="text-on-surface-variant mb-3" size={40} aria-hidden="true" />
@@ -187,6 +187,7 @@ export default async function EventScanPage({
                 token={t}
                 eventId={event.id}
                 kind={lookup.kind}
+                userId={lookup.userId}
                 name={lookup.name}
                 email={lookup.email}
                 label={lookup.label}
@@ -205,33 +206,42 @@ export default async function EventScanPage({
 
             {!t && <QrScanner practiceMode={practiceMode} />}
 
-            <form method="get" className="flex flex-col gap-3 sm:flex-row">
-              {practiceMode && <input type="hidden" name="practice" value="1" />}
-              <input
-                name="t"
-                placeholder="Tempel/salin token QR manual"
-                className="flex-1 bg-soft-gray rounded-md p-3 text-body-md"
-              />
-              <button
-                type="submit"
-                className="deco-btn bg-accent text-on-accent text-label-caps uppercase px-6 py-3 rounded-md hover:brightness-95 transition-[filter]"
-              >
-                Cek Token
-              </button>
-            </form>
+            {/* Token manual jarang dipakai: dilipat supaya pencarian nama (yang sering dipakai) naik. */}
+            <details className="mb-6 rounded-md border border-outline-variant">
+              <summary className="cursor-pointer list-none px-4 py-3 text-body-sm font-medium text-on-surface-variant hover:text-on-background">
+                Punya token QR? Masukkan manual
+              </summary>
+              <form method="get" className="flex flex-col gap-3 border-t border-outline-variant p-3 sm:flex-row">
+                {practiceMode && <input type="hidden" name="practice" value="1" />}
+                <input
+                  name="t"
+                  aria-label="Token QR"
+                  placeholder="Tempel/salin token QR"
+                  className="flex-1 bg-soft-gray rounded-md p-3 text-body-md"
+                />
+                <button
+                  type="submit"
+                  className="deco-btn bg-accent text-on-accent text-label-caps uppercase px-6 py-3 rounded-md hover:brightness-95 transition-[filter]"
+                >
+                  Cek Token
+                </button>
+              </form>
+            </details>
 
             {!t && <ManualCheckIn eventId={event.id} practice={practiceMode} />}
+
+            {/* Mode Latihan itu alat sekunder: di bawah pemindai, bukan di antara judul dan kamera. */}
+            {!practiceMode && (
+              <Link
+                href={toggleHref}
+                className="inline-flex items-center gap-2 text-label-caps uppercase tracking-wide text-on-surface-variant hover:text-on-background border border-outline-variant rounded-md px-3 py-2 transition-colors"
+              >
+                <FlaskConical size={14} aria-hidden="true" /> Aktifkan Mode Latihan
+              </Link>
+            )}
           </>
         )}
 
-        <p className="text-label-caps text-on-surface-variant mt-8">
-          {registeredCount} terdaftar &middot; {attendedCount} hadir
-          {committeeTotal > 0 && (
-            <>
-              {" "}&middot; {committeeTotal} panitia &middot; {committeeAttended} panitia hadir
-            </>
-          )}
-        </p>
       </main>
       <SiteFooter />
     </div>

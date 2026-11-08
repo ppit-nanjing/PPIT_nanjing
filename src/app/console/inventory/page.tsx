@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import { eq, desc, and, isNull } from "drizzle-orm";
 import { db } from "@/db";
 import { inventoryItems, borrowRequests, users, itemContributions, procurementRequests, externalLoans, itemReservations, events } from "@/db/schema";
@@ -19,6 +20,8 @@ import { conditionLabel, INVENTORY_CONDITIONS, CONDITION_LABEL } from "@/lib/inv
 import { fieldInput as input, primaryBtn, Select } from "@/components/console/form";
 import { SubmitButton } from "@/components/console/submit-button";
 
+
+export const metadata: Metadata = { title: "Inventaris" };
 
 export default async function ConsoleInventoryPage() {
   await requireModuleAccess("inventory");
@@ -200,11 +203,11 @@ export default async function ConsoleInventoryPage() {
                   <Package size={16} className="text-secondary" />
                   <h3 className="text-body-md font-semibold text-on-background">{item.name}</h3>
                 </div>
-                <p className="text-label-caps text-on-surface-variant">
+                <p className="text-body-sm text-on-surface-variant">
                   {item.availableQuantity} / {item.totalQuantity} tersedia &middot; {conditionLabel(item.condition)}
                 </p>
                 {(item.category || item.location || item.custodian) && (
-                  <p className="text-label-caps text-on-surface-variant mt-1">
+                  <p className="text-body-sm text-on-surface-variant mt-1">
                     {[item.category, item.location, item.custodian && `Pemegang: ${item.custodian}`]
                       .filter(Boolean)
                       .join(" · ")}

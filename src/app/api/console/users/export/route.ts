@@ -1,4 +1,5 @@
 import { db } from "@/db";
+import { formatChinaDateIso } from "@/lib/datetime";
 import { departments, departmentMembers, roles, users } from "@/db/schema";
 import { requireModuleAccess } from "@/lib/admin-scope";
 
@@ -50,7 +51,7 @@ export async function GET() {
   return new Response(csv, {
     headers: {
       "Content-Type": "text/csv; charset=utf-8",
-      "Content-Disposition": `attachment; filename="pengguna-ppit-${new Date().toISOString().slice(0, 10)}.csv"`,
+      "Content-Disposition": `attachment; filename="pengguna-ppit-${formatChinaDateIso(new Date())}.csv"`,
       "Cache-Control": "no-store",
     },
   });

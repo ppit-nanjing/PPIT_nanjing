@@ -16,6 +16,7 @@ Sebelumnya `.env.example` hanya memuat 11 dari 13 variabel yang benar-benar diba
 | `AUTH_SECRET` | **WAJIB** | Dibuat sendiri: `npx auth secret` | Vercel + `.env` lokal |
 | `AUTH_GOOGLE_ID` | **WAJIB** | Google Cloud Console → APIs & Services → Credentials → OAuth client | Vercel + `.env` lokal |
 | `AUTH_GOOGLE_SECRET` | **WAJIB** | Sama, di layar yang sama | Vercel + `.env` lokal |
+| `GOOGLE_DRIVE_REFRESH_TOKEN` | Opsional (tombol "Ke Google Sheets" dari server) | `npx tsx --env-file=.env scripts/google-drive-oauth-token.ts --write-env`, masuk sebagai akun Google organisasi. Rinci di `docs/Tampilan Tabel Konsol.md` | Vercel (Production). Rahasia |
 | `BLOB_READ_WRITE_TOKEN` | **WAJIB untuk sensus** | Vercel → Storage → Blob store → Connect ke project (disuntik otomatis di produksi) | Vercel (otomatis) + `.env` lokal (salin manual) |
 | `PRIVATE_READ_WRITE_TOKEN` | **WAJIB untuk dokumen pribadi** | Vercel → Storage → store Blob **Private** (terpisah dari yang publik) → Connect ke project; Vercel menyuntiknya dengan prefix `PRIVATE_` | Vercel (otomatis) + `.env` lokal (salin manual) |
 | `CRON_SECRET` | **WAJIB di produksi** | Dibuat sendiri, lihat di bawah | Vercel |

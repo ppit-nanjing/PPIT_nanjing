@@ -42,7 +42,7 @@ export function VolunteerApplicationList({ applications }: { applications: Volun
       })}
       renderDetail={(v) => (
         <>
-          <div className="flex flex-col gap-0.5 text-label-caps text-on-surface-variant">
+          <div className="flex flex-col gap-0.5 text-body-sm text-on-surface-variant">
             <span className="break-all normal-case">
               {v.email}
               {v.whatsapp ? ` · ${v.whatsapp}` : ""}

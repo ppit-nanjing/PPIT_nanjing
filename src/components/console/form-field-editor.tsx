@@ -67,6 +67,7 @@ export function FormFieldEditor({
   isQuiz,
   actions,
   divisionField,
+  excludeTypes = [],
 }: {
   field: MembershipFieldDef;
   index: number;
@@ -75,6 +76,8 @@ export function FormFieldEditor({
   actions: FormFieldActions;
   /** Hanya untuk baris DIVISION_FIELD_KEY di form Oprek berdivisi. */
   divisionField?: DivisionFieldInfo;
+  /** Jenis jawaban yang disembunyikan dari pilihan (formulir tidak mendukung unggahan). */
+  excludeTypes?: MembershipFieldDef["type"][];
 }) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
@@ -277,12 +280,16 @@ export function FormFieldEditor({
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div className="flex flex-col gap-2">
                     <span className="text-label-caps uppercase tracking-wide text-on-surface-variant">Jenis Jawaban</span>
+                    {/* defaultValue, bukan value: <form action> di React 19 mereset kolom setelah simpan, dan
+                        <select> terkontrol kembali ke opsi pertama padahal state `type` tidak berubah. Simpan
+                        kedua dari editor yang masih terbuka lalu mengirim "Teks Pendek" dan diam-diam mengubah
+                        pertanyaan pilihan jadi isian teks. Select memasang ulang dirinya saat defaultValue berubah. */}
                     <Select
                       name="type"
-                      value={type}
+                      defaultValue={field.type}
                       onChange={(e) => setType(e.target.value as MembershipFieldDef["type"])}
                       className="w-full"
-                      options={ALL_TYPES.map((t) => ({ value: t, label: FIELD_TYPE_LABELS[t] }))}
+                      options={ALL_TYPES.filter((t) => !excludeTypes.includes(t) || t === field.type).map((t) => ({ value: t, label: FIELD_TYPE_LABELS[t] }))}
                     />
                   </div>
                   <CheckboxField name="required" defaultChecked={field.required} label="Wajib diisi" className="text-body-md text-on-background self-end pb-3" />
@@ -359,7 +366,7 @@ export function FormFieldEditor({
                     <div className="flex flex-col gap-2">
                       <span className="text-label-caps uppercase tracking-wide text-on-surface-variant">Keterangan untuk Peserta (opsional)</span>
                       <input name="helpText" defaultValue={field.helpText ?? ""} className="bg-surface-container-lowest rounded-md p-3 text-body-md" />
-                      <span className="text-label-caps text-on-surface-variant">Penjelasan tambahan di bawah pertanyaan.</span>
+                      <span className="text-body-sm text-on-surface-variant">Penjelasan tambahan di bawah pertanyaan.</span>
                     </div>
                     {type === "number" && (
                       <div className="grid grid-cols-2 gap-4">
@@ -387,7 +394,7 @@ export function FormFieldEditor({
                         onChange={(e) => setCfg((c) => ({ ...c, imageUrl: e.target.value.trim() || undefined }))}
                         className="bg-surface-container-lowest rounded-md p-3 text-body-md"
                       />
-                      <span className="text-label-caps text-on-surface-variant">Tampil sebaris di bawah pertanyaan (sama seperti Google Form).</span>
+                      <span className="text-body-sm text-on-surface-variant">Tampil sebaris di bawah pertanyaan (sama seperti Google Form).</span>
                     </div>
                     {isQuiz && (
                       <div className="flex flex-col gap-4 bg-tertiary-container/10 rounded-md p-3">
@@ -458,7 +465,7 @@ function AnswerKeyEditor({
       /* keep empty */
     }
     if (rows.length === 0 || options.length === 0) {
-      return <p className="text-label-caps text-on-surface-variant">Isi baris &amp; kolom dulu untuk memilih kunci jawaban.</p>;
+      return <p className="text-body-sm text-on-surface-variant">Isi baris &amp; kolom dulu untuk memilih kunci jawaban.</p>;
     }
     const multi = type === "grid_checkbox";
     const set = (rowIdx: number, col: string, checked: boolean) => {
@@ -525,7 +532,7 @@ function AnswerKeyEditor({
             {o}
           </label>
         ))}
-        <span className="text-label-caps text-on-surface-variant">Semua pilihan yang dicentang harus dipilih peserta agar dianggap benar.</span>
+        <span className="text-body-sm text-on-surface-variant">Semua pilihan yang dicentang harus dipilih peserta agar dianggap benar.</span>
       </div>
     );
   }
@@ -555,7 +562,7 @@ function AnswerKeyEditor({
   return (
     <>
       <input value={value} onChange={(e) => onChange(e.target.value)} className={cell} />
-      <span className="text-label-caps text-on-surface-variant">Dicocokkan persis, tanpa membedakan huruf besar/kecil.</span>
+      <span className="text-body-sm text-on-surface-variant">Dicocokkan persis, tanpa membedakan huruf besar/kecil.</span>
     </>
   );
 }

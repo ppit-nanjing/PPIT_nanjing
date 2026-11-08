@@ -48,12 +48,14 @@
 - [Organization & Regional Branches](./Organization%20&%20Regional%20Branches.md)
 - [Event Flow](./Event%20Flow.md)
 - [Evaluasi Acara](./Evaluasi%20Acara.md) — kuesioner pasca-acara (`/events/:slug/evaluasi`) + rekap & ekspor di console
+- [Tampilan Tabel Konsol](./Tampilan%20Tabel%20Konsol.md) — tab Tabel (baca-saja, ala spreadsheet) untuk evaluasi acara dan daftar pendaftar: urut, cari, filter, pilih kolom, salin; kolom pribadi tersembunyi
 - [Evaluasi Panitia Acara](./Evaluasi%20Panitia%20Acara.md) — evaluasi kolektif antar panitia per-acara (`/events/:slug/evaluasi-panitia`), jendela waktu diatur BPH di konsol acara
 - [Sampah Kegiatan](./Sampah%20Kegiatan.md) — "Hapus" kegiatan = pindah ke Sampah (soft delete), pulihkan / hapus permanen di `/console/events`
 - [Content Pages](./Content%20Pages.md) (News, Gallery, Legal)
 - [Career Flow](./Career%20Flow.md) (Jobs, panduan, Mentorship, console lowongan, rencana akun perusahaan; `/career` dialihkan ke `/jobs`)
 - [Join Us Flow](./Join%20Us%20Flow.md)
 - [Formulir & Oprek](./Formulir%20&%20Oprek.md) — modul console: Pemilu, Oprek BPH Acara, Oprek Kepanitiaan (formulir internal kabinet) + riwayat modul Formulir lama
+- [Formulir Kustom](./Formulir%20Kustom.md) — formulir buatan sendiri ala Google Forms (riset pasar, kuesioner) oleh pengurus kabinet / panitia acara: judul dan pertanyaan bebas, wajib login atau publik, biodata dari sensus, hasil berupa grafik + tabel + Google Sheet langsung + CSV/Excel (jam CST). `/formulir`, `/f/[id]`; kode `survei`
 - [Equipment Lending Flow](./Equipment%20Lending%20Flow.md)
 - [Sensus Profile Flow](./Sensus%20Profile%20Flow.md)
 - [Guidebook Maba](./Guidebook%20Maba.md) — **rencana + sebagian jadi** (issue #65): panduan bertahap + checklist, isi dari PDF, jawaban AI hanya dari isi guidebook, jalur edit di console. Isi topiknya masuk ke database lewat `src/db/ingest-guide.ts` dari markdown di [`docs/guidebook/`](guidebook/). Yang sudah ada di branch `feat/chatbot`: skema `guide_chunks`/`guide_meta` (migrasi `0057_guidebook.sql`, sudah jalan di database lokal Docker, belum di Neon produksi), chunker + renderer markdown, halaman `/console/docs/guidebook` untuk menulis topik sekaligus diagnostik korpus, 23 topik untuk maba (9 dari PDF + 8 topik pengetahuan sehari-hari + 6 topik celah 2026-10-14, sembilan belas di antaranya punya versi Inggris di [`docs/guidebook/en/`](guidebook/en/)), dan pencarian bantuan yang jawabannya cuma dari artikel publik. Mutu pencariannya dijaga `src/db/eval-guidebook.ts` dengan soal-soal di `docs/guidebook-golden.json` (recall@4 81/81 pada 2026-10-14)

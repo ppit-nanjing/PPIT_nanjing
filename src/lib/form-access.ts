@@ -1,6 +1,6 @@
 import { cache } from "react";
 import { notFound, redirect } from "next/navigation";
-import { and, asc, eq, isNull, or, sql } from "drizzle-orm";
+import { and, asc, eq, isNotNull, isNull, or, sql } from "drizzle-orm";
 import { auth } from "@/auth";
 import { db } from "@/db";
 import { departmentMembers, departments, eventCommittee, eventResponsibleDepartments, events, forms, sensusProfiles, users } from "@/db/schema";
@@ -41,6 +41,9 @@ export type FormsAccess = {
   bphEventIds: string[];
   // Acara tempat user ini Kadiv (kelola Oprek anggota acara itu).
   kadivEventIds: string[];
+  // Semua acara tempat user ini panitia (peran apa pun). Dipakai modul Formulir:
+  // panitia boleh membuat formulir untuk acaranya.
+  committeeEventIds: string[];
 };
 
 export const getFormsAccess = cache(async (): Promise<FormsAccess | null> => {
@@ -75,6 +78,7 @@ export const getFormsAccess = cache(async (): Promise<FormsAccess | null> => {
     canKepanitiaanTab,
     bphEventIds,
     kadivEventIds,
+    committeeEventIds: [...new Set(committeeRows.map((r) => r.eventId))],
   };
 });
 
@@ -121,6 +125,7 @@ export async function canManageForm(
   }
   if (acc.isFull || acc.canForms) return true;
   if (form.kind === "pemilu") return false;
+  if (form.kind === "survei") return canManageSurvey(form, acc);
   if (form.createdBy && form.createdBy === acc.userId) return true;
   if (form.eventId) {
     const eventAccess = await getEventAccess(form.eventId);
@@ -131,11 +136,50 @@ export async function canManageForm(
   return false;
 }
 
+/**
+ * Pembuat formulir masih berhak mengelola formulirnya selama masih berhak MEMBUAT:
+ * pengurus kabinet, atau panitia acara tempat formulir itu terikat. Orang yang sudah
+ * keluar dari keduanya tidak otomatis memegang hasil formulir (yang bisa memuat
+ * biodata) selamanya. `isCabinetMember` dihitung pemanggil supaya fungsi ini murni.
+ */
+export function isSurveyCreatorEligible(
+  access: Pick<FormsAccess, "committeeEventIds">,
+  isCabinetMember: boolean,
+  eventId: string | null,
+): boolean {
+  if (isCabinetMember) return true;
+  return eventId !== null && access.committeeEventIds.includes(eventId);
+}
+
+// Kelola formulir: pembuat yang masih berhak, atau BPH Panitia acara terikatnya.
+// Pemegang full/modul forms sudah lolos di canManageForm sebelum sampai sini.
+async function canManageSurvey(
+  form: Pick<FormRow, "eventId" | "createdBy">,
+  acc: FormsAccess,
+): Promise<boolean> {
+  if (form.createdBy && form.createdBy === acc.userId) {
+    const membership = await getCabinetMembership(acc.userId);
+    // Akun yang dibekukan kehilangan hak pembuat (sesi lama bisa masih hidup).
+    if (
+      membership?.status !== "suspended" &&
+      isSurveyCreatorEligible(acc, membership?.isCabinetMember === true, form.eventId)
+    ) {
+      return true;
+    }
+  }
+  if (form.eventId) {
+    const eventAccess = await getEventAccess(form.eventId);
+    if (eventAccess.isBphPanitia) return true;
+  }
+  return false;
+}
+
 // Acara yang boleh dipakai koordinator untuk membuat form Oprek BPH: acara
 // yang divisinya tercatat sebagai Divisi Penanggung Jawab, atau yang dia buat
-// sendiri. `null` = tanpa batas (full / modul forms). Tanpa batas ini koor
-// divisi mana pun bisa membuka Oprek BPH untuk acara divisi lain lalu
-// (sebagai pembuat form) menempatkan pelamar — termasuk dirinya — jadi ketua.
+// sendiri dan sudah disetujui BPH Kabinet. `null` = tanpa batas (full / modul
+// forms). Tanpa batas ini koor divisi mana pun bisa membuka Oprek BPH untuk acara
+// divisi lain lalu (sebagai pembuat form) menempatkan pelamar — termasuk dirinya —
+// jadi ketua. Syarat disetujui menutup jalan yang sama lewat draf buatan sendiri.
 export async function getCoordinatorEventIds(access: FormsAccess): Promise<string[] | null> {
   if (access.isFull || access.canForms) return null;
   const rows = await db
@@ -145,7 +189,7 @@ export async function getCoordinatorEventIds(access: FormsAccess): Promise<strin
       and(
         isNull(events.deletedAt),
         or(
-          eq(events.createdBy, access.userId),
+          and(eq(events.createdBy, access.userId), isNotNull(events.approvedAt)),
           sql`exists (
             select 1 from ${eventResponsibleDepartments} erd
             join ${departmentMembers} dm on dm.department_id = erd.department_id

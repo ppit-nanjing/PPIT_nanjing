@@ -1,13 +1,22 @@
+import type { Metadata } from "next";
+import { redirect } from "next/navigation";
 import { db } from "@/db";
 import { helpArticles } from "@/db/schema";
 import { Plus, FileText, History, Map } from "lucide-react";
 import { CollapsibleSection } from "@/components/console/collapsible-section";
 import { GuideButton } from "@/components/console/guide-button";
 import Link from "next/link";
-import { requireModuleAccess } from "@/lib/admin-scope";
+import { auth } from "@/auth";
+import { hasModuleAccess } from "@/lib/admin-scope";
+
+export const metadata: Metadata = { title: "Dokumentasi" };
 
 export default async function ConsoleDocsPage() {
-  await requireModuleAccess("guidebook");
+  // Membaca Help Center terbuka untuk semua pengurus; hanya tombol menulis dan
+  // panel guidebook yang butuh modul "guidebook".
+  const session = await auth();
+  if (!session) redirect("/login");
+  const canManageGuides = hasModuleAccess(session.user.adminScope, "guidebook");
 
   const articles = await db.select().from(helpArticles);
   const guide = articles.find((a) => a.slug === "dokumentasi");
@@ -27,24 +36,28 @@ export default async function ConsoleDocsPage() {
         </div>
         <div className="flex flex-wrap gap-3 shrink-0">
           {guide && <GuideButton title={guide.title} content={guide.content ?? ""} />}
-          <Link
-            href="/console/docs/guidebook"
-            className="flex items-center gap-2 border border-outline-variant text-on-background text-label-caps uppercase tracking-wide px-5 py-3 rounded-md hover:bg-surface-container-low transition-colors"
-          >
-            <Map size={16} /> Guidebook Maba
-          </Link>
-          <Link
-            href="/console/docs/changelog"
-            className="flex items-center gap-2 border border-outline-variant text-on-background text-label-caps uppercase tracking-wide px-5 py-3 rounded-md hover:bg-surface-container-low transition-colors"
-          >
-            <History size={16} /> Changelog
-          </Link>
-          <Link
-            href="/console/docs/new"
-            className="flex items-center gap-2 bg-primary-container text-on-primary text-label-caps uppercase tracking-wide px-5 py-3 rounded-md hover:bg-primary transition-colors"
-          >
-            <Plus size={16} /> Tulis Panduan
-          </Link>
+          {canManageGuides && (
+            <>
+              <Link
+                href="/console/docs/guidebook"
+                className="flex items-center gap-2 border border-outline-variant text-on-background text-label-caps uppercase tracking-wide px-5 py-3 rounded-md hover:bg-surface-container-low transition-colors"
+              >
+                <Map size={16} /> Guidebook Maba
+              </Link>
+              <Link
+                href="/console/docs/changelog"
+                className="flex items-center gap-2 border border-outline-variant text-on-background text-label-caps uppercase tracking-wide px-5 py-3 rounded-md hover:bg-surface-container-low transition-colors"
+              >
+                <History size={16} /> Changelog
+              </Link>
+              <Link
+                href="/console/docs/new"
+                className="flex items-center gap-2 bg-primary-container text-on-primary text-label-caps uppercase tracking-wide px-5 py-3 rounded-md hover:bg-primary transition-colors"
+              >
+                <Plus size={16} /> Tulis Panduan
+              </Link>
+            </>
+          )}
         </div>
       </div>
 

@@ -99,6 +99,10 @@ export async function upsertNewsArticle(
   // Inline instead of thrown - a thrown Error here would dump the admin into
   // the route error boundary with the whole article lost.
   if (!title) return { error: "Judul wajib diisi." };
+  // Berita kosong tidak boleh dipublikasikan (apalagi dengan email massal): simpan sebagai draf dulu.
+  if (publish && !content && !contentHtml) {
+    return { error: "Isi berita masih kosong. Tulis isinya dulu, atau simpan sebagai draf tanpa mencentang Publikasikan." };
+  }
 
   let article: typeof newsArticles.$inferSelect;
   // Only a fresh transition into "published" should email subscribers -
@@ -158,7 +162,7 @@ export async function upsertNewsArticle(
   revalidatePath("/news");
   revalidatePath(`/news/${article.slug}`);
   if (eventId) revalidatePath(`/console/events/${eventId}`);
-  redirect(withFlash(scoped && eventId ? `/console/events/${eventId}` : "/console/content", "Artikel tersimpan."));
+  redirect(withFlash(scoped && eventId ? `/console/events/${eventId}?bagian=pasca` : "/console/content", "Artikel tersimpan."));
 }
 
 // Hard delete (kegiatan kini punya Sampah, artikel belum). For genuine mistakes / duplicates / spam;
@@ -176,7 +180,7 @@ export async function deleteNewsArticle(id: string) {
   revalidatePath("/news");
   revalidatePath(`/news/${row.slug}`);
   if (row.eventId) revalidatePath(`/console/events/${row.eventId}`);
-  redirect(scoped && row.eventId ? `/console/events/${row.eventId}` : "/console/content");
+  redirect(scoped && row.eventId ? `/console/events/${row.eventId}?bagian=pasca` : "/console/content");
 }
 
 // draft <-> published <-> archived, without touching the article body. Never
@@ -321,7 +325,7 @@ export async function deleteGalleryAlbum(albumId: string) {
   revalidatePath("/gallery");
   revalidatePath("/gallery/archive");
   if (album.eventId) revalidatePath(`/console/events/${album.eventId}`);
-  redirect(album.eventId ? `/console/events/${album.eventId}` : "/console/content");
+  redirect(album.eventId ? `/console/events/${album.eventId}?bagian=pasca` : "/console/content");
 }
 
 /**

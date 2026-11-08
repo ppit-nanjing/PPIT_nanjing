@@ -15,6 +15,7 @@ import { feeTierAt, amountForTier } from "@/lib/event-fee";
 import { isValidPassport } from "@/lib/sensus-form";
 import { getEventAccess } from "@/lib/event-access";
 import { scrubForeignPrivateUrl } from "@/lib/private-files";
+import { scheduleLiveSheetSync } from "@/lib/live-sheets";
 
 // Peserta yang sensusnya belum lengkap ditanyai asal cabangnya di form
 // pendaftaran (lihat komentar di event_registrations.branch). Nilainya
@@ -305,6 +306,8 @@ async function runRegistration(eventId: string, slugArg: string, formData: FormD
       feeOptionId,
       biodataJson,
     });
+    // Sheet langsung acara ini (kalau ada) ikut diperbarui; tidak pernah menunda atau menggagalkan pendaftaran.
+    scheduleLiveSheetSync(eventId, ["pendaftar"]);
     // In-app confirmation for the member who just registered.
     await createTemplatedNotification({
       userId: session.user.id,

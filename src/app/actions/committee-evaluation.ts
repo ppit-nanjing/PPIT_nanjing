@@ -18,6 +18,7 @@ import { isUniqueViolation } from "@/lib/db-errors";
 import { UUID_RE } from "@/lib/uuid";
 import { type EvalFormState, validateEvalAnswer, type EvalQuestionRow } from "@/lib/event-evaluation-questions";
 import { loadEvaluationQuestions } from "@/lib/event-evaluation-queries";
+import { scheduleLiveSheetSync } from "@/lib/live-sheets";
 import {
   committeeEvalTemplateQuestions,
   committeeEvalWindowState,
@@ -130,6 +131,7 @@ export async function submitCommitteeEvaluation(
     return { error: "generic" };
   }
 
+  scheduleLiveSheetSync(event.id, ["evaluasi-panitia"]);
   revalidatePath(`/events/${slug}/evaluasi-panitia`);
   revalidatePath(`/console/events/${event.id}`);
   return { ok: true };

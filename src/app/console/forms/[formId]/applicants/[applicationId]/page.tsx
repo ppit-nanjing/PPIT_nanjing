@@ -142,7 +142,7 @@ export default async function FormApplicantPage({
       <p className="text-body-sm text-on-surface-variant mb-8">
         {FORM_KIND_LABEL[form.kind]}
         {eventTitle ? ` · ${eventTitle}` : ""} &middot; {form.title} &middot;{" "}
-        {new Date(app.submittedAt).toLocaleString("id-ID", { dateStyle: "medium", timeStyle: "short" })}
+        {new Date(app.submittedAt).toLocaleString("id-ID", { timeZone: "Asia/Shanghai", dateStyle: "medium", timeStyle: "short" })}
       </p>
 
       <section className="bg-surface-container-lowest border border-outline-variant rounded-lg p-6 mb-8">
@@ -305,7 +305,7 @@ export default async function FormApplicantPage({
                 <li key={i} className="text-body-sm text-on-surface-variant">
                   <span className="text-on-background">{r.actorName ?? "Pengurus"}</span> &middot; {label}
                   {after.decisionEmail === "sent" ? " · notifikasi terkirim" : after.decisionEmail === "skipped" ? " · tanpa notifikasi" : after.decisionEmail ? " · notifikasi gagal" : ""}{" "}
-                  &middot; {new Date(r.createdAt).toLocaleString("id-ID", { dateStyle: "medium", timeStyle: "short" })}
+                  &middot; {new Date(r.createdAt).toLocaleString("id-ID", { timeZone: "Asia/Shanghai", dateStyle: "medium", timeStyle: "short" })}
                 </li>
               );
             })}

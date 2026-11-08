@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import { and, asc, desc, eq, inArray, isNull, or, sql } from "drizzle-orm";
 import { db } from "@/db";
 import { events, users, certificates } from "@/db/schema";
@@ -23,6 +24,8 @@ import { SubmitButton } from "@/components/console/submit-button";
 // Peran penugasan baru. humas/acara/logistik/dokumentasi sengaja tidak ada:
 // itu nama DIVISI, bukan peran - di skema nilainya tinggal demi baris lama.
 const ROLES = ["ketua", "wakil", "sekretaris", "bendahara", "supervisor", "anggota"];
+
+export const metadata: Metadata = { title: "Work Ledger" };
 
 export default async function WorkLedgerPage() {
   const session = await requireModuleAccess("events");

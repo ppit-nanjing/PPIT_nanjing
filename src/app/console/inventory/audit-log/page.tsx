@@ -63,9 +63,9 @@ export default async function InventoryAuditLogPage() {
                     {log.quantityDelta > 0 ? "+" : ""}
                     {log.quantityDelta}
                   </td>
-                  <td className="px-5 py-3 text-label-caps text-on-surface-variant">{actorName ?? actorEmail ?? "Sistem"}</td>
-                  <td className="px-5 py-3 text-label-caps text-on-surface-variant">
-                    {new Date(log.createdAt).toLocaleString("id-ID")}
+                  <td className="px-5 py-3 text-body-sm text-on-surface-variant">{actorName ?? actorEmail ?? "Sistem"}</td>
+                  <td className="px-5 py-3 text-body-sm text-on-surface-variant">
+                    {new Date(log.createdAt).toLocaleString("id-ID", { timeZone: "Asia/Shanghai", dateStyle: "medium", timeStyle: "short" })}
                   </td>
                 </tr>
               ))}
@@ -96,8 +96,8 @@ export default async function InventoryAuditLogPage() {
                   <span className="text-label-caps text-on-surface-variant">Oleh: </span>
                   <span className="text-on-surface-variant">{actorName ?? actorEmail ?? "Sistem"}</span>
                 </p>
-                <p className="text-label-caps text-on-surface-variant">
-                  {new Date(log.createdAt).toLocaleString("id-ID")}
+                <p className="text-body-sm text-on-surface-variant">
+                  {new Date(log.createdAt).toLocaleString("id-ID", { timeZone: "Asia/Shanghai", dateStyle: "medium", timeStyle: "short" })}
                 </p>
               </div>
             ))

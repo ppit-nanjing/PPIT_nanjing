@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import { desc, eq, sql } from "drizzle-orm";
 import { db } from "@/db";
 import { membershipApplications, recruitmentPeriods } from "@/db/schema";
@@ -24,6 +25,8 @@ const STATUS_CLASS: Record<string, string> = {
   accepted: "bg-primary-container/15 text-primary-container",
   rejected: "bg-error-container/40 text-on-error-container",
 };
+
+export const metadata: Metadata = { title: "Rekrutmen" };
 
 export default async function ConsoleMembershipPage() {
   await requireModuleAccess("membership");
@@ -52,7 +55,7 @@ export default async function ConsoleMembershipPage() {
   return (
     <div className="px-4 py-6 sm:px-6 lg:px-8 lg:py-10">
       <div className="flex flex-wrap items-start justify-between gap-3 mb-2">
-        <h1 className="text-headline-md sm:text-headline-lg text-on-background">Pendaftaran Anggota</h1>
+        <h1 className="text-headline-md sm:text-headline-lg text-on-background">Rekrutmen Pengurus</h1>
         {guide && <GuideButton title={guide.title} content={guide.content} docSlug="pendaftaran" />}
       </div>
       <p className="text-body-md text-on-surface-variant mb-4">
@@ -112,9 +115,9 @@ export default async function ConsoleMembershipPage() {
                     </span>
                   </p>
                   <p className="text-label-caps text-on-surface-variant">
-                    {p.opensAt ? new Date(p.opensAt).toLocaleString("id-ID", { dateStyle: "medium", timeStyle: "short" }) : "—"}
+                    {p.opensAt ? new Date(p.opensAt).toLocaleString("id-ID", { timeZone: "Asia/Shanghai", dateStyle: "medium", timeStyle: "short" }) : "—"}
                     {" → "}
-                    {p.closesAt ? new Date(p.closesAt).toLocaleString("id-ID", { dateStyle: "medium", timeStyle: "short" }) : "—"}
+                    {p.closesAt ? new Date(p.closesAt).toLocaleString("id-ID", { timeZone: "Asia/Shanghai", dateStyle: "medium", timeStyle: "short" }) : "—"}
                   </p>
                 </div>
                 <ConfirmButton
@@ -177,7 +180,7 @@ export default async function ConsoleMembershipPage() {
                   </span>
                 </td>
                 <td className="px-5 py-3 text-on-surface-variant">
-                  {a.submittedAt ? new Date(a.submittedAt).toLocaleString("id-ID", { dateStyle: "medium", timeStyle: "short" }) : "-"}
+                  {a.submittedAt ? new Date(a.submittedAt).toLocaleString("id-ID", { timeZone: "Asia/Shanghai", dateStyle: "medium", timeStyle: "short" }) : "-"}
                 </td>
                 <td className="px-5 py-3 text-on-surface-variant">{a.batchLabel ?? "-"}</td>
               </tr>
@@ -196,7 +199,7 @@ export default async function ConsoleMembershipPage() {
                 <a href={`/console/membership/${a.id}`} className="font-medium text-primary-container hover:text-primary">
                   {a.fullName}
                 </a>
-                <p className="text-label-caps text-on-surface-variant">{a.email}</p>
+                <p className="text-body-sm text-on-surface-variant">{a.email}</p>
               </div>
               <dl className="grid grid-cols-2 gap-x-4 gap-y-2 text-body-md">
                 <div>
@@ -214,7 +217,7 @@ export default async function ConsoleMembershipPage() {
                 <div>
                   <dt className="text-label-caps text-on-surface-variant">Terkirim</dt>
                   <dd className="text-on-background">
-                    {a.submittedAt ? new Date(a.submittedAt).toLocaleString("id-ID", { dateStyle: "medium", timeStyle: "short" }) : "-"}
+                    {a.submittedAt ? new Date(a.submittedAt).toLocaleString("id-ID", { timeZone: "Asia/Shanghai", dateStyle: "medium", timeStyle: "short" }) : "-"}
                   </dd>
                 </div>
                 <div>
@@ -226,7 +229,7 @@ export default async function ConsoleMembershipPage() {
           ))
         )}
       </div>
-      <p className="text-label-caps text-on-surface-variant mt-4">
+      <p className="text-body-sm text-on-surface-variant mt-4 max-w-[62ch]">
         Klik nama pendaftar untuk melihat detail, mengubah status, menambahkan catatan, atau menghapus.
       </p>
     </div>

@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { redirect } from "next/navigation";
 import { auth } from "@/auth";
 import { listNotifications } from "@/lib/notifications";
@@ -8,6 +9,12 @@ import { PageHeader } from "@/components/page-header";
 import { NotificationMarkAllReadButton } from "@/components/notifications/notification-bell";
 import { getT } from "@/lib/i18n/server";
 import { BellOff } from "lucide-react";
+
+// Pemberitahuan yang punya halaman tujuan. Hanya jenis yang dikenal yang jadi tautan.
+function notificationHref(type: string | null, id: string | null): string | null {
+  if (type === "custom_form" && id) return `/formulir/${id}?tab=hasil`;
+  return null;
+}
 
 export default async function NotificationsPage() {
   const { t } = await getT();
@@ -60,6 +67,14 @@ export default async function NotificationsPage() {
                   {item.title}
                 </p>
                 {item.body && <p className="text-body-md text-on-surface-variant mt-1">{item.body}</p>}
+                {(() => {
+                  const href = notificationHref(item.relatedEntityType, item.relatedEntityId);
+                  return href ? (
+                    <Link href={href} className="inline-block mt-2 text-label-caps uppercase tracking-wide text-primary-container underline underline-offset-2 hover:text-primary">
+                      Lihat hasil
+                    </Link>
+                  ) : null;
+                })()}
                 <p className="text-label-caps uppercase tracking-wide text-on-surface-variant mt-2 flex items-center gap-2">
                   {!item.isRead && (
                     <span

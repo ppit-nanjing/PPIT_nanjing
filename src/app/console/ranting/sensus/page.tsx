@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import { desc, eq } from "drizzle-orm";
 import Link from "next/link";
 import { redirect } from "next/navigation";
@@ -16,6 +17,8 @@ import { FileCheck2, FileX2, Search, Download } from "lucide-react";
 // "sensus". Lihat src/lib/rantings.ts dan resolveAdminScope() di src/auth.ts.
 
 type SearchParams = Promise<Record<string, string | string[] | undefined>>;
+
+export const metadata: Metadata = { title: "Sensus Ranting" };
 
 export default async function RantingSensusPage({ searchParams }: { searchParams: SearchParams }) {
   const session = await requireModuleAccess("sensus-ranting");

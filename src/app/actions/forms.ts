@@ -25,7 +25,9 @@ import { renderMembershipEmail, renderMembershipEmailText } from "@/lib/membersh
 import { getEventAccess } from "@/lib/event-access";
 import { canFillForm, canPlaceApplicant, getCabinetMembership, getCoordinatorEventIds, getFormsAccess, isKadivOnlyPlacer, requireFormManage } from "@/lib/form-access";
 import { EVENT_COMMITTEE_ROLE_LABEL, isBphPanitiaRole, type EventCommitteeRole } from "@/lib/event-capabilities";
-import { BPH_FORM_ROLE_LABEL, BPH_FORM_ROLES, FORM_GROUP_QR_AUDIENCES, FORM_TAB_PATH, KADIV_PLACEMENT_ROLES, PLACEMENT_ROLE_OPTIONS, DIVISION_FIELD_KEY, DIVISION_FIELD_LABEL, isDivisionOprekKind, isFormGroupQrUrl, isOprekKind, type FormKind } from "@/lib/form-types";
+import { BPH_FORM_ROLE_LABEL, BPH_FORM_ROLES, FORM_GROUP_QR_AUDIENCES, FORM_TAB_PATH, KADIV_PLACEMENT_ROLES, PLACEMENT_ROLE_OPTIONS, DIVISION_FIELD_KEY, DIVISION_FIELD_LABEL, isDivisionOprekKind, isFormGroupQrUrl, isOprekKind, isSurveyKind, type FormKind } from "@/lib/form-types";
+import { isSurveyFieldType } from "@/lib/survey";
+import { scheduleLiveSheetSync } from "@/lib/live-sheets";
 import { hasCompletedSensus } from "@/lib/sensus-gate";
 import { getSiteUrl } from "@/lib/site-url";
 import { FIELD_TYPE_LABELS, GRID_TYPES, QUESTION_BY_KEY, type MembershipFieldDef } from "@/lib/membership-form";
@@ -46,6 +48,15 @@ function tabPath(kind: FormKind): string {
 }
 
 function revalidateFormPaths(formId: string, kind: FormKind) {
+  // Formulir dikelola dari /formulir dan diisi di /f/[id], bukan dari konsol.
+  if (isSurveyKind(kind)) {
+    // Pertanyaan berubah = kolom Google Sheet langsung (kalau ada) ikut berubah.
+    scheduleLiveSheetSync(formId, ["formulir"]);
+    revalidatePath("/formulir");
+    revalidatePath(`/formulir/${formId}`);
+    revalidatePath(`/f/${formId}`);
+    return;
+  }
   revalidatePath("/console/forms");
   revalidatePath(`/console/forms/${formId}`);
   revalidatePath(tabPath(kind));
@@ -164,6 +175,8 @@ export async function createForm(formData: FormData) {
 export async function updateFormSettings(formData: FormData) {
   const id = String(formData.get("id") ?? "");
   const { form } = await requireFormManage(id);
+  // Formulir punya setelan sendiri (updateSurveySettings di survey.ts).
+  if (isSurveyKind(form.kind)) notFound();
 
   const titleInput = String(formData.get("title") ?? "").trim();
   const description = String(formData.get("description") ?? "").trim();
@@ -220,6 +233,8 @@ export async function updateFormSettings(formData: FormData) {
 export async function deleteForm(formData: FormData) {
   const id = String(formData.get("id") ?? "");
   const { form, access } = await requireFormManage(id);
+  // Formulir dihapus lewat deleteSurvey (survey.ts).
+  if (isSurveyKind(form.kind)) notFound();
   // Lamaran ikut terhapus (cascade). Penugasan panitia hasil lamaran yang
   // diterima dilepas dengan aturan yang sama seperti hapus satu lamaran, dan
   // butuh izin penempatan yang sama (kunci acara 14 hari).
@@ -268,9 +283,11 @@ export async function createFormField(formData: FormData) {
   const { form } = await requireFormManage(formId);
   const label = String(formData.get("label") ?? "").trim() || "Pertanyaan baru";
   const typeRaw = String(formData.get("type") ?? "text");
-  const type = FIELD_TYPE_KEYS.includes(typeRaw as MembershipFieldDef["type"])
+  const requested = FIELD_TYPE_KEYS.includes(typeRaw as MembershipFieldDef["type"])
     ? (typeRaw as MembershipFieldDef["type"])
     : "text";
+  // Formulir tidak mendukung unggahan berkas/gambar (lihat SURVEY_BLOCKED_TYPES).
+  const type = isSurveyKind(form.kind) && !isSurveyFieldType(requested) ? "text" : requested;
 
   await db.insert(formFields).values({
     formId: form.id,
@@ -289,6 +306,9 @@ export async function createFormFieldFromTemplate(formData: FormData) {
   const templateKey = String(formData.get("templateKey") ?? "");
   const tpl = QUESTION_BY_KEY[templateKey];
   if (!tpl) throw new Error("Template tidak ditemukan");
+  if (isSurveyKind(form.kind) && !isSurveyFieldType(tpl.type)) {
+    throw new Error("Jenis pertanyaan ini tidak tersedia di formulir.");
+  }
 
   await db.insert(formFields).values({
     formId: form.id,
@@ -310,12 +330,15 @@ export async function updateFormField(formData: FormData) {
   const label = String(formData.get("label") ?? "").trim();
   const typeRaw = String(formData.get("type") ?? "text");
   // Baris "Divisi Pilihan" selalu section (penanda posisi), apa pun isian form.
-  const type =
+  const requestedType =
     field.key === DIVISION_FIELD_KEY
       ? "section"
       : FIELD_TYPE_KEYS.includes(typeRaw as MembershipFieldDef["type"])
         ? (typeRaw as MembershipFieldDef["type"])
         : "text";
+  // Formulir tidak mendukung unggahan: jenis itu ditolak, jenis lama dipertahankan.
+  const type =
+    isSurveyKind(form.kind) && !isSurveyFieldType(requestedType) ? (isSurveyFieldType(field.type) ? field.type : "text") : requestedType;
   const required = formData.get("required") === "on";
   const placeholder = String(formData.get("placeholder") ?? "").trim();
   const helpText = String(formData.get("helpText") ?? "").trim();
@@ -438,6 +461,8 @@ export async function submitFormApplication(formData: FormData) {
 
   const [form] = await db.select().from(forms).where(eq(forms.id, formId));
   if (!form) redirect("/console");
+  // Formulir diisi lewat submitSurvey di /f/[id], bukan jalur lamaran ini.
+  if (isSurveyKind(form.kind)) redirect(`/f/${form.id}`);
   const back = `/forms/${form.id}`;
 
   const membership = await getCabinetMembership(userId);
