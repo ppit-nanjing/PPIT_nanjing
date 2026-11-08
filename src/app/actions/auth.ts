@@ -12,6 +12,7 @@ import { safeRedirect } from "@/lib/safe-redirect";
 import { sendEmail } from "@/lib/email";
 import { renderMembershipEmail, renderMembershipEmailText } from "@/lib/membership-email";
 import { createResetToken, consumeResetToken, purgeExpiredResetTokens } from "@/lib/password-reset";
+import { canReceivePasswordReset } from "@/lib/password-reset-rules";
 import type { TKey } from "@/lib/i18n/dictionaries/id";
 import { suggestEmailFix } from "@/lib/email-typo";
 
@@ -169,13 +170,19 @@ export async function requestPasswordReset(_prev: AuthFormState, formData: FormD
   try {
     await purgeExpiredResetTokens();
     const [user] = await db
-      .select({ id: users.id, name: users.name, passwordHash: users.passwordHash })
+      .select({
+        id: users.id,
+        name: users.name,
+        passwordHash: users.passwordHash,
+        emailVerified: users.emailVerified,
+      })
       .from(users)
       .where(eq(users.email, email));
 
-    // Hanya akun yang PUNYA password yang bisa direset. Akun Google-only tidak
-    // dikirimi apa pun (mereka masuk lewat Google) - pesan generik menutupinya.
-    if (user?.passwordHash) {
+    // Akun Google-only yang emailnya sudah terverifikasi ikut dilayani: tanpa
+    // ini mereka tidak punya jalan sama sekali untuk memasang password. Akun
+    // yang tidak berhak tidak dikirimi apa pun - pesan generik menutupinya.
+    if (user && canReceivePasswordReset(user)) {
       const token = await createResetToken(user.id);
       const link = `${await requestOrigin()}/reset-password?token=${encodeURIComponent(token)}`;
       const heading = "Reset password akun PPIT Nanjing";
