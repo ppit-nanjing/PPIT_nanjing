@@ -25,7 +25,7 @@ interface Row {
   roleId: string | null;
   departmentId: string | null;
   position: string;
-  hasPassword: boolean;
+  canResetPassword: boolean;
 }
 interface Role {
   id: string;
@@ -471,7 +471,7 @@ function UserRow({
           >
             Edit
           </button>
-          {user.hasPassword && (
+          {user.canResetPassword && (
             <ConfirmButton
               onConfirm={() => sendPasswordResetLink(user.id)}
               title="Kirim link reset password?"
@@ -570,7 +570,7 @@ function UserRow({
           >
             <Pencil size={16} aria-hidden />
           </button>
-          {user.hasPassword && (
+          {user.canResetPassword && (
             <ConfirmButton
               onConfirm={() => sendPasswordResetLink(user.id)}
               title="Kirim link reset password?"

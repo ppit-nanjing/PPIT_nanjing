@@ -36,7 +36,10 @@ export default async function ConsoleUsersPage() {
       roleId: u.roleId,
       departmentId: membership?.departmentId ?? null,
       position: membership?.position ?? "",
-      hasPassword: !!u.passwordHash,
+      // Bisa menerima tautan reset kalau punya password, atau kalau emailnya
+      // sudah terbukti lewat Google (satu-satunya jalan akun Google-only
+      // memasang kata sandi).
+      canResetPassword: Boolean(u.passwordHash || u.emailVerified),
     };
   });
 

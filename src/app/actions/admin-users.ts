@@ -9,6 +9,7 @@ import { hasModuleAccess } from "@/lib/admin-scope";
 import { sendEmail } from "@/lib/email";
 import { renderMembershipEmail, renderMembershipEmailText } from "@/lib/membership-email";
 import { createResetToken, purgeExpiredResetTokens } from "@/lib/password-reset";
+import { canReceivePasswordReset } from "@/lib/password-reset-rules";
 import { getSiteUrl } from "@/lib/site-url";
 import { suggestEmailFix } from "@/lib/email-typo";
 
@@ -84,14 +85,23 @@ export async function updateUserDetails(userId: string, name: string, email: str
 export async function sendPasswordResetLink(userId: string): Promise<void> {
   await assertAdmin();
   const [user] = await db
-    .select({ id: users.id, name: users.name, email: users.email, passwordHash: users.passwordHash })
+    .select({
+      id: users.id,
+      name: users.name,
+      email: users.email,
+      passwordHash: users.passwordHash,
+      emailVerified: users.emailVerified,
+    })
     .from(users)
     .where(eq(users.id, userId));
   if (!user) throw new Error("Pengguna tidak ditemukan.");
-  // Akun Google-only tidak punya kata sandi untuk direset - tombolnya sendiri
-  // sudah disembunyikan untuk baris begini, ini jaga-jaga kalau dipanggil lewat
-  // jalur lain.
-  if (!user.passwordHash) throw new Error("Akun ini masuk lewat Google, tidak punya kata sandi untuk direset.");
+  // Tombolnya sendiri sudah disembunyikan untuk baris yang tidak berhak, ini
+  // jaga-jaga kalau fungsinya dipanggil lewat jalur lain. Akun Google-only yang
+  // emailnya terverifikasi justru boleh: tautan ini satu-satunya cara mereka
+  // memasang kata sandi.
+  if (!canReceivePasswordReset(user)) {
+    throw new Error("Akun ini belum punya kata sandi dan emailnya belum terverifikasi.");
+  }
 
   await purgeExpiredResetTokens();
   const token = await createResetToken(user.id);

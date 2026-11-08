@@ -15,7 +15,7 @@ interface Row {
   roleId: string | null;
   departmentId: string | null;
   position: string;
-  hasPassword: boolean;
+  canResetPassword: boolean;
 }
 interface Role {
   id: string;

@@ -8,6 +8,7 @@
     "start": "next start",
     "lint": "eslint",
     "check:mrz": "tsx scripts/check-mrz.ts",
+    "check:reset": "tsx scripts/check-password-reset.ts",
     "test": "tsx scripts/check-mrz.ts",
     "check:contrast": "tsx scripts/check-contrast.ts",
     "check:event-approval": "tsx scripts/check-event-approval.ts",
