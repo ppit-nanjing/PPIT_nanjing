@@ -95,7 +95,7 @@ Konsekuensi untuk pengurus:
 - **Artikel yang belum ditandai "Tampilkan di halaman publik" tidak akan pernah dipakai chatbot.** Itu disengaja: SOP console (isi internal) tidak boleh bocor ke jawaban anggota.
 - Menambah panduan baru = tulis artikel di `/console/docs` + nyalakan toggle publik. Tanpa deploy. Guidebook maba (issue #65) memakai jalur yang sama — rencananya di [Guidebook Maba](./Guidebook%20Maba.md).
 
-Sudah diuji langsung (2026-10-11, `findGuideChunks` dipanggil dari skrip sekali-pakai terhadap database Docker lokal): pertanyaan yang cocok dengan artikel publik mengembalikan artikel itu, istilah yang hanya ada di artikel non-publik mengembalikan daftar kosong, pertanyaan yang tidak nyambung juga kosong, dan konteks yang dikirim ke model tidak pernah memuat artikel internal.
+Sudah diuji langsung (2026-10-11, `findGuideChunks` dipanggil dari skrip sekali-pakai terhadap database lokal): pertanyaan yang cocok dengan artikel publik mengembalikan artikel itu, istilah yang hanya ada di artikel non-publik mengembalikan daftar kosong, pertanyaan yang tidak nyambung juga kosong, dan konteks yang dikirim ke model tidak pernah memuat artikel internal.
 
 Jawaban akhir dari model sudah terlihat di deployment pratinjau, belum di mesin lokal. Kunci Groq lokal menjawab `403 {"error":{"message":"Forbidden"}}` — sama persis saat tanpa kunci sama sekali, jadi yang diblokir IP-nya, bukan kuncinya. Karena itu jalur jawaban diuji di Chromium pada `ppit-nanjing-preview.vercel.app` (2026-10-12, dua kali oleh dua sesi berbeda: `admin@ppit-local.test` dan satu akun anggota biasa hasil daftar sendiri), pertanyaan diketik langsung di widget Help Center:
 

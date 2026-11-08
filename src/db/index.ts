@@ -7,8 +7,8 @@ import * as schema from "./schema";
 type Database = NeonHttpDatabase<typeof schema>;
 
 // Neon cuma bisa diakses lewat HTTP API-nya, jadi driver neon-http tidak bisa
-// menyambung ke Postgres biasa. Di mesin lokal (docker compose, lihat
-// docker-compose.yml) `DB_DRIVER=pg` memakai driver node-postgres.
+// menyambung ke Postgres biasa. Kalau DATABASE_URL menunjuk Postgres biasa,
+// `DB_DRIVER=pg` memakai driver node-postgres.
 //
 // createRequire dipakai supaya `pg` - devDependency - tidak ikut terbundel ke
 // fungsi produksi: namanya tidak bisa dibaca statis oleh bundler.

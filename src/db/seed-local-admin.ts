@@ -1,5 +1,5 @@
 /**
- * Admin lokal untuk lingkungan Docker/Dokploy di mesin sendiri: login Google
+ * Admin lokal untuk lingkungan lokal/Dokploy di mesin sendiri: login Google
  * butuh kredensial OAuth asli, jadi satu user dengan password dibuat di sini
  * supaya /console bisa dibuka. Sengaja bukan bagian dari seed.ts - seed itu
  * dipakai di database sungguhan juga.
