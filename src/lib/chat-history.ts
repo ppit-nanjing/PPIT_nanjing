@@ -14,10 +14,14 @@ export const MAX_HISTORY_TURNS = 12;
 export const MAX_HISTORY_MESSAGE_CHARS = 2_000;
 export const MAX_HISTORY_TOTAL_CHARS = 8_000;
 
+// Tanggal dan rentang tahun bukan nomor telepon: "2026-10-25" juga delapan
+// angka, jadi bentuknya harus dikenali dulu sebelum pola angka panjang diredaksi.
+const DATE_SHAPE = /^\d{4}[-/.]\d{1,2}[-/.]\d{1,2}$|^\d{1,2}[-/.]\d{1,2}[-/.]\d{2,4}$|^\d{4}\s*[-–]\s*\d{4}$/;
+
 export function redactPII(text: string, maxChars: number): string {
   return text
     .replace(/[\w.+-]+@[\w-]+\.[\w.-]+/g, "[email]")
-    .replace(/\+?\d[\d\s().-]{6,}\d/g, "[nomor]")
+    .replace(/\+?\d[\d\s().-]{6,}\d/g, (m) => (DATE_SHAPE.test(m.trim()) ? m : "[nomor]"))
     .slice(0, maxChars);
 }
 

@@ -36,12 +36,16 @@ Jadikan `HELP_ARTICLE` **editable oleh Super Admin lewat UI** (bukan hardcode di
 
 Sampai 2026-10-10 semua admin bisa membuka `/console/docs` dan menerbitkan artikel: halaman dan aksinya cuma memeriksa `session.user.isAdmin`. Sejak 2026-10-11 gerbangnya kunci modul **`guidebook`** (keputusan pengurus di issue #65), terpisah dari `content` yang mengurus berita.
 
+Sejak 2026-11-08 pembagiannya dipisah: **membaca** Help Center terbuka untuk semua pengurus, sementara **menulis**, panel guidebook, dan ekspor Word tetap butuh modul `guidebook`. Alasannya, saat seluruh halaman digerbangi, pengurus yang didelegasikan modul lain kehilangan bantuan yang menjelaskan konsolnya sendiri.
+
 | Yang digerbangi | Caranya |
 |---|---|
-| `/console/docs`, `/console/docs/new`, `/console/docs/[slug]`, `/console/docs/guidebook`, `/console/docs/changelog` | `requireModuleAccess("guidebook")` di awal komponen halaman → dialihkan ke `/console` |
+| `/console/docs` dan `/console/docs/[slug]` (membaca) | Terbuka untuk semua pengurus yang lolos gerbang `/console`; tidak ada `requireModuleAccess` |
+| `/console/docs/new`, `/console/docs/guidebook`, `/console/docs/changelog` | `requireModuleAccess("guidebook")` di awal komponen halaman → dialihkan ke `/console` |
+| Panel sunting, panel Status Topik, dan tautan "Tulis Panduan"/"Guidebook Maba"/"Changelog" | Disembunyikan dengan `hasModuleAccess(scope, "guidebook")`; pembaca tanpa modul hanya melihat isi artikel dan tombol cetak |
 | Semua aksi di `src/app/actions/admin-docs.ts` (simpan, hapus, pulihkan, gabung, changelog) | `requireModuleAccess("guidebook")` di dalam `requireAdmin()`, jadi aksi tidak bisa dipanggil dari luar halaman |
 | `GET /api/console/docs/[slug]/export` (unduh docx) | `hasModuleAccess` → **403**, bukan redirect: route handler tidak boleh melempar pengalihan halaman |
-| Tautan "Dokumentasi" di sidebar | item menu diberi `module: "guidebook"`, jadi admin tanpa modul itu tidak melihat tautan ke halaman yang pasti ditolak |
+| Tautan "Dokumentasi" di sidebar | Tetap `module: null` dan tinggal di grup Utama, karena bantuan harus selalu bisa dibaca |
 
 Dua hal yang perlu diingat saat mengurus akses:
 

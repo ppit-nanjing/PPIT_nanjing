@@ -6,7 +6,7 @@
 
 ## Kenapa perlu database sendiri
 
-`DATABASE_URL` produksi dulu memakai endpoint pooled Neon, yang cuma bicara HTTP. (Sejak 2026-10-15 produksi Vercel memakai Postgres VPS ini dengan `DB_DRIVER=pg` — lihat bagian Deploy Vercel di bawah.) `psql` dan `drizzle-kit` tidak bisa menyambung ke sana. Akibatnya, selama memakai Neon:
+`DATABASE_URL` produksi dulu memakai endpoint pooled Neon, yang cuma bicara HTTP. (Sejak 2026-10-15 project Vercel **preview pribadi** `ppit-nanjing-preview` memakai Postgres VPS terpisah dengan `DB_DRIVER=pg` — lihat bagian Deploy Vercel di bawah. Produksi organisasi `ppit-nanjing` tetap di Neon.) `psql` dan `drizzle-kit` tidak bisa menyambung ke sana. Akibatnya, selama memakai Neon:
 
 - Hasil migrasi tidak bisa diperiksa langsung (`\d guide_chunks`, hitung baris, cek kolom generated).
 - `drizzle-kit push` berjalan ke database sungguhan, dan **`push` menerapkan pernyataan tanpa bertanya kalau stdin bukan terminal** — sekali dijalankan lewat pipe atau `< /dev/null`, tidak ada layar konfirmasi yang muncul.
@@ -90,9 +90,9 @@ Langkah 4 dan 5 diuji di database kosong: `push` membentuk 70 tabel lengkap deng
 
   Skripnya login lewat `/login`, lalu membuka `/console/docs/guidebook` atau satu topik dan mencetak satu baris `[ok]`/`[!!]` per pemeriksaan. Tulis `import("playwright-core")`, bukan `import("playwright")`.
 
-## Deploy Vercel: produksi sekarang memakai Postgres VPS ini
+## Deploy Vercel: project preview pribadi memakai Postgres VPS ini
 
-Sejak 2026-10-15, proyek Vercel `ppit-nanjing-preview` (team `zandev32s-projects`) tidak lagi menyambung ke Neon. Dua variabel Production diisi begini:
+Sejak 2026-10-15, proyek Vercel `ppit-nanjing-preview` (team `zandev32s-projects`) tidak lagi menyambung ke Neon. Ini project preview pribadi pemilik repo, bukan produksi organisasi: `ppit-nanjing` (team `ppitnanjings-projects`) masih memakai Neon dan tidak mengisi `DB_DRIVER`. Dua variabel Production diisi begini:
 
 | Variabel | Nilai | Alasan |
 | --- | --- | --- |

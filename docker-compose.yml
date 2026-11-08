@@ -1,5 +1,6 @@
-# Postgres lokal buat `npm run dev`. Produksi Vercel sekarang menunjuk container
-# ini juga (`DB_DRIVER=pg` + alamat publik VPS di env Vercel). Penjelasan lengkap:
+# Postgres lokal buat `npm run dev`. Hanya untuk mesin sendiri: port sengaja
+# diikat ke 127.0.0.1 supaya tidak terbuka ke jaringan. Deployment pribadi di VPS
+# terpisah, dengan konfigurasi dan password sendiri. Penjelasan lengkap:
 # docs/Database Lokal Docker.md
 services:
   db:
@@ -7,10 +8,10 @@ services:
     restart: unless-stopped
     environment:
       POSTGRES_USER: ppit
-      POSTGRES_PASSWORD: ppit
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-ppit}
       POSTGRES_DB: ppit
     ports:
-      - "5432:5432"
+      - "127.0.0.1:5432:5432"
     volumes:
       - ppit-lokal:/var/lib/postgresql/data
     healthcheck:

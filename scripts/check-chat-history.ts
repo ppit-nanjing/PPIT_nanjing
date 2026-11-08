@@ -29,6 +29,13 @@ const pii = sanitizeHistory([
 check("email diredaksi", pii[0].content.includes("[email]") && !pii[0].content.includes("budi@"), pii[0]);
 check("nomor diredaksi", pii[0].content.includes("[nomor]") && !/\d{4}/.test(pii[0].content), pii[0]);
 
+// Tanggal dan rentang tahun bukan nomor telepon — jangan ikut hilang.
+const dates = sanitizeHistory([
+  { role: "user", content: "pendaftaran 2026-10-25, tahun ajaran 2025-2026" },
+]);
+check("tanggal dipertahankan", dates[0].content.includes("2026-10-25") && dates[0].content.includes("2025-2026"), dates[0]);
+check("tanggal tidak jadi [nomor]", !dates[0].content.includes("[nomor]"), dates[0]);
+
 // Batas panjang per pesan.
 const long = sanitizeHistory([{ role: "user", content: "a".repeat(MAX_HISTORY_MESSAGE_CHARS + 500) }]);
 check("pesan dipotong", long[0].content.length === MAX_HISTORY_MESSAGE_CHARS, long[0].content.length);
