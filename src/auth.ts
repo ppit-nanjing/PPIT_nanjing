@@ -169,8 +169,8 @@ function resolveAdminScope(ctx: SessionContext): "full" | string[] | null {
   else if (tier === "scoped") cabinetScope = [...new Set(ctx.memberships.flatMap((m) => m.scope))];
   const rantingScope = resolveRantingScope(ctx);
   // Gabungkan slot-slotnya (satu orang boleh pegang kabinet + ranting):
-  // "full" dari slot mana pun menang, selain itu union kedua daftar.
-  if (cabinetScope === "full" || rantingScope === "full") return "full";
+  // "full" dari slot kabinet menang, selain itu union kedua daftar.
+  if (cabinetScope === "full") return "full";
   const merged = [...new Set([...(cabinetScope ?? []), ...(rantingScope ?? [])])];
   return merged.length ? merged : null;
 }

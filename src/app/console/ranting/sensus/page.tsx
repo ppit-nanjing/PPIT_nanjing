@@ -33,8 +33,8 @@ export default async function RantingSensusPage({ searchParams }: { searchParams
   const q = (Array.isArray(qRaw) ? qRaw[0] : qRaw ?? "").trim();
   const needle = q.toLowerCase();
 
-  const rows = await getRantings();
-  const ranting = rows.find((r) => r.code === code);
+  const rantingsList = await getRantings();
+  const ranting = rantingsList.find((r) => r.code === code);
   if (!ranting) redirect("/console/sensus");
   const rows = await db
     .select({ sensus: sensusProfiles, userName: users.name, userEmail: users.email })
@@ -42,7 +42,7 @@ export default async function RantingSensusPage({ searchParams }: { searchParams
     .leftJoin(users, eq(sensusProfiles.userId, users.id))
     .orderBy(desc(sensusProfiles.updatedAt));
 
-  const campusRows = rows.filter((r) => universityInRanting(r.sensus.university, code));
+  const campusRows = rows.filter((r) => universityInRanting(r.sensus.university, ranting));
   const mine = needle
     ? campusRows.filter((r) =>
         // Tanpa paspor - ranting tidak melihat itu.

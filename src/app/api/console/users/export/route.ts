@@ -1,6 +1,6 @@
 import { db } from "@/db";
 import { formatChinaDateIso } from "@/lib/datetime";
-import { departments, departmentMembers, roles, users, userRoles, rantings } from "@/db/schema";
+import { departments, departmentMembers, roles, users, userRoles } from "@/db/schema";
 import { requireModuleAccess } from "@/lib/admin-scope";
 import { getRantings } from "@/lib/rantings";
 
