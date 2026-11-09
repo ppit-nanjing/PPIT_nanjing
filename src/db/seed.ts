@@ -4,7 +4,7 @@
  * Run with: npx tsx src/db/seed.ts
  */
 import { db } from "./index";
-import { roles, departments, managementPeriods } from "./schema";
+import { roles, rantings, departments, managementPeriods } from "./schema";
 
 async function main() {
   // ---------- Roles (access tiers per the admin-access rule) ----------
@@ -34,18 +34,28 @@ async function main() {
     .returning();
   const [dewanPembina] = await db
     .insert(roles)
-    .values({ name: "Dewan Pembina", accessTier: "advisory", description: "Mengayomi dan mengarahkan organisasi" })
+    .values({ name: "Dewan Pembina", accessTier: "advisory", description: "Mengayomi dan mengarahkan organisasi", category: "advisory" })
     .returning();
 
-  // Ranting = sub-cabang setingkat kampus (INA @ NUIST, JIA @ JSAHVC). "BPH
-  // Ranting" -> hanya ringkasan sensus kampus sendiri (/console/ranting/sensus,
-  // key "sensus-ranting"); "Anggota Ranting" -> tanpa akses console. Dikenali
-  // lewat NAMA role di resolveAdminScope() (src/auth.ts) - lihat src/lib/rantings.ts.
+  // Ranting = sub-cabang setingkat kampus (INA @ NUIST, JIA @ JSAHVC). Sejak
+  // Opsi B (0058): role kategori 'ranting' (level) + unit ranting di tabel
+  // rantings, dipasangkan lewat user_roles. "BPH Ranting" -> hanya ringkasan
+  // sensus kampus sendiri (/console/ranting/sensus, key "sensus-ranting");
+  // "Anggota Ranting" -> tanpa akses console. Menambah ranting baru (mis.
+  // Taizhou) cukup INSERT di sini, bukan ubah kode.
   await db.insert(roles).values([
-    { name: "[INA] BPH Ranting", accessTier: "scoped", description: "Pengurus ranting INA (NUIST) — akses ringkasan sensus kampus sendiri" },
-    { name: "[INA] Anggota Ranting", accessTier: "scoped", description: "Anggota ranting INA (NUIST) — tanpa akses console kecuali diberikan BPH pusat" },
-    { name: "[JIA] BPH Ranting", accessTier: "scoped", description: "Pengurus ranting JIA (JSAHVC) — akses ringkasan sensus kampus sendiri" },
-    { name: "[JIA] Anggota Ranting", accessTier: "scoped", description: "Anggota ranting JIA (JSAHVC) — tanpa akses console kecuali diberikan BPH pusat" },
+    { name: "BPH Ranting", accessTier: "scoped", description: "Pengurus ranting — akses ringkasan sensus kampus ranting yang dipilihnya", category: "ranting" },
+    { name: "Anggota Ranting", accessTier: "scoped", description: "Anggota ranting — tanpa akses console kecuali diberikan akses lain oleh BPH pusat", category: "ranting" },
+  ]);
+  await db.insert(rantings).values([
+    {
+      code: "INA",
+      label: "INA · NUIST",
+      universities: ["Nanjing University of Information Science and Technology"],
+      wechatId: "cal08ou_",
+      orderIndex: 1,
+    },
+    { code: "JIA", label: "JIA · JSAHVC", universities: [], orderIndex: 2 },
   ]);
 
   void wakilKetua;

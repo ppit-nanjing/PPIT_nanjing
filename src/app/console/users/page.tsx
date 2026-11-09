@@ -1,8 +1,9 @@
 import type { Metadata } from "next";
 import { db } from "@/db";
-import { users, roles, departments, departmentMembers } from "@/db/schema";
+import { users, roles, departments, departmentMembers, userRoles } from "@/db/schema";
 import { UsersConsole } from "@/components/console/users-console";
 import { requireModuleAccess } from "@/lib/admin-scope";
+import { getRantings } from "@/lib/rantings";
 import { inviteUsers } from "@/app/actions/admin-users";
 import { CollapsibleSection } from "@/components/console/collapsible-section";
 import { GuideButton } from "@/components/console/guide-button";
@@ -15,18 +16,32 @@ export const metadata: Metadata = { title: "Pengguna" };
 
 export default async function ConsoleUsersPage() {
   await requireModuleAccess("users");
-  // Perf: these four reads used to be awaited one-by-one (4 sequential round
-  // trips to Neon); they are independent, so run them concurrently.
-  const [allUsers, allRoles, allDepartments, memberships, guide] = await Promise.all([
+  // Perf: these reads used to be awaited one-by-one (sequential round trips
+  // to Neon); they are independent, so run them concurrently.
+  const [allUsers, allRoles, allDepartments, memberships, assignments, rantingsList, guide] = await Promise.all([
     db.select().from(users),
     db.select().from(roles),
     db.select().from(departments),
     db.select().from(departmentMembers),
+    // Opsi B: slot role per kategori, satu baris per kategori per orang.
+    db.select().from(userRoles),
+    getRantings(),
     getGuide("pengguna"),
   ]);
 
+  // Legacy "[INA] BPH Ranting" dst. tidak lagi bisa ditugaskan (digantikan
+  // role kanonik "BPH Ranting"/"Anggota Ranting" + unit ranting di tabel
+  // rantings) - sembunyikan dari pemilih tanpa menghapus barisnya.
+  const assignableRoles = allRoles.filter((r) => !r.name.trim().startsWith("["));
+
   const rows = allUsers.map((u) => {
     const membership = memberships.find((m) => m.userId === u.id);
+    // Slot kategori kabinet/advisory bisa ada keduanya (satu unik per
+    // kategori); tampilkan yang kabinet dulu, kalau kosong baru advisory.
+    const kabinet = assignments.find((a) => a.userId === u.id && a.roleCategory === "kabinet");
+    const advisory = assignments.find((a) => a.userId === u.id && a.roleCategory === "advisory");
+    const cabinetAssignment = kabinet ?? advisory;
+    const rantingAssignment = assignments.find((a) => a.userId === u.id && a.roleCategory === "ranting");
     return {
       id: u.id,
       name: u.name,
@@ -34,6 +49,9 @@ export default async function ConsoleUsersPage() {
       image: u.image,
       status: u.status,
       roleId: u.roleId,
+      cabinetRoleId: cabinetAssignment?.roleId ?? null,
+      rantingRoleId: rantingAssignment?.roleId ?? null,
+      rantingId: rantingAssignment?.rantingId ?? null,
       departmentId: membership?.departmentId ?? null,
       position: membership?.position ?? "",
       // Bisa menerima tautan reset kalau punya password, atau kalau emailnya
@@ -96,9 +114,10 @@ atau email saja: seseorang@contoh.com`}
 
       <UsersConsole
         users={rows}
-        roles={allRoles}
+        roles={assignableRoles}
         departments={allDepartments}
         memberships={memberships}
+        rantings={rantingsList}
       />
     </div>
   );

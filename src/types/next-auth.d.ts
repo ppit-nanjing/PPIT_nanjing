@@ -29,10 +29,11 @@ declare module "next-auth" {
       // Juga membuka pintu /console dan menu Kegiatan. Menerbitkan tetap butuh
       // persetujuan BPH Kabinet (EventAccess.canRelease di src/lib/event-access.ts).
       canCreateEvent: boolean;
-      // Set only for users with a "[INA]/[JIA] …Ranting" role - which campus
-      // sub-branch they belong to. Drives the filter on /console/ranting/sensus.
-      // null for everyone else. See src/lib/rantings.ts.
-      rantingCode: "INA" | "JIA" | null;
+      // Set only for users with an active ranting assignment (user_roles,
+      // category 'ranting') - the code of the campus sub-branch they belong
+      // to ("INA", "JIA", ...). Drives the filter on /console/ranting/sensus.
+      // null for everyone else. See src/lib/rantings.ts and src/auth.ts.
+      rantingCode: string | null;
       emailSubscribed: boolean | null;
       // Saved language preference, resolved fresh per session() callback call
       // (see resolveLocale() in src/auth.ts). Not the source of truth for

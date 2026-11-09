@@ -10,7 +10,6 @@ import { db } from "@/db";
 import { users, accounts, sessions, verificationTokens } from "@/db/schema";
 import { verifyPassword } from "@/lib/password";
 import { isBphPanitiaRole, type EventCommitteeRole } from "@/lib/event-capabilities";
-import { isRantingBphRole, rantingCodeFromRoleName, type RantingCode } from "@/lib/rantings";
 
 // Best-effort brute-force throttle for the email/password path. NOTE: this is an
 // in-memory Map per function instance, so on Vercel (multiple Lambda instances)
@@ -57,10 +56,13 @@ function getRememberMePreference(user: unknown): boolean | undefined {
 //   union of their department(s)' adminModuleScope arrays. Koordinator tetap
 //   dapat menu Formulir/Oprek lewat session.user.isCoordinator, bukan modul.
 // - accessTier 'advisory' (Dewan Pembina) or no role/department -> no admin access.
-// - a ranting role ("[INA]/[JIA] BPH Ranting") -> the single "sensus-ranting" key
-//   (own-campus census summary only, see src/lib/rantings.ts); "[INA]/[JIA]
-//   Anggota Ranting" -> no access. These are matched by role NAME and take
-//   precedence over accessTier.
+// - a ranting assignment (user_roles, category 'ranting': role "BPH Ranting" +
+//   unit dari tabel rantings) -> the single "sensus-ranting" key (own-campus
+//   census summary only, see src/lib/rantings.ts); "Anggota Ranting" -> no
+//   access. Sistem "[INA] ..." lama tetap lolos via pemetaan backfill 0058.
+// Sejak Opsi B (2026-11) satu orang bisa memegang role kabinet DAN ranting
+// sekaligus (satu per kategori, tabel user_roles); scope-nya = gabungan
+// keduanya (full menang, sisanya union).
 //
 // Perf: this used to be three sequential awaited helpers (resolveAdminScope's two
 // queries + emailSubscribed + locale = 4 round trips) and it runs inside the session
@@ -69,8 +71,11 @@ function getRememberMePreference(user: unknown): boolean | undefined {
 // (kepanitiaan juga ikut lewat subquery skalar - lihat isCommittee/committeeRoles -
 // supaya layout konsol tidak query lagi).
 type SessionContext = {
-  accessTier: string | null;
-  roleName: string | null;
+  // Role kategori 'kabinet'/'advisory' (slot Kategori 1 di user_roles).
+  kabinetRole: { name: string; accessTier: string } | null;
+  // Assignment kategori 'ranting': role level + unit rantingnya.
+  rantingInfo: { roleName: string; rantingCode: string } | null;
+  // users.status - dipakai canCreateEvent (akun nonaktif tidak boleh bikin acara).
   status: string | null;
   emailSubscribed: boolean | null;
   locale: string | null;
@@ -84,10 +89,21 @@ type SessionContext = {
   memberships: { grants: boolean; scope: string[]; position: string | null }[];
 };
 
+// Dua subquery json - user_roles dijamin maksimal satu baris per kategori
+// (unique index user_roles_user_category_unique), jadi `limit 1` hanyalah
+// jaga-jaga untuk data manual yang melanggar itu.
 async function loadSessionContext(userId: string): Promise<SessionContext | null> {
   const result = await db.execute<SessionContext>(sql`
-    select r.access_tier as "accessTier",
-           r.name as "roleName",
+    select (select json_build_object('name', rk.name, 'accessTier', rk.access_tier)
+              from user_roles uk join roles rk on rk.id = uk.role_id
+             where uk.user_id = u.id and uk.role_category in ('kabinet', 'advisory')
+             limit 1) as "kabinetRole",
+           (select json_build_object('roleName', rr.name, 'rantingCode', rt.code)
+              from user_roles ur
+              join roles rr on rr.id = ur.role_id
+              left join rantings rt on rt.id = ur.ranting_id and rt.is_active
+             where ur.user_id = u.id and ur.role_category = 'ranting' and rt.id is not null
+             limit 1) as "rantingInfo",
            u.status as "status",
            u.email_subscribed as "emailSubscribed",
            u.locale as "locale",
@@ -106,38 +122,57 @@ async function loadSessionContext(userId: string): Promise<SessionContext | null
              '[]'::json
            ) as "memberships"
     from users u
-    left join roles r on r.id = u.role_id
     left join department_members dm on dm.user_id = u.id
     left join departments d on d.id = dm.department_id
     where u.id = ${userId}
-    group by u.id, r.id
+    group by u.id
     limit 1
   `);
-  return result.rows[0] ?? null;
+  const row = result.rows[0] ?? null;
+  if (!row) return null;
+  // Kolom json bisa kembali sebagai string ATAU sudah ter-parse tergantung
+  // driver - normalkan dua-duanya.
+  const asJson = <T>(v: unknown): T | null =>
+    v == null ? null : (typeof v === "string" ? (JSON.parse(v) as T) : (v as T));
+  return {
+    ...row,
+    kabinetRole: asJson<SessionContext["kabinetRole"]>(row.kabinetRole),
+    rantingInfo: asJson<SessionContext["rantingInfo"]>(row.rantingInfo),
+  };
 }
 
-// "Koordinator Divisi" (atau kepala unit) dikenali dari nama role, posisi di
-// department_members, atau kolom head departments — sama seperti pola
-// name-matching role ranting di resolveAdminScope(). Dipakai modul Formulir
-// (koor boleh bikin form Oprek BPH untuk prokernya) tanpa memberi mereka
-// modul admin lain.
+// "Koordinator Divisi" (atau kepala unit) dikenali dari nama role kabinet,
+// posisi di department_members, atau kolom head departments — sama seperti
+// pola name-matching lama untuk role ranting. Dipakai modul Formulir (koor
+// boleh bikin form Oprek BPH untuk prokernya) tanpa memberi mereka modul
+// admin lain.
 function isCabinetCoordinator(ctx: SessionContext): boolean {
-  if (ctx.roleName?.trim() === "Koordinator Divisi") return true;
+  if (ctx.kabinetRole?.name?.trim() === "Koordinator Divisi") return true;
   if (ctx.isHead) return true;
   return ctx.memberships.some((m) => (m.position ?? "").toLowerCase().includes("koordinator"));
 }
 
+// Scope dari slot kategori ranting: pemegang role yang mengandung "BPH
+// Ranting" dapat ringkasan sensus kampusnya sendiri; "Anggota Ranting"
+// tidak mendapat apa-apa sampai BPH pusat memberi akses lain. Role "[INA]
+// BPH Ranting" legacy pun lolos - nama levelnya sama.
+function resolveRantingScope(ctx: SessionContext): string[] | null {
+  if (!ctx.rantingInfo) return null;
+  return /bph ranting$/i.test(ctx.rantingInfo.roleName.trim()) ? ["sensus-ranting"] : null;
+}
+
 function resolveAdminScope(ctx: SessionContext): "full" | string[] | null {
-  // Ranting roles are matched by name and win over everything else: a "[INA] BPH
-  // Ranting" gets exactly the own-campus census summary, an "[INA] Anggota
-  // Ranting" gets nothing until a full admin assigns them a different role.
-  if (rantingCodeFromRoleName(ctx.roleName)) {
-    return isRantingBphRole(ctx.roleName) ? ["sensus-ranting"] : null;
-  }
-  if (ctx.accessTier === "full" || ctx.memberships.some((m) => m.grants)) return "full";
-  if (ctx.accessTier !== "scoped") return null;
-  const scope = [...new Set(ctx.memberships.flatMap((m) => m.scope))];
-  return scope;
+  // Slot kabinet (Kategori 1) - Division Teknologi / tier full tetap prioritas.
+  let cabinetScope: "full" | string[] | null = null;
+  const tier = ctx.kabinetRole?.accessTier ?? null;
+  if (tier === "full" || ctx.memberships.some((m) => m.grants)) cabinetScope = "full";
+  else if (tier === "scoped") cabinetScope = [...new Set(ctx.memberships.flatMap((m) => m.scope))];
+  const rantingScope = resolveRantingScope(ctx);
+  // Gabungkan slot-slotnya (satu orang boleh pegang kabinet + ranting):
+  // "full" dari slot mana pun menang, selain itu union kedua daftar.
+  if (cabinetScope === "full" || rantingScope === "full") return "full";
+  const merged = [...new Set([...(cabinetScope ?? []), ...(rantingScope ?? [])])];
+  return merged.length ? merged : null;
 }
 
 const { handlers, auth: uncachedAuth, signIn, signOut } = NextAuth({
@@ -340,14 +375,20 @@ const { handlers, auth: uncachedAuth, signIn, signOut } = NextAuth({
       // Menu Formulir: pengurus kabinet (punya baris department_members), panitia, atau admin penuh.
       session.user.canCreateSurvey = scope === "full" || ctx.memberships.length > 0 || ctx.isCommittee === true;
       // Membuat draf acara: pengurus kabinet (bukan panitia dari luar kabinet, bukan ranting) atau admin penuh.
+      // Sejak Opsi B ranting terdeteksi dari user_roles (bukan nama role):
+      // pemegang slot ranting ikut ditotong, atau admin penuh.
       session.user.canCreateEvent =
-        ctx.status === "active" && !rantingCodeFromRoleName(ctx.roleName) && (scope === "full" || ctx.memberships.length > 0);
+        ctx.status === "active" &&
+        !ctx.rantingInfo &&
+        (scope === "full" || ctx.memberships.length > 0);
       session.user.isBphCommittee = (ctx.committeeRoles ?? []).some((role) =>
         isBphPanitiaRole(role as EventCommitteeRole),
       );
-      // Which ranting a ranting-role user belongs to; null for everyone else.
-      // Drives the campus filter on /console/ranting/sensus.
-      session.user.rantingCode = (rantingCodeFromRoleName(ctx.roleName) as RantingCode | null) ?? null;
+      // Which ranting a ranting-assignment user belongs to; null for everyone else.
+      // Drives the campus filter on /console/ranting/sensus. Kode nyata dari
+      // tabel rantings lewat user_roles (kategori 'ranting') - bukan lagi dari
+      // nama role "[INA] ...".
+      session.user.rantingCode = ctx.rantingInfo?.rantingCode ?? null;
       session.user.emailSubscribed = ctx.emailSubscribed ?? null;
       // Locale fallback only - see the cookie-wins-over-session note in
       // src/lib/i18n/server.ts.

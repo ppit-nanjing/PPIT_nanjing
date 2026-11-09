@@ -1,64 +1,76 @@
-// Ranting = sub-cabang setingkat kampus di bawah PPIT Nanjing. Dua yang aktif:
-// INA di NUIST, JIA di JSAHVC (lihat teks di src/app/about/page.tsx). Pengurus
-// ranting ("[INA] BPH Ranting" / "[JIA] BPH Ranting") hanya boleh melihat
-// ringkasan sensus mahasiswa KAMPUS-nya sendiri di /console/ranting/sensus —
-// tidak ada akses ke sensus penuh, ekspor, atau modul lain.
+// Ranting = sub-cabang setingkat kampus di bawah PPIT Nanjing. Sejak Opsi B
+// (2026-11) datanya TABEL `rantings` di database (drizzle/0058-...) - BUKAN
+//* hardcode lagi. Menambah ranting (mis. Taizhou) = INSERT satu baris data;
+// kode atau deploy baru tidak diperlukan.
 //
 // Pemetaan ranting -> kampus dibuat lewat nilai `university` yang tersimpan di
-// sensus_profiles. Nilainya berasal dari dropdown per-cabang
-// (src/db/seed-branch-universities.ts) — cocokkan persis (case-insensitive,
-// di-trim). Mahasiswa yang memakai opsi bebas "Lainnya" tidak akan terhitung;
-// itu keterbatasan yang diterima, bukan bug.
+// sensus_profiles, dicocokkan persis (case-insensitive, di-trim) dengan daftar
+// `rantings.universities` - nilainya berasal dari dropdown per-cabang
+// (src/db/seed-branch-universities.ts). Mahasiswa yang memakai opsi bebas
+// "Lainnya" atau alias pendek ("NUIST") tidak akan terhitung; itu keterbatasan
+// yang diterima, bukan bug.
+//
+// Hanya untuk server (butuh db). Client yang butuh daftar ranting harus
+// menerima datanya sebagai props polos dari Server Component.
+import { cache } from "react";
+import { asc, eq } from "drizzle-orm";
+import { db } from "@/db";
+import { rantings } from "@/db/schema";
 
-export const RANTINGS = {
-  INA: {
-    label: "INA · NUIST",
-    // src/db/seed-branch-universities.ts:276
-    universities: ["Nanjing University of Information Science and Technology"],
-    // Grup WeChat ranting sendiri, ditampilkan di /sensus/success di samping
-    // kartu grup utama PPIT Nanjing - belum ada gambar QR untuk ranting ini,
-    // jadi cukup ID-nya saja (bukan pola "hilang", ini yang diminta).
-    wechatId: "cal08ou_",
-  },
-  JIA: {
-    label: "JIA · JSAHVC",
-    // TODO: isi string `university` persis yang dipakai mahasiswa JSAHVC di
-    // form sensus. Sampai diisi, halaman ranting JIA tampil kosong.
-    universities: [] as string[],
-    wechatId: undefined as string | undefined,
-  },
-} as const;
+// Kode ranting unik ("INA", "JIA", dst - uppercase). Dikembangkan dari
+// literal "INA" | "JIA" karena daftar ranting kini data, bukan union TS.
+export type RantingCode = string;
 
-export type RantingCode = keyof typeof RANTINGS;
-
-export function isRantingCode(value: string | null | undefined): value is RantingCode {
-  return value === "INA" || value === "JIA";
+// Satu baris ranting, serializable - aman dikirim ke Client Components.
+export interface RantingData {
+  id: string;
+  code: string;
+  label: string;
+  universities: string[];
+  wechatId: string | null;
 }
 
-// Ambil kode ranting dari nama role ("[INA] BPH Ranting" -> "INA"). Nama role
-// di-seed di src/db/seed.ts / drizzle/0034_ranting_roles.sql.
-export function rantingCodeFromRoleName(roleName: string | null | undefined): RantingCode | null {
-  const m = /^\[(INA|JIA)\]/.exec((roleName ?? "").trim());
-  return m ? (m[1] as RantingCode) : null;
+// cache() dedupes antar panggilan dalam satu render server (sensus success,
+// halaman konsol ranting, dsb. bisa memanggil lebih dari sekali).
+export const getRantings = cache(async (): Promise<RantingData[]> => {
+  const rows = await db
+    .select({
+      id: rantings.id,
+      code: rantings.code,
+      label: rantings.label,
+      universities: rantings.universities,
+      wechatId: rantings.wechatId,
+    })
+    .from(rantings)
+    .where(eq(rantings.isActive, true))
+    .orderBy(asc(rantings.orderIndex), asc(rantings.code));
+  return rows;
+});
+
+export function isRantingCode(value: string | null | undefined, list: RantingData[]): boolean {
+  return !!value && list.some((r) => r.code === value);
 }
 
-export function isRantingBphRole(roleName: string | null | undefined): boolean {
-  return /^\[(INA|JIA)\]\s*BPH Ranting$/i.test((roleName ?? "").trim());
+export function findRanting(code: string | null | undefined, list: RantingData[]): RantingData | undefined {
+  return list.find((r) => r.code === code);
 }
 
 // Cocokkan nilai `university` sensus dengan daftar kampus sebuah ranting.
-export function universityInRanting(university: string | null | undefined, code: RantingCode): boolean {
+export function universityInRanting(
+  university: string | null | undefined,
+  ranting: RantingData,
+): boolean {
   const u = (university ?? "").trim().toLowerCase();
   if (!u) return false;
-  return RANTINGS[code].universities.some((name) => name.toLowerCase() === u);
+  return ranting.universities.some((name) => name.toLowerCase().trim() === u);
 }
 
-// Kebalikan dari universityInRanting: dari kampus, cari kode rantingnya (kalau
+// Kebalikan universityInRanting: dari kampus, cari kode rantingnya (kalau
 // ada). Dipakai di /sensus/success untuk menampilkan kartu grup WeChat
 // ranting tambahan, di samping kartu grup utama PPIT Nanjing yang sudah ada.
-export function rantingCodeFromUniversity(university: string | null | undefined): RantingCode | null {
-  for (const code of Object.keys(RANTINGS) as RantingCode[]) {
-    if (universityInRanting(university, code)) return code;
+export function rantingCodeFromUniversity(university: string | null | undefined, list: RantingData[]): string | null {
+  for (const r of list) {
+    if (universityInRanting(university, r)) return r.code;
   }
   return null;
 }

@@ -5,7 +5,7 @@ import { redirect } from "next/navigation";
 import { db } from "@/db";
 import { sensusProfiles, users } from "@/db/schema";
 import { requireModuleAccess } from "@/lib/admin-scope";
-import { RANTINGS, universityInRanting } from "@/lib/rantings";
+import { getRantings, universityInRanting } from "@/lib/rantings";
 import { CollapsibleSection } from "@/components/console/collapsible-section";
 import { TextField, primaryBtn } from "@/components/console/form";
 import { FileCheck2, FileX2, Search, Download } from "lucide-react";
@@ -33,7 +33,9 @@ export default async function RantingSensusPage({ searchParams }: { searchParams
   const q = (Array.isArray(qRaw) ? qRaw[0] : qRaw ?? "").trim();
   const needle = q.toLowerCase();
 
-  const ranting = RANTINGS[code];
+  const rows = await getRantings();
+  const ranting = rows.find((r) => r.code === code);
+  if (!ranting) redirect("/console/sensus");
   const rows = await db
     .select({ sensus: sensusProfiles, userName: users.name, userEmail: users.email })
     .from(sensusProfiles)
@@ -66,7 +68,7 @@ export default async function RantingSensusPage({ searchParams }: { searchParams
       <div className="mb-6">
         <h1 className="text-headline-md sm:text-headline-lg text-on-background mb-2">Sensus Ranting {ranting.label}</h1>
         <p className="text-body-md text-on-surface-variant max-w-2xl">
-          Ringkasan pengisian sensus mahasiswa {code === "INA" ? "NUIST" : "JSAHVC"}. Hanya data kampus ranting kamu —
+          Ringkasan pengisian sensus mahasiswa kampus yang dipetakan ke ranting kamu. Hanya data kampus ranting kamu —
           untuk melihat siapa yang sudah dan belum mengisi. Nomor paspor dan data pribadi lengkap tidak ditampilkan di
           sini.
         </p>

@@ -13,6 +13,7 @@ import {
   primaryKey,
   uniqueIndex,
   index,
+  foreignKey,
   AnyPgColumn,
 } from "drizzle-orm/pg-core";
 
@@ -101,6 +102,13 @@ export const feedbackCategoryEnum = pgEnum("feedback_category", ["bug", "design"
 export const feedbackStatusEnum = pgEnum("feedback_status", ["new", "in_review", "resolved"]);
 // See docs/Data Dictionary.md "Admin Access Rule" - sourced from the 2026/2027 recruitment guidebook.
 export const accessTierEnum = pgEnum("access_tier", ["full", "scoped", "advisory"]);
+// Kategori role (Opsi B, 2026-11): seseorang boleh memegang SATU role di
+// SETIAP kategori (divalidasi unique index `user_roles(user_id, role_category)`,
+// bukan di sini - roles sendiri bebas dipakai banyak orang). 'kabinet' = BPH +
+// pengurus kabinet, 'ranting' = role tingkat ranting (unitnya di `user_roles
+// .ranting_id`, bukan di nama role seperti sistem "[INA] ..." yang lama),
+// 'advisory' = Dewan Pembina. Kategori 3 (custom permissions) menyusul.
+export const roleCategoryEnum = pgEnum("role_category", ["kabinet", "ranting", "advisory"]);
 
 // ---------- 1. Identity & Access ----------
 
@@ -113,7 +121,55 @@ export const roles = pgTable("roles", {
   // 'advisory' = Dewan Pembina - no operational admin access.
   accessTier: accessTierEnum("access_tier").notNull().default("scoped"),
   description: text("description"),
+  category: roleCategoryEnum("category").notNull().default("kabinet"),
 });
+
+// Ranting = sub-cabang setingkat kampus (INA @ NUIST, JIA @ JSAHVC, ...).
+// Data, bukan hardcode: menambah ranting baru (mis. Taizhou) cukup INSERT di
+// sini - daftar universitasnya dipakai untuk memetakan `sensus_profiles
+// .university` ke ranting (cocok persis case-insensitive setelah trim,
+// mahasiswa pilihan "Lainnya" tidak terhitung). Pengurus ranting memegang
+// role kategori 'ranting' (mis. "BPH Ranting") + baris `user_roles` yang
+// menunjuk ranting ini.
+export const rantings = pgTable("rantings", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  code: text("code").notNull().unique(), // "INA", "JIA", ...
+  label: text("label").notNull(), // "INA · NUIST"
+  universities: jsonb("universities").$type<string[]>().notNull().default([]),
+  wechatId: text("wechat_id"), // grup WeChat kampus ranting itu sendiri
+  isActive: boolean("is_active").notNull().default(true),
+  orderIndex: integer("order_index").notNull().default(0),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
+// Multi-role per pengguna, SATU role per KATEGORI (Opsi B 2026-11, melengkapi
+// `users.role_id` tunggal yang lama). `role_category` disalin dari role-nya
+// dan dikunci lewat FK komposit ke roles(id, category) supaya tidak bisa
+// telantar. `ranting_id` wajib saat category='ranting' (check constraint) -
+// role ranting berarti "BPH/Anggota RANTING-nya {unit}".
+export const userRoles = pgTable(
+  "user_roles",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    userId: uuid("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+    roleId: uuid("role_id").notNull().references(() => roles.id, { onDelete: "restrict" }),
+    roleCategory: roleCategoryEnum("role_category").notNull(),
+    rantingId: uuid("ranting_id").references(() => rantings.id, { onDelete: "set null" }),
+    assignedAt: timestamp("assigned_at").notNull().defaultNow(),
+    assignedBy: uuid("assigned_by").references(() => users.id, { onDelete: "set null" }),
+  },
+  (t) => [
+    uniqueIndex("user_roles_user_category_unique").on(t.userId, t.roleCategory),
+    // sinkronkat role & kategori - butuh unique (id, category) di roles, dibuat
+    // di migrasinya (id sendiri sudah PK, index ini cuma untuk referensi FK).
+    foreignKey({
+      name: "user_roles_role_current_fkey",
+      columns: [t.roleId, t.roleCategory],
+      foreignColumns: [roles.id, roles.category],
+    }),
+  ],
+);
+
 
 export const permissions = pgTable("permissions", {
   id: uuid("id").defaultRandom().primaryKey(),
@@ -138,6 +194,11 @@ export const users = pgTable("users", {
   emailVerified: timestamp("email_verified", { mode: "date" }),
   image: text("image"),
   avatarUrl: text("avatar_url"),
+  // Legacy mirror slot: role kategori 'kabinet'/'advisory' aktif (disalin
+  // updateUserRoles di src/app/actions/admin-users.ts). Sumber kebenaran akses
+  // sudah pindah ke `user_roles` (kabinet + ranting bisa bersamaan); kolom ini
+  // dipertahankan agar eksport & tampilan lama tetap jalan. Role ranting TIDAK
+  // pernah disimpan di sini.
   roleId: uuid("role_id").references(() => roles.id),
   phone: text("phone"),
   wechatId: text("wechat_id"),
@@ -1134,6 +1195,9 @@ export const feedback = pgTable("feedback", {
 
 export const usersRelations = relations(users, ({ one, many }) => ({
   role: one(roles, { fields: [users.roleId], references: [roles.id] }),
+  // Opsi B (kategori role) - users.role_id hanya mirror role kabinet untuk
+  // tampilan/eksport; sumber kebenaran akses = user_roles (lihat auth.ts).
+  userRoles: many(userRoles),
   sensusProfile: one(sensusProfiles, { fields: [users.id], references: [sensusProfiles.userId] }),
   departmentMemberships: many(departmentMembers),
   eventRegistrations: many(eventRegistrations),
@@ -1154,7 +1218,19 @@ export const branchUniversitiesRelations = relations(branchUniversities, ({ one 
 
 export const rolesRelations = relations(roles, ({ many }) => ({
   users: many(users),
+  userRoles: many(userRoles),
   rolePermissions: many(rolePermissions),
+}));
+
+// ---------- Ranting (unit setingkat kampus) ----------
+export const rantingsRelations = relations(rantings, ({ many }) => ({
+  userRoles: many(userRoles),
+}));
+
+export const userRolesRelations = relations(userRoles, ({ one }) => ({
+  user: one(users, { fields: [userRoles.userId], references: [users.id] }),
+  role: one(roles, { fields: [userRoles.roleId], references: [roles.id] }),
+  ranting: one(rantings, { fields: [userRoles.rantingId], references: [rantings.id] }),
 }));
 
 export const departmentsRelations = relations(departments, ({ one, many }) => ({

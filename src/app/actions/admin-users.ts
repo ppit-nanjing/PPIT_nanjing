@@ -1,10 +1,11 @@
 "use server";
 
+import { inArray } from "drizzle-orm";
 import { and, eq, ne } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { auth } from "@/auth";
 import { db } from "@/db";
-import { users, departmentMembers, departments, membershipApplications, feedback, externalLoans } from "@/db/schema";
+import { users, roles, rantings, userRoles, departmentMembers, departments, membershipApplications, feedback, externalLoans } from "@/db/schema";
 import { hasModuleAccess } from "@/lib/admin-scope";
 import { sendEmail } from "@/lib/email";
 import { renderMembershipEmail, renderMembershipEmailText } from "@/lib/membership-email";
@@ -18,15 +19,69 @@ const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 async function assertAdmin() {
   const session = await auth();
   if (!hasModuleAccess(session?.user?.adminScope ?? null, "users")) throw new Error("Forbidden");
+  return { id: session!.user.id };
 }
 
-export async function updateUserRole(userId: string, roleId: string) {
-  await assertAdmin();
-  await db
-    .update(users)
-    .set({ roleId: roleId || null })
-    .where(eq(users.id, userId));
+/**
+ * Simpan slot role berbasis kategori (Opsi B 2026-11):
+ *  - kabinetSlot   : role 'kabinet'/'advisory' ("" = kosong -> orang awam)
+ *  - rantingSlot   : role 'ranting' ("BPH Ranting" / "Anggota Ranting", "" = kosong),
+ *  - rantingUnitId : unit rantingnya (wajib saat rantingSlot diisi).
+ * Satu orang maksimal SATU role per kategori - unik di DB dan di sini slot
+ * lama dihapus dulu. users.role_id (mirror lama) tetap disalin agar eksport
+ * CSV & tampilan lain yang membaca kolom itu tetap konsisten.
+ */
+export async function updateUserRoles(userId: string, cabinetSlot: string, rantingSlot: string, rantingUnitId: string) {
+  const admin = await assertAdmin();
+
+  const [user] = await db.select({ id: users.id }).from(users).where(eq(users.id, userId));
+  if (!user) throw new Error("Pengguna tidak ditemukan.");
+
+  const allRoles = await db.select({ id: roles.id, category: roles.category, name: roles.name }).from(roles);
+  const cabinetRole = cabinetSlot ? allRoles.find((r) => r.id === cabinetSlot && (r.category === "kabinet" || r.category === "advisory")) : undefined;
+  const rantingRole = rantingSlot ? allRoles.find((r) => r.id === rantingSlot && r.category === "ranting") : undefined;
+  if (cabinetSlot && !cabinetRole) throw new Error("Role kabinet yang dipilih tidak berlaku.");
+  if (rantingSlot && !rantingRole) throw new Error("Role ranting yang dipilih tidak berlaku.");
+
+  let unitId: string | null = null;
+  if (rantingRole) {
+    const [unit] = await db
+      .select({ id: rantings.id })
+      .from(rantings)
+      // Role ranting tanpa unit tidak boleh ada (CDC user_roles).
+      .where(and(eq(rantings.id, rantingUnitId), eq(rantings.isActive, true)));
+    if (!unit) throw new Error("Pilih unit ranting untuk role ranting ini.");
+    unitId = unit.id;
+  }
+
+  await db.transaction(async (tx) => {
+    // Slot kategori kabinet/advisory: satu slot UI mencakup dua kategori itu,
+    // jadi keduanya dibersihkan (mencegah Ketua Umum + Dewan Pembina bersamaan).
+    await tx.delete(userRoles).where(and(eq(userRoles.userId, userId), inArray(userRoles.roleCategory, ["kabinet", "advisory"])));
+    if (cabinetRole) {
+      await tx.insert(userRoles).values({
+        userId,
+        roleId: cabinetRole.id,
+        roleCategory: cabinetRole.category,
+        assignedBy: admin.id,
+      });
+    }
+    await tx.delete(userRoles).where(and(eq(userRoles.userId, userId), eq(userRoles.roleCategory, "ranting")));
+    if (rantingRole && unitId) {
+      await tx.insert(userRoles).values({
+        userId,
+        roleId: rantingRole.id,
+        roleCategory: "ranting",
+        rantingId: unitId,
+        assignedBy: admin.id,
+      });
+    }
+    // Mirror slot kabinet ke kolom lama (eksport CSV & display).
+    await tx.update(users).set({ roleId: cabinetRole?.id ?? null }).where(eq(users.id, userId));
+  });
+
   revalidatePath("/console/users");
+  revalidatePath("/console/organization");
 }
 
 export async function assignUserDepartment(userId: string, departmentId: string, position: string) {

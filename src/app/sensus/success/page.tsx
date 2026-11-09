@@ -8,24 +8,25 @@ import { getT } from "@/lib/i18n/server";
 import { auth } from "@/auth";
 import { db } from "@/db";
 import { sensusProfiles } from "@/db/schema";
-import { RANTINGS, rantingCodeFromUniversity } from "@/lib/rantings";
+import { getRantings, rantingCodeFromUniversity, type RantingData } from "@/lib/rantings";
 
 export default async function SensusSuccessPage() {
   const { t } = await getT();
 
-  // Ranting (INA/JIA) punya grup WeChat kampus sendiri, di luar grup utama
+  // Ranting (INA/JIA, dst.) punya grup WeChat kampus sendiri, di luar grup utama
   // PPIT Nanjing di bawah - ditentukan dari `university` yang baru saja
   // disimpan, bukan dari role admin (setiap mahasiswa ranting, bukan cuma
   // pengurusnya, perlu tahu ini).
   const session = await auth();
-  let ranting: (typeof RANTINGS)[keyof typeof RANTINGS] | null = null;
+  const rantingsList = await getRantings();
+  let ranting: RantingData | null = null;
   if (session?.user?.id) {
     const [profile] = await db
       .select({ university: sensusProfiles.university })
       .from(sensusProfiles)
       .where(eq(sensusProfiles.userId, session.user.id));
-    const code = rantingCodeFromUniversity(profile?.university);
-    if (code) ranting = RANTINGS[code];
+    const code = rantingCodeFromUniversity(profile?.university, rantingsList);
+    if (code) ranting = rantingsList.find((r) => r.code === code) ?? null;
   }
 
   return (

@@ -5,7 +5,7 @@ import { auth } from "@/auth";
 import { db } from "@/db";
 import { sensusProfiles, users } from "@/db/schema";
 import { hasModuleAccess } from "@/lib/admin-scope";
-import { RANTINGS, universityInRanting, isRantingCode } from "@/lib/rantings";
+import { getRantings, isRantingCode, universityInRanting } from "@/lib/rantings";
 import { datasetToCsv, datasetToXlsx, type ReportDataset } from "@/lib/report-export";
 import {
   SENSUS_EXPORT_COLUMNS_FULL,
@@ -24,13 +24,16 @@ export async function GET(request: Request) {
   const scope = session?.user.adminScope ?? null;
   const full = hasModuleAccess(scope, "sensus");
   const rantingCode = session?.user.rantingCode ?? null;
-  const rantingOnly = !full && hasModuleAccess(scope, "sensus-ranting") && isRantingCode(rantingCode);
+  const rantingsList = full ? null : await getRantings();
+  const rantingOnly =
+    !full && hasModuleAccess(scope, "sensus-ranting") && isRantingCode(rantingCode, rantingsList ?? []);
 
   if (!full && !rantingOnly) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
   const url = new URL(request.url);
+  const rantingData = rantingOnly ? (rantingsList ?? []).find((r) => r.code === rantingCode) ?? null : null;
   const format = (url.searchParams.get("format") ?? "csv").toLowerCase();
   if (format !== "csv" && format !== "xlsx") {
     return NextResponse.json({ error: "Format tidak didukung (csv|xlsx)" }, { status: 400 });
@@ -49,7 +52,7 @@ export async function GET(request: Request) {
 
   const filtered = rows.filter(({ sensus: s, userName, userEmail }) => {
     // Pengurus ranting: paksa ke kampus sendiri, abaikan filter kampus dari URL.
-    if (rantingOnly && !universityInRanting(s.university, rantingCode as "INA" | "JIA")) return false;
+    if (rantingOnly && !universityInRanting(s.university, rantingData!)) return false;
     if (status === "complete" && s.completionStatus !== "complete") return false;
     if (status === "incomplete" && s.completionStatus === "complete") return false;
     if (branch !== "all" && s.branch !== branch) return false;
@@ -69,7 +72,7 @@ export async function GET(request: Request) {
   const now = new Date();
   const dataset: ReportDataset = rantingOnly
     ? {
-        title: `Sensus Ranting ${RANTINGS[rantingCode as "INA" | "JIA"].label}`,
+        title: `Sensus Ranting ${rantingData!.label}`,
         type: "sensus_ranting",
         generatedAt: now,
         filters: {},

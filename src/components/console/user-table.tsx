@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 import { Pencil, KeyRound, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import {
-  updateUserRole,
+  updateUserRoles,
   assignUserDepartment,
   updateUserStatus,
   updateUserDetails,
@@ -23,6 +23,9 @@ interface Row {
   image: string | null;
   status: "invited" | "active" | "inactive" | "suspended";
   roleId: string | null;
+  cabinetRoleId: string | null;
+  rantingRoleId: string | null;
+  rantingId: string | null;
   departmentId: string | null;
   position: string;
   canResetPassword: boolean;
@@ -30,6 +33,13 @@ interface Row {
 interface Role {
   id: string;
   name: string;
+  accessTier: "full" | "scoped" | "advisory";
+  category: "kabinet" | "ranting" | "advisory";
+}
+interface Ranting {
+  id: string;
+  code: string;
+  label: string;
 }
 interface Department {
   id: string;
@@ -100,10 +110,12 @@ export function UserTable({
   users,
   roles,
   departments,
+  rantings,
 }: {
   users: Row[];
   roles: Role[];
   departments: Department[];
+  rantings: Ranting[];
 }) {
   const byId = new Map(departments.map((d) => [d.id, d]));
   const assignable = departments.filter((d) => isAssignable(d, departments));
@@ -133,6 +145,7 @@ export function UserTable({
                 roles={roles}
                 departments={assignable}
                 byId={byId}
+                rantings={rantings}
                 layout="table"
               />
             ))}
@@ -159,6 +172,7 @@ export function UserTable({
               roles={roles}
               departments={assignable}
               byId={byId}
+              rantings={rantings}
               layout="card"
             />
           ))
@@ -173,16 +187,20 @@ function UserRow({
   roles,
   departments,
   byId,
+  rantings,
   layout,
 }: {
   user: Row;
   roles: Role[];
   departments: Department[];
   byId: Map<string, Department>;
+  rantings: Ranting[];
   layout: Layout;
 }) {
   const router = useRouter();
-  const [roleId, setRoleId] = useState(user.roleId ?? "");
+  const [cabinetRoleId, setCabinetRoleId] = useState(user.cabinetRoleId ?? "");
+  const [rantingRoleId, setRantingRoleId] = useState(user.rantingRoleId ?? "");
+  const [rantingId, setRantingId] = useState(user.rantingId ?? "");
   const [departmentId, setDepartmentId] = useState(user.departmentId ?? "");
   const [status, setStatus] = useState(user.status);
   const [editing, setEditing] = useState(false);
@@ -199,6 +217,14 @@ function UserRow({
   if (savedDepartmentId !== prevSavedDepartmentId) {
     setPrevSavedDepartmentId(savedDepartmentId);
     setDepartmentId(savedDepartmentId);
+  }
+  const savedRoleSlots = `${user.cabinetRoleId ?? ""}|${user.rantingRoleId ?? ""}|${user.rantingId ?? ""}`;
+  const [prevSavedRoleSlots, setPrevSavedRoleSlots] = useState(savedRoleSlots);
+  if (savedRoleSlots !== prevSavedRoleSlots) {
+    setPrevSavedRoleSlots(savedRoleSlots);
+    setCabinetRoleId(user.cabinetRoleId ?? "");
+    setRantingRoleId(user.rantingRoleId ?? "");
+    setRantingId(user.rantingId ?? "");
   }
   const [prevSavedStatus, setPrevSavedStatus] = useState(user.status);
   if (user.status !== prevSavedStatus) {
@@ -294,7 +320,82 @@ function UserRow({
       ? [...departments, byId.get(user.departmentId)!].filter(Boolean)
       : departments;
 
-  const roleName = roles.find((r) => r.id === user.roleId)?.name;
+  const roleName = roles.find((r) => r.id === user.cabinetRoleId)?.name;
+  const rantingRoleName = roles.find((r) => r.id === user.rantingRoleId)?.name;
+  const rantingLabel = rantings.find((r) => r.id === user.rantingId)?.label;
+  // Peran = slot kategori 1 + slot kategori 2/2a (ranting) kalau ada.
+  const peranText =
+    [
+      roleName,
+      rantingRoleName ? [rantingRoleName, rantingLabel ?? "(ranting belum dipilih)"].filter(Boolean).join(" · ") : null,
+    ]
+      .filter(Boolean)
+      .join(" · ") || "— Tanpa akses admin —";
+
+  const cabinetRoles = roles.filter((r) => r.category === "kabinet" || r.category === "advisory");
+  const rantingRoles = roles.filter((r) => r.category === "ranting");
+  // Slot ranting wajib punya unit; cegah Simpan kalau belum dipilih.
+  const rolesInvalid = !!rantingRoleId && !rantingId;
+
+  const roleEditor = (
+    <div className="flex flex-col gap-1">
+      <span className={labelCls}>Kategori 1 · Role Kabinet</span>
+      <Select
+        value={cabinetRoleId}
+        onChange={(e) => setCabinetRoleId(e.target.value)}
+        className={layout === "card" ? selectClsFull : selectCls}
+        aria-label="Role kabinet"
+      >
+        <option value="">— Orang awam —</option>
+        {cabinetRoles.map((r) => (
+          <option key={r.id} value={r.id}>
+            {r.name}
+          </option>
+        ))}
+      </Select>
+      <span className={`${labelCls} mt-1`}>Kategori 2 · Role Ranting</span>
+      <Select
+        value={rantingRoleId}
+        onChange={(e) => setRantingRoleId(e.target.value)}
+        className={layout === "card" ? selectClsFull : selectCls}
+        aria-label="Role ranting"
+      >
+        <option value="">— Bukan menjawab ranting —</option>
+        {rantingRoles.map((r) => (
+          <option key={r.id} value={r.id}>
+            {r.name}
+          </option>
+        ))}
+      </Select>
+      {rantingRoleId && (
+        <>
+          <span className={`${labelCls} mt-1`}>Kategori 2a · Unit Ranting</span>
+          <Select
+            value={rantingId}
+            onChange={(e) => setRantingId(e.target.value)}
+            className={`${layout === "card" ? selectClsFull : selectCls}${!rantingId ? " ring-2 ring-tertiary-container" : ""}`}
+            aria-label="Unit ranting"
+          >
+            <option value="">— Pilih ranting —</option>
+            {rantings.map((r) => (
+              <option key={r.id} value={r.id}>
+                {r.label}
+              </option>
+            ))}
+          </Select>
+        </>
+      )}
+    </div>
+  );
+
+  function resetRoleStates() {
+    setCabinetRoleId(user.cabinetRoleId ?? "");
+    setRantingRoleId(user.rantingRoleId ?? "");
+    setRantingId(user.rantingId ?? "");
+  }
+  async function saveRoles() {
+    await updateUserRoles(user.id, cabinetRoleId, rantingRoleId, rantingId);
+  }
 
   const avatar = user.image ? (
     <Image src={user.image} alt="" width={32} height={32} className="w-8 h-8 rounded-full object-cover" />
@@ -319,22 +420,15 @@ function UserRow({
             placeholder="Email"
             className={`${selectClsFull}`}
           />
-          <Select value={roleId} onChange={(e) => setRoleId(e.target.value)} className={`${selectClsFull}`} aria-label="Role admin">
-            <option value="">— Tanpa akses admin —</option>
-            {roles.map((r) => (
-              <option key={r.id} value={r.id}>
-                {r.name}
-              </option>
-            ))}
-          </Select>
+          {roleEditor}
           <div className="flex gap-2">
             <button
               type="button"
-              disabled={!name.trim() || !email.trim()}
+              disabled={!name.trim() || !email.trim() || rolesInvalid}
               onClick={() =>
                 startTransition(async () => {
                   await updateUserDetails(user.id, name, email);
-                  await updateUserRole(user.id, roleId);
+                  await saveRoles();
                   setEditing(false);
                   router.refresh();
                 })
@@ -348,7 +442,7 @@ function UserRow({
               onClick={() => {
                 setName(user.name ?? "");
                 setEmail(user.email);
-                setRoleId(user.roleId ?? "");
+                resetRoleStates();
                 setEditing(false);
               }}
               className="flex-1 text-label-caps uppercase tracking-wide px-3 py-1.5 rounded-md border border-outline-variant text-on-surface-variant hover:text-on-background transition-colors"
@@ -371,14 +465,7 @@ function UserRow({
               placeholder="Email"
               className={selectCls}
             />
-            <Select value={roleId} onChange={(e) => setRoleId(e.target.value)} className={selectCls} aria-label="Role admin">
-              <option value="">— Tanpa akses admin —</option>
-              {roles.map((r) => (
-                <option key={r.id} value={r.id}>
-                  {r.name}
-                </option>
-              ))}
-            </Select>
+            {roleEditor}
           </div>
         </td>
         <td className="px-3 py-2 max-w-[9rem] truncate text-on-surface-variant">{scopeLabel(byId.get(user.departmentId ?? ""), byId)}</td>
@@ -387,11 +474,11 @@ function UserRow({
           <div className="flex justify-end gap-1.5">
             <button
               type="button"
-              disabled={!name.trim() || !email.trim()}
+              disabled={!name.trim() || !email.trim() || rolesInvalid}
               onClick={() =>
                 startTransition(async () => {
                   await updateUserDetails(user.id, name, email);
-                  await updateUserRole(user.id, roleId);
+                  await saveRoles();
                   setEditing(false);
                   router.refresh();
                 })
@@ -405,7 +492,7 @@ function UserRow({
               onClick={() => {
                 setName(user.name ?? "");
                 setEmail(user.email);
-                setRoleId(user.roleId ?? "");
+                resetRoleStates();
                 setEditing(false);
               }}
               className="text-label-caps uppercase tracking-wide px-2 py-1 rounded-md border border-outline-variant text-on-surface-variant hover:text-on-background transition-colors"
@@ -444,7 +531,7 @@ function UserRow({
               </option>
             ))}
           </Select>
-          {roleName && <p className="text-body-sm text-on-surface-variant">Peran: {roleName}</p>}
+          <p className="text-body-sm text-on-surface-variant">Peran: {peranText}</p>
         </div>
 
         <div className="flex flex-col gap-1">
@@ -534,9 +621,9 @@ function UserRow({
             </option>
           ))}
         </select>
-        {roleName && (
-          <p className="text-body-sm text-on-surface-variant mt-1 truncate" title={`Peran: ${roleName}`}>
-            Peran: {roleName}
+        {peranText !== "— Tanpa akses admin —" && (
+          <p className="text-body-sm text-on-surface-variant mt-1 truncate" title={`Peran: ${peranText}`}>
+            Peran: {peranText}
           </p>
         )}
       </td>

@@ -1,7 +1,8 @@
 import { db } from "@/db";
 import { formatChinaDateIso } from "@/lib/datetime";
-import { departments, departmentMembers, roles, users } from "@/db/schema";
+import { departments, departmentMembers, roles, users, userRoles, rantings } from "@/db/schema";
 import { requireModuleAccess } from "@/lib/admin-scope";
+import { getRantings } from "@/lib/rantings";
 
 // Same hardening as the other console exports - see
 // api/console/events/[id]/registrations/export for the reasoning.
@@ -26,22 +27,44 @@ const STATUS_LABEL: Record<string, string> = {
 export async function GET() {
   await requireModuleAccess("users");
 
-  const [allUsers, allRoles, memberships, allDepartments] = await Promise.all([
+  const [allUsers, allRoles, memberships, allDepartments, assignments, rantingsList] = await Promise.all([
     db.select().from(users),
     db.select().from(roles),
     db.select().from(departmentMembers),
     db.select().from(departments),
+    db.select().from(userRoles),
+    getRantings(),
   ]);
   const roleById = new Map(allRoles.map((r) => [r.id, r.name]));
   const deptById = new Map(allDepartments.map((d) => [d.id, d.name]));
+  const rantingById = new Map(rantingsList.map((r) => [r.id, r.label]));
   const membershipByUser = new Map(memberships.map((m) => [m.userId, m]));
+  const rantingSlotByUser = new Map(
+    assignments.filter((a) => a.roleCategory === "ranting").map((a) => [a.userId, a]),
+  );
 
-  const header = ["Nama", "Email", "Status", "Role", "Divisi", "Jabatan"];
+  const header = ["Nama", "Email", "Status", "Role", "Ranting", "Divisi", "Jabatan"];
   const lines = [header.map(csvCell).join(",")];
   for (const u of allUsers.sort((a, b) => (a.name ?? "").localeCompare(b.name ?? ""))) {
     const m = membershipByUser.get(u.id);
+    const rantingSlot = rantingSlotByUser.get(u.id);
+    // Role = mirror slot kabinet; ranting (role + unit) ditampilkan di kolomnya
+    // sendiri karena satu orang bisa memegang keduanya sekaligus.
+    const rantingText = rantingSlot
+      ? [roleById.get(rantingSlot.roleId) ?? "", rantingSlot.rantingId ? rantingById.get(rantingSlot.rantingId) ?? "" : ""]
+          .filter(Boolean)
+          .join(" · ")
+      : "";
     lines.push(
-      [u.name ?? "", u.email, STATUS_LABEL[u.status] ?? u.status, roleById.get(u.roleId ?? "") ?? "", m ? deptById.get(m.departmentId) ?? "" : "", m?.position ?? ""]
+      [
+        u.name ?? "",
+        u.email,
+        STATUS_LABEL[u.status] ?? u.status,
+        roleById.get(u.roleId ?? "") ?? "",
+        rantingText,
+        m ? deptById.get(m.departmentId) ?? "" : "",
+        m?.position ?? "",
+      ]
         .map(csvCell)
         .join(","),
     );

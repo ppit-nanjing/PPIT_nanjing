@@ -13,6 +13,9 @@ interface Row {
   image: string | null;
   status: "invited" | "active" | "inactive" | "suspended";
   roleId: string | null;
+  cabinetRoleId: string | null;
+  rantingRoleId: string | null;
+  rantingId: string | null;
   departmentId: string | null;
   position: string;
   canResetPassword: boolean;
@@ -20,6 +23,8 @@ interface Row {
 interface Role {
   id: string;
   name: string;
+  accessTier: "full" | "scoped" | "advisory";
+  category: "kabinet" | "ranting" | "advisory";
 }
 interface Department {
   id: string;
@@ -33,6 +38,25 @@ interface Membership {
   departmentId: string;
   position: string | null;
 }
+interface Ranting {
+  id: string;
+  code: string;
+  label: string;
+}
+
+// Filter "Kategori"/segmentasi di atas tabel - sekarang mengikuti model role
+// per kategori (Opsi B): Kategori 1 (BPH/pengurus kabinet/orang awam) +
+// Kategori 2 (ranting di tingkat role & unitnya).
+const CATEGORY_FILTERS: { value: string; label: string }[] = [
+  { value: "all", label: "Semua Kategori" },
+  { value: "bphKabinet", label: "BPH Kabinet" },
+  { value: "pengurusKabinet", label: "Pengurus Kabinet (punya divisi)" },
+  { value: "orangAwam", label: "Orang Awam" },
+  { value: "bphRanting", label: "BPH Ranting" },
+  { value: "anggotaRanting", label: "Anggota Ranting" },
+  { value: "noDivision", label: "Belum ada divisi" },
+  { value: "noAdminAccess", label: "Tanpa akses admin" },
+];
 
 const STATUSES: { value: Row["status"]; label: string }[] = [
   { value: "active", label: "Aktif" },
@@ -45,11 +69,13 @@ export function UsersConsole({
   roles,
   departments,
   memberships,
+  rantings,
 }: {
   users: Row[];
   roles: Role[];
   departments: Department[];
   memberships: Membership[];
+  rantings: Ranting[];
 }) {
   const [tab, setTab] = useState<"list" | "structure">("list");
   const [q, setQ] = useState("");
@@ -58,17 +84,30 @@ export function UsersConsole({
   const [catFilter, setCatFilter] = useState("all");
 
   const query = q.trim().toLowerCase();
+  const selectCls = selectInput;
+
+  // Filter kategori mengikuti model role per kategori (Opsi B). Kategori
+  // Kabinet = role kabinet tier 'full' (Ketua Umum, Wakil, Sekretaris,
+  // Bendahara). Pengurus kabinet = punya divisi (Koordinator/Anggota Divisi).
+  // Orang awam = tanpa role mana pun + tanpa divisi.
   const filtered = users.filter((u) => {
     if (query && !`${u.name}\n${u.email}`.toLowerCase().includes(query)) return false;
     if (deptFilter && u.departmentId !== deptFilter) return false;
     if (statusFilter && u.status !== statusFilter) return false;
-    if (catFilter === "member" && !u.departmentId) return false;
-    if (catFilter === "noDivision" && u.departmentId) return false;
-    if (catFilter === "noRole" && u.roleId) return false;
+    const cabinetRole = roles.find((r) => r.id === u.cabinetRoleId);
+    const rantingRole = roles.find((r) => r.id === u.rantingRoleId);
+    if (catFilter === "bphKabinet" && cabinetRole?.accessTier !== "full") return false;
+    else if (catFilter === "pengurusKabinet" && !u.departmentId) return false;
+    else if (catFilter === "orangAwam" && (u.cabinetRoleId || u.rantingRoleId || u.departmentId)) return false;
+    else if (catFilter === "bphRanting") {
+      if (!rantingRole || !/bph ranting$/i.test(rantingRole.name.trim())) return false;
+    } else if (catFilter === "anggotaRanting") {
+      if (!rantingRole) return false;
+      if (/bph ranting$/i.test(rantingRole.name.trim())) return false;
+    } else if (catFilter === "noDivision" && u.departmentId) return false;
+    else if (catFilter === "noAdminAccess" && (u.cabinetRoleId || u.rantingRoleId)) return false;
     return true;
   });
-
-  const selectCls = selectInput;
 
   return (
     <div>
@@ -105,14 +144,15 @@ export function UsersConsole({
               className={`${selectCls} w-full sm:col-span-2 lg:col-span-4`}
               aria-label="Filter kategori"
             >
-              <option value="all">Semua Kategori</option>
-              <option value="member">Pengurus kabinet (punya divisi)</option>
-              <option value="noDivision">Belum ada divisi</option>
-              <option value="noRole">Belum ada akses admin</option>
+              {CATEGORY_FILTERS.map((c) => (
+                <option key={c.value} value={c.value}>
+                  {c.label}
+                </option>
+              ))}
             </Select>
           </div>
 
-          <UserTable users={filtered} roles={roles} departments={departments} />
+          <UserTable users={filtered} roles={roles} departments={departments} rantings={rantings} />
 
           <p className="text-body-sm text-on-surface-variant mt-4 max-w-[62ch] leading-relaxed">
             Kolom <strong>Divisi &amp; peran</strong> menunjukkan divisi pengguna (mis. BPH, Program &amp; Acara · Akademia).
