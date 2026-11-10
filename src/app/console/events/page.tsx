@@ -3,11 +3,11 @@ import { sql, inArray, eq, and, asc, desc, isNull, isNotNull } from "drizzle-orm
 import { redirect } from "next/navigation";
 import { auth } from "@/auth";
 import { db } from "@/db";
-import { departments, events, eventCommittee, eventRegistrations, users } from "@/db/schema";
+import { departments, events, eventRegistrations, users } from "@/db/schema";
 import { restoreEvent, deleteEventPermanently } from "@/app/actions/admin-events";
 import { publishDueEvents } from "@/lib/publish-events";
 import { hasModuleAccess } from "@/lib/admin-scope";
-import { getScopedEventIds } from "@/lib/event-access";
+import { getPersonalEventIds, getScopedEventIds } from "@/lib/event-access";
 import { eventApprovalState, grantsCreatorRights, isEventApproved, isUnapprovedDraft } from "@/lib/event-capabilities";
 import { eventCountdownLabel, eventDayLabel, eventPreparationNote, eventStage, eventStatusChip, eventTimeLabel } from "@/lib/event-stage";
 import { EVENT_STATUS_LABEL as STATUS_LABEL } from "@/lib/event-status-labels";
@@ -47,34 +47,16 @@ export default async function ConsoleEventsPage() {
   const userId = session.user.id;
 
   // Acara di Sampah tidak dihitung: pemegang modul mengelolanya dari bagian Sampah.
-  // Query ini tidak diperlukan untuk full admin (daftarnya semua acara).
-  const committeeRows = isFullAdmin
-    ? []
-    : await db
-        .select({ eventId: eventCommittee.eventId })
-        .from(eventCommittee)
-        .innerJoin(events, eq(events.id, eventCommittee.eventId))
-        .where(and(eq(eventCommittee.userId, session.user.id), isNull(events.deletedAt)));
-  const committeeEventIds = [...new Set(committeeRows.map((r) => r.eventId))];
+  // Full admin dan pemegang modul tidak memerlukannya (daftarnya lewat scope).
+  const personalEventIds = isFullAdmin || canManageEvents ? [] : await getPersonalEventIds();
 
-  if (!canManageEvents && !canCreateEvent && committeeEventIds.length === 0) redirect("/console?akses=events");
+  if (!canManageEvents && !canCreateEvent && personalEventIds.length === 0) redirect("/console?akses=events");
 
   const scopedIds = isFullAdmin || !canManageEvents ? [] : (await getScopedEventIds()) ?? [];
-  const createdRows =
-    isFullAdmin || canManageEvents || !canCreateEvent
-      ? []
-      : await db
-          .select({ id: events.id, status: events.status, approvedAt: events.approvedAt, approvedBy: events.approvedBy })
-          .from(events)
-          .where(and(eq(events.createdBy, session.user.id), isNull(events.deletedAt)));
   // Full admin = semua; pemegang modul = acara hasil scope (buat ∪ divisi PJ ∪
   // kepanitiaan); selebihnya = acara kepanitiaannya ∪ acara buatannya yang masih
-  // memberi hak pembuat (selain itu tidak bisa dia buka, lihat grantsCreatorRights).
-  const visibleEventIds: string[] | null = isFullAdmin
-    ? null
-    : canManageEvents
-      ? scopedIds
-      : [...new Set([...committeeEventIds, ...createdRows.filter(grantsCreatorRights).map((r) => r.id)])];
+  // memberi hak pembuat (getPersonalEventIds).
+  const visibleEventIds: string[] | null = isFullAdmin ? null : canManageEvents ? scopedIds : personalEventIds;
   const scopedIdSet = new Set(scopedIds);
 
   // Kept sequential on purpose: the list below must reflect events this
