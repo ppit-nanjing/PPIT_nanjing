@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import type { ReactNode } from "react";
-import { and, desc, eq, inArray, isNull, sql, type SQL } from "drizzle-orm";
+import { and, desc, eq, inArray, isNotNull, isNull, sql, type SQL } from "drizzle-orm";
 import { db } from "@/db";
 import {
   borrowRequests,
@@ -37,7 +37,7 @@ import { START_HIDDEN_COOKIE, buildStartGuide } from "@/lib/console-start";
 import { moduleLabel } from "@/lib/console-nav";
 import { hasModuleAccess, type AdminModule } from "@/lib/admin-scope";
 import { getPersonalEventIds, getScopedEventIds } from "@/lib/event-access";
-import { eventCountdownLabel, eventDayLabel, eventStage, eventTimeLabel } from "@/lib/event-stage";
+import { eventCountdownLabel, eventDayLabel, eventPreparationNote, eventStage, eventTimeLabel } from "@/lib/event-stage";
 import { getGuide } from "@/lib/guides";
 
 // /console admits any admin, cabinet coordinator, event committee member or cabinet
@@ -300,7 +300,7 @@ export default async function ConsoleDashboardPage({ searchParams }: { searchPar
 
   // All independent reads in one parallel batch: the fused count query, each card's
   // short list, and the guide. Wall-clock cost ≈ one round trip.
-  const [counts, agendaRows, activeLoans, divisionRows, applicants, latestNews, openJobs, newFeedback, guide] =
+  const [counts, agendaRows, preparingRows, activeLoans, divisionRows, applicants, latestNews, openJobs, newFeedback, guide] =
     await Promise.all([
       fetchDashboardCounts(access, startOfMonth, access.events ? (agendaIds ?? null) : null),
       // Acara yang belum lewat, terdekat dulu. `total` menghitung semuanya, bukan hanya empat
@@ -315,7 +315,9 @@ export default async function ConsoleDashboardPage({ searchParams }: { searchPar
             startAt: events.startAt,
             endAt: events.endAt,
             capacity: events.capacity,
-            registered: sql<number>`(select count(*) from event_registrations er where er.event_id = ${events.id} and er.status <> 'cancelled')::int`,
+            // Kolom ditulis lengkap: di select satu tabel Drizzle menulis ${events.id} tanpa nama
+            // tabel, yang di dalam subquery ini akan terbaca sebagai er.id.
+            registered: sql<number>`(select count(*) from event_registrations er where er.event_id = "events"."id" and er.status <> 'cancelled')::int`,
             total: sql<number>`(count(*) over())::int`,
           })
           .from(events)
@@ -329,6 +331,29 @@ export default async function ConsoleDashboardPage({ searchParams }: { searchPar
           )
           .orderBy(sql`${events.startAt} asc nulls last`)
           .limit(4),
+      ),
+      // Acara yang belum tayang, untuk mengisi kartu Kegiatan kalau acara mendatangnya sedikit.
+      // Bagi full admin hanya yang sudah disetujui, sama dengan hitungan draf.
+      whenAllowed(agendaIds !== undefined && (agendaIds === null || agendaIds.length > 0), () =>
+        db
+          .select({
+            id: events.id,
+            title: events.title,
+            status: events.status,
+            approvedAt: events.approvedAt,
+            approvalRequestedAt: events.approvalRequestedAt,
+            scheduledPublishAt: events.scheduledPublishAt,
+          })
+          .from(events)
+          .where(
+            and(
+              isNull(events.deletedAt),
+              inArray(events.status, ["draft", "scheduled"]),
+              agendaIds ? inArray(events.id, agendaIds) : isNotNull(events.approvedAt),
+            ),
+          )
+          .orderBy(sql`${events.startAt} asc nulls last`)
+          .limit(3),
       ),
       whenAllowed(access.inventory, () =>
         db
@@ -442,6 +467,8 @@ export default async function ConsoleDashboardPage({ searchParams }: { searchPar
     };
   });
   const upcomingTotal = agendaRows[0]?.total ?? 0;
+  // Kartu Kegiatan memuat paling banyak empat baris acara; sisanya diisi yang sedang disiapkan.
+  const preparing = preparingRows.slice(0, Math.max(0, 4 - agenda.length));
 
   const eventsNote = eventCounts
     ? [
@@ -466,6 +493,15 @@ export default async function ConsoleDashboardPage({ searchParams }: { searchPar
             note={eventsNote}
           >
             <EventAgenda events={agenda} empty="Belum ada acara mendatang yang sudah diterbitkan." />
+            {preparing.length > 0 && (
+              <div className="flex flex-col gap-2">
+                <p className="text-body-sm text-on-surface-variant">Sedang disiapkan</p>
+                <ShortList
+                  empty=""
+                  rows={preparing.map((ev) => ({ key: ev.id, primary: ev.title, trailing: eventPreparationNote(ev) }))}
+                />
+              </div>
+            )}
           </DashboardCard>
         );
 
@@ -756,7 +792,7 @@ export default async function ConsoleDashboardPage({ searchParams }: { searchPar
     : today;
 
   return (
-    <div className="mx-auto w-full max-w-[var(--container-max)] px-4 py-6 sm:px-6 lg:px-8 lg:py-10">
+    <div className="px-4 py-6 sm:px-6 lg:px-8 lg:py-10">
       <div className="mb-8 flex flex-wrap items-start justify-between gap-3">
         <div>
           <h1 className="text-headline-md sm:text-headline-lg text-on-background">Dashboard</h1>
