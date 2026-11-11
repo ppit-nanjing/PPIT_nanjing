@@ -8,7 +8,11 @@
 --
 -- Daftar di bawah diambil dari database produksi pada 2026-11-11 dan dicek satu
 -- per satu: jam "publik" (UTC) yang masuk akal, jam konsol tidak (mis. Fun Hike
--- 17.00-22.00, WIF 21.00-02.00, jadwal rilis jam 00.00/04.00).
+-- 17.00-22.00, WIF 21.00-02.00, jadwal rilis jam 00.00/04.00). Skrip seed acara
+-- (seed-wif-2026, seed-culinary-challenge-2026, seed-events-2026-2027) juga
+-- sengaja menulis jam CST sebagai Date.UTC, jadi konvensinya sama. NYALA: seed
+-- mencatat "jam tentatif 13:00 CST" dan menyimpannya Date.UTC(13:00); form edit
+-- di web live juga menampilkan 13.00, jadi 21.00 di konsol adalah hasil bug ini.
 --
 -- Jalankan SEKALI, tepat setelah perbaikan kodenya ter-deploy:
 --   npx tsx --env-file=.env src/db/apply-sql.ts drizzle/0061_jam_acara_cst.sql
