@@ -41,7 +41,7 @@ import { loadEvaluationAnswers, loadEvaluationQuestions } from "@/lib/event-eval
 import { ReservationManager } from "@/components/console/reservation-manager";
 import { checkInBlockReason } from "@/lib/event-checkin";
 import { feeTierAt, amountForTier } from "@/lib/event-fee";
-import { toChinaLocalInput, toDateLocalInput } from "@/lib/datetime";
+import { toChinaLocalInput } from "@/lib/datetime";
 import { ConfirmButton } from "@/components/console/confirm-button";
 import { FlashToast } from "@/components/console/flash-toast";
 import { SubmitButton } from "@/components/console/submit-button";
@@ -729,7 +729,7 @@ export default async function ConsoleEventDetailPage({ params }: { params: Promi
                   <input
                     name="startAt"
                     type="datetime-local"
-                    defaultValue={event.startAt ? toDateLocalInput(new Date(event.startAt)) : ""}
+                    defaultValue={event.startAt ? toChinaLocalInput(new Date(event.startAt)) : ""}
                     className="bg-soft-gray rounded-md p-3 text-body-md"
                   />
                 </label>
@@ -738,7 +738,7 @@ export default async function ConsoleEventDetailPage({ params }: { params: Promi
                   <input
                     name="endAt"
                     type="datetime-local"
-                    defaultValue={event.endAt ? toDateLocalInput(new Date(event.endAt)) : ""}
+                    defaultValue={event.endAt ? toChinaLocalInput(new Date(event.endAt)) : ""}
                     className="bg-soft-gray rounded-md p-3 text-body-md"
                   />
                   <span className="text-xs text-on-surface-variant">Kepanitiaan terkunci 14 hari setelah waktu ini.</span>
@@ -808,7 +808,7 @@ export default async function ConsoleEventDetailPage({ params }: { params: Promi
                 defaultQrUrl={event.paymentQrUrl}
                 defaultAlipayUid={event.alipayUid}
                 defaultEarlyBirdUntil={
-                  event.earlyBirdUntil ? toDateLocalInput(new Date(event.earlyBirdUntil)) : ""
+                  event.earlyBirdUntil ? toChinaLocalInput(new Date(event.earlyBirdUntil)) : ""
                 }
               />
               {event.isPaid && (
@@ -821,7 +821,7 @@ export default async function ConsoleEventDetailPage({ params }: { params: Promi
                 <input
                   name="registrationDeadline"
                   type="datetime-local"
-                  defaultValue={event.registrationDeadline ? toDateLocalInput(new Date(event.registrationDeadline)) : ""}
+                  defaultValue={event.registrationDeadline ? toChinaLocalInput(new Date(event.registrationDeadline)) : ""}
                   className="bg-soft-gray rounded-md p-3 text-body-md"
                 />
                 <p className="text-xs text-on-surface-variant">Lewat dari ini pendaftaran tertutup otomatis. Kosong = tanpa batas.</p>
@@ -833,7 +833,7 @@ export default async function ConsoleEventDetailPage({ params }: { params: Promi
                     <input
                       name="scheduledPublishAt"
                       type="datetime-local"
-                      defaultValue={event.scheduledPublishAt ? toDateLocalInput(new Date(event.scheduledPublishAt)) : ""}
+                      defaultValue={event.scheduledPublishAt ? toChinaLocalInput(new Date(event.scheduledPublishAt)) : ""}
                       className="bg-soft-gray rounded-md p-3 text-body-md"
                     />
                     <p className="text-xs text-on-surface-variant">Acara terbit sendiri pada waktu ini. Kosong = tetap Draf sampai dipublikasikan manual.</p>

@@ -22,6 +22,7 @@ import { getEventSeats } from "@/lib/event-capacity";
 import { hasCompletedSensus } from "@/lib/sensus-gate";
 import { getT } from "@/lib/i18n/server";
 import { INTL_LOCALE } from "@/lib/i18n/config";
+import { hasChinaClockTime } from "@/lib/datetime";
 
 const COMMITTEE_ROLE_LABEL: Record<string, string> = {
   ketua: "Ketua",
@@ -170,9 +171,7 @@ export default async function EventDetailPage({ params, searchParams }: { params
 
   const startDate = event.startAt ? new Date(event.startAt) : null;
   const fmtTime = (d: Date) =>
-    d.getHours() !== 0 || d.getMinutes() !== 0
-      ? d.toLocaleTimeString(INTL_LOCALE[locale], { hour: "2-digit", minute: "2-digit" })
-      : null;
+    hasChinaClockTime(d) ? d.toLocaleTimeString(INTL_LOCALE[locale], { hour: "2-digit", minute: "2-digit", timeZone: "Asia/Shanghai" }) : null;
   const timeRange = startDate
     ? [fmtTime(startDate), event.endAt ? fmtTime(new Date(event.endAt)) : null].filter(Boolean).join(" – ")
     : "";
@@ -260,7 +259,7 @@ export default async function EventDetailPage({ params, searchParams }: { params
                     {startDate && (
                       <span className="flex items-center gap-1.5">
                         <CalendarDays size={15} aria-hidden="true" />
-                        {startDate.toLocaleDateString(INTL_LOCALE[locale], { dateStyle: "long" })}
+                        {startDate.toLocaleDateString(INTL_LOCALE[locale], { dateStyle: "long", timeZone: "Asia/Shanghai" })}
                         {timeRange && ` · ${timeRange}`}
                       </span>
                     )}
@@ -520,19 +519,11 @@ export default async function EventDetailPage({ params, searchParams }: { params
                     <div>
                        <p className="text-label-caps uppercase text-on-surface-variant mb-0.5">{t("events.dateTime")}</p>
                        <p className="text-body-md text-on-background font-semibold">
-                         {new Date(event.startAt).toLocaleDateString(INTL_LOCALE[locale], { dateStyle: "full" })}
+                         {new Date(event.startAt).toLocaleDateString(INTL_LOCALE[locale], { dateStyle: "full", timeZone: "Asia/Shanghai" })}
                        </p>
                        {(() => {
-                         const start = new Date(event.startAt);
-                         const startTime =
-                           start.getHours() !== 0 || start.getMinutes() !== 0
-                             ? start.toLocaleTimeString(INTL_LOCALE[locale], { hour: "2-digit", minute: "2-digit" })
-                             : null;
-                         const endTime =
-                           event.endAt &&
-                           (new Date(event.endAt).getHours() !== 0 || new Date(event.endAt).getMinutes() !== 0)
-                             ? new Date(event.endAt).toLocaleTimeString(INTL_LOCALE[locale], { hour: "2-digit", minute: "2-digit" })
-                             : null;
+                         const startTime = fmtTime(new Date(event.startAt));
+                         const endTime = event.endAt ? fmtTime(new Date(event.endAt)) : null;
                         if (!startTime && !endTime) return null;
                         return (
                           <p className="text-body-sm text-on-surface-variant">
@@ -654,6 +645,7 @@ export default async function EventDetailPage({ params, searchParams }: { params
                     {t("events.regDeadline", {
                       date: new Date(event.registrationDeadline).toLocaleDateString(INTL_LOCALE[locale], {
                         dateStyle: "long",
+                        timeZone: "Asia/Shanghai",
                       }),
                     })}
                   </p>

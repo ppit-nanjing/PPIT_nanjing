@@ -10,6 +10,7 @@ import { events, managementPeriods, shortLinks } from "@/db/schema";
 import { hasModuleAccess } from "@/lib/admin-scope-constants";
 import { requireEventCapability } from "@/lib/event-access";
 import { getSiteOrigin } from "@/lib/site";
+import { parseChinaLocalInput } from "@/lib/datetime";
 
 export type ShortLinkFormState = { error?: string };
 
@@ -92,7 +93,7 @@ export async function createShortLink(
   if (collision) return { error: `Slug "${slug}" sudah dipakai. Gunakan slug lain.` };
 
   const managementPeriodId = await resolvePeriodId(formData, actorId);
-  const expiresAt = expiresAtRaw ? new Date(expiresAtRaw) : null;
+  const expiresAt = parseChinaLocalInput(expiresAtRaw);
 
   await db.insert(shortLinks).values({
     slug,
@@ -149,7 +150,7 @@ export async function updateShortLink(
   }
 
   const managementPeriodId = await resolvePeriodId(formData, actorId);
-  const expiresAt = expiresAtRaw ? new Date(expiresAtRaw) : null;
+  const expiresAt = parseChinaLocalInput(expiresAtRaw);
 
   await db
     .update(shortLinks)

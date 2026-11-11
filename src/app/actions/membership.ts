@@ -17,6 +17,7 @@ import {
   users,
 } from "@/db/schema";
 import { requireModuleAccess } from "@/lib/admin-scope";
+import { parseChinaLocalInput } from "@/lib/datetime";
 import { notificationTemplates } from "@/db/schema";
 import { getTemplateDef, renderTemplate } from "@/lib/notification-templates";
 import { createTemplatedNotification } from "@/lib/notifications";
@@ -585,14 +586,12 @@ export async function createRecruitmentPeriod(formData: FormData) {
   await requireModuleAccess("membership");
   const batchLabel = String(formData.get("batchLabel") ?? "").trim();
   if (!batchLabel) throw new Error("Nama batch wajib diisi.");
-  const opensAtRaw = String(formData.get("opensAt") ?? "").trim();
-  const closesAtRaw = String(formData.get("closesAt") ?? "").trim();
   await db.insert(recruitmentPeriods).values({
     batchLabel,
     // New periods start closed - opening is an explicit, separate decision.
     isOpen: false,
-    opensAt: opensAtRaw ? new Date(opensAtRaw) : null,
-    closesAt: closesAtRaw ? new Date(closesAtRaw) : null,
+    opensAt: parseChinaLocalInput(formData.get("opensAt")),
+    closesAt: parseChinaLocalInput(formData.get("closesAt")),
   });
   revalidatePath("/console/membership");
   revalidatePath("/join-us");

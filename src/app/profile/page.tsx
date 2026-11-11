@@ -420,7 +420,7 @@ export default async function ProfilePage({
                                 <p className="text-label-caps text-on-surface-variant mt-0.5">
                                   {[
                                     c.eventTitle,
-                                    new Date(c.issuedAt).toLocaleDateString("id-ID", { dateStyle: "long" }),
+                                    new Date(c.issuedAt).toLocaleDateString("id-ID", { dateStyle: "long", timeZone: "Asia/Shanghai" }),
                                   ]
                                     .filter(Boolean)
                                     .join(" · ")}
@@ -472,7 +472,7 @@ export default async function ProfilePage({
                                       dateTime={when.toISOString()}
                                       className="text-label-caps text-on-surface-variant"
                                     >
-                                      {when.toLocaleDateString("id-ID", { dateStyle: "long" })}
+                                      {when.toLocaleDateString("id-ID", { dateStyle: "long", timeZone: "Asia/Shanghai" })}
                                     </time>
                                   </div>
                                   <span

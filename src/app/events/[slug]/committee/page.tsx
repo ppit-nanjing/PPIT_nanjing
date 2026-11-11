@@ -114,7 +114,7 @@ export default async function CommitteeTicketPage({ params }: { params: Promise<
           >
             <ScanLine size={14} aria-hidden />
             {assignment.checkedInAt
-              ? `Hadir · ${new Date(assignment.checkedInAt).toLocaleString("id-ID", { dateStyle: "short", timeStyle: "short" })}`
+              ? `Hadir · ${new Date(assignment.checkedInAt).toLocaleString("id-ID", { dateStyle: "short", timeStyle: "short", timeZone: "Asia/Shanghai" })}`
               : "Belum check-in"}
           </div>
 
@@ -123,7 +123,7 @@ export default async function CommitteeTicketPage({ params }: { params: Promise<
             {event.startAt && (
               <span className="flex items-center gap-1.5">
                 <CalendarDays size={14} aria-hidden="true" />{" "}
-                {new Date(event.startAt).toLocaleDateString("id-ID", { dateStyle: "full" })}
+                {new Date(event.startAt).toLocaleDateString("id-ID", { dateStyle: "full", timeZone: "Asia/Shanghai" })}
               </span>
             )}
             {event.location && (

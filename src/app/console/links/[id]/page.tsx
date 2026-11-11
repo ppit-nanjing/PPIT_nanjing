@@ -10,7 +10,7 @@ import { ShortLinkForm } from "@/components/console/short-link-form";
 import { CopyLinkButton } from "@/components/console/copy-link-button";
 import { ShortLinkDeleteButton } from "@/components/console/short-link-delete-button";
 import { deleteShortLink, toggleShortLink, updateShortLink } from "@/app/actions/short-links";
-import { toDateLocalInput } from "@/lib/datetime";
+import { toChinaLocalInput } from "@/lib/datetime";
 import { SubmitButton } from "@/components/console/submit-button";
 
 export default async function EditShortLinkPage({
@@ -73,7 +73,7 @@ export default async function EditShortLinkPage({
           description: link.description,
           category: link.category,
           managementPeriodId: link.managementPeriodId,
-          expiresAt: link.expiresAt ? toDateLocalInput(link.expiresAt) : null,
+          expiresAt: link.expiresAt ? toChinaLocalInput(link.expiresAt) : null,
           isActive: link.isActive,
         }}
       />

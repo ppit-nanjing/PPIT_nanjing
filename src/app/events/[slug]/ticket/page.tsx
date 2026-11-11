@@ -253,7 +253,7 @@ export default async function EventTicketPage({ params }: { params: Promise<{ sl
               {event.startAt && (
                 <span className="flex items-center gap-1.5">
                   <CalendarDays size={14} aria-hidden="true" />{" "}
-                  {new Date(event.startAt).toLocaleDateString(INTL_LOCALE[locale], { dateStyle: "full" })}
+                  {new Date(event.startAt).toLocaleDateString(INTL_LOCALE[locale], { dateStyle: "full", timeZone: "Asia/Shanghai" })}
                 </span>
               )}
               {event.location && (
