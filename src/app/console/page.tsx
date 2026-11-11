@@ -9,6 +9,7 @@ import {
   departments,
   events,
   feedback,
+  helpArticles,
   inventoryItems,
   jobPostings,
   membershipApplications,
@@ -16,14 +17,13 @@ import {
   users,
 } from "@/db/schema";
 import { redirect } from "next/navigation";
-import { cookies } from "next/headers";
 import { CalendarDays, FileText, MessageSquare, Package, UserCheck, UserPlus } from "lucide-react";
 import { auth } from "@/auth";
 import { GuideButton } from "@/components/console/guide-button";
-import { StartHere } from "@/components/console/start-here";
 import {
   AttentionList,
   DashboardCard,
+  DocsStrip,
   DivisionBars,
   EventStage,
   FactRows,
@@ -34,7 +34,6 @@ import {
   type StageEvent,
   type AttentionItem,
 } from "@/components/console/dashboard-cards";
-import { START_HIDDEN_COOKIE, buildStartGuide } from "@/lib/console-start";
 import { moduleLabel } from "@/lib/console-nav";
 import { hasModuleAccess, type AdminModule } from "@/lib/admin-scope";
 import { getPersonalEventIds, getScopedEventIds } from "@/lib/event-access";
@@ -305,7 +304,7 @@ export default async function ConsoleDashboardPage({ searchParams }: { searchPar
 
   // All independent reads in one parallel batch: the fused count query, each card's
   // short list, and the guide. Wall-clock cost ≈ one round trip.
-  const [counts, agendaRows, preparingRows, activeLoans, divisionRows, applicants, latestNews, openJobs, newFeedback, formsData, guide] =
+  const [counts, agendaRows, preparingRows, activeLoans, divisionRows, applicants, latestNews, openJobs, newFeedback, formsData, docs, guide] =
     await Promise.all([
       fetchDashboardCounts(access, startOfMonth, access.events ? (agendaIds ?? null) : null),
       // Acara yang belum lewat, terdekat dulu, jadi yang sedang berlangsung ada di depan. `total`
@@ -445,6 +444,13 @@ export default async function ConsoleDashboardPage({ searchParams }: { searchPar
           .limit(3),
       ),
       formsVisible ? getSurveyAccess().then((sa) => (sa ? getDashboardForms(sa) : null)) : Promise.resolve(null),
+      // Dokumentasi terbuka untuk semua akun konsol (menu tanpa modul), jadi tanpa gerbang.
+      db
+        .select({ slug: helpArticles.slug, title: helpArticles.title, total: sql<number>`(count(*) over())::int` })
+        .from(helpArticles)
+        .orderBy(desc(helpArticles.updatedAt))
+        .limit(3)
+        .then((rows) => ({ total: rows[0]?.total ?? 0, recent: rows.map((r) => ({ slug: r.slug, title: r.title })) })),
       getGuide("dashboard"),
     ]);
 
@@ -811,17 +817,6 @@ export default async function ConsoleDashboardPage({ searchParams }: { searchPar
 
   const spans = dashboardSpans(smallCards.length);
 
-  // Dipakai untuk semua akun: tanpa query (murni dari akses akun); kartu disembunyikan lewat cookie.
-  const start = buildStartGuide({
-    scope,
-    isCommittee: session.user.isCommittee,
-    isBphCommittee: session.user.isBphCommittee || session.user.isEventKadiv,
-    isCoordinator: session.user.isCoordinator,
-    canCreateSurvey: session.user.canCreateSurvey,
-    canCreateEvent: session.user.canCreateEvent,
-  });
-  const startHidden = (await cookies()).get(START_HIDDEN_COOKIE)?.value === "1";
-
   const today = now.toLocaleDateString("id-ID", { timeZone: "Asia/Shanghai", weekday: "long", day: "numeric", month: "long", year: "numeric" });
   const subline = showAttention
     ? `${today} · ${attentionTotal > 0 ? `${attentionTotal} menunggu tindakan` : "tidak ada yang menunggu tindakan"}`
@@ -854,20 +849,13 @@ export default async function ConsoleDashboardPage({ searchParams }: { searchPar
           )}
         </p>
       )}
-      <StartHere name={session.user.name ?? null} steps={start.steps} modules={start.modules} initialHidden={startHidden} />
-
       {showAttention && <AttentionList items={attentionItems} />}
 
-      {eventsCard || smallCards.length > 0 ? (
-        <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-6">
-          {eventsCard?.(WIDE_CARD)}
-          {smallCards.map((card, i) => card.node(spans[i]))}
-        </div>
-      ) : (
-        <p className="rounded-lg border border-outline-variant bg-surface-container-lowest px-5 py-4 text-body-md text-on-surface-variant">
-          Menu yang bisa dibuka akun ini ada di sidebar.
-        </p>
-      )}
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-6">
+        {eventsCard?.(WIDE_CARD)}
+        {smallCards.map((card, i) => card.node(spans[i]))}
+        <DocsStrip total={docs.total} recent={docs.recent} />
+      </div>
     </div>
   );
 }

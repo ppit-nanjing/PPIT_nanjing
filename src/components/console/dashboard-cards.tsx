@@ -403,6 +403,52 @@ export function EventStage({
   );
 }
 
+/**
+ * Pita tipis di dasar dashboard: jalan ke Dokumentasi, dengan artikel yang terakhir diperbarui.
+ * Seluruh pita membuka Dokumentasi; tiap judul artikel membuka artikelnya sendiri.
+ */
+export function DocsStrip({ total, recent }: { total: number; recent: { slug: string; title: string }[] }) {
+  return (
+    <section
+      aria-labelledby="pita-dokumentasi"
+      className={`group relative flex flex-col gap-3 rounded-lg border border-outline-variant bg-surface-container-lowest px-5 py-4 transition-colors hover:border-muted-gold focus-within:border-muted-gold motion-reduce:transition-none lg:flex-row lg:items-center lg:gap-8 ${WIDE_CARD}`}
+    >
+      <div className="flex shrink-0 items-baseline gap-3">
+        <h2 id="pita-dokumentasi" className="text-headline-sm text-on-background">
+          <Link
+            href="/console/docs"
+            className="rounded-sm after:absolute after:inset-0 after:rounded-lg focus-visible:outline-none focus-visible:after:ring-2 focus-visible:after:ring-primary-container"
+          >
+            Dokumentasi
+          </Link>
+        </h2>
+        <span className="text-body-sm tabular-nums text-on-surface-variant">{total} panduan</span>
+      </div>
+      {recent.length > 0 && (
+        <div className="flex min-w-0 flex-1 flex-col gap-1.5 lg:flex-row lg:items-baseline lg:gap-4">
+          <span className="shrink-0 text-body-sm text-on-surface-variant">Baru diperbarui</span>
+          <ul className="flex min-w-0 flex-wrap gap-x-5 gap-y-1">
+            {recent.map((a) => (
+              <li key={a.slug} className="min-w-0">
+                <Link
+                  href={`/console/docs/${a.slug}`}
+                  className="relative z-10 block truncate rounded-sm text-body-sm text-on-background underline-offset-4 transition-colors hover:text-primary-container hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-container motion-reduce:transition-none"
+                >
+                  {a.title}
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+      <p aria-hidden="true" className="flex shrink-0 items-center gap-1.5 text-body-sm text-primary-container">
+        Buka Dokumentasi
+        <ArrowRight size={14} className="transition-transform group-hover:translate-x-0.5 motion-reduce:transform-none" />
+      </p>
+    </section>
+  );
+}
+
 // Grid 6 kolom di layar lebar, 2 di tablet. Kartu Kegiatan (WIDE_CARD) memenuhi barisnya sendiri;
 // kartu lain bertiga per baris, dan sisa pembagiannya berbagi rata berdua, supaya tidak ada sel
 // kosong di ujung baris.

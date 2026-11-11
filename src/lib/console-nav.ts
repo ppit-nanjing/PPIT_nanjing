@@ -21,8 +21,8 @@ import {
 } from "lucide-react";
 import { hasModuleAccess, type AdminModule } from "@/lib/admin-scope-constants";
 
-// Satu-satunya daftar menu konsol: sidebar dan kartu "Mulai dari sini" di dashboard membacanya
-// dari sini, jadi "apa yang bisa dibuka akun ini" tidak bisa berbeda antara menu dan panduan.
+// Satu-satunya daftar menu konsol: sidebar membacanya dari sini, beserta aturan siapa melihat
+// menu apa dan `hint` untuk tooltip-nya.
 
 export type NavItem = {
   href: string;
