@@ -317,7 +317,7 @@ export async function deleteGalleryAlbum(albumId: string) {
     .where(eq(galleryAlbums.id, albumId));
   // Sudah terhapus (double-submit / tab basi) — tujuannya "tidak ada", jadi
   // balik ke daftar saja.
-  if (!album) redirect("/console/content");
+  if (!album) redirect("/console/content?tab=galeri");
 
   await db.delete(galleryAlbums).where(eq(galleryAlbums.id, albumId));
 
@@ -325,7 +325,7 @@ export async function deleteGalleryAlbum(albumId: string) {
   revalidatePath("/gallery");
   revalidatePath("/gallery/archive");
   if (album.eventId) revalidatePath(`/console/events/${album.eventId}`);
-  redirect(album.eventId ? `/console/events/${album.eventId}?bagian=pasca` : "/console/content");
+  redirect(album.eventId ? `/console/events/${album.eventId}?bagian=pasca` : "/console/content?tab=galeri");
 }
 
 /**

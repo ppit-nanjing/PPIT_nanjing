@@ -31,7 +31,7 @@ export default async function ConsoleAlbumDetailPage({ params }: { params: Promi
     allowed = (await getEventAccess(album.eventId)).can("event.manageGallery");
   }
   if (!allowed) redirect("/console?akses=content");
-  const backHref = !hasContent && album.eventId ? `/console/events/${album.eventId}` : "/console/content";
+  const backHref = !hasContent && album.eventId ? `/console/events/${album.eventId}` : "/console/content?tab=galeri";
   const photos = await db.select().from(galleryPhotos).where(eq(galleryPhotos.albumId, albumId));
 
   return (

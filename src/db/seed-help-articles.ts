@@ -178,19 +178,22 @@ Halaman Jawaban punya tombol Ekspor CSV — satu baris per pendaftar, satu kolom
     slug: "konten",
     section: SERING_DIPAKAI,
     title: "Konten — Berita & Galeri",
-    content: `Tulis Berita Baru
-- Judul: wajib.
-- Foto Sampul: opsional, upload atau URL.
-- Kategori: opsional.
-- Isi berita: ada tombol bantuan AI "Perbaiki" dan "Review" kalau mau dibantu merapikan tulisan.
-- Centang "Publikasikan sekarang": kalau dicentang langsung terbit; kalau tidak, tersimpan sebagai draft dan bisa diterbitkan belakangan.
-Judul tidak perlu unik — sistem otomatis bikin slug + kode acak supaya tidak bentrok.
+    content: `Halaman Konten punya dua tab: Berita dan Galeri. Bentuknya sama dengan daftar Kegiatan.
 
-Album Baru
-Judul Album wajib, Foto Sampul opsional. Setelah dibuat, kamu masuk ke halaman album itu untuk menambah foto satu-satu (tiap foto: URL gambar wajib, keterangan opsional).
+Berita
+- Tombol "Tulis Berita" (kanan atas) membuka form berita baru. Judul wajib; sampul, kategori, dan isi opsional. Di bawah isi berita ada tombol "Minta saran AI" untuk mengecek judul dan isi.
+- Centang "Publikasikan sekarang" untuk langsung terbit. Kalau tidak dicentang, berita tersimpan sebagai draf.
+- Daftar dibagi menjadi Draf, Terbaru (berita terakhir yang terbit, tampil besar), dan Sudah Terbit. Klik judul untuk mengedit.
+- Tombol "⋯" di tiap kartu: Buka Halaman Publik, Arsipkan, dan Hapus Permanen. Arsipkan menyembunyikan berita dari situs tapi tetap tersimpan; berita yang diarsipkan ada di bagian Arsip paling bawah dan bisa dipulihkan ke draf. Hapus Permanen tidak bisa dibatalkan.
+- Kotak cari mencari judul, kategori, dan nama penulis.
+
+Galeri
+- Tombol "Album Baru" membuat album. Judul wajib, sampul opsional. Setelah dibuat, kamu masuk ke halaman album untuk mengunggah foto.
+- Di situs, album hanya menampilkan foto yang diberi bintang (sorotan). Album tanpa sorotan diberi tanda "Belum ada sorotan" dan tampil tanpa foto di situs, jadi beri bintang pada foto terbaik.
+- Isi juga "Tautan album lengkap" di halaman album supaya pengunjung bisa mengambil semua foto. Kartu album memberi tahu kalau tautan ini belum diisi.
 
 Soal upload gambar (berlaku di semua tempat upload: berita, galeri, inventaris)
-Maksimal 10 MB, format PNG/JPEG/WEBP saja. PENTING: pilih file dulu, lalu klik tombol Upload terpisah untuk dapat URL-nya sebelum submit form — memilih file saja belum otomatis meng-upload.`,
+Maksimal 10 MB, format PNG/JPEG/WEBP saja.`,
   },
   {
     slug: "katalog",
