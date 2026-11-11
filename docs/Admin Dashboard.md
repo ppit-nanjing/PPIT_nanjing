@@ -43,7 +43,7 @@ Isi tiap kartu dan modul yang menjadi gerbangnya (`hasModuleAccess()`); query-ny
 
 | Kartu | Modul | Isi |
 | --- | --- | --- |
-| Kegiatan | `events` | Acara terdekat tampil besar dengan sampulnya (yang sedang berlangsung lebih dulu); sisanya dipisah Sedang berlangsung, Mendatang, dan Sedang disiapkan (bagian kosong tidak tampil). Juga pendaftar minggu ini dibanding minggu lalu dan jumlah draf |
+| Kegiatan | `events` | Satu kolom per tahap yang ada isinya (Sedang berlangsung, Mendatang, Sedang disiapkan), sama lebar dan dipisah garis, masing-masing dengan jumlahnya. Acara pertama tiap kolom tampil besar dengan sampulnya; acara tanpa sampul mendapat plat tanggal, atau lambang PPIT kalau tanggalnya belum diisi. Juga pendaftar minggu ini dibanding minggu lalu |
 | Kegiatan Saya | tanpa `events`, tapi panitia atau boleh membuat acara | Acara yang dia buat atau ikuti (`getPersonalEventIds()`, sama dengan daftar Kegiatan) |
 | Inventaris | `inventory` | Jumlah jenis barang, unit tersedia dari total, hingga 3 peminjaman berjalan (terlambat lebih dulu) |
 | Pengurus | `organization` | Jumlah pengurus, jumlah orang per divisi (5 pertama dalam urutan Organisasi) |

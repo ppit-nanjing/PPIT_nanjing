@@ -31,14 +31,14 @@ import {
   ShortList,
   WIDE_CARD,
   dashboardSpans,
-  type AgendaEvent,
+  type StageEvent,
   type AttentionItem,
 } from "@/components/console/dashboard-cards";
 import { START_HIDDEN_COOKIE, buildStartGuide } from "@/lib/console-start";
 import { moduleLabel } from "@/lib/console-nav";
 import { hasModuleAccess, type AdminModule } from "@/lib/admin-scope";
 import { getPersonalEventIds, getScopedEventIds } from "@/lib/event-access";
-import { eventCountdownLabel, eventDayLabel, eventPreparationNote, eventStage, eventTimeLabel } from "@/lib/event-stage";
+import { eventCountdownLabel, eventDatePlate, eventDayLabel, eventPreparationNote, eventStage, eventTimeLabel } from "@/lib/event-stage";
 import { getGuide } from "@/lib/guides";
 
 // /console admits any admin, cabinet coordinator, event committee member or cabinet
@@ -69,9 +69,6 @@ type DashboardCounts = {
   organization?: { members: number };
   sensus?: { complete: number; started: number; members: number };
   events?: {
-    // Bagi full admin hanya yang sudah disetujui: draf percobaan pengurus lain bukan
-    // pekerjaan BPH sampai diajukan.
-    draft: number;
     // Menunggu keputusan BPH Kabinet. Selalu 0 selain untuk full admin.
     awaitingApproval: number;
     pendingRegs: number;
@@ -132,10 +129,8 @@ async function fetchDashboardCounts(
     );
   }
   if (access.events) {
-    const ownEvents = eventIds === null ? sql`true` : inArray(events.id, eventIds);
     const ownRegs = eventIds === null ? sql`true` : inArray(eventRegistrations.eventId, eventIds);
     cols.push(
-      sql`(select count(*) from events where status = 'draft' and deleted_at is null and ${eventIds === null ? sql`approved_at is not null` : ownEvents})::int as "eventsDraft"`,
       eventIds === null
         ? sql`(select count(*) from events where status = 'draft' and approval_requested_at is not null and approved_at is null and deleted_at is null)::int as "eventsAwaitingApproval"`
         : sql`0 as "eventsAwaitingApproval"`,
@@ -197,7 +192,6 @@ async function fetchDashboardCounts(
     sensus: access.sensus ? { complete: r.sensusComplete, started: r.sensusStarted, members: r.sensusMembers } : undefined,
     events: access.events
       ? {
-          draft: r.eventsDraft,
           awaitingApproval: r.eventsAwaitingApproval,
           pendingRegs: r.regsPending,
           regsThisWeek: r.regsThisWeek,
@@ -304,8 +298,8 @@ export default async function ConsoleDashboardPage({ searchParams }: { searchPar
   const [counts, agendaRows, preparingRows, activeLoans, divisionRows, applicants, latestNews, openJobs, newFeedback, guide] =
     await Promise.all([
       fetchDashboardCounts(access, startOfMonth, access.events ? (agendaIds ?? null) : null),
-      // Acara yang belum lewat, terdekat dulu. `total` menghitung semuanya, bukan hanya empat
-      // yang tampil, supaya angka kartu dan barisnya berasal dari satu query.
+      // Acara yang belum lewat, terdekat dulu, jadi yang sedang berlangsung ada di depan. `total`
+      // menghitung semuanya, bukan hanya yang tampil, untuk angka di kepala kolomnya.
       whenAllowed(agendaIds !== undefined && (agendaIds === null || agendaIds.length > 0), () =>
         db
           .select({
@@ -332,7 +326,7 @@ export default async function ConsoleDashboardPage({ searchParams }: { searchPar
             ),
           )
           .orderBy(sql`${events.startAt} asc nulls last`)
-          .limit(4),
+          .limit(6),
       ),
       // Acara yang belum tayang, bagian "Sedang disiapkan" di kartu Kegiatan. Bagi full admin
       // hanya yang sudah disetujui, sama dengan hitungan draf.
@@ -341,10 +335,14 @@ export default async function ConsoleDashboardPage({ searchParams }: { searchPar
           .select({
             id: events.id,
             title: events.title,
+            coverImageUrl: events.coverImageUrl,
+            location: events.location,
+            startAt: events.startAt,
             status: events.status,
             approvedAt: events.approvedAt,
             approvalRequestedAt: events.approvalRequestedAt,
             scheduledPublishAt: events.scheduledPublishAt,
+            total: sql<number>`(count(*) over())::int`,
           })
           .from(events)
           .where(
@@ -462,30 +460,40 @@ export default async function ConsoleDashboardPage({ searchParams }: { searchPar
   const attentionTotal = attentionItems.reduce((sum, a) => sum + a.count, 0);
 
   // ===== Kartu modul =====
-  const agenda: AgendaEvent[] = agendaRows.map((ev) => {
-    const stage = eventStage(ev, now);
-    const time = ev.startAt ? eventTimeLabel(ev.startAt) : null;
-    return {
+  const when = (start: Date | null) =>
+    start ? [eventDayLabel(start), eventTimeLabel(start)].filter(Boolean).join(" · ") : "Tanggal belum diisi";
+  const agenda = agendaRows.map((ev) => {
+    const live = eventStage(ev, now) === "berlangsung";
+    const item: StageEvent = {
       id: ev.id,
       title: ev.title,
       coverImageUrl: ev.coverImageUrl,
+      plate: ev.startAt ? eventDatePlate(ev.startAt) : null,
+      when: when(ev.startAt),
       location: ev.location,
-      when: ev.startAt ? [eventDayLabel(ev.startAt), time].filter(Boolean).join(" · ") : "Tanggal belum diisi",
-      countdown: stage === "berlangsung" ? null : ev.startAt ? eventCountdownLabel(ev.startAt, now) : null,
-      live: stage === "berlangsung",
-      registered: ev.registered,
-      capacity: ev.capacity,
+      // Kolomnya sudah berjudul "Sedang berlangsung"; yang mendatang menyebut jaraknya.
+      status: live ? null : ev.startAt ? eventCountdownLabel(ev.startAt, now) : null,
+      seats: { registered: ev.registered, capacity: ev.capacity },
     };
+    return { live, item };
   });
-  const upcomingTotal = agendaRows[0]?.total ?? 0;
+  // Diurutkan dari tanggal mulai, jadi semua yang sedang berlangsung ada di antara baris yang diambil.
+  const liveEvents = agenda.filter((a) => a.live).map((a) => a.item);
+  const upcomingEvents = agenda.filter((a) => !a.live).map((a) => a.item);
+  const agendaTotal = agendaRows[0]?.total ?? 0;
+  const preparingEvents: StageEvent[] = preparingRows.map((ev) => ({
+    id: ev.id,
+    title: ev.title,
+    coverImageUrl: ev.coverImageUrl,
+    plate: ev.startAt ? eventDatePlate(ev.startAt) : null,
+    when: when(ev.startAt),
+    location: ev.location,
+    status: eventPreparationNote(ev),
+    seats: null,
+  }));
 
   const eventsNote = eventCounts
-    ? [
-        `${eventCounts.regsThisWeek} pendaftar minggu ini, ${eventCounts.regsLastWeek} minggu lalu`,
-        eventCounts.draft > 0 ? `${eventCounts.draft} masih draf` : null,
-      ]
-        .filter(Boolean)
-        .join(" · ")
+    ? `${eventCounts.regsThisWeek} pendaftar minggu ini, ${eventCounts.regsLastWeek} minggu lalu`
     : undefined;
   const eventsCard =
     agendaIds === undefined
@@ -497,14 +505,13 @@ export default async function ConsoleDashboardPage({ searchParams }: { searchPar
             title={access.events ? "Kegiatan" : "Kegiatan Saya"}
             href="/console/events"
             linkLabel="Buka Kegiatan"
-            figure={upcomingTotal}
-            figureLabel="acara mendatang"
             note={eventsNote}
           >
             <EventStage
-              events={agenda}
-              preparing={preparingRows.map((ev) => ({ key: ev.id, primary: ev.title, trailing: eventPreparationNote(ev) }))}
-              empty="Belum ada acara mendatang yang sudah diterbitkan."
+              live={{ events: liveEvents.slice(0, 3), total: liveEvents.length }}
+              upcoming={{ events: upcomingEvents.slice(0, 3), total: agendaTotal - liveEvents.length }}
+              preparing={{ events: preparingEvents, total: preparingRows[0]?.total ?? 0 }}
+              empty="Belum ada acara mendatang atau yang sedang disiapkan."
             />
           </DashboardCard>
         );

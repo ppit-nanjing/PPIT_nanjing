@@ -76,6 +76,15 @@ export function eventDayLabel(date: Date | string, style: "short" | "long" = "sh
   }).format(new Date(date));
 }
 
+/** Tanggal dan bulan terpisah, untuk plat tanggal acara yang belum punya sampul. */
+export function eventDatePlate(date: Date | string): { day: string; month: string } {
+  const parts = new Intl.DateTimeFormat("id-ID", { timeZone: TIME_ZONE, day: "numeric", month: "short" }).formatToParts(new Date(date));
+  return {
+    day: parts.find((p) => p.type === "day")?.value ?? "",
+    month: parts.find((p) => p.type === "month")?.value ?? "",
+  };
+}
+
 /** Jam di Tiongkok, atau null bila acaranya tidak mencantumkan jam (tersimpan 00.00). */
 export function eventTimeLabel(date: Date | string): string | null {
   const label = new Intl.DateTimeFormat("id-ID", {

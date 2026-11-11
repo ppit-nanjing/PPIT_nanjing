@@ -3,6 +3,7 @@ import Link from "next/link";
 import { ArrowRight, type LucideIcon } from "lucide-react";
 import type { ReactNode } from "react";
 import { EventCapacityMeter } from "@/components/console/event-capacity-meter";
+import { EventStatusMark, type EventStatusTone } from "@/components/console/event-status-mark";
 
 // Kartu cuplikan dashboard konsol: satu kartu per modul, seluruh kartu adalah tautan ke
 // modulnya (tautan judul membentang lewat ::after). Isi yang punya tujuan sendiri, seperti
@@ -224,142 +225,180 @@ export function DivisionBars({ rows, more }: { rows: { key: string; name: string
   );
 }
 
-export type AgendaEvent = {
+export type StageEvent = {
   id: string;
   title: string;
   coverImageUrl: string | null;
-  location: string | null;
+  /** Plat tanggal untuk acara tanpa sampul; null kalau tanggalnya belum diisi. */
+  plate: { day: string; month: string } | null;
   when: string;
-  countdown: string | null;
-  live: boolean;
-  registered: number;
-  capacity: number | null;
+  location: string | null;
+  /** "3 hari lagi", "Sedang berlangsung", atau langkah berikutnya untuk acara yang disiapkan. */
+  status: string | null;
+  /** Kuota hanya untuk acara yang sudah tayang. */
+  seats: { registered: number; capacity: number | null } | null;
 };
 
-/** Baris acara: sampul, waktu, dan kuota. Tiap baris membuka acaranya. */
-function EventRows({ events }: { events: AgendaEvent[] }) {
-  return (
-    <ul className="relative z-10 -mx-2 flex flex-col">
-      {events.map((ev) => (
-        <li key={ev.id}>
-          <Link
-            href={`/console/events/${ev.id}`}
-            className="flex items-center gap-4 rounded-md px-2 py-2 transition-colors hover:bg-surface-container-low focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-container motion-reduce:transition-none"
-          >
-            <span className="relative h-11 w-16 shrink-0 overflow-hidden rounded bg-surface-container-high" aria-hidden="true">
-              {ev.coverImageUrl ? (
-                <Image src={ev.coverImageUrl} alt="" fill sizes="64px" className="object-cover" />
-              ) : (
-                <span className="flex h-full w-full items-center justify-center text-headline-sm text-outline">
-                  {ev.title.charAt(0)}
-                </span>
-              )}
-            </span>
-            <span className="min-w-0 flex-1">
-              <span className="block truncate text-body-sm text-on-background">{ev.title}</span>
-              <span className="block text-body-sm text-on-surface-variant">
-                {ev.when}
-                {ev.countdown && <span className="text-gold-ink"> · {ev.countdown}</span>}
-                <span className="tabular-nums sm:hidden">
-                  {" · "}
-                  {ev.registered}
-                  {ev.capacity != null && ` / ${ev.capacity}`} terdaftar
-                </span>
-              </span>
-            </span>
-            <span className="hidden w-24 shrink-0 flex-col items-end gap-1.5 sm:flex">
-              <span className="text-body-sm tabular-nums text-on-background">
-                {ev.registered}
-                <span className="text-on-surface-variant">{ev.capacity != null ? ` / ${ev.capacity}` : " terdaftar"}</span>
-              </span>
-              <EventCapacityMeter registered={ev.registered} capacity={ev.capacity} className="w-full" />
-            </span>
-          </Link>
-        </li>
-      ))}
-    </ul>
-  );
-}
+export type StageGroup = { events: StageEvent[]; total: number };
 
-/** Satu bagian berjudul di kartu Kegiatan; pemanggil tidak merendernya kalau kosong. */
-function StageSection({ title, children }: { title: string; children: ReactNode }) {
-  return (
-    <div className="flex min-w-0 flex-col gap-2">
-      <p className="text-body-sm font-semibold text-on-background">{title}</p>
-      {children}
-    </div>
-  );
-}
+type StageKind = "live" | "upcoming" | "preparing";
+
+const STAGE_LABEL: Record<StageKind, string> = {
+  live: "Sedang berlangsung",
+  upcoming: "Mendatang",
+  preparing: "Sedang disiapkan",
+};
+
+const STAGE_TONE: Record<StageKind, EventStatusTone> = { live: "gold", upcoming: "jade", preparing: "neutral" };
+
+const STATUS_TEXT: Record<StageKind, string> = {
+  live: "text-gold-ink",
+  upcoming: "text-primary-container",
+  preparing: "text-on-surface-variant",
+};
 
 /**
- * Isi kartu Kegiatan: acara yang paling dekat (yang sedang berlangsung lebih dulu) tampil besar
- * dengan sampulnya, lalu sisanya dipisah per tahap. Bagian yang kosong tidak tampil.
+ * Sampul acara. Acara tanpa sampul mendapat plat hijau giok berisi tanggalnya, atau lambang
+ * PPIT kalau tanggalnya pun belum diisi.
  */
-export function EventStage({ events, preparing, empty }: { events: AgendaEvent[]; preparing: ListRow[]; empty: string }) {
-  const [lead, ...others] = [...events.filter((e) => e.live), ...events.filter((e) => !e.live)];
-  const live = others.filter((e) => e.live);
-  const upcoming = others.filter((e) => !e.live);
-  const hasSide = live.length > 0 || upcoming.length > 0 || preparing.length > 0;
-  const leadSpan = hasSide ? "xl:col-span-8" : "xl:col-span-12";
-
+function EventCover({ ev, size }: { ev: StageEvent; size: "large" | "small" }) {
+  if (ev.coverImageUrl) {
+    return <Image src={ev.coverImageUrl} alt="" fill sizes={size === "large" ? "(max-width: 640px) 100vw, 360px" : "64px"} className="object-cover" />;
+  }
   return (
-    <div className="grid grid-cols-1 gap-6 xl:grid-cols-12">
-      {lead ? (
-        <Link
-          href={`/console/events/${lead.id}`}
-          className={`relative z-10 -m-2 grid min-w-0 gap-4 rounded-md p-2 transition-colors hover:bg-surface-container-low focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-container motion-reduce:transition-none sm:grid-cols-2 ${leadSpan}`}
-        >
-          <span className="relative aspect-[16/10] overflow-hidden rounded bg-surface-container-high" aria-hidden="true">
-            {lead.coverImageUrl ? (
-              <Image src={lead.coverImageUrl} alt="" fill sizes="(max-width: 640px) 100vw, 33vw" className="object-cover" />
-            ) : (
-              <span className="flex h-full w-full items-center justify-center text-display-hero-mobile text-outline">
-                {lead.title.charAt(0)}
-              </span>
-            )}
+    <span className="absolute inset-0 flex flex-col items-center justify-center bg-band text-on-band">
+      {ev.plate ? (
+        <>
+          <span className={`${size === "large" ? "text-display-hero-mobile" : "text-headline-sm"} leading-none text-band-accent`}>
+            {ev.plate.day}
           </span>
-          <span className="flex min-w-0 flex-col justify-center gap-2">
-            <span className={`text-body-sm font-semibold ${lead.live ? "text-gold-ink" : "text-primary-container"}`}>
-              {lead.live ? "Sedang berlangsung" : (lead.countdown ?? "Akan datang")}
-            </span>
-            <span className="text-headline-md text-on-background">{lead.title}</span>
-            <span className="text-body-sm text-on-surface-variant">
-              {lead.when}
-              {lead.location && ` · ${lead.location}`}
-            </span>
-            <span className="mt-2 flex flex-col gap-1.5">
-              <span className="text-body-sm tabular-nums text-on-background">
-                {lead.registered}
-                <span className="text-on-surface-variant">
-                  {lead.capacity != null ? ` dari ${lead.capacity} kursi terisi` : " terdaftar"}
-                </span>
-              </span>
-              <EventCapacityMeter registered={lead.registered} capacity={lead.capacity} />
-            </span>
+          <span className={`${size === "large" ? "mt-1 text-body-md" : "text-body-sm leading-tight"} text-on-band-muted`}>
+            {ev.plate.month}
           </span>
-        </Link>
+        </>
       ) : (
-        <p className={`text-body-sm text-on-surface-variant ${leadSpan}`}>{empty}</p>
+        <span className={`brand-logo text-band-accent ${size === "large" ? "h-16" : "h-7"}`} />
       )}
-      {hasSide && (
-        <div className="flex min-w-0 flex-col gap-5 xl:col-span-4">
-          {live.length > 0 && (
-            <StageSection title="Sedang berlangsung">
-              <EventRows events={live} />
-            </StageSection>
-          )}
-          {upcoming.length > 0 && (
-            <StageSection title="Mendatang">
-              <EventRows events={upcoming} />
-            </StageSection>
-          )}
-          {preparing.length > 0 && (
-            <StageSection title="Sedang disiapkan">
-              <ShortList empty="" rows={preparing} />
-            </StageSection>
-          )}
-        </div>
+    </span>
+  );
+}
+
+function Seats({ seats }: { seats: NonNullable<StageEvent["seats"]> }) {
+  return (
+    <span className="text-body-sm tabular-nums text-on-background">
+      {seats.registered}
+      <span className="text-on-surface-variant">{seats.capacity != null ? ` / ${seats.capacity} kursi` : " terdaftar"}</span>
+    </span>
+  );
+}
+
+const ITEM_LINK =
+  "relative z-10 rounded-md transition-colors hover:bg-surface-container-low focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-container motion-reduce:transition-none";
+
+/** Acara pertama di sebuah kolom: sampulnya di atas, atau di samping kalau kolomnya lebar. */
+function FeaturedEvent({ ev, kind }: { ev: StageEvent; kind: StageKind }) {
+  return (
+    <Link
+      href={`/console/events/${ev.id}`}
+      className={`${ITEM_LINK} -m-2 grid gap-3 p-2 @xl:grid-cols-[minmax(0,15rem)_1fr] @xl:items-center @xl:gap-5 @4xl:grid-cols-[minmax(0,20rem)_1fr]`}
+    >
+      <span className="relative aspect-[16/9] overflow-hidden rounded bg-surface-container-high" aria-hidden="true">
+        <EventCover ev={ev} size="large" />
+      </span>
+      <span className="flex min-w-0 max-w-2xl flex-col gap-1.5">
+        {ev.status && <span className={`text-body-sm font-semibold ${STATUS_TEXT[kind]}`}>{ev.status}</span>}
+        <span className="line-clamp-2 text-headline-sm text-on-background">{ev.title}</span>
+        <span className="line-clamp-2 text-body-sm text-on-surface-variant">
+          {ev.when}
+          {ev.location && ` · ${ev.location}`}
+        </span>
+        {ev.seats && (
+          <span className="mt-1 flex flex-col gap-1.5">
+            <Seats seats={ev.seats} />
+            <EventCapacityMeter registered={ev.seats.registered} capacity={ev.seats.capacity} />
+          </span>
+        )}
+      </span>
+    </Link>
+  );
+}
+
+/** Acara berikutnya di kolom yang sama, sebagai baris ringkas. */
+function EventRow({ ev, kind }: { ev: StageEvent; kind: StageKind }) {
+  return (
+    <li className="border-t border-outline-variant/70 pt-2">
+      <Link href={`/console/events/${ev.id}`} className={`${ITEM_LINK} -mx-2 flex items-center gap-3 px-2 py-1.5`}>
+        <span className="relative h-11 w-16 shrink-0 overflow-hidden rounded bg-surface-container-high" aria-hidden="true">
+          <EventCover ev={ev} size="small" />
+        </span>
+        <span className="min-w-0 flex-1">
+          <span className="block truncate text-body-sm text-on-background">{ev.title}</span>
+          <span className="block truncate text-body-sm text-on-surface-variant">
+            {kind === "preparing" ? ev.status : ev.when}
+          </span>
+        </span>
+        {ev.seats && (
+          <span className="shrink-0">
+            <Seats seats={ev.seats} />
+          </span>
+        )}
+      </Link>
+    </li>
+  );
+}
+
+function StageColumn({ kind, group }: { kind: StageKind; group: StageGroup }) {
+  const [first, ...rest] = group.events;
+  const hidden = group.total - group.events.length;
+  return (
+    <section aria-label={STAGE_LABEL[kind]} className="@container flex min-w-0 flex-col gap-4 py-5 first:pt-0 last:pb-0 xl:px-6 xl:py-0 xl:first:pl-0 xl:last:pr-0">
+      <div className="flex items-baseline justify-between gap-3">
+        <EventStatusMark label={STAGE_LABEL[kind]} tone={STAGE_TONE[kind]} bare />
+        <span className="text-body-sm tabular-nums text-on-surface-variant">{group.total}</span>
+      </div>
+      <FeaturedEvent ev={first} kind={kind} />
+      {rest.length > 0 && (
+        <ul className="flex flex-col gap-2">
+          {rest.map((ev) => (
+            <EventRow key={ev.id} ev={ev} kind={kind} />
+          ))}
+        </ul>
       )}
+      {hidden > 0 && <p className="text-body-sm text-on-surface-variant">dan {hidden} acara lainnya</p>}
+    </section>
+  );
+}
+
+const STAGE_COLUMNS: Record<number, string> = { 1: "xl:grid-cols-1", 2: "xl:grid-cols-2", 3: "xl:grid-cols-3" };
+
+/**
+ * Isi kartu Kegiatan: satu kolom per tahap yang ada isinya (sedang berlangsung, mendatang,
+ * sedang disiapkan), sama lebar dan dipisah garis. Acara pertama tiap kolom tampil besar.
+ */
+export function EventStage({
+  live,
+  upcoming,
+  preparing,
+  empty,
+}: {
+  live: StageGroup;
+  upcoming: StageGroup;
+  preparing: StageGroup;
+  empty: string;
+}) {
+  const columns = (
+    [
+      ["live", live],
+      ["upcoming", upcoming],
+      ["preparing", preparing],
+    ] as const
+  ).filter(([, group]) => group.events.length > 0);
+  if (columns.length === 0) return <p className="text-body-sm text-on-surface-variant">{empty}</p>;
+  return (
+    <div className={`grid grid-cols-1 divide-y divide-outline-variant xl:divide-x xl:divide-y-0 ${STAGE_COLUMNS[columns.length]}`}>
+      {columns.map(([kind, group]) => (
+        <StageColumn key={kind} kind={kind} group={group} />
+      ))}
     </div>
   );
 }
