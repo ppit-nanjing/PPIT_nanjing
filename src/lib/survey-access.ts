@@ -1,9 +1,10 @@
 import { cache } from "react";
 import { redirect } from "next/navigation";
-import { and, desc, eq, inArray, isNull, or, sql } from "drizzle-orm";
+import { and, desc, eq, inArray, isNull, ne, or, sql, type SQL } from "drizzle-orm";
 import { db } from "@/db";
-import { events, forms } from "@/db/schema";
+import { events, formApplications, forms } from "@/db/schema";
 import { getCabinetMembership, getCoordinatorEventIds, getFormsAccess, type FormsAccess } from "@/lib/form-access";
+import type { FormKind } from "@/lib/form-types";
 
 // Gerbang server modul Formulir. Formulir dibuat dan dikelola dari /formulir, BUKAN
 // dari /console: layout konsol hanya menerima admin/koordinator/panitia, dan
@@ -132,4 +133,86 @@ export async function listManageableSurveys(sa: SurveyAccess): Promise<SurveyLis
     .limit(300);
 
   return rows.map(({ createdBy, ...r }) => ({ ...r, createdByMe: createdBy === access.userId }));
+}
+
+const OPREK_KINDS: FormKind[] = ["oprek_bph_acara", "oprek_kepanitiaan", "oprek_kadiv"];
+
+/**
+ * Formulir semua jenis yang dikelola user ini, sebagai syarat SQL. Cermin canManageForm
+ * (form-access.ts): full/modul forms semuanya; lainnya buatannya sendiri (Formulir Kustom
+ * hanya selama masih berhak membuat), formulir acara tempat dia BPH Panitia, dan Oprek anggota
+ * acara tempat dia Kadiv. Pemilu hanya untuk full/modul forms. Acara di Sampah tidak ikut.
+ * Pemanggil wajib leftJoin events ke forms.eventId.
+ */
+function managedFormsScope(sa: SurveyAccess): SQL | undefined {
+  const { access } = sa;
+  const live = or(isNull(forms.eventId), isNull(events.deletedAt));
+  if (access.isFull || access.canForms) return live;
+  const ownSurvey = sa.canCreate
+    ? and(
+        eq(forms.kind, "survei"),
+        eq(forms.createdBy, access.userId),
+        sa.isCabinetMember
+          ? undefined
+          : access.committeeEventIds.length > 0
+            ? inArray(forms.eventId, access.committeeEventIds)
+            : sql`false`,
+      )
+    : sql`false`;
+  const ownOprek = and(eq(forms.createdBy, access.userId), inArray(forms.kind, OPREK_KINDS));
+  const asBphPanitia =
+    access.bphEventIds.length > 0 ? and(inArray(forms.eventId, access.bphEventIds), ne(forms.kind, "pemilu")) : sql`false`;
+  const asKadiv =
+    access.kadivEventIds.length > 0
+      ? and(eq(forms.kind, "oprek_kepanitiaan"), inArray(forms.eventId, access.kadivEventIds))
+      : sql`false`;
+  return and(live, or(ownSurvey, ownOprek, asBphPanitia, asKadiv));
+}
+
+export type DashboardFormRow = { id: string; title: string; kind: FormKind; closesAt: Date | null; entries: number };
+
+/**
+ * Untuk kartu Formulir di dashboard: formulir yang sedang dibuka (tutup paling dekat dulu)
+ * dan jumlah lamaran Oprek yang belum diputuskan, keduanya dibatasi managedFormsScope.
+ */
+export async function getDashboardForms(
+  sa: SurveyAccess,
+): Promise<{ open: DashboardFormRow[]; openTotal: number; managedTotal: number; pendingOprek: number }> {
+  const scope = managedFormsScope(sa);
+  const [open, [managed], [pending]] = await Promise.all([
+    db
+      .select({
+        id: forms.id,
+        title: forms.title,
+        kind: forms.kind,
+        closesAt: forms.closesAt,
+        // Formulir Kustom menyimpan jawaban di form_responses; Pemilu dan Oprek di form_applications.
+        entries: sql<number>`(case when "forms"."kind" = 'survei'
+          then (select count(*) from form_responses r where r.form_id = "forms"."id")
+          else (select count(*) from form_applications a where a.form_id = "forms"."id") end)::int`,
+        total: sql<number>`(count(*) over())::int`,
+      })
+      .from(forms)
+      .leftJoin(events, eq(events.id, forms.eventId))
+      .where(and(eq(forms.isOpen, true), scope))
+      .orderBy(sql`${forms.closesAt} asc nulls last`, desc(forms.createdAt))
+      .limit(3),
+    db
+      .select({ n: sql<number>`count(*)::int` })
+      .from(forms)
+      .leftJoin(events, eq(events.id, forms.eventId))
+      .where(scope),
+    db
+      .select({ n: sql<number>`count(*)::int` })
+      .from(formApplications)
+      .innerJoin(forms, eq(forms.id, formApplications.formId))
+      .leftJoin(events, eq(events.id, forms.eventId))
+      .where(and(eq(formApplications.status, "pending"), inArray(forms.kind, OPREK_KINDS), scope)),
+  ]);
+  return {
+    open: open.map((r) => ({ id: r.id, title: r.title, kind: r.kind, closesAt: r.closesAt, entries: r.entries })),
+    openTotal: open[0]?.total ?? 0,
+    managedTotal: managed?.n ?? 0,
+    pendingOprek: pending?.n ?? 0,
+  };
 }

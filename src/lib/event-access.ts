@@ -286,6 +286,31 @@ export const getScopedEventIds = cache(async function getScopedEventIds(): Promi
 });
 
 /**
+ * Acara milik akun tanpa modul "events": tempat dia panitia ∪ acara buatannya yang
+ * masih memberi hak pembuat (grantsCreatorRights). Acara di Sampah tidak ikut.
+ * Daftar Kegiatan dan dashboard memakai ini supaya menampilkan acara yang sama.
+ */
+export const getPersonalEventIds = cache(async function getPersonalEventIds(): Promise<string[]> {
+  const session = await auth();
+  if (!session?.user?.id) return [];
+  const userId = session.user.id;
+  const [committeeRows, createdRows] = await Promise.all([
+    db
+      .select({ id: eventCommittee.eventId })
+      .from(eventCommittee)
+      .innerJoin(events, eq(events.id, eventCommittee.eventId))
+      .where(and(eq(eventCommittee.userId, userId), isNull(events.deletedAt))),
+    session.user.canCreateEvent
+      ? db
+          .select({ id: events.id, status: events.status, approvedAt: events.approvedAt, approvedBy: events.approvedBy })
+          .from(events)
+          .where(and(eq(events.createdBy, userId), isNull(events.deletedAt)))
+      : Promise.resolve([]),
+  ]);
+  return [...new Set([...committeeRows.map((r) => r.id), ...createdRows.filter(grantsCreatorRights).map((r) => r.id)])];
+});
+
+/**
  * Untuk halaman & server action konsol acara: redirect kalau tidak berwenang,
  * persis pola requireModuleAccess(). Mengembalikan EventAccess supaya pemanggil
  * bisa memeriksa kapabilitas lain tanpa query ulang.

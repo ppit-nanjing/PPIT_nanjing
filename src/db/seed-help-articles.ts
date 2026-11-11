@@ -18,14 +18,13 @@ const articles: { slug: string; section: string; title: string; content: string 
     slug: "dashboard",
     section: SERING_DIPAKAI,
     title: "Dashboard — Ringkasan Aktivitas",
-    content: `Halaman ini murni ringkasan, tidak ada yang perlu diisi.
+    content: `Halaman ini murni ringkasan, tidak ada yang perlu diisi. Yang tampil mengikuti modul yang dipegang akunmu.
 
-- Ringkasan: angka utama semua modul (anggota, sensus, kegiatan, dst).
-- Perlu Perhatian: daftar item yang butuh tindakan (lamaran menunggu, masukan baru, permintaan peminjaman, dst) — klik "Tinjau" untuk langsung ke modul terkait.
-- Aksi Cepat: jalan pintas ke alur kerja yang sering dipakai.
-- Aktivitas Terbaru: gabungan masukan, pendaftaran kegiatan, dan lamaran membership terbaru, diurutkan dari yang paling baru.
-
-Kalau "Perlu Perhatian" kosong, itu artinya semua sudah tertangani — bukan halamannya rusak.`,
+- Perlu Tindakan: antrean yang menunggu keputusan (acara menunggu persetujuan BPH, peminjaman terlambat, lamaran, masukan baru, dst). Klik barisnya untuk langsung ke modul terkait. Kalau kosong, artinya semua sudah tertangani, bukan halamannya rusak.
+- Kartu per modul: setiap kartu berisi angka utama dan cuplikan isinya (acara mendatang, barang yang sedang dipinjam, jumlah pengurus per divisi, lamaran terbaru, dst). Klik kartunya untuk membuka modul itu. Di kartu Kegiatan, klik baris acara untuk langsung membuka acaranya.
+- Pengurus tanpa modul melihat kartu "Kegiatan Saya" (acara yang kamu buat atau ikuti).
+- Kartu Formulir tampil untuk semua yang bisa membuka menu Formulir, tapi isinya hanya formulir yang kamu kelola. Lamaran Oprek yang belum kamu putuskan muncul di Perlu Tindakan.
+- Di paling bawah ada pita Dokumentasi: jumlah panduan dan 3 artikel yang terakhir diperbarui. Klik judulnya untuk membaca, atau klik pitanya untuk membuka semua panduan.`,
   },
   {
     slug: "pengguna",
