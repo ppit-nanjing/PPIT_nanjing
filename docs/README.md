@@ -62,6 +62,7 @@
 ## 🛠️ Screens — Admin Console
 
 - [Admin Dashboard](./Admin%20Dashboard.md)
+- [Konten](./Konten.md) — `/console/content`: tab Berita dan Galeri berbentuk papan seperti Kegiatan, menu "⋯", album tanpa foto sorotan
 - [Kota & Katalog](./Kota%20&%20Katalog.md) — `/console/katalog`: tujuh tab (Tempat, Kampus, Distrik, Wilayah Naungan, Merchandise, Sponsor, Donasi), pola daftar + form, aturan distrik
 - [User & Role Management](./User%20&%20Role%20Management.md)
 - [Konfirmasi Akses Admin.md](./Konfirmasi%20Akses%20Admin.md) — tabel `adminModuleScope` per divisi, dikonfirmasi langsung dari database produksi

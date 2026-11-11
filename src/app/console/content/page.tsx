@@ -1,150 +1,118 @@
 import type { Metadata } from "next";
-import { desc, sql } from "drizzle-orm";
-import { db } from "@/db";
-import { newsArticles, galleryAlbums } from "@/db/schema";
-import { requireModuleAccess } from "@/lib/admin-scope";
-import { setNewsArticleStatus } from "@/app/actions/admin-content";
+import Link from "next/link";
+import { asc, desc, eq, sql } from "drizzle-orm";
 import { Plus } from "lucide-react";
-import { CollapsibleSection } from "@/components/console/collapsible-section";
-import { ConfirmButton } from "@/components/console/confirm-button";
-import { DeleteNewsButton } from "@/components/console/delete-news-button";
+import { db } from "@/db";
+import { events, galleryAlbums, galleryPhotos, newsArticles, users } from "@/db/schema";
+import { requireModuleAccess } from "@/lib/admin-scope";
+import { eventDayLabel } from "@/lib/event-stage";
+import { getGuide } from "@/lib/guides";
 import { GuideButton } from "@/components/console/guide-button";
 import { FlashToast } from "@/components/console/flash-toast";
-import { getGuide } from "@/lib/guides";
-import Link from "next/link";
-
-const STATUS_LABEL: Record<string, string> = {
-  draft: "Draf",
-  published: "Dipublikasikan",
-  archived: "Arsip",
-};
-
-type Article = typeof newsArticles.$inferSelect;
-
-function NewsRow({ a }: { a: Article }) {
-  return (
-    <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between bg-surface-container-lowest border border-outline-variant rounded-lg pl-5 pr-2 py-2 hover:bg-surface-container-low transition-colors">
-      <Link
-        href={`/console/content/news/${a.id}`}
-        className="w-full sm:flex-1 sm:min-w-0 flex items-center justify-between gap-3 py-1.5"
-      >
-        <span className="text-body-md text-on-background truncate">{a.title}</span>
-        <span className="text-label-caps uppercase tracking-wide bg-surface-container-low px-2 py-1 rounded shrink-0">
-          {STATUS_LABEL[a.status]}
-        </span>
-      </Link>
-      <div className="self-end sm:self-auto flex items-center gap-2 sm:shrink-0">
-        {a.status === "archived" ? (
-          <ConfirmButton
-            title="Pulihkan berita?"
-            message={`"${a.title}" akan kembali menjadi draf. Publikasikan lagi lewat halaman edit.`}
-            confirmLabel="Ya, pulihkan"
-            action={setNewsArticleStatus}
-            payload={{ id: a.id, status: "draft" }}
-            danger={false}
-            className="text-label-caps uppercase tracking-wide px-2.5 py-1 sm:px-3 sm:py-1.5 rounded-md border border-outline-variant text-on-surface-variant hover:bg-surface-container-low transition-colors"
-          >
-            Pulihkan
-          </ConfirmButton>
-        ) : (
-          <ConfirmButton
-            title="Arsipkan berita?"
-            message={`"${a.title}" akan disembunyikan dari halaman publik tapi tetap tersimpan di sini.`}
-            confirmLabel="Ya, arsipkan"
-            action={setNewsArticleStatus}
-            payload={{ id: a.id, status: "archived" }}
-            danger={false}
-            className="text-label-caps uppercase tracking-wide px-2.5 py-1 sm:px-3 sm:py-1.5 rounded-md border border-outline-variant text-on-surface-variant hover:bg-surface-container-low transition-colors"
-          >
-            Arsipkan
-          </ConfirmButton>
-        )}
-        <DeleteNewsButton id={a.id} />
-      </div>
-    </div>
-  );
-}
+import { ContentBoard, type BoardAlbum, type BoardArticle } from "@/components/console/content-board";
 
 export const metadata: Metadata = { title: "Konten" };
 
-export default async function ConsoleContentPage() {
-  await requireModuleAccess("content");
-  // NULLS LAST: draft (publishedAt null) must not float above published news.
-  const articles = await db
-    .select()
-    .from(newsArticles)
-    .orderBy(sql`${newsArticles.publishedAt} desc nulls last`);
-  const albums = await db.select().from(galleryAlbums).orderBy(desc(galleryAlbums.createdAt));
-  const guide = await getGuide("konten");
+function articleDateLabel(status: BoardArticle["status"], publishedAt: Date | null): string {
+  const day = publishedAt ? eventDayLabel(publishedAt) : null;
+  if (status === "published") return day ? `Terbit ${day}` : "Terbit";
+  if (status === "archived") return day ? `Diarsipkan · terbit ${day}` : "Diarsipkan";
+  return day ? `Ditarik ke draf · terbit ${day}` : "Belum pernah terbit";
+}
 
-  const activeArticles = articles.filter((a) => a.status !== "archived");
-  const archivedArticles = articles.filter((a) => a.status === "archived");
+export default async function ConsoleContentPage({ searchParams }: PageProps<"/console/content">) {
+  await requireModuleAccess("content");
+
+  const [params, articleRows, albumRows, guide] = await Promise.all([
+    searchParams,
+    // NULLS LAST: draf (publishedAt null) tidak boleh mengapung di atas berita yang sudah terbit.
+    db
+      .select({
+        id: newsArticles.id,
+        slug: newsArticles.slug,
+        title: newsArticles.title,
+        content: newsArticles.content,
+        coverImageUrl: newsArticles.coverImageUrl,
+        category: newsArticles.category,
+        status: newsArticles.status,
+        publishedAt: newsArticles.publishedAt,
+        author: users.name,
+        eventTitle: events.title,
+      })
+      .from(newsArticles)
+      .leftJoin(users, eq(newsArticles.authorId, users.id))
+      .leftJoin(events, eq(newsArticles.eventId, events.id))
+      .orderBy(sql`${newsArticles.publishedAt} desc nulls last`, asc(newsArticles.title)),
+    // Sampul mengikuti /gallery: sampul album, lalu foto sorotan pertama. Di konsol foto biasa
+    // pertama ikut jadi cadangan supaya album tanpa sorotan tetap mudah dikenali.
+    db
+      .select({
+        id: galleryAlbums.id,
+        title: galleryAlbums.title,
+        coverImageUrl: galleryAlbums.coverImageUrl,
+        driveUrl: galleryAlbums.driveUrl,
+        createdAt: galleryAlbums.createdAt,
+        eventTitle: events.title,
+        photoCount: sql<number>`count(${galleryPhotos.id})::int`,
+        highlightCount: sql<number>`(count(${galleryPhotos.id}) filter (where ${galleryPhotos.isHighlight}))::int`,
+        firstHighlight: sql<string | null>`(array_agg(${galleryPhotos.imageUrl} order by ${galleryPhotos.uploadedAt}) filter (where ${galleryPhotos.isHighlight}))[1]`,
+        firstPhoto: sql<string | null>`(array_agg(${galleryPhotos.imageUrl} order by ${galleryPhotos.uploadedAt}))[1]`,
+      })
+      .from(galleryAlbums)
+      .leftJoin(events, eq(galleryAlbums.eventId, events.id))
+      .leftJoin(galleryPhotos, eq(galleryPhotos.albumId, galleryAlbums.id))
+      .groupBy(galleryAlbums.id, events.title)
+      .orderBy(desc(galleryAlbums.createdAt)),
+    getGuide("konten"),
+  ]);
+
+  const latestId = articleRows.find((a) => a.status === "published")?.id;
+  const articles: BoardArticle[] = articleRows.map((a) => ({
+    id: a.id,
+    slug: a.slug,
+    title: a.title,
+    coverImageUrl: a.coverImageUrl,
+    category: a.category,
+    status: a.status,
+    excerpt: a.id === latestId ? a.content?.slice(0, 280) ?? null : null,
+    dateLabel: articleDateLabel(a.status, a.publishedAt),
+    author: a.author,
+    eventTitle: a.eventTitle,
+  }));
+
+  const albums: BoardAlbum[] = albumRows.map((a) => ({
+    id: a.id,
+    title: a.title,
+    cover: a.coverImageUrl ?? a.firstHighlight ?? a.firstPhoto,
+    photoCount: a.photoCount,
+    highlightCount: a.highlightCount,
+    eventTitle: a.eventTitle,
+    hasDriveUrl: !!a.driveUrl,
+    createdLabel: eventDayLabel(a.createdAt),
+  }));
+
+  const button = "inline-flex items-center gap-2 rounded-md px-4 py-2.5 text-label-caps uppercase tracking-wide transition-colors";
 
   return (
-    <div className="px-4 py-6 sm:px-6 lg:px-8 lg:py-10">
+    <div className="px-3 py-4 sm:px-6 lg:px-8 lg:py-10">
       <FlashToast />
-      <div className="flex flex-wrap items-start justify-between gap-3 mb-8">
-        <h1 className="text-headline-md sm:text-headline-lg text-on-background">Konten</h1>
-        {guide && <GuideButton title={guide.title} content={guide.content} docSlug="konten" />}
+      <div className="mb-6 flex flex-wrap items-start justify-between gap-3 sm:mb-8">
+        <div className="min-w-0">
+          <h1 className="text-headline-md sm:text-headline-lg text-on-background">Konten</h1>
+          <p className="mt-1 max-w-[62ch] text-body-md text-on-surface-variant">Berita dan album foto yang tampil di situs publik.</p>
+        </div>
+        <div className="flex flex-wrap items-center gap-2">
+          {guide && <GuideButton title={guide.title} content={guide.content} docSlug="konten" />}
+          <Link href="/console/content/gallery/new" className={`${button} border border-outline-variant text-on-background hover:bg-surface-container-low`}>
+            <Plus size={15} aria-hidden /> Album Baru
+          </Link>
+          <Link href="/console/content/news/new" className={`${button} bg-primary-container text-on-primary hover:bg-primary`}>
+            <Plus size={15} aria-hidden /> Tulis Berita
+          </Link>
+        </div>
       </div>
 
-      <div className="flex flex-col gap-6">
-        <CollapsibleSection title="Berita" description="Artikel berita yang dipublikasikan.">
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between mb-4">
-            <Link
-              href="/console/content/news/new"
-              className="flex items-center gap-2 bg-primary-container text-on-primary text-label-caps uppercase tracking-wide px-4 py-2.5 rounded-md hover:bg-primary transition-colors"
-            >
-              <Plus size={14} /> Tulis Berita
-            </Link>
-          </div>
-          <div className="flex flex-col gap-2">
-            {activeArticles.length === 0 && (
-              <p className="text-body-md text-on-surface-variant">Belum ada berita.</p>
-            )}
-            {activeArticles.map((a) => (
-              <NewsRow key={a.id} a={a} />
-            ))}
-          </div>
-        </CollapsibleSection>
-
-        {archivedArticles.length > 0 && (
-          <CollapsibleSection
-            title={`Arsip Berita (${archivedArticles.length})`}
-            description="Berita lama yang sudah dipensiunkan. Tidak tampil di halaman publik."
-            defaultOpen={false}
-          >
-            <div className="flex flex-col gap-2">
-              {archivedArticles.map((a) => (
-                <NewsRow key={a.id} a={a} />
-              ))}
-            </div>
-          </CollapsibleSection>
-        )}
-
-        <CollapsibleSection title="Galeri" description="Album foto kegiatan.">
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between mb-4">
-            <Link
-              href="/console/content/gallery/new"
-              className="flex items-center gap-2 bg-primary-container text-on-primary text-label-caps uppercase tracking-wide px-4 py-2.5 rounded-md hover:bg-primary transition-colors"
-            >
-              <Plus size={14} /> Album Baru
-            </Link>
-          </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-            {albums.length === 0 && <p className="text-body-md text-on-surface-variant col-span-full">Belum ada album.</p>}
-            {albums.map((al) => (
-              <a
-                key={al.id}
-                href={`/console/content/gallery/${al.id}`}
-                className="bg-surface-container-lowest border border-outline-variant rounded-lg p-4 hover:bg-surface-container-low transition-colors"
-              >
-                <p className="text-body-md font-medium text-on-background">{al.title}</p>
-              </a>
-            ))}
-          </div>
-        </CollapsibleSection>
-      </div>
+      <ContentBoard articles={articles} albums={albums} initialTab={params.tab === "galeri" ? "galeri" : "berita"} />
     </div>
   );
 }
