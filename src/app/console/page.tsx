@@ -17,7 +17,7 @@ import {
 } from "@/db/schema";
 import { redirect } from "next/navigation";
 import { cookies } from "next/headers";
-import { CalendarDays, MessageSquare, Package, UserCheck, UserPlus } from "lucide-react";
+import { CalendarDays, FileText, MessageSquare, Package, UserCheck, UserPlus } from "lucide-react";
 import { auth } from "@/auth";
 import { GuideButton } from "@/components/console/guide-button";
 import { StartHere } from "@/components/console/start-here";
@@ -40,6 +40,8 @@ import { hasModuleAccess, type AdminModule } from "@/lib/admin-scope";
 import { getPersonalEventIds, getScopedEventIds } from "@/lib/event-access";
 import { eventCountdownLabel, eventDatePlate, eventDayLabel, eventPreparationNote, eventStage, eventTimeLabel } from "@/lib/event-stage";
 import { getGuide } from "@/lib/guides";
+import { FORM_KIND_LABEL } from "@/lib/form-types";
+import { getDashboardForms, getSurveyAccess } from "@/lib/survey-access";
 
 // /console admits any admin, cabinet coordinator, event committee member or cabinet
 // member who may draft events, so the layout says nothing about WHICH modules this
@@ -279,7 +281,6 @@ export default async function ConsoleDashboardPage({ searchParams }: { searchPar
   const access = Object.fromEntries(
     DASHBOARD_MODULES.map((m) => [m, hasModuleAccess(scope, m)]),
   ) as DashboardAccess;
-  const holdsAnyModule = DASHBOARD_MODULES.some((m) => access[m]);
 
   // Kegiatan: pemegang modul melihat acara dalam cakupannya (null = semua); pengurus dan
   // panitia tanpa modul melihat "Kegiatan Saya" (acara yang dia buat atau ikuti).
@@ -290,12 +291,21 @@ export default async function ConsoleDashboardPage({ searchParams }: { searchPar
       ? await getPersonalEventIds()
       : undefined;
 
+  // Kartu Formulir: siapa pun yang bisa membuka menu Formulir (aturan yang sama dengan sidebar).
+  // Isinya hanya formulir yang dia kelola (getDashboardForms).
+  const formsVisible =
+    hasModuleAccess(scope, "forms") ||
+    session.user.isBphCommittee ||
+    session.user.isEventKadiv ||
+    session.user.isCoordinator ||
+    session.user.canCreateSurvey;
+
   const now = new Date();
   const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
 
   // All independent reads in one parallel batch: the fused count query, each card's
   // short list, and the guide. Wall-clock cost ≈ one round trip.
-  const [counts, agendaRows, preparingRows, activeLoans, divisionRows, applicants, latestNews, openJobs, newFeedback, guide] =
+  const [counts, agendaRows, preparingRows, activeLoans, divisionRows, applicants, latestNews, openJobs, newFeedback, formsData, guide] =
     await Promise.all([
       fetchDashboardCounts(access, startOfMonth, access.events ? (agendaIds ?? null) : null),
       // Acara yang belum lewat, terdekat dulu, jadi yang sedang berlangsung ada di depan. `total`
@@ -434,6 +444,7 @@ export default async function ConsoleDashboardPage({ searchParams }: { searchPar
           .orderBy(desc(feedback.createdAt))
           .limit(3),
       ),
+      formsVisible ? getSurveyAccess().then((sa) => (sa ? getDashboardForms(sa) : null)) : Promise.resolve(null),
       getGuide("dashboard"),
     ]);
 
@@ -447,6 +458,7 @@ export default async function ConsoleDashboardPage({ searchParams }: { searchPar
       { icon: CalendarDays, label: "Acara menunggu persetujuan BPH", count: eventCounts?.awaitingApproval ?? 0, href: "/console/events" },
       { icon: Package, label: "Peminjaman terlambat dikembalikan", count: inventory?.overdueBorrow ?? 0, href: "/console/inventory", alarm: true },
       { icon: UserCheck, label: "Lamaran rekrutmen menunggu", count: membership?.pending ?? 0, href: "/console/membership" },
+      { icon: FileText, label: "Lamaran Oprek menunggu keputusan", count: formsData?.pendingOprek ?? 0, href: "/console/forms" },
       { icon: MessageSquare, label: "Masukan baru", count: feedbackCounts?.unread ?? 0, href: "/console/feedback" },
       { icon: UserPlus, label: "Pendaftaran kegiatan menunggu", count: eventCounts?.pendingRegs ?? 0, href: "/console/events" },
       { icon: Package, label: "Pengajuan peminjaman menunggu", count: inventory?.pendingBorrow ?? 0, href: "/console/inventory" },
@@ -456,7 +468,7 @@ export default async function ConsoleDashboardPage({ searchParams }: { searchPar
   ).filter((a) => a.count > 0);
   // Only modules that produce attention items; otherwise "nothing waiting" would be a
   // claim about modules this viewer cannot see.
-  const showAttention = access.membership || access.feedback || access.events || access.inventory;
+  const showAttention = access.membership || access.feedback || access.events || access.inventory || formsData !== null;
   const attentionTotal = attentionItems.reduce((sum, a) => sum + a.count, 0);
 
   // ===== Kartu modul =====
@@ -518,6 +530,120 @@ export default async function ConsoleDashboardPage({ searchParams }: { searchPar
 
   const smallCards: { key: string; node: (span: string) => ReactNode }[] = [];
 
+  if (userCounts) {
+    smallCards.push({
+      key: "pengguna",
+      node: (span) => (
+        <DashboardCard
+          key="pengguna"
+          id="kartu-pengguna"
+          className={span}
+          title="Pengguna"
+          href="/console/users"
+          linkLabel="Buka Pengguna"
+          figure={userCounts.total}
+          figureLabel="akun"
+        >
+          <FactRows
+            rows={[
+              { label: "Aktif", value: userCounts.active },
+              { label: "Diundang, belum masuk", value: userCounts.invited },
+              { label: "Nonaktif atau ditangguhkan", value: userCounts.inactive },
+              { label: "Baru bulan ini", value: userCounts.newThisMonth },
+            ]}
+          />
+        </DashboardCard>
+      ),
+    });
+  }
+
+  if (organization) {
+    const ordered = inTreeOrder(divisionRows);
+    const shown = ordered.slice(0, 4);
+    smallCards.push({
+      key: "pengurus",
+      node: (span) => (
+        <DashboardCard
+          key="pengurus"
+          id="kartu-pengurus"
+          className={span}
+          title="Pengurus"
+          href="/console/organization"
+          linkLabel="Buka Organisasi"
+          figure={organization.members}
+          figureLabel={`pengurus di ${divisionRows.length} divisi`}
+        >
+          <DivisionBars
+            rows={shown.map((d) => ({ key: d.id, name: d.name, count: d.members }))}
+            more={ordered.length - shown.length}
+          />
+        </DashboardCard>
+      ),
+    });
+  }
+
+  if (sensus) {
+    const percent = sensus.members > 0 ? Math.round((sensus.complete / sensus.members) * 100) : 0;
+    smallCards.push({
+      key: "sensus",
+      node: (span) => (
+        <DashboardCard
+          key="sensus"
+          id="kartu-sensus"
+          className={span}
+          title="Sensus"
+          href="/console/sensus"
+          linkLabel="Buka Sensus"
+          figure={sensus.complete}
+          figureLabel="sensus lengkap"
+        >
+          <RatioMeter
+            value={sensus.complete}
+            max={sensus.members}
+            label="Sensus lengkap dari semua akun"
+            startLabel={`${percent}% lengkap`}
+            endLabel={`dari ${sensus.members} akun`}
+          />
+          <FactRows
+            rows={[
+              { label: "Sudah mulai, belum lengkap", value: sensus.started - sensus.complete },
+              { label: "Belum mengisi sama sekali", value: Math.max(sensus.members - sensus.started, 0) },
+            ]}
+          />
+        </DashboardCard>
+      ),
+    });
+  }
+
+  if (formsData) {
+    smallCards.push({
+      key: "formulir",
+      node: (span) => (
+        <DashboardCard
+          key="formulir"
+          id="kartu-formulir"
+          className={span}
+          title="Formulir"
+          href="/console/forms"
+          linkLabel="Buka Formulir"
+          figure={formsData.openTotal}
+          figureLabel="formulir dibuka"
+          note={`dari ${formsData.managedTotal} formulir yang kamu kelola`}
+        >
+          <ShortList
+            empty="Tidak ada formulir yang kamu kelola yang sedang dibuka."
+            rows={formsData.open.map((f) => ({
+              key: f.id,
+              primary: f.title,
+              secondary: `${FORM_KIND_LABEL[f.kind]} · ${f.entries} ${f.kind === "survei" ? "jawaban" : f.kind === "pemilu" ? "isian" : "pelamar"}`,
+              trailing: f.closesAt ? `tutup ${eventDayLabel(f.closesAt)}` : null,
+            }))}
+          />
+        </DashboardCard>
+      ),
+    });
+  }
+
   if (inventory) {
     smallCards.push({
       key: "inventaris",
@@ -557,62 +683,6 @@ export default async function ConsoleDashboardPage({ searchParams }: { searchPar
               trailing:
                 loan.status === "overdue" ? "Terlambat" : loan.requestedTo ? `s.d. ${eventDayLabel(loan.requestedTo)}` : null,
               tone: loan.status === "overdue" ? "alarm" : undefined,
-            }))}
-          />
-        </DashboardCard>
-      ),
-    });
-  }
-
-  if (organization) {
-    const ordered = inTreeOrder(divisionRows);
-    const shown = ordered.slice(0, 5);
-    smallCards.push({
-      key: "pengurus",
-      node: (span) => (
-        <DashboardCard
-          key="pengurus"
-          id="kartu-pengurus"
-          className={span}
-          title="Pengurus"
-          href="/console/organization"
-          linkLabel="Buka Organisasi"
-          figure={organization.members}
-          figureLabel={`pengurus di ${divisionRows.length} divisi`}
-        >
-          <DivisionBars
-            rows={shown.map((d) => ({ key: d.id, name: d.name, count: d.members }))}
-            more={ordered.length - shown.length}
-          />
-        </DashboardCard>
-      ),
-    });
-  }
-
-  if (membership) {
-    smallCards.push({
-      key: "rekrutmen",
-      node: (span) => (
-        <DashboardCard
-          key="rekrutmen"
-          id="kartu-rekrutmen"
-          className={span}
-          title="Rekrutmen"
-          href="/console/membership"
-          linkLabel="Buka Rekrutmen"
-          figure={membership.pending}
-          figureLabel="lamaran menunggu"
-          note={membership.recruitOpen ? "Rekrutmen sedang dibuka" : "Rekrutmen sedang ditutup"}
-          noteTone={membership.recruitOpen ? "positive" : "muted"}
-        >
-          <ShortList
-            empty="Belum ada lamaran."
-            rows={applicants.map((a) => ({
-              key: a.id,
-              primary: a.fullName,
-              secondary: [a.divisionInterest, timeAgo(a.submittedAt)].filter(Boolean).join(" · "),
-              trailing: APPLICATION_STATUS[a.status] ?? a.status,
-              tone: a.status === "pending" ? "accent" : undefined,
             }))}
           />
         </DashboardCard>
@@ -708,81 +778,33 @@ export default async function ConsoleDashboardPage({ searchParams }: { searchPar
     });
   }
 
-  if (sensus) {
-    const percent = sensus.members > 0 ? Math.round((sensus.complete / sensus.members) * 100) : 0;
+  if (membership) {
     smallCards.push({
-      key: "sensus",
+      key: "rekrutmen",
       node: (span) => (
         <DashboardCard
-          key="sensus"
-          id="kartu-sensus"
+          key="rekrutmen"
+          id="kartu-rekrutmen"
           className={span}
-          title="Sensus"
-          href="/console/sensus"
-          linkLabel="Buka Sensus"
-          figure={sensus.complete}
-          figureLabel="sensus lengkap"
+          title="Rekrutmen"
+          href="/console/membership"
+          linkLabel="Buka Rekrutmen"
+          figure={membership.pending}
+          figureLabel="lamaran menunggu"
+          note={membership.recruitOpen ? "Rekrutmen sedang dibuka" : "Rekrutmen sedang ditutup"}
+          noteTone={membership.recruitOpen ? "positive" : "muted"}
         >
-          <RatioMeter
-            value={sensus.complete}
-            max={sensus.members}
-            label="Sensus lengkap dari semua akun"
-            startLabel={`${percent}% lengkap`}
-            endLabel={`dari ${sensus.members} akun`}
-          />
-          <FactRows
-            rows={[
-              { label: "Sudah mulai, belum lengkap", value: sensus.started - sensus.complete },
-              { label: "Belum mengisi sama sekali", value: Math.max(sensus.members - sensus.started, 0) },
-            ]}
+          <ShortList
+            empty="Belum ada lamaran."
+            rows={applicants.map((a) => ({
+              key: a.id,
+              primary: a.fullName,
+              secondary: [a.divisionInterest, timeAgo(a.submittedAt)].filter(Boolean).join(" · "),
+              trailing: APPLICATION_STATUS[a.status] ?? a.status,
+              tone: a.status === "pending" ? "accent" : undefined,
+            }))}
           />
         </DashboardCard>
-      ),
-    });
-  }
-
-  if (userCounts) {
-    smallCards.push({
-      key: "pengguna",
-      node: (span) => (
-        <DashboardCard
-          key="pengguna"
-          id="kartu-pengguna"
-          className={span}
-          title="Pengguna"
-          href="/console/users"
-          linkLabel="Buka Pengguna"
-          figure={userCounts.total}
-          figureLabel="akun"
-        >
-          <FactRows
-            rows={[
-              { label: "Aktif", value: userCounts.active },
-              { label: "Diundang, belum masuk", value: userCounts.invited },
-              { label: "Nonaktif atau ditangguhkan", value: userCounts.inactive },
-              { label: "Baru bulan ini", value: userCounts.newThisMonth },
-            ]}
-          />
-        </DashboardCard>
-      ),
-    });
-  }
-
-  // Tanpa modul dashboard: Formulir adalah satu-satunya jalan lain selain Kegiatan Saya.
-  const formsHub = hasModuleAccess(scope, "forms") || session.user.isBphCommittee || session.user.isEventKadiv || session.user.isCoordinator;
-  if (!holdsAnyModule && (formsHub || session.user.canCreateSurvey)) {
-    smallCards.push({
-      key: "formulir",
-      node: (span) => (
-        <DashboardCard
-          key="formulir"
-          id="kartu-formulir"
-          className={span}
-          title="Formulir"
-          href={formsHub ? "/console/forms" : "/formulir"}
-          linkLabel="Buka Formulir"
-          note={formsHub ? "Oprek, Pemilu, dan Formulir Kustom." : "Buat formulir sendiri dan lihat hasilnya."}
-        />
       ),
     });
   }

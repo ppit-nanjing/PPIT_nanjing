@@ -36,8 +36,8 @@ Layout `/console` hanya memeriksa "boleh masuk konsol sama sekali" (admin, koord
 Masukan Vincent: dashboard berisi **cuplikan per modul** yang bisa diklik, bukan deretan angka. Urutannya dari atas:
 
 1. **Judul** dan satu kalimat: tanggal hari ini dan jumlah hal yang menunggu tindakan.
-2. **Perlu Tindakan**: antrean yang menunggu keputusan seseorang (acara menunggu persetujuan BPH, peminjaman terlambat, lamaran, masukan baru, pendaftaran menunggu, pengajuan peminjaman, kontribusi, pengadaan). Setiap baris membuka modulnya. Draf tidak masuk sini; jumlahnya ada di kartu modulnya.
-3. **Kartu modul** dari `src/components/console/dashboard-cards.tsx`. Seluruh kartu adalah tautan ke modulnya; acara di kartu Kegiatan membuka acaranya sendiri. Baris yang objeknya punya gambar asli (foto barang, sampul berita, gambar lowongan) menampilkan gambar kecilnya; kalau tidak ada satu pun, slot gambarnya tidak dibuat. Urutan: Kegiatan (satu baris penuh), Inventaris, Pengurus, Rekrutmen, Masukan, Konten, Lowongan, Sensus, Pengguna.
+2. **Perlu Tindakan**: antrean yang menunggu keputusan seseorang (acara menunggu persetujuan BPH, peminjaman terlambat, lamaran rekrutmen, lamaran Oprek, masukan baru, pendaftaran menunggu, pengajuan peminjaman, kontribusi, pengadaan). Setiap baris membuka modulnya. Draf tidak masuk sini; jumlahnya ada di kartu modulnya.
+3. **Kartu modul** dari `src/components/console/dashboard-cards.tsx`. Seluruh kartu adalah tautan ke modulnya; acara di kartu Kegiatan membuka acaranya sendiri. Baris yang objeknya punya gambar asli (foto barang, sampul berita, gambar lowongan) menampilkan gambar kecilnya; kalau tidak ada satu pun, slot gambarnya tidak dibuat. Urutan: Kegiatan (satu baris penuh), lalu tiga baris bertiga: Pengguna, Pengurus, Sensus; Formulir, Inventaris, Masukan; Konten, Lowongan, Rekrutmen. Kartu yang modulnya tidak dipegang akun itu dilewati, dan sisanya tetap mengikuti urutan ini.
 
 Isi tiap kartu dan modul yang menjadi gerbangnya (`hasModuleAccess()`); query-nya hanya dijalankan kalau pemakai memegang modul itu:
 
@@ -46,14 +46,14 @@ Isi tiap kartu dan modul yang menjadi gerbangnya (`hasModuleAccess()`); query-ny
 | Kegiatan | `events` | Satu kolom per tahap yang ada isinya (Sedang berlangsung, Mendatang, Sedang disiapkan), sama lebar dan dipisah garis, masing-masing dengan jumlahnya. Acara pertama tiap kolom tampil besar dengan sampulnya; acara tanpa sampul mendapat plat tanggal, atau lambang PPIT kalau tanggalnya belum diisi. Juga pendaftar minggu ini dibanding minggu lalu |
 | Kegiatan Saya | tanpa `events`, tapi panitia atau boleh membuat acara | Acara yang dia buat atau ikuti (`getPersonalEventIds()`, sama dengan daftar Kegiatan) |
 | Inventaris | `inventory` | Jumlah jenis barang, unit tersedia dari total, hingga 3 peminjaman berjalan (terlambat lebih dulu) |
-| Pengurus | `organization` | Jumlah pengurus, jumlah orang per divisi (5 pertama dalam urutan Organisasi) |
+| Pengurus | `organization` | Jumlah pengurus, jumlah orang per divisi (4 pertama dalam urutan Organisasi) |
 | Rekrutmen | `membership` | Lamaran menunggu, status periode, 3 lamaran terbaru |
 | Masukan | `feedback` | Masukan baru dan totalnya, 3 masukan baru terbaru |
 | Konten | `content` (alias `gallery`) | Berita terbit, draf, album dan foto, 3 berita terbaru |
 | Lowongan | `career` | Lowongan dibuka, lamaran masuk, 3 lowongan terbaru |
 | Sensus | `sensus` (bukan `sensus-verify`) | Sensus lengkap dari semua akun, yang belum lengkap, yang belum mengisi |
 | Pengguna | `users` | Jumlah akun: aktif, diundang belum masuk, nonaktif atau ditangguhkan, baru bulan ini |
-| Formulir | tanpa modul dashboard, tapi boleh membuka Formulir atau Formulir Kustom | Tautan saja |
+| Formulir | siapa pun yang bisa membuka menu Formulir (modul `forms`, BPH Panitia, Kadiv, koordinator, atau `canCreateSurvey`) | Formulir yang sedang dibuka dari formulir yang dia kelola, jumlah semua yang dia kelola, dan 3 formulir dengan jumlah jawaban atau pelamarnya. "Yang dia kelola" mengikuti `canManageForm` (`managedFormsScope` di `src/lib/survey-access.ts`). Lamaran Oprek yang belum diputuskan, dalam batas yang sama, masuk ke Perlu Tindakan |
 
 - Semua angka berasal dari satu query gabungan (`fetchDashboardCounts()`), dan cuplikan tiap kartu berjalan bersamaan dengannya dalam satu putaran.
 - Pemegang `events` yang bukan full admin hanya melihat angka dan acara yang bisa dibukanya: yang dia buat, yang divisinya jadi Divisi Penanggung Jawab, atau yang dia jadi panitianya (`getScopedEventIds()`, batas yang sama dengan `/console/events`). Full admin melihat semua acara.
