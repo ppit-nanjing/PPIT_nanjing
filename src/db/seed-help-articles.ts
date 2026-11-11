@@ -196,17 +196,25 @@ Maksimal 10 MB, format PNG/JPEG/WEBP saja. PENTING: pilih file dulu, lalu klik t
     slug: "katalog",
     section: SERING_BINGUNG,
     title: "Kota & Katalog — Tempat, Kampus, Merchandise, Donasi",
-    content: `Halaman ini gabungan beberapa hal berbeda yang semuanya menampilkan konten publik (Tempat, Kampus, Katalog):
+    content: `Halaman ini mengisi beberapa halaman publik sekaligus. Isinya dibagi ke tab di bagian atas; angka di tiap tab adalah jumlah isinya.
 
-- Tempat: Nama wajib, sisanya (kategori, distrik, alamat, gambar, tautan peta) opsional.
-- Wilayah Naungan: cuma 9 kota tetap, batas wilayahnya tidak bisa diedit — yang bisa diubah cuma jumlah mahasiswa, kontak, catatan per kota.
-- Distrik: Nama wajib — mengisi nama yang SAMA dengan yang sudah ada akan MENGUPDATE distrik itu, bukan bikin baru.
-- Universitas: Nama & Kota penting diisi, checkbox "Kampus mitra" untuk yang berstatus mitra resmi.
-- Merchandise: ini cuma etalase, BUKAN toko — tidak ada checkout. "Catatan pemesanan" biasanya diisi cara pesan (mis. lewat WhatsApp).
-- Sponsor & Mitra: Nama wajib, Tingkat pilih dari Mitra/Silver/Gold/Platinum.
+Cara pakainya sama di semua tab
+- Menambah: klik tombol "Tambah ...", isi formnya, simpan.
+- Mengubah: klik barisnya, form edit terbuka di bawahnya. Tombol Hapus ada di dalam form itu.
+- Mencari: kotak cari dan saringan muncul sendiri kalau daftarnya sudah panjang.
+- Kolom "Terjemahan Inggris" boleh dikosongkan; isinya diterjemahkan otomatis saat disimpan.
 
-Kanal & Laporan Donasi (cuma muncul untuk admin dengan akses Organisasi, bukan semua admin Konten)
-Kanal Donasi cuma menampilkan info rekening/QR — situs TIDAK memproses pembayaran apa pun. Kanal bisa diedit (tombol Edit — termasuk ganti QR/rekening) atau disembunyikan sementara lewat Sembunyikan/Tampilkan; tidak perlu hapus lalu bikin ulang. Laporan Donasi berisi laporan yang dikirim SENDIRI oleh donatur (self-report); sebelum menandai "Terverifikasi", cek dulu manual ke mutasi rekening — jangan percaya angka yang diketik donatur begitu saja. Tombol Export CSV mengunduh rekap untuk LPJ (termasuk catatan internal dan tautan bukti — perlakukan sebagai data finansial).
+Isi tiap tab
+- Tempat: Nama wajib, sisanya opsional. Distrik dipilih dari daftar, dan itulah yang menentukan tempat ini dihitung di distrik mana pada Peta Nanjing. Matikan "Tampil di situs publik" untuk menyembunyikan tanpa menghapus.
+- Kampus: Nama dan Kota penting diisi. Centang "Kampus mitra" untuk yang berstatus mitra resmi.
+- Distrik: teks pengantar tiap distrik Nanjing. Nama distrik tidak bisa diubah setelah dibuat. Teks ini belum ditampilkan di situs publik.
+- Wilayah Naungan: daftar kotanya tetap dan batas wilayahnya tidak bisa diedit. Yang diisi hanya jumlah mahasiswa, kontak, dan catatan tiap kota. Simpan per baris.
+- Merchandise: ini etalase, BUKAN toko, tidak ada checkout. Tulis cara memesannya di "Cara memesan" (mis. lewat WhatsApp).
+- Sponsor: Nama wajib, Tingkat pilih dari Mitra/Silver/Gold/Platinum.
+
+Tab Donasi (hanya muncul untuk akun dengan akses Organisasi)
+Laporan Donasi berisi laporan yang dikirim SENDIRI oleh donatur. Sebelum menekan Verifikasi, cocokkan dulu dengan mutasi rekening; jangan percaya angka yang diketik donatur begitu saja. Hanya yang terverifikasi yang tampil publik. Keputusan bisa dibatalkan dengan tombol Batalkan. Tombol Unduh CSV mengunduh rekap untuk LPJ (termasuk catatan internal dan tautan bukti, jadi perlakukan sebagai data keuangan).
+Kanal Donasi hanya menampilkan info rekening atau QR; situs TIDAK memproses pembayaran apa pun. Kanal bisa diedit atau disembunyikan sementara dari dalam form editnya, tidak perlu dihapus lalu dibuat ulang.
 
 Semua tombol Hapus di halaman ini meminta konfirmasi dulu, lalu menghapus permanen.`,
   },

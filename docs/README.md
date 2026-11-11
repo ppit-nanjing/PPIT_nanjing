@@ -56,11 +56,13 @@
 - [Formulir & Oprek](./Formulir%20&%20Oprek.md) — modul console: Pemilu, Oprek BPH Acara, Oprek Kepanitiaan (formulir internal kabinet) + riwayat modul Formulir lama
 - [Formulir Kustom](./Formulir%20Kustom.md) — formulir buatan sendiri ala Google Forms (riset pasar, kuesioner) oleh pengurus kabinet / panitia acara: judul dan pertanyaan bebas, wajib login atau publik, biodata dari sensus, hasil berupa grafik + tabel + Google Sheet langsung + CSV/Excel (jam CST). `/formulir`, `/f/[id]`; kode `survei`
 - [Equipment Lending Flow](./Equipment%20Lending%20Flow.md)
+- [Rencana Peta Interaktif](./Rencana%20Peta%20Interaktif.md) — **usulan, belum dikerjakan**: menyambung `/coverage` dan `/map` menjadi peta bertingkat yang bisa diklik (wilayah → Nanjing → distrik → tempat & kampus), tahapan, dan yang perlu diputuskan
 - [Sensus Profile Flow](./Sensus%20Profile%20Flow.md)
 
 ## 🛠️ Screens — Admin Console
 
 - [Admin Dashboard](./Admin%20Dashboard.md)
+- [Kota & Katalog](./Kota%20&%20Katalog.md) — `/console/katalog`: tujuh tab (Tempat, Kampus, Distrik, Wilayah Naungan, Merchandise, Sponsor, Donasi), pola daftar + form, aturan distrik
 - [User & Role Management](./User%20&%20Role%20Management.md)
 - [Konfirmasi Akses Admin.md](./Konfirmasi%20Akses%20Admin.md) — tabel `adminModuleScope` per divisi, dikonfirmasi langsung dari database produksi
 - [Organization Management](./Organization%20Management.md)
