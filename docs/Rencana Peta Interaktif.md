@@ -1,6 +1,6 @@
 # Rencana: Peta Interaktif Bertingkat
 
-> Usulan, belum dikerjakan. Ditulis 2026-11-12 dari ide Kenneth (Divisi Teknologi) untuk dibahas dengan Vincent dan BPH. Kode yang disebut di sini sudah dicek ke repo pada tanggal itu.
+> Usulan dari Kenneth (12 November 2026)
 
 ## Ringkasan
 
