@@ -245,7 +245,7 @@ export default async function Home() {
                       href={`/events/${e.slug}`}
                       imageUrl={e.coverImageUrl}
                       eyebrow={e.category}
-                      meta={e.startAt ? new Date(e.startAt).toLocaleDateString(INTL_LOCALE[locale], { dateStyle: "medium" }) : ""}
+                      meta={e.startAt ? new Date(e.startAt).toLocaleDateString(INTL_LOCALE[locale], { dateStyle: "medium", timeZone: "Asia/Shanghai" }) : ""}
                       title={e.title}
                       excerpt={e.description}
                     />

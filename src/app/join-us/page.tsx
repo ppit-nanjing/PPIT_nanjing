@@ -51,6 +51,7 @@ export default async function JoinUsPage() {
                     batch: period.batchLabel ?? "",
                     date: new Date(period.closesAt!).toLocaleDateString(INTL_LOCALE[locale], {
                       dateStyle: "long",
+                      timeZone: "Asia/Shanghai",
                     }),
                   })
                 : t("joinus.closedNone")}

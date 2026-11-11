@@ -17,6 +17,7 @@ import { checkInBlockReason, checkInClosedReason, type CheckInBlock } from "@/li
 import { WIF_2026_KELOMPOK, normalizeNameForKelompok } from "@/lib/wif-2026-kelompok";
 import { sanitizeDescriptionHtml } from "@/lib/sanitize-description-html";
 import { scheduleLiveSheetSync } from "@/lib/live-sheets";
+import { parseChinaLocalInput } from "@/lib/datetime";
 
 function slugify(title: string) {
   return (
@@ -100,17 +101,15 @@ export async function createEvent(_prev: EventFormState, formData: FormData): Pr
   if (locationUrl2Raw && !isValidHttpUrl(locationUrl2Raw)) {
     return { error: "Link lokasi (2) harus diawali http:// atau https://" };
   }
-  const startAt = formData.get("startAt") ? new Date(String(formData.get("startAt"))) : null;
-  const endAt = formData.get("endAt") ? new Date(String(formData.get("endAt"))) : null;
+  const startAt = parseChinaLocalInput(formData.get("startAt"));
+  const endAt = parseChinaLocalInput(formData.get("endAt"));
   // Waktu selesai dipakai kunci kepanitiaan (isCommitteeLocked) dan status
   // "sudah lewat"; selesai sebelum mulai membuat keduanya salah hitung.
   if (startAt && endAt && endAt <= startAt) {
     return { error: "Waktu selesai harus setelah waktu mulai." };
   }
 
-  const scheduledPublishAt = isFull && formData.get("scheduledPublishAt")
-    ? new Date(String(formData.get("scheduledPublishAt")))
-    : null;
+  const scheduledPublishAt = isFull ? parseChinaLocalInput(formData.get("scheduledPublishAt")) : null;
   // "intent=draft" forces a plain draft even when a publish schedule is set;
   // otherwise a set schedule keeps the event in 'scheduled' (hidden) state.
   const intent = String(formData.get("intent") ?? "schedule");
@@ -130,12 +129,8 @@ export async function createEvent(_prev: EventFormState, formData: FormData): Pr
       coverImageUrl: String(formData.get("coverImageUrl") ?? "").trim() || null,
       startAt,
       endAt,
-      registrationDeadline: formData.get("registrationDeadline")
-        ? new Date(String(formData.get("registrationDeadline")))
-        : null,
-      earlyBirdUntil: formData.get("earlyBirdUntil")
-        ? new Date(String(formData.get("earlyBirdUntil")))
-        : null,
+      registrationDeadline: parseChinaLocalInput(formData.get("registrationDeadline")),
+      earlyBirdUntil: parseChinaLocalInput(formData.get("earlyBirdUntil")),
       capacity: formData.get("capacity") ? Number(formData.get("capacity")) : null,
       requiresSensus: formData.get("requiresSensus") === "on",
       requiresBiodata: formData.get("requiresBiodata") === "on",
@@ -227,8 +222,8 @@ export async function updateEventInfo(id: string, formData: FormData) {
   if (locationUrl2Raw && !isValidHttpUrl(locationUrl2Raw)) {
     throw new Error("Link lokasi (2) harus diawali http:// atau https://");
   }
-  const startAt = formData.get("startAt") ? new Date(String(formData.get("startAt"))) : null;
-  const endAt = formData.get("endAt") ? new Date(String(formData.get("endAt"))) : null;
+  const startAt = parseChinaLocalInput(formData.get("startAt"));
+  const endAt = parseChinaLocalInput(formData.get("endAt"));
   if (startAt && endAt && endAt <= startAt) {
     throw new Error("Waktu selesai harus setelah waktu mulai.");
   }
@@ -242,9 +237,7 @@ export async function updateEventInfo(id: string, formData: FormData) {
   // Tanpa izin, nilai kiriman diabaikan dan jadwal lama dibiarkan.
   const scheduledPublishAt = !access.canRelease
     ? before?.scheduledPublishAt ?? null
-    : formData.get("scheduledPublishAt")
-      ? new Date(String(formData.get("scheduledPublishAt")))
-      : null;
+    : parseChinaLocalInput(formData.get("scheduledPublishAt"));
   const isPaid = formData.get("isPaid") === "on";
 
   await db
@@ -258,12 +251,8 @@ export async function updateEventInfo(id: string, formData: FormData) {
       coverImageUrl: String(formData.get("coverImageUrl") ?? "").trim() || null,
       startAt,
       endAt,
-      registrationDeadline: formData.get("registrationDeadline")
-        ? new Date(String(formData.get("registrationDeadline")))
-        : null,
-      earlyBirdUntil: formData.get("earlyBirdUntil")
-        ? new Date(String(formData.get("earlyBirdUntil")))
-        : null,
+      registrationDeadline: parseChinaLocalInput(formData.get("registrationDeadline")),
+      earlyBirdUntil: parseChinaLocalInput(formData.get("earlyBirdUntil")),
       capacity: formData.get("capacity") ? Number(formData.get("capacity")) : null,
       requiresSensus: formData.get("requiresSensus") === "on",
       requiresBiodata: formData.get("requiresBiodata") === "on",

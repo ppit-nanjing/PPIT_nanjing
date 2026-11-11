@@ -94,7 +94,7 @@ export default async function SponsorshipPage() {
                       {p.title}
                       {p.startAt && (
                         <span className="block text-label-caps text-on-surface-variant">
-                          {new Date(p.startAt).toLocaleDateString(INTL_LOCALE[locale], { dateStyle: "medium" })}
+                          {new Date(p.startAt).toLocaleDateString(INTL_LOCALE[locale], { dateStyle: "medium", timeZone: "Asia/Shanghai" })}
                         </span>
                       )}
                     </td>

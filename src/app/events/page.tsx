@@ -13,6 +13,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { getT } from "@/lib/i18n/server";
 import { INTL_LOCALE } from "@/lib/i18n/config";
+import { hasChinaClockTime } from "@/lib/datetime";
 
 export default async function EventsPage({
   searchParams,
@@ -149,11 +150,12 @@ export default async function EventsPage({
                                day: "numeric",
                                month: "long",
                                year: "numeric",
+                               timeZone: "Asia/Shanghai",
                              })}
                              {(() => {
                                const d = new Date(featured.startAt);
-                               return d.getHours() !== 0 || d.getMinutes() !== 0
-                                 ? ` · ${d.toLocaleTimeString(INTL_LOCALE[locale], { hour: "2-digit", minute: "2-digit" })}`
+                               return hasChinaClockTime(d)
+                                 ? ` · ${d.toLocaleTimeString(INTL_LOCALE[locale], { hour: "2-digit", minute: "2-digit", timeZone: "Asia/Shanghai" })}`
                                  : null;
                              })()}
                           </span>

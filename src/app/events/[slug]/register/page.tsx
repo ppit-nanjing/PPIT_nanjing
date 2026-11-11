@@ -31,6 +31,7 @@ import { EventThemeStyle } from "@/components/events/event-theme-style";
 import { registerForEvent, registerForEventPractice } from "@/app/actions/events";
 import { getT } from "@/lib/i18n/server";
 import { INTL_LOCALE } from "@/lib/i18n/config";
+import { hasChinaClockTime } from "@/lib/datetime";
 import { sortByCoverageOrder } from "@/lib/coverage-cities";
 
 export default async function EventRegisterPage({
@@ -185,7 +186,7 @@ export default async function EventRegisterPage({
   const earlyBirdActive =
     feeTier === "early_bird" && feeOptions.some((o) => hasEarlyBirdDiscount(o.amountCny, o.earlyBirdAmountCny));
   const earlyBirdUntilLabel = event.earlyBirdUntil
-    ? new Date(event.earlyBirdUntil).toLocaleDateString(INTL_LOCALE[locale], { day: "numeric", month: "long", year: "numeric" })
+    ? new Date(event.earlyBirdUntil).toLocaleDateString(INTL_LOCALE[locale], { day: "numeric", month: "long", year: "numeric", timeZone: "Asia/Shanghai" })
     : null;
 
   const steps: FlowStep[] = [];
@@ -335,9 +336,9 @@ export default async function EventRegisterPage({
 
   const start = event.startAt ? new Date(event.startAt) : null;
   const dateLabel = start
-    ? `${start.toLocaleDateString(INTL_LOCALE[locale], { dateStyle: "full" })}${
-        start.getHours() !== 0 || start.getMinutes() !== 0
-          ? ` · ${start.toLocaleTimeString(INTL_LOCALE[locale], { hour: "2-digit", minute: "2-digit" })}`
+    ? `${start.toLocaleDateString(INTL_LOCALE[locale], { dateStyle: "full", timeZone: "Asia/Shanghai" })}${
+        hasChinaClockTime(start)
+          ? ` · ${start.toLocaleTimeString(INTL_LOCALE[locale], { hour: "2-digit", minute: "2-digit", timeZone: "Asia/Shanghai" })}`
           : ""
       }`
     : null;

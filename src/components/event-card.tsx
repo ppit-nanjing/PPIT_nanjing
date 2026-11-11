@@ -5,6 +5,7 @@ import { Reveal } from "@/components/reveal";
 import { CalendarDays, MapPin, CalendarX, Clock, ArrowRight } from "lucide-react";
 import { getT } from "@/lib/i18n/server";
 import { INTL_LOCALE } from "@/lib/i18n/config";
+import { hasChinaClockTime } from "@/lib/datetime";
 
 export type EventCardEvent = {
   id: string;
@@ -34,9 +35,9 @@ export async function EventCard({
 }) {
   const { t, locale } = await getT();
   const date = event.startAt ? new Date(event.startAt) : null;
-  const hasTime = date ? date.getHours() !== 0 || date.getMinutes() !== 0 : false;
+  const hasTime = date ? hasChinaClockTime(date) : false;
   const timeLabel = date
-    ? date.toLocaleTimeString(INTL_LOCALE[locale], { hour: "2-digit", minute: "2-digit" })
+    ? date.toLocaleTimeString(INTL_LOCALE[locale], { hour: "2-digit", minute: "2-digit", timeZone: "Asia/Shanghai" })
     : "";
 
   return (
@@ -93,6 +94,7 @@ export async function EventCard({
                   day: "numeric",
                   month: "short",
                   year: "numeric",
+                  timeZone: "Asia/Shanghai",
                 })}
                 {hasTime && (
                   <>
