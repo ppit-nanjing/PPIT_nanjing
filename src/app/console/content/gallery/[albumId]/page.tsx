@@ -35,7 +35,7 @@ export default async function ConsoleAlbumDetailPage({ params }: { params: Promi
   const photos = await db.select().from(galleryPhotos).where(eq(galleryPhotos.albumId, albumId));
 
   return (
-    <div className="px-4 py-6 sm:px-6 lg:px-8 lg:py-10 max-w-3xl">
+    <div className="mx-auto w-full max-w-[var(--container-max)] px-4 py-6 sm:px-6 lg:px-8 lg:py-10">
       <FlashToast />
       <Link
         href={backHref}
@@ -56,57 +56,60 @@ export default async function ConsoleAlbumDetailPage({ params }: { params: Promi
         </ConfirmButton>
       </div>
 
-      <CollapsibleSection title="Detail Album" defaultOpen>
-        <form action={updateGalleryAlbum.bind(null, albumId)} className="flex flex-col gap-6 mb-10">
-          <label className="flex flex-col gap-1">
-            <span className="text-label-caps uppercase tracking-wide text-on-surface-variant">Judul Album</span>
-            <input
-              name="title"
-              required
-              defaultValue={album.title}
-              className="bg-soft-gray rounded-md p-3 text-body-md"
+      {/* Layar lebar: detail dan tautan berdampingan, foto memakai lebar penuh di bawahnya. */}
+      <div className="mb-6 grid grid-cols-1 gap-6 lg:grid-cols-2 lg:items-start">
+        <CollapsibleSection title="Detail Album" defaultOpen>
+          <form action={updateGalleryAlbum.bind(null, albumId)} className="flex flex-col gap-6">
+            <label className="flex flex-col gap-1">
+              <span className="text-label-caps uppercase tracking-wide text-on-surface-variant">Judul Album</span>
+              <input
+                name="title"
+                required
+                defaultValue={album.title}
+                className="bg-soft-gray rounded-md p-3 text-body-md"
+              />
+            </label>
+            <ImageUploadCropper
+              name="coverImageUrl"
+              folder="album"
+              label="Foto Sampul (opsional)"
+              defaultValue={album.coverImageUrl ?? ""}
+              aspect={16 / 9}
+              hint="Ideal 1920 × 1080 px (16:9) — gambar di-crop & dikompres otomatis."
             />
-          </label>
-          <ImageUploadCropper
-            name="coverImageUrl"
-            folder="album"
-            label="Foto Sampul (opsional)"
-            defaultValue={album.coverImageUrl ?? ""}
-            aspect={16 / 9}
-            hint="Ideal 1920 × 1080 px (16:9) — gambar di-crop & dikompres otomatis."
-          />
-          <SubmitButton
-            successMessage="Detail album tersimpan."
-            className="self-start bg-primary-container text-on-primary text-label-caps uppercase tracking-wide px-6 py-3 rounded-md hover:bg-primary transition-colors"
-          >
-            Simpan Perubahan
-          </SubmitButton>
-        </form>
-      </CollapsibleSection>
+            <SubmitButton
+              successMessage="Detail album tersimpan."
+              className="self-start bg-primary-container text-on-primary text-label-caps uppercase tracking-wide px-6 py-3 rounded-md hover:bg-primary transition-colors"
+            >
+              Simpan Perubahan
+            </SubmitButton>
+          </form>
+        </CollapsibleSection>
 
-      <CollapsibleSection title="Tautan Album Lengkap" defaultOpen>
-        <form action={setAlbumDriveUrl.bind(null, albumId)} className="flex flex-col gap-3 sm:flex-row sm:items-end mb-10">
-          <label className="flex-1 flex flex-col gap-1">
-            <span className="text-label-caps uppercase tracking-wide text-on-surface-variant">Tautan album lengkap</span>
-            <input
-              name="driveUrl"
-              type="url"
-              defaultValue={album.driveUrl ?? ""}
-              placeholder="https://…"
-              className="bg-soft-gray rounded-md p-3 text-body-md"
-            />
-          <span className="text-body-sm text-on-surface-variant">
-              Pengunjung mengambil foto lengkap lewat tautan ini. Pastikan bisa dibuka dari Tiongkok: Google Drive/Photos sering terblokir tanpa VPN.
-            </span>
-          </label>
-          <SubmitButton
-            successMessage="Tautan album tersimpan."
-            className="bg-primary-container text-on-primary text-label-caps uppercase tracking-wide px-5 py-3 rounded-md hover:bg-primary transition-colors shrink-0"
-          >
-            Simpan Link
-          </SubmitButton>
-        </form>
-      </CollapsibleSection>
+        <CollapsibleSection title="Tautan Album Lengkap" defaultOpen>
+          <form action={setAlbumDriveUrl.bind(null, albumId)} className="flex flex-col gap-3 sm:flex-row sm:items-end">
+            <label className="flex-1 flex flex-col gap-1">
+              <span className="text-label-caps uppercase tracking-wide text-on-surface-variant">Tautan album lengkap</span>
+              <input
+                name="driveUrl"
+                type="url"
+                defaultValue={album.driveUrl ?? ""}
+                placeholder="https://…"
+                className="bg-soft-gray rounded-md p-3 text-body-md"
+              />
+            <span className="text-body-sm text-on-surface-variant">
+                Pengunjung mengambil foto lengkap lewat tautan ini. Pastikan bisa dibuka dari Tiongkok: Google Drive/Photos sering terblokir tanpa VPN.
+              </span>
+            </label>
+            <SubmitButton
+              successMessage="Tautan album tersimpan."
+              className="bg-primary-container text-on-primary text-label-caps uppercase tracking-wide px-5 py-3 rounded-md hover:bg-primary transition-colors shrink-0"
+            >
+              Simpan Link
+            </SubmitButton>
+          </form>
+        </CollapsibleSection>
+      </div>
 
       <CollapsibleSection title="Galeri Album">
         <MultiPhotoUpload albumId={albumId} />

@@ -11,7 +11,7 @@ export default async function NewGalleryAlbumPage() {
   await requireModuleAccess("content");
 
   return (
-    <div className="px-4 py-6 sm:px-6 lg:px-8 lg:py-10 max-w-3xl">
+    <div className="mx-auto w-full max-w-[var(--container-max)] px-4 py-6 sm:px-6 lg:px-8 lg:py-10">
       <Link
         href="/console/content?tab=galeri"
         className="inline-flex items-center gap-2 text-label-caps uppercase tracking-wide text-on-surface-variant hover:text-on-background mb-4"

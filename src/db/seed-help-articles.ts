@@ -181,7 +181,7 @@ Halaman Jawaban punya tombol Ekspor CSV — satu baris per pendaftar, satu kolom
     content: `Halaman Konten punya dua tab: Berita dan Galeri. Bentuknya sama dengan daftar Kegiatan.
 
 Berita
-- Tombol "Tulis Berita" (kanan atas) membuka form berita baru. Judul wajib; sampul, kategori, dan isi opsional. Di bawah isi berita ada tombol "Minta saran AI" untuk mengecek judul dan isi.
+- Tombol "Tulis Berita" (kanan atas) membuka form berita baru. Judul wajib; sampul, kategori, dan isi opsional. Di bawah isi berita ada dua bantuan AI: "Perbaiki teks pilihan" (blok teksnya dulu) dan "Minta saran AI" untuk mengecek judul dan isi.
 - Centang "Publikasikan sekarang" untuk langsung terbit. Kalau tidak dicentang, berita tersimpan sebagai draf.
 - Daftar dibagi menjadi Draf, Terbaru (berita terakhir yang terbit, tampil besar), dan Sudah Terbit. Klik judul untuk mengedit.
 - Tombol "⋯" di tiap kartu: Buka Halaman Publik, Arsipkan, dan Hapus Permanen. Arsipkan menyembunyikan berita dari situs tapi tetap tersimpan; berita yang diarsipkan ada di bagian Arsip paling bawah dan bisa dipulihkan ke draf. Hapus Permanen tidak bisa dibatalkan.

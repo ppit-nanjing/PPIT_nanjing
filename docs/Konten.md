@@ -15,6 +15,8 @@ Dulu halaman ini berisi dua bagian lipat: daftar judul berita dengan tombol Arsi
 
 Tidak ada perubahan skema. Server Action tidak berubah, kecuali tujuan redirect `deleteGalleryAlbum` yang sekarang `?tab=galeri`.
 
+Halaman di dalamnya (tulis/edit berita, album baru, detail album) sekarang selebar halaman detail Kegiatan (`--container-max`, di tengah), bukan lagi 768px menempel di kiri. Form berita memakai dua kolom di layar lebar: editor di kolom utama, sampul dan kategori di kolom samping. Di halaman album, Detail Album dan Tautan Album Lengkap berdampingan, dan galeri foto memakai lebar penuh.
+
 ## Berkas
 
 | Berkas | Isi |
