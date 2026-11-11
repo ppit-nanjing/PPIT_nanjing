@@ -152,22 +152,42 @@ export function RatioMeter({ value, max, label, startLabel, endLabel }: {
   );
 }
 
-export type ListRow = { key: string; primary: string; secondary?: string | null; trailing?: string | null; tone?: "alarm" | "accent" };
+export type ListRow = {
+  key: string;
+  primary: string;
+  secondary?: string | null;
+  trailing?: string | null;
+  tone?: "alarm" | "accent";
+  /** Gambar asli baris itu (foto barang, sampul berita); `null` = objek ini belum punya gambar. */
+  image?: string | null;
+};
 
-/** Daftar pendek berisi nama di kiri dan satu keterangan di kanan. */
+/** Gambar kecil sebuah objek. Tanpa gambar slotnya tetap ada (kosong), supaya teks sebaris rata. */
+function Thumb({ src }: { src: string | null }) {
+  return (
+    <span aria-hidden="true" className={`relative h-10 w-10 shrink-0 overflow-hidden rounded ${src ? "" : "bg-surface-container-low"}`}>
+      {src && <Image src={src} alt="" fill sizes="40px" className="object-cover" />}
+    </span>
+  );
+}
+
+/** Daftar pendek berisi nama di kiri dan satu keterangan di kanan, dengan gambar kecil bila ada. */
 export function ShortList({ rows, empty }: { rows: ListRow[]; empty: string }) {
   if (rows.length === 0) return <p className="text-body-sm text-on-surface-variant">{empty}</p>;
+  // Slot gambar hanya kalau setidaknya satu baris punya gambar asli.
+  const withPictures = rows.some((row) => row.image);
   return (
     <ul className="flex flex-col">
       {rows.map((row) => (
-        <li key={row.key} className="flex items-baseline justify-between gap-3 border-t border-outline-variant/70 py-2 first:border-t-0 first:pt-0">
-          <span className="min-w-0">
+        <li key={row.key} className="flex items-center gap-3 border-t border-outline-variant/70 py-2 first:border-t-0 first:pt-0">
+          {withPictures && <Thumb src={row.image ?? null} />}
+          <span className="min-w-0 flex-1">
             <span className="block truncate text-body-sm text-on-background">{row.primary}</span>
             {row.secondary && <span className="block truncate text-body-sm text-on-surface-variant">{row.secondary}</span>}
           </span>
           {row.trailing && (
             <span
-              className={`shrink-0 whitespace-nowrap text-body-sm tabular-nums ${
+              className={`shrink-0 self-start whitespace-nowrap text-body-sm tabular-nums ${
                 row.tone === "alarm" ? "text-error" : row.tone === "accent" ? "text-gold-ink" : "text-on-surface-variant"
               }`}
             >
@@ -208,15 +228,16 @@ export type AgendaEvent = {
   id: string;
   title: string;
   coverImageUrl: string | null;
+  location: string | null;
   when: string;
   countdown: string | null;
+  live: boolean;
   registered: number;
   capacity: number | null;
 };
 
-/** Acara berikutnya, seperti di halaman Kegiatan: sampul, waktu, dan kuota. Tiap baris membuka acaranya. */
-export function EventAgenda({ events, empty }: { events: AgendaEvent[]; empty: string }) {
-  if (events.length === 0) return <p className="text-body-sm text-on-surface-variant">{empty}</p>;
+/** Baris acara: sampul, waktu, dan kuota. Tiap baris membuka acaranya. */
+function EventRows({ events }: { events: AgendaEvent[] }) {
   return (
     <ul className="relative z-10 -mx-2 flex flex-col">
       {events.map((ev) => (
@@ -225,9 +246,9 @@ export function EventAgenda({ events, empty }: { events: AgendaEvent[]; empty: s
             href={`/console/events/${ev.id}`}
             className="flex items-center gap-4 rounded-md px-2 py-2 transition-colors hover:bg-surface-container-low focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-container motion-reduce:transition-none"
           >
-            <span className="relative h-12 w-20 shrink-0 overflow-hidden rounded bg-surface-container-high" aria-hidden="true">
+            <span className="relative h-11 w-16 shrink-0 overflow-hidden rounded bg-surface-container-high" aria-hidden="true">
               {ev.coverImageUrl ? (
-                <Image src={ev.coverImageUrl} alt="" fill sizes="80px" className="object-cover" />
+                <Image src={ev.coverImageUrl} alt="" fill sizes="64px" className="object-cover" />
               ) : (
                 <span className="flex h-full w-full items-center justify-center text-headline-sm text-outline">
                   {ev.title.charAt(0)}
@@ -235,7 +256,7 @@ export function EventAgenda({ events, empty }: { events: AgendaEvent[]; empty: s
               )}
             </span>
             <span className="min-w-0 flex-1">
-              <span className="block truncate text-body-md text-on-background">{ev.title}</span>
+              <span className="block truncate text-body-sm text-on-background">{ev.title}</span>
               <span className="block text-body-sm text-on-surface-variant">
                 {ev.when}
                 {ev.countdown && <span className="text-gold-ink"> · {ev.countdown}</span>}
@@ -246,7 +267,7 @@ export function EventAgenda({ events, empty }: { events: AgendaEvent[]; empty: s
                 </span>
               </span>
             </span>
-            <span className="hidden w-32 shrink-0 flex-col items-end gap-1.5 sm:flex">
+            <span className="hidden w-24 shrink-0 flex-col items-end gap-1.5 sm:flex">
               <span className="text-body-sm tabular-nums text-on-background">
                 {ev.registered}
                 <span className="text-on-surface-variant">{ev.capacity != null ? ` / ${ev.capacity}` : " terdaftar"}</span>
@@ -260,21 +281,104 @@ export function EventAgenda({ events, empty }: { events: AgendaEvent[]; empty: s
   );
 }
 
-// Grid 6 kolom di layar lebar, 2 di tablet. Kartu lebar (Kegiatan) memakai 4 kolom dan berbagi
-// baris dengan kartu pertama berikutnya; sisanya bertiga per baris, dan sisa pembagiannya
-// berbagi rata berdua, supaya tidak ada sel kosong di ujung baris.
-export function dashboardSpans(hasWide: boolean, smallCount: number): { wide: string; small: string[] } {
+/** Satu bagian berjudul di kartu Kegiatan; pemanggil tidak merendernya kalau kosong. */
+function StageSection({ title, children }: { title: string; children: ReactNode }) {
+  return (
+    <div className="flex min-w-0 flex-col gap-2">
+      <p className="text-body-sm font-semibold text-on-background">{title}</p>
+      {children}
+    </div>
+  );
+}
+
+/**
+ * Isi kartu Kegiatan: acara yang paling dekat (yang sedang berlangsung lebih dulu) tampil besar
+ * dengan sampulnya, lalu sisanya dipisah per tahap. Bagian yang kosong tidak tampil.
+ */
+export function EventStage({ events, preparing, empty }: { events: AgendaEvent[]; preparing: ListRow[]; empty: string }) {
+  const [lead, ...others] = [...events.filter((e) => e.live), ...events.filter((e) => !e.live)];
+  const live = others.filter((e) => e.live);
+  const upcoming = others.filter((e) => !e.live);
+  const hasSide = live.length > 0 || upcoming.length > 0 || preparing.length > 0;
+  const leadSpan = hasSide ? "xl:col-span-8" : "xl:col-span-12";
+
+  return (
+    <div className="grid grid-cols-1 gap-6 xl:grid-cols-12">
+      {lead ? (
+        <Link
+          href={`/console/events/${lead.id}`}
+          className={`relative z-10 -m-2 grid min-w-0 gap-4 rounded-md p-2 transition-colors hover:bg-surface-container-low focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-container motion-reduce:transition-none sm:grid-cols-2 ${leadSpan}`}
+        >
+          <span className="relative aspect-[16/10] overflow-hidden rounded bg-surface-container-high" aria-hidden="true">
+            {lead.coverImageUrl ? (
+              <Image src={lead.coverImageUrl} alt="" fill sizes="(max-width: 640px) 100vw, 33vw" className="object-cover" />
+            ) : (
+              <span className="flex h-full w-full items-center justify-center text-display-hero-mobile text-outline">
+                {lead.title.charAt(0)}
+              </span>
+            )}
+          </span>
+          <span className="flex min-w-0 flex-col justify-center gap-2">
+            <span className={`text-body-sm font-semibold ${lead.live ? "text-gold-ink" : "text-primary-container"}`}>
+              {lead.live ? "Sedang berlangsung" : (lead.countdown ?? "Akan datang")}
+            </span>
+            <span className="text-headline-md text-on-background">{lead.title}</span>
+            <span className="text-body-sm text-on-surface-variant">
+              {lead.when}
+              {lead.location && ` · ${lead.location}`}
+            </span>
+            <span className="mt-2 flex flex-col gap-1.5">
+              <span className="text-body-sm tabular-nums text-on-background">
+                {lead.registered}
+                <span className="text-on-surface-variant">
+                  {lead.capacity != null ? ` dari ${lead.capacity} kursi terisi` : " terdaftar"}
+                </span>
+              </span>
+              <EventCapacityMeter registered={lead.registered} capacity={lead.capacity} />
+            </span>
+          </span>
+        </Link>
+      ) : (
+        <p className={`text-body-sm text-on-surface-variant ${leadSpan}`}>{empty}</p>
+      )}
+      {hasSide && (
+        <div className="flex min-w-0 flex-col gap-5 xl:col-span-4">
+          {live.length > 0 && (
+            <StageSection title="Sedang berlangsung">
+              <EventRows events={live} />
+            </StageSection>
+          )}
+          {upcoming.length > 0 && (
+            <StageSection title="Mendatang">
+              <EventRows events={upcoming} />
+            </StageSection>
+          )}
+          {preparing.length > 0 && (
+            <StageSection title="Sedang disiapkan">
+              <ShortList empty="" rows={preparing} />
+            </StageSection>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// Grid 6 kolom di layar lebar, 2 di tablet. Kartu Kegiatan (WIDE_CARD) memenuhi barisnya sendiri;
+// kartu lain bertiga per baris, dan sisa pembagiannya berbagi rata berdua, supaya tidak ada sel
+// kosong di ujung baris.
+export const WIDE_CARD = "md:col-span-2 xl:col-span-6";
+
+export function dashboardSpans(smallCount: number): string[] {
   const xl: string[] = Array.from({ length: smallCount }, () => "xl:col-span-2");
-  const rest = hasWide ? Math.max(smallCount - 1, 0) : smallCount;
   // Sisa satu: empat kartu terakhir jadi dua baris berdua. Hanya kalau memang satu kartu,
   // kartu itu memakai lebar penuh.
-  if (rest % 3 === 1 && rest >= 4) for (let i = smallCount - 4; i < smallCount; i++) xl[i] = "xl:col-span-3";
-  else if (rest % 3 === 1) xl[smallCount - 1] = "xl:col-span-6";
-  if (rest % 3 === 2) {
+  if (smallCount % 3 === 1 && smallCount >= 4) for (let i = smallCount - 4; i < smallCount; i++) xl[i] = "xl:col-span-3";
+  else if (smallCount % 3 === 1) xl[smallCount - 1] = "xl:col-span-6";
+  if (smallCount % 3 === 2) {
     xl[smallCount - 2] = "xl:col-span-3";
     xl[smallCount - 1] = "xl:col-span-3";
   }
-  // Tablet: kartu lebar memenuhi barisnya, kartu kecil berpasangan; yang ganjil terakhir melebar.
-  const small = xl.map((cls, i) => (smallCount % 2 === 1 && i === smallCount - 1 ? `md:col-span-2 ${cls}` : cls));
-  return { wide: smallCount === 0 ? "md:col-span-2 xl:col-span-6" : "md:col-span-2 xl:col-span-4", small };
+  // Tablet: kartu berpasangan; yang ganjil terakhir melebar.
+  return xl.map((cls, i) => (smallCount % 2 === 1 && i === smallCount - 1 ? `md:col-span-2 ${cls}` : cls));
 }

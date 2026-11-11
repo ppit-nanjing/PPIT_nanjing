@@ -25,10 +25,11 @@ import {
   AttentionList,
   DashboardCard,
   DivisionBars,
-  EventAgenda,
+  EventStage,
   FactRows,
   RatioMeter,
   ShortList,
+  WIDE_CARD,
   dashboardSpans,
   type AgendaEvent,
   type AttentionItem,
@@ -311,6 +312,7 @@ export default async function ConsoleDashboardPage({ searchParams }: { searchPar
             id: events.id,
             title: events.title,
             coverImageUrl: events.coverImageUrl,
+            location: events.location,
             status: events.status,
             startAt: events.startAt,
             endAt: events.endAt,
@@ -332,8 +334,8 @@ export default async function ConsoleDashboardPage({ searchParams }: { searchPar
           .orderBy(sql`${events.startAt} asc nulls last`)
           .limit(4),
       ),
-      // Acara yang belum tayang, untuk mengisi kartu Kegiatan kalau acara mendatangnya sedikit.
-      // Bagi full admin hanya yang sudah disetujui, sama dengan hitungan draf.
+      // Acara yang belum tayang, bagian "Sedang disiapkan" di kartu Kegiatan. Bagi full admin
+      // hanya yang sudah disetujui, sama dengan hitungan draf.
       whenAllowed(agendaIds !== undefined && (agendaIds === null || agendaIds.length > 0), () =>
         db
           .select({
@@ -360,6 +362,7 @@ export default async function ConsoleDashboardPage({ searchParams }: { searchPar
           .select({
             id: borrowRequests.id,
             itemName: inventoryItems.name,
+            itemImage: inventoryItems.imageUrl,
             borrowerName: borrowRequests.borrowerName,
             userName: users.name,
             status: borrowRequests.status,
@@ -400,7 +403,12 @@ export default async function ConsoleDashboardPage({ searchParams }: { searchPar
       ),
       whenAllowed(access.content, () =>
         db
-          .select({ id: newsArticles.id, title: newsArticles.title, publishedAt: newsArticles.publishedAt })
+          .select({
+            id: newsArticles.id,
+            title: newsArticles.title,
+            coverImageUrl: newsArticles.coverImageUrl,
+            publishedAt: newsArticles.publishedAt,
+          })
           .from(newsArticles)
           .where(eq(newsArticles.status, "published"))
           .orderBy(sql`${newsArticles.publishedAt} desc nulls last`)
@@ -412,12 +420,13 @@ export default async function ConsoleDashboardPage({ searchParams }: { searchPar
             id: jobPostings.id,
             title: jobPostings.title,
             company: jobPostings.company,
+            imageUrl: jobPostings.imageUrl,
             deadline: jobPostings.applicationDeadline,
           })
           .from(jobPostings)
           .where(eq(jobPostings.status, "open"))
           .orderBy(desc(jobPostings.createdAt))
-          .limit(2),
+          .limit(3),
       ),
       whenAllowed(access.feedback, () =>
         db
@@ -460,15 +469,15 @@ export default async function ConsoleDashboardPage({ searchParams }: { searchPar
       id: ev.id,
       title: ev.title,
       coverImageUrl: ev.coverImageUrl,
+      location: ev.location,
       when: ev.startAt ? [eventDayLabel(ev.startAt), time].filter(Boolean).join(" · ") : "Tanggal belum diisi",
-      countdown: stage === "berlangsung" ? "Sedang berlangsung" : ev.startAt ? eventCountdownLabel(ev.startAt, now) : null,
+      countdown: stage === "berlangsung" ? null : ev.startAt ? eventCountdownLabel(ev.startAt, now) : null,
+      live: stage === "berlangsung",
       registered: ev.registered,
       capacity: ev.capacity,
     };
   });
   const upcomingTotal = agendaRows[0]?.total ?? 0;
-  // Kartu Kegiatan memuat paling banyak empat baris acara; sisanya diisi yang sedang disiapkan.
-  const preparing = preparingRows.slice(0, Math.max(0, 4 - agenda.length));
 
   const eventsNote = eventCounts
     ? [
@@ -492,16 +501,11 @@ export default async function ConsoleDashboardPage({ searchParams }: { searchPar
             figureLabel="acara mendatang"
             note={eventsNote}
           >
-            <EventAgenda events={agenda} empty="Belum ada acara mendatang yang sudah diterbitkan." />
-            {preparing.length > 0 && (
-              <div className="flex flex-col gap-2">
-                <p className="text-body-sm text-on-surface-variant">Sedang disiapkan</p>
-                <ShortList
-                  empty=""
-                  rows={preparing.map((ev) => ({ key: ev.id, primary: ev.title, trailing: eventPreparationNote(ev) }))}
-                />
-              </div>
-            )}
+            <EventStage
+              events={agenda}
+              preparing={preparingRows.map((ev) => ({ key: ev.id, primary: ev.title, trailing: eventPreparationNote(ev) }))}
+              empty="Belum ada acara mendatang yang sudah diterbitkan."
+            />
           </DashboardCard>
         );
 
@@ -541,6 +545,7 @@ export default async function ConsoleDashboardPage({ searchParams }: { searchPar
             rows={activeLoans.map((loan) => ({
               key: loan.id,
               primary: loan.itemName,
+              image: loan.itemImage,
               secondary: loan.borrowerName ?? loan.userName,
               trailing:
                 loan.status === "overdue" ? "Terlambat" : loan.requestedTo ? `s.d. ${eventDayLabel(loan.requestedTo)}` : null,
@@ -554,7 +559,7 @@ export default async function ConsoleDashboardPage({ searchParams }: { searchPar
 
   if (organization) {
     const ordered = inTreeOrder(divisionRows);
-    const shown = ordered.slice(0, 4);
+    const shown = ordered.slice(0, 5);
     smallCards.push({
       key: "pengurus",
       node: (span) => (
@@ -657,6 +662,7 @@ export default async function ConsoleDashboardPage({ searchParams }: { searchPar
             rows={latestNews.map((n) => ({
               key: n.id,
               primary: n.title,
+              image: n.coverImageUrl,
               trailing: n.publishedAt ? eventDayLabel(n.publishedAt) : null,
             }))}
           />
@@ -685,6 +691,7 @@ export default async function ConsoleDashboardPage({ searchParams }: { searchPar
             rows={openJobs.map((j) => ({
               key: j.id,
               primary: j.title,
+              image: j.imageUrl,
               secondary: j.company,
               trailing: j.deadline ? `s.d. ${eventDayLabel(j.deadline)}` : null,
             }))}
@@ -773,7 +780,7 @@ export default async function ConsoleDashboardPage({ searchParams }: { searchPar
     });
   }
 
-  const spans = dashboardSpans(eventsCard !== null, smallCards.length);
+  const spans = dashboardSpans(smallCards.length);
 
   // Dipakai untuk semua akun: tanpa query (murni dari akses akun); kartu disembunyikan lewat cookie.
   const start = buildStartGuide({
@@ -824,8 +831,8 @@ export default async function ConsoleDashboardPage({ searchParams }: { searchPar
 
       {eventsCard || smallCards.length > 0 ? (
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-6">
-          {eventsCard?.(spans.wide)}
-          {smallCards.map((card, i) => card.node(spans.small[i]))}
+          {eventsCard?.(WIDE_CARD)}
+          {smallCards.map((card, i) => card.node(spans[i]))}
         </div>
       ) : (
         <p className="rounded-lg border border-outline-variant bg-surface-container-lowest px-5 py-4 text-body-md text-on-surface-variant">

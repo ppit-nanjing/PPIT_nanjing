@@ -37,27 +37,27 @@ Masukan Vincent: dashboard berisi **cuplikan per modul** yang bisa diklik, bukan
 
 1. **Judul** dan satu kalimat: tanggal hari ini dan jumlah hal yang menunggu tindakan.
 2. **Perlu Tindakan**: antrean yang menunggu keputusan seseorang (acara menunggu persetujuan BPH, peminjaman terlambat, lamaran, masukan baru, pendaftaran menunggu, pengajuan peminjaman, kontribusi, pengadaan). Setiap baris membuka modulnya. Draf tidak masuk sini; jumlahnya ada di kartu modulnya.
-3. **Kartu modul** dari `src/components/console/dashboard-cards.tsx`. Seluruh kartu adalah tautan ke modulnya; baris acara di kartu Kegiatan membuka acaranya sendiri. Urutan: Kegiatan (kartu lebar), Inventaris, Pengurus, Rekrutmen, Masukan, Konten, Lowongan, Sensus, Pengguna.
+3. **Kartu modul** dari `src/components/console/dashboard-cards.tsx`. Seluruh kartu adalah tautan ke modulnya; acara di kartu Kegiatan membuka acaranya sendiri. Baris yang objeknya punya gambar asli (foto barang, sampul berita, gambar lowongan) menampilkan gambar kecilnya; kalau tidak ada satu pun, slot gambarnya tidak dibuat. Urutan: Kegiatan (satu baris penuh), Inventaris, Pengurus, Rekrutmen, Masukan, Konten, Lowongan, Sensus, Pengguna.
 
 Isi tiap kartu dan modul yang menjadi gerbangnya (`hasModuleAccess()`); query-nya hanya dijalankan kalau pemakai memegang modul itu:
 
 | Kartu | Modul | Isi |
 | --- | --- | --- |
-| Kegiatan | `events` | Acara mendatang (hingga 4, dengan sampul dan kuota), pendaftar minggu ini dibanding minggu lalu, jumlah draf |
+| Kegiatan | `events` | Acara terdekat tampil besar dengan sampulnya (yang sedang berlangsung lebih dulu); sisanya dipisah Sedang berlangsung, Mendatang, dan Sedang disiapkan (bagian kosong tidak tampil). Juga pendaftar minggu ini dibanding minggu lalu dan jumlah draf |
 | Kegiatan Saya | tanpa `events`, tapi panitia atau boleh membuat acara | Acara yang dia buat atau ikuti (`getPersonalEventIds()`, sama dengan daftar Kegiatan) |
 | Inventaris | `inventory` | Jumlah jenis barang, unit tersedia dari total, hingga 3 peminjaman berjalan (terlambat lebih dulu) |
-| Pengurus | `organization` | Jumlah pengurus, jumlah orang per divisi (4 pertama dalam urutan Organisasi) |
+| Pengurus | `organization` | Jumlah pengurus, jumlah orang per divisi (5 pertama dalam urutan Organisasi) |
 | Rekrutmen | `membership` | Lamaran menunggu, status periode, 3 lamaran terbaru |
 | Masukan | `feedback` | Masukan baru dan totalnya, 3 masukan baru terbaru |
 | Konten | `content` (alias `gallery`) | Berita terbit, draf, album dan foto, 3 berita terbaru |
-| Lowongan | `career` | Lowongan dibuka, lamaran masuk, 2 lowongan terbaru |
+| Lowongan | `career` | Lowongan dibuka, lamaran masuk, 3 lowongan terbaru |
 | Sensus | `sensus` (bukan `sensus-verify`) | Sensus lengkap dari semua akun, yang belum lengkap, yang belum mengisi |
 | Pengguna | `users` | Jumlah akun: aktif, diundang belum masuk, nonaktif atau ditangguhkan, baru bulan ini |
 | Formulir | tanpa modul dashboard, tapi boleh membuka Formulir atau Formulir Kustom | Tautan saja |
 
 - Semua angka berasal dari satu query gabungan (`fetchDashboardCounts()`), dan cuplikan tiap kartu berjalan bersamaan dengannya dalam satu putaran.
 - Pemegang `events` yang bukan full admin hanya melihat angka dan acara yang bisa dibukanya: yang dia buat, yang divisinya jadi Divisi Penanggung Jawab, atau yang dia jadi panitianya (`getScopedEventIds()`, batas yang sama dengan `/console/events`). Full admin melihat semua acara.
-- Grid 6 kolom di layar lebar: kartu Kegiatan memakai 4 kolom, kartu lain 2 kolom, dan sisa di baris terakhir dibagi rata (`dashboardSpans()`) supaya tidak ada sel kosong. Di tablet 2 kolom, di HP 1 kolom.
+- Grid 6 kolom di layar lebar: kartu Kegiatan memenuhi barisnya sendiri, kartu lain 2 kolom, dan sisa di baris terakhir dibagi rata (`dashboardSpans()`) supaya tidak ada sel kosong. Di tablet 2 kolom, di HP 1 kolom.
 - Pengurus ranting (scope `sensus-ranting` saja) tetap dialihkan ke `/console/ranting/sensus`.
 - Menambah kartu baru: daftarkan modulnya di `DASHBOARD_MODULES`, taruh subquery angkanya di `fetchDashboardCounts()` di bawah `if (access.<modul>)`, cuplikannya di `Promise.all` lewat `whenAllowed()`, lalu render kartunya hanya kalau grup hitungannya ada. Jangan menambahkan data modul lain tanpa gate.
 
