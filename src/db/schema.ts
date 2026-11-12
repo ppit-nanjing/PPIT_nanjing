@@ -1256,9 +1256,7 @@ export const districts = pgTable("districts", {
   nameZh: text("name_zh"),
   // Auto-diisi Groq (lihat translateFields() di lib/groq.ts) - `name` distrik
   // sengaja tidak punya varian *_en (nama distrik/geografis, tidak diterjemahkan).
-  // Belum ada halaman publik yang membaca districts.description sama sekali
-  // (lihat komentar di atas), jadi ini disiapkan duluan supaya siap begitu
-  // halaman itu dibangun.
+  // Tampil di /map saat distriknya dipilih (src/components/map/district-explorer.tsx).
   description: text("description"),
   descriptionEn: text("description_en"),
   orderIndex: integer("order_index").notNull().default(0),

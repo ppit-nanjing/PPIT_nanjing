@@ -1,14 +1,28 @@
-import { eq, sql } from "drizzle-orm";
+import { Suspense } from "react";
+import { and, asc, eq, isNotNull } from "drizzle-orm";
 import Link from "next/link";
 import { db } from "@/db";
-import { places, universities } from "@/db/schema";
+import { districts, places, universities } from "@/db/schema";
 import { SiteNav } from "@/components/site-nav";
 import { SiteFooter } from "@/components/site-footer";
 import { PageHeader } from "@/components/page-header";
-import { CoverageMap } from "@/components/coverage-map";
+import { DistrictExplorer } from "@/components/map/district-explorer";
 import type { CoverageFeature } from "@/app/coverage/page";
 import geo from "@/data/nanjing-districts.geo.json";
+import { canonicalDistrict } from "@/lib/nanjing-districts";
 import { getT } from "@/lib/i18n/server";
+import type { TKey } from "@/lib/i18n/dictionaries/id";
+
+// Sama dengan CATEGORY di /places; hanya labelnya yang dipakai di sini.
+const CATEGORY_LABEL: Record<string, TKey> = {
+  tourism: "places.catTourism",
+  culture: "places.catCulture",
+  nature: "places.catNature",
+  food: "places.catFood",
+  shopping: "places.catShopping",
+  spiritual: "places.catSpiritual",
+  practical: "places.catPractical",
+};
 
 export async function generateMetadata() {
   const { t } = await getT();
@@ -16,105 +30,79 @@ export async function generateMetadata() {
 }
 
 export default async function NanjingMapPage() {
-  const { t } = await getT();
+  const { t, locale } = await getT();
+  const pick = (id: string | null, en: string | null) => (locale === "en" ? (en ?? id) : id);
   const features = (geo as unknown as { features: CoverageFeature[] }).features;
 
-  // Distrik dicocokkan lewat nama Inggris maupun Mandarin, karena admin bisa
-  // mengetik salah satunya saat menambah tempat/kampus.
-  const [placeRows, uniRows] = await Promise.all([
+  const [placeRows, uniRows, districtRows] = await Promise.all([
     db
-      .select({ district: places.district, n: sql<number>`count(*)::int` })
+      .select()
       .from(places)
-      .where(eq(places.published, true))
-      .groupBy(places.district),
+      .where(and(eq(places.published, true), isNotNull(places.district)))
+      .orderBy(asc(places.name)),
     db
-      .select({ district: universities.district, n: sql<number>`count(*)::int` })
+      .select()
       .from(universities)
-      .where(eq(universities.published, true))
-      .groupBy(universities.district),
+      .where(and(eq(universities.published, true), isNotNull(universities.district)))
+      .orderBy(asc(universities.orderIndex), asc(universities.name)),
+    db.select().from(districts),
   ]);
 
-  const tally = (rows: { district: string | null; n: number }[]) => {
-    const m = new Map<string, number>();
-    for (const r of rows) {
-      if (!r.district) continue;
-      const key = r.district.trim().toLowerCase();
-      m.set(key, (m.get(key) ?? 0) + r.n);
-    }
-    return m;
-  };
-  const placeBy = tally(placeRows);
-  const uniBy = tally(uniRows);
+  // Distrik dicocokkan lewat nama Inggris maupun Mandarin (canonicalDistrict), karena
+  // baris lama diketik bebas. Yang tidak cocok dengan 11 distrik tidak ikut tampil.
+  const placeCards = placeRows.flatMap((p) => {
+    const district = canonicalDistrict(p.district);
+    if (!district) return [];
+    return [
+      {
+        id: p.id,
+        category: p.category,
+        categoryLabel: CATEGORY_LABEL[p.category] ? t(CATEGORY_LABEL[p.category]) : p.category,
+        district,
+        name: pick(p.name, p.nameEn) ?? p.name,
+        nameZh: p.nameZh,
+        description: pick(p.description, p.descriptionEn),
+        metroStation: p.address,
+        addressZh: p.addressZh,
+        imageUrl: p.imageUrl,
+        mapUrl: p.mapUrl,
+      },
+    ];
+  });
 
-  const countFor = (f: CoverageFeature) => {
-    const en = f.properties.label.toLowerCase();
-    const zh = f.properties.zh.toLowerCase();
-    const zhShort = f.properties.zh.replace(/区$/, "").toLowerCase();
-    const get = (m: Map<string, number>) => (m.get(en) ?? 0) + (m.get(zh) ?? 0) + (m.get(zhShort) ?? 0);
-    return get(placeBy) + get(uniBy);
-  };
+  const campuses = uniRows.flatMap((u) => {
+    const district = canonicalDistrict(u.district);
+    if (!district) return [];
+    return [
+      { id: u.id, district, name: u.name, nameZh: u.nameZh, abbreviation: u.abbreviation, websiteUrl: u.websiteUrl },
+    ];
+  });
 
-  const counts = Object.fromEntries(
-    features.map((f) => {
-      const n = countFor(f);
-      return [f.properties.id, n > 0 ? n : null];
-    }),
-  );
-  const totalTagged = Object.values(counts).reduce<number>((s, n) => s + (n ?? 0), 0);
+  const descriptions: Record<string, string> = {};
+  for (const d of districtRows) {
+    const key = canonicalDistrict(d.name);
+    const text = pick(d.description, d.descriptionEn);
+    if (key && text) descriptions[key] = text;
+  }
 
   return (
     <div className="min-h-screen bg-background text-on-background">
       <SiteNav />
 
-      <PageHeader
-        eyebrow={t("explore.kicker")}
-        title={t("njmap.title")}
-        intro={
-          <>
-            {t("njmap.lead", { n: features.length })}{" "}
-            {totalTagged > 0 ? t("njmap.tagged", { n: totalTagged }) : t("njmap.untagged")}
-          </>
-        }
-      />
+      <PageHeader eyebrow={t("explore.kicker")} title={t("njmap.title")} intro={t("njmap.lead", { n: features.length })} />
 
-      <div className="h-10" aria-hidden="true" />
+      <div className="h-12" aria-hidden="true" />
 
       <main className="max-w-[var(--container-max)] mx-auto px-[var(--spacing-container-padding)] pb-20">
-        {/* Nanjing is tall and narrow, so the map is a slim column. Pairing it
-            with the district list fills the row instead of leaving dead space. */}
-        <div className="grid grid-cols-1 lg:grid-cols-[26rem_minmax(0,1fr)] gap-6 items-start">
-          <CoverageMap
-            features={features}
-            counts={counts}
-            ariaLabel={t("njmap.mapAria", { n: features.length })}
-            hint={t("njmap.hint")}
-            searchLabel={t("njmap.searchLabel")}
-            unit={t("njmap.unit")}
-            emptyUnit={t("njmap.emptyUnit")}
-          />
-
-          <ul className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-            {features.map((f) => (
-              <li
-                key={f.properties.id}
-                className="flex items-baseline justify-between gap-3 bg-surface-container-lowest border border-outline-variant rounded-xl px-4 py-3"
-              >
-                <span className="min-w-0">
-                  <span className="block text-body-md text-on-background">{f.properties.label}</span>
-                  <span className="block text-label-caps text-on-surface-variant">{f.properties.zh}</span>
-                </span>
-                <span className="text-label-caps uppercase tracking-wide text-on-surface-variant shrink-0">
-                  {counts[f.properties.id] ?? "—"}
-                </span>
-              </li>
-            ))}
-          </ul>
-        </div>
+        {/* useSearchParams di dalamnya butuh batas Suspense bila rute ini suatu saat diprerender. */}
+        <Suspense>
+          <DistrictExplorer features={features} descriptions={descriptions} campuses={campuses} places={placeCards} />
+        </Suspense>
 
         {/* Tiga peta di situs ini memang berbeda cakupan - tautkan supaya tidak tertukar. */}
-        <div className="mt-10 bg-surface-container-low border border-outline-variant rounded-xl p-5">
-          <p className="text-label-caps uppercase tracking-wide text-on-surface-variant mb-2">{t("njmap.otherMaps")}</p>
-          <ul className="flex flex-col sm:flex-row gap-4 text-body-md">
+        <div className="mt-20 border-t border-outline-variant pt-6">
+          <p className="text-label-caps uppercase text-on-surface-variant mb-2">{t("njmap.otherMaps")}</p>
+          <ul className="flex flex-col sm:flex-row gap-x-10 gap-y-2 text-body-md">
             <li>
               <Link href="/coverage" className="text-primary-container hover:underline">
                 {t("coverage.title")}

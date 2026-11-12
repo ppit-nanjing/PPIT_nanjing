@@ -54,6 +54,7 @@ function refresh() {
   revalidatePath("/catalogue");
   revalidatePath("/catalogue/sponsorship");
   revalidatePath("/coverage");
+  revalidatePath("/map");
 }
 
 // ---------- reads ----------

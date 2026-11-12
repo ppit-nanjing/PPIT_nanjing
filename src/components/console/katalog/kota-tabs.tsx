@@ -284,10 +284,9 @@ export function DistrictsTab({ districts, places, universities }: { districts: D
 
   return (
     <div className="flex flex-col gap-5">
-      {/* Tabel districts belum dibaca halaman publik mana pun (dicek 2026-11); jangan menjanjikan tempat tampilnya. */}
       <TabIntro href="/map" hrefLabel="Lihat Peta Nanjing">
-        Teks pengantar tiap distrik Nanjing. Teks ini belum ditampilkan di situs publik; hitungan tempat dan kampus di tiap
-        baris adalah angka yang muncul di Peta Nanjing.
+        Teks pengantar tiap distrik Nanjing. Teks ini tampil di Peta Nanjing saat distriknya dipilih; hitungan tempat dan
+        kampus di tiap baris adalah angka yang muncul di peta itu.
       </TabIntro>
       <AddPanel label="Tambah Distrik">
         <DistrictForm />

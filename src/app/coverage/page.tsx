@@ -4,8 +4,9 @@ import { coverageCities } from "@/db/schema";
 import { SiteNav } from "@/components/site-nav";
 import { SiteFooter } from "@/components/site-footer";
 import { PageHeader } from "@/components/page-header";
-import { CoverageMap } from "@/components/coverage-map";
+import { CoverageExplorer } from "@/components/map/coverage-explorer";
 import geo from "@/data/nanjing-coverage.geo.json";
+import districtGeo from "@/data/nanjing-districts.geo.json";
 import { sortByCoverageOrder } from "@/lib/coverage-cities";
 import { getT } from "@/lib/i18n/server";
 
@@ -51,47 +52,22 @@ export default async function CoveragePage() {
         }
       />
 
-      <div className="h-10" aria-hidden="true" />
+      <div className="h-12" aria-hidden="true" />
 
       <main className="max-w-[var(--container-max)] mx-auto px-[var(--spacing-container-padding)] pb-20">
-        <CoverageMap
-          ariaLabel={t("coverage.mapAria", { n: features.length })}
+        <CoverageExplorer
           features={features}
-          counts={Object.fromEntries(
-            features.map((f) => [f.properties.id, bySlug.get(f.properties.id)?.memberCount ?? null]),
-          )}
-        />
-
-        <ul className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mt-8">
-          {features.map((f) => {
+          cities={features.map((f) => {
             const row = bySlug.get(f.properties.id);
-            return (
-              <li
-                key={f.properties.id}
-                className="bg-surface-container-lowest border border-outline-variant rounded-xl p-5"
-              >
-                <div className="flex items-baseline justify-between gap-2">
-                  <h2 className="text-headline-sm text-on-background">
-                    {f.properties.label} <span className="text-body-md text-on-surface-variant">{f.properties.zh}</span>
-                  </h2>
-                  <span className="text-label-caps uppercase tracking-wide text-on-surface-variant shrink-0">
-                    {row?.memberCount != null ? t("coverage.people", { n: row.memberCount }) : "—"}
-                  </span>
-                </div>
-                {f.properties.within && (
-                  <p className="text-label-caps text-on-surface-variant mt-1">
-                    {t("coverage.partOf", {
-                      parent:
-                        features.find((x) => x.properties.id === f.properties.within)?.properties.label ?? "",
-                    })}
-                  </p>
-                )}
-                {row?.contactInfo && <p className="text-body-md text-on-surface-variant mt-2">{row.contactInfo}</p>}
-                {row?.note && <p className="text-body-sm text-on-surface-variant mt-1">{row.note}</p>}
-              </li>
-            );
+            return {
+              id: f.properties.id,
+              memberCount: row?.memberCount ?? null,
+              contactInfo: row?.contactInfo ?? null,
+              note: row?.note ?? null,
+            };
           })}
-        </ul>
+          districtCount={districtGeo.features.length}
+        />
       </main>
 
       <SiteFooter />
