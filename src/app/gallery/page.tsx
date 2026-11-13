@@ -33,7 +33,7 @@ export default async function GalleryPage() {
         </Link>
       </PageHeader>
 
-      <main className="max-w-[var(--container-max)] mx-auto px-[var(--spacing-container-padding)] pb-24">
+      <main className="max-w-[var(--container-max)] mx-auto px-[var(--spacing-container-padding)] pt-12 pb-24">
         {albums.length === 0 ? (
           <Reveal>
             <div className="flex flex-col items-center text-center py-24">

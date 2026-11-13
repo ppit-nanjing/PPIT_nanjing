@@ -31,9 +31,9 @@ Tidak ada perubahan skema, dan Server Action-nya tidak berubah: nama isian form 
 
 | Tab | Mengisi | Catatan |
 | --- | --- | --- |
-| Tempat | `/places`, hitungan di `/map` | "Tampil di situs publik" hanya ada di form edit; tempat baru langsung tampil |
-| Kampus | `/universities` | Kota memakai saran dari daftar wilayah naungan, tapi tetap boleh diketik |
-| Distrik | belum ada | Tabel `districts` (teks pengantar) **belum dibaca halaman publik mana pun**. Baris menampilkan jumlah tempat dan kampus terbit di distrik itu, sama dengan angka di `/map` |
+| Tempat | `/places`, dan `/map` di distriknya | "Tampil di situs publik" hanya ada di form edit; tempat baru langsung tampil |
+| Kampus | `/universities`, dan `/map` di distriknya | Kota memakai saran dari daftar wilayah naungan, tapi tetap boleh diketik. Hanya kampus yang punya distrik yang tampil di `/map`; di `/universities` kampus Nanjing tanpa distrik masuk kelompok "Distrik belum dicatat". Kampus tanpa logo menampilkan monogram singkatannya; logo yang diunggah di konsol langsung menggantikannya |
+| Distrik | `/map`, saat distriknya dipilih | Tabel `districts` berisi teks pengantar. Baris menampilkan jumlah tempat dan kampus terbit di distrik itu, sama dengan angka di `/map`. Lihat [Rencana Peta Interaktif](./Rencana%20Peta%20Interaktif.md) |
 | Wilayah Naungan | `/coverage` | Daftar kota tetap; yang diisi jumlah mahasiswa, kontak, catatan |
 | Merchandise | `/catalogue` | Etalase, bukan toko |
 | Sponsor | `/catalogue/sponsorship` | |

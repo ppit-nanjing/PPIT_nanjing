@@ -175,7 +175,7 @@ export default async function JobsPage({
         </form>
       </PageHeader>
 
-      <main className="max-w-[var(--container-max)] mx-auto px-[var(--spacing-container-padding)] pb-24 grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+      <main className="max-w-[var(--container-max)] mx-auto px-[var(--spacing-container-padding)] pt-12 pb-24 grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
         <aside aria-label={t("jobs.filterAria")} className="lg:col-span-3 bg-surface-container-lowest border border-outline-variant rounded-lg p-6">
           <div className="flex items-center gap-2 mb-6 border-b border-outline-variant pb-4">
             <SlidersHorizontal size={18} className="text-on-background" />

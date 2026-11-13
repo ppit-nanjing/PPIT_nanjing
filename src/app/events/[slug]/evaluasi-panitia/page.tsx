@@ -190,7 +190,7 @@ export default async function CommitteeEvaluationPage({ params }: { params: Prom
     <div className="min-h-screen bg-background text-on-background">
       <SiteNav />
       <PageHeader eyebrow={t("ceval.kicker")} title={t("ceval.title", { event: event.title })} intro={t("ceval.intro")} />
-      <main className="max-w-3xl mx-auto px-[var(--spacing-container-padding)] pb-20">{body}</main>
+      <main className="max-w-3xl mx-auto px-[var(--spacing-container-padding)] pt-12 pb-20">{body}</main>
       <SiteFooter />
     </div>
   );
