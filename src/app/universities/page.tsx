@@ -1,47 +1,111 @@
 import { asc, eq } from "drizzle-orm";
-import Image from "next/image";
-import { GraduationCap, ExternalLink } from "lucide-react";
+import { GraduationCap } from "lucide-react";
 import { db } from "@/db";
-import { universities, coverageCities } from "@/db/schema";
+import { universities } from "@/db/schema";
 import { SiteNav } from "@/components/site-nav";
 import { SiteFooter } from "@/components/site-footer";
 import { PageHeader } from "@/components/page-header";
+import {
+  UniversityDirectory,
+  type DirectoryCampus,
+  type DirectoryCity,
+  type DirectoryGroup,
+} from "@/components/universities/university-directory";
+import type { CoverageFeature } from "@/app/coverage/page";
+import geo from "@/data/nanjing-coverage.geo.json";
+import districtGeo from "@/data/nanjing-districts.geo.json";
 import { getT } from "@/lib/i18n/server";
-import { sortByCoverageOrder } from "@/lib/coverage-cities";
+import { COVERAGE_CITY_SLUGS, coverageCityRank } from "@/lib/coverage-cities";
+import { outlineOf, outlinesOf } from "@/lib/geo-outline";
+import { NANJING_DISTRICTS, canonicalDistrict } from "@/lib/nanjing-districts";
 
 export async function generateMetadata() {
   const { t } = await getT();
   return { title: t("uni.metaTitle"), description: t("uni.metaDesc") };
 }
 
-export default async function UniversitiesPage() {
-  const { t, locale } = await getT();
-  // description is admin-typed free text (ID); descriptionEn is an auto-
-  // translation that can be null (AI not run yet / failed) - fallback to ID.
-  const pickDesc = (u: { description: string | null; descriptionEn: string | null }) =>
-    locale === "en" ? (u.descriptionEn ?? u.description) : u.description;
-  // Bucket label for rows with no city set - translated, so it has to be
-  // resolved inside the component rather than as a module constant.
-  const UNASSIGNED = t("uni.unassigned");
-  const [rows, cityInfo] = await Promise.all([
-    db
-      .select()
-      .from(universities)
-      .where(eq(universities.published, true))
-      .orderBy(asc(universities.orderIndex), asc(universities.name)),
-    // Kampus dikelompokkan per KOTA — mereka tersebar di 9 kota naungan, bukan
-    // cuma di distrik-distrik Nanjing.
-    db.select().from(coverageCities).orderBy(asc(coverageCities.label)),
-  ]);
+// Kota tempat sekretariat, dan satu-satunya kota yang kampusnya dibagi per distrik.
+const SEAT = "nanjing";
+// Kampus yang kotanya bukan salah satu dari 9 kota naungan.
+const OTHER = "lainnya";
 
+export default async function UniversitiesPage() {
+  const { t } = await getT();
+  const rows = await db
+    .select()
+    .from(universities)
+    .where(eq(universities.published, true))
+    .orderBy(asc(universities.orderIndex), asc(universities.name));
+
+  const features = new Map(
+    (geo as unknown as { features: CoverageFeature[] }).features.map((f) => [f.properties.id, f]),
+  );
+  const districtFeatures = (districtGeo as unknown as { features: CoverageFeature[] }).features;
+
+  // Kampus dikelompokkan per KOTA (mereka tersebar di 9 kota naungan), lalu per
+  // distrik di kota yang kampusnya punya distrik. Nama kota dicocokkan lewat
+  // coverageCityRank, yang menerima "Huai’an", "Huai'an", maupun "huaian".
   const byCity = new Map<string, typeof rows>();
   for (const u of rows) {
-    const key = u.city?.trim() || UNASSIGNED;
-    byCity.set(key, [...(byCity.get(key) ?? []), u]);
+    const slug = COVERAGE_CITY_SLUGS[coverageCityRank(u.city ?? "")] ?? OTHER;
+    byCity.set(slug, [...(byCity.get(slug) ?? []), u]);
   }
-  // Urutan kanonik: Nanjing dulu, sisanya alfabetis (src/lib/coverage-cities.ts).
-  const ordered = sortByCoverageOrder([...byCity.keys()], (name) => name);
-  const infoByName = new Map(cityInfo.map((c) => [c.label, c]));
+
+  const toCampus = (u: (typeof rows)[number]): DirectoryCampus => ({
+    id: u.id,
+    name: u.name,
+    nameZh: u.nameZh,
+    abbreviation: u.abbreviation,
+    logoUrl: u.logoUrl,
+    websiteUrl: u.websiteUrl,
+    studentCount: u.studentCount,
+    isPartner: u.isPartner,
+    coordinatorName: u.coordinatorName,
+    coordinatorEmail: u.coordinatorEmail,
+  });
+
+  const groupsOf = (list: typeof rows): DirectoryGroup[] => {
+    const byDistrict = new Map<string, typeof rows>();
+    for (const u of list) {
+      const key = canonicalDistrict(u.district) ?? "";
+      byDistrict.set(key, [...(byDistrict.get(key) ?? []), u]);
+    }
+    // Tidak ada satu pun yang berdistrik: kota ini tidak dibagi, jadi satu kelompok tanpa judul.
+    if (byDistrict.size === 1 && byDistrict.has("")) {
+      return [{ key: "all", label: null, zh: null, href: null, locate: null, campuses: list.map(toCampus) }];
+    }
+    return [...byDistrict.entries()]
+      // Distrik terpadat dulu; yang belum berdistrik selalu paling akhir.
+      .sort(([a, x], [b, y]) => (a === "" ? 1 : b === "" ? -1 : y.length - x.length || a.localeCompare(b)))
+      .map(([key, campuses]) => ({
+        key: key || "none",
+        label: key || t("uni.noDistrict"),
+        zh: NANJING_DISTRICTS.find((d) => d.label === key)?.zh.replace(/区$/, "") ?? null,
+        href: key ? `/map?distrik=${key.toLowerCase()}` : null,
+        locate: districtFeatures.find((f) => f.properties.label === key)?.properties.id ?? null,
+        campuses: campuses.map(toCampus),
+      }));
+  };
+
+  const cities: DirectoryCity[] = [...COVERAGE_CITY_SLUGS, OTHER].flatMap((slug) => {
+    const list = byCity.get(slug);
+    if (!list) return [];
+    const feature = features.get(slug);
+    return [
+      {
+        id: slug,
+        label: feature?.properties.label ?? t("uni.unassigned"),
+        zh: feature?.properties.zh.replace(/市$/, "") ?? null,
+        outline: feature ? outlineOf(feature) : null,
+        seat: slug === SEAT,
+        href: slug === SEAT ? "/map" : null,
+        // 60 titik per bentuk cukup untuk gambar selebar 64px.
+        locator: slug === SEAT ? outlinesOf(districtFeatures, 110, 60) : null,
+        groups: groupsOf(list),
+      },
+    ];
+  });
+
   const partnerCount = rows.filter((u) => u.isPartner).length;
 
   return (
@@ -55,117 +119,24 @@ export default async function UniversitiesPage() {
           rows.length > 0
             ? t("uni.lead", {
                 n: rows.length,
-                cities: ordered.length,
+                cities: cities.length,
                 partners: partnerCount ? t("uni.leadPartners", { n: partnerCount }) : "",
               })
             : t("uni.leadEmpty")
         }
       />
 
-      <div className="h-10" aria-hidden="true" />
+      <div className="h-12" aria-hidden="true" />
 
       <main className="max-w-[var(--container-max)] mx-auto px-[var(--spacing-container-padding)] pb-20">
         {rows.length === 0 ? (
           <div className="bg-surface-container-low border border-outline-variant rounded-xl p-10 text-center">
             <GraduationCap className="mx-auto mb-4 text-on-surface-variant" size={28} />
             <p className="text-body-lg text-on-background mb-1">{t("uni.empty")}</p>
-            <p className="text-body-md text-on-surface-variant">
-              {t("uni.emptyDesc")}
-            </p>
+            <p className="text-body-md text-on-surface-variant">{t("uni.emptyDesc")}</p>
           </div>
         ) : (
-          <div className="flex flex-col gap-12">
-            {ordered.map((city) => {
-              const info = infoByName.get(city);
-              const list = byCity.get(city) ?? [];
-              return (
-                <section key={city}>
-                  <div className="border-b border-outline-variant pb-4 mb-5">
-                    <h2 className="text-headline-md text-on-background">
-                      {city}
-                    </h2>
-                    <p className="text-label-caps uppercase tracking-wide text-on-surface-variant mt-1">
-                      {t("uni.count", { n: list.length })}
-                      {info?.memberCount != null
-                        ? ` · ${t("uni.studentsApprox", { n: info.memberCount })}`
-                        : ""}
-                    </p>
-                    {info?.note && (
-                      <p className="text-body-md text-on-surface-variant mt-3 max-w-3xl">{info.note}</p>
-                    )}
-                  </div>
-
-                  <ul className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    {list.map((u) => (
-                      <li
-                        key={u.id}
-                        className="flex gap-4 bg-surface-container-lowest border border-outline-variant rounded-xl p-5"
-                      >
-                        {u.logoUrl ? (
-                          <Image
-                            src={u.logoUrl}
-                            alt=""
-                            width={48}
-                            height={48}
-                            className="w-12 h-12 rounded-md object-contain bg-surface-container shrink-0"
-                          />
-                        ) : (
-                          <div className="w-12 h-12 rounded-md bg-surface-container flex items-center justify-center shrink-0">
-                            <GraduationCap size={20} className="text-on-surface-variant" aria-hidden />
-                          </div>
-                        )}
-                        <div className="min-w-0 flex flex-col gap-1">
-                          <h3 className="text-body-lg text-on-background">
-                            {u.name}
-                            {u.abbreviation && (
-                              <span className="text-on-surface-variant"> ({u.abbreviation})</span>
-                            )}
-                          </h3>
-                          {u.nameZh && <p className="text-body-md text-on-surface-variant">{u.nameZh}</p>}
-                          {pickDesc(u) && <p className="text-body-md text-on-surface-variant">{pickDesc(u)}</p>}
-                          <div className="flex flex-wrap items-center gap-3 mt-1">
-                            {u.isPartner && (
-                              <span className="text-label-caps uppercase tracking-wide bg-tertiary-container text-on-tertiary-container px-2 py-0.5 rounded">
-                                {t("uni.partner")}
-                              </span>
-                            )}
-                            {u.studentCount != null && (
-                              <span className="text-label-caps text-on-surface-variant">
-                                {t("uni.studentsApprox", { n: u.studentCount })}
-                              </span>
-                            )}
-                            {u.coordinatorName && (
-                              <span className="text-label-caps text-on-surface-variant">
-                                {t("uni.coordinator")} <span className="text-on-background">{u.coordinatorName}</span>
-                              </span>
-                            )}
-                            {u.coordinatorEmail && (
-                              <a
-                                href={`mailto:${u.coordinatorEmail}`}
-                                className="text-label-caps text-primary-container hover:underline"
-                              >
-                                {u.coordinatorEmail}
-                              </a>
-                            )}
-                            {u.websiteUrl && (
-                              <a
-                                href={u.websiteUrl}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="inline-flex items-center gap-1 text-label-caps uppercase tracking-wide text-primary-container hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-container focus-visible:ring-offset-2 focus-visible:ring-offset-surface-container-lowest rounded"
-                              >
-                                {t("uni.website")} <ExternalLink size={12} aria-hidden />
-                              </a>
-                            )}
-                          </div>
-                        </div>
-                      </li>
-                    ))}
-                  </ul>
-                </section>
-              );
-            })}
-          </div>
+          <UniversityDirectory cities={cities} />
         )}
       </main>
 

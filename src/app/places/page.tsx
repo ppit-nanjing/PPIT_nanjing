@@ -112,7 +112,7 @@ export default async function PlacesPage({
         </nav>
       </PageHeader>
 
-      <main className="max-w-[var(--container-max)] mx-auto px-[var(--spacing-container-padding)] pb-20">
+      <main className="max-w-[var(--container-max)] mx-auto px-[var(--spacing-container-padding)] pt-12 pb-20">
         {rows.length === 0 ? (
           <div className="bg-surface-container-low border border-outline-variant rounded-xl p-10 text-center">
             <MapPin className="mx-auto mb-4 text-on-surface-variant" size={28} />

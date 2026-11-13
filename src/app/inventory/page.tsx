@@ -113,7 +113,7 @@ export default async function InventoryPage({
         )}
       </PageHeader>
 
-      <main className="max-w-[var(--container-max)] mx-auto px-[var(--spacing-container-padding)] pb-24">
+      <main className="max-w-[var(--container-max)] mx-auto px-[var(--spacing-container-padding)] pt-12 pb-24">
         {items.length === 0 ? (
           <div role="status" aria-live="polite" className="flex flex-col items-center text-center py-24">
             <Package className="text-outline-variant mb-4" size={40} aria-hidden />

@@ -1200,6 +1200,13 @@ export const en = {
   "uni.partner": "Partner campus",
   "uni.coordinator": "Coordinator:",
   "uni.website": "Website",
+  "uni.searchLabel": "Search universities, e.g. NJU",
+  "uni.matchCount": "{{n}} of {{total}} universities",
+  "uni.noMatch": "No matching universities.",
+  "uni.noMatchHint": "Try the abbreviation (NJU, SEU), the Chinese name, or the district. If your campus really is missing, tell the committee through the Help & Feedback button.",
+  "uni.noDistrict": "District not recorded yet",
+  "uni.seeOnMap": "See on the map",
+  "uni.indexAria": "Cities",
 
   // Catalogue shell + merchandise
   "catalogue.kicker": "Catalogue",

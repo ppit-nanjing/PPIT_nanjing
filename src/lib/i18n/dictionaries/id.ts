@@ -1203,6 +1203,13 @@ export const id = {
   "uni.partner": "Kampus mitra",
   "uni.coordinator": "Koordinator:",
   "uni.website": "Situs",
+  "uni.searchLabel": "Cari universitas, mis. NJU",
+  "uni.matchCount": "{{n}} dari {{total}} universitas",
+  "uni.noMatch": "Tidak ada universitas yang cocok.",
+  "uni.noMatchHint": "Coba singkatannya (NJU, SEU), nama Mandarinnya, atau nama distriknya. Kalau kampusmu memang belum ada, kabari pengurus lewat tombol Bantuan & Masukan.",
+  "uni.noDistrict": "Distrik belum dicatat",
+  "uni.seeOnMap": "Lihat di peta",
+  "uni.indexAria": "Kota",
 
   // Catalogue shell + merchandise
   "catalogue.kicker": "Katalog",

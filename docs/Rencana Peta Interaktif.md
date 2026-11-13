@@ -74,6 +74,17 @@ Enam kampus punya dua lokasi dan dicatat di distrik yang paling dekat pusat kota
 - Daftar kota pindah ke samping peta dan memakai bentuk baris yang sama dengan daftar distrik.
 - Warna berskala mengikuti jumlah mahasiswa per kota. Selama angkanya belum diisi, semua kota selain Nanjing berwarna sama.
 
+### Direktori Universitas (`/universities`)
+
+Dirancang ulang pada 14 November 2026, memakai kolom distrik yang sama. Belum di-commit saat catatan ini ditulis.
+
+- **Baris, bukan kartu.** Dari 68 kampus belum ada yang punya logo, situs, atau koordinator, dan hanya 26 yang punya deskripsi, jadi kartu berikon sebagian besar kosong. Tiap kampus sekarang satu baris: logo, nama, nama Mandarin, dan singkatannya. Deskripsi kampus (kolom `description`) sengaja tidak ditampilkan, tapi tetap tersimpan di database. Situs, koordinator, jumlah mahasiswa, dan tanda kampus mitra tetap tampil begitu diisi.
+- **Kota, lalu distrik.** Tiap kota dibuka dengan siluet kotanya, nama Mandarin besar, dan jumlah kampus. Kampus Nanjing dikelompokkan per distrik, tiap kelompok dengan peta penunjuk kecil (Nanjing dengan distrik itu berwarna emas) dan tautan ke `/map?distrik=...`. Kampus Nanjing yang belum punya distrik masuk kelompok "Distrik belum dicatat".
+- **Pencarian** menurut nama, singkatan, nama Mandarin, atau nama distrik ("gulou" menampilkan lima kampus di Gulou).
+- **Daftar kota** di kiri sebagai daftar isi, dengan batang tipis yang menunjukkan porsi kampus tiap kota. Di HP menjadi satu baris yang digulir ke samping.
+- **Logo kampus** di kiri nama. 37 kampus mendapat lambang dari kotak info artikel Wikipedia-nya (sumber tiap berkas di `public/logos/universities/SOURCES.md`); kampus cabang di Jurong memakai logo kampus induknya. Sisanya menampilkan monogram singkatannya (mis. "JMI") sampai pengurus mengunggah logonya lewat konsol. Logo yang berupa tulisan memanjang (Nanjing University of the Arts) sengaja tidak dipakai karena tidak terbaca di ukuran 36px.
+- **Langkah setelah merge:** jalankan `src/db/sql/isi-logo-kampus.sql` setelah deploy produksi selesai, bukan sebelumnya. Berkas logonya baru ada di produksi setelah deploy, dan situs live sudah menampilkan logo begitu `logo_url` terisi.
+
 ## Catatan untuk Divisi Teknologi
 
 | Berkas | Isi |
@@ -81,6 +92,12 @@ Enam kampus punya dua lokasi dan dicatat di distrik yang paling dekat pusat kota
 | `src/components/coverage-map.tsx` | Komponen peta bersama (klien). Menggambar SVG dari berkas batas wilayah |
 | `src/components/map/district-explorer.tsx` | Peta Nanjing dan kolom isi distrik (klien) |
 | `src/app/map/page.tsx` | Mengambil tempat, kampus, dan teks distrik, lalu mengirimnya sebagai data biasa |
+| `src/components/universities/university-directory.tsx` | Direktori kampus dengan pencarian (klien) |
+| `src/app/universities/page.tsx` | Mengelompokkan kampus per kota dan distrik |
+| `src/lib/geo-outline.ts` | Garis bentuk kota dan distrik untuk gambar kecil yang tidak interaktif |
+| `src/lib/search-text.ts` | Penyamaan teks untuk pencarian, dipakai `/map` dan `/universities` |
+| `public/logos/universities/` | Logo kampus (WebP 96px) dan daftar sumbernya |
+| `src/db/sql/isi-logo-kampus.sql` | Mengisi `logo_url` 37 kampus; dijalankan sekali setelah deploy |
 | `src/components/map/coverage-explorer.tsx` | Peta wilayah dan daftar kota (klien, supaya baris dan peta berbagi sorotan) |
 | `src/app/coverage/page.tsx` | Mengambil data kota naungan dan mengirimnya sebagai data biasa |
 

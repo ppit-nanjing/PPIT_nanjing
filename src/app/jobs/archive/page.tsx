@@ -59,7 +59,7 @@ export default async function JobsArchivePage() {
         </Link>
       </PageHeader>
 
-      <main className="max-w-[var(--container-max)] mx-auto px-[var(--spacing-container-padding)] pb-24 flex flex-col gap-4">
+      <main className="max-w-[var(--container-max)] mx-auto px-[var(--spacing-container-padding)] pt-12 pb-24 flex flex-col gap-4">
         {rows.length === 0 ? (
           <div className="flex flex-col items-center text-center py-20 bg-surface-container-lowest border border-[var(--deco-line)] border-dashed rounded-lg px-6">
             <Archive className="text-outline-variant mb-4" size={40} aria-hidden />

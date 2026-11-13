@@ -10,6 +10,7 @@ import type { CoverageFeature } from "@/app/coverage/page";
 import { CoverageMap } from "@/components/coverage-map";
 import type { PlaceCard } from "@/components/places/places-grid";
 import { useT } from "@/lib/i18n/client";
+import { plain } from "@/lib/search-text";
 
 export type DistrictCampus = {
   id: string;
@@ -20,10 +21,6 @@ export type DistrictCampus = {
   abbreviation: string | null;
   websiteUrl: string | null;
 };
-
-/** Tanpa huruf besar, aksen, tanda petik, dan spasi, supaya "gu lou" menemukan Gulou. */
-const plain = (s: string) =>
-  s.toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "").replace(/['’\-\s]/g, "");
 
 const hrefFor = (label: string | null) => (label ? `/map?distrik=${label.toLowerCase()}` : "/map");
 
