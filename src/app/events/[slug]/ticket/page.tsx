@@ -89,6 +89,8 @@ export default async function EventTicketPage({ params }: { params: Promise<{ sl
   const hasFee = event.isPaid && feeAmount !== 0;
   const awaitingPayment = hasFee && registration.paymentStatus !== "verified";
   const gated = registration.status === "pending" || awaitingPayment;
+  // Panduan bayar + form bukti hanya untuk yang belum mengirim bukti atau buktinya ditolak.
+  const needsProof = registration.paymentStatus === "unpaid" || registration.paymentStatus === "rejected";
   const alipayLink =
     feeAmount != null && event.alipayUid
       ? buildAlipayTransferLink(event.alipayUid, feeAmount, `${session.user.name ?? "Peserta"} - ${event.title}`)
@@ -301,10 +303,10 @@ export default async function EventTicketPage({ params }: { params: Promise<{ sl
                 {t("ticket.pay.amountTbd")}
               </p>
             )}
-            {event.paymentInstructions && (
+            {needsProof && event.paymentInstructions && (
               <p className="text-body-sm text-on-surface-variant whitespace-pre-line mb-4">{event.paymentInstructions}</p>
             )}
-            {event.paymentQrUrl && registration.paymentStatus !== "verified" && (
+            {needsProof && event.paymentQrUrl && (
               <div className="flex flex-col items-center gap-2 mb-4 py-4 border-y border-outline-variant">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
@@ -319,7 +321,7 @@ export default async function EventTicketPage({ params }: { params: Promise<{ sl
                 </p>
               </div>
             )}
-            {alipayQrDataUrl && alipayLink && (
+            {needsProof && alipayQrDataUrl && alipayLink && (
               <div className="flex flex-col items-center gap-2 mb-4 py-4 border-y border-outline-variant">
                 <Image
                   src={alipayQrDataUrl}
@@ -362,7 +364,8 @@ export default async function EventTicketPage({ params }: { params: Promise<{ sl
                 </span>
               </p>
             )}
-            {registration.paymentStatus !== "verified" && (
+            {/* Bukti sudah terkirim: tunggu verifikasi, jangan minta unggah lagi. Ditolak = unggah ulang. */}
+            {needsProof && (
               <form action={submitPaymentProof} className="flex flex-col gap-3">
                 <input type="hidden" name="id" value={registration.id} />
                 <input type="hidden" name="slug" value={slug} />
@@ -371,6 +374,7 @@ export default async function EventTicketPage({ params }: { params: Promise<{ sl
                   folder="payment-proof"
                   required
                   autoUpload
+                  allowPaste={false}
                   defaultValue={registration.paymentProofUrl ?? ""}
                   accept="image/*"
                   label={gated ? t("ticket.pay.proofLabel") : t("ticket.pay.proofLabelUpdate")}

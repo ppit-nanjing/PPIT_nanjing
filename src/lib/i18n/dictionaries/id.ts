@@ -254,6 +254,7 @@ export const id = {
   "events.feeOptionHint": "Pilih kategori yang sesuai denganmu — nominal itulah yang kamu bayar.",
   "events.regErrBiodata": "Lengkapi semua biodata dan pastikan bukti mahasiswa sudah terunggah sebelum mengirim.",
   "events.regErrAttendance": "Pilih hadir secara online atau offline sebelum mengirim.",
+  "events.regErrPayment": "Transfer biayanya dulu, lalu unggah screenshot buktinya sebelum mengirim pendaftaran.",
   "events.regErrQuestion": "Masih ada pertanyaan wajib yang belum kamu jawab.",
   "events.regErrFee": "Pilih salah satu kategori tarif dulu.",
   "events.regErrCategoryFull": "Kuota kategori tarif yang kamu pilih baru saja penuh — pilih kategori lain.",

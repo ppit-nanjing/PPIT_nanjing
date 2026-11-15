@@ -301,14 +301,16 @@ async function runRegistration(eventId: string, slugArg: string, formData: FormD
       ? amountForTier(feeTierAt(event.earlyBirdUntil), pickedSeat.amountCny, pickedSeat.earlyBirdAmountCny)
       : event.feeCny;
     const needsPayment = event.isPaid && effectiveAmount !== 0;
-    // Bukti bayar boleh langsung diunggah di form (info bayar tampil sebelum
-    // submit). Opsional: yang belum bayar tetap bisa mengunggahnya dari tiket.
+    // Bukti bayar diunggah langsung di form (info bayar tampil sebelum submit).
     const proofRaw = scrubForeignPrivateUrl(
       String(formData?.get("paymentProofUrl") ?? "").trim(),
       "payment-proof",
       session.user.id,
     );
     const paymentProofUrl = needsPayment && proofRaw && isAllowedUploadUrl(proofRaw) ? proofRaw : null;
+    // Bayar dulu, baru terdaftar: tanpa bukti, pendaftaran berbayar ditolak kembali ke form.
+    // Nominal yang belum ditentukan (null) dikecualikan: belum ada yang bisa dibayar.
+    if (needsPayment && effectiveAmount != null && !paymentProofUrl) redirect(registerErrUrl(slug, "payment", practice));
 
     // Practice stops here: everything above (the real validation) has passed, and
     // nothing below (insert, notification, sensus mirror) runs.

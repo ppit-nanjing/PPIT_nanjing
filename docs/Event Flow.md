@@ -44,7 +44,7 @@ flowchart TD
 
 ## Acara berbayar (HTM)
 
-Kalau `events.is_paid`, pendaftaran masuk **`pending` tanpa QR**. Info bayar (instruksi + QR bayar panitia) sudah tampil **di form, sebelum submit**: di langkah Kategori tarif, di langkah Pembayaran untuk tarif tunggal, atau di bawah pilihan hadir (lihat bawah). Peserta boleh langsung mengunggah bukti di form (`payment_status` langsung `submitted`) atau menyusul dari halaman tiket → **bendahara acara** (bukan bendahara kabinet) memverifikasi di console. Set `verified` → pendaftaran naik ke `confirmed` → **QR check-in terbit seketika**. Itu satu-satunya pintu QR untuk acara berbayar.
+Kalau `events.is_paid`, pendaftaran masuk **`pending` tanpa QR**. Info bayar (instruksi + QR bayar panitia) sudah tampil **di form, sebelum submit**: di langkah Kategori tarif, di langkah Pembayaran untuk tarif tunggal, atau di bawah pilihan hadir (lihat bawah). Bukti transfer **wajib** diunggah di form kalau nominalnya sudah ditentukan (server memantulkan `?err=payment`), jadi pendaftaran berbayar masuk langsung sebagai `payment_status = submitted`. Halaman tiket hanya meminta unggah lagi kalau buktinya ditolak (atau untuk pendaftaran lama yang masih `unpaid`) → **bendahara acara** (bukan bendahara kabinet) memverifikasi di console. Set `verified` → pendaftaran naik ke `confirmed` → **QR check-in terbit seketika**. Itu satu-satunya pintu QR untuk acara berbayar.
 
 Pembayaran **perorangan** — satu pendaftaran satu tanggungan. Tidak ada payment gateway: Alipay/WeChat Pay butuh merchant account berbadan hukum Tiongkok, QR pribadi tidak punya webhook. Deep-link `alipays://` yang mengisi nominal otomatis (`events.alipay_uid`) hanya mengurangi ketik, verifikasi tetap 100% manual.
 
