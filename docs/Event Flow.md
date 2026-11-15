@@ -71,7 +71,7 @@ Admin bisa menambah pertanyaan per acara (`event_questions`): teks, textarea, se
 
 Dipakai acara seperti NYALA yang bisa diikuti online maupun offline, dengan grup (WeChat) terpisah. Migrasi `0060_event_attendance_mode.sql` (**terapkan ke produksi sebelum kode dirilis**, lalu `npm run check:drift`).
 
-- **Panitia**: di konsol acara, centang "Tanyakan hadir online atau offline saat mendaftar" (Pendaftaran, Biaya & Jadwal Rilis), lalu unggah **QR Grup Online** dan **QR Grup Offline** di Deskripsi & Agenda. Kolom QR selalu tampil supaya menyimpan form dengan saklar mati tidak menghapusnya.
+- **Panitia**: di konsol acara, centang "Tanyakan hadir online atau offline saat mendaftar" (tab Formulir → Aturan Pendaftaran), lalu unggah **QR Grup Online** dan **QR Grup Offline** di tab Formulir → Setelah Mendaftar. Kolom QR selalu tampil supaya menyimpan form dengan saklar mati tidak menghapusnya.
 - **Peserta**: form pendaftaran menampilkan pilihan **Online / Offline** (wajib) di langkah Pertanyaan. `runRegistration` memvalidasi ulang di server (galat `?err=attendance`) dan menyimpannya di `event_registrations.attendance_mode` (`online` | `offline`). Acara tanpa saklar mengabaikan kiriman itu.
 - **Tarif ikut pilihan hadir**: kalau acara berbayar punya kategori tarif yang namanya persis **Online** dan **Offline** (NYALA: Offline ¥10, Online ¥0), langkah Kategori tarif dilewati. Harganya tampil di pilihan hadir, server memilih kategori dari `attendance_mode` (`feeOptionsByMode`), dan info bayar hanya muncul saat mode berbayar dicentang (CSS `:has`, tanpa JS).
 - **Tiket**: kartu "Langkah Berikutnya" menampilkan **hanya QR grup sesuai pilihan** peserta, dan **baru setelah pembayaran terverifikasi** (selama tiket masih tergerbang muncul catatan "QR grup tampil setelah pembayaranmu diverifikasi"). Kalau QR-nya belum diunggah, muncul catatan "belum tersedia". Pendaftaran lama (tanpa pilihan) tidak mendapat kartu ini.
@@ -81,7 +81,7 @@ Dipakai acara seperti NYALA yang bisa diikuti online maupun offline, dengan grup
 
 ## Pertanyaan cabang PPI (`ask_branch`)
 
-Peserta yang sensusnya belum lengkap ditanya "Kamu dari cabang PPI mana?" (jawaban di `event_registrations.branch`). Saklar "Tanyakan cabang PPI ke peserta yang belum isi sensus" di Pendaftaran, Biaya & Jadwal Rilis bisa mematikannya per acara (mis. NYALA). Migrasi `0062_event_ask_branch.sql`, bawaan `true` (**terapkan ke produksi sebelum kode dirilis**, lalu `npm run check:drift`).
+Peserta yang sensusnya belum lengkap ditanya "Kamu dari cabang PPI mana?" (jawaban di `event_registrations.branch`). Saklar "Tanyakan cabang PPI ke peserta yang belum isi sensus" di tab Formulir → Aturan Pendaftaran bisa mematikannya per acara (mis. NYALA). Migrasi `0062_event_ask_branch.sql`, bawaan `true` (**terapkan ke produksi sebelum kode dirilis**, lalu `npm run check:drift`).
 
 ## Mode Latihan (uji form pendaftaran)
 

@@ -199,17 +199,21 @@ export async function createEvent(_prev: EventFormState, formData: FormData): Pr
   redirect(`/console/events/${created.id}`);
 }
 
-// Form edit acara dipecah tiga sesuai tingkat aksesnya (lihat
-// event-capabilities.ts): Info & Pengaturan (event.editInfo, BPH Panitia),
-// Deskripsi & Agenda (event.editContent, DASAR), Setelah Acara
-// (event.postEventReport, DASAR). Status/publikasi lewat setEventStatus.
+// Form edit acara dipecah per kartu di panel admin, masing-masing hanya
+// menulis kolomnya sendiri (kartu lain tidak ikut tertimpa saat disimpan):
+// - tab Acara: Info Acara (updateEventInfo) dan Deskripsi & Agenda (updateEventContent)
+// - tab Formulir: Aturan Pendaftaran (updateEventRegistrationRules), Biaya &
+//   Pembayaran (updateEventPayment), Setelah Mendaftar (updateEventAfterRegister)
+// - tab Panitia: saklar volunteer (updateEventVolunteerSignup)
+// - tab Pasca-Acara: Setelah Acara (updateEventPostReport)
+// Wewenang per kartu lihat event-capabilities.ts. Status/publikasi lewat setEventStatus.
 
 async function revalidateEventPaths(id: string, slug?: string | null) {
   revalidatePath(`/console/events/${id}`);
   if (slug) revalidatePath(`/events/${slug}`);
 }
 
-/** Bagian 1–2: identitas acara + aturan pendaftaran + HTM + jadwal rilis. */
+/** Kartu Info Acara (tab Acara): identitas, waktu, kapasitas, tampilan, jadwal rilis. */
 export async function updateEventInfo(id: string, formData: FormData) {
   const access = await requireEventCapability(id, "event.editInfo");
   const title = String(formData.get("title") ?? "").trim();
@@ -238,7 +242,6 @@ export async function updateEventInfo(id: string, formData: FormData) {
   const scheduledPublishAt = !access.canRelease
     ? before?.scheduledPublishAt ?? null
     : parseChinaLocalInput(formData.get("scheduledPublishAt"));
-  const isPaid = formData.get("isPaid") === "on";
 
   await db
     .update(events)
@@ -251,20 +254,8 @@ export async function updateEventInfo(id: string, formData: FormData) {
       coverImageUrl: String(formData.get("coverImageUrl") ?? "").trim() || null,
       startAt,
       endAt,
-      registrationDeadline: parseChinaLocalInput(formData.get("registrationDeadline")),
-      earlyBirdUntil: parseChinaLocalInput(formData.get("earlyBirdUntil")),
       capacity: formData.get("capacity") ? Number(formData.get("capacity")) : null,
-      requiresSensus: formData.get("requiresSensus") === "on",
-      requiresBiodata: formData.get("requiresBiodata") === "on",
-      offersAttendanceMode: formData.get("offersAttendanceMode") === "on",
-      askBranch: formData.get("askBranch") === "on",
-      volunteerSignupOpen: formData.get("volunteerSignupOpen") === "on",
       scheduledPublishAt,
-      isPaid,
-      feeCny: parseFeeCny(formData),
-      paymentInstructions: String(formData.get("paymentInstructions") ?? "").trim() || null,
-      paymentQrUrl: String(formData.get("paymentQrUrl") ?? "").trim() || null,
-      alipayUid: String(formData.get("alipayUid") ?? "").trim() || null,
       themeBg: parseHex(formData, "themeBg"),
       themeAccent: parseHex(formData, "themeAccent"),
       themeAccent2: parseHex(formData, "themeAccent2"),
@@ -283,6 +274,43 @@ export async function updateEventInfo(id: string, formData: FormData) {
     await db.update(events).set({ status: "draft" }).where(eq(events.id, id));
   }
 
+  await revalidateEventPaths(id, before?.slug);
+}
+
+/** Kartu Aturan Pendaftaran (tab Formulir): siapa boleh daftar dan apa yang ditanyakan sistem. */
+export async function updateEventRegistrationRules(id: string, formData: FormData) {
+  await requireEventCapability(id, "event.editInfo");
+  const [before] = await db.select({ slug: events.slug }).from(events).where(eq(events.id, id));
+  await db
+    .update(events)
+    .set({
+      requiresSensus: formData.get("requiresSensus") === "on",
+      requiresBiodata: formData.get("requiresBiodata") === "on",
+      offersAttendanceMode: formData.get("offersAttendanceMode") === "on",
+      askBranch: formData.get("askBranch") === "on",
+      registrationDeadline: parseChinaLocalInput(formData.get("registrationDeadline")),
+    })
+    .where(eq(events.id, id));
+  await revalidateEventPaths(id, before?.slug);
+}
+
+/** Kartu Biaya & Pembayaran (tab Formulir): HTM, early bird, instruksi, QR bayar. */
+export async function updateEventPayment(id: string, formData: FormData) {
+  await requireEventCapability(id, "event.editInfo");
+  const [before] = await db.select({ slug: events.slug }).from(events).where(eq(events.id, id));
+  const isPaid = formData.get("isPaid") === "on";
+  await db
+    .update(events)
+    .set({
+      isPaid,
+      feeCny: parseFeeCny(formData),
+      earlyBirdUntil: parseChinaLocalInput(formData.get("earlyBirdUntil")),
+      paymentInstructions: String(formData.get("paymentInstructions") ?? "").trim() || null,
+      paymentQrUrl: String(formData.get("paymentQrUrl") ?? "").trim() || null,
+      alipayUid: String(formData.get("alipayUid") ?? "").trim() || null,
+    })
+    .where(eq(events.id, id));
+
   // An event can go free -> paid after people already registered (fee often
   // isn't known until a sponsor is confirmed). Anyone still "not_required"
   // now owes money and needs to show up in the verification queue. Only widens
@@ -297,7 +325,18 @@ export async function updateEventInfo(id: string, formData: FormData) {
   await revalidateEventPaths(id, before?.slug);
 }
 
-/** Aturan sertifikat & evaluasi, di tab Pasca-Acara. Wewenang yang sama dengan Info & Pengaturan. */
+/** Saklar pendaftaran volunteer publik (tab Panitia). */
+export async function updateEventVolunteerSignup(id: string, formData: FormData) {
+  await requireEventCapability(id, "event.editInfo");
+  const [before] = await db.select({ slug: events.slug }).from(events).where(eq(events.id, id));
+  await db
+    .update(events)
+    .set({ volunteerSignupOpen: formData.get("volunteerSignupOpen") === "on" })
+    .where(eq(events.id, id));
+  await revalidateEventPaths(id, before?.slug);
+}
+
+/** Aturan sertifikat & evaluasi, di tab Pasca-Acara. Wewenang yang sama dengan kartu Info Acara (event.editInfo). */
 export async function updateEventCertificateSettings(id: string, formData: FormData) {
   await requireEventCapability(id, "event.editInfo");
   const [before] = await db.select({ slug: events.slug }).from(events).where(eq(events.id, id));
@@ -318,7 +357,7 @@ function imageUrlOrNull(value: FormDataEntryValue | null): string | null {
   return v.startsWith("https://") || (v.startsWith("/") && !v.startsWith("//")) ? v : null;
 }
 
-/** Bagian 3: deskripsi, agenda, info setelah daftar. Fitur DASAR panitia. */
+/** Kartu Deskripsi & Agenda (tab Acara). Fitur DASAR panitia. */
 export async function updateEventContent(id: string, formData: FormData) {
   await requireEventCapability(id, "event.editContent");
   const [before] = await db.select({ slug: events.slug }).from(events).where(eq(events.id, id));
@@ -340,6 +379,18 @@ export async function updateEventContent(id: string, formData: FormData) {
         return /^(<p><\/p>\s*)+$/.test(clean) ? null : clean;
       })(),
       agenda: String(formData.get("agenda") ?? "").trim() || null,
+    })
+    .where(eq(events.id, id));
+  await revalidateEventPaths(id, before?.slug);
+}
+
+/** Kartu Setelah Mendaftar (tab Formulir): info dan QR yang tampil di tiket. Fitur DASAR panitia. */
+export async function updateEventAfterRegister(id: string, formData: FormData) {
+  await requireEventCapability(id, "event.editContent");
+  const [before] = await db.select({ slug: events.slug }).from(events).where(eq(events.id, id));
+  await db
+    .update(events)
+    .set({
       confirmationInfo: String(formData.get("confirmationInfo") ?? "").trim() || null,
       confirmationContactQr1Url: String(formData.get("confirmationContactQr1Url") ?? "").trim() || null,
       confirmationContactQr2Url: String(formData.get("confirmationContactQr2Url") ?? "").trim() || null,

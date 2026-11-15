@@ -36,7 +36,7 @@ export function EventApprovalPanel({
         <p className="text-body-md text-on-background">
           Diajukan oleh <span className="font-medium">{requestedBy ?? "seorang pengurus"}</span>
           {requestedAt && `, ${requestedAt}`}. Menyetujui belum menerbitkan acara ini. Kalau butuh panitia, tunjuk Ketua
-          Pelaksana di Struktur Kepanitiaan (tab Internal).
+          Pelaksana di Struktur Kepanitiaan (tab Panitia).
         </p>
         <SubmitButton name="decision" value="approve" successMessage="Keputusan tersimpan." className={PRIMARY_BUTTON}>
           Setujui

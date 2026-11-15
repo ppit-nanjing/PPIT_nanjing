@@ -8,18 +8,27 @@ import { useSearchParams } from "next/navigation";
 // yang belum disimpan tetap ada saat pindah bagian. Bagian aktif disimpan di ?bagian=
 // lewat history.replaceState: tanpa perjalanan ke server, dan bisa dibagikan/di-refresh.
 
-export type EventPanelTab = "publik" | "internal" | "pasca";
+// Pengelompokan ala Google Form: tiap tab menjawab satu pertanyaan panitia
+// ("acaranya seperti apa", "formulirnya bagaimana", "siapa yang daftar", ...).
+export type EventPanelTab = "acara" | "formulir" | "pendaftar" | "panitia" | "pasca";
 
 const TABS: { key: EventPanelTab; label: string }[] = [
-  { key: "publik", label: "Publik" },
-  { key: "internal", label: "Internal" },
+  { key: "acara", label: "Acara" },
+  { key: "formulir", label: "Formulir" },
+  { key: "pendaftar", label: "Pendaftar" },
+  { key: "panitia", label: "Panitia" },
   { key: "pasca", label: "Pasca-Acara" },
 ];
 
+// Tautan lama (notifikasi, redirect, bookmark) masih memakai nama tab sebelumnya.
+const LEGACY_TABS: Record<string, EventPanelTab> = { publik: "acara", internal: "pendaftar" };
+
 const PANEL_ID = "event-admin-panel";
 
-function isPanelTab(value: string | null): value is EventPanelTab {
-  return TABS.some((tab) => tab.key === value);
+function tabFromUrl(value: string | null): EventPanelTab | null {
+  if (!value) return null;
+  if (TABS.some((tab) => tab.key === value)) return value as EventPanelTab;
+  return LEGACY_TABS[value] ?? null;
 }
 
 function openTab(next: EventPanelTab) {
@@ -55,25 +64,29 @@ export function EventPanelJump({
 
 export function EventAdminPanel({
   defaultTab,
-  pendingInternal,
-  publik,
-  internal,
+  pending,
+  acara,
+  formulir,
+  pendaftar,
+  panitia,
   pasca,
 }: {
   defaultTab: EventPanelTab;
-  /** Antrean yang menunggu keputusan di bagian Internal. Nol = tanpa angka. */
-  pendingInternal: number;
-  publik: ReactNode;
-  internal: ReactNode;
+  /** Antrean yang menunggu keputusan per tab. Nol / tidak ada = tanpa angka. */
+  pending: Partial<Record<EventPanelTab, number>>;
+  acara: ReactNode;
+  formulir: ReactNode;
+  pendaftar: ReactNode;
+  panitia: ReactNode;
   pasca: ReactNode;
 }) {
-  const fromUrl = useSearchParams().get("bagian");
+  const fromUrl = tabFromUrl(useSearchParams().get("bagian"));
   // Dibekukan saat halaman dibuka: tahap acara bisa berubah karena aksi di panel ini sendiri
   // (mis. menerbitkan), dan tab tidak boleh melompat di tangan orang yang sedang memakainya.
   const [initialTab] = useState(defaultTab);
-  const active = isPanelTab(fromUrl) ? fromUrl : initialTab;
+  const active = fromUrl ?? initialTab;
   const buttonsRef = useRef<Partial<Record<EventPanelTab, HTMLButtonElement | null>>>({});
-  const content: Record<EventPanelTab, ReactNode> = { publik, internal, pasca };
+  const content: Record<EventPanelTab, ReactNode> = { acara, formulir, pendaftar, panitia, pasca };
 
   // Pola tablist WAI-ARIA: panah berpindah tab, hanya tab aktif yang bisa dicapai dengan Tab.
   function onKeyDown(e: KeyboardEvent<HTMLDivElement>) {
@@ -120,9 +133,9 @@ export function EventAdminPanel({
             }`}
           >
             {tab.label}
-            {tab.key === "internal" && pendingInternal > 0 && (
+            {(pending[tab.key] ?? 0) > 0 && (
               <span className="ml-2 rounded bg-gold-ink/15 px-1.5 py-0.5 tabular-nums text-gold-ink">
-                {pendingInternal}
+                {pending[tab.key]}
                 <span className="sr-only"> menunggu keputusan</span>
               </span>
             )}
