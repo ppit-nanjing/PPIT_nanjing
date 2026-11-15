@@ -169,7 +169,7 @@ export function EventConsoleHeader({
             <LedgerCell label="Menunggu Keputusan">
               <p className={`text-headline-md tabular-nums ${waiting > 0 ? "text-gold-ink" : "text-on-background"}`}>{waiting}</p>
               {waiting > 0 ? (
-                <EventPanelJump tab="internal" className="self-start text-left text-body-sm text-primary-container underline underline-offset-2 hover:text-primary">
+                <EventPanelJump tab={queue && queue.payments > 0 ? "pendaftar" : "panitia"} className="self-start text-left text-body-sm text-primary-container underline underline-offset-2 hover:text-primary">
                   {queueParts.join(", ")}
                 </EventPanelJump>
               ) : (

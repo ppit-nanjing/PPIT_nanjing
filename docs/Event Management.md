@@ -21,12 +21,16 @@
 **Detail `/console/events/[id]`** punya dua lapis:
 
 - **Kepala** (`event-console-header.tsx`): cermin kepala halaman publik (sampul, judul, tanggal, lokasi), lalu angka terdaftar, hadir, panitia, dan antrean keputusan, lalu lima tahap acara (Persiapan, Tayang, Berlangsung, Pasca-Acara, Terkunci) beserta tanggalnya. Tombol Scanner Check-in selalu di layar pertama.
-- **Panel Admin** (`event-admin-panel.tsx`) dengan tiga tab. Isi tiap bagian tidak berubah; hanya tempatnya:
-  - **Publik**: Status & Publikasi, Info & Pengaturan Acara, Deskripsi & Agenda, Pertanyaan Pendaftaran, Kategori Tarif, Tautan Pendaftaran & Evaluasi.
-  - **Internal**: Verifikasi Pembayaran, Pendaftar Volunteer, Daftar Pendaftar, Struktur Kepanitiaan, Reservasi Aset, Divisi Penanggung Jawab, Riwayat Audit.
+- **Panel Admin** (`event-admin-panel.tsx`) dengan lima tab ala Google Form. Tiap tab menjawab satu pertanyaan panitia:
+  - **Acara** (acaranya seperti apa): Status & Publikasi, Info Acara (judul, waktu, tempat, kapasitas, sampul, warna, jadwal rilis), Deskripsi & Agenda, Tautan Pendaftaran & Evaluasi.
+  - **Formulir** (apa yang dilihat peserta): tombol **Coba Formulir** (Mode Latihan, tab baru), lalu kartu Aturan Pendaftaran (sensus, biodata, online/offline, cabang PPI, batas pendaftaran), Pertanyaan (+ pratinjau), Biaya & Pembayaran (HTM, early bird, instruksi, QR bayar, kategori tarif), dan Setelah Mendaftar (info di tiket, QR kontak, QR grup online/offline).
+  - **Pendaftar**: Verifikasi Pembayaran, Daftar Pendaftar.
+  - **Panitia**: Pendaftar Volunteer (dengan saklar pendaftaran volunteer publik), Struktur Kepanitiaan, Reservasi Aset, Divisi Penanggung Jawab, Riwayat Audit.
   - **Pasca-Acara**: Setelah Acara, Galeri Foto, Artikel Berita, Aturan Sertifikat & Evaluasi, Sertifikat Peserta & Panitia, Evaluasi Acara, Pertanyaan Evaluasi, Kredit / Arsip.
 
-Tab yang terbuka mengikuti tahap acara: Persiapan membuka Publik; Tayang dan Berlangsung membuka Internal; setelah itu Pasca-Acara. Kalau ada pembayaran atau volunteer menunggu keputusan, Internal didahulukan (kecuali saat Persiapan). Tab tersimpan di `?bagian=publik|internal|pasca`, jadi bisa dibagikan dan bertahan saat di-refresh. Isi semua tab tetap dirender server dengan gerbang `can()` yang sama; tab hanya mengatur yang terlihat, **bukan** batas akses. Menambah bagian baru: taruh di kelompok yang sesuai di `page.tsx`, dan isi `description`-nya dengan keadaan terkini (mis. "3 pertanyaan"), bukan penjelasan fungsi.
+Kartu di tab Acara, Formulir, dan Pendaftar selalu terbuka, dan tiap kartu punya tombol simpan sendiri yang hanya menulis kolom kartu itu (`updateEventInfo`, `updateEventContent`, `updateEventRegistrationRules`, `updateEventPayment`, `updateEventAfterRegister`; saklar volunteer lewat `updateEventVolunteerSignup`). Tab Panitia dan Pasca-Acara tetap memakai bagian yang bisa dilipat karena isinya editor berat yang jarang dibuka.
+
+Tab yang terbuka mengikuti tahap acara: Persiapan (atau ada pengajuan persetujuan yang menunggu) membuka Acara; pembayaran yang menunggu membuka Pendaftar, volunteer yang menunggu membuka Panitia; Tayang dan Berlangsung membuka Pendaftar; setelah itu Pasca-Acara. Tab tersimpan di `?bagian=acara|formulir|pendaftar|panitia|pasca`; tautan lama `publik` dan `internal` dialihkan ke Acara dan Pendaftar. Isi semua tab tetap dirender server dengan gerbang `can()` yang sama; tab hanya mengatur yang terlihat, **bukan** batas akses. Menambah bagian baru: taruh di tab yang sesuai di `page.tsx`, dan isi `description`-nya dengan keadaan terkini (mis. "3 pertanyaan"), bukan penjelasan fungsi.
 
 ## Fungsi
 
