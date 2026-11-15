@@ -233,7 +233,6 @@ export const en = {
   "events.branchQuestion": "Which PPI branch are you from?",
   "events.branchPlaceholder": "Select a branch",
   "events.branchNonStudent": "Not an Indonesian student in China",
-  "events.payProofHint": "Already paid? Upload the proof now, or add it later from your ticket page.",
   "events.free": "Free",
   "events.attendanceQuestion": "Will you join online or offline?",
   "events.attendanceOnline": "Online",

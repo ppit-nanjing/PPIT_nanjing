@@ -220,7 +220,6 @@ export default async function EventRegisterPage({
           className="self-center rounded-lg border border-outline-variant bg-white p-1"
         />
       )}
-      <p className="text-body-sm text-on-surface-variant">{t("events.payProofHint")}</p>
       <FileUpload
         name="paymentProofUrl"
         folder="payment-proof"
