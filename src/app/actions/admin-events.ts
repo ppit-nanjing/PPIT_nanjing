@@ -257,6 +257,7 @@ export async function updateEventInfo(id: string, formData: FormData) {
       requiresSensus: formData.get("requiresSensus") === "on",
       requiresBiodata: formData.get("requiresBiodata") === "on",
       offersAttendanceMode: formData.get("offersAttendanceMode") === "on",
+      askBranch: formData.get("askBranch") === "on",
       volunteerSignupOpen: formData.get("volunteerSignupOpen") === "on",
       scheduledPublishAt,
       isPaid,

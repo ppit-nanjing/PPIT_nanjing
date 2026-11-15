@@ -793,7 +793,13 @@ export default async function ConsoleEventDetailPage({ params }: { params: Promi
                 name="offersAttendanceMode"
                 defaultChecked={event.offersAttendanceMode}
                 label="Tanyakan hadir online atau offline saat mendaftar (NYALA dsb.)"
-                hint="Peserta wajib memilih. Tiketnya lalu menampilkan QR grup sesuai pilihan; unggah kedua QR di bagian Deskripsi & Agenda."
+                hint="Peserta wajib memilih. Tiketnya lalu menampilkan QR grup sesuai pilihan (setelah pembayaran terverifikasi); unggah kedua QR di bagian Deskripsi & Agenda. Kalau kategori tarif bernama persis Online dan Offline, tarifnya ikut pilihan ini dan peserta tidak memilih tarif lagi."
+              />
+              <CheckField
+                name="askBranch"
+                defaultChecked={event.askBranch}
+                label="Tanyakan cabang PPI ke peserta yang belum isi sensus"
+                hint="Matikan untuk acara terbuka yang tidak perlu tahu asal cabang peserta."
               />
               <CheckField
                 name="volunteerSignupOpen"

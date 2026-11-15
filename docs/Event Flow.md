@@ -13,8 +13,8 @@ flowchart TD
 
     subgraph Wizard["Form pendaftaran (satu POST)"]
         Bio["Biodata — kalau requires_biodata<br/>(di-snapshot dari sensus bila lengkap)"]
-        Qs["Pertanyaan: cabang PPI + event_questions kustom"]
-        Fee["Kategori tarif — kalau ada event_fee_options<br/>(harga early bird bila registered_at ≤ early_bird_until)"]
+        Qs["Pertanyaan: cabang PPI (bila ask_branch) + event_questions kustom"]
+        Fee["Kategori tarif — kalau ada event_fee_options<br/>(harga early bird bila registered_at ≤ early_bird_until)<br/>+ info bayar & unggah bukti opsional"]
         Bio --> Qs --> Fee
     end
     Reg --> Wizard --> Submit["registerForEvent()"]
@@ -44,7 +44,7 @@ flowchart TD
 
 ## Acara berbayar (HTM)
 
-Kalau `events.is_paid`, pendaftaran masuk **`pending` tanpa QR**. Peserta transfer manual → unggah screenshot di halaman tiket → **bendahara acara** (bukan bendahara kabinet) memverifikasi di console. Set `verified` → pendaftaran naik ke `confirmed` → **QR check-in terbit seketika**. Itu satu-satunya pintu QR untuk acara berbayar.
+Kalau `events.is_paid`, pendaftaran masuk **`pending` tanpa QR**. Info bayar (instruksi + QR bayar panitia) sudah tampil **di form, sebelum submit**: di langkah Kategori tarif, di langkah Pembayaran untuk tarif tunggal, atau di bawah pilihan hadir (lihat bawah). Peserta boleh langsung mengunggah bukti di form (`payment_status` langsung `submitted`) atau menyusul dari halaman tiket → **bendahara acara** (bukan bendahara kabinet) memverifikasi di console. Set `verified` → pendaftaran naik ke `confirmed` → **QR check-in terbit seketika**. Itu satu-satunya pintu QR untuk acara berbayar.
 
 Pembayaran **perorangan** — satu pendaftaran satu tanggungan. Tidak ada payment gateway: Alipay/WeChat Pay butuh merchant account berbadan hukum Tiongkok, QR pribadi tidak punya webhook. Deep-link `alipays://` yang mengisi nominal otomatis (`events.alipay_uid`) hanya mengurangi ketik, verifikasi tetap 100% manual.
 
@@ -73,10 +73,15 @@ Dipakai acara seperti NYALA yang bisa diikuti online maupun offline, dengan grup
 
 - **Panitia**: di konsol acara, centang "Tanyakan hadir online atau offline saat mendaftar" (Pendaftaran, Biaya & Jadwal Rilis), lalu unggah **QR Grup Online** dan **QR Grup Offline** di Deskripsi & Agenda. Kolom QR selalu tampil supaya menyimpan form dengan saklar mati tidak menghapusnya.
 - **Peserta**: form pendaftaran menampilkan pilihan **Online / Offline** (wajib) di langkah Pertanyaan. `runRegistration` memvalidasi ulang di server (galat `?err=attendance`) dan menyimpannya di `event_registrations.attendance_mode` (`online` | `offline`). Acara tanpa saklar mengabaikan kiriman itu.
-- **Tiket**: kartu "Langkah Berikutnya" menampilkan **hanya QR grup sesuai pilihan** peserta. Kalau QR-nya belum diunggah, muncul catatan "belum tersedia". Pendaftaran lama (tanpa pilihan) tidak mendapat kartu ini.
+- **Tarif ikut pilihan hadir**: kalau acara berbayar punya kategori tarif yang namanya persis **Online** dan **Offline** (NYALA: Offline ¥10, Online ¥0), langkah Kategori tarif dilewati. Harganya tampil di pilihan hadir, server memilih kategori dari `attendance_mode` (`feeOptionsByMode`), dan info bayar hanya muncul saat mode berbayar dicentang (CSS `:has`, tanpa JS).
+- **Tiket**: kartu "Langkah Berikutnya" menampilkan **hanya QR grup sesuai pilihan** peserta, dan **baru setelah pembayaran terverifikasi** (selama tiket masih tergerbang muncul catatan "QR grup tampil setelah pembayaranmu diverifikasi"). Kalau QR-nya belum diunggah, muncul catatan "belum tersedia". Pendaftaran lama (tanpa pilihan) tidak mendapat kartu ini.
 - **Konsol & ekspor**: kolom "Hadir Via" muncul di tabel pendaftar, CSV, dan Google Sheet bila ada yang memilih.
 - Pilihan ini **tidak mengubah** QR check-in: panitia tetap memakai status pendaftaran seperti biasa. Untuk acara yang pesertanya online tidak perlu di-scan, matikan "Sertifikat hanya untuk yang tercatat hadir" di Pasca-Acara.
 - Kode: `src/lib/event-attendance-mode.ts`, `src/app/actions/events.ts` (`runRegistration`), `src/app/events/[slug]/register/page.tsx`, `src/app/events/[slug]/ticket/page.tsx`, `updateEvent`/`updateEventContent` di `src/app/actions/admin-events.ts`.
+
+## Pertanyaan cabang PPI (`ask_branch`)
+
+Peserta yang sensusnya belum lengkap ditanya "Kamu dari cabang PPI mana?" (jawaban di `event_registrations.branch`). Saklar "Tanyakan cabang PPI ke peserta yang belum isi sensus" di Pendaftaran, Biaya & Jadwal Rilis bisa mematikannya per acara (mis. NYALA). Migrasi `0062_event_ask_branch.sql`, bawaan `true` (**terapkan ke produksi sebelum kode dirilis**, lalu `npm run check:drift`).
 
 ## Mode Latihan (uji form pendaftaran)
 
