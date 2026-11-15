@@ -67,7 +67,9 @@ export default async function EventRegisterPage({
             ? t("events.regErrBiodata")
             : err === "attendance"
               ? t("events.regErrAttendance")
-              : t("events.regErrGeneric");
+              : err === "payment"
+                ? t("events.regErrPayment")
+                : t("events.regErrGeneric");
 
   const [event] = await db.select().from(events).where(and(eq(events.slug, slug), isNull(events.deletedAt)));
   if (!event) notFound();
@@ -224,8 +226,9 @@ export default async function EventRegisterPage({
         name="paymentProofUrl"
         folder="payment-proof"
         autoUpload
+        allowPaste={false}
         accept="image/*"
-        label={t("ticket.pay.proofLabel")}
+        label={`${t("ticket.pay.proofLabel")} *`}
       />
     </div>
   );

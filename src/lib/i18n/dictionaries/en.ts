@@ -251,6 +251,7 @@ export const en = {
   "events.feeOptionHint": "Pick the category that applies to you — that's the amount you'll pay.",
   "events.regErrBiodata": "Fill in every personal detail and make sure your student proof has uploaded before submitting.",
   "events.regErrAttendance": "Choose whether you will join online or offline before submitting.",
+  "events.regErrPayment": "Pay the fee first, then upload a screenshot of the transfer before submitting.",
   "events.regErrQuestion": "There's still a required question you haven't answered.",
   "events.regErrFee": "Pick a fee category first.",
   "events.regErrCategoryFull": "The fee category you picked just filled up — choose another one.",
