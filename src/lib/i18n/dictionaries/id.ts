@@ -236,7 +236,6 @@ export const id = {
   "events.branchQuestion": "Kamu dari cabang PPI mana?",
   "events.branchPlaceholder": "Pilih cabang",
   "events.branchNonStudent": "Bukan mahasiswa Indonesia di Tiongkok",
-  "events.payProofHint": "Sudah transfer? Unggah buktinya sekarang, atau menyusul dari halaman tiket.",
   "events.free": "Gratis",
   "events.attendanceQuestion": "Kamu akan hadir secara online atau offline?",
   "events.attendanceOnline": "Online",
