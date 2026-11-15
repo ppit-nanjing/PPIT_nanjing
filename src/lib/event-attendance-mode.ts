@@ -11,6 +11,18 @@ export function parseAttendanceMode(value: unknown): AttendanceMode | null {
     : null;
 }
 
+/**
+ * Kategori tarif yang namanya persis "Online" dan "Offline" (mis. NYALA:
+ * Offline ¥10, Online ¥0) mengikuti pilihan hadir, supaya peserta tidak memilih
+ * online/offline dua kali. Null kalau salah satu mode tidak punya kategori yang cocok.
+ */
+export function feeOptionsByMode<T extends { label: string }>(options: T[]): Record<AttendanceMode, T> | null {
+  const find = (mode: AttendanceMode) => options.find((o) => o.label.trim().toLowerCase() === mode);
+  const online = find("online");
+  const offline = find("offline");
+  return online && offline ? { online, offline } : null;
+}
+
 /** Label untuk konsol dan ekspor (Indonesia, sama seperti sisa konsol). */
 export const ATTENDANCE_MODE_LABEL: Record<AttendanceMode, string> = {
   online: "Online",

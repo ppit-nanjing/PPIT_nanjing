@@ -12,7 +12,7 @@ import { NON_STUDENT_BRANCH } from "@/lib/membership-status";
 import { createTemplatedNotification } from "@/lib/notifications";
 import { getEventSeats } from "@/lib/event-capacity";
 import { feeTierAt, amountForTier } from "@/lib/event-fee";
-import { parseAttendanceMode } from "@/lib/event-attendance-mode";
+import { feeOptionsByMode, parseAttendanceMode } from "@/lib/event-attendance-mode";
 import { isValidPassport } from "@/lib/sensus-form";
 import { getEventAccess } from "@/lib/event-access";
 import { scrubForeignPrivateUrl } from "@/lib/private-files";
@@ -164,7 +164,8 @@ async function runRegistration(eventId: string, slugArg: string, formData: FormD
     // Hanya disimpan untuk peserta yang sensusnya belum lengkap. Kalau sensusnya
     // lengkap, cabangnya sudah diketahui dari sana dan itu sumber yang lebih
     // berwenang - menyalinnya ke sini cuma bikin dua nilai yang bisa berselisih.
-    const branch = sensusComplete ? null : await normalizeRegistrationBranch(formData?.get("branch") ?? null);
+    const branch =
+      sensusComplete || !event.askBranch ? null : await normalizeRegistrationBranch(formData?.get("branch") ?? null);
 
     // Pertanyaan kustom acara: kumpulkan jawaban dari form, wajibkan yang
     // ditandai required. Pilihan tanpa opsi / tipe aneh diabaikan - admin yang
@@ -208,10 +209,14 @@ async function runRegistration(eventId: string, slugArg: string, formData: FormD
     // kategori, peserta wajib memilih salah satu - dan pilihannya harus milik
     // acara ini, bukan id acara lain yang ditempel lewat form.
     const feeOptions = await db
-      .select({ id: eventFeeOptions.id })
+      .select({ id: eventFeeOptions.id, label: eventFeeOptions.label })
       .from(eventFeeOptions)
       .where(eq(eventFeeOptions.eventId, eventId));
-    const pickedFeeOption = String(formData?.get("feeOptionId") ?? "").trim();
+    // Kategori "Online"/"Offline" ikut pilihan hadir; form tidak mengirim feeOptionId.
+    const modeFees = event.isPaid && attendanceMode ? feeOptionsByMode(feeOptions) : null;
+    const pickedFeeOption = modeFees && attendanceMode
+      ? modeFees[attendanceMode].id
+      : String(formData?.get("feeOptionId") ?? "").trim();
     const feeOptionId = feeOptions.some((o) => o.id === pickedFeeOption) ? pickedFeeOption : null;
     if (event.isPaid && feeOptions.length > 0 && !feeOptionId) redirect(registerErrUrl(slug, "fee", practice));
 
@@ -296,6 +301,14 @@ async function runRegistration(eventId: string, slugArg: string, formData: FormD
       ? amountForTier(feeTierAt(event.earlyBirdUntil), pickedSeat.amountCny, pickedSeat.earlyBirdAmountCny)
       : event.feeCny;
     const needsPayment = event.isPaid && effectiveAmount !== 0;
+    // Bukti bayar boleh langsung diunggah di form (info bayar tampil sebelum
+    // submit). Opsional: yang belum bayar tetap bisa mengunggahnya dari tiket.
+    const proofRaw = scrubForeignPrivateUrl(
+      String(formData?.get("paymentProofUrl") ?? "").trim(),
+      "payment-proof",
+      session.user.id,
+    );
+    const paymentProofUrl = needsPayment && proofRaw && isAllowedUploadUrl(proofRaw) ? proofRaw : null;
 
     // Practice stops here: everything above (the real validation) has passed, and
     // nothing below (insert, notification, sensus mirror) runs.
@@ -310,7 +323,8 @@ async function runRegistration(eventId: string, slugArg: string, formData: FormD
       status: needsPayment ? "pending" : "confirmed",
       qrCodeToken: needsPayment ? null : randomUUID(),
       branch,
-      paymentStatus: needsPayment ? "unpaid" : "not_required",
+      paymentStatus: needsPayment ? (paymentProofUrl ? "submitted" : "unpaid") : "not_required",
+      paymentProofUrl,
       answersJson: answers,
       feeOptionId,
       biodataJson,

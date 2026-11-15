@@ -15,7 +15,14 @@ import {
   users,
 } from "@/db/schema";
 import { NON_STUDENT_BRANCH } from "@/lib/membership-status";
-import { ATTENDANCE_MODES } from "@/lib/event-attendance-mode";
+import { ATTENDANCE_MODES, feeOptionsByMode, type AttendanceMode } from "@/lib/event-attendance-mode";
+import { FileUpload } from "@/components/upload/file-upload";
+
+// Info bayar di bawah pilihan hadir hanya muncul saat mode berbayar dicentang (CSS :has, tanpa JS).
+const SHOW_WHEN_MODE: Record<AttendanceMode, string> = {
+  online: "group-has-[input[value=online]:checked]/att:flex",
+  offline: "group-has-[input[value=offline]:checked]/att:flex",
+};
 import { hasCompletedSensus } from "@/lib/sensus-gate";
 import { handleFromLink, profileKeyForLabel, sensusKeyForLabel } from "@/lib/event-question-prefill";
 import { getEventAccess } from "@/lib/event-access";
@@ -103,7 +110,7 @@ export default async function EventRegisterPage({
 
   // Cabang hanya ditanyakan ke peserta yang sensusnya belum lengkap dan hanya
   // bila biodata lengkap tidak dikumpulkan (di sana kota/ranting sudah ditanya).
-  const askBranch = !event.requiresBiodata && !sensusComplete;
+  const askBranch = event.askBranch && !event.requiresBiodata && !sensusComplete;
   const branchOptions = askBranch
     ? (await db.select({ cityName: regionalBranches.cityName }).from(regionalBranches))
         .map((b) => b.cityName)
@@ -189,6 +196,41 @@ export default async function EventRegisterPage({
     ? new Date(event.earlyBirdUntil).toLocaleDateString(INTL_LOCALE[locale], { day: "numeric", month: "long", year: "numeric", timeZone: "Asia/Shanghai" })
     : null;
 
+  // Kategori "Online"/"Offline" ikut pilihan hadir: langkah Entrance Fee dilewati,
+  // harganya tampil di pilihan hadir, dan info bayar hanya muncul untuk mode berbayar.
+  const modeFees = event.offersAttendanceMode && feeOptions.length > 0 ? feeOptionsByMode(feeOptions) : null;
+  const priceOf = (o: { amountCny: number; earlyBirdAmountCny: number | null }) =>
+    amountForTier(feeTier, o.amountCny, o.earlyBirdAmountCny);
+  const paidModes = modeFees ? ATTENDANCE_MODES.filter((m) => priceOf(modeFees[m]) !== 0) : [];
+
+  // Info bayar SEBELUM submit: peserta bisa transfer dan mengunggah bukti langsung.
+  const paymentBlock = (className: string) => (
+    <div className={`flex-col gap-3 rounded-md border border-outline-variant p-4 text-left ${className}`}>
+      <h3 className="text-label-caps uppercase tracking-wide text-gold-ink">{t("ticket.pay.heading")}</h3>
+      {event.paymentInstructions && (
+        <p className="text-body-sm text-on-surface-variant whitespace-pre-line">{event.paymentInstructions}</p>
+      )}
+      {event.paymentQrUrl && (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img
+          src={event.paymentQrUrl}
+          alt={t("ticket.pay.qrAdminAlt")}
+          width={200}
+          height={200}
+          className="self-center rounded-lg border border-outline-variant bg-white p-1"
+        />
+      )}
+      <p className="text-body-sm text-on-surface-variant">{t("events.payProofHint")}</p>
+      <FileUpload
+        name="paymentProofUrl"
+        folder="payment-proof"
+        autoUpload
+        accept="image/*"
+        label={t("ticket.pay.proofLabel")}
+      />
+    </div>
+  );
+
   const steps: FlowStep[] = [];
 
   if (biodata) {
@@ -212,25 +254,48 @@ export default async function EventRegisterPage({
       content: (
         <>
           {event.offersAttendanceMode && (
-            <fieldset className="flex flex-col gap-2 text-left border-0 p-0 m-0">
-              <legend className="text-label-caps uppercase tracking-wide text-on-surface-variant p-0">
-                {t("events.attendanceQuestion")}
-                <span className="text-error" aria-hidden="true"> *</span>
-              </legend>
-              {ATTENDANCE_MODES.map((mode) => (
-                <label key={mode} className="flex items-center gap-2 rounded-md bg-soft-gray p-2.5 text-body-md cursor-pointer">
-                  <input
-                    type="radio"
-                    name="attendanceMode"
-                    value={mode}
-                    required
-                    className="h-4 w-4 accent-[var(--color-primary-container)]"
-                  />
-                  {mode === "online" ? t("events.attendanceOnline") : t("events.attendanceOffline")}
-                </label>
-              ))}
-              <span className="text-xs text-on-surface-variant">{t("events.attendanceHint")}</span>
-            </fieldset>
+            <div className="group/att flex flex-col gap-4">
+              <fieldset className="flex flex-col gap-2 text-left border-0 p-0 m-0">
+                <legend className="text-label-caps uppercase tracking-wide text-on-surface-variant p-0">
+                  {t("events.attendanceQuestion")}
+                  <span className="text-error" aria-hidden="true"> *</span>
+                </legend>
+                {ATTENDANCE_MODES.map((mode) => {
+                  const fee = modeFees?.[mode];
+                  const price = fee ? priceOf(fee) : null;
+                  return (
+                    <label
+                      key={mode}
+                      className={`flex items-center gap-2 rounded-md p-2.5 text-body-md ${
+                        fee?.isFull ? "bg-soft-gray/50 cursor-not-allowed text-on-surface-variant" : "bg-soft-gray cursor-pointer"
+                      }`}
+                    >
+                      <input
+                        type="radio"
+                        name="attendanceMode"
+                        value={mode}
+                        required
+                        disabled={fee?.isFull}
+                        className="h-4 w-4 accent-[var(--color-primary-container)]"
+                      />
+                      <span className={fee?.isFull ? "line-through" : ""}>
+                        {mode === "online" ? t("events.attendanceOnline") : t("events.attendanceOffline")}
+                        {fee && (
+                          <span className="text-on-surface-variant"> · {price === 0 ? t("events.free") : `¥${price}`}</span>
+                        )}
+                      </span>
+                      {fee?.isFull && (
+                        <span className="ml-auto shrink-0 text-label-caps uppercase tracking-wide text-error">
+                          {t("events.quotaFull")}
+                        </span>
+                      )}
+                    </label>
+                  );
+                })}
+                <span className="text-xs text-on-surface-variant">{t("events.attendanceHint")}</span>
+              </fieldset>
+              {paidModes.length > 0 && paymentBlock(`hidden ${paidModes.map((m) => SHOW_WHEN_MODE[m]).join(" ")}`)}
+            </div>
           )}
           {askBranch && (
             <label className="flex flex-col gap-2 text-left">
@@ -246,7 +311,6 @@ export default async function EventRegisterPage({
                 ))}
                 <option value={NON_STUDENT_BRANCH}>{t("events.branchNonStudent")}</option>
               </Select>
-              <span className="text-xs text-on-surface-variant">{t("events.branchHint")}</span>
             </label>
           )}
           <EventQuestionFields questions={questions} fileHint={t("events.fileHint")} defaults={questionDefaults} />
@@ -255,7 +319,7 @@ export default async function EventRegisterPage({
     });
   }
 
-  if (feeOptions.length > 0) {
+  if (feeOptions.length > 0 && !modeFees) {
     steps.push({
       id: "fee",
       title: t("events.feeOptionQuestion"),
@@ -315,7 +379,22 @@ export default async function EventRegisterPage({
               </label>
             );
           })}
+          {paymentBlock("flex")}
         </fieldset>
+      ),
+    });
+  } else if (event.isPaid && feeOptions.length === 0 && event.feeCny !== 0) {
+    // Tarif tunggal: langkah pembayaran sendiri, supaya info bayar tetap tampil sebelum submit.
+    steps.push({
+      id: "payment",
+      title: t("ticket.pay.heading"),
+      content: (
+        <>
+          <p className="text-body-md text-on-background">
+            {event.feeCny != null ? `${t("ticket.pay.amountLabel")}: ¥${event.feeCny}` : t("ticket.pay.amountTbd")}
+          </p>
+          {paymentBlock("flex")}
+        </>
       ),
     });
   }

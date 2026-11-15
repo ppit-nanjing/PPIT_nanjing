@@ -533,6 +533,8 @@ export const events = pgTable("events", {
   // cocok: groupQrOnlineUrl atau groupQrOfflineUrl. Keduanya QR gambar (blob
   // folder "events"), sama pola dengan confirmationContactQr*.
   offersAttendanceMode: boolean("offers_attendance_mode").notNull().default(false),
+  // Tanyakan cabang PPI ke peserta yang sensusnya belum lengkap (migrasi 0062).
+  askBranch: boolean("ask_branch").notNull().default(true),
   groupQrOnlineUrl: text("group_qr_online_url"),
   groupQrOfflineUrl: text("group_qr_offline_url"),
   // Warna halaman acara (opsional) - biar halaman terasa senada dengan poster.
