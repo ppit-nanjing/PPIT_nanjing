@@ -20,6 +20,9 @@ import { buildAlipayTransferLink } from "@/lib/alipay-deeplink";
 import { feeTierAt, amountForTier } from "@/lib/event-fee";
 import { parseAttendanceMode } from "@/lib/event-attendance-mode";
 import { FileUpload } from "@/components/upload/file-upload";
+import { ConfirmButton } from "@/components/console/confirm-button";
+import { cancelOwnRegistration } from "@/app/actions/events";
+import { canSelfCancel } from "@/lib/event-checkin";
 
 // Payment-status -> dictionary key. The console keeps its own Indonesian-only
 // PAYMENT_STATUS_LABEL map; this participant-facing page is bilingual.
@@ -46,6 +49,30 @@ export default async function EventTicketPage({ params }: { params: Promise<{ sl
     .where(and(eq(eventRegistrations.eventId, event.id), eq(eventRegistrations.userId, session.user.id)));
 
   if (!registration) redirect(`/events/${slug}`);
+
+  if (registration.status === "cancelled") {
+    return (
+      <div className="min-h-screen bg-background text-on-background">
+        <SiteNav />
+        <main className="mx-auto max-w-md px-[var(--spacing-container-padding)] py-16 text-center">
+          <div role="status">
+            <h1 className="text-headline-lg text-heading mb-3">{t("ticket.cancelledTitle")}</h1>
+            <DecoRule className="mb-4" />
+            <p className="text-body-md text-on-surface-variant mb-8">{t("ticket.cancelledDesc")}</p>
+          </div>
+          <Link
+            href={`/events/${slug}`}
+            className="inline-flex items-center justify-center gap-2 border border-outline-variant text-on-background text-label-caps uppercase tracking-wide px-6 py-3 rounded-md hover:border-muted-gold hover:text-gold-ink transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-container focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+          >
+            <ArrowLeft size={16} aria-hidden="true" /> {t("ticket.toDetail")}
+          </Link>
+        </main>
+        <SiteFooter />
+      </div>
+    );
+  }
+  const selfCancel = canSelfCancel(registration, event);
+  const eventStarted = !!event.startAt && new Date(event.startAt) <= new Date();
 
   // Encode an absolute check-in URL (not just the raw token) so any phone camera
   // can scan it and open the scanner directly, which identifies the user.
@@ -404,6 +431,25 @@ export default async function EventTicketPage({ params }: { params: Promise<{ sl
             {t("events.others")}
           </Link>
         </div>
+
+        {selfCancel ? (
+          <div className="mt-8 flex justify-center">
+            <ConfirmButton
+              action={cancelOwnRegistration}
+              payload={{ eventId: event.id }}
+              title={t("ticket.cancelTitle")}
+              message={t("ticket.cancelMessage")}
+              confirmLabel={t("ticket.cancelConfirm")}
+              cancelLabel={t("ticket.cancelKeep")}
+              successMessage={t("ticket.cancelDone")}
+              className="rounded-md px-4 py-2 text-label-caps uppercase tracking-wide text-error transition-colors hover:bg-error-container/30 focus:outline-none focus-visible:ring-2 focus-visible:ring-error focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+            >
+              {t("ticket.cancel")}
+            </ConfirmButton>
+          </div>
+        ) : registration.paymentStatus !== "not_required" && !registration.checkedInAt && !eventStarted ? (
+          <p className="mt-8 text-body-sm text-on-surface-variant">{t("ticket.cancelViaCommittee")}</p>
+        ) : null}
       </main>
 
       <SiteFooter />

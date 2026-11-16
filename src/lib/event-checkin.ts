@@ -27,6 +27,24 @@ export function checkInBlockReason(
   return null;
 }
 
+/**
+ * Peserta boleh membatalkan pendaftarannya sendiri hanya kalau tidak ada uang yang
+ * terlibat (paymentStatus "not_required", mis. NYALA Online), belum check-in, dan
+ * acaranya belum mulai. Pendaftaran berbayar tetap lewat panitia (urusan refund).
+ */
+export function canSelfCancel(
+  reg: { status: string; paymentStatus: string; checkedInAt: Date | null },
+  event: { startAt: Date | null },
+  now: Date = new Date(),
+): boolean {
+  return (
+    reg.status !== "cancelled" &&
+    reg.paymentStatus === "not_required" &&
+    !reg.checkedInAt &&
+    (!event.startAt || new Date(event.startAt) > now)
+  );
+}
+
 export const CHECK_IN_BLOCK_LABEL: Record<CheckInBlock, string> = {
   cancelled: "Dibatalkan",
   unpaid: "Belum lunas",

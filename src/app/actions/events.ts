@@ -3,6 +3,7 @@
 import { randomUUID } from "crypto";
 import { eq, and, ne, isNull } from "drizzle-orm";
 import { redirect } from "next/navigation";
+import { revalidatePath } from "next/cache";
 import { auth } from "@/auth";
 import { db } from "@/db";
 import { events, eventRegistrations, eventQuestions, eventFeeOptions, regionalBranches, sensusProfiles } from "@/db/schema";
@@ -17,6 +18,8 @@ import { isValidPassport } from "@/lib/sensus-form";
 import { getEventAccess } from "@/lib/event-access";
 import { scrubForeignPrivateUrl } from "@/lib/private-files";
 import { scheduleLiveSheetSync } from "@/lib/live-sheets";
+import { logEventAudit } from "@/lib/event-audit";
+import { canSelfCancel } from "@/lib/event-checkin";
 
 // Peserta yang sensusnya belum lengkap ditanyai asal cabangnya di form
 // pendaftaran (lihat komentar di event_registrations.branch). Nilainya
@@ -160,7 +163,10 @@ async function runRegistration(eventId: string, slugArg: string, formData: FormD
         .from(eventRegistrations)
         .where(and(eq(eventRegistrations.eventId, eventId), eq(eventRegistrations.userId, session.user.id)));
 
-  if (!existing) {
+  // Pendaftaran yang dibatalkan (oleh panitia atau peserta sendiri) boleh diisi ulang:
+  // barisnya ditimpa di bawah, karena satu akun hanya punya satu baris per acara.
+  const reregister = existing?.status === "cancelled";
+  if (!existing || reregister) {
     // Hanya disimpan untuk peserta yang sensusnya belum lengkap. Kalau sensusnya
     // lengkap, cabangnya sudah diketahui dari sana dan itu sumber yang lebih
     // berwenang - menyalinnya ke sini cuma bikin dua nilai yang bisa berselisih.
@@ -319,19 +325,45 @@ async function runRegistration(eventId: string, slugArg: string, formData: FormD
       redirect(`/events/${slug}/register?practice=1&done=${needsPayment ? "pending" : "confirmed"}${amount}`);
     }
 
-    await db.insert(eventRegistrations).values({
-      eventId,
-      userId: session.user.id,
-      status: needsPayment ? "pending" : "confirmed",
+    const values = {
+      status: needsPayment ? ("pending" as const) : ("confirmed" as const),
+      // QR baru: screenshot tiket dari pendaftaran yang dibatalkan tidak berlaku lagi.
       qrCodeToken: needsPayment ? null : randomUUID(),
       branch,
-      paymentStatus: needsPayment ? (paymentProofUrl ? "submitted" : "unpaid") : "not_required",
+      paymentStatus: needsPayment ? (paymentProofUrl ? ("submitted" as const) : ("unpaid" as const)) : ("not_required" as const),
       paymentProofUrl,
       answersJson: answers,
       feeOptionId,
       biodataJson,
       attendanceMode,
-    });
+    };
+    if (existing && reregister) {
+      // Jejak bayar lama dicatat dulu supaya bendahara tetap bisa menelusuri transfernya.
+      await logEventAudit(session.user.id, eventId, "registration.reregistered", {
+        before: {
+          status: existing.status,
+          paymentStatus: existing.paymentStatus,
+          paymentProofUrl: existing.paymentProofUrl,
+          feeOptionId: existing.feeOptionId,
+          attendanceMode: existing.attendanceMode,
+        },
+        after: { status: values.status, paymentStatus: values.paymentStatus, attendanceMode },
+      });
+      await db
+        .update(eventRegistrations)
+        .set({
+          ...values,
+          registeredAt: new Date(),
+          checkedInAt: null,
+          checkedInBy: null,
+          paymentNote: null,
+          paymentVerifiedAt: null,
+          paymentVerifiedBy: null,
+        })
+        .where(eq(eventRegistrations.id, existing.id));
+    } else {
+      await db.insert(eventRegistrations).values({ eventId, userId: session.user.id, ...values });
+    }
     // Sheet langsung acara ini (kalau ada) ikut diperbarui; tidak pernah menunda atau menggagalkan pendaftaran.
     scheduleLiveSheetSync(eventId, ["pendaftar"]);
     // In-app confirmation for the member who just registered.
@@ -356,4 +388,41 @@ async function runRegistration(eventId: string, slugArg: string, formData: FormD
   }
 
   redirect(`/events/${slug}/ticket`);
+}
+
+/**
+ * Peserta membatalkan pendaftarannya sendiri dari halaman tiket. Hanya untuk
+ * pendaftaran tanpa pembayaran (lihat canSelfCancel); setelah itu dia bisa
+ * mendaftar ulang lewat formulir, mis. pindah dari Online ke Offline.
+ */
+export async function cancelOwnRegistration(formData: FormData) {
+  const session = await auth();
+  if (!session?.user?.id) throw new Error("Silakan masuk terlebih dahulu");
+  const eventId = String(formData.get("eventId") ?? "");
+  const [event] = await db
+    .select({ id: events.id, slug: events.slug, startAt: events.startAt })
+    .from(events)
+    .where(and(eq(events.id, eventId), isNull(events.deletedAt)));
+  if (!event) throw new Error("Acara tidak ditemukan");
+
+  const [reg] = await db
+    .select()
+    .from(eventRegistrations)
+    .where(and(eq(eventRegistrations.eventId, event.id), eq(eventRegistrations.userId, session.user.id)));
+  if (!reg || !canSelfCancel(reg, event)) {
+    throw new Error("Pendaftaran ini tidak bisa dibatalkan sendiri. Hubungi panitia acara.");
+  }
+
+  await db
+    .update(eventRegistrations)
+    .set({ status: "cancelled" })
+    .where(eq(eventRegistrations.id, reg.id));
+  await logEventAudit(session.user.id, event.id, "registration.cancelled", {
+    before: { status: reg.status },
+    after: { status: "cancelled", by: "peserta" },
+  });
+  scheduleLiveSheetSync(event.id, ["pendaftar"]);
+  revalidatePath(`/events/${event.slug}`);
+  revalidatePath(`/console/events/${event.id}`);
+  redirect(`/events/${event.slug}`);
 }

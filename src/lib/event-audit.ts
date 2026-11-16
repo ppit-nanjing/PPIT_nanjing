@@ -28,6 +28,7 @@ export type EventAuditAction =
   | "event.approval_rejected"
   | "registration.cancelled"
   | "registration.restored"
+  | "registration.reregistered"
   | "checkin.undone"
   | "committee.assigned"
   | "committee.removed"
@@ -81,6 +82,7 @@ export const EVENT_AUDIT_ACTION_LABEL: Record<EventAuditAction, string> = {
   "event.approval_rejected": "Pengajuan acara ditolak",
   "registration.cancelled": "Pendaftaran peserta dibatalkan",
   "registration.restored": "Pendaftaran peserta dipulihkan",
+  "registration.reregistered": "Peserta mendaftar ulang setelah dibatalkan",
   "checkin.undone": "Check-in dibatalkan",
   "committee.assigned": "Panitia ditugaskan",
   "committee.removed": "Panitia dikeluarkan",
