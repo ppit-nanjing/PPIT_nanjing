@@ -83,7 +83,8 @@ export default async function EventDetailPage({ params, searchParams }: { params
       .select()
       .from(eventRegistrations)
       .where(and(eq(eventRegistrations.eventId, event.id), eq(eventRegistrations.userId, session.user.id)));
-    alreadyRegistered = !!existing;
+    // Pendaftaran yang dibatalkan tidak dihitung: tombolnya kembali jadi Daftar.
+    alreadyRegistered = !!existing && existing.status !== "cancelled";
     const [committee] = await db
       .select({ divisionName: eventDivisions.name, role: eventCommittee.role })
       .from(eventCommittee)

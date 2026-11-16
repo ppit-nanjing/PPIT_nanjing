@@ -92,7 +92,7 @@ export default async function EventRegisterPage({
     .select()
     .from(eventRegistrations)
     .where(and(eq(eventRegistrations.eventId, event.id), eq(eventRegistrations.userId, userId)));
-  if (existing && !practice) redirect(`${eventHref}/ticket`);
+  if (existing && existing.status !== "cancelled" && !practice) redirect(`${eventHref}/ticket`);
 
   const sensusComplete = await hasCompletedSensus(userId);
   if (!practice && event.requiresSensus && !sensusComplete) {

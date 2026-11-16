@@ -79,6 +79,13 @@ Dipakai acara seperti NYALA yang bisa diikuti online maupun offline, dengan grup
 - Pilihan ini **tidak mengubah** QR check-in: panitia tetap memakai status pendaftaran seperti biasa. Untuk acara yang pesertanya online tidak perlu di-scan, matikan "Sertifikat hanya untuk yang tercatat hadir" di Pasca-Acara.
 - Kode: `src/lib/event-attendance-mode.ts`, `src/app/actions/events.ts` (`runRegistration`), `src/app/events/[slug]/register/page.tsx`, `src/app/events/[slug]/ticket/page.tsx`, `updateEvent`/`updateEventContent` di `src/app/actions/admin-events.ts`.
 
+## Membatalkan & mendaftar ulang
+
+- **Peserta** bisa membatalkan sendiri dari halaman tiket (tombol "Batalkan Pendaftaran", dengan konfirmasi) **hanya** kalau pendaftarannya tidak melibatkan uang (`payment_status = not_required`, mis. NYALA Online), belum check-in, dan acara belum mulai (`canSelfCancel` di `src/lib/event-checkin.ts`, action `cancelOwnRegistration`). Pendaftaran berbayar menampilkan "hubungi panitia", karena pengembalian uang diurus bendahara.
+- **Panitia** tetap bisa membatalkan atau memulihkan siapa pun dari tab Pendaftar.
+- Pendaftaran berstatus `cancelled` (oleh siapa pun) **boleh diisi ulang** dari formulir: halaman acara kembali menampilkan tombol Daftar, dan `runRegistration` menimpa baris lama (satu akun satu baris per acara) dengan jawaban, status bayar, waktu daftar, dan QR check-in yang baru. Data bayar lama dicatat dulu di Riwayat Audit sebagai `registration.reregistered`.
+- Tiket pendaftaran yang dibatalkan menampilkan "Pendaftaran Dibatalkan" dan tidak lagi menampilkan QR.
+
 ## Pertanyaan cabang PPI (`ask_branch`)
 
 Peserta yang sensusnya belum lengkap ditanya "Kamu dari cabang PPI mana?" (jawaban di `event_registrations.branch`). Saklar "Tanyakan cabang PPI ke peserta yang belum isi sensus" di tab Formulir → Aturan Pendaftaran bisa mematikannya per acara (mis. NYALA). Migrasi `0062_event_ask_branch.sql`, bawaan `true` (**terapkan ke produksi sebelum kode dirilis**, lalu `npm run check:drift`).
