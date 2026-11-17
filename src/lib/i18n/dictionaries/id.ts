@@ -238,7 +238,7 @@ export const id = {
   "events.branchNonStudent": "Bukan mahasiswa Indonesia di Tiongkok",
   "events.attendanceQuestion": "Kamu akan hadir secara online atau offline?",
   "events.attendanceOnline": "Online",
-  "events.attendanceOffline": "Offline (datang langsung)",
+  "events.attendanceOffline": "Offline",
   "events.attendanceHint": "Pilihanmu menentukan grup yang kamu masuki setelah mendaftar.",
   "events.fileHint": "Unggah 1 berkas: PDF, dokumen, atau gambar. Maks 10 MB.",
   "events.feeOptionQuestion": "Entrance Fee",

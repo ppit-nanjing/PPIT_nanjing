@@ -235,7 +235,7 @@ export const en = {
   "events.branchNonStudent": "Not an Indonesian student in China",
   "events.attendanceQuestion": "Will you join online or offline?",
   "events.attendanceOnline": "Online",
-  "events.attendanceOffline": "Offline (in person)",
+  "events.attendanceOffline": "Offline",
   "events.attendanceHint": "Your choice decides which group you join after registering.",
   "events.fileHint": "Upload one file: PDF, document, or image. Max 10 MB.",
   "events.feeOptionQuestion": "Entrance Fee",

@@ -200,7 +200,8 @@ export default async function EventRegisterPage({
   const paidModes = modeFees ? ATTENDANCE_MODES.filter((m) => priceOf(modeFees[m]) !== 0) : [];
 
   // Info bayar SEBELUM submit: peserta bisa transfer dan mengunggah bukti langsung.
-  const paymentBlock = (className: string) => (
+  // Bukti wajib hanya bila setiap pilihan di langkah itu berbayar (kategori ¥0 tidak perlu bukti).
+  const paymentBlock = (className: string, proofRequired = true) => (
     <div className={`flex-col gap-3 rounded-md border border-outline-variant p-4 text-left ${className}`}>
       <h3 className="text-label-caps uppercase tracking-wide text-gold-ink">{t("ticket.pay.heading")}</h3>
       {event.paymentInstructions && (
@@ -221,6 +222,7 @@ export default async function EventRegisterPage({
         folder="payment-proof"
         autoUpload
         allowPaste={false}
+        required={proofRequired}
         accept="image/*"
         label={`${t("ticket.pay.proofLabel")} *`}
       />
@@ -371,7 +373,7 @@ export default async function EventRegisterPage({
               </label>
             );
           })}
-          {paymentBlock("flex")}
+          {paymentBlock("flex", feeOptions.every((o) => priceOf(o) !== 0))}
         </fieldset>
       ),
     });
@@ -410,7 +412,7 @@ export default async function EventRegisterPage({
           <p className="text-body-md text-on-background">
             {event.feeCny != null ? `${t("ticket.pay.amountLabel")}: ¥${event.feeCny}` : t("ticket.pay.amountTbd")}
           </p>
-          {paymentBlock("flex")}
+          {paymentBlock("flex", event.feeCny != null)}
         </>
       ),
     });
