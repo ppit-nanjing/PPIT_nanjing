@@ -122,6 +122,20 @@ export function FileUpload({
         />
       )}
       {!allowPaste && value && <input type="hidden" name={name} value={value} />}
+      {/* Tanpa kolom tempel, `required` tak punya kontrol yang bisa divalidasi browser. Input tak
+          terlihat ini kosong sampai unggahan SELESAI, jadi form tak bisa dikirim saat pratinjau sudah
+          muncul tapi berkasnya masih terunggah. Sengaja tanpa setCustomValidity: form bertahap
+          melepas `required` di langkah tersembunyi, dan pesan kustom akan tetap menahan form. */}
+      {!allowPaste && required && (
+        <input
+          aria-hidden="true"
+          tabIndex={-1}
+          required
+          value={value}
+          onChange={() => {}}
+          className="sr-only"
+        />
+      )}
       {allowPaste && autoUpload && <input type="hidden" name={name} value={value} />}
 
       <div

@@ -8,7 +8,14 @@ import { motion, useReducedMotion } from "motion/react";
 import { AlertCircle, ArrowLeft, ArrowRight, Check, CalendarDays, MapPin } from "lucide-react";
 import { useT } from "@/lib/i18n/client";
 
-export type FlowStep = { id: string; title: string; hint?: string; content: ReactNode };
+export type FlowStep = {
+  id: string;
+  title: string;
+  hint?: string;
+  content: ReactNode;
+  /** Langkah bersyarat (mis. Pembayaran hanya untuk yang memilih Offline): tampil bila field `name` bernilai salah satu `values`. */
+  showWhen?: { name: string; values: string[] };
+};
 
 /**
  * Formulir pendaftaran acara satu-layar-per-bagian, halaman tersendiri
@@ -54,12 +61,35 @@ export function EventRegisterFlow({
   const formRef = useRef<HTMLFormElement>(null);
   const topRef = useRef<HTMLDivElement>(null);
   const stepRef = useRef(step);
-  const last = steps.length - 1;
-  const single = steps.length <= 1;
+  // Nilai field yang menentukan langkah bersyarat, dibaca ulang setiap form berubah.
+  const [watched, setWatched] = useState<Record<string, string>>({});
+  const visible = steps.flatMap((s, i) =>
+    !s.showWhen || s.showWhen.values.includes(watched[s.showWhen.name] ?? "") ? [i] : [],
+  );
+  const pos = Math.max(0, visible.indexOf(step));
+  const last = visible[visible.length - 1] ?? 0;
+  const nextStep = visible[pos + 1] ?? last;
+  const prevStep = visible[pos - 1] ?? 0;
+  const single = visible.length <= 1;
+  // Formulir dengan langkah bersyarat tidak menampilkan bilah "langkah x dari y": angkanya
+  // berubah sesuai pilihan dan membocorkan halaman Pembayaran sebelum peserta memilih.
+  const showProgress = !single && !steps.some((s) => s.showWhen);
+
+  function readWatched() {
+    const form = formRef.current;
+    if (!form) return;
+    const data = new FormData(form);
+    const next: Record<string, string> = {};
+    for (const s of steps) if (s.showWhen) next[s.showWhen.name] = String(data.get(s.showWhen.name) ?? "");
+    setWatched((prev) => (Object.keys(next).every((k) => prev[k] === next[k]) ? prev : next));
+  }
 
   useEffect(() => {
     stepRef.current = step;
   }, [step]);
+
+  // Browser bisa memulihkan pilihan radio (kembali/muat ulang): sinkronkan langkah bersyarat sekali saat dipasang.
+  useEffect(readWatched, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   // registerForEvent redirects back to this SAME route with a new `?err=...`
   // on a recoverable validation failure (mis. paspor belum diisi, KTM belum
@@ -76,9 +106,21 @@ export function EventRegisterFlow({
     if (!initialError) return;
     const code = searchParams.get("err");
     const stepId =
-      code === "biodata" ? "biodata" : code === "question" ? "questions" : code === "fee" || code === "category_full" ? "fee" : null;
+      code === "biodata"
+        ? "biodata"
+        : code === "question"
+          ? "questions"
+          : code === "fee" || code === "category_full"
+            ? "fee"
+            : code === "payment"
+              ? "payment"
+              : null;
     const idx = stepId ? steps.findIndex((s) => s.id === stepId) : -1;
-    if (idx > -1 && idx !== stepRef.current) {
+    // Langkah bersyarat yang syaratnya tidak terpenuhi (mis. pilihan Offline hilang setelah muat ulang) tidak dibuka.
+    const cond = idx > -1 ? steps[idx].showWhen : undefined;
+    const form = formRef.current;
+    const condOk = !cond || (!!form && cond.values.includes(String(new FormData(form).get(cond.name) ?? "")));
+    if (idx > -1 && condOk && idx !== stepRef.current) {
       setDir(idx < stepRef.current ? -1 : 1);
       setStep(idx);
     }
@@ -171,7 +213,7 @@ export function EventRegisterFlow({
     }
   }
 
-  const pct = Math.round(((step + 1) / steps.length) * 100);
+  const pct = Math.round(((pos + 1) / visible.length) * 100);
 
   return (
     <div ref={topRef} className="mx-auto w-full max-w-2xl scroll-mt-6">
@@ -202,11 +244,11 @@ export function EventRegisterFlow({
       </div>
 
       {/* Progres */}
-      {!single && (
+      {showProgress && (
         <div className="sticky top-2 z-10 mt-4 flex flex-col gap-1.5 rounded-lg border border-outline-variant bg-background/85 px-4 py-3 backdrop-blur">
           <div className="flex items-center justify-between text-label-caps uppercase tracking-wide text-on-surface-variant">
             <span>{steps[step]?.title}</span>
-            <span>{t("events.registerStepOf", { n: step + 1, total: steps.length })}</span>
+            <span>{t("events.registerStepOf", { n: pos + 1, total: visible.length })}</span>
           </div>
           <div className="h-1.5 w-full overflow-hidden rounded-full bg-surface-container-low">
             <motion.div
@@ -229,7 +271,7 @@ export function EventRegisterFlow({
         </div>
       )}
 
-      <form ref={formRef} action={action} className="mt-4 flex flex-col gap-5">
+      <form ref={formRef} action={action} onChange={readWatched} className="mt-4 flex flex-col gap-5">
         <div className="relative">
           {steps.map((s, i) => {
             const active = i === step;
@@ -245,7 +287,7 @@ export function EventRegisterFlow({
                   transition={{ duration: reduceMotion ? 0 : 0.25, ease: "easeOut" }}
                   className="evt-surface flex flex-col gap-4 rounded-lg border border-outline-variant bg-surface-container-lowest p-5 sm:p-6"
                 >
-                  {!single && (
+                  {(showProgress || !!s.showWhen) && (
                     <div className="flex flex-col gap-1">
                       <h2 className="text-headline-sm text-heading">{s.title}</h2>
                       {s.hint && <p className="text-body-sm text-on-surface-variant">{s.hint}</p>}
@@ -263,7 +305,7 @@ export function EventRegisterFlow({
           {step > 0 ? (
             <button
               type="button"
-              onClick={() => go(Math.max(0, step - 1), -1)}
+              onClick={() => go(prevStep, -1)}
               className="inline-flex items-center justify-center gap-2 rounded-md border border-outline-variant px-5 py-3.5 text-label-caps uppercase tracking-wide text-on-background transition-colors hover:bg-surface-container-low focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-container"
             >
               <ArrowLeft size={16} aria-hidden="true" /> {t("events.wizardBack")}
@@ -281,7 +323,7 @@ export function EventRegisterFlow({
             <button
               type="button"
               onClick={() => {
-                if (currentStepValid()) go(Math.min(last, step + 1), 1);
+                if (currentStepValid()) go(nextStep, 1);
               }}
               className="inline-flex flex-1 items-center justify-center gap-2 deco-btn rounded-md bg-accent px-6 py-3.5 text-label-caps uppercase text-on-accent transition-[filter] hover:brightness-95 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-container focus-visible:ring-offset-2 focus-visible:ring-offset-background"
             >

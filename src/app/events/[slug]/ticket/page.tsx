@@ -191,10 +191,8 @@ export default async function EventTicketPage({ params }: { params: Promise<{ sl
                   <h3 className="text-label-caps uppercase tracking-wide text-gold-ink">
                     {attendanceMode === "online" ? t("ticket.groupQrOnlineTitle") : t("ticket.groupQrOfflineTitle")}
                   </h3>
-                  {/* QR grup ditahan sampai pembayaran terverifikasi (atau pendaftaran disetujui). */}
-                  {gated ? (
-                    <p className="text-body-sm text-on-surface-variant">{t("ticket.groupQrAfterPayment")}</p>
-                  ) : groupQrUrl ? (
+                  {/* QR grup langsung tampil setelah mendaftar (seperti Google Form); bukti bayar sudah wajib di formulir. */}
+                  {groupQrUrl ? (
                     // eslint-disable-next-line @next/next/no-img-element
                     <img
                       src={groupQrUrl}
