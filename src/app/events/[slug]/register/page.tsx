@@ -15,14 +15,8 @@ import {
   users,
 } from "@/db/schema";
 import { NON_STUDENT_BRANCH } from "@/lib/membership-status";
-import { ATTENDANCE_MODES, feeOptionsByMode, type AttendanceMode } from "@/lib/event-attendance-mode";
+import { ATTENDANCE_MODES, feeOptionsByMode } from "@/lib/event-attendance-mode";
 import { FileUpload } from "@/components/upload/file-upload";
-
-// Info bayar di bawah pilihan hadir hanya muncul saat mode berbayar dicentang (CSS :has, tanpa JS).
-const SHOW_WHEN_MODE: Record<AttendanceMode, string> = {
-  online: "group-has-[input[value=online]:checked]/att:flex",
-  offline: "group-has-[input[value=offline]:checked]/att:flex",
-};
 import { hasCompletedSensus } from "@/lib/sensus-gate";
 import { handleFromLink, profileKeyForLabel, sensusKeyForLabel } from "@/lib/event-question-prefill";
 import { getEventAccess } from "@/lib/event-access";
@@ -256,15 +250,15 @@ export default async function EventRegisterPage({
       content: (
         <>
           {event.offersAttendanceMode && (
-            <div className="group/att flex flex-col gap-4">
+            <div className="flex flex-col gap-4">
               <fieldset className="flex flex-col gap-2 text-left border-0 p-0 m-0">
                 <legend className="text-label-caps uppercase tracking-wide text-on-surface-variant p-0">
                   {t("events.attendanceQuestion")}
                   <span className="text-error" aria-hidden="true"> *</span>
                 </legend>
                 {ATTENDANCE_MODES.map((mode) => {
+                  // Harga sengaja tidak ditampilkan di sini; nominalnya muncul di halaman Pembayaran.
                   const fee = modeFees?.[mode];
-                  const price = fee ? priceOf(fee) : null;
                   return (
                     <label
                       key={mode}
@@ -282,9 +276,6 @@ export default async function EventRegisterPage({
                       />
                       <span className={fee?.isFull ? "line-through" : ""}>
                         {mode === "online" ? t("events.attendanceOnline") : t("events.attendanceOffline")}
-                        {fee && (
-                          <span className="text-on-surface-variant"> · {price === 0 ? t("events.free") : `¥${price}`}</span>
-                        )}
                       </span>
                       {fee?.isFull && (
                         <span className="ml-auto shrink-0 text-label-caps uppercase tracking-wide text-error">
@@ -296,7 +287,6 @@ export default async function EventRegisterPage({
                 })}
                 <span className="text-xs text-on-surface-variant">{t("events.attendanceHint")}</span>
               </fieldset>
-              {paidModes.length > 0 && paymentBlock(`hidden ${paidModes.map((m) => SHOW_WHEN_MODE[m]).join(" ")}`)}
             </div>
           )}
           {askBranch && (
@@ -383,6 +373,31 @@ export default async function EventRegisterPage({
           })}
           {paymentBlock("flex")}
         </fieldset>
+      ),
+    });
+  } else if (modeFees && paidModes.length > 0) {
+    // Tarif ikut pilihan hadir (NYALA): halaman Pembayaran sendiri, hanya untuk yang memilih mode berbayar.
+    steps.push({
+      id: "payment",
+      title: t("ticket.pay.heading"),
+      showWhen: { name: "attendanceMode", values: paidModes },
+      content: (
+        <>
+          <div className="rounded-lg bg-primary-container/10 px-4 py-3">
+            <p className="text-label-caps uppercase tracking-wide text-on-surface-variant">{t("ticket.pay.amountLabel")}</p>
+            {paidModes.map((m) => (
+              <p key={m} className="text-headline-md text-on-background">
+                ¥{priceOf(modeFees[m])}
+                {paidModes.length > 1 && (
+                  <span className="text-body-md text-on-surface-variant">
+                    {" "}· {m === "online" ? t("events.attendanceOnline") : t("events.attendanceOffline")}
+                  </span>
+                )}
+              </p>
+            ))}
+          </div>
+          {paymentBlock("flex")}
+        </>
       ),
     });
   } else if (event.isPaid && feeOptions.length === 0 && event.feeCny !== 0) {
