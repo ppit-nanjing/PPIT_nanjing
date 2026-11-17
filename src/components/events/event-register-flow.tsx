@@ -71,6 +71,9 @@ export function EventRegisterFlow({
   const nextStep = visible[pos + 1] ?? last;
   const prevStep = visible[pos - 1] ?? 0;
   const single = visible.length <= 1;
+  // Formulir dengan langkah bersyarat tidak menampilkan bilah "langkah x dari y": angkanya
+  // berubah sesuai pilihan dan membocorkan halaman Pembayaran sebelum peserta memilih.
+  const showProgress = !single && !steps.some((s) => s.showWhen);
 
   function readWatched() {
     const form = formRef.current;
@@ -241,7 +244,7 @@ export function EventRegisterFlow({
       </div>
 
       {/* Progres */}
-      {!single && (
+      {showProgress && (
         <div className="sticky top-2 z-10 mt-4 flex flex-col gap-1.5 rounded-lg border border-outline-variant bg-background/85 px-4 py-3 backdrop-blur">
           <div className="flex items-center justify-between text-label-caps uppercase tracking-wide text-on-surface-variant">
             <span>{steps[step]?.title}</span>
@@ -284,7 +287,7 @@ export function EventRegisterFlow({
                   transition={{ duration: reduceMotion ? 0 : 0.25, ease: "easeOut" }}
                   className="evt-surface flex flex-col gap-4 rounded-lg border border-outline-variant bg-surface-container-lowest p-5 sm:p-6"
                 >
-                  {!single && (
+                  {(showProgress || !!s.showWhen) && (
                     <div className="flex flex-col gap-1">
                       <h2 className="text-headline-sm text-heading">{s.title}</h2>
                       {s.hint && <p className="text-body-sm text-on-surface-variant">{s.hint}</p>}
