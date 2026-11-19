@@ -694,12 +694,13 @@ export async function saveFeeOption(formData: FormData) {
   const amountCny = parseAmountCny(formData);
   const quota = parseFeeOptionQuota(formData);
   const earlyBirdAmountCny = parseEarlyBirdAmountCny(formData);
+  const registrationDeadline = parseChinaLocalInput(formData.get("registrationDeadline"));
 
   const id = String(formData.get("id") ?? "").trim();
   if (id) {
     await db
       .update(eventFeeOptions)
-      .set({ label, amountCny, quota, earlyBirdAmountCny })
+      .set({ label, amountCny, quota, earlyBirdAmountCny, registrationDeadline })
       .where(and(eq(eventFeeOptions.id, id), eq(eventFeeOptions.eventId, eventId)));
   } else {
     const [{ maxOrder }] = await db
@@ -708,7 +709,7 @@ export async function saveFeeOption(formData: FormData) {
       .where(eq(eventFeeOptions.eventId, eventId));
     await db
       .insert(eventFeeOptions)
-      .values({ eventId, label, amountCny, quota, earlyBirdAmountCny, orderIndex: Number(maxOrder) + 1 });
+      .values({ eventId, label, amountCny, quota, earlyBirdAmountCny, registrationDeadline, orderIndex: Number(maxOrder) + 1 });
   }
   revalidatePath(`/console/events/${eventId}`);
 }

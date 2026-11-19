@@ -57,6 +57,8 @@ export default async function EventRegisterPage({
         ? t("events.regErrFee")
         : err === "category_full"
           ? t("events.regErrCategoryFull")
+          : err === "category_closed"
+            ? t("events.regErrCategoryClosed")
           : err === "biodata"
             ? t("events.regErrBiodata")
             : err === "attendance"
@@ -94,7 +96,8 @@ export default async function EventRegisterPage({
   }
 
   const seats = await getEventSeats(event);
-  const deadlinePassed = event.registrationDeadline ? new Date(event.registrationDeadline) < new Date() : false;
+  const deadlinePassed =
+    (event.registrationDeadline ? new Date(event.registrationDeadline) < new Date() : false) || seats.allOptionsClosed;
   // Pendaftaran tidak dibuka / penuh / lewat tenggat: kembalikan ke halaman
   // acara — di sana pesannya (penuh / tenggat / belum dibuka) sudah tampil.
   // `seats.isFull` = pagu total acara tercapai ATAU setiap kategori tarif
@@ -261,11 +264,12 @@ export default async function EventRegisterPage({
                 {ATTENDANCE_MODES.map((mode) => {
                   // Harga sengaja tidak ditampilkan di sini; nominalnya muncul di halaman Pembayaran.
                   const fee = modeFees?.[mode];
+                  const off = !!fee && (fee.isFull || fee.isClosed);
                   return (
                     <label
                       key={mode}
                       className={`flex items-center gap-2 rounded-md p-2.5 text-body-md ${
-                        fee?.isFull ? "bg-soft-gray/50 cursor-not-allowed text-on-surface-variant" : "bg-soft-gray cursor-pointer"
+                        off ? "bg-soft-gray/50 cursor-not-allowed text-on-surface-variant" : "bg-soft-gray cursor-pointer"
                       }`}
                     >
                       <input
@@ -273,15 +277,15 @@ export default async function EventRegisterPage({
                         name="attendanceMode"
                         value={mode}
                         required
-                        disabled={fee?.isFull}
+                        disabled={off}
                         className="h-4 w-4 accent-[var(--color-primary-container)]"
                       />
-                      <span className={fee?.isFull ? "line-through" : ""}>
+                      <span className={off ? "line-through" : ""}>
                         {mode === "online" ? t("events.attendanceOnline") : t("events.attendanceOffline")}
                       </span>
-                      {fee?.isFull && (
+                      {off && (
                         <span className="ml-auto shrink-0 text-label-caps uppercase tracking-wide text-error">
-                          {t("events.quotaFull")}
+                          {fee.isClosed ? t("events.categoryClosed") : t("events.quotaFull")}
                         </span>
                       )}
                     </label>
@@ -336,7 +340,7 @@ export default async function EventRegisterPage({
               <label
                 key={o.id}
                 className={`flex items-center gap-2 rounded-md p-2.5 text-body-md ${
-                  o.isFull
+                  o.isFull || o.isClosed
                     ? "bg-soft-gray/50 cursor-not-allowed text-on-surface-variant"
                     : "bg-soft-gray cursor-pointer"
                 }`}
@@ -346,10 +350,10 @@ export default async function EventRegisterPage({
                   name="feeOptionId"
                   value={o.id}
                   required
-                  disabled={o.isFull}
+                  disabled={o.isFull || o.isClosed}
                   className="h-4 w-4 accent-[var(--color-primary-container)]"
                 />
-                <span className={o.isFull ? "line-through" : ""}>
+                <span className={o.isFull || o.isClosed ? "line-through" : ""}>
                   {o.label}{" "}
                   <span className="text-on-surface-variant">
                     (¥{price}
@@ -361,9 +365,9 @@ export default async function EventRegisterPage({
                     </span>
                   )}
                 </span>
-                {o.isFull ? (
+                {o.isFull || o.isClosed ? (
                   <span className="ml-auto shrink-0 text-label-caps uppercase tracking-wide text-error">
-                    {t("events.quotaFull")}
+                    {o.isClosed ? t("events.categoryClosed") : t("events.quotaFull")}
                   </span>
                 ) : o.remaining != null && o.remaining <= 15 ? (
                   <span className="ml-auto shrink-0 text-label-caps uppercase tracking-wide text-on-surface-variant">

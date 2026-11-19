@@ -26,6 +26,9 @@ export type FeeOptionSeats = {
   isFull: boolean;
   // Sisa kursi kategori ini; null = kategori tak punya kuota.
   remaining: number | null;
+  // Batas pendaftaran kategori ini (null = ikut batas acara) dan apakah sudah lewat.
+  registrationDeadline: Date | null;
+  isClosed: boolean;
 };
 
 export type EventSeats = {
@@ -37,6 +40,9 @@ export type EventSeats = {
   feeOptions: FeeOptionSeats[];
   // Ada minimal satu kategori tarif yang dibatasi kuota.
   hasQuotas: boolean;
+  // Tidak ada kategori yang masih bisa dipilih karena sebagian sudah lewat batas
+  // waktunya dan sisanya penuh. Diperlakukan seperti batas pendaftaran lewat.
+  allOptionsClosed: boolean;
   // Pendaftaran online harus ditutup:
   //  - events.capacity tercapai, ATAU
   //  - SETIAP kategori tarif punya kuota dan semuanya penuh. (Kalau ada satu
@@ -62,6 +68,7 @@ export async function getEventSeats(event: {
       amountCny: eventFeeOptions.amountCny,
       earlyBirdAmountCny: eventFeeOptions.earlyBirdAmountCny,
       quota: eventFeeOptions.quota,
+      registrationDeadline: eventFeeOptions.registrationDeadline,
     })
     .from(eventFeeOptions)
     .where(eq(eventFeeOptions.eventId, event.id))
@@ -79,6 +86,7 @@ export async function getEventSeats(event: {
     }
   }
 
+  const now = new Date();
   const feeOptions: FeeOptionSeats[] = options.map((o) => {
     const reg = perOption.get(o.id) ?? 0;
     return {
@@ -90,6 +98,8 @@ export async function getEventSeats(event: {
       registered: reg,
       isFull: o.quota != null && reg >= o.quota,
       remaining: o.quota != null ? Math.max(0, o.quota - reg) : null,
+      registrationDeadline: o.registrationDeadline,
+      isClosed: o.registrationDeadline != null && o.registrationDeadline < now,
     };
   });
 
@@ -104,6 +114,8 @@ export async function getEventSeats(event: {
     capacityFull,
     feeOptions,
     hasQuotas,
+    allOptionsClosed:
+      feeOptions.length > 0 && feeOptions.some((o) => o.isClosed) && feeOptions.every((o) => o.isClosed || o.isFull),
     isFull: capacityFull || quotaFull,
   };
 }

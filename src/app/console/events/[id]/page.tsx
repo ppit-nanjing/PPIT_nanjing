@@ -1090,6 +1090,10 @@ export default async function ConsoleEventDetailPage({ params }: { params: Promi
             <strong className="text-on-background">Kuota</strong>: kosong = hanya Kapasitas acara yang berlaku. Kategori
             yang penuh tertutup sendiri. Panitia tidak memakai kuota ini.
           </li>
+          <li id="fee-deadline-hint">
+            <strong className="text-on-background">Tutup pendaftaran</strong>: kosong = ikut batas pendaftaran acara. Diisi =
+            kategori ini saja yang tertutup setelah waktu itu (mis. Offline tutup lebih awal dari Online).
+          </li>
           <li>
             <strong className="text-on-background">Early bird</strong>: untuk yang mendaftar sebelum{" "}
             {event.earlyBirdUntil
@@ -1137,6 +1141,16 @@ export default async function ConsoleEventDetailPage({ params }: { params: Promi
                   className="bg-soft-gray rounded-md p-2.5 text-body-md"
                 />
               </label>
+              <label className="flex flex-col gap-1">
+                <span className="text-label-caps uppercase tracking-wide text-on-surface-variant">Tutup pendaftaran</span>
+                <input
+                  name="registrationDeadline"
+                  type="datetime-local"
+                  defaultValue={o.registrationDeadline ? toChinaLocalInput(new Date(o.registrationDeadline)) : ""}
+                  aria-describedby="fee-deadline-hint"
+                  className="bg-soft-gray rounded-md p-2.5 text-body-md"
+                />
+              </label>
               <SubmitButton
                 successMessage="Kategori tarif tersimpan."
                 className="text-label-caps uppercase tracking-wide border border-outline-variant px-3 py-2 rounded-md hover:bg-surface-container-low transition-colors"
@@ -1160,6 +1174,9 @@ export default async function ConsoleEventDetailPage({ params }: { params: Promi
                 {o.registered}
                 {o.quota != null ? ` / ${o.quota}` : ""} terdaftar
                 {o.isFull ? " · penuh" : ""}
+                {o.registrationDeadline
+                  ? ` · tutup ${new Date(o.registrationDeadline).toLocaleString("id-ID", { timeZone: "Asia/Shanghai", dateStyle: "medium", timeStyle: "short" })}`
+                  : ""}
                 {o.earlyBirdAmountCny != null ? ` · early bird ¥${o.earlyBirdAmountCny} → normal ¥${o.amountCny}` : ""}
               </p>
             </form>
@@ -1182,6 +1199,10 @@ export default async function ConsoleEventDetailPage({ params }: { params: Promi
           <label className="flex flex-col gap-1 w-20">
             <span className="text-label-caps uppercase tracking-wide text-on-surface-variant">Kuota</span>
             <input name="quota" type="number" min={0} placeholder="∞" className="bg-soft-gray rounded-md p-2.5 text-body-md" />
+          </label>
+          <label className="flex flex-col gap-1">
+            <span className="text-label-caps uppercase tracking-wide text-on-surface-variant">Tutup pendaftaran</span>
+            <input name="registrationDeadline" type="datetime-local" className="bg-soft-gray rounded-md p-2.5 text-body-md" />
           </label>
           <SubmitButton
             successMessage="Kategori tarif ditambahkan."

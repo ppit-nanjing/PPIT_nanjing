@@ -97,7 +97,8 @@ export default async function EventDetailPage({ params, searchParams }: { params
   const canScan = eventAccess?.can("event.scanAttendance") ?? false;
 
   const now = new Date();
-  const deadlinePassed = event.registrationDeadline ? new Date(event.registrationDeadline) < now : false;
+  const deadlinePassed =
+    (event.registrationDeadline ? new Date(event.registrationDeadline) < now : false) || seats.allOptionsClosed;
   // Penuh = pagu total acara tercapai ATAU setiap kategori tarif berkuota
   // sudah penuh (mis. WIF: Freshmen 130 + Non-freshmen 20).
   const isFull = seats.isFull;
@@ -619,22 +620,57 @@ export default async function EventDetailPage({ params, searchParams }: { params
                         {/* Kuota per kategori tarif (mis. WIF: Freshmen 130,
                             Non-freshmen 20) — begitu satu kategori penuh, hanya
                             kategori itu yang tertutup. */}
-                        {seats.feeOptions.some((o) => o.quota != null) && (
-                          <ul className="mt-2 flex flex-col gap-1">
-                            {seats.feeOptions
-                              .filter((o) => o.quota != null)
-                              .map((o) => (
-                                <li
-                                  key={o.id}
-                                  className="flex flex-wrap items-center gap-x-2 text-label-caps uppercase tracking-wide text-on-surface-variant"
-                                >
+                        {/* Per kategori (mis. NYALA Online / Offline): jumlah, bar kuota, dan
+                            batas waktunya sendiri. Kategori tanpa kuota dan tanpa batas waktu
+                            hanya ikut tampil kalau ada kategori lain yang punya. */}
+                        {seats.feeOptions.some((o) => o.quota != null || o.registrationDeadline != null) && (
+                          <ul className="mt-3 flex flex-col gap-3">
+                            {seats.feeOptions.map((o) => (
+                              <li key={o.id} className="flex flex-col gap-1">
+                                <div className="flex flex-wrap items-baseline justify-between gap-x-3 text-label-caps uppercase tracking-wide">
                                   <span className="text-on-background">{o.label}</span>
-                                  <span>
-                                    {o.registered} / {o.quota}
+                                  <span className="tabular-nums text-on-surface-variant">
+                                    {o.quota != null ? `${o.registered} / ${o.quota}` : t("events.registered", { count: o.registered })}
                                   </span>
-                                  {o.isFull && <span className="text-error">· {t("events.quotaFull")}</span>}
-                                </li>
-                              ))}
+                                </div>
+                                {o.quota != null && (
+                                  <div
+                                    className="h-1.5 w-full overflow-hidden rounded-full bg-surface-container-low"
+                                    role="progressbar"
+                                    aria-label={`${t("events.capacityLabel")}: ${o.label}`}
+                                    aria-valuemin={0}
+                                    aria-valuemax={o.quota}
+                                    aria-valuenow={Math.min(o.registered, o.quota)}
+                                  >
+                                    <div
+                                      className={`h-full rounded-full transition-[width] duration-500 motion-reduce:transition-none ${
+                                        o.isFull ? "bg-error" : "bg-primary-container"
+                                      }`}
+                                      style={{ width: `${Math.min(100, (o.registered / o.quota) * 100)}%` }}
+                                    />
+                                  </div>
+                                )}
+                                <p className={`text-label-caps ${o.isFull || o.isClosed ? "text-error" : "text-on-surface-variant"}`}>
+                                  {o.isClosed
+                                    ? t("events.categoryClosed")
+                                    : o.isFull
+                                      ? t("events.quotaFull")
+                                      : [
+                                          o.remaining != null ? t("events.slotsLeft", { n: o.remaining }) : null,
+                                          o.registrationDeadline
+                                            ? t("events.categoryCloses", {
+                                                date: new Date(o.registrationDeadline).toLocaleDateString(INTL_LOCALE[locale], {
+                                                  dateStyle: "long",
+                                                  timeZone: "Asia/Shanghai",
+                                                }),
+                                              })
+                                            : null,
+                                        ]
+                                          .filter(Boolean)
+                                          .join(" · ")}
+                                </p>
+                              </li>
+                            ))}
                           </ul>
                         )}
                       </>

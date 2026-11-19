@@ -110,7 +110,7 @@ export function EventRegisterFlow({
         ? "biodata"
         : code === "question"
           ? "questions"
-          : code === "fee" || code === "category_full"
+          : code === "fee" || code === "category_full" || code === "category_closed"
             ? "fee"
             : code === "payment"
               ? "payment"
