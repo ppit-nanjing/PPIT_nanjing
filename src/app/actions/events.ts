@@ -240,6 +240,7 @@ async function runRegistration(eventId: string, slugArg: string, formData: FormD
       // Kategori itu penuh persis di sela ini — balik ke form supaya peserta
       // bisa pilih kategori lain yang masih ada kuotanya.
       if (picked?.isFull) redirect(registerErrUrl(slug, "category_full", practice));
+      if (picked?.isClosed) redirect(registerErrUrl(slug, "category_closed", practice));
     }
 
     // Biodata lengkap (acara requiresBiodata): snapshot dari sensus bila lengkap,

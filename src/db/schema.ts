@@ -653,6 +653,9 @@ export const eventFeeOptions = pgTable("event_fee_options", {
   // events.capacity). Boleh dijumlah di bawah events.capacity kalau memang ada
   // sisa kursi yang diurus di luar portal (mis. jatah panitia).
   quota: integer("quota"),
+  // Batas pendaftaran kategori ini saja (migrasi 0063). NULL = ikut batas acara.
+  // Contoh NYALA: Offline tutup 1 Des, Online ikut batas acara 4 Des.
+  registrationDeadline: timestamp("registration_deadline"),
   orderIndex: integer("order_index").notNull().default(0),
 });
 

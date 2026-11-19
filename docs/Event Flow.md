@@ -53,6 +53,8 @@ Pembayaran **perorangan** — satu pendaftaran satu tanggungan. Tidak ada paymen
 - Nol baris `event_fee_options` → tarif tunggal `events.fee_cny` (atau gratis).
 - ≥1 baris → peserta memilih satu kategori saat mendaftar; nominal dibaca dari opsinya, tidak disalin ke pendaftaran.
 - `event_fee_options.quota` membatasi per kategori — satu kategori penuh, kategori lain jalan terus.
+- `event_fee_options.registration_deadline` (migrasi `0063`) menutup **satu kategori saja** setelah waktunya (mis. NYALA: Offline tutup 1 Des, Online ikut batas acara 4 Des). Kosong = ikut `events.registration_deadline`. Kategori yang lewat tampil "Ditutup" di formulir dan ditolak server (`?err=category_closed`); kalau semua kategori sudah ditutup atau penuh, acara dianggap lewat batas pendaftaran.
+- Halaman acara menampilkan baris per kategori (jumlah, bar kuota, sisa kursi, tanggal tutup) kalau ada kategori yang punya kuota atau batas waktu. `events.capacity` tetap pagu **total** semua kategori; kosongkan kalau hanya satu kategori yang dibatasi (NYALA: kuota Offline 100, Online tanpa batas).
 - Early bird: sampai `events.early_bird_until`, pendaftar kena `early_bird_amount_cny` (bila diisi). Tier dihitung live dari `registered_at`, jadi menggeser tanggal ikut menggeser harga pendaftar lama.
 
 ## Biodata lengkap (`requires_biodata`)

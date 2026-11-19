@@ -73,6 +73,8 @@ export default async function EventDetailPage({ params, searchParams }: { params
 
   const seats = await getEventSeats(event);
   const registeredCount = seats.registered;
+  // Rincian per kategori menggantikan bar total kalau ada kategori yang berkuota atau punya batas waktu sendiri.
+  const showCategorySeats = seats.feeOptions.some((o) => o.quota != null || o.registrationDeadline != null);
 
   let alreadyRegistered = false;
   // Penugasan panitia pengunjung ini pada acara yang sama - kalau ada, form
@@ -97,7 +99,8 @@ export default async function EventDetailPage({ params, searchParams }: { params
   const canScan = eventAccess?.can("event.scanAttendance") ?? false;
 
   const now = new Date();
-  const deadlinePassed = event.registrationDeadline ? new Date(event.registrationDeadline) < now : false;
+  const deadlinePassed =
+    (event.registrationDeadline ? new Date(event.registrationDeadline) < now : false) || seats.allOptionsClosed;
   // Penuh = pagu total acara tercapai ATAU setiap kategori tarif berkuota
   // sudah penuh (mis. WIF: Freshmen 130 + Non-freshmen 20).
   const isFull = seats.isFull;
@@ -592,14 +595,15 @@ export default async function EventDetailPage({ params, searchParams }: { params
                         <p className="text-label-caps uppercase text-on-surface-variant mb-0.5">{t("events.attendees")}</p>
                         <p className="text-body-md text-on-background font-semibold">
                           {t("events.registered", { count: registeredCount })}
-                          {event.capacity ? ` / ${event.capacity}` : ""}
+                          {!showCategorySeats && event.capacity ? ` / ${event.capacity}` : ""}
                         </p>
-                        {event.capacity != null && !isFull && (
+                        {/* Tanpa kategori berkuota/berbatas waktu: satu angka total + bar kapasitas. */}
+                        {!showCategorySeats && event.capacity != null && !isFull && (
                           <p className="text-label-caps text-primary-container mt-0.5">
                             {t("events.slotsLeft", { n: event.capacity - registeredCount })}
                           </p>
                         )}
-                        {event.capacity != null && (
+                        {!showCategorySeats && event.capacity != null && (
                           <div
                             className="mt-2 h-2 w-full rounded-full bg-surface-container-low overflow-hidden"
                             role="progressbar"
@@ -616,25 +620,63 @@ export default async function EventDetailPage({ params, searchParams }: { params
                             />
                           </div>
                         )}
-                        {/* Kuota per kategori tarif (mis. WIF: Freshmen 130,
-                            Non-freshmen 20) — begitu satu kategori penuh, hanya
-                            kategori itu yang tertutup. */}
-                        {seats.feeOptions.some((o) => o.quota != null) && (
-                          <ul className="mt-2 flex flex-col gap-1">
-                            {seats.feeOptions
-                              .filter((o) => o.quota != null)
-                              .map((o) => (
-                                <li
-                                  key={o.id}
-                                  className="flex flex-wrap items-center gap-x-2 text-label-caps uppercase tracking-wide text-on-surface-variant"
-                                >
-                                  <span className="text-on-background">{o.label}</span>
-                                  <span>
-                                    {o.registered} / {o.quota}
-                                  </span>
-                                  {o.isFull && <span className="text-error">· {t("events.quotaFull")}</span>}
+                        {/* Dengan kategori (mis. NYALA Offline berkuota + Online): total cukup satu angka di atas,
+                            lalu satu baris per kategori. Bar hanya untuk kategori berkuota; keterangan pendek
+                            (sisa slot, tanggal tutup) hanya kalau ada isinya. */}
+                        {showCategorySeats && (
+                          <ul className="mt-3 flex flex-col gap-3">
+                            {seats.feeOptions.map((o) => {
+                              const note = o.isClosed
+                                ? t("events.categoryClosed")
+                                : o.isFull
+                                  ? t("events.quotaFull")
+                                  : [
+                                      o.remaining != null ? t("events.slotsLeft", { n: o.remaining }) : null,
+                                      o.registrationDeadline
+                                        ? t("events.categoryCloses", {
+                                            date: new Date(o.registrationDeadline).toLocaleDateString(INTL_LOCALE[locale], {
+                                              day: "numeric",
+                                              month: "short",
+                                              timeZone: "Asia/Shanghai",
+                                            }),
+                                          })
+                                        : null,
+                                    ]
+                                      .filter(Boolean)
+                                      .join(" · ");
+                              return (
+                                <li key={o.id} className="flex flex-col gap-1.5">
+                                  <div className="flex items-baseline justify-between gap-3 text-body-md">
+                                    <span className="font-medium text-on-background">{o.label}</span>
+                                    <span className="tabular-nums text-on-surface-variant">
+                                      {o.quota != null ? `${o.registered} / ${o.quota}` : t("events.registered", { count: o.registered })}
+                                    </span>
+                                  </div>
+                                  {o.quota != null && (
+                                    <div
+                                      className="h-1.5 w-full overflow-hidden rounded-full bg-surface-container-low"
+                                      role="progressbar"
+                                      aria-label={`${t("events.capacityLabel")}: ${o.label}`}
+                                      aria-valuemin={0}
+                                      aria-valuemax={o.quota}
+                                      aria-valuenow={Math.min(o.registered, o.quota)}
+                                    >
+                                      <div
+                                        className={`h-full rounded-full transition-[width] duration-500 motion-reduce:transition-none ${
+                                          o.isFull ? "bg-error" : "bg-primary-container"
+                                        }`}
+                                        style={{ width: `${Math.min(100, (o.registered / o.quota) * 100)}%` }}
+                                      />
+                                    </div>
+                                  )}
+                                  {note && (
+                                    <p className={`text-body-sm ${o.isFull || o.isClosed ? "text-error" : "text-on-surface-variant"}`}>
+                                      {note}
+                                    </p>
+                                  )}
                                 </li>
-                              ))}
+                              );
+                            })}
                           </ul>
                         )}
                       </>

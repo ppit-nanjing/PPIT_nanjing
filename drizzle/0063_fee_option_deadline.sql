@@ -1,0 +1,11 @@
+-- Migrasi 0063 — batas pendaftaran per kategori tarif.
+--
+-- event_fee_options.registration_deadline: NULL (bawaan) = kategori ini ikut
+-- batas pendaftaran acara (events.registration_deadline). Diisi = kategori ini
+-- saja yang tertutup setelah waktu itu, kategori lain jalan terus. Contoh NYALA:
+-- Offline tutup 1 Des, Online tutup 4 Des (batas acara).
+--
+-- Hanya menambah kolom nullable, jadi semua acara yang ada berperilaku persis
+-- seperti sebelumnya. Aman dijalankan ulang. Jalankan SEBELUM kode yang membaca
+-- kolom ini ter-deploy.
+ALTER TABLE "event_fee_options" ADD COLUMN IF NOT EXISTS "registration_deadline" timestamp;
