@@ -1,3 +1,4 @@
+import { ne } from "drizzle-orm";
 import { redirect } from "next/navigation";
 import { auth } from "@/auth";
 import { db } from "@/db";
@@ -14,7 +15,10 @@ export default async function ContributePage() {
   const session = await auth();
   if (!session?.user?.id) redirect(`/login?returnTo=${encodeURIComponent("/inventory/contribute")}`);
 
-  const all = await db.select({ category: inventoryItems.category }).from(inventoryItems);
+  const all = await db
+    .select({ category: inventoryItems.category })
+    .from(inventoryItems)
+    .where(ne(inventoryItems.condition, "retired"));
   const categories = [...new Set(all.map((i) => i.category).filter((c): c is string => !!c))];
 
   const { t } = await getT();

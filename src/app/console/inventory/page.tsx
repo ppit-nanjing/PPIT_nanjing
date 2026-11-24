@@ -69,7 +69,10 @@ export default async function ConsoleInventoryPage() {
     getGuide("inventaris"),
   ]);
 
-  const itemOptions = items.map((i) => ({ id: i.id, name: i.name, availableQuantity: i.availableQuantity }));
+  // Barang Dipensiunkan tidak bisa dipilih untuk pinjam keluar, reservasi, atau sumbangan.
+  const itemOptions = items
+    .filter((i) => i.condition !== "retired")
+    .map((i) => ({ id: i.id, name: i.name, availableQuantity: i.availableQuantity }));
 
   return (
     <div className="px-4 py-6 sm:px-6 lg:px-8 lg:py-10">
