@@ -30,66 +30,8 @@ export function ExternalLoanManager({ items, loans }: { items: Item[]; loans: Lo
 
   return (
     <div className="flex flex-col gap-6">
-      <form
-        action={(fd) =>
-          startTransition(async () => {
-            await recordExternalLoan(fd);
-            toast.success("Peminjaman dicatat.");
-          })
-        }
-        className="bg-surface-container-low border border-outline-variant rounded-xl p-5 grid grid-cols-1 md:grid-cols-2 gap-4"
-      >
-        <h3 className="text-headline-md text-on-background md:col-span-2">Catat Peminjaman Keluar</h3>
-        <label className="flex flex-col gap-2">
-          <span className="text-label-caps uppercase tracking-wide text-on-surface-variant">Barang *</span>
-          <Select
-            name="itemId"
-            required
-            defaultValue=""
-            placeholder="Pilih barang"
-            className="w-full"
-          >
-            {items.map((i) => (
-              <option key={i.id} value={i.id} disabled={i.availableQuantity < 1}>
-                {i.name} ({i.availableQuantity} tersedia)
-              </option>
-            ))}
-          </Select>
-        </label>
-        <label className="flex flex-col gap-2">
-          <span className="text-label-caps uppercase tracking-wide text-on-surface-variant">Nama Peminjam *</span>
-          <input name="borrowerName" required className="bg-soft-gray rounded-md p-3 text-body-md" />
-        </label>
-        <label className="flex flex-col gap-2">
-          <span className="text-label-caps uppercase tracking-wide text-on-surface-variant">Kontak Peminjam</span>
-          <input name="borrowerContact" className="bg-soft-gray rounded-md p-3 text-body-md" />
-        </label>
-        <label className="flex flex-col gap-2">
-          <span className="text-label-caps uppercase tracking-wide text-on-surface-variant">Jumlah</span>
-          <input type="number" min={1} name="quantity" defaultValue={1} className="bg-soft-gray rounded-md p-3 text-body-md" />
-        </label>
-        <label className="flex flex-col gap-2">
-          <span className="text-label-caps uppercase tracking-wide text-on-surface-variant">Kondisi Saat Keluar</span>
-          <Select name="conditionOut" defaultValue="good" options={CONDITIONS} className="w-full" />
-        </label>
-        <label className="flex flex-col gap-2">
-          <span className="text-label-caps uppercase tracking-wide text-on-surface-variant">Perkiraan Tanggal Kembali</span>
-          <input type="date" name="expectedReturnAt" className="bg-soft-gray rounded-md p-3 text-body-md" />
-        </label>
-        <label className="flex flex-col gap-2 md:col-span-2">
-          <span className="text-label-caps uppercase tracking-wide text-on-surface-variant">Tujuan / Keterangan</span>
-          <input name="purpose" className="bg-soft-gray rounded-md p-3 text-body-md" />
-        </label>
-        <button
-          type="submit"
-          disabled={pending}
-          className="md:col-span-2 self-start bg-primary-container text-on-primary text-label-caps uppercase tracking-wide px-6 py-3 rounded-md hover:bg-primary transition-colors disabled:opacity-60"
-        >
-          {pending ? "Menyimpan..." : "Catat Peminjaman"}
-        </button>
-      </form>
-
       <div className="flex flex-col gap-4">
+        <p className="text-label-caps uppercase tracking-wide text-on-surface-variant">Sedang di pihak luar ({loans.length})</p>
         {loans.length === 0 ? (
           <p className="text-body-md text-on-surface-variant">Belum ada peminjaman keluar.</p>
         ) : (
@@ -141,6 +83,65 @@ export function ExternalLoanManager({ items, loans }: { items: Item[]; loans: Lo
           ))
         )}
       </div>
+
+      <form
+        action={(fd) =>
+          startTransition(async () => {
+            await recordExternalLoan(fd);
+            toast.success("Peminjaman dicatat.");
+          })
+        }
+        className="bg-surface-container-low border border-outline-variant rounded-xl p-5 grid grid-cols-1 md:grid-cols-2 gap-4"
+      >
+        <p className="text-label-caps uppercase tracking-wide text-primary-container md:col-span-2">Catat peminjaman keluar</p>
+        <label className="flex flex-col gap-2">
+          <span className="text-label-caps uppercase tracking-wide text-on-surface-variant">Barang *</span>
+          <Select
+            name="itemId"
+            required
+            defaultValue=""
+            placeholder="Pilih barang"
+            className="w-full"
+          >
+            {items.map((i) => (
+              <option key={i.id} value={i.id} disabled={i.availableQuantity < 1}>
+                {i.name} ({i.availableQuantity} tersedia)
+              </option>
+            ))}
+          </Select>
+        </label>
+        <label className="flex flex-col gap-2">
+          <span className="text-label-caps uppercase tracking-wide text-on-surface-variant">Nama Peminjam *</span>
+          <input name="borrowerName" required className="bg-soft-gray rounded-md p-3 text-body-md" />
+        </label>
+        <label className="flex flex-col gap-2">
+          <span className="text-label-caps uppercase tracking-wide text-on-surface-variant">Kontak Peminjam</span>
+          <input name="borrowerContact" className="bg-soft-gray rounded-md p-3 text-body-md" />
+        </label>
+        <label className="flex flex-col gap-2">
+          <span className="text-label-caps uppercase tracking-wide text-on-surface-variant">Jumlah</span>
+          <input type="number" min={1} name="quantity" defaultValue={1} className="bg-soft-gray rounded-md p-3 text-body-md" />
+        </label>
+        <label className="flex flex-col gap-2">
+          <span className="text-label-caps uppercase tracking-wide text-on-surface-variant">Kondisi Saat Keluar</span>
+          <Select name="conditionOut" defaultValue="good" options={CONDITIONS} className="w-full" />
+        </label>
+        <label className="flex flex-col gap-2">
+          <span className="text-label-caps uppercase tracking-wide text-on-surface-variant">Perkiraan Tanggal Kembali</span>
+          <input type="date" name="expectedReturnAt" className="bg-soft-gray rounded-md p-3 text-body-md" />
+        </label>
+        <label className="flex flex-col gap-2 md:col-span-2">
+          <span className="text-label-caps uppercase tracking-wide text-on-surface-variant">Tujuan / Keterangan</span>
+          <input name="purpose" className="bg-soft-gray rounded-md p-3 text-body-md" />
+        </label>
+        <button
+          type="submit"
+          disabled={pending}
+          className="md:col-span-2 justify-self-start bg-primary-container text-on-primary text-label-caps uppercase tracking-wide px-6 py-3 rounded-md hover:bg-primary transition-colors disabled:opacity-60"
+        >
+          {pending ? "Menyimpan..." : "Catat Peminjaman"}
+        </button>
+      </form>
     </div>
   );
 }

@@ -13,6 +13,7 @@ import {
 import { ProofView } from "@/components/console/proof-view";
 import { CollapsibleRecordList, type BadgeTone } from "@/components/console/collapsible-record-list";
 import { ConfirmButton } from "@/components/console/confirm-button";
+import { FilterBar } from "@/components/console/filter-bar";
 import { Select } from "@/components/console/form";
 import {
   BORROW_HOLDS_STOCK,
@@ -71,12 +72,44 @@ export function BorrowRequestQueue({ requests }: { requests: Request[] }) {
 
   const wantsReturn = (r: Request) =>
     Boolean(r.returnRequestedAt) && (r.status === "borrowed" || r.status === "overdue");
+  const groupOf = (r: Request): QueueGroup =>
+    r.status === "pending" || wantsReturn(r) ? "tindakan" : BORROW_HOLDS_STOCK.includes(r.status) ? "dipinjam" : "selesai";
+
+  const counts: Record<QueueFilter, number> = { tindakan: 0, dipinjam: 0, selesai: 0, semua: requests.length };
+  for (const r of requests) counts[groupOf(r)] += 1;
+  // Dibuka di antrean yang perlu dikerjakan; kalau kosong, yang sedang di luar.
+  const [filter, setFilter] = useState<QueueFilter>(() =>
+    counts.tindakan > 0 ? "tindakan" : counts.dipinjam > 0 ? "dipinjam" : "semua",
+  );
+  const [query, setQuery] = useState("");
+  const needle = query.trim().toLowerCase();
+  const visible = requests.filter(
+    (r) =>
+      (filter === "semua" || groupOf(r) === filter) &&
+      (!needle || [r.itemName, r.userName, r.borrowerName, r.userEmail].filter(Boolean).join(" ").toLowerCase().includes(needle)),
+  );
 
   return (
+    <div className="flex flex-col gap-4">
+    <FilterBar
+      label="Saring pengajuan"
+      options={QUEUE_FILTERS.map((f) => ({ ...f, count: counts[f.key] }))}
+      value={filter}
+      onChange={setFilter}
+      query={query}
+      onQuery={setQuery}
+      placeholder="Cari barang atau peminjam"
+    />
     <CollapsibleRecordList
-      records={requests}
+      records={visible}
       countLabel={(n) => `${n} pengajuan`}
-      emptyText="Belum ada pengajuan peminjaman."
+      emptyText={
+        requests.length === 0
+          ? "Belum ada pengajuan peminjaman."
+          : needle
+            ? `Tidak ada pengajuan yang cocok dengan "${query.trim()}".`
+            : "Tidak ada pengajuan di kelompok ini."
+      }
       defaultOpen={(r) => r.status === "pending" || wantsReturn(r)}
       banner={
         error ? (
@@ -254,8 +287,19 @@ export function BorrowRequestQueue({ requests }: { requests: Request[] }) {
         </>
       )}
     />
+    </div>
   );
 }
+
+type QueueGroup = "tindakan" | "dipinjam" | "selesai";
+type QueueFilter = QueueGroup | "semua";
+
+const QUEUE_FILTERS: { key: QueueFilter; label: string }[] = [
+  { key: "tindakan", label: "Perlu Tindakan" },
+  { key: "dipinjam", label: "Sedang Dipinjam" },
+  { key: "selesai", label: "Selesai" },
+  { key: "semua", label: "Semua" },
+];
 
 // Jalan keluar untuk salah klik: ubah status ke apa saja. Disembunyikan di
 // balik <details> supaya tidak ikut terklik saat memproses antrean.

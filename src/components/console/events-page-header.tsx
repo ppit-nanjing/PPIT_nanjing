@@ -3,18 +3,20 @@
 import { useState, type ReactNode } from "react";
 import { Plus, X } from "lucide-react";
 
-// Baris judul halaman Kegiatan. Form buat acara dibuka di bawah judul, bukan modal,
-// dan hanya disembunyikan saat ditutup supaya isian yang belum dikirim tidak hilang.
+// Baris judul halaman konsol (Kegiatan, Inventaris). Form buat baru dibuka di bawah judul,
+// bukan modal, dan hanya disembunyikan saat ditutup supaya isian yang belum dikirim tidak hilang.
 export function EventsPageHeader({
   title,
   subline,
   guide,
+  createLabel = "Buat Kegiatan",
   children,
 }: {
   title: string;
   subline?: string;
   guide?: ReactNode;
-  /** Form buat acara. Kosong = akun ini tidak boleh membuat acara. */
+  createLabel?: string;
+  /** Form buat baru. Kosong = akun ini tidak boleh membuat. */
   children?: ReactNode;
 }) {
   const [open, setOpen] = useState(false);
@@ -41,7 +43,7 @@ export function EventsPageHeader({
               className="inline-flex items-center gap-2 rounded-md bg-primary-container px-4 py-2.5 text-label-caps uppercase tracking-wide text-on-primary transition-colors hover:bg-primary"
             >
               {open ? <X size={15} aria-hidden /> : <Plus size={15} aria-hidden />}
-              {open ? "Tutup Form" : "Buat Kegiatan"}
+              {open ? "Tutup Form" : createLabel}
             </button>
           )}
         </div>
@@ -49,7 +51,7 @@ export function EventsPageHeader({
       {mounted && (
         <section
           id="event-create-panel"
-          aria-label="Buat kegiatan baru"
+          aria-label={createLabel}
           hidden={!open}
           className="mt-4 rounded-xl border border-outline-variant bg-surface-container-lowest pt-4"
         >
