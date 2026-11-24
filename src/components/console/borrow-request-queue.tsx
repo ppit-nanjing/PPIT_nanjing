@@ -8,9 +8,18 @@ import {
   rejectBorrowRequest,
   markHandedOver,
   markReturned,
+  correctBorrowStatus,
 } from "@/app/actions/admin-inventory";
 import { ProofView } from "@/components/console/proof-view";
 import { CollapsibleRecordList, type BadgeTone } from "@/components/console/collapsible-record-list";
+import { ConfirmButton } from "@/components/console/confirm-button";
+import { Select } from "@/components/console/form";
+import {
+  BORROW_HOLDS_STOCK,
+  BORROW_STATUSES,
+  BORROW_STATUS_LABEL as STATUS_LABEL,
+  type BorrowStatus,
+} from "@/lib/inventory-labels";
 
 interface Request {
   id: string;
@@ -26,20 +35,11 @@ interface Request {
   purpose: string | null;
   usageLocation: string | null;
   statementUrl: string | null;
-  status: "pending" | "approved" | "rejected" | "borrowed" | "returned" | "overdue";
+  status: BorrowStatus;
   requestedFrom: string | null;
   requestedTo: string | null;
   returnRequestedAt: string | null;
 }
-
-const STATUS_LABEL: Record<Request["status"], string> = {
-  pending: "Menunggu",
-  approved: "Disetujui",
-  rejected: "Ditolak",
-  borrowed: "Dipinjam",
-  returned: "Dikembalikan",
-  overdue: "Terlambat",
-};
 
 const STATUS_TONE: Record<Request["status"], BadgeTone> = {
   pending: "info",
@@ -250,8 +250,63 @@ export function BorrowRequestQueue({ requests }: { requests: Request[] }) {
             <p className="text-label-caps text-on-surface-variant">Selesai - barang kembali ke stok.</p>
           )}
           {r.status === "rejected" && <p className="text-label-caps text-on-surface-variant">Pengajuan ditolak.</p>}
+          <StatusCorrection request={r} />
         </>
       )}
     />
+  );
+}
+
+// Jalan keluar untuk salah klik: ubah status ke apa saja. Disembunyikan di
+// balik <details> supaya tidak ikut terklik saat memproses antrean.
+function StatusCorrection({ request: r }: { request: Request }) {
+  const [next, setNext] = useState<BorrowStatus>(r.status);
+  const holds = (s: BorrowStatus) => BORROW_HOLDS_STOCK.includes(s);
+  const stock =
+    holds(r.status) === holds(next)
+      ? "Stok tersedia tidak berubah."
+      : holds(next)
+        ? `Stok tersedia berkurang ${r.quantity}.`
+        : `Stok tersedia bertambah ${r.quantity}.`;
+
+  return (
+    <details className="border-t border-outline-variant pt-3">
+      <summary className="w-fit cursor-pointer text-label-caps uppercase tracking-wide text-on-surface-variant hover:text-primary-container">
+        Koreksi status…
+      </summary>
+      <div className="mt-3 flex flex-wrap items-center gap-2">
+        <Select
+          aria-label="Status baru"
+          value={next}
+          onChange={(e) => setNext(e.target.value as BorrowStatus)}
+          className="w-auto"
+        >
+          {BORROW_STATUSES.map((s) => (
+            <option key={s} value={s}>
+              {STATUS_LABEL[s]}
+            </option>
+          ))}
+        </Select>
+        {next !== r.status && (
+          <ConfirmButton
+            danger={false}
+            title="Koreksi status"
+            message={`Ubah status dari ${STATUS_LABEL[r.status]} ke ${STATUS_LABEL[next]}? ${stock} Peminjam tidak diberi notifikasi.`}
+            confirmLabel="Ya, ubah"
+            successMessage="Status dikoreksi."
+            onConfirm={async () => {
+              const res = await correctBorrowStatus(r.id, next);
+              if (res.error) throw new Error(res.error);
+            }}
+            className="rounded-md bg-primary-container/10 px-3 py-2 text-label-caps text-primary-container transition-colors hover:bg-primary-container/20 motion-reduce:transition-none"
+          >
+            Ubah status
+          </ConfirmButton>
+        )}
+      </div>
+      <p className="mt-2 text-body-sm text-on-surface-variant">
+        Untuk memperbaiki salah klik. Pilih Terlambat bila tanggal kembali sudah lewat.
+      </p>
+    </details>
   );
 }

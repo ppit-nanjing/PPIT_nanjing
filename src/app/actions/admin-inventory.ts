@@ -1,6 +1,6 @@
 "use server";
 
-import { eq, sql } from "drizzle-orm";
+import { and, eq, gte, sql } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { auth } from "@/auth";
 import { db } from "@/db";
@@ -9,6 +9,7 @@ import { hasModuleAccess } from "@/lib/admin-scope";
 import { getEventAccess } from "@/lib/event-access";
 import { logEventAudit } from "@/lib/event-audit";
 import { createTemplatedNotification } from "@/lib/notifications";
+import { BORROW_HOLDS_STOCK, BORROW_STATUSES, BORROW_STATUS_LABEL, type BorrowStatus } from "@/lib/inventory-labels";
 
 async function requireAdmin() {
   const session = await auth();
@@ -215,6 +216,62 @@ export async function markReturned(requestId: string) {
   });
 
   revalidatePath("/console/inventory");
+}
+
+// Koreksi manual oleh admin, mis. salah klik "Dikembalikan" padahal barang
+// belum kembali. Stok tersedia ikut digeser bila status berpindah masuk/keluar
+// BORROW_HOLDS_STOCK; peminjam TIDAK dinotifikasi (ini koreksi internal) dan
+// setiap koreksi dicatat di Log Audit. Mengembalikan { error } supaya pesannya
+// sampai ke layar (pesan throw diganti pesan umum di produksi).
+export async function correctBorrowStatus(requestId: string, next: string): Promise<{ error?: string }> {
+  const actorId = await requireAdmin();
+  if (!BORROW_STATUSES.includes(next as BorrowStatus)) return { error: "Status tidak dikenal." };
+  const status = next as BorrowStatus;
+
+  const [request] = await db.select().from(borrowRequests).where(eq(borrowRequests.id, requestId));
+  if (!request) return { error: "Pengajuan tidak ditemukan." };
+  if (request.status === status) return {};
+
+  const holds = (s: BorrowStatus) => BORROW_HOLDS_STOCK.includes(s);
+  // +quantity: unit kembali ke stok; -quantity: unit dipotong dari stok.
+  const stockChange = (Number(holds(request.status)) - Number(holds(status))) * request.quantity;
+
+  if (stockChange < 0) {
+    // Potong hanya bila stoknya ada, dalam satu UPDATE supaya dua koreksi bersamaan tidak membuat stok negatif.
+    const taken = await db
+      .update(inventoryItems)
+      .set({ availableQuantity: sql`${inventoryItems.availableQuantity} - ${request.quantity}` })
+      .where(and(eq(inventoryItems.id, request.itemId), gte(inventoryItems.availableQuantity, request.quantity)))
+      .returning({ id: inventoryItems.id });
+    if (taken.length === 0) {
+      return { error: `Stok tersedia tidak cukup: butuh ${request.quantity} unit. Unit ini mungkin sudah dipinjamkan ke orang lain.` };
+    }
+  } else if (stockChange > 0) {
+    await db
+      .update(inventoryItems)
+      .set({ availableQuantity: sql`${inventoryItems.availableQuantity} + ${stockChange}` })
+      .where(eq(inventoryItems.id, request.itemId));
+  }
+
+  await db
+    .update(borrowRequests)
+    .set({
+      status,
+      returnedAt: status === "returned" ? (request.returnedAt ?? new Date()) : null,
+      returnRequestedAt: status === "borrowed" || status === "overdue" ? request.returnRequestedAt : null,
+    })
+    .where(eq(borrowRequests.id, requestId));
+
+  await db.insert(inventoryAuditLogs).values({
+    itemId: request.itemId,
+    performedBy: actorId,
+    action: "adjusted",
+    quantityDelta: stockChange,
+    note: `Koreksi status peminjaman: ${BORROW_STATUS_LABEL[request.status]} → ${BORROW_STATUS_LABEL[status]}`,
+  });
+
+  revalidatePath("/console/inventory");
+  return {};
 }
 
 // §4c - PPIT lends its OWN asset to an external (non-registered) party. Admin

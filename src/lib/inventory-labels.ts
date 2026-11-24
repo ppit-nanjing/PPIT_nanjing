@@ -22,3 +22,20 @@ export const CONDITION_LABEL: Record<InventoryCondition, string> = {
 export function conditionLabel(condition: string): string {
   return CONDITION_LABEL[condition as InventoryCondition] ?? condition;
 }
+
+export const BORROW_STATUSES = ["pending", "approved", "rejected", "borrowed", "returned", "overdue"] as const;
+
+export type BorrowStatus = (typeof BORROW_STATUSES)[number];
+
+export const BORROW_STATUS_LABEL: Record<BorrowStatus, string> = {
+  pending: "Menunggu",
+  approved: "Disetujui",
+  rejected: "Ditolak",
+  borrowed: "Dipinjam",
+  returned: "Dikembalikan",
+  overdue: "Terlambat",
+};
+
+// Status yang memegang unit: stok tersedia sudah dipotong (disetujui sampai
+// barang kembali). Berpindah masuk/keluar kelompok ini menggeser stok.
+export const BORROW_HOLDS_STOCK: readonly BorrowStatus[] = ["approved", "borrowed", "overdue"];
