@@ -3,12 +3,13 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { CalendarDays, ExternalLink, MapPin, MoreHorizontal, Search } from "lucide-react";
+import { CalendarDays, ExternalLink, MapPin, MoreHorizontal } from "lucide-react";
 import { setEventStatus } from "@/app/actions/admin-events";
 import { ConfirmButton } from "@/components/console/confirm-button";
 import { DeleteEventButton } from "@/components/console/delete-event-button";
 import { EventCapacityMeter } from "@/components/console/event-capacity-meter";
 import { EventStatusMark, type EventStatusTone } from "@/components/console/event-status-mark";
+import { FilterBar } from "@/components/console/filter-bar";
 
 // Daftar kegiatan konsol, sengaja berbentuk seperti /events (acara terdekat besar, kartu
 // bersampul, kegiatan lampau abu-abu) ditambah yang hanya perlu panitia: acara yang masih
@@ -331,40 +332,18 @@ export function EventsBoard({ events, emptyText }: { events: BoardEvent[]; empty
 
   return (
     <div className="flex flex-col gap-10">
-      <div className="flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between xl:gap-6 xl:border-b xl:border-outline-variant">
-        <div
-          role="group"
-          aria-label="Saring kegiatan"
-          className="flex min-w-0 gap-1 overflow-x-auto overflow-y-hidden border-b border-outline-variant xl:border-b-0"
-        >
-          {FILTERS.filter((option) => option.key !== "menunggu" || counts.menunggu > 0).map((option) => (
-            <button
-              key={option.key}
-              type="button"
-              aria-pressed={filter === option.key}
-              onClick={() => setFilter(option.key)}
-              className={`shrink-0 border-b-2 px-4 py-2.5 text-label-caps uppercase tracking-wide transition-colors ${
-                filter === option.key
-                  ? "border-primary-container text-primary-container"
-                  : "border-transparent text-on-surface-variant hover:text-on-background"
-              }`}
-            >
-              {option.label} <span className="tabular-nums">{counts[option.key]}</span>
-            </button>
-          ))}
-        </div>
-        <label className="flex items-center gap-2 rounded-md bg-soft-gray px-3 xl:w-72 xl:shrink-0">
-          <Search size={15} className="shrink-0 text-on-surface-variant" aria-hidden />
-          <span className="sr-only">Cari kegiatan</span>
-          <input
-            type="search"
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            placeholder="Cari judul, kategori, lokasi"
-            className="min-w-0 flex-1 bg-transparent py-2 text-body-sm placeholder:text-on-surface-variant focus:outline-none"
-          />
-        </label>
-      </div>
+      <FilterBar
+        label="Saring kegiatan"
+        options={FILTERS.filter((option) => option.key !== "menunggu" || counts.menunggu > 0).map((option) => ({
+          ...option,
+          count: counts[option.key],
+        }))}
+        value={filter}
+        onChange={setFilter}
+        query={query}
+        onQuery={setQuery}
+        placeholder="Cari judul, kategori, lokasi"
+      />
 
       {visible.length === 0 && (
         <p className="rounded-lg border border-dashed border-outline-variant p-6 text-body-md text-on-surface-variant">

@@ -1,21 +1,29 @@
 # Inventory Management
 
-> Bagian dari [Admin Dashboard](./Admin%20Dashboard.md).
+> Bagian dari [Admin Dashboard](./Admin%20Dashboard.md). Alur peminjaman: [Equipment Lending Flow](./Equipment%20Lending%20Flow.md).
 
-## Layar
+## Layar `/console/inventory`
 
-| Layar | File |
+Tata letaknya mengikuti konsol Kegiatan (`/console/events`):
+
+1. **Kepala halaman** — judul, Panduan, Log Audit, dan tombol **Tambah Barang** yang membuka form di bawah judul (`EventsPageHeader` dengan `createLabel`).
+2. **Ringkasan angka** — Barang aktif (dan jumlah Pensiun), Unit tersedia dari barang aktif, Sedang dipinjam (pengajuan Disetujui/Dipinjam/Terlambat + pinjam keluar; jumlah terlambat disorot), Perlu tindakan (pengajuan menunggu + minta kembali + usulan Nanjinger).
+3. **Tab** (`ConsoleTabPanel`, sama dengan Panel Admin acara; bagian aktif di `?bagian=`). Tab bawaan: Peminjaman bila ada antrean, lalu Usulan, selain itu Barang.
+
+| Tab (`?bagian=`) | Isi |
 |---|---|
-| Borrow Requests | `borrow_requests_admin_console` |
-| Inventory Audit Report | `inventory_audit_report_admin_console` |
-| Guide: Inventory Control | `guide_inventory_control_admin_console` |
+| Peminjaman (`peminjaman`) | Antrean pengajuan dengan saringan Perlu Tindakan / Sedang Dipinjam / Selesai / Semua + cari. Per baris: setujui/tolak, serahkan, tandai kembali, dan **Koreksi status…** untuk salah klik. |
+| Barang (`barang`) | Daftar ringkas (foto, kategori, lokasi, pemegang, stok, kondisi) dengan saringan Aktif / Pensiun / Semua, kategori, dan cari. Edit terbuka di baris itu (hanya satu form dirender). |
+| Pinjam Keluar (`keluar`) | Aset yang sedang di pihak luar (tandai kembali) dan form catat peminjaman keluar. |
+| Reservasi (`reservasi`) | Blokir aset untuk periode acara. |
+| Usulan Nanjinger (`usulan`) | Sumbangan/pinjaman barang dari Nanjinger dan usulan pengadaan. |
 
-## Fungsi
+`/console/inventory/audit-log` — riwayat perubahan stok/kondisi barang (`inventory_audit_logs`).
 
-- **Borrow Requests** — antrean persetujuan pengajuan peminjaman dari [Equipment Lending Flow](./Equipment%20Lending%20Flow.md) publik: approve/reject, tandai returned/overdue.
-- **Audit Report** — riwayat perubahan stok/kondisi barang (`INVENTORY_AUDIT_LOG`) — barang ditambah, disesuaikan jumlahnya, rusak, atau dipensiunkan.
+## Aturan
 
-- **Daftar Barang** di `/console/inventory` — tambah barang dan edit per barang (nama, kategori, lokasi, pemegang, kondisi, jumlah, foto). Untuk mengeluarkan barang dari katalog publik, set kondisi **Dipensiunkan**, jangan dihapus (lihat [Equipment Lending Flow](./Equipment%20Lending%20Flow.md) § Aturan).
+- Untuk mengeluarkan barang dari katalog publik, ubah kondisinya jadi **Pensiun** (`retired`), jangan dihapus — menghapus ikut menghapus riwayat peminjamannya. Barang Pensiun tidak bisa dipilih untuk pinjam keluar, reservasi, atau penggabungan sumbangan.
+- Aturan stok, koreksi status, dan sinkron dengan sheet ASET Logistik: lihat [Equipment Lending Flow](./Equipment%20Lending%20Flow.md) § Aturan.
 
 ## Entitas terkait
 

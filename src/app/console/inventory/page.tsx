@@ -1,37 +1,61 @@
 import type { Metadata } from "next";
-import { eq, desc, and, isNull } from "drizzle-orm";
+import type { ReactNode } from "react";
+import Link from "next/link";
+import { eq, desc, and, isNull, asc } from "drizzle-orm";
+import { ArrowRight } from "lucide-react";
 import { db } from "@/db";
 import { inventoryItems, borrowRequests, users, itemContributions, procurementRequests, externalLoans, itemReservations, events } from "@/db/schema";
-import { createInventoryItem, updateInventoryItem } from "@/app/actions/admin-inventory";
+import { createInventoryItem } from "@/app/actions/admin-inventory";
 import { FileUpload } from "@/components/upload/file-upload";
 import { BorrowRequestQueue } from "@/components/console/borrow-request-queue";
 import { ContributionReview } from "@/components/console/contribution-review";
 import { ProcurementReview } from "@/components/console/procurement-review";
 import { ExternalLoanManager } from "@/components/console/external-loan-manager";
 import { ReservationManager } from "@/components/console/reservation-manager";
-import { CollapsibleSection } from "@/components/console/collapsible-section";
+import { InventoryItemList } from "@/components/console/inventory-item-list";
+import { ConsoleTabPanel } from "@/components/console/console-tab-panel";
+import { EventsPageHeader } from "@/components/console/events-page-header";
 import { GuideButton } from "@/components/console/guide-button";
+import { SubmitButton } from "@/components/console/submit-button";
+import { fieldInput as input, primaryBtn } from "@/components/console/form";
 import { getGuide } from "@/lib/guides";
 import { markOverdueBorrows } from "@/lib/mark-overdue";
 import { requireModuleAccess } from "@/lib/admin-scope";
-import { Plus, Package, Pencil } from "lucide-react";
-import Link from "next/link";
-import { conditionLabel, INVENTORY_CONDITIONS, CONDITION_LABEL } from "@/lib/inventory-labels";
-import { fieldInput as input, primaryBtn, Select } from "@/components/console/form";
-import { SubmitButton } from "@/components/console/submit-button";
-
+import { conditionLabel, BORROW_HOLDS_STOCK } from "@/lib/inventory-labels";
 
 export const metadata: Metadata = { title: "Inventaris" };
+
+type InventoryTab = "peminjaman" | "barang" | "keluar" | "reservasi" | "usulan";
+
+// Kartu ala Google Form (sama dengan Panel Admin acara): judul + keterangan, isi selalu terbuka.
+function PanelCard({ title, description, children }: { title: string; description?: ReactNode; children: ReactNode }) {
+  return (
+    <section className="rounded-xl border border-outline-variant bg-surface-container-lowest">
+      <div className="flex flex-col gap-0.5 border-b border-outline-variant px-4 py-4 sm:px-6">
+        <h3 className="text-headline-sm text-on-background">{title}</h3>
+        {description ? <p className="text-body-sm text-on-surface-variant">{description}</p> : null}
+      </div>
+      <div className="px-4 py-5 sm:px-6 sm:py-6">{children}</div>
+    </section>
+  );
+}
+
+function LedgerCell({ label, children }: { label: string; children: ReactNode }) {
+  return (
+    <div className="flex min-w-0 flex-col gap-1 bg-surface-container-lowest px-5 py-4">
+      <dt className="text-body-sm text-on-surface-variant">{label}</dt>
+      {children}
+    </div>
+  );
+}
 
 export default async function ConsoleInventoryPage() {
   await requireModuleAccess("inventory");
   // Defensif: kalau cron tidak jalan, buka halaman ini tetap menandai yang
   // lewat jatuh tempo (pola sama dengan publishDueEvents di halaman acara).
   await markOverdueBorrows();
-  // Perf: all five reads are independent - run them concurrently instead of
-  // stacking five serial round trips to the Neon proxy.
   const [items, requests, contributions, procurements, loans, reservations, eventList, guide] = await Promise.all([
-    db.select().from(inventoryItems),
+    db.select().from(inventoryItems).orderBy(asc(inventoryItems.name)),
     db
       .select({ req: borrowRequests, itemName: inventoryItems.name, userName: users.name, userEmail: users.email })
       .from(borrowRequests)
@@ -69,94 +93,77 @@ export default async function ConsoleInventoryPage() {
     getGuide("inventaris"),
   ]);
 
-  // Barang Dipensiunkan tidak bisa dipilih untuk pinjam keluar, reservasi, atau sumbangan.
-  const itemOptions = items
-    .filter((i) => i.condition !== "retired")
-    .map((i) => ({ id: i.id, name: i.name, availableQuantity: i.availableQuantity }));
+  const activeItems = items.filter((i) => i.condition !== "retired");
+  // Barang Pensiun tidak bisa dipilih untuk pinjam keluar, reservasi, atau sumbangan.
+  const itemOptions = activeItems.map((i) => ({ id: i.id, name: i.name, availableQuantity: i.availableQuantity }));
 
-  return (
-    <div className="px-4 py-6 sm:px-6 lg:px-8 lg:py-10">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between mb-8">
-        <h1 className="text-headline-md sm:text-headline-lg text-on-background">Manajemen Inventaris</h1>
-        <div className="flex items-center gap-3">
-          {guide && <GuideButton title={guide.title} content={guide.content} docSlug="inventaris" />}
-          <Link href="/console/inventory/audit-log" className="text-label-caps text-primary-container hover:text-primary transition-colors">
-            Log Audit &rarr;
-          </Link>
-        </div>
-      </div>
+  // Angka ringkas di kepala halaman.
+  const unitsTotal = activeItems.reduce((sum, i) => sum + i.totalQuantity, 0);
+  const unitsAvailable = activeItems.reduce((sum, i) => sum + i.availableQuantity, 0);
+  const borrowedOut = requests.filter((r) => BORROW_HOLDS_STOCK.includes(r.req.status)).length;
+  const overdue = requests.filter((r) => r.req.status === "overdue").length;
+  const borrowQueue = requests.filter(
+    (r) => r.req.status === "pending" || (r.req.returnRequestedAt && (r.req.status === "borrowed" || r.req.status === "overdue")),
+  ).length;
+  const proposals = contributions.length + procurements.filter((p) => p.r.status === "pending").length;
+  const needsAction = borrowQueue + proposals;
 
-      <div className="flex flex-col gap-6">
-        <CollapsibleSection title="Pengajuan Peminjaman">
-          <BorrowRequestQueue
-            requests={requests.map((r) => ({
-              id: r.req.id,
-              itemName: r.itemName ?? "(barang dihapus)",
-              userName: r.userName,
-              userEmail: r.userEmail,
-              borrowerName: r.req.borrowerName,
-              borrowerEmail: r.req.borrowerEmail,
-              borrowerWechat: r.req.borrowerWechat,
-              borrowerPhone: r.req.borrowerPhone,
-              quantity: r.req.quantity,
-              purpose: r.req.purpose,
-              usageLocation: r.req.usageLocation,
-              statementUrl: r.req.statementUrl,
-              status: r.req.status,
-              requestedFrom: r.req.requestedFrom,
-              requestedTo: r.req.requestedTo,
-              returnRequestedAt: r.req.returnRequestedAt ? r.req.returnRequestedAt.toISOString() : null,
-            }))}
-          />
-        </CollapsibleSection>
-
-        <CollapsibleSection title="Pengajuan Sumbangan / Pinjaman Barang">
-          <ContributionReview
-            contributions={contributions.map((x) => ({
-              id: x.c.id,
-              name: x.c.name,
-              category: x.c.category,
-              condition: conditionLabel(x.c.condition),
-              contributionType: x.c.contributionType,
-              userName: x.userName,
-              userEmail: x.userEmail,
-            }))}
-            items={itemOptions}
-          />
-        </CollapsibleSection>
-
-        <CollapsibleSection title="Usulan Pengadaan Barang">
-          <ProcurementReview
-            requests={procurements.map((x) => ({
-              id: x.r.id,
-              itemName: x.r.itemName,
-              category: x.r.category,
-              justification: x.r.justification,
-              imageUrl: x.r.imageUrl,
-              estimatedCost: x.r.estimatedCost,
-              urgency: x.r.urgency,
-              status: x.r.status,
-              userName: x.userName,
-            }))}
-          />
-        </CollapsibleSection>
-
-        <CollapsibleSection title="Reservasi Aset untuk Acara">
-          <ReservationManager
-            items={itemOptions.map((i) => ({ id: i.id, name: i.name }))}
-            events={eventList.map((e) => ({ id: e.id, name: e.title }))}
-            reservations={reservations.map((x) => ({
-              id: x.r.id,
-              itemName: x.itemName ?? "(barang dihapus)",
-              reason: x.r.reason,
-              reservedFrom: x.r.reservedFrom,
-              reservedTo: x.r.reservedTo,
-              eventTitle: x.eventTitle ?? null,
-            }))}
-          />
-        </CollapsibleSection>
-
-        <CollapsibleSection title="Pinjam Keluar (Eksternal)">
+  const tabs: { key: InventoryTab; label: string; pending?: number; content: ReactNode }[] = [
+    {
+      key: "peminjaman",
+      label: "Peminjaman",
+      pending: borrowQueue,
+      content: (
+        <BorrowRequestQueue
+          requests={requests.map((r) => ({
+            id: r.req.id,
+            itemName: r.itemName ?? "(barang dihapus)",
+            userName: r.userName,
+            userEmail: r.userEmail,
+            borrowerName: r.req.borrowerName,
+            borrowerEmail: r.req.borrowerEmail,
+            borrowerWechat: r.req.borrowerWechat,
+            borrowerPhone: r.req.borrowerPhone,
+            quantity: r.req.quantity,
+            purpose: r.req.purpose,
+            usageLocation: r.req.usageLocation,
+            statementUrl: r.req.statementUrl,
+            status: r.req.status,
+            requestedFrom: r.req.requestedFrom,
+            requestedTo: r.req.requestedTo,
+            returnRequestedAt: r.req.returnRequestedAt ? r.req.returnRequestedAt.toISOString() : null,
+          }))}
+        />
+      ),
+    },
+    {
+      key: "barang",
+      label: "Barang",
+      content: (
+        <InventoryItemList
+          items={items.map((i) => ({
+            id: i.id,
+            name: i.name,
+            category: i.category,
+            description: i.description,
+            imageUrl: i.imageUrl,
+            totalQuantity: i.totalQuantity,
+            availableQuantity: i.availableQuantity,
+            condition: i.condition,
+            location: i.location,
+            custodian: i.custodian,
+          }))}
+        />
+      ),
+    },
+    {
+      key: "keluar",
+      label: "Pinjam Keluar",
+      content: (
+        <PanelCard
+          title="Pinjam keluar ke pihak luar"
+          description="Aset PPIT yang dipinjamkan langsung ke pihak di luar website (tanpa pengajuan). Stok berkurang saat dicatat dan kembali saat ditandai kembali."
+        >
           <ExternalLoanManager
             items={itemOptions}
             loans={loans.map((x) => ({
@@ -170,95 +177,160 @@ export default async function ConsoleInventoryPage() {
               expectedReturnAt: x.l.expectedReturnAt,
             }))}
           />
-        </CollapsibleSection>
+        </PanelCard>
+      ),
+    },
+    {
+      key: "reservasi",
+      label: "Reservasi",
+      content: (
+        <PanelCard title="Reservasi aset untuk acara">
+          <ReservationManager
+            items={itemOptions.map((i) => ({ id: i.id, name: i.name }))}
+            events={eventList.map((e) => ({ id: e.id, name: e.title }))}
+            reservations={reservations.map((x) => ({
+              id: x.r.id,
+              itemName: x.itemName ?? "(barang dihapus)",
+              reason: x.r.reason,
+              reservedFrom: x.r.reservedFrom,
+              reservedTo: x.r.reservedTo,
+              eventTitle: x.eventTitle ?? null,
+            }))}
+          />
+        </PanelCard>
+      ),
+    },
+    {
+      key: "usulan",
+      label: "Usulan Nanjinger",
+      pending: proposals,
+      content: (
+        <div className="flex flex-col gap-4">
+          <PanelCard
+            title="Sumbangan & pinjaman barang"
+            description="Barang pribadi yang ditawarkan Nanjinger. Belum milik PPIT sampai disetujui."
+          >
+            <ContributionReview
+              contributions={contributions.map((x) => ({
+                id: x.c.id,
+                name: x.c.name,
+                category: x.c.category,
+                condition: conditionLabel(x.c.condition),
+                contributionType: x.c.contributionType,
+                userName: x.userName,
+                userEmail: x.userEmail,
+              }))}
+              items={itemOptions}
+            />
+          </PanelCard>
+          <PanelCard title="Usulan pengadaan" description="Barang yang diusulkan untuk dibeli PPIT. Pembeliannya tetap di luar website.">
+            <ProcurementReview
+              requests={procurements.map((x) => ({
+                id: x.r.id,
+                itemName: x.r.itemName,
+                category: x.r.category,
+                justification: x.r.justification,
+                imageUrl: x.r.imageUrl,
+                estimatedCost: x.r.estimatedCost,
+                urgency: x.r.urgency,
+                status: x.r.status,
+                userName: x.userName,
+              }))}
+            />
+          </PanelCard>
+        </div>
+      ),
+    },
+  ];
 
-        <CollapsibleSection title="Daftar Barang">
-          <details className="mb-6 bg-surface-container-lowest border border-outline-variant rounded-xl">
-            <summary className="flex items-center gap-2 px-6 py-4 cursor-pointer text-label-caps text-primary-container uppercase tracking-wide">
-              <Plus size={16} /> Tambah Barang
-            </summary>
-            <form action={createInventoryItem} className="px-6 pb-6 flex flex-col gap-4">
-              <input name="name" placeholder="Nama Barang *" required className="bg-soft-gray rounded-md p-3 text-body-md" />
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                <input name="category" placeholder="Kategori" className="bg-soft-gray rounded-md p-3 text-body-md" />
-                <input name="location" placeholder="Lokasi Penyimpanan" className="bg-soft-gray rounded-md p-3 text-body-md" />
-                <input name="custodian" placeholder="Pemegang (opsional)" className="bg-soft-gray rounded-md p-3 text-body-md" />
-              </div>
-              <input name="totalQuantity" type="number" min={1} placeholder="Jumlah Total *" required className="bg-soft-gray rounded-md p-3 text-body-md" />
-              <textarea name="description" placeholder="Deskripsi" rows={2} className="bg-soft-gray rounded-md p-3 text-body-md resize-none" />
-              <FileUpload name="imageUrl" folder="inventory" label="Foto Barang (opsional)" placeholder="URL atau unggah gambar" />
-              <SubmitButton
-                successMessage="Barang ditambahkan."
-                className="self-start bg-primary-container text-on-primary text-label-caps uppercase tracking-wide px-6 py-3 rounded-md hover:bg-primary transition-colors"
-              >
-                Tambah Barang
-              </SubmitButton>
-            </form>
-          </details>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-            {items.length === 0 && (
-              <p className="text-body-md text-on-surface-variant col-span-full">Belum ada barang terdaftar.</p>
-            )}
-            {items.map((item) => (
-              <div key={item.id} className="bg-surface-container-lowest border border-outline-variant rounded-lg p-5">
-                <div className="flex items-center gap-2 mb-2">
-                  <Package size={16} className="text-secondary" />
-                  <h3 className="text-body-md font-semibold text-on-background">{item.name}</h3>
-                </div>
-                <p className="text-body-sm text-on-surface-variant">
-                  {item.availableQuantity} / {item.totalQuantity} tersedia &middot; {conditionLabel(item.condition)}
-                </p>
-                {(item.category || item.location || item.custodian) && (
-                  <p className="text-body-sm text-on-surface-variant mt-1">
-                    {[item.category, item.location, item.custodian && `Pemegang: ${item.custodian}`]
-                      .filter(Boolean)
-                      .join(" · ")}
-                  </p>
-                )}
-                {/* Pure-HTML edit form: no client JS needed, matches the
-                    create form above so both stay visually identical. */}
-                <details className="mt-3">
-                  <summary className="inline-flex items-center gap-1.5 text-label-caps uppercase tracking-wide text-primary-container cursor-pointer hover:text-primary transition-colors">
-                    <Pencil size={12} /> Edit
-                  </summary>
-                  <form action={updateInventoryItem} className="mt-3 flex flex-col gap-3">
-                    <input type="hidden" name="id" value={item.id} />
-                    <input name="name" required defaultValue={item.name} placeholder="Nama Barang *" className={input} />
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                      <input name="category" defaultValue={item.category ?? ""} placeholder="Kategori" className={input} />
-                      <input name="location" defaultValue={item.location ?? ""} placeholder="Lokasi Penyimpanan" className={input} />
-                      <input name="custodian" defaultValue={item.custodian ?? ""} placeholder="Pemegang" className={input} />
-                      <Select name="condition" defaultValue={item.condition} aria-label="Kondisi" className="w-full">
-                        {INVENTORY_CONDITIONS.map((c) => (
-                          <option key={c} value={c}>
-                            Kondisi: {CONDITION_LABEL[c]}
-                          </option>
-                        ))}
-                      </Select>
-                    </div>
-                    <div className="grid grid-cols-2 gap-3">
-                      <label className="flex flex-col gap-1">
-                        <span className="text-label-caps text-on-surface-variant">Jumlah total</span>
-                        <input name="totalQuantity" type="number" min={0} required defaultValue={item.totalQuantity} className={input} />
-                      </label>
-                      <label className="flex flex-col gap-1">
-                        <span className="text-label-caps text-on-surface-variant">Tersedia</span>
-                        <input name="availableQuantity" type="number" min={0} required defaultValue={item.availableQuantity} className={input} />
-                      </label>
-                    </div>
-                    <textarea name="description" rows={2} defaultValue={item.description ?? ""} placeholder="Deskripsi" className={`${input} resize-none`} />
-                    <FileUpload name="imageUrl" folder="inventory" label="Foto Barang (opsional)" placeholder="URL atau unggah gambar" defaultValue={item.imageUrl ?? ""} />
-                    <SubmitButton successMessage="Barang tersimpan." className={primaryBtn}>
-                      Simpan Perubahan
-                    </SubmitButton>
-                  </form>
-                </details>
-              </div>
-            ))}
+  return (
+    <div className="px-3 py-4 sm:px-6 lg:px-8 lg:py-10">
+      <EventsPageHeader
+        title="Manajemen Inventaris"
+        createLabel="Tambah Barang"
+        guide={
+          <>
+            {guide && <GuideButton title={guide.title} content={guide.content} docSlug="inventaris" />}
+            <Link
+              href="/console/inventory/audit-log"
+              className="inline-flex items-center gap-1.5 rounded-md px-3 py-2.5 text-label-caps uppercase tracking-wide text-on-surface-variant transition-colors hover:text-primary-container"
+            >
+              Log Audit <ArrowRight size={14} aria-hidden />
+            </Link>
+          </>
+        }
+      >
+        <form action={createInventoryItem} className="flex flex-col gap-4 px-4 pb-5 sm:px-6">
+          <label className="flex flex-col gap-1">
+            <span className="text-label-caps text-on-surface-variant">Nama barang *</span>
+            <input name="name" required className={input} />
+          </label>
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            <label className="flex flex-col gap-1">
+              <span className="text-label-caps text-on-surface-variant">Jumlah total *</span>
+              <input name="totalQuantity" type="number" min={1} required className={input} />
+            </label>
+            <label className="flex flex-col gap-1">
+              <span className="text-label-caps text-on-surface-variant">Kategori</span>
+              <input name="category" list="inventory-categories" className={input} />
+            </label>
+            <label className="flex flex-col gap-1">
+              <span className="text-label-caps text-on-surface-variant">Lokasi penyimpanan</span>
+              <input name="location" className={input} />
+            </label>
+            <label className="flex flex-col gap-1">
+              <span className="text-label-caps text-on-surface-variant">Pemegang</span>
+              <input name="custodian" className={input} />
+            </label>
           </div>
-        </CollapsibleSection>
-      </div>
+          <datalist id="inventory-categories">
+            {[...new Set(activeItems.map((i) => i.category).filter((c): c is string => !!c))].sort().map((c) => (
+              <option key={c} value={c} />
+            ))}
+          </datalist>
+          <label className="flex flex-col gap-1">
+            <span className="text-label-caps text-on-surface-variant">Deskripsi</span>
+            <textarea name="description" rows={2} className={`${input} resize-none`} />
+          </label>
+          <FileUpload name="imageUrl" folder="inventory" label="Foto barang (opsional)" placeholder="URL atau unggah gambar" />
+          <SubmitButton successMessage="Barang ditambahkan." className={primaryBtn}>
+            Tambah Barang
+          </SubmitButton>
+        </form>
+      </EventsPageHeader>
+
+      <dl className="mb-8 grid grid-cols-2 gap-px overflow-hidden rounded-xl border border-outline-variant bg-outline-variant lg:grid-cols-4">
+        <LedgerCell label="Barang aktif">
+          <dd className="text-headline-md tabular-nums text-on-background">{activeItems.length}</dd>
+          <dd className="text-body-sm tabular-nums text-on-surface-variant">{items.length - activeItems.length} pensiun</dd>
+        </LedgerCell>
+        <LedgerCell label="Unit tersedia">
+          <dd className="tabular-nums text-on-background">
+            <span className="text-headline-md">{unitsAvailable}</span>
+            <span className="text-body-sm text-on-surface-variant"> / {unitsTotal}</span>
+          </dd>
+          <dd className="text-body-sm text-on-surface-variant">Dari barang aktif</dd>
+        </LedgerCell>
+        <LedgerCell label="Sedang dipinjam">
+          <dd className="text-headline-md tabular-nums text-on-background">{borrowedOut + loans.length}</dd>
+          <dd className={`text-body-sm tabular-nums ${overdue > 0 ? "text-tertiary" : "text-on-surface-variant"}`}>
+            {overdue > 0 ? `${overdue} terlambat` : `${loans.length} ke pihak luar`}
+          </dd>
+        </LedgerCell>
+        <LedgerCell label="Perlu tindakan">
+          <dd className={`text-headline-md tabular-nums ${needsAction > 0 ? "text-gold-ink" : "text-on-background"}`}>{needsAction}</dd>
+          <dd className="text-body-sm tabular-nums text-on-surface-variant">
+            {needsAction > 0 ? [borrowQueue > 0 && `${borrowQueue} peminjaman`, proposals > 0 && `${proposals} usulan`].filter(Boolean).join(", ") : "Tidak ada antrean"}
+          </dd>
+        </LedgerCell>
+      </dl>
+
+      <ConsoleTabPanel
+        id="inventory-panel"
+        ariaLabel="Bagian manajemen inventaris"
+        tabs={tabs}
+        defaultTab={borrowQueue > 0 ? "peminjaman" : proposals > 0 ? "usulan" : "barang"}
+      />
     </div>
   );
 }
