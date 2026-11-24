@@ -80,6 +80,11 @@ export async function reviewContribution(formData: FormData) {
 
   if (decision === "approve") {
     if (existingItemId) {
+      const [target] = await db
+        .select({ condition: inventoryItems.condition })
+        .from(inventoryItems)
+        .where(eq(inventoryItems.id, existingItemId));
+      if (!target || target.condition === "retired") throw new Error("Barang tujuan tidak ditemukan");
       // Merge into an existing catalog item: bump its quantities by 1.
       await db
         .update(inventoryItems)

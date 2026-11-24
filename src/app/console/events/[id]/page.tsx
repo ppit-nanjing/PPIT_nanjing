@@ -1,4 +1,4 @@
-import { eq, and, asc, desc, like, or, sql, inArray } from "drizzle-orm";
+import { eq, and, asc, desc, like, or, sql, inArray, ne } from "drizzle-orm";
 import { notFound } from "next/navigation";
 import type { ComponentProps, ReactNode } from "react";
 import QRCode from "qrcode";
@@ -311,7 +311,11 @@ export default async function ConsoleEventDetailPage({ params }: { params: Promi
           .then((r) => r[0] ?? { total: 0, mine: 0 }),
     canBorrowAssets
       ? Promise.all([
-          db.select({ id: inventoryItems.id, name: inventoryItems.name }).from(inventoryItems).orderBy(inventoryItems.name),
+          db
+            .select({ id: inventoryItems.id, name: inventoryItems.name })
+            .from(inventoryItems)
+            .where(ne(inventoryItems.condition, "retired"))
+            .orderBy(inventoryItems.name),
           db
             .select({ r: itemReservations, itemName: inventoryItems.name })
             .from(itemReservations)
