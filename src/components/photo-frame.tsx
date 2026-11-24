@@ -1,4 +1,4 @@
-import type { StaticImageData } from "next/image";
+import Image, { type StaticImageData } from "next/image";
 import { PhotoZoom } from "@/components/photo-zoom";
 
 /**
@@ -23,7 +23,18 @@ export function PhotoFrame({
   return (
     <figure className="photo-frame max-w-[980px] mx-auto">
       <span className="crest" aria-hidden="true" />
-      <PhotoZoom image={image} alt={alt} />
+      <div className="mat">
+        <PhotoZoom image={image} alt={alt}>
+          <Image
+            src={image}
+            alt={alt}
+            placeholder="blur"
+            sizes="(min-width: 1024px) 940px, calc(100vw - 2.5rem)"
+            loading="lazy"
+            decoding="async"
+          />
+        </PhotoZoom>
+      </div>
       <figcaption className="text-center mt-5">
         <strong className="block text-label-caps uppercase text-primary-container">{caption}</strong>
         {note && <span className="block text-body-sm text-on-surface-variant mt-1">{note}</span>}
