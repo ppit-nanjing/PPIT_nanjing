@@ -47,7 +47,7 @@ flowchart TD
 |---|---|
 | `/inventory` | Katalog aset yang bisa dipinjam + stok tersedia + kondisi |
 | `/inventory/:id/borrow` | Form pengajuan: jumlah, tanggal pinjam-kembali, keperluan, **lokasi penggunaan**, unggah **Pernyataan Peminjam** bertanda tangan (PDF). Jalur internal & eksternal di form yang sama. |
-| `/inventory/borrow/success` | Konfirmasi, status "menunggu persetujuan Divisi Logistik" |
+| `/inventory/borrow/success` | Konfirmasi, status "menunggu persetujuan Divisi Logistik", dan kotak **WeChat ID narahubung Logistik** (tombol salin) supaya peminjam langsung menghubungi. Daftarnya konstanta `LOGISTICS_WECHAT` di `src/app/inventory/borrow/success/page.tsx`; ganti saat pengurus berganti. |
 | `/inventory/contribute` | Form sumbang (permanen) / pinjamkan sementara barang pribadi |
 | `/inventory/request-new` | Form usul pengadaan — barang, alasan, estimasi biaya (RMB), urgensi. Ini **usulan**, pembelian tetap offline. |
 | `/console/inventory` | Antrean approve/reject peminjaman, konfirmasi pengembalian, reservasi acara, catat peminjaman eksternal. Baris yang dibuka menampilkan peminjam, barang, dan periode; **menolak wajib menulis alasan** (dikirim ke peminjam lewat notifikasi `borrow_rejected`; peminjam luar tanpa akun diberi tahu manual) |
@@ -60,6 +60,8 @@ flowchart TD
 - **Pengembalian dua langkah**: peminjam menandai "Kembalikan" (`return_requested_at`), admin yang benar-benar `markReturned()` dan memulihkan stok.
 - **Overdue** diset cron harian (`/api/cron/mark-overdue`) untuk `borrow_requests` dan `external_loans` yang lewat tanggal kembali.
 - Barang sumbangan **bukan milik PPIT** sampai admin approve `item_contributions` → disalin jadi `inventory_items`.
+- Barang berkondisi **Dipensiunkan** (`retired`) **disembunyikan dari publik**: tidak tampil di `/inventory`, filter kategori, maupun pencarian global, dan halaman/aksi pinjamnya menolak. Di konsol barang tetap ada beserta riwayatnya. Pakai ini, bukan hapus — menghapus barang ikut menghapus riwayat peminjamannya (cascade).
+- Sumber data barang adalah sheet **ASET** periode berjalan milik Divisi Logistik. Sinkron 24 Nov 2026 memakai sheet `ASET (2627)`: barang yang tidak ada di sheet atau berstatus "TIDAK BISA DIPINJAM" diset `retired`, kategori mengikuti kolom TAG, dan foto disimpan di Vercel Blob (WebP, maks 1000 px) — bukan ditautkan ke Google Drive, yang diblokir di Tiongkok.
 
 ## Belum ada
 

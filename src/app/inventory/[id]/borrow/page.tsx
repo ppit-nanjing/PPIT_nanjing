@@ -18,7 +18,7 @@ export default async function BorrowRequestPage({ params }: { params: Promise<{ 
   const { id } = await params;
 
   const [item] = await db.select().from(inventoryItems).where(eq(inventoryItems.id, id));
-  if (!item) notFound();
+  if (!item || item.condition === "retired") notFound();
 
   const reservations = await upcomingReservations(id);
 

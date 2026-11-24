@@ -15,7 +15,7 @@
 - **Borrow Requests** — antrean persetujuan pengajuan peminjaman dari [Equipment Lending Flow](./Equipment%20Lending%20Flow.md) publik: approve/reject, tandai returned/overdue.
 - **Audit Report** — riwayat perubahan stok/kondisi barang (`INVENTORY_AUDIT_LOG`) — barang ditambah, disesuaikan jumlahnya, rusak, atau dipensiunkan.
 
-⚠️ Prototipe tidak memiliki layar CRUD terpisah untuk *menambah katalog barang baru* (`INVENTORY_ITEM`) di admin console — kemungkinan digabung ke dalam alur "New Entry Selection" ([lihat catatan](./Documentation%20&%20Help%20Center.md)) atau perlu ditambahkan saat build karena belum ter-cover di prototipe manapun.
+- **Daftar Barang** di `/console/inventory` — tambah barang dan edit per barang (nama, kategori, lokasi, pemegang, kondisi, jumlah, foto). Untuk mengeluarkan barang dari katalog publik, set kondisi **Dipensiunkan**, jangan dihapus (lihat [Equipment Lending Flow](./Equipment%20Lending%20Flow.md) § Aturan).
 
 ## Entitas terkait
 
