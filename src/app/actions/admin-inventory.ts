@@ -236,7 +236,7 @@ export async function recordExternalLoan(formData: FormData) {
   if (!Number.isFinite(quantity) || quantity < 1) throw new Error("Jumlah tidak valid");
 
   const [item] = await db.select().from(inventoryItems).where(eq(inventoryItems.id, itemId));
-  if (!item) throw new Error("Barang tidak ditemukan");
+  if (!item || item.condition === "retired") throw new Error("Barang tidak ditemukan");
   if (item.availableQuantity < quantity) throw new Error("Stok tidak cukup untuk dipinjam keluar");
 
   await db
@@ -335,8 +335,11 @@ export async function createItemReservation(formData: FormData) {
     ? eventAccess.session!.user.id
     : await requireAdmin();
 
-  const [item] = await db.select({ id: inventoryItems.id, name: inventoryItems.name }).from(inventoryItems).where(eq(inventoryItems.id, itemId));
-  if (!item) throw new Error("Barang tidak ditemukan");
+  const [item] = await db
+    .select({ id: inventoryItems.id, name: inventoryItems.name, condition: inventoryItems.condition })
+    .from(inventoryItems)
+    .where(eq(inventoryItems.id, itemId));
+  if (!item || item.condition === "retired") throw new Error("Barang tidak ditemukan");
 
   await db.insert(itemReservations).values({ itemId, eventId, reason, reservedFrom, reservedTo, createdBy: actorId });
   if (eventId) {
