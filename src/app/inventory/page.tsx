@@ -8,6 +8,7 @@ import { Package, MapPin, Search } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { conditionLabel } from "@/lib/inventory-labels";
+import { PhotoZoom } from "@/components/photo-zoom";
 import { getT } from "@/lib/i18n/server";
 
 export default async function InventoryPage({
@@ -149,7 +150,7 @@ export default async function InventoryPage({
               >
                 <div className="h-40 bg-surface-container-low flex items-center justify-center overflow-hidden relative">
                   <span
-                    className={`absolute top-3 left-3 flex items-center gap-1.5 bg-surface-container-lowest/90 backdrop-blur text-label-caps uppercase px-2.5 py-1 rounded-md shadow-sm ${
+                    className={`absolute top-3 left-3 z-10 pointer-events-none flex items-center gap-1.5 bg-surface-container-lowest/90 backdrop-blur text-label-caps uppercase px-2.5 py-1 rounded-md shadow-sm ${
                       item.availableQuantity > 0 ? "text-primary-container" : "text-secondary"
                     }`}
                   >
@@ -157,13 +158,15 @@ export default async function InventoryPage({
                     {item.availableQuantity > 0 ? t("inventory.available") : t("inventory.unavailable")}
                   </span>
                   {item.imageUrl ? (
-                    <Image
-                      src={item.imageUrl}
-                      alt={item.name}
-                      fill
-                      sizes="(max-width: 768px) 100vw, 33vw"
-                      className="object-cover"
-                    />
+                    <PhotoZoom image={item.imageUrl} alt={item.name} className="absolute! inset-0 focus-visible:ring-inset focus-visible:ring-offset-0">
+                      <Image
+                        src={item.imageUrl}
+                        alt={item.name}
+                        fill
+                        sizes="(max-width: 768px) 100vw, 33vw"
+                        className="object-cover"
+                      />
+                    </PhotoZoom>
                   ) : (
                     <Package className="text-outline-variant" size={28} aria-hidden />
                   )}

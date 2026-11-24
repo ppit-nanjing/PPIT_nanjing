@@ -1,19 +1,29 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import Image, { type StaticImageData } from "next/image";
 import { X, ZoomIn } from "lucide-react";
 import { useT } from "@/lib/i18n/client";
 
 /**
- * The photo inside a PhotoFrame mat: a button that opens the full picture in a
+ * A thumbnail (children) wrapped in a button that opens the full picture in a
  * native modal <dialog>. The dialog gives Escape-to-close, a focus trap, inert
  * background and focus return for free; a click anywhere outside the picture
  * closes it too. The large copy is only mounted while open, so the page does not
- * download it up front. The enlarged <img> sits outside `.mat`, so the frame's
- * arch-radius image rule does not touch it.
+ * download it up front. Used by PhotoFrame (static import) and inventory cards
+ * (Blob URL).
  */
-export function PhotoZoom({ image, alt }: { image: StaticImageData; alt: string }) {
+export function PhotoZoom({
+  image,
+  alt,
+  className = "",
+  children,
+}: {
+  image: StaticImageData | string;
+  alt: string;
+  className?: string;
+  children: ReactNode;
+}) {
   const t = useT();
   const dialogRef = useRef<HTMLDialogElement>(null);
   const [open, setOpen] = useState(false);
@@ -35,30 +45,21 @@ export function PhotoZoom({ image, alt }: { image: StaticImageData; alt: string 
 
   return (
     <>
-      <div className="mat">
-        <button
-          type="button"
-          onClick={show}
-          aria-haspopup="dialog"
-          aria-label={`${t("home.family.zoom")}: ${alt}`}
-          className="group relative block w-full cursor-zoom-in rounded-[inherit] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-container focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+      <button
+        type="button"
+        onClick={show}
+        aria-haspopup="dialog"
+        aria-label={`${t("home.family.zoom")}: ${alt}`}
+        className={`group relative block w-full cursor-zoom-in rounded-[inherit] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-container focus-visible:ring-offset-2 focus-visible:ring-offset-background ${className}`}
+      >
+        {children}
+        <span
+          aria-hidden="true"
+          className="absolute bottom-3 right-3 flex h-9 w-9 items-center justify-center rounded-md bg-band/80 text-on-band transition-colors group-hover:bg-band motion-reduce:transition-none"
         >
-          <Image
-            src={image}
-            alt={alt}
-            placeholder="blur"
-            sizes="(min-width: 1024px) 940px, calc(100vw - 2.5rem)"
-            loading="lazy"
-            decoding="async"
-          />
-          <span
-            aria-hidden="true"
-            className="absolute bottom-3 right-3 flex h-9 w-9 items-center justify-center rounded-md bg-band/80 text-on-band transition-colors group-hover:bg-band motion-reduce:transition-none"
-          >
-            <ZoomIn size={18} />
-          </span>
-        </button>
-      </div>
+          <ZoomIn size={18} />
+        </span>
+      </button>
 
       <dialog
         ref={dialogRef}
@@ -80,6 +81,8 @@ export function PhotoZoom({ image, alt }: { image: StaticImageData; alt: string 
             <Image
               src={image}
               alt={alt}
+              // A URL has no intrinsic size for next/image; the CSS below lets the real size win once loaded.
+              {...(typeof image === "string" && { width: 1000, height: 1000 })}
               loading="eager"
               sizes="100vw"
               onClick={(e) => e.stopPropagation()}
