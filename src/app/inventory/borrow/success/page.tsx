@@ -49,7 +49,7 @@ export default async function BorrowSuccessPage() {
               >
                 <div>
                   <p className="text-label-caps uppercase tracking-wide text-on-surface-variant">{c.name}</p>
-                  <p className="text-headline-md text-on-background select-all">{c.wechat}</p>
+                  <p className="text-body-lg font-bold tracking-wide text-on-background select-all">{c.wechat}</p>
                 </div>
                 <CopyButton value={c.wechat} label={t("inventory.wechatCopy")} />
               </li>
