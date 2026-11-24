@@ -1,9 +1,16 @@
 import { SiteNav } from "@/components/site-nav";
 import { SiteFooter } from "@/components/site-footer";
 import { DecoRule } from "@/components/deco/deco-rule";
-import { CheckCircle2 } from "lucide-react";
+import { CopyButton } from "@/components/copy-button";
+import { CheckCircle2, MessageCircle } from "lucide-react";
 import Link from "next/link";
 import { getT } from "@/lib/i18n/server";
+
+// Narahubung Divisi Logistik untuk peminjaman. Ganti di sini saat pengurus berganti.
+const LOGISTICS_WECHAT = [
+  { name: "Clevera", wechat: "arevelc" },
+  { name: "Athaya", wechat: "athayamzzra" },
+];
 
 export default async function BorrowSuccessPage() {
   const { t } = await getT();
@@ -24,6 +31,31 @@ export default async function BorrowSuccessPage() {
         <p className="text-body-md text-on-surface-variant mb-8">
           {t("inventory.successDesc")}
         </p>
+
+        <section
+          aria-labelledby="wechat-contact-title"
+          className="text-left border-2 border-primary-container bg-primary-container/10 rounded-lg p-6 mb-8"
+        >
+          <h2 id="wechat-contact-title" className="flex items-center gap-2 text-headline-sm text-heading mb-1">
+            <MessageCircle className="text-primary-container" size={20} aria-hidden />
+            {t("inventory.wechatTitle")}
+          </h2>
+          <p className="text-body-md text-on-surface-variant mb-4">{t("inventory.wechatDesc")}</p>
+          <ul className="flex flex-col gap-3">
+            {LOGISTICS_WECHAT.map((c) => (
+              <li
+                key={c.wechat}
+                className="flex flex-wrap items-center justify-between gap-3 bg-surface-container-lowest border border-outline-variant rounded-md px-4 py-3"
+              >
+                <div>
+                  <p className="text-label-caps uppercase tracking-wide text-on-surface-variant">{c.name}</p>
+                  <p className="text-headline-md text-on-background select-all">{c.wechat}</p>
+                </div>
+                <CopyButton value={c.wechat} label={t("inventory.wechatCopy")} />
+              </li>
+            ))}
+          </ul>
+        </section>
 
         <ul className="flex flex-col gap-3 text-left deco-frame bg-surface-container-lowest rounded-lg p-6 mb-10">
           <li className="flex items-start gap-3 text-body-md text-on-surface-variant">

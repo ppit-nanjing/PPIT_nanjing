@@ -1,4 +1,4 @@
-import { eq, ilike, and, or, isNull } from "drizzle-orm";
+import { eq, ilike, and, or, isNull, ne } from "drizzle-orm";
 import { db } from "@/db";
 import { events, newsArticles, jobPostings, galleryAlbums, inventoryItems } from "@/db/schema";
 
@@ -47,7 +47,12 @@ export async function runGlobalSearch(q: string, hasSensus: boolean): Promise<Se
     db
       .select({ name: inventoryItems.name })
       .from(inventoryItems)
-      .where(or(ilike(inventoryItems.name, pattern), ilike(inventoryItems.category, pattern)))
+      .where(
+        and(
+          ne(inventoryItems.condition, "retired"),
+          or(ilike(inventoryItems.name, pattern), ilike(inventoryItems.category, pattern)),
+        ),
+      )
       .limit(5),
   ]);
 

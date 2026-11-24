@@ -1,4 +1,4 @@
-import { ilike, and, eq } from "drizzle-orm";
+import { ilike, and, eq, ne } from "drizzle-orm";
 import { db } from "@/db";
 import { inventoryItems } from "@/db/schema";
 import { SiteNav } from "@/components/site-nav";
@@ -17,16 +17,18 @@ export default async function InventoryPage({
 }) {
   const { q, category } = await searchParams;
 
-  const conditions = [];
+  // Barang "Dipensiunkan" disembunyikan dari publik (riwayat pinjamnya tetap ada di konsol).
+  const listed = ne(inventoryItems.condition, "retired");
+  const conditions = [listed];
   if (q) conditions.push(ilike(inventoryItems.name, `%${q}%`));
   if (category) conditions.push(eq(inventoryItems.category, category));
 
   const items = await db
     .select()
     .from(inventoryItems)
-    .where(conditions.length > 0 ? and(...conditions) : undefined);
+    .where(and(...conditions));
 
-  const allItems = await db.select({ category: inventoryItems.category }).from(inventoryItems);
+  const allItems = await db.select({ category: inventoryItems.category }).from(inventoryItems).where(listed);
   const categories = [...new Set(allItems.map((i) => i.category).filter((c): c is string => !!c))];
 
   const { t } = await getT();

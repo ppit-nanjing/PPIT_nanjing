@@ -19,7 +19,7 @@ export async function submitBorrowRequest(itemId: string, formData: FormData) {
   const isInternal = session?.user?.id ? await hasCompletedSensus(session.user.id) : false;
 
   const [item] = await db.select().from(inventoryItems).where(eq(inventoryItems.id, itemId));
-  if (!item) throw new Error("Barang tidak ditemukan");
+  if (!item || item.condition === "retired") throw new Error("Barang tidak ditemukan");
 
   const quantity = Number(formData.get("quantity") ?? 1);
   const purpose = String(formData.get("purpose") ?? "").trim();
