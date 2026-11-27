@@ -37,6 +37,7 @@ import {
 import { moduleLabel } from "@/lib/console-nav";
 import { hasModuleAccess, type AdminModule } from "@/lib/admin-scope";
 import { getPersonalEventIds, getScopedEventIds } from "@/lib/event-access";
+import { getCategorySeatsByEvent } from "@/lib/event-capacity";
 import { eventCountdownLabel, eventDatePlate, eventDayLabel, eventPreparationNote, eventStage, eventTimeLabel } from "@/lib/event-stage";
 import { getGuide } from "@/lib/guides";
 import { FORM_KIND_LABEL } from "@/lib/form-types";
@@ -480,8 +481,10 @@ export default async function ConsoleDashboardPage({ searchParams }: { searchPar
   // ===== Kartu modul =====
   const when = (start: Date | null) =>
     start ? [eventDayLabel(start), eventTimeLabel(start)].filter(Boolean).join(" · ") : "Tanggal belum diisi";
+  const categorySeats = await getCategorySeatsByEvent(agendaRows.map((ev) => ev.id));
   const agenda = agendaRows.map((ev) => {
     const live = eventStage(ev, now) === "berlangsung";
+    const categories = categorySeats.get(ev.id) ?? null;
     const item: StageEvent = {
       id: ev.id,
       title: ev.title,
@@ -491,7 +494,8 @@ export default async function ConsoleDashboardPage({ searchParams }: { searchPar
       location: ev.location,
       // Kolomnya sudah berjudul "Sedang berlangsung"; yang mendatang menyebut jaraknya.
       status: live ? null : ev.startAt ? eventCountdownLabel(ev.startAt, now) : null,
-      seats: { registered: ev.registered, capacity: ev.capacity },
+      // Dengan kategori berkuota, pagu total tidak ditampilkan: kuotanya per kategori.
+      seats: { registered: ev.registered, capacity: categories ? null : ev.capacity, categories },
     };
     return { live, item };
   });

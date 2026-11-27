@@ -1,4 +1,4 @@
-import { and, count, eq, ne } from "drizzle-orm";
+import { and, count, eq, inArray, ne, sql } from "drizzle-orm";
 import { db } from "@/db";
 import { eventFeeOptions, eventRegistrations } from "@/db/schema";
 
@@ -51,6 +51,34 @@ export type EventSeats = {
 };
 
 const notCancelled = () => ne(eventRegistrations.status, "cancelled");
+
+export type CategorySeats = { label: string; quota: number | null; registered: number };
+
+// Kursi per kategori tarif untuk banyak acara sekaligus (konsol). Hanya acara yang
+// punya minimal satu kategori berkuota (mis. NYALA: Offline 100, Online tanpa batas):
+// di acara seperti itu "terdaftar / capacity" menyesatkan, jadi konsol memecahnya
+// per kategori seperti halaman publik. Aturan hitungnya sama dengan getEventSeats().
+export async function getCategorySeatsByEvent(eventIds: string[]): Promise<Map<string, CategorySeats[]>> {
+  const result = new Map<string, CategorySeats[]>();
+  if (eventIds.length === 0) return result;
+  const rows = await db
+    .select({
+      eventId: eventFeeOptions.eventId,
+      label: eventFeeOptions.label,
+      quota: eventFeeOptions.quota,
+      registered: sql<number>`count(${eventRegistrations.id})::int`,
+    })
+    .from(eventFeeOptions)
+    .leftJoin(eventRegistrations, and(eq(eventRegistrations.feeOptionId, eventFeeOptions.id), notCancelled()))
+    .where(inArray(eventFeeOptions.eventId, eventIds))
+    .groupBy(eventFeeOptions.id)
+    .orderBy(eventFeeOptions.orderIndex, eventFeeOptions.id);
+  for (const { eventId, ...seat } of rows) {
+    result.set(eventId, [...(result.get(eventId) ?? []), seat]);
+  }
+  for (const [id, seats] of result) if (!seats.some((s) => s.quota != null)) result.delete(id);
+  return result;
+}
 
 export async function getEventSeats(event: {
   id: string;

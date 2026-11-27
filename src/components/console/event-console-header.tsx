@@ -2,7 +2,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { ArrowLeft, CalendarDays, ExternalLink, MapPin, ScanLine } from "lucide-react";
 import { EventPanelJump } from "@/components/console/event-admin-panel";
-import { EventCapacityMeter } from "@/components/console/event-capacity-meter";
+import { EventCapacityMeter, EventCategorySeats } from "@/components/console/event-capacity-meter";
 import { EventStatusMark, type EventStatusTone } from "@/components/console/event-status-mark";
 import type { EventLifecycleStep } from "@/lib/event-stage";
 
@@ -36,6 +36,7 @@ export function EventConsoleHeader({
   registered,
   attended,
   capacity,
+  categories,
   finalAttendeeCount,
   committee,
   queue,
@@ -55,6 +56,8 @@ export function EventConsoleHeader({
   registered: number;
   attended: number;
   capacity: number | null;
+  /** Kategori tarif bila ada yang berkuota (mis. Offline 100 + Online): menggantikan pagu total. */
+  categories: { label: string; quota: number | null; registered: number }[] | null;
   finalAttendeeCount: number | null;
   /** Null = akun ini tidak mengelola kepanitiaan. */
   committee: { members: number; divisions: number } | null;
@@ -146,12 +149,18 @@ export function EventConsoleHeader({
           <LedgerCell label="Terdaftar">
             <p className="tabular-nums text-on-background">
               <span className="text-headline-md">{registered}</span>
-              {capacity != null && <span className="text-body-sm text-on-surface-variant"> / {capacity}</span>}
+                {!categories && capacity != null && <span className="text-body-sm text-on-surface-variant"> / {capacity}</span>}
             </p>
-            <EventCapacityMeter registered={registered} capacity={capacity} className="mt-1" />
-            <p className="text-body-sm tabular-nums text-on-surface-variant">
-              {left == null ? "Tanpa batas kuota" : left === 0 ? "Kuota penuh" : `${left} sisa`}
-            </p>
+            {categories ? (
+              <EventCategorySeats categories={categories} className="mt-1" />
+            ) : (
+              <>
+                <EventCapacityMeter registered={registered} capacity={capacity} className="mt-1" />
+                <p className="text-body-sm tabular-nums text-on-surface-variant">
+                  {left == null ? "Tanpa batas kuota" : left === 0 ? "Kuota penuh" : `${left} sisa`}
+                </p>
+              </>
+            )}
           </LedgerCell>
           <LedgerCell label="Hadir">
             <p className="text-headline-md tabular-nums text-on-background">{attended}</p>

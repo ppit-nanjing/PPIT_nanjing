@@ -8,6 +8,7 @@ import { restoreEvent, deleteEventPermanently } from "@/app/actions/admin-events
 import { publishDueEvents } from "@/lib/publish-events";
 import { hasModuleAccess } from "@/lib/admin-scope";
 import { getPersonalEventIds, getScopedEventIds } from "@/lib/event-access";
+import { getCategorySeatsByEvent } from "@/lib/event-capacity";
 import { eventApprovalState, grantsCreatorRights, isEventApproved, isUnapprovedDraft } from "@/lib/event-capabilities";
 import { eventCountdownLabel, eventDayLabel, eventPreparationNote, eventStage, eventStatusChip, eventTimeLabel } from "@/lib/event-stage";
 import { EVENT_STATUS_LABEL as STATUS_LABEL } from "@/lib/event-status-labels";
@@ -118,6 +119,7 @@ export default async function ConsoleEventsPage() {
     new Intl.DateTimeFormat("id-ID", { dateStyle: "medium", timeStyle: "short", timeZone: "Asia/Shanghai" }).format(d);
 
   const seatsByEvent = new Map(seatRows.map((row) => [row.eventId, row]));
+  const categorySeats = await getCategorySeatsByEvent(list.map((e) => e.id));
   const now = new Date();
   const groupOf = (e: (typeof list)[number]): EventBoardGroup => {
     const stage = eventStage(e, now);
@@ -168,7 +170,8 @@ export default async function ConsoleEventsPage() {
           : eventPreparationNote(e),
       registered: seats?.registered ?? 0,
       attended: seats?.attended ?? 0,
-      capacity: e.capacity,
+      capacity: categorySeats.has(e.id) ? null : e.capacity,
+      categories: categorySeats.get(e.id) ?? null,
       finalAttendeeCount: e.finalAttendeeCount,
       isDraft: e.status === "draft",
       isPublic: e.status === "published" || e.status === "registration_closed" || e.status === "completed",

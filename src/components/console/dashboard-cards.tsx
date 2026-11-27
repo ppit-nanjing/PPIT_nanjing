@@ -2,7 +2,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { ArrowRight, type LucideIcon } from "lucide-react";
 import type { ReactNode } from "react";
-import { EventCapacityMeter } from "@/components/console/event-capacity-meter";
+import { EventCapacityMeter, EventCategorySeats } from "@/components/console/event-capacity-meter";
 import { EventStatusMark, type EventStatusTone } from "@/components/console/event-status-mark";
 
 // Kartu cuplikan dashboard konsol: satu kartu per modul, seluruh kartu adalah tautan ke
@@ -236,7 +236,12 @@ export type StageEvent = {
   /** "3 hari lagi", "Sedang berlangsung", atau langkah berikutnya untuk acara yang disiapkan. */
   status: string | null;
   /** Kuota hanya untuk acara yang sudah tayang. */
-  seats: { registered: number; capacity: number | null } | null;
+  seats: {
+    registered: number;
+    capacity: number | null;
+    /** Kategori tarif, hanya untuk acara yang punya kategori berkuota (mis. Offline/Online). */
+    categories: { label: string; quota: number | null; registered: number }[] | null;
+  } | null;
 };
 
 export type StageGroup = { events: StageEvent[]; total: number };
@@ -316,6 +321,7 @@ function FeaturedEvent({ ev, kind }: { ev: StageEvent; kind: StageKind }) {
           <span className="mt-1 flex flex-col gap-1.5">
             <Seats seats={ev.seats} />
             <EventCapacityMeter registered={ev.seats.registered} capacity={ev.seats.capacity} />
+            {ev.seats.categories && <EventCategorySeats categories={ev.seats.categories} className="max-w-sm" />}
           </span>
         )}
       </span>
