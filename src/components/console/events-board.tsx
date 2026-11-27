@@ -7,7 +7,7 @@ import { CalendarDays, ExternalLink, MapPin, MoreHorizontal } from "lucide-react
 import { setEventStatus } from "@/app/actions/admin-events";
 import { ConfirmButton } from "@/components/console/confirm-button";
 import { DeleteEventButton } from "@/components/console/delete-event-button";
-import { EventCapacityMeter } from "@/components/console/event-capacity-meter";
+import { EventCapacityMeter, EventCategorySeats } from "@/components/console/event-capacity-meter";
 import { EventStatusMark, type EventStatusTone } from "@/components/console/event-status-mark";
 import { FilterBar } from "@/components/console/filter-bar";
 
@@ -35,7 +35,9 @@ export type BoardEvent = {
   preparationNote: string;
   registered: number;
   attended: number;
+  /** Null kalau acaranya punya kategori berkuota: kuotanya ada di `categories`. */
   capacity: number | null;
+  categories: { label: string; quota: number | null; registered: number }[] | null;
   finalAttendeeCount: number | null;
   isDraft: boolean;
   isPublic: boolean;
@@ -209,6 +211,7 @@ function EventBoardCard({ event }: { event: BoardEvent }) {
         <div className="mt-auto flex flex-col gap-1.5 pt-2">
           <p className="text-body-sm tabular-nums text-on-background">{seatsLine(event)}</p>
           {event.group === "datang" && <EventCapacityMeter registered={event.registered} capacity={event.capacity} />}
+          {event.group === "datang" && event.categories && <EventCategorySeats categories={event.categories} />}
         </div>
       </div>
     </article>
@@ -251,6 +254,7 @@ function FeaturedEventCard({ event }: { event: BoardEvent }) {
             {left != null && <p className="text-body-sm tabular-nums text-on-surface-variant">{left === 0 ? "Penuh" : `${left} sisa`}</p>}
           </div>
           <EventCapacityMeter registered={event.registered} capacity={event.capacity} />
+          {event.categories && <EventCategorySeats categories={event.categories} />}
         </div>
       </div>
     </article>

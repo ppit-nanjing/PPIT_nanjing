@@ -41,6 +41,7 @@ import { loadEvaluationAnswers, loadEvaluationQuestions } from "@/lib/event-eval
 import { ReservationManager } from "@/components/console/reservation-manager";
 import { checkInBlockReason } from "@/lib/event-checkin";
 import { feeTierAt, amountForTier } from "@/lib/event-fee";
+import { getCategorySeatsByEvent } from "@/lib/event-capacity";
 import { toChinaLocalInput } from "@/lib/datetime";
 import { ConfirmButton } from "@/components/console/confirm-button";
 import { FlashToast } from "@/components/console/flash-toast";
@@ -489,6 +490,7 @@ export default async function ConsoleEventDetailPage({ params }: { params: Promi
   // cuma yang di halaman publik. registrations.length mentah dulu dipakai
   // langsung di sini dan diam-diam tidak ikut turun.
   const activeRegistrationCount = registrations.filter((r) => r.reg.status !== "cancelled").length;
+  const categorySeats = (await getCategorySeatsByEvent([event.id])).get(event.id) ?? null;
   // Berhak sertifikat peserta = HANYA yang kehadirannya tercatat (status "attended",
   // QR-nya di-scan). Terkonfirmasi saja tidak cukup. Aturan yang sama dijaga server
   // di certificateCandidates() (actions/committee.ts).
@@ -604,6 +606,7 @@ export default async function ConsoleEventDetailPage({ params }: { params: Promi
         registered={activeRegistrationCount}
         attended={attended}
         capacity={event.capacity}
+        categories={categorySeats}
         finalAttendeeCount={event.finalAttendeeCount}
         committee={canManageCommittee ? { members: committee.length, divisions: divisions.length } : null}
         queue={showQueue ? { payments: pendingPaymentCount, volunteers: pendingVolunteerCount } : null}
